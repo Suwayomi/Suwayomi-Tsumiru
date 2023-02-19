@@ -76,7 +76,8 @@ enum MangaSort {
   unread,
   lastUpdated,
   lastChapterDate,
-  totalChapters;
+  totalChapters,
+  lastRead;
 
   String toLocale(BuildContext context) => switch (this) {
         MangaSort.alphabetical => context.l10n.mangaSortAlphabetical,
@@ -85,6 +86,7 @@ enum MangaSort {
         MangaSort.lastUpdated => context.l10n.mangaSortLastUpdated,
         MangaSort.lastChapterDate => context.l10n.mangaSortLastChapterDate,
         MangaSort.totalChapters => context.l10n.mangaSortTotalChapters,
+        MangaSort.lastRead => context.l10n.mangaSortLastRead,
       };
 }
 
