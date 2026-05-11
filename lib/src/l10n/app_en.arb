@@ -907,6 +907,9 @@
     "@start": {
         "description": "Button text start reading the manga"
     },
+    "@started": {
+        "description": "Library filter label: manga the user has started reading (read at least one chapter)"
+    },
     "@systemTrayIcon": {
         "description": "Switch title to Show icon in system tray in settings"
     },
@@ -1374,6 +1377,7 @@
     "sourceTypePopular": "Popular",
     "sources": "Sources",
     "start": "Start",
+    "started": "Started",
     "systemTrayIcon": "Show icon in system tray",
     "thatHaventBeenStarted": "That haven't been started",
     "themeModeDark": "Dark",

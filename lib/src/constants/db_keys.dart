@@ -38,6 +38,8 @@ enum DBKeys {
   mangaFilterDownloaded(null),
   mangaFilterUnread(null),
   mangaFilterCompleted(null),
+  mangaFilterStarted(null),
+  mangaFilterBookmarked(null),
   chapterFilterDownloaded(null),
   chapterFilterUnread(null),
   chapterFilterBookmarked(null),

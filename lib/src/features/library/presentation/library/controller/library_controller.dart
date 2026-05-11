@@ -41,6 +41,9 @@ class CategoryMangaListWithQueryAndFilter
     final mangaFilterDownloaded =
         ref.watch(libraryMangaFilterDownloadedProvider);
     final mangaFilterCompleted = ref.watch(libraryMangaFilterCompletedProvider);
+    final mangaFilterStarted = ref.watch(libraryMangaFilterStartedProvider);
+    final mangaFilterBookmarked =
+        ref.watch(libraryMangaFilterBookmarkedProvider);
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
     final sortedDirection =
@@ -59,6 +62,16 @@ class CategoryMangaListWithQueryAndFilter
 
       if (mangaFilterCompleted != null &&
           (mangaFilterCompleted ^ (manga.status.name == "COMPLETED"))) {
+        return false;
+      }
+
+      if (mangaFilterStarted != null &&
+          (mangaFilterStarted ^ (manga.lastReadChapter != null))) {
+        return false;
+      }
+
+      if (mangaFilterBookmarked != null &&
+          (mangaFilterBookmarked ^ manga.bookmarkCount.isGreaterThan(0))) {
         return false;
       }
 
@@ -130,6 +143,20 @@ class LibraryMangaFilterCompleted extends _$LibraryMangaFilterCompleted
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.mangaFilterCompleted);
+}
+
+@riverpod
+class LibraryMangaFilterStarted extends _$LibraryMangaFilterStarted
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.mangaFilterStarted);
+}
+
+@riverpod
+class LibraryMangaFilterBookmarked extends _$LibraryMangaFilterBookmarked
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.mangaFilterBookmarked);
 }
 
 @riverpod
