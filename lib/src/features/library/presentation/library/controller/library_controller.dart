@@ -82,6 +82,14 @@ class CategoryMangaListWithQueryAndFilter
                   .compareTo(
                       int.tryParse(m2.latestFetchedChapter?.fetchedAt ?? '0') ??
                           0),
+            MangaSort.lastChapterDate => (int.tryParse(
+                        m1.latestUploadedChapter?.uploadDate ?? '0') ??
+                    0)
+                .compareTo(
+                    int.tryParse(m2.latestUploadedChapter?.uploadDate ?? '0') ??
+                        0),
+            MangaSort.totalChapters => m1.chapters.totalCount
+                .compareTo(m2.chapters.totalCount),
           }) *
           sortDirToggle;
     }
