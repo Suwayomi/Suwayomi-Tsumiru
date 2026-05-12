@@ -14,6 +14,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/db_keys.dart';
 import '../constants/endpoints.dart';
 import '../constants/enum.dart';
+import '../features/auth/data/auth_coordinator.dart';
+import '../features/auth/data/auth_credentials_store.dart';
+import '../features/auth/data/auth_state.dart';
+import '../features/auth/data/suwayomi_auth_link.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -64,10 +68,56 @@ GraphQLClient graphQlClient(Ref ref) {
 
   // Auto retry is handled by TimeoutHttpClient retries instead of RetryLink
 
-  // Basic authentication link
+  // Basic authentication link (unchanged).
   if (authType == AuthType.basic && credentials.isNotBlank) {
     final AuthLink authLink = AuthLink(getToken: () => credentials);
     link = authLink.concat(link);
+  }
+
+  // simple_login / ui_login link.
+  if (authType == AuthType.simpleLogin || authType == AuthType.uiLogin) {
+    final suwayomiAuthLink = SuwayomiAuthLink(
+      authType: () => authType,
+      getHeaders: () async {
+        // Synchronously read the cached snapshot — populated at startup
+        // by the eager `await container.read(...future)` in main(). We
+        // read via `.future` defensively in case a caller invokes a
+        // GraphQL operation before the preload finishes.
+        final snapshot =
+            await ref.read(authCredentialsStoreProvider.future);
+        return authType == AuthType.simpleLogin
+            ? snapshot.simpleLoginCookieHeader
+            : snapshot.uiAuthorizationHeader;
+      },
+      refreshAccessToken: () async {
+        // Refresh path only applies to ui_login. For simple_login the
+        // Link short-circuits before invoking this callback, so any
+        // value works; AuthFailure is the most semantically truthful.
+        if (authType != AuthType.uiLogin) {
+          return const RefreshAuthFailure();
+        }
+        // Use a NON-authed GraphQL client to avoid recursion: the refresh
+        // mutation must NOT go through SuwayomiAuthLink itself. The
+        // AuthCoordinator owns single-flight dedup (R2-3), so both Link
+        // instances (query + subscription) share one refresh through it.
+        final rawClient = GraphQLClient(
+          link: HttpLink(Endpoints.baseApi(
+            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+            port: ref.read(serverPortProvider),
+            addPort: ref.read(serverPortToggleProvider).ifNull(),
+            isGraphQl: true,
+          )),
+          cache: GraphQLCache(),
+        );
+        return await ref
+            .read(authCoordinatorProvider.notifier)
+            .refreshUiAccessToken(gqlClient: rawClient);
+      },
+      onNeedsReauth: () {
+        ref.read(needsReauthProvider.notifier).set(true);
+      },
+    );
+    link = suwayomiAuthLink.concat(link);
   }
 
   final loggerLink = LoggerLink();
@@ -97,6 +147,48 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     final AuthLink authLink = AuthLink(getToken: () => credentials);
     link = authLink.concat(link);
   }
+
+  if (authType == AuthType.simpleLogin || authType == AuthType.uiLogin) {
+    final suwayomiAuthLink = SuwayomiAuthLink(
+      authType: () => authType,
+      getHeaders: () async {
+        // Synchronously read the cached snapshot — populated at startup
+        // by the eager `await container.read(...future)` in main(). We
+        // read via `.future` defensively in case a caller invokes a
+        // GraphQL operation before the preload finishes.
+        final snapshot =
+            await ref.read(authCredentialsStoreProvider.future);
+        return authType == AuthType.simpleLogin
+            ? snapshot.simpleLoginCookieHeader
+            : snapshot.uiAuthorizationHeader;
+      },
+      refreshAccessToken: () async {
+        // Round-3 fix: signature is `Future<RefreshOutcome>`, must not
+        // return `null`. For non-uiLogin the Link short-circuits before
+        // this callback, but the type system still requires a value.
+        if (authType != AuthType.uiLogin) {
+          return const RefreshAuthFailure();
+        }
+        final rawClient = GraphQLClient(
+          link: HttpLink(Endpoints.baseApi(
+            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+            port: ref.read(serverPortProvider),
+            addPort: ref.read(serverPortToggleProvider).ifNull(),
+            isGraphQl: true,
+          )),
+          cache: GraphQLCache(),
+        );
+        return await ref
+            .read(authCoordinatorProvider.notifier)
+            .refreshUiAccessToken(gqlClient: rawClient);
+      },
+      onNeedsReauth: () {
+        ref.read(needsReauthProvider.notifier).set(true);
+      },
+    );
+    link = suwayomiAuthLink.concat(link);
+  }
+
   final loggerLink = LoggerLink();
   return GraphQLClient(
     link: loggerLink.concat(link),
