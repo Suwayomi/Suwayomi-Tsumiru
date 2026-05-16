@@ -52,7 +52,25 @@ class ServerImage extends HookConsumerWidget {
     // Providers
     final authType = ref.watch(authTypeKeyProvider);
     final basicToken = ref.watch(credentialsProvider).valueOrNull;
-    final creds = ref.watch(authCredentialsStoreProvider).valueOrNull;
+
+    // Watch ONLY the simple-login cookie via `select` — never the
+    // uiAccessToken. Watching the whole credentials state caused a
+    // rebuild storm in webtoon mode every time the proactive refresh
+    // rotated the access token (every ~4 min), and the wave of
+    // simultaneous ServerImage rebuilds re-anchored the
+    // ScrollablePositionedList and yanked the user backward several
+    // pages mid-chapter. The access token is read via `ref.read` at
+    // build time only — for cached images the URL value is irrelevant
+    // because the lookup hits via the stable cacheKey (baseApi).
+    final simpleCookieHeader = ref.watch(
+      authCredentialsStoreProvider.select(
+        (async) => async.valueOrNull?.simpleLoginCookieHeader,
+      ),
+    );
+    final uiAccessTokenSnapshot = ref
+        .read(authCredentialsStoreProvider)
+        .valueOrNull
+        ?.uiAccessToken;
 
     final baseApi = "${Endpoints.baseApi(
       baseUrl: ref.watch(serverUrlProvider),
@@ -66,19 +84,27 @@ class ServerImage extends HookConsumerWidget {
     if (authType == AuthType.basic && basicToken != null) {
       httpHeaders = {"Authorization": basicToken};
     } else if (authType == AuthType.simpleLogin) {
-      httpHeaders = creds?.simpleLoginCookieHeader;
+      httpHeaders = simpleCookieHeader;
     }
 
     // For ui_login, append ?token= since cached_network_image can't
     // reliably inject Authorization headers across platforms. Use the
     // un-tokened URL as cacheKey so token rotation doesn't bust cache.
+    // Token value is read non-reactively above — if it rotates while
+    // the widget exists, the widget won't rebuild and will keep using
+    // the snapshot token. That's safe for cached images (cacheKey
+    // hit, no HTTP). For uncached images the snapshot may be slightly
+    // stale, but the proactive refresh schedules at exp-60s so the
+    // snapshot is virtually always within the server's grace window;
+    // worst case the request 401s once and the next widget rebuild
+    // picks up the new token.
     var fetchUrl = baseApi;
     if (authType == AuthType.uiLogin &&
-        creds?.uiAccessToken != null &&
-        creds!.uiAccessToken!.isNotEmpty) {
+        uiAccessTokenSnapshot != null &&
+        uiAccessTokenSnapshot.isNotEmpty) {
       final sep = fetchUrl.contains('?') ? '&' : '?';
       fetchUrl =
-          '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds.uiAccessToken!)}';
+          '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiAccessTokenSnapshot)}';
     }
 
     final ImageRenderMethodForWeb renderMethod;
