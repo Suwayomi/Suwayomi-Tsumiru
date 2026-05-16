@@ -15,6 +15,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../constants/app_sizes.dart';
 import '../constants/endpoints.dart';
 import '../constants/enum.dart';
+import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -112,7 +113,35 @@ class ServerImage extends HookConsumerWidget {
                   ),
                   const Gap(32),
                   TextButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      // 1. Evict any cached entry. CachedNetworkImage
+                      //    stores under our explicit cacheKey (baseApi),
+                      //    but defensively evict fetchUrl too in case
+                      //    the lib ever falls back to imageUrl. Idempotent
+                      //    + cheap — non-existent entries are a no-op.
+                      //    Wrapped in try/catch because removeFile
+                      //    throws on missing entries on some platforms.
+                      for (final keyToEvict in {baseApi, fetchUrl}) {
+                        try {
+                          await DefaultCacheManager().removeFile(keyToEvict);
+                        } catch (_) {/* not in cache; ignore */}
+                      }
+                      // 2. Speculatively refresh if the ui_login access
+                      //    token is within leadTime of expiry. Internally
+                      //    gated on authType == uiLogin so this is a true
+                      //    no-op for basic/simple — no GQL traffic.
+                      try {
+                        await ref
+                            .read(authCoordinatorProvider.notifier)
+                            .refreshUiAccessTokenIfDue(
+                              gqlClient: ref.read(graphQlClientProvider),
+                            );
+                      } catch (_) {/* refresh failures degrade to retry */}
+                      // 3. Remount. On RefreshSuccess the store was
+                      //    updated synchronously, so the rebuild sees
+                      //    fresh creds. On transient failure we remount
+                      //    with stale creds and let the user retry —
+                      //    correct behavior for non-auth errors.
                       key.value = (UniqueKey());
                     },
                     child: Text(context.l10n.reload),

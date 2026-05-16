@@ -6,6 +6,7 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'jwt_utils.dart';
 import 'secure_credentials_provider.dart';
 
 part 'auth_credentials_store.g.dart';
@@ -30,18 +31,26 @@ class AuthCredentialsState {
     this.simpleLoginCookie,
     this.uiAccessToken,
     this.uiRefreshToken,
+    this.uiAccessTokenExpiresAt,
   });
 
   const AuthCredentialsState.empty()
       : password = null,
         simpleLoginCookie = null,
         uiAccessToken = null,
-        uiRefreshToken = null;
+        uiRefreshToken = null,
+        uiAccessTokenExpiresAt = null;
 
   final String? password;
   final String? simpleLoginCookie;
   final String? uiAccessToken;
   final String? uiRefreshToken;
+
+  /// Decoded `exp` claim from the current `uiAccessToken`, or `null` if
+  /// no token is present or the token was malformed. Derived from the
+  /// JWT — NOT persisted separately to secure storage — and recomputed
+  /// every time `uiAccessToken` is set.
+  final DateTime? uiAccessTokenExpiresAt;
 
   /// Convenience: `{'Authorization': 'Bearer <jwt>'}` or `null` when no
   /// access token is present. Used by `SuwayomiAuthLink.getHeaders`.
@@ -66,6 +75,8 @@ class AuthCredentialsState {
     bool clearUiAccessToken = false,
     String? uiRefreshToken,
     bool clearUiRefreshToken = false,
+    DateTime? uiAccessTokenExpiresAt,
+    bool clearUiAccessTokenExpiresAt = false,
   }) {
     return AuthCredentialsState(
       password: clearPassword ? null : (password ?? this.password),
@@ -78,6 +89,9 @@ class AuthCredentialsState {
       uiRefreshToken: clearUiRefreshToken
           ? null
           : (uiRefreshToken ?? this.uiRefreshToken),
+      uiAccessTokenExpiresAt: clearUiAccessTokenExpiresAt
+          ? null
+          : (uiAccessTokenExpiresAt ?? this.uiAccessTokenExpiresAt),
     );
   }
 }
@@ -122,6 +136,8 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       simpleLoginCookie: results[1],
       uiAccessToken: results[2],
       uiRefreshToken: results[3],
+      uiAccessTokenExpiresAt:
+          results[2] == null ? null : decodeJwtExp(results[2]!),
     );
   }
 
@@ -169,9 +185,15 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     final storage = ref.read(secureStorageProvider);
     await storage.write(key: _kUiAccessKey, value: accessToken);
     await storage.write(key: _kUiRefreshKey, value: refreshToken);
+    final expiresAt = decodeJwtExp(accessToken);
     state = AsyncData(_current.copyWith(
       uiAccessToken: accessToken,
       uiRefreshToken: refreshToken,
+      uiAccessTokenExpiresAt: expiresAt,
+      // If decoder returned null (malformed token), wipe any stale
+      // expiry from a previous good token so the Timer doesn't fire
+      // off the old schedule.
+      clearUiAccessTokenExpiresAt: expiresAt == null,
     ));
   }
 
@@ -180,7 +202,12 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
           key: _kUiAccessKey,
           value: accessToken,
         );
-    state = AsyncData(_current.copyWith(uiAccessToken: accessToken));
+    final expiresAt = decodeJwtExp(accessToken);
+    state = AsyncData(_current.copyWith(
+      uiAccessToken: accessToken,
+      uiAccessTokenExpiresAt: expiresAt,
+      clearUiAccessTokenExpiresAt: expiresAt == null,
+    ));
   }
 
   Future<void> clearUiLoginTokens() async {
@@ -190,6 +217,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     state = AsyncData(_current.copyWith(
       clearUiAccessToken: true,
       clearUiRefreshToken: true,
+      clearUiAccessTokenExpiresAt: true,
     ));
   }
 

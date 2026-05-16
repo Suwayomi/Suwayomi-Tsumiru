@@ -4,13 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:async'; // Completer — required by single-flight refresh
+import 'dart:async'; // Completer + Timer — required by single-flight + proactive refresh
 
 import 'package:flutter/foundation.dart'; // debugPrint
 import 'package:graphql/client.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
+import '../../../global_providers/global_providers.dart';
 // Input types are defined in the schema file and NOT re-exported by
 // auth.graphql.dart, so we import the schema directly.
 import '../../../graphql/__generated__/schema.graphql.dart'
@@ -147,10 +149,138 @@ int? _httpStatusOfLinkException(LinkException ex) {
 /// Orchestrates login, re-auth, and test-connection flows for the two new
 /// auth modes. Pure logic — the UI calls into this and observes the
 /// resulting state via [AuthCredentialsStore] and [NeedsReauth].
+///
+/// **Proactive refresh** (this file's reason for existing post-v0.2.0):
+/// ui_login access tokens expire after ~5 min by default. Image fetches
+/// bypass the GraphQL auth link, so when no GraphQL traffic surfaces a
+/// 401, the token quietly expires and every subsequent image breaks.
+/// We schedule a Timer at `exp - proactiveRefreshLead` to rotate the
+/// token before any image request can see it expired. On transient
+/// refresh failures we reschedule via [_backoffSchedule]. On auth
+/// failure we cancel and surface the existing re-auth banner.
 @Riverpod(keepAlive: true)
 class AuthCoordinator extends _$AuthCoordinator {
+  /// How long before the access token's `exp` to fire a refresh. Sized
+  /// to comfortably cover round-trip + reader prefetch latency.
+  static const Duration proactiveRefreshLead = Duration(seconds: 60);
+
+  /// Maximum delay we'll wait before firing a proactive refresh. Caps
+  /// JWTs with weirdly-far-future `exp` claims so the Timer isn't
+  /// scheduled for a duration that survives device reboot.
+  static const Duration _maxProactiveDelay = Duration(hours: 24);
+
+  /// Backoff schedule for transient-failure retries (R2-3). One-shot
+  /// Dart `Timer` doesn't re-fire on its own, so we explicitly hop
+  /// through this list and cap at the last entry.
+  static const List<Duration> _backoffSchedule = [
+    Duration(seconds: 30),
+    Duration(seconds: 60),
+    Duration(seconds: 120),
+    Duration(seconds: 300),
+  ];
+
+  Timer? _proactiveRefreshTimer;
+  int _proactiveBackoffStep = 0;
+
   @override
-  void build() {}
+  void build() {
+    // Listen to credentials changes and (re)schedule the proactive
+    // refresh whenever a ui_login access token is present. Cancel when
+    // tokens are cleared (logout, mode switch).
+    ref.listen<AsyncValue<AuthCredentialsState>>(
+      authCredentialsStoreProvider,
+      (prev, next) {
+        final state = next.valueOrNull;
+        if (state == null) return;
+        if (state.uiAccessToken == null ||
+            state.uiAccessTokenExpiresAt == null) {
+          _cancelProactiveRefresh();
+          return;
+        }
+        // Re-schedule only when the expiry actually changed (e.g.
+        // post-refresh, post-login, post-bootstrap). Cheap idempotent
+        // reschedule is also fine — we cancel any existing Timer first.
+        final prevExpiry = prev?.valueOrNull?.uiAccessTokenExpiresAt;
+        if (prevExpiry == state.uiAccessTokenExpiresAt &&
+            _proactiveRefreshTimer != null) {
+          return;
+        }
+        _scheduleProactiveRefresh(ref.read(graphQlClientProvider));
+      },
+      fireImmediately: true,
+    );
+    ref.onDispose(_cancelProactiveRefresh);
+  }
+
+  /// (Re)schedules the proactive refresh Timer from the currently-stored
+  /// `uiAccessTokenExpiresAt`. Idempotent — cancels any existing Timer
+  /// first. No-op if there is no expiry (logout / non-ui mode).
+  void _scheduleProactiveRefresh(GraphQLClient gqlClient) {
+    _proactiveRefreshTimer?.cancel();
+    _proactiveRefreshTimer = null;
+
+    final expiresAt = ref
+        .read(authCredentialsStoreProvider)
+        .valueOrNull
+        ?.uiAccessTokenExpiresAt;
+    if (expiresAt == null) return;
+
+    final now = DateTime.now().toUtc();
+    var delay = expiresAt.difference(now) - proactiveRefreshLead;
+    if (delay.isNegative) delay = Duration.zero;
+    if (delay > _maxProactiveDelay) delay = _maxProactiveDelay;
+
+    _proactiveRefreshTimer = Timer(delay, () {
+      _proactiveRefreshTimer = null;
+      _firePeriodicRefresh(gqlClient);
+    });
+  }
+
+  /// Schedules a transient-failure backoff Timer. Cancels any existing
+  /// Timer first so we never have two pending.
+  void _scheduleBackoffRefresh(GraphQLClient gqlClient) {
+    _proactiveRefreshTimer?.cancel();
+    final stepIndex =
+        _proactiveBackoffStep.clamp(0, _backoffSchedule.length - 1);
+    final delay = _backoffSchedule[stepIndex];
+    _proactiveBackoffStep++;
+    _proactiveRefreshTimer = Timer(delay, () {
+      _proactiveRefreshTimer = null;
+      _firePeriodicRefresh(gqlClient);
+    });
+  }
+
+  /// Common Timer body — calls `refreshUiAccessToken` and dispatches
+  /// the next schedule based on outcome.
+  Future<void> _firePeriodicRefresh(GraphQLClient gqlClient) async {
+    try {
+      final outcome = await refreshUiAccessToken(gqlClient: gqlClient);
+      if (outcome is RefreshSuccess) {
+        _proactiveBackoffStep = 0;
+        _scheduleProactiveRefresh(gqlClient);
+      } else if (outcome is RefreshTransientFailure) {
+        _scheduleBackoffRefresh(gqlClient);
+      }
+      // RefreshAuthFailure: tokens are cleared and the credentials
+      // listener will fire with uiAccessToken=null, triggering
+      // _cancelProactiveRefresh. No work here.
+    } catch (e, st) {
+      debugPrint('proactive refresh callback raised: $e\n$st');
+      // Treat unexpected throws as transient — keep trying.
+      _scheduleBackoffRefresh(gqlClient);
+    }
+  }
+
+  /// Cancels any pending Timer and resets the backoff step. Safe to
+  /// call repeatedly.
+  void _cancelProactiveRefresh() {
+    _proactiveRefreshTimer?.cancel();
+    _proactiveRefreshTimer = null;
+    _proactiveBackoffStep = 0;
+  }
+
+  @visibleForTesting
+  bool get debugHasProactiveTimer => _proactiveRefreshTimer != null;
 
   // ---------- Verify-only paths (no persistence) ----------
   //
@@ -360,8 +490,50 @@ class AuthCoordinator extends _$AuthCoordinator {
       ref.read(needsReauthProvider.notifier).set(true);
       return const RefreshOutcome.authFailure();
     }
+
+    // R2-1, R2-2: Re-read auth mode IMMEDIATELY before applying the
+    // refreshed token. The user may have switched to basic_auth or
+    // simple_login between the moment we issued the refresh and the
+    // moment its response arrived. Persisting a ui_login token here
+    // would resurrect dead credentials and break the now-active mode.
+    // Single-flight protects us from duplicate refreshes but does NOT
+    // protect us from stale-mode writes — that's this check's job.
+    final currentMode = ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
+    if (currentMode != AuthType.uiLogin) {
+      debugPrint(
+          'refresh result discarded: auth mode changed to $currentMode mid-refresh');
+      return RefreshOutcome.transientFailure(
+          Exception('auth mode changed during refresh'));
+    }
+
     await store.updateUiLoginAccessToken(newAccess);
     return RefreshOutcome.success(newAccess);
+  }
+
+  /// Speculatively refresh the ui_login access token if it's within
+  /// [leadTime] of expiry. Returns `null` when no refresh was needed
+  /// or when the current auth mode isn't ui_login. Called by the
+  /// per-image Reload button and the app-resume lifecycle hook.
+  ///
+  /// R2-7: Explicit auth-mode gate. A stale `uiAccessTokenExpiresAt`
+  /// (defensive — `clearUiLoginTokens` should null it) must not trip a
+  /// ui-login refresh while the user is actually on basic/simple.
+  Future<RefreshOutcome?> refreshUiAccessTokenIfDue({
+    required GraphQLClient gqlClient,
+    Duration leadTime = proactiveRefreshLead,
+  }) async {
+    if ((ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial) !=
+        AuthType.uiLogin) {
+      return null;
+    }
+    final expiresAt = ref
+        .read(authCredentialsStoreProvider)
+        .valueOrNull
+        ?.uiAccessTokenExpiresAt;
+    if (expiresAt == null) return null;
+    final remaining = expiresAt.difference(DateTime.now().toUtc());
+    if (remaining > leadTime) return null;
+    return refreshUiAccessToken(gqlClient: gqlClient);
   }
 
   /// Runs the appropriate verify-only round-trip and returns a typed

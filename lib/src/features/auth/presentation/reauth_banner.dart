@@ -11,6 +11,7 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
+import '../data/auth_lifecycle_observer.dart';
 import '../data/auth_state.dart';
 
 /// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
@@ -26,14 +27,27 @@ class ReauthBannerHost extends ConsumerStatefulWidget {
 
 class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   bool _bannerShown = false;
+  late final AuthLifecycleObserver _authObserver;
 
   @override
   void initState() {
     super.initState();
+    // Register the app-lifecycle observer here — same widget the
+    // re-auth banner lives in, so its lifetime matches the auth UI.
+    // R2-4: Dart Timers don't fire during Android Doze, so we need an
+    // explicit on-resume refresh-if-due trigger to cover the gap.
+    _authObserver = AuthLifecycleObserver(ref);
+    WidgetsBinding.instance.addObserver(_authObserver);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (ref.read(needsReauthProvider)) _showBanner();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_authObserver);
+    super.dispose();
   }
 
   void _showBanner() {

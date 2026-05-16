@@ -1,10 +1,20 @@
 // Copyright (c) 2026 Contributors to the Suwayomi project
 
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tachidesk_sorayomi/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tachidesk_sorayomi/src/features/auth/data/secure_credentials_provider.dart';
+
+/// Builds a minimal JWT with the given payload. Signature is a fixed
+/// placeholder; the decoder doesn't verify.
+String _buildJwt(Map<String, dynamic> payload) {
+  String b64Url(String s) =>
+      base64Url.encode(utf8.encode(s)).replaceAll('=', '');
+  return '${b64Url('{"alg":"HS256"}')}.${b64Url(jsonEncode(payload))}.sig';
+}
 
 class _InMemorySecureStorage implements FlutterSecureStorage {
   _InMemorySecureStorage([Map<String, String>? seed])
@@ -157,6 +167,106 @@ void main() {
       expect(state.uiAccessToken, 'NEW');
       expect(state.uiRefreshToken, 'REFRESH',
           reason: 'refresh token must not be touched on access rotation');
+    });
+
+    test('saveUiLoginTokens populates uiAccessTokenExpiresAt from JWT', () async {
+      // JWT with exp=1800000000 (2027-01-15 08:00 UTC).
+      const expTs = 1800000000;
+      final jwt = _buildJwt({'exp': expTs});
+
+      final storage = _InMemorySecureStorage();
+      final c = _container(storage);
+      addTearDown(c.dispose);
+      await c.read(authCredentialsStoreProvider.future);
+
+      final store = c.read(authCredentialsStoreProvider.notifier);
+      await store.saveUiLoginTokens(accessToken: jwt, refreshToken: 'R');
+
+      final state = c.read(authCredentialsStoreProvider).requireValue;
+      expect(state.uiAccessTokenExpiresAt, isNotNull);
+      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+          expTs * 1000);
+      expect(state.uiAccessTokenExpiresAt!.isUtc, isTrue);
+    });
+
+    test('updateUiLoginAccessToken refreshes the expiry timestamp', () async {
+      final oldJwt = _buildJwt({'exp': 1700000000});
+      final newJwt = _buildJwt({'exp': 1800000000});
+      final storage = _InMemorySecureStorage({
+        'auth.ui.accessToken': oldJwt,
+        'auth.ui.refreshToken': 'R',
+      });
+      final c = _container(storage);
+      addTearDown(c.dispose);
+      await c.read(authCredentialsStoreProvider.future);
+
+      final store = c.read(authCredentialsStoreProvider.notifier);
+      await store.updateUiLoginAccessToken(newJwt);
+
+      final state = c.read(authCredentialsStoreProvider).requireValue;
+      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+          1800000000 * 1000);
+    });
+
+    test('clearUiLoginTokens also clears uiAccessTokenExpiresAt', () async {
+      final jwt = _buildJwt({'exp': 1800000000});
+      final storage = _InMemorySecureStorage({
+        'auth.ui.accessToken': jwt,
+        'auth.ui.refreshToken': 'R',
+      });
+      final c = _container(storage);
+      addTearDown(c.dispose);
+      await c.read(authCredentialsStoreProvider.future);
+
+      final store = c.read(authCredentialsStoreProvider.notifier);
+      // Expiry should have been seeded on bootstrap.
+      expect(c.read(authCredentialsStoreProvider).requireValue
+          .uiAccessTokenExpiresAt, isNotNull);
+
+      await store.clearUiLoginTokens();
+      final state = c.read(authCredentialsStoreProvider).requireValue;
+      expect(state.uiAccessTokenExpiresAt, isNull);
+    });
+
+    test('saveUiLoginTokens with malformed JWT leaves expiry null AND '
+        'clears any stale expiry from a previous good token', () async {
+      final goodJwt = _buildJwt({'exp': 1800000000});
+      final storage = _InMemorySecureStorage({
+        'auth.ui.accessToken': goodJwt,
+        'auth.ui.refreshToken': 'R',
+      });
+      final c = _container(storage);
+      addTearDown(c.dispose);
+      await c.read(authCredentialsStoreProvider.future);
+
+      // Sanity: expiry was decoded.
+      expect(c.read(authCredentialsStoreProvider).requireValue
+          .uiAccessTokenExpiresAt, isNotNull);
+
+      // Overwrite with a malformed token.
+      final store = c.read(authCredentialsStoreProvider.notifier);
+      await store.saveUiLoginTokens(accessToken: 'not-a-jwt', refreshToken: 'R2');
+
+      final state = c.read(authCredentialsStoreProvider).requireValue;
+      expect(state.uiAccessToken, 'not-a-jwt');
+      expect(state.uiAccessTokenExpiresAt, isNull,
+          reason: 'stale expiry from the previous valid token must not survive');
+    });
+
+    test('build() seeds uiAccessTokenExpiresAt from stored access token',
+        () async {
+      final jwt = _buildJwt({'exp': 1800000000});
+      final storage = _InMemorySecureStorage({
+        'auth.ui.accessToken': jwt,
+        'auth.ui.refreshToken': 'R',
+      });
+      final c = _container(storage);
+      addTearDown(c.dispose);
+      await c.read(authCredentialsStoreProvider.future);
+
+      final state = c.read(authCredentialsStoreProvider).requireValue;
+      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+          1800000000 * 1000);
     });
   });
 

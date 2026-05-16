@@ -13,6 +13,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
+import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
@@ -62,6 +63,20 @@ Future<void> main() async {
   } catch (e, st) {
     debugPrint('auth preload failed, falling back to empty state: $e\n$st');
     // Both notifiers will re-attempt on first widget read. App still launches.
+  }
+
+  // 3) Eagerly instantiate the AuthCoordinator so its build() runs and
+  //    sets up the proactive-refresh listener BEFORE any image request
+  //    can see an expired token. Without this, the Coordinator stays
+  //    lazy until something hits a 401 — which for an existing logged-in
+  //    session may not happen for the entire 5-minute access-token
+  //    lifetime, exactly the window we're trying to close.
+  //    `read(.notifier)` constructs the notifier and runs build().
+  try {
+    container.read(authCoordinatorProvider.notifier);
+  } catch (e, st) {
+    debugPrint('auth coordinator preload failed: $e\n$st');
+    // Non-fatal: reactive 401-refresh path still works on first use.
   }
 
   runApp(
