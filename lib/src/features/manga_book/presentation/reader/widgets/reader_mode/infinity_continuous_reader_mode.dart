@@ -18,6 +18,7 @@ import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
+import '../../../../../auth/data/auth_credentials_store.dart';
 import '../../../../../history/presentation/history_controller.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
@@ -373,6 +374,34 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       }
       return null;
     }, [currentChapterPageIndex.value]);
+
+    // Debug instrumentation: log auth-credential changes (token
+    // rotations) so we can correlate them with viewport jumps. If a
+    // token rotation lines up with a viewport bump in the same frame,
+    // the proactive refresh path is causing the reader to re-anchor.
+    ref.listen(authCredentialsStoreProvider, (prev, next) {
+      final prevState = prev?.valueOrNull;
+      final nextState = next.valueOrNull;
+      if (prevState == null || nextState == null) return;
+      // Detect access-token rotation specifically (string → different string).
+      if (prevState.uiAccessToken != null &&
+          nextState.uiAccessToken != null &&
+          prevState.uiAccessToken != nextState.uiAccessToken) {
+        ReaderDebugLog.log('ui_token_rotated', {
+          'prev_exp':
+              prevState.uiAccessTokenExpiresAt?.toIso8601String() ?? 'null',
+          'new_exp':
+              nextState.uiAccessTokenExpiresAt?.toIso8601String() ?? 'null',
+          'loaded_chs': loadedChapters.value.length,
+          'cur_idx': currentIndex.value,
+        });
+      } else if (prevState.uiAccessToken != nextState.uiAccessToken) {
+        ReaderDebugLog.log('ui_token_changed', {
+          'from': prevState.uiAccessToken == null ? 'null' : 'present',
+          'to': nextState.uiAccessToken == null ? 'null' : 'present',
+        });
+      }
+    });
 
     // Debug instrumentation: log every time the loaded-chapters list
     // mutates so we can correlate prepends/appends with reader bumps.
