@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -374,6 +375,93 @@ class ListViewReaderMode extends HookConsumerWidget {
       );
     }
 
+    // Slider debounce — the Slider fires onChanged continuously during
+    // a drag; without debounce we'd issue dozens of overlapping scrolls.
+    // We keep state updates immediate (so the slider's page-number text
+    // tracks the drag) but defer the actual scroll until the user
+    // pauses.
+    final pendingSliderTimer = useRef<Timer?>(null);
+
+    void scrollToGlobalIndex(int globalIndex,
+        {bool animate = true, String? source}) {
+      if (!scrollController.hasClients) return;
+      if (globalIndex < 0 || globalIndex >= totalPages) return;
+
+      final loc = _locateGlobalIndex(globalIndex, loadedChapters.value);
+      if (loc == null) return;
+      final keyId = _pageKeyId(loc.chapterId, loc.pageIdx);
+      final ctx = pageKeys.value[keyId]?.currentContext;
+      final duration = animate
+          ? const Duration(milliseconds: 300)
+          : Duration.zero;
+
+      // Fast path: target is already built — ensureVisible works.
+      if (ctx != null) {
+        ReaderDebugLog.log('jump_direct', {
+          'source': source ?? 'unknown',
+          'global_idx': globalIndex,
+          'chapter_id': loc.chapterId,
+          'page_idx': loc.pageIdx,
+        });
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.0,
+          duration: duration,
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+
+      // Slow path: target's widget hasn't been built yet (outside the
+      // ListView cache window). Estimate the pixel offset and jumpTo,
+      // then refine via ensureVisible once the widget has laid out.
+      final viewportHeight = MediaQuery.of(context).size.height;
+      double avgPageHeight =
+          viewportHeight * InfinityContinuousConfig.verticalPageHeightRatio;
+      if (pageRects.value.isNotEmpty) {
+        double sum = 0;
+        int n = 0;
+        for (final r in pageRects.value.values) {
+          final h = r.bottom - r.top;
+          if (h > 0) {
+            sum += h;
+            n++;
+          }
+        }
+        if (n > 0) avgPageHeight = sum / n;
+      }
+      final position = scrollController.position;
+      final estimated = (globalIndex * avgPageHeight).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      ReaderDebugLog.log('jump_estimated', {
+        'source': source ?? 'unknown',
+        'global_idx': globalIndex,
+        'chapter_id': loc.chapterId,
+        'page_idx': loc.pageIdx,
+        'avg_page_h': avgPageHeight.toStringAsFixed(1),
+        'estimated_offset': estimated.round(),
+        'max_extent': position.maxScrollExtent.round(),
+      });
+      scrollController.jumpTo(estimated);
+
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!scrollController.hasClients) return;
+        final ctx2 = pageKeys.value[keyId]?.currentContext;
+        if (ctx2 == null) return;
+        Scrollable.ensureVisible(
+          ctx2,
+          alignment: 0.0,
+          duration: Duration.zero,
+        );
+        ReaderDebugLog.log('jump_estimated_refined', {
+          'source': source ?? 'unknown',
+          'global_idx': globalIndex,
+        });
+      });
+    }
+
     void jumpToChapterRelative(int chapterIdx) {
       final globalIndex =
           InfinityContinuousUtils.convertChapterIndexToGlobalIndex(
@@ -382,42 +470,26 @@ class ListViewReaderMode extends HookConsumerWidget {
         currentVisibleChapter.value.id,
       );
       if (globalIndex < 0) return;
+
+      // Immediate state update so the slider's page-number text
+      // follows the user's drag.
+      if (currentChapterPageIndex.value != chapterIdx) {
+        currentChapterPageIndex.value = chapterIdx;
+      }
       currentIndex.value = globalIndex;
-      ReaderDebugLog.log('slider_jumpTo', {
-        'global_idx': globalIndex,
-        'chapter_idx': chapterIdx,
-        'visible_ch': currentVisibleChapter.value.id,
+
+      pendingSliderTimer.value?.cancel();
+      pendingSliderTimer.value =
+          Timer(const Duration(milliseconds: 80), () {
+        scrollToGlobalIndex(globalIndex,
+            animate: isAnimationEnabled, source: 'slider');
       });
-      final key = pageKeys.value[
-          _pageKeyId(currentVisibleChapter.value.id, chapterIdx)];
-      final ctx = key?.currentContext;
-      if (ctx == null) return;
-      Scrollable.ensureVisible(
-        ctx,
-        alignment: 0.0,
-        duration: isAnimationEnabled
-            ? const Duration(milliseconds: 300)
-            : Duration.zero,
-        curve: Curves.easeOut,
-      );
     }
 
     void handlePageNavigation({required bool isNext}) {
       final target = currentIndex.value + (isNext ? 1 : -1);
-      if (target < 0 || target >= totalPages) return;
-      final loc = _locateGlobalIndex(target, loadedChapters.value);
-      if (loc == null) return;
-      final key = pageKeys.value[_pageKeyId(loc.chapterId, loc.pageIdx)];
-      final ctx = key?.currentContext;
-      if (ctx == null) return;
-      Scrollable.ensureVisible(
-        ctx,
-        alignment: 0.0,
-        duration: isAnimationEnabled
-            ? const Duration(milliseconds: 300)
-            : Duration.zero,
-        curve: Curves.easeOut,
-      );
+      scrollToGlobalIndex(target,
+          animate: isAnimationEnabled, source: isNext ? 'next' : 'prev');
     }
 
     bool onScrollNotification(ScrollNotification notification) {
@@ -426,6 +498,36 @@ class ListViewReaderMode extends HookConsumerWidget {
 
       final metrics = notification.metrics;
       final delta = notification.scrollDelta ?? 0;
+
+      // Smoking-gun event for a backward bump: any single scroll
+      // notification with a large absolute delta. Real user scrolling
+      // produces small deltas (a finger drag is tens of px/frame).
+      // 200+ px in one notification implies a programmatic jump or a
+      // layout snap. We log immediately rather than waiting for the
+      // 200ms-sampled viewport entry.
+      if (delta.abs() > 200) {
+        // Identify which page is currently at viewport-top so the log
+        // entry tells us "the user was looking at page X, then the
+        // scroll jumped to Y".
+        int? topIdx;
+        double? topPos;
+        for (final e in pageRects.value.entries) {
+          if (topIdx == null ||
+              (e.value.top.abs() < (topPos ?? double.infinity))) {
+            topIdx = e.key;
+            topPos = e.value.top;
+          }
+        }
+        ReaderDebugLog.log('large_scroll_jump', {
+          'delta': delta.round(),
+          'pixels_before': (metrics.pixels - delta).round(),
+          'pixels_after': metrics.pixels.round(),
+          'viewport_top_idx': topIdx ?? -1,
+          'viewport_top_y': (topPos ?? 0).toStringAsFixed(1),
+          'loaded_chs': loadedChapters.value.length,
+        });
+      }
+
       if (delta.abs() < 2.0) return false;
 
       final now = DateTime.now();
@@ -523,6 +625,34 @@ class ListViewReaderMode extends HookConsumerWidget {
             color: Colors.transparent,
             child: GestureDetector(
               onTap: () async {
+                // Capture the exact reader state at press time. The
+                // 200ms-sampled viewport entry can lag by up to 200ms,
+                // which means the BUMP user is reporting may have
+                // already settled by the time it logs. Snapshot the
+                // raw pageRects + scroll offset right now so the log
+                // contains the state-as-felt.
+                final viewportHeight = MediaQuery.of(context).size.height;
+                final visibleRects = pageRects.value.entries
+                    .where((e) =>
+                        e.value.bottom > 0 && e.value.top < viewportHeight)
+                    .toList()
+                  ..sort((a, b) => a.key.compareTo(b.key));
+                ReaderDebugLog.log('BUMP_SNAPSHOT', {
+                  'offset': scrollController.hasClients
+                      ? scrollController.offset.round()
+                      : -1,
+                  'max_extent': scrollController.hasClients
+                      ? scrollController.position.maxScrollExtent.round()
+                      : -1,
+                  'visible_count': visibleRects.length,
+                  'visible_idxs': visibleRects
+                      .map((e) =>
+                          '${e.key}@${e.value.top.toStringAsFixed(0)}..${e.value.bottom.toStringAsFixed(0)}')
+                      .join('|'),
+                  'loaded_chs': loadedChapters.value.map((c) => c.chapterId).join(','),
+                  'cur_idx': currentIndex.value,
+                  'cur_visible_ch': currentVisibleChapter.value.id,
+                });
                 ReaderDebugLog.mark('BUMP_REPORTED');
                 await ReaderDebugLog.flushToClipboard();
                 if (context.mounted) {

@@ -20,8 +20,9 @@ class ReaderDebugLog {
   ReaderDebugLog._();
 
   /// Capacity. Older entries get evicted; the tail (most recent) is
-  /// what matters for diagnosing a bump the user just felt.
-  static const int _capacity = 2000;
+  /// what matters for diagnosing a bump the user just felt. Sized for
+  /// ~30 sec of fine-grained events at the current emission rate.
+  static const int _capacity = 5000;
 
   static final List<_Entry> _entries = [];
   static int _seq = 0;
