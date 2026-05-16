@@ -13,6 +13,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:zoom_view/zoom_view.dart';
 
+import 'infinity_continuous/listview_reader_mode.dart';
+
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
@@ -69,7 +71,19 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       return _buildNormalMode(context, ref);
     }
 
-    return _buildContinuousMode(context, ref);
+    // Webtoon mode now uses a plain ListView-based reader to bypass the
+    // ScrollablePositionedList anchor-flip bug that produced backward
+    // bumps mid-chapter. Falls back to the SPL implementation if the
+    // experimental flag is disabled.
+    return ListViewReaderMode(
+      manga: manga,
+      chapter: chapter,
+      chapterPages: chapterPages,
+      onPageChanged: onPageChanged,
+      scrollDirection: scrollDirection,
+      reverse: reverse,
+      showReaderLayoutAnimation: showReaderLayoutAnimation,
+    );
   }
 
   /// Builds the normal continuous reader mode
