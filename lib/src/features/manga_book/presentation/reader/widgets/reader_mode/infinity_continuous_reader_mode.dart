@@ -35,6 +35,7 @@ import 'infinity_continuous/infinity_continuous_config.dart';
 import 'infinity_continuous/infinity_continuous_feedback.dart';
 import 'infinity_continuous/infinity_continuous_navigation.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
+import 'infinity_continuous/reader_debug_log.dart';
 
 /// Infinity continuous reader mode with support for multi-chapter loading
 class InfinityContinuousReaderMode extends HookConsumerWidget {
@@ -277,10 +278,33 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
 
     // Update current index based on scroll position and track chapter completion
     useEffect(() {
+      // Debug instrumentation: log visible-window changes (sampled to
+      // 200ms cadence) so we can correlate them with bumps.
+      DateTime? lastPosLog;
       void listener() {
         final List<ItemPosition> positions =
             positionsListener.itemPositions.value.toList();
         if (positions.isEmpty) return;
+
+        // Sampled position log — full firehose would drown the buffer.
+        final now = DateTime.now();
+        if (lastPosLog == null ||
+            now.difference(lastPosLog!) > const Duration(milliseconds: 200)) {
+          lastPosLog = now;
+          final sorted = [...positions]
+            ..sort((a, b) => a.index.compareTo(b.index));
+          final first = sorted.first;
+          final last = sorted.last;
+          ReaderDebugLog.log('viewport', {
+            'first_idx': first.index,
+            'first_lead': first.itemLeadingEdge.toStringAsFixed(3),
+            'last_idx': last.index,
+            'last_trail': last.itemTrailingEdge.toStringAsFixed(3),
+            'count': positions.length,
+            'loaded_chs': loadedChapters.value.length,
+            'cur_idx': currentIndex.value,
+          });
+        }
 
         // Update current index for UI display and track visible chapter
         InfinityContinuousUtils.updateCurrentIndexAndChapter(
@@ -350,12 +374,41 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [currentChapterPageIndex.value]);
 
+    // Debug instrumentation: log every time the loaded-chapters list
+    // mutates so we can correlate prepends/appends with reader bumps.
+    final lastLoggedChapterIds = useRef<List<int>?>(null);
+    useEffect(() {
+      final newIds = [for (final c in loadedChapters.value) c.chapterId];
+      final old = lastLoggedChapterIds.value;
+      lastLoggedChapterIds.value = newIds;
+      if (old == null) {
+        ReaderDebugLog.log('loaded_chapters_init', {
+          'ids': newIds.join(','),
+          'count': newIds.length,
+        });
+      } else {
+        // Diff: prepend = new ids at start, append = new ids at end.
+        final operation = (newIds.length > old.length)
+            ? (newIds.last != old.last ? 'append' : 'prepend')
+            : (newIds.length < old.length ? 'shrink' : 'reorder');
+        ReaderDebugLog.log('loaded_chapters_changed', {
+          'op': operation,
+          'old_ids': old.join(','),
+          'new_ids': newIds.join(','),
+          'cur_idx': currentIndex.value,
+          'visible_ch': currentVisibleChapter.value.id,
+        });
+      }
+      return null;
+    }, [loadedChapters.value]);
+
     final bool isAnimationEnabled =
         ref.read(readerScrollAnimationProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
         ref.read(pinchToZoomProvider).ifNull(true);
 
-    return ReaderWrapper(
+    return Stack(children: [
+      ReaderWrapper(
       scrollDirection: scrollDirection,
       chapterPages: InfinityContinuousUtils.createChapterPagesDto(
           loadedChapters.value, currentVisibleChapter.value, chapterPages),
@@ -373,6 +426,11 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
         );
         if (globalIndex >= 0) {
           currentIndex.value = globalIndex;
+          ReaderDebugLog.log('slider_jumpTo', {
+            'global_idx': globalIndex,
+            'chapter_idx': index,
+            'visible_ch': currentVisibleChapter.value.id,
+          });
           scrollController.jumpTo(index: globalIndex);
         }
       },
@@ -459,7 +517,50 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
           ),
         ),
       ),
-    );
+    ),
+      // Diagnostic overlay: red BUMP marker button. Tap when the
+      // reader jumps you backward — the log gets a USER_MARK and the
+      // last ~2000 events are copied to clipboard so you can paste
+      // them. Only present on debug/reader-* branches.
+      Positioned(
+        right: 12,
+        bottom: 96,
+        child: SafeArea(
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: () async {
+                ReaderDebugLog.mark('BUMP_REPORTED');
+                await ReaderDebugLog.flushToClipboard();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reader log copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'BUMP',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ]);
   }
 
   /// Builds a page item for normal mode
