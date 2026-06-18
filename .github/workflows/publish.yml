@@ -1,10 +1,9 @@
 name: Publish
 on:
-  # Enable manual run
+  # Manual only on this fork. Releases are built by release-fork.yml; the
+  # upstream winget/homebrew/Play-Store/iOS jobs below need secrets this fork
+  # doesn't have, so don't auto-fire them on tags.
   workflow_dispatch:
-  push:
-    tags:
-      - "*.*.*"
 env:
   pkg_name: tachidesk-sorayomi
 jobs:

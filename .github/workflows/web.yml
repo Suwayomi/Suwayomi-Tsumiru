@@ -7,10 +7,8 @@
 name: gh-Pages
 
 on:
+  # Manual only on this fork — Web is built and attached by release-fork.yml.
   workflow_dispatch:
-  push:
-    tags:
-      - "*.*.*"
 
 jobs:
   build:
