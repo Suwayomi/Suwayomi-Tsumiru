@@ -27,7 +27,7 @@ import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_config.dart';
 import 'infinity_continuous/infinity_continuous_navigation.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
-import 'infinity_continuous/listview_reader_mode.dart';
+import 'infinity_continuous/multichapter_continuous_reader_mode.dart';
 
 /// Continuous reader mode entry point.
 ///
@@ -69,7 +69,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       return _buildSingleChapterMode(context, ref);
     }
 
-    return ListViewReaderMode(
+    return MultiChapterContinuousReaderMode(
       manga: manga,
       chapter: chapter,
       chapterPages: chapterPages,
