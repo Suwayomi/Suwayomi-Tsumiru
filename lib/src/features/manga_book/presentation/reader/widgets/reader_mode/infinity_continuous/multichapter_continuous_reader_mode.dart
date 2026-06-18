@@ -33,6 +33,7 @@ import '../../reader_wrapper.dart';
 import 'infinity_continuous_config.dart';
 import 'infinity_continuous_feedback.dart';
 import 'infinity_continuous_utils.dart';
+import 'reader_scroll_diag.dart';
 
 typedef _LoadedChapter = ({
   ChapterPagesDto pages,
@@ -459,19 +460,27 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       separatorBuilder: buildSeparator,
     );
 
-    return ReaderWrapper(
-      scrollDirection: scrollDirection,
-      // Slider/title reflect the chapter the user is currently in, and
-      // the slider tracks progress WITHIN that chapter (no totalPageCount).
-      chapterPages: InfinityContinuousUtils.createChapterPagesDto(
-          loadedChapters.value, currentVisibleChapter.value, chapterPages),
-      chapter: currentVisibleChapter.value,
-      manga: manga,
-      showReaderLayoutAnimation: showReaderLayoutAnimation,
-      currentIndex: currentChapterPageIndex.value,
-      onChanged: jumpToChapterRelative,
-      onPrevious: () => handlePageNavigation(isNext: false),
-      onNext: () => handlePageNavigation(isNext: true),
+    // TEMP scroll diagnostic: log any large offset jump (a snap) with the
+    // top-visible page + offset, so the reported back-scroll snap is captured
+    // on-device. Remove once fixed.
+    final loggedChild = NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n is ScrollUpdateNotification && (n.scrollDelta ?? 0).abs() > 150) {
+          int topIdx = -1;
+          double topLead = 2;
+          for (final p in positionsListener.itemPositions.value) {
+            if (p.itemLeadingEdge < topLead) {
+              topLead = p.itemLeadingEdge;
+              topIdx = p.index;
+            }
+          }
+          ReaderScrollDiag.add(
+              'SCROLL_JUMP d=${n.scrollDelta!.round()} px=${n.metrics.pixels.round()} '
+              'topIdx=$topIdx lead=${topLead.toStringAsFixed(2)} '
+              'visCh=${currentVisibleChapter.value.id} relPage=${currentChapterPageIndex.value}');
+        }
+        return false;
+      },
       child: AppUtils.wrapOn(
         !kIsWeb &&
                 (Platform.isAndroid || Platform.isIOS) &&
@@ -487,6 +496,53 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             : null,
         positionedList,
       ),
+    );
+
+    return Stack(
+      children: [
+        ReaderWrapper(
+          scrollDirection: scrollDirection,
+          chapterPages: InfinityContinuousUtils.createChapterPagesDto(
+              loadedChapters.value, currentVisibleChapter.value, chapterPages),
+          chapter: currentVisibleChapter.value,
+          manga: manga,
+          showReaderLayoutAnimation: showReaderLayoutAnimation,
+          currentIndex: currentChapterPageIndex.value,
+          onChanged: jumpToChapterRelative,
+          onPrevious: () => handlePageNavigation(isNext: false),
+          onNext: () => handlePageNavigation(isNext: true),
+          child: loggedChild,
+        ),
+        Positioned(
+          right: 10,
+          bottom: 150,
+          child: SafeArea(
+            child: Material(
+              color: Colors.deepPurple.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                onTap: () async {
+                  await ReaderScrollDiag.copyToClipboard();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Reader scroll log copied'),
+                      duration: Duration(seconds: 2),
+                    ));
+                  }
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text('COPY LOG',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
