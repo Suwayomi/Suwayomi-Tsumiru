@@ -33,6 +33,7 @@ class ServerImage extends HookConsumerWidget {
     this.fit,
     this.appendApiToUrl = false,
     this.progressIndicatorBuilder,
+    this.imageBuilder,
     this.wrapper,
     this.showReloadButton = false,
   });
@@ -43,6 +44,9 @@ class ServerImage extends HookConsumerWidget {
   final bool appendApiToUrl;
   final Widget Function(BuildContext, String, DownloadProgress)?
       progressIndicatorBuilder;
+  // Wraps the decoded image. Only invoked once the image has loaded (never for
+  // the placeholder), so callers can measure the real rendered page here.
+  final Widget Function(BuildContext, ImageProvider)? imageBuilder;
   final Widget Function(Widget child)? wrapper;
   final bool showReloadButton;
 
@@ -199,6 +203,7 @@ class ServerImage extends HookConsumerWidget {
       fit: fit ?? BoxFit.cover,
       imageRenderMethodForWeb: renderMethod,
       progressIndicatorBuilder: finalProgressIndicatorBuilder,
+      imageBuilder: imageBuilder,
       errorWidget: errorWidget,
     );
   }

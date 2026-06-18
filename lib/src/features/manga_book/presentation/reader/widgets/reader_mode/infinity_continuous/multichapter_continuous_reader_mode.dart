@@ -33,6 +33,7 @@ import '../../reader_wrapper.dart';
 import 'infinity_continuous_config.dart';
 import 'infinity_continuous_feedback.dart';
 import 'infinity_continuous_utils.dart';
+import 'measure_size.dart';
 import 'reader_scroll_diag.dart';
 
 typedef _LoadedChapter = ({
@@ -102,6 +103,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // always reads the latest list without rebinding on every change.
     final loadedRef = useRef<List<_LoadedChapter>>(loadedChapters.value);
     loadedRef.value = loadedChapters.value;
+
+    // Per-page measured rendered height, keyed by image URL. Page images load
+    // with no intrinsic height, so a page that gets disposed on a long scroll
+    // re-enters as a tiny placeholder and then grows on decode — which yanks
+    // the scroll backward to the top of the previous strip. Recording each
+    // page's true height the first time it lays out lets us reserve that exact
+    // height in the placeholder on re-entry, so the strip never collapses and
+    // the scroll stays put. Reader-scoped so it survives item dispose/rebuild.
+    final pageHeights = useRef<Map<String, double>>(<String, double>{});
 
     final currentVisibleChapter = useState<ChapterDto>(chapter);
     final currentChapterPageIndex = useState<int>(
@@ -414,16 +424,30 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               InfinityContinuousConfig.verticalPageHeightRatio,
         );
       }
+      // Reserve the page's true height (once measured) so a re-entering strip
+      // never collapses to the small placeholder and snaps the scroll.
+      final reservedHeight = pageHeights.value[loc.imageUrl];
+      final placeholderHeight = reservedHeight ??
+          context.height * InfinityContinuousConfig.verticalPageHeightRatio;
       return ServerImage(
         showReloadButton: true,
         fit: BoxFit.fitWidth,
         appendApiToUrl: false,
         imageUrl: loc.imageUrl,
         progressIndicatorBuilder: (_, __, progress) => SizedBox(
-          height: context.height *
-              InfinityContinuousConfig.verticalPageHeightRatio,
+          height: placeholderHeight,
           child: Center(
             child: CircularProgressIndicator(value: progress.progress),
+          ),
+        ),
+        imageBuilder: (context, imageProvider) => MeasureSize(
+          onChange: (size) {
+            if (size.height > 0) pageHeights.value[loc.imageUrl] = size.height;
+          },
+          child: Image(
+            image: imageProvider,
+            fit: BoxFit.fitWidth,
+            width: double.infinity,
           ),
         ),
       );
@@ -463,9 +487,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // TEMP scroll diagnostic: log any large offset jump (a snap) with the
     // top-visible page + offset, so the reported back-scroll snap is captured
     // on-device. Remove once fixed.
+    final diagPrevTop = useRef<int>(-999);
+    final diagPrevPx = useRef<double>(0);
     final loggedChild = NotificationListener<ScrollNotification>(
       onNotification: (n) {
-        if (n is ScrollUpdateNotification && (n.scrollDelta ?? 0).abs() > 150) {
+        if (n is ScrollUpdateNotification) {
           int topIdx = -1;
           double topLead = 2;
           for (final p in positionsListener.itemPositions.value) {
@@ -474,10 +500,29 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               topIdx = p.index;
             }
           }
-          ReaderScrollDiag.add(
-              'SCROLL_JUMP d=${n.scrollDelta!.round()} px=${n.metrics.pixels.round()} '
-              'topIdx=$topIdx lead=${topLead.toStringAsFixed(2)} '
-              'visCh=${currentVisibleChapter.value.id} relPage=${currentChapterPageIndex.value}');
+          final px = n.metrics.pixels;
+          final d = n.scrollDelta ?? 0;
+          final prevTop = diagPrevTop.value;
+          final flipped = topIdx != prevTop;
+          // THE SNAP SIGNATURE: scrolling UP (top index decreases), the new top
+          // strip appears already near its TOP (lead > -1) instead of peeking
+          // in from above at its bottom (lead ~ -8). That means the scroll
+          // jumped over the whole previous strip to its top.
+          final isSnap = flipped &&
+              prevTop != -999 &&
+              topIdx < prevTop &&
+              topLead > -1.0;
+          if (isSnap || flipped || d.abs() > 150) {
+            final tag = isSnap ? "SNAP!" : (flipped ? "TOP" : "JMP");
+            ReaderScrollDiag.add(
+                '$tag $prevTop->$topIdx '
+                'd=${d.round()} px=${px.round()} dpx=${(px - diagPrevPx.value).round()} '
+                'lead=${topLead.toStringAsFixed(2)} '
+                'min=${n.metrics.minScrollExtent.round()} max=${n.metrics.maxScrollExtent.round()} '
+                'visCh=${currentVisibleChapter.value.id} relPage=${currentChapterPageIndex.value}');
+            diagPrevTop.value = topIdx;
+          }
+          diagPrevPx.value = px;
         }
         return false;
       },
