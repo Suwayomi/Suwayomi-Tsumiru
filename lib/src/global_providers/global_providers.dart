@@ -134,60 +134,53 @@ GraphQLClient graphQlClient(Ref ref) {
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider).valueOrNull;
-  Link link = WebSocketLink(
-      Endpoints.baseApi(
-        baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-        port: ref.watch(serverPortProvider),
-        addPort: ref.watch(serverPortToggleProvider).ifNull(),
-        isGraphQl: true,
-        isWebsocket: true,
-      ),
-      subProtocol: GraphQLProtocol.graphqlTransportWs);
-  if (authType == AuthType.basic && credentials.isNotBlank) {
-    final AuthLink authLink = AuthLink(getToken: () => credentials);
-    link = authLink.concat(link);
+  final wsUrl = Endpoints.baseApi(
+    baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+    port: ref.watch(serverPortProvider),
+    addPort: ref.watch(serverPortToggleProvider).ifNull(),
+    isGraphQl: true,
+    isWebsocket: true,
+  );
+
+  // Authenticate the SOCKET itself, not a per-operation Link. A header /
+  // context Link (AuthLink / SuwayomiAuthLink) never reaches the WebSocket,
+  // so it leaves the connection unauthenticated and any @requireAuth
+  // subscription (e.g. downloadStatusChanged) fails with "Unauthorized" —
+  // while auth-exempt subscriptions (updateStatusChanged) still work, which
+  // is what made this look downloads-specific.
+  //
+  // graphql-transport-ws carries auth two ways, matching Suwayomi-Server:
+  //   * ui_login  -> connection_init payload `{Authorization: <bare token>}`
+  //                  (server `onInit` does NOT strip "Bearer "; the WebUI
+  //                  sends the bare token, so we do too).
+  //   * simple_login / basic -> the WS handshake (upgrade) headers.
+  dynamic initialPayload;
+  Map<String, String>? handshakeHeaders;
+  if (authType == AuthType.uiLogin) {
+    initialPayload = () async {
+      final snapshot = await ref.read(authCredentialsStoreProvider.future);
+      final token = snapshot.uiAccessToken;
+      return (token == null || token.isEmpty)
+          ? <String, dynamic>{}
+          : <String, dynamic>{'Authorization': token};
+    };
+  } else if (authType == AuthType.simpleLogin) {
+    handshakeHeaders = ref
+        .read(authCredentialsStoreProvider)
+        .valueOrNull
+        ?.simpleLoginCookieHeader;
+  } else if (authType == AuthType.basic && credentials.isNotBlank) {
+    handshakeHeaders = {'Authorization': credentials!};
   }
 
-  if (authType == AuthType.simpleLogin || authType == AuthType.uiLogin) {
-    final suwayomiAuthLink = SuwayomiAuthLink(
-      authType: () => authType,
-      getHeaders: () async {
-        // Synchronously read the cached snapshot — populated at startup
-        // by the eager `await container.read(...future)` in main(). We
-        // read via `.future` defensively in case a caller invokes a
-        // GraphQL operation before the preload finishes.
-        final snapshot =
-            await ref.read(authCredentialsStoreProvider.future);
-        return authType == AuthType.simpleLogin
-            ? snapshot.simpleLoginCookieHeader
-            : snapshot.uiAuthorizationHeader;
-      },
-      refreshAccessToken: () async {
-        // Round-3 fix: signature is `Future<RefreshOutcome>`, must not
-        // return `null`. For non-uiLogin the Link short-circuits before
-        // this callback, but the type system still requires a value.
-        if (authType != AuthType.uiLogin) {
-          return const RefreshAuthFailure();
-        }
-        final rawClient = GraphQLClient(
-          link: HttpLink(Endpoints.baseApi(
-            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-            port: ref.read(serverPortProvider),
-            addPort: ref.read(serverPortToggleProvider).ifNull(),
-            isGraphQl: true,
-          )),
-          cache: GraphQLCache(),
-        );
-        return await ref
-            .read(authCoordinatorProvider.notifier)
-            .refreshUiAccessToken(gqlClient: rawClient);
-      },
-      onNeedsReauth: () {
-        ref.read(needsReauthProvider.notifier).set(true);
-      },
-    );
-    link = suwayomiAuthLink.concat(link);
-  }
+  final Link link = WebSocketLink(
+    wsUrl,
+    subProtocol: GraphQLProtocol.graphqlTransportWs,
+    config: SocketClientConfig(
+      initialPayload: initialPayload,
+      headers: handshakeHeaders,
+    ),
+  );
 
   final loggerLink = LoggerLink();
   return GraphQLClient(
