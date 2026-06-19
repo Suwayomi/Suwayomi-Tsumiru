@@ -103,7 +103,8 @@ jobs:
           flutter build apk --release --split-per-abi
 
       - name: Build ${{ matrix.target }}
-        if: matrix.target != 'android'
+        # Linux is built by fastforge in the AppImage step below (and by the Flatpak workflow).
+        if: matrix.target != 'android' && matrix.target != 'linux'
         run: flutter build ${{ matrix.target }} --release
 
       # ---- package into dist/ ----
@@ -116,12 +117,27 @@ jobs:
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "dist/${pkg_name}-${{ github.ref_name }}-android-armeabi-v7a.apk"
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk     "dist/${pkg_name}-${{ github.ref_name }}-android-x86_64.apk"
 
-      - name: Package Linux
+      - name: Build Linux AppImage
         if: matrix.target == 'linux'
-        working-directory: build/linux/x64/release/bundle
+        env:
+          # appimagetool is itself an AppImage; extract-and-run avoids needing FUSE on CI.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/dist"
-          GZIP=-9 tar czf "$GITHUB_WORKSPACE/dist/${pkg_name}-${{ github.ref_name }}-linux-x64.tar.gz" *
+          # Official appimagetool (fastforge shells out to it).
+          sudo wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          sudo chmod +x /usr/local/bin/appimagetool
+          # fastforge's AppImage maker may call `locate` for include resolution.
+          sudo apt-get install -y --no-install-recommends plocate && sudo updatedb || true
+          dart pub global activate fastforge
+          export PATH="$PATH:$HOME/.pub-cache/bin"
+          # Builds `flutter build linux --release` + packages an AppImage.
+          fastforge package --platform linux --targets appimage
+          # Collect the AppImage into dist/ with our release naming.
+          mkdir -p dist
+          built="$(find dist -name '*.AppImage' | head -1)"
+          mv "$built" "dist/${pkg_name}-${{ github.ref_name }}-linux-x86_64.AppImage"
+          # Drop fastforge's version subdir so the release only attaches our named files.
+          find dist -mindepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Package Web
         if: matrix.target == 'web'

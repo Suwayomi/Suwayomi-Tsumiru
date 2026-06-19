@@ -1,0 +1,17 @@
+# fastforge AppImage config (https://fastforge.dev). Built in CI via
+# `fastforge package --platform linux --targets appimage`.
+display_name: Tsumiru
+generic_name: Manga Reader
+icon: assets/icons/launcher/tsumiru_icon.png
+startup_notify: true
+categories:
+  - Graphics
+  - Viewer
+keywords:
+  - manga
+  - manhwa
+  - webtoon
+  - comic
+  - reader
+  - suwayomi
+metainfo: flatpak/io.github.aaronbamblett.tsumiru.metainfo.xml
