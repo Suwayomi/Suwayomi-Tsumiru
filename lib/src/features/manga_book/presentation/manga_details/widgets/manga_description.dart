@@ -42,62 +42,67 @@ class MangaDescription extends HookConsumerWidget {
         Stack(
           children: [
             Positioned.fill(child: _CoverBackdrop(manga: manga)),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                MangaCoverDescriptiveListTile(
-                  manga: manga,
-                  showBadges: false,
-                  onTitleClicked: (query) =>
-                      GlobalSearchRoute(query: query).push(context),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      AsyncTextButtonIcon(
-                        onPressed: () async {
-                          final val = await AsyncValue.guard(() async {
-                            if (manga.inLibrary.ifNull()) {
-                              await removeMangaFromLibrary();
-                            } else {
-                              await addMangaToLibrary();
-                            }
-                            await refresh();
-                          });
-                          if (context.mounted) {
-                            val.showToastOnError(ref.read(toastProvider));
-                          }
-                        },
-                        isPrimary: manga.inLibrary.ifNull(),
-                        primaryIcon: const Icon(Icons.favorite_rounded),
-                        secondaryIcon:
-                            const Icon(Icons.favorite_border_outlined),
-                        secondaryStyle:
-                            TextButton.styleFrom(foregroundColor: Colors.grey),
-                        primaryLabel: Text(context.l10n.inLibrary),
-                        secondaryLabel: Text(context.l10n.addToLibrary),
-                      ),
-                      if (manga.realUrl.isNotBlank)
-                        TextButton.icon(
-                          onPressed: () async {
-                            launchUrlInWeb(
-                              context,
-                              (manga.realUrl ?? ""),
-                              ref.read(toastProvider),
-                            );
-                          },
-                          icon: const Icon(Icons.public_rounded),
-                          style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey),
-                          label: Text(context.l10n.webView),
-                        ),
-                    ],
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MangaCoverDescriptiveListTile(
+                    manga: manga,
+                    showBadges: false,
+                    onTitleClicked: (query) =>
+                        GlobalSearchRoute(query: query).push(context),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        AsyncTextButtonIcon(
+                          onPressed: () async {
+                            final val = await AsyncValue.guard(() async {
+                              if (manga.inLibrary.ifNull()) {
+                                await removeMangaFromLibrary();
+                              } else {
+                                await addMangaToLibrary();
+                              }
+                              await refresh();
+                            });
+                            if (context.mounted) {
+                              val.showToastOnError(ref.read(toastProvider));
+                            }
+                          },
+                          isPrimary: manga.inLibrary.ifNull(),
+                          primaryIcon: const Icon(Icons.favorite_rounded),
+                          secondaryIcon:
+                              const Icon(Icons.favorite_border_outlined),
+                          secondaryStyle: TextButton.styleFrom(
+                              foregroundColor: Colors.grey),
+                          primaryLabel: Text(context.l10n.inLibrary),
+                          secondaryLabel: Text(context.l10n.addToLibrary),
+                        ),
+                        if (manga.realUrl.isNotBlank)
+                          TextButton.icon(
+                            onPressed: () async {
+                              launchUrlInWeb(
+                                context,
+                                (manga.realUrl ?? ""),
+                                ref.read(toastProvider),
+                              );
+                            },
+                            icon: const Icon(Icons.public_rounded),
+                            style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey),
+                            label: Text(context.l10n.webView),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -154,7 +159,7 @@ class MangaDescription extends HookConsumerWidget {
               // alignment: WrapAlignment.spaceBetween,
               children: [
                 ...manga.genre.map<Widget>(
-                  (e) => Chip(label: Text(e)),
+                  (e) => _GenreChip(e),
                 )
               ],
             ),
@@ -169,7 +174,7 @@ class MangaDescription extends HookConsumerWidget {
                   ...manga.genre.map<Widget>(
                     (e) => Padding(
                       padding: KEdgeInsets.h4.size,
-                      child: Chip(label: Text(e)),
+                      child: _GenreChip(e),
                     ),
                   )
                 ],
@@ -200,16 +205,18 @@ class _CoverBackdrop extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Opacity(
-              opacity: 0.25,
+              opacity: 0.6,
               child: ImageFiltered(
                 imageFilter: ImageFilter.blur(
-                  sigmaX: 24,
-                  sigmaY: 24,
+                  sigmaX: 20,
+                  sigmaY: 20,
                   tileMode: TileMode.decal,
                 ),
                 child: ServerImage(imageUrl: url, fit: BoxFit.cover),
               ),
             ),
+            // Fade the blurred cover into the page surface lower down so it
+            // bleeds seamlessly into the chapter list.
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -217,15 +224,41 @@ class _CoverBackdrop extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     surface.withValues(alpha: 0.0),
-                    surface.withValues(alpha: 0.55),
+                    surface.withValues(alpha: 0.15),
+                    surface.withValues(alpha: 0.85),
                     surface,
                   ],
-                  stops: const [0.0, 0.6, 1.0],
+                  stops: const [0.0, 0.4, 0.82, 1.0],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Accent-glass genre chip — translucent primary-tinted fill + accent border,
+/// instead of a stock Material [Chip].
+class _GenreChip extends StatelessWidget {
+  const _GenreChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.30)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: cs.onSurface, fontSize: 13),
       ),
     );
   }
