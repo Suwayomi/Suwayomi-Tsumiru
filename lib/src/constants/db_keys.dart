@@ -44,7 +44,7 @@ enum DBKeys {
   chapterFilterDownloaded(null),
   chapterFilterUnread(null),
   chapterFilterBookmarked(null),
-  mangaSort(MangaSort.alphabetical),
+  mangaSort(MangaSort.lastRead),
   mangaSortDirection(true), // asc=true, dsc=false
   chapterSort(ChapterSort.source),
   chapterSortDirection(false), // asc=true, dsc=false
