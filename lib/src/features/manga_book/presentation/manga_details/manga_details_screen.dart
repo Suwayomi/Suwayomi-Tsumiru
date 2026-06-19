@@ -110,6 +110,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) => Scaffold(
+          extendBodyBehindAppBar: selectedChapters.value.isEmpty,
           appBar: selectedChapters.value.isNotEmpty
               ? AppBar(
                   leading: IconButton(
@@ -150,6 +151,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ],
                 )
               : AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
                   title: Text(data?.title ?? context.l10n.manga),
                   actions: [
                     if (context.isTablet) ...[
