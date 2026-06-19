@@ -10,4 +10,8 @@ void main() {
   test('default sort direction stays ascending-toggle (most-recent-first for lastRead)', () {
     expect(DBKeys.mangaSortDirection.initial, true);
   });
+
+  test('downloaded badge is off by default', () {
+    expect(DBKeys.downloadedBadge.initial, false);
+  });
 }
