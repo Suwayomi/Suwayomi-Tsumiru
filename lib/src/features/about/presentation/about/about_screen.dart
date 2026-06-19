@@ -149,8 +149,8 @@ class AboutScreen extends HookConsumerWidget {
             ListTile(
               title: Text(context.l10n.whatsNew),
               onTap: () async {
-                final url = AppUrls.sorayomiWhatsNew.url + packageInfo.version;
-                await launchUrlInWeb(context, url, toast);
+                await launchUrlInWeb(
+                    context, AppUrls.sorayomiWhatsNew.url, toast);
               },
             ),
             ListTile(
@@ -212,12 +212,6 @@ class AboutScreen extends HookConsumerWidget {
                       url: about!.discord,
                       toast: toast,
                     ),
-                  MediaLaunchButton(
-                    title: context.l10n.reddit,
-                    iconData: FontAwesomeIcons.reddit,
-                    url: AppUrls.tachideskReddit.url,
-                    toast: toast,
-                  ),
                 ],
               ),
             ),

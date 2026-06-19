@@ -2,7 +2,9 @@ name: tsumiru
 description: A manga reader client for Suwayomi Server.
 
 publish_to: "none"
-version: 0.6.4+28
+# Public version matches the Tsumiru release line (v0.4.0); build number keeps
+# climbing from the inherited 0.6.4+28 so Android upgrades stay monotonic.
+version: 0.4.0+29
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -93,16 +95,15 @@ flutter_gen:
   output: lib/src/constants/gen/
 
 flutter_native_splash:
-  color: "#54C5F8"
+  color: "#0b0d1a"
   image: assets/icons/dark_icon.png
-  branding: assets/icons/launcher/from_suwayomi.png
-  color_dark: "#01579B"
+  color_dark: "#0b0d1a"
   image_dark: assets/icons/light_icon.png
   android_12:
-    color: "#54C5F8"
-    color_dark: "#01579B"
-    icon_background_color: "#54C5F8"
-    icon_background_color_dark: "#01579B"
+    color: "#0b0d1a"
+    color_dark: "#0b0d1a"
+    icon_background_color: "#0b0d1a"
+    icon_background_color_dark: "#0b0d1a"
     image: assets/icons/dark_icon.png
     image_dark: assets/icons/light_icon.png
 
