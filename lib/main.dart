@@ -114,7 +114,7 @@ Future<void> _seedTestConfig(ProviderContainer container) async {
 
   container.read(serverUrlProvider.notifier).update(url);
   if (url.startsWith('https')) {
-    // Reverse-proxied https (e.g. suwayomi.example.com) needs no extra port.
+    // Reverse-proxied https servers need no extra port appended.
     container.read(serverPortToggleProvider.notifier).update(false);
   }
   container.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);
