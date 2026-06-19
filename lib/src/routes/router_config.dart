@@ -1,4 +1,3 @@
-import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -231,11 +230,12 @@ class QuickSearchRoute extends ShellRouteData {
   @override
   Widget builder(context, state, navigator) =>
       AnnotatedRegion<SystemUiOverlayStyle>(
-        value: FlexColorScheme.themedSystemNavigationBar(
-          context,
-          systemNavBarStyle: FlexSystemNavBarStyle.background,
-          useDivider: false,
-          opacity: 0.60,
+        value: SystemUiOverlayStyle(
+          systemNavigationBarColor: Theme.of(context)
+              .colorScheme
+              .surface
+              .withValues(alpha: 0.60),
+          systemNavigationBarDividerColor: Colors.transparent,
         ),
         child: SearchStackScreen(child: navigator),
       );

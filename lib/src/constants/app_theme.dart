@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
 
-/// App-level curated themes. Replaces direct use of the third-party
-/// `FlexScheme` enum. Dark hexes mirror ~/Projects/theme-kit/themes/*.css.
+/// App-level curated themes. Dark hexes mirror ~/Projects/theme-kit/themes/*.css.
 enum AppTheme {
   indigoNight,
   carbon,

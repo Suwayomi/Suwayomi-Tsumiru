@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
@@ -58,7 +57,6 @@ enum DBKeys {
   hideEmptyCategory(false),
   pinchToZoom(true),
   readerIgnoreSafeArea(false),
-  flexScheme(FlexScheme.material),
   appTheme(AppTheme.indigoNight),
   customThemeColor(0xFF7C7BFF),
   historyEnabled(true),
