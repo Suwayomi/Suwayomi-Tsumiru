@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -16,6 +18,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/async_buttons/async_text_button_icon.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
+import '../../../../../widgets/server_image.dart';
 import '../../../domain/manga/manga_model.dart';
 
 class MangaDescription extends HookConsumerWidget {
@@ -36,54 +39,67 @@ class MangaDescription extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MangaCoverDescriptiveListTile(
-          manga: manga,
-          showBadges: false,
-          onTitleClicked: (query) =>
-              GlobalSearchRoute(query: query).push(context),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              AsyncTextButtonIcon(
-                onPressed: () async {
-                  final val = await AsyncValue.guard(() async {
-                    if (manga.inLibrary.ifNull()) {
-                      await removeMangaFromLibrary();
-                    } else {
-                      await addMangaToLibrary();
-                    }
-                    await refresh();
-                  });
-                  if (context.mounted) {
-                    val.showToastOnError(ref.read(toastProvider));
-                  }
-                },
-                isPrimary: manga.inLibrary.ifNull(),
-                primaryIcon: const Icon(Icons.favorite_rounded),
-                secondaryIcon: const Icon(Icons.favorite_border_outlined),
-                secondaryStyle:
-                    TextButton.styleFrom(foregroundColor: Colors.grey),
-                primaryLabel: Text(context.l10n.inLibrary),
-                secondaryLabel: Text(context.l10n.addToLibrary),
-              ),
-              if (manga.realUrl.isNotBlank)
-                TextButton.icon(
-                  onPressed: () async {
-                    launchUrlInWeb(
-                      context,
-                      (manga.realUrl ?? ""),
-                      ref.read(toastProvider),
-                    );
-                  },
-                  icon: const Icon(Icons.public_rounded),
-                  style: TextButton.styleFrom(foregroundColor: Colors.grey),
-                  label: Text(context.l10n.webView),
+        Stack(
+          children: [
+            Positioned.fill(child: _CoverBackdrop(manga: manga)),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MangaCoverDescriptiveListTile(
+                  manga: manga,
+                  showBadges: false,
+                  onTitleClicked: (query) =>
+                      GlobalSearchRoute(query: query).push(context),
                 ),
-            ],
-          ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      AsyncTextButtonIcon(
+                        onPressed: () async {
+                          final val = await AsyncValue.guard(() async {
+                            if (manga.inLibrary.ifNull()) {
+                              await removeMangaFromLibrary();
+                            } else {
+                              await addMangaToLibrary();
+                            }
+                            await refresh();
+                          });
+                          if (context.mounted) {
+                            val.showToastOnError(ref.read(toastProvider));
+                          }
+                        },
+                        isPrimary: manga.inLibrary.ifNull(),
+                        primaryIcon: const Icon(Icons.favorite_rounded),
+                        secondaryIcon:
+                            const Icon(Icons.favorite_border_outlined),
+                        secondaryStyle:
+                            TextButton.styleFrom(foregroundColor: Colors.grey),
+                        primaryLabel: Text(context.l10n.inLibrary),
+                        secondaryLabel: Text(context.l10n.addToLibrary),
+                      ),
+                      if (manga.realUrl.isNotBlank)
+                        TextButton.icon(
+                          onPressed: () async {
+                            launchUrlInWeb(
+                              context,
+                              (manga.realUrl ?? ""),
+                              ref.read(toastProvider),
+                            );
+                          },
+                          icon: const Icon(Icons.public_rounded),
+                          style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey),
+                          label: Text(context.l10n.webView),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         if (manga.description.isNotBlank)
           Padding(
@@ -161,6 +177,56 @@ class MangaDescription extends HookConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Blurred, faded cover-art glow behind the manga-detail header (Komikku-style
+/// hero). The cover fills the header, is blurred + dimmed, then a vertical
+/// gradient fades it into the page surface so it blends into the chapter list.
+class _CoverBackdrop extends StatelessWidget {
+  const _CoverBackdrop({required this.manga});
+
+  final MangaDto manga;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = manga.thumbnailUrl ?? '';
+    if (url.isEmpty) return const SizedBox.shrink();
+    final surface = Theme.of(context).colorScheme.surface;
+    return IgnorePointer(
+      child: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: 0.25,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: 24,
+                  sigmaY: 24,
+                  tileMode: TileMode.decal,
+                ),
+                child: ServerImage(imageUrl: url, fit: BoxFit.cover),
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    surface.withValues(alpha: 0.0),
+                    surface.withValues(alpha: 0.55),
+                    surface,
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
