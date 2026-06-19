@@ -46,8 +46,10 @@ class AboutRepository {
     return gitResponse.copyWithData<Version?>(
       (data) {
         String? tag = data?["tag_name"];
-        Version? latestReleaseBuildNumber =
-            tag != null ? Version.parse(tag) : null;
+        // Release tags are "v0.4.0"; pub_semver can't parse the leading "v".
+        Version? latestReleaseBuildNumber = tag != null
+            ? Version.parse(tag.startsWith('v') ? tag.substring(1) : tag)
+            : null;
         Version? packageBuildNumber = Version.parse(packageInfo.version);
         if (latestReleaseBuildNumber != null &&
             latestReleaseBuildNumber
