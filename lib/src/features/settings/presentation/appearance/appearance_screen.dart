@@ -7,8 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_theme.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
+import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
 import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import 'widgets/is_true_black/is_true_black_tile.dart';
@@ -25,7 +27,15 @@ class AppearanceScreen extends ConsumerWidget {
         children: [
           const AppThemeModeTile(),
           if (themeMode != ThemeMode.light) const IsTrueBlackTile(),
-          const AppThemeSelector(),
+          const ThemeSelector(),
+          Consumer(
+            builder: (context, ref, _) {
+              final theme = ref.watch(appThemeKeyProvider);
+              return theme == AppTheme.custom
+                  ? const CustomColorTile()
+                  : const SizedBox.shrink();
+            },
+          ),
           const GridCoverWidthSlider(),
         ],
       ),

@@ -16,6 +16,7 @@ dependencies:
   cupertino_icons: ^1.0.5
   extension_type_unions: ^1.0.10
   file_picker: ^8.0.0+1
+  flex_color_picker: 3.7.1
   flex_color_scheme: ^8.2.0
   flutter:
     sdk: flutter
