@@ -2,7 +2,7 @@ name: tsumiru
 description: A manga reader client for Suwayomi Server.
 
 publish_to: "none"
-version: 0.6.4+27
+version: 0.6.4+28
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -108,18 +108,20 @@ flutter_native_splash:
 
 flutter_launcher_icons:
   android: "launcher_icon"
+  adaptive_icon_background: "#02061D"
+  adaptive_icon_foreground: "assets/icons/launcher/tsumiru_icon_fg.png"
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icons/launcher/sorayomi_icon.png"
-  image_path_ios: "assets/icons/launcher/ios_sorayomi_icon.png"
+  image_path: "assets/icons/launcher/tsumiru_icon.png"
+  image_path_ios: "assets/icons/launcher/tsumiru_icon.png"
   web:
     generate: true
-    image_path: "assets/icons/launcher/sorayomi_icon.png"
-    background_color: "#54C5F8"
-    theme_color: "#54C5F8"
+    image_path: "assets/icons/launcher/tsumiru_icon.png"
+    background_color: "#02061D"
+    theme_color: "#7c7bff"
   windows:
     generate: true
-    image_path: "assets/icons/launcher/sorayomi_icon.png"
+    image_path: "assets/icons/launcher/tsumiru_icon.png"
   macos:
     generate: true
-    image_path: "assets/icons/launcher/sorayomi_icon.png"
+    image_path: "assets/icons/launcher/tsumiru_icon.png"
