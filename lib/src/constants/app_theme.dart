@@ -15,6 +15,7 @@ enum AppTheme {
           (const Color(0xFF7C7BFF), const Color(0xFF33D6FF)),
         AppTheme.carbon => (const Color(0xFF19E6B0), const Color(0xFF22D3EE)),
         AppTheme.plum => (const Color(0xFFFF5DB1), const Color(0xFFFF9F5C)),
+        // placeholder swatch for the user-seeded custom theme
         AppTheme.custom =>
           (const Color(0xFF7C7BFF), const Color(0xFF33D6FF)),
       };

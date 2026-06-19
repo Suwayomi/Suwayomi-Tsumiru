@@ -141,6 +141,7 @@ class CustomColorTile extends ConsumerWidget {
           pickersEnabled: const {ColorPickerType.wheel: true},
           enableShadesSelection: false,
         );
+        if (!context.mounted) return;
         ref
             .read(customThemeColorProvider.notifier)
             .update(picked.toARGB32());

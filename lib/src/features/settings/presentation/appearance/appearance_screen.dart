@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_theme.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/section_title.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
@@ -27,6 +28,7 @@ class AppearanceScreen extends ConsumerWidget {
         children: [
           const AppThemeModeTile(),
           if (themeMode != ThemeMode.light) const IsTrueBlackTile(),
+          SectionTitle(title: context.l10n.appThemeTitle),
           const ThemeSelector(),
           Consumer(
             builder: (context, ref, _) {

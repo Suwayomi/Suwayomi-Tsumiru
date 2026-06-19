@@ -42,7 +42,7 @@ void main() {
       amoled: false,
     );
     // fromSeed maps a red seed to a reddish primary
-    expect(theme.colorScheme.primary.red,
-        greaterThan(theme.colorScheme.primary.blue));
+    expect(theme.colorScheme.primary.r,
+        greaterThan(theme.colorScheme.primary.b));
   });
 }
