@@ -32,7 +32,7 @@ enum DBKeys {
   infinityScrollingMode(false),
   scrollAnimation(true),
   showNSFW(true),
-  downloadedBadge(true),
+  downloadedBadge(false),
   unreadBadge(true),
   languageBadge(false),
   l10n(Locale('en')),
