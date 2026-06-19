@@ -1,4 +1,4 @@
-package com.suwayomi.tachidesk_sorayomi
+package io.github.aaronbamblett.tsumiru
 
 import io.flutter.embedding.android.FlutterActivity
 

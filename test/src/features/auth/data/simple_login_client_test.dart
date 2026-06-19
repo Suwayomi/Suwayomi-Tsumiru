@@ -3,7 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/simple_login_client.dart';
+import 'package:tsumiru/src/features/auth/data/simple_login_client.dart';
 
 void main() {
   group('SimpleLoginClient', () {

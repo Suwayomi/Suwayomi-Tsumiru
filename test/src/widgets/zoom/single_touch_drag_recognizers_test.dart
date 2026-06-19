@@ -12,7 +12,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/widgets/zoom/single_touch_drag_recognizers.dart';
+import 'package:tsumiru/src/widgets/zoom/single_touch_drag_recognizers.dart';
 
 const double _viewportWidth = 400.0;
 const double _viewportHeight = 800.0;

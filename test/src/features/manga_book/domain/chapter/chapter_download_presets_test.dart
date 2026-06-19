@@ -1,6 +1,6 @@
 // test/src/features/manga_book/domain/chapter/chapter_download_presets_test.dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/features/manga_book/domain/chapter/chapter_download_presets.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_download_presets.dart';
 
 ChapterDownloadCandidate _ch(
   int id,

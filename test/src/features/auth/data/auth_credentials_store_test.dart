@@ -5,8 +5,8 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/auth_credentials_store.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/secure_credentials_provider.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 
 /// Builds a minimal JWT with the given payload. Signature is a fixed
 /// placeholder; the decoder doesn't verify.

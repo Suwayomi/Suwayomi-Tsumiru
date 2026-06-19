@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 
 void main() {
   group('isLocalAddress', () {

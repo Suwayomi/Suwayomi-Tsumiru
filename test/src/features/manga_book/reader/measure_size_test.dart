@@ -13,7 +13,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/measure_size.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/measure_size.dart';
 
 void main() {
   testWidgets('reports the child height once laid out', (tester) async {

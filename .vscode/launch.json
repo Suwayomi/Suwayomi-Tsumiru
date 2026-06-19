@@ -5,18 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "tachidesk_sorayomi",
+            "name": "tsumiru",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "tachidesk_sorayomi (profile mode)",
+            "name": "tsumiru (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "tachidesk_sorayomi (release mode)",
+            "name": "tsumiru (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

@@ -3,9 +3,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart';
 import 'package:graphql/client.dart';
-import 'package:tachidesk_sorayomi/src/constants/enum.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/auth_coordinator.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/suwayomi_auth_link.dart';
+import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
+import 'package:tsumiru/src/features/auth/data/suwayomi_auth_link.dart';
 
 /// Records each downstream request and lets the test script the responses
 /// it returns. The next-in-link, after the SuwayomiAuthLink.

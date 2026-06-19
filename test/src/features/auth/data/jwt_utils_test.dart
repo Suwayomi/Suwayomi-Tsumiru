@@ -7,7 +7,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/jwt_utils.dart';
+import 'package:tsumiru/src/features/auth/data/jwt_utils.dart';
 
 /// Builds a JWT with the given payload. The signature segment is a fixed
 /// placeholder — these tests don't verify, so any non-empty string works.

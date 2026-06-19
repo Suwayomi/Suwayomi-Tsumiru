@@ -17,7 +17,7 @@ on:
       - "v*.*.*"
 
 env:
-  pkg_name: tachidesk-sorayomi
+  pkg_name: tsumiru
   # Pinned to the project's toolchain — newer Flutter breaks the Dart 3.8 deps.
   flutter_version: "3.32.4"
 

@@ -1,8 +1,8 @@
 import 'dart:io' show HandshakeException;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/auth_coordinator.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/simple_login_client.dart';
+import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
+import 'package:tsumiru/src/features/auth/data/simple_login_client.dart';
 
 void main() {
   group('classifyAuthError', () {

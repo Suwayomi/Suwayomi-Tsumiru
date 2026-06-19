@@ -3,7 +3,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tachidesk_sorayomi/src/features/auth/data/basic_auth_migration.dart';
+import 'package:tsumiru/src/features/auth/data/basic_auth_migration.dart';
 
 class _InMemorySecureStorage implements FlutterSecureStorage {
   final Map<String, String> _store = {};

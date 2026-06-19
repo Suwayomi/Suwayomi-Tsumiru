@@ -21,14 +21,14 @@ targets:
               type: MultipartFile
               fromJsonFunctionName: fileFromJson
               toJsonFunctionName: fileToJson
-              import: package:tachidesk_sorayomi/src/utils/misc/scalars.dart
+              import: package:tsumiru/src/utils/misc/scalars.dart
             LongString:
               type: String
               fromJsonFunctionName: longStringFromJson
               toJsonFunctionName: longStringToJson
-              import: package:tachidesk_sorayomi/src/utils/misc/scalars.dart
+              import: package:tsumiru/src/utils/misc/scalars.dart
             Cursor:
               type: int
               fromJsonFunctionName: cursorFromJson
               toJsonFunctionName: cursorToJson
-              import: package:tachidesk_sorayomi/src/utils/misc/scalars.dart
+              import: package:tsumiru/src/utils/misc/scalars.dart
