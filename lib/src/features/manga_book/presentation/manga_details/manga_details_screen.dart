@@ -17,6 +17,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -267,8 +268,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               : null,
           floatingActionButton:
               firstUnreadChapter != null && selectedChapters.value.isEmpty
-                  ? FloatingActionButton.extended(
-                      isExtended: context.isTablet,
+                  ? BrandFab(
                       label: Text(
                         data?.lastReadChapter?.index != null
                             ? context.l10n.resume
