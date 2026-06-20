@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tsumiru — Indigo Night design playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ===== Indigo Night tokens — VERBATIM from theme-kit/themes/indigo.css ===== */
+:root{
+  --bg:#0b0d1a; --bg2:#11142a;
+  --panel:rgba(255,255,255,.04); --panel-brd:rgba(255,255,255,.08);
+  --ink:#eef0fb; --muted:#9aa0c4; --faint:#6b7099;
+  --accent:#7c7bff; --accent2:#33d6ff; --glow:rgba(124,123,255,.35);
+  --success:#34e0a1; --warning:#ffcf5c; --info:#2dd4bf; --danger:#ff6b6b;
+  --grad:linear-gradient(135deg,#7c7bff,#33d6ff);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+/* hide scrollbars everywhere (scroll still works via wheel/touch) */
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{width:0;height:0;display:none}
+html,body{height:100%}
+body{font-family:var(--font);background:#05060f;color:var(--ink);display:flex;height:100vh;overflow:hidden}
+
+/* ===== Controls panel ===== */
+.controls{width:330px;flex:none;background:#0a0c18;border-right:1px solid var(--panel-brd);
+  padding:18px 18px 28px;overflow-y:auto}
+.controls h1{font-size:15px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+.controls .sub{color:var(--faint);font-size:12px;margin-bottom:16px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.presets button{flex:1;min-width:80px;padding:9px 8px;border-radius:10px;border:1px solid var(--panel-brd);
+  background:rgba(255,255,255,.04);color:var(--ink);font:600 12px var(--font);cursor:pointer}
+.presets button:hover{border-color:var(--accent);background:rgba(124,123,255,.12)}
+.grp{margin-bottom:15px}
+.grp label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.grp label b{color:var(--accent2);font-weight:700}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--panel-brd);background:rgba(255,255,255,.03);
+  color:var(--muted);font:600 11px var(--font);cursor:pointer}
+.seg button.on{background:rgba(124,123,255,.16);border-color:var(--accent);color:var(--ink)}
+.out{margin-top:8px;background:#06070f;border:1px solid var(--panel-brd);border-radius:10px;padding:12px}
+.out .o{font:12px/1.5 var(--font);color:var(--muted)}
+.out button{margin-top:10px;width:100%;padding:9px;border-radius:9px;border:none;background:var(--grad);
+  color:#fff;font:700 12px var(--font);cursor:pointer}
+
+/* ===== Stage ===== */
+.stage{flex:1;display:grid;place-items:center;overflow:auto;padding:30px}
+
+/* phone — driven by --p* vars set from JS */
+.phone{
+  --pBlur:14px; --pOpacity:.7; --pTint:.55; --pGlow:22px; --pGlowA:.45; --pDepth:.6;
+  width:392px;height:760px;border-radius:34px;overflow:hidden;position:relative;background:var(--bg);
+  box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 1px var(--panel-brd);
+}
+.scroll{position:absolute;inset:0;overflow-y:auto}
+
+.hero{position:relative;padding:0 16px 16px;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:var(--coverbg);
+  filter:blur(var(--pBlur)) saturate(1.25);transform:scale(1.3);opacity:var(--pOpacity)}
+.hero::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(11,13,26,.05),rgba(11,13,26,.45) 62%,rgba(11,13,26,.92) 86%,var(--bg)),
+  linear-gradient(180deg,rgba(124,123,255,calc(.28*var(--pTint))),rgba(51,214,255,calc(.10*var(--pTint))) 55%,transparent 72%)}
+.hero>*{position:relative;z-index:1}
+.appbar{display:flex;gap:6px;align-items:center;padding:14px 0 22px}
+.appbar .sp{flex:1}
+.ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:var(--ink);font-size:17px;
+  background:rgba(255,255,255,.06);border:1px solid var(--panel-brd);backdrop-filter:blur(8px)}
+.head{display:flex;gap:15px}
+.cover{width:112px;height:160px;border-radius:14px;flex:none;position:relative;overflow:hidden;background:var(--coverbg);
+  box-shadow:0 14px 32px rgba(0,0,0,.55),0 0 0 1px var(--panel-brd)}
+.cover .rom{position:absolute;bottom:8px;left:0;right:0;text-align:center;font:800 italic 17px var(--font);
+  color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+.title{font:800 22px/1.15 var(--font);letter-spacing:-.01em;padding-top:4px}
+.author{font:600 14px var(--font);margin-top:7px}
+.status{color:var(--muted);font-size:12.5px;margin-top:6px}
+.status b{color:var(--accent2);font-weight:700}
+
+.actions{display:flex;gap:10px;padding:16px}
+.btn{flex:1;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;
+  font:600 14px var(--font);cursor:pointer;border:1px solid var(--panel-brd);background:rgba(255,255,255,.05);color:var(--ink)}
+.btn.primary{background:var(--grad);border:none;color:#fff;
+  box-shadow:0 8px var(--pGlow) rgba(124,123,255,var(--pGlowA)),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn .h{color:var(--accent)}
+
+.desc{padding:6px 16px 0;color:var(--muted);font-size:13.5px;line-height:1.55;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.chips{display:flex;gap:8px;padding:14px 16px 6px;overflow-x:auto}
+.chip{flex:none;padding:7px 13px;border-radius:11px;font:500 13px var(--font);color:var(--ink)}
+/* chip styles toggled by .phone[data-chip] */
+.phone[data-chip="glass"] .chip{background:rgba(124,123,255,.12);border:1px solid rgba(124,123,255,.34);
+  box-shadow:0 0 14px rgba(124,123,255,calc(.12*var(--pDepth)))}
+.phone[data-chip="glass"] .chip:nth-child(even){background:rgba(51,214,255,.10);border-color:rgba(51,214,255,.32)}
+.phone[data-chip="gradient"] .chip{background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(124,123,255,.30)}
+.phone[data-chip="outline"] .chip{background:transparent;border:1px solid var(--panel-brd);color:var(--muted)}
+
+.barhead{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 8px}
+.barhead h3{font:700 16px var(--font)}
+.barhead .pill{font:600 12px var(--font);color:var(--accent2);background:rgba(51,214,255,.10);
+  border:1px solid rgba(51,214,255,.28);padding:3px 11px;border-radius:20px}
+.chap{display:flex;align-items:center;gap:12px;padding:13px 16px;
+  border-bottom:1px solid rgba(255,255,255,calc(.05*var(--pDepth)))}
+.chap .n{font:600 15px var(--font)}
+.chap.read .n{color:var(--muted)}
+.chap .d{color:var(--faint);font-size:12.5px;margin-top:3px}
+.chap .grow{flex:1}
+.ck{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;color:#04121a;
+  background:var(--grad);box-shadow:0 0 12px rgba(124,123,255,calc(.5*var(--pGlowA)))}
+.ck.un{background:transparent;border:1.5px solid var(--faint);color:var(--faint)}
+.fab{position:absolute;right:18px;bottom:20px;height:52px;border-radius:18px;padding:0 20px;display:flex;align-items:center;
+  gap:9px;font:700 14px var(--font);color:#fff;background:var(--grad);
+  box-shadow:0 12px var(--pGlow) rgba(124,123,255,var(--pGlowA)),inset 0 1px 0 rgba(255,255,255,.3);cursor:pointer}
+.gl{font-family:'Segoe UI Symbol',sans-serif}
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>Tsumiru · Indigo Night</h1>
+  <div class="sub">Dial the look, then hit “Copy direction” and paste it back to me.</div>
+
+  <div class="presets">
+    <button data-preset="subtle">Subtle</button>
+    <button data-preset="immersive">Immersive</button>
+    <button data-preset="maxglow">Max glow</button>
+  </div>
+
+  <div class="grp"><label>Hero blur <b id="vBlur"></b></label><input id="blur" type="range" min="0" max="40" step="1"></div>
+  <div class="grp"><label>Hero cover opacity <b id="vOpacity"></b></label><input id="opacity" type="range" min="0" max="100" step="1"></div>
+  <div class="grp"><label>Indigo tint <b id="vTint"></b></label><input id="tint" type="range" min="0" max="100" step="1"></div>
+  <div class="grp"><label>Glow strength <b id="vGlow"></b></label><input id="glow" type="range" min="0" max="100" step="1"></div>
+  <div class="grp"><label>Surface depth / borders <b id="vDepth"></b></label><input id="depth" type="range" min="0" max="100" step="1"></div>
+  <div class="grp"><label>Genre chip style</label>
+    <div class="seg" id="chipSeg">
+      <button data-chip="glass">Glass</button>
+      <button data-chip="gradient">Gradient</button>
+      <button data-chip="outline">Outline</button>
+    </div>
+  </div>
+  <div class="grp"><label>Sample cover palette</label>
+    <div class="seg" id="coverSeg">
+      <button data-cover="fire">Fire</button>
+      <button data-cover="cool">Cool</button>
+      <button data-cover="violet">Violet</button>
+    </div>
+  </div>
+
+  <div class="out">
+    <div class="o" id="prompt"></div>
+    <button id="copy">Copy direction</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="phone" id="phone" data-chip="glass">
+    <div class="scroll">
+      <div class="hero">
+        <div class="appbar">
+          <div class="ic gl">←</div><div class="sp"></div>
+          <div class="ic gl">⤓</div><div class="ic gl">⛃</div><div class="ic gl">⋮</div>
+        </div>
+        <div class="head">
+          <div class="cover"><span class="rom">STREAM</span></div>
+          <div>
+            <div class="title">Reincarnator's Stream</div>
+            <div class="author">Heuk Ain</div>
+            <div class="status"><b class="gl">◷</b> Ongoing · Asura Scans (EN)</div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="btn primary"><span class="gl">♥</span> In Library</div>
+        <div class="btn"><span class="gl">🌐</span> Web View</div>
+      </div>
+      <div class="desc">Narukami Subaru, the strongest player and the Master of Lightning, was betrayed and killed by a trusted friend while conquering the Tower. After using up all his power to save his comrades, he dies — yet wakes 20 years in the past…</div>
+      <div class="chips">
+        <span class="chip">Action</span><span class="chip">Adventure</span><span class="chip">Fantasy</span><span class="chip">Murim</span><span class="chip">Reincarnation</span>
+      </div>
+      <div class="barhead"><h3>Chapters</h3><span class="pill">54 total</span></div>
+      <div class="chap read"><div><div class="n">Chapter 54</div><div class="d">6 days ago</div></div><div class="grow"></div><div class="ck gl">✓</div></div>
+      <div class="chap read"><div><div class="n">Chapter 53</div><div class="d">Jun 6, 2026</div></div><div class="grow"></div><div class="ck gl">✓</div></div>
+      <div class="chap"><div><div class="n">Chapter 52</div><div class="d">May 30, 2026</div></div><div class="grow"></div><div class="ck un gl">✓</div></div>
+      <div class="chap"><div><div class="n">Chapter 51</div><div class="d">May 23, 2026</div></div><div class="grow"></div><div class="ck un gl">✓</div></div>
+      <div class="chap"><div><div class="n">Chapter 50</div><div class="d">May 16, 2026</div></div><div class="grow"></div><div class="ck un gl">✓</div></div>
+      <div style="height:90px"></div>
+    </div>
+    <div class="fab"><span class="gl">▶</span> Resume</div>
+  </div>
+</div>
+
+<script>
+const COVERS={
+  fire:"radial-gradient(120% 90% at 30% 0%, #ff8a3d 0%, #b3253a 34%, #2b1550 62%, #0b0d1a 82%)",
+  cool:"radial-gradient(120% 90% at 30% 0%, #33d6ff 0%, #3a5bd0 34%, #221a55 62%, #0b0d1a 82%)",
+  violet:"radial-gradient(120% 90% at 30% 0%, #b06bff 0%, #6a2bd0 34%, #1b1240 62%, #0b0d1a 82%)",
+};
+const DEFAULTS={blur:14,opacity:70,tint:55,glow:48,depth:60,chip:"glass",cover:"fire"};
+const PRESETS={
+  subtle:{blur:24,opacity:42,tint:30,glow:24,depth:40,chip:"glass",cover:"fire"},
+  immersive:{blur:14,opacity:72,tint:55,glow:48,depth:60,chip:"glass",cover:"fire"},
+  maxglow:{blur:9,opacity:88,tint:48,glow:90,depth:85,chip:"gradient",cover:"violet"},
+};
+const state={...PRESETS.immersive};
+const $=id=>document.getElementById(id);
+const phone=$('phone');
+
+function render(){
+  phone.style.setProperty('--pBlur',state.blur+'px');
+  phone.style.setProperty('--pOpacity',(state.opacity/100).toFixed(2));
+  phone.style.setProperty('--pTint',(state.tint/100).toFixed(2));
+  // glow: 0..100 → blur 6..40px and alpha .15...7
+  phone.style.setProperty('--pGlow',(6+state.glow*0.34).toFixed(0)+'px');
+  phone.style.setProperty('--pGlowA',(0.15+state.glow*0.0055).toFixed(2));
+  phone.style.setProperty('--pDepth',(state.depth/100).toFixed(2));
+  phone.style.setProperty('--coverbg',COVERS[state.cover]);
+  phone.setAttribute('data-chip',state.chip);
+  $('vBlur').textContent=state.blur+'px';
+  $('vOpacity').textContent=state.opacity+'%';
+  $('vTint').textContent=state.tint+'%';
+  $('vGlow').textContent=state.glow+'%';
+  $('vDepth').textContent=state.depth+'%';
+  $('blur').value=state.blur;$('opacity').value=state.opacity;$('tint').value=state.tint;
+  $('glow').value=state.glow;$('depth').value=state.depth;
+  document.querySelectorAll('#chipSeg button').forEach(b=>b.classList.toggle('on',b.dataset.chip===state.chip));
+  document.querySelectorAll('#coverSeg button').forEach(b=>b.classList.toggle('on',b.dataset.cover===state.cover));
+  prompt();
+}
+function prompt(){
+  const p=[];
+  p.push(`hero blur ${state.blur}px`, `cover opacity ${state.opacity}%`, `indigo tint ${state.tint}%`);
+  p.push(state.glow>70?'strong glow':state.glow>35?'medium glow':'subtle glow', `(${state.glow}%)`);
+  p.push(`surface depth ${state.depth}%`, `${state.chip} chips`);
+  $('prompt').textContent='Implement the Indigo Night manga-detail with: '+p.join(', ')+'. Gradient+glow on primary button & FAB, glass app bar, exact theme-kit colors.';
+}
+['blur','opacity','tint','glow','depth'].forEach(k=>$(k).addEventListener('input',e=>{state[k]=+e.target.value;render();}));
+document.querySelectorAll('#chipSeg button').forEach(b=>b.onclick=()=>{state.chip=b.dataset.chip;render();});
+document.querySelectorAll('#coverSeg button').forEach(b=>b.onclick=()=>{state.cover=b.dataset.cover;render();});
+document.querySelectorAll('.presets button').forEach(b=>b.onclick=()=>{Object.assign(state,PRESETS[b.dataset.preset]);render();});
+$('copy').onclick=()=>{navigator.clipboard.writeText($('prompt').textContent);$('copy').textContent='Copied!';setTimeout(()=>$('copy').textContent='Copy direction',1200);};
+render();
+</script>
+</body>
+</html>
