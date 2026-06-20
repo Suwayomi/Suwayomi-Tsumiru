@@ -4,7 +4,7 @@ The largest feature area (~103 files). Split into two persistence tiers: **clien
 
 ## Structure & routing
 
-Entry is the "More" tab (`more_screen.dart`, a shell-nav destination) — it inlines `ServerUrlTile` + `AppThemeModeTile`, then links to `BackupRoute` and `SettingsRoute`. `SettingsScreen` is the hub for eight sections:
+Entry is the "More" tab (`more_screen.dart`, a shell-nav destination) — it inlines `ServerUrlTile`, links to Categories/History, an **Appearance** shortcut (`AppearanceSettingsRoute` — theming lives there, not inline), then `BackupRoute` and `SettingsRoute`. `SettingsScreen` is the hub for eight sections:
 
 | Section | Screen |
 |---|---|
@@ -39,5 +39,5 @@ Entry is the "More" tab (`more_screen.dart`, a shell-nav destination) — it inl
 - **`serverPortToggleProvider` is architecture-critical** — it globally gates whether the port is appended to all API URLs (`Endpoints.baseApi(..., addPort:)`). Defaults `true` (non-web).
 - **`backup_settings_repository.dart:47` copy-paste bug** — `includeChapters` is set to `includeCategories`; the user's `includeChapters` choice is never sent.
 - **`reader_continuous_reading_tile.dart` is an empty (0-byte) file** — dead placeholder.
-- **`more_screen.dart` ≠ `settings_screen.dart`** — MoreScreen is a main tab with its own inline URL/theme tiles (same providers as the Server section).
+- **`more_screen.dart` ≠ `settings_screen.dart`** — MoreScreen is a main tab with an inline `ServerUrlTile` (same provider as the Server section) plus an Appearance shortcut; the old duplicate theme-mode tile was removed so theming lives only under Appearance.
 - **Server-side sections silently show nothing if the server is offline** (no error UI).
