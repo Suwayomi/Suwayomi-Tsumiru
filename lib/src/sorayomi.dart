@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
@@ -54,6 +55,7 @@ class Sorayomi extends ConsumerWidget {
           amoled: isTrueBlack,
         ),
         themeMode: themeMode ?? ThemeMode.system,
+        scrollBehavior: const AppScrollBehavior(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: appLocale,
@@ -61,4 +63,21 @@ class Sorayomi extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// App-wide scroll behavior that lets the **mouse and trackpad** drag-scroll
+/// (Flutter's desktop default only scrolls via wheel/touch). Fixes click-drag
+/// on every scrollable — the theme picker, the webtoon reader, lists, etc.
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.unknown,
+      };
 }
