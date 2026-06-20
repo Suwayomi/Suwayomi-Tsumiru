@@ -23,6 +23,8 @@ ThemeData buildAppTheme({
 
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;
+  // A lighter, more vibrant blue for text/outline actions (Uninstall, links…).
+  final brightPrimary = Color.lerp(primary, Colors.white, 0.22)!;
 
   ButtonStyle filledLike() => ButtonStyle(
         backgroundColor: WidgetStatePropertyAll(primary),
@@ -116,11 +118,17 @@ ThemeData buildAppTheme({
       overlayColor: primary.withValues(alpha: 0.18),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: primary),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
     filledButtonTheme: FilledButtonThemeData(style: filledLike()),
     elevatedButtonTheme: ElevatedButtonThemeData(style: filledLike()),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: WidgetStatePropertyAll(primary),
+        foregroundColor: WidgetStatePropertyAll(brightPrimary),
         side: WidgetStatePropertyAll(
           BorderSide(color: primary.withValues(alpha: 0.5)),
         ),
@@ -130,7 +138,8 @@ ThemeData buildAppTheme({
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: ButtonStyle(foregroundColor: WidgetStatePropertyAll(primary)),
+      style:
+          ButtonStyle(foregroundColor: WidgetStatePropertyAll(brightPrimary)),
     ),
   );
 }

@@ -42,70 +42,65 @@ class MangaDescription extends HookConsumerWidget {
         Stack(
           children: [
             Positioned.fill(child: _CoverBackdrop(manga: manga)),
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.paddingOf(context).top + kToolbarHeight,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MangaCoverDescriptiveListTile(
-                    manga: manga,
-                    showBadges: false,
-                    onTitleClicked: (query) =>
-                        GlobalSearchRoute(query: query).push(context),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GradientButton(
-                            icon: Icon(
-                              manga.inLibrary.ifNull()
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                            ),
-                            label: Text(
-                              manga.inLibrary.ifNull()
-                                  ? context.l10n.inLibrary
-                                  : context.l10n.addToLibrary,
-                            ),
-                            onPressed: () async {
-                              final val = await AsyncValue.guard(() async {
-                                if (manga.inLibrary.ifNull()) {
-                                  await removeMangaFromLibrary();
-                                } else {
-                                  await addMangaToLibrary();
-                                }
-                                await refresh();
-                              });
-                              if (context.mounted) {
-                                val.showToastOnError(ref.read(toastProvider));
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MangaCoverDescriptiveListTile(
+                  manga: manga,
+                  showBadges: false,
+                  onTitleClicked: (query) =>
+                      GlobalSearchRoute(query: query).push(context),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GradientButton(
+                          icon: Icon(
+                            manga.inLibrary.ifNull()
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                          ),
+                          label: Text(
+                            manga.inLibrary.ifNull()
+                                ? context.l10n.inLibrary
+                                : context.l10n.addToLibrary,
+                          ),
+                          onPressed: () async {
+                            final val = await AsyncValue.guard(() async {
+                              if (manga.inLibrary.ifNull()) {
+                                await removeMangaFromLibrary();
+                              } else {
+                                await addMangaToLibrary();
                               }
-                            },
+                              await refresh();
+                            });
+                            if (context.mounted) {
+                              val.showToastOnError(ref.read(toastProvider));
+                            }
+                          },
+                        ),
+                      ),
+                      if (manga.realUrl.isNotBlank) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: GlassButton(
+                            icon: const Icon(Icons.public_rounded),
+                            label: Text(context.l10n.webView),
+                            onPressed: () => launchUrlInWeb(
+                              context,
+                              (manga.realUrl ?? ""),
+                              ref.read(toastProvider),
+                            ),
                           ),
                         ),
-                        if (manga.realUrl.isNotBlank) ...[
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: GlassButton(
-                              icon: const Icon(Icons.public_rounded),
-                              label: Text(context.l10n.webView),
-                              onPressed: () => launchUrlInWeb(
-                                context,
-                                (manga.realUrl ?? ""),
-                                ref.read(toastProvider),
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
