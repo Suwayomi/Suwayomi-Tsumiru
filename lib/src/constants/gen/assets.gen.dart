@@ -53,6 +53,14 @@ class $AssetsIconsLauncherGen {
   AssetGenImage get sorayomiPreviewIcon =>
       const AssetGenImage('assets/icons/launcher/sorayomi_preview_icon.png');
 
+  /// File path: assets/icons/launcher/tsumiru_icon.png
+  AssetGenImage get tsumiruIcon =>
+      const AssetGenImage('assets/icons/launcher/tsumiru_icon.png');
+
+  /// File path: assets/icons/launcher/tsumiru_icon_fg.png
+  AssetGenImage get tsumiruIconFg =>
+      const AssetGenImage('assets/icons/launcher/tsumiru_icon_fg.png');
+
   /// List of all assets
   List<dynamic> get values => [
     fromSuwayomi,
@@ -60,6 +68,8 @@ class $AssetsIconsLauncherGen {
     sorayomiIconIco,
     sorayomiIconPng,
     sorayomiPreviewIcon,
+    tsumiruIcon,
+    tsumiruIconFg,
   ];
 }
 

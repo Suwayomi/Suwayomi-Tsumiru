@@ -94,7 +94,7 @@ class ChapterListTile extends StatelessWidget {
         ),
         selectedColor: context.theme.colorScheme.onSurface,
         selectedTileColor:
-            context.theme.colorScheme.primary.withValues(alpha: 0.18),
+            context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
         selected: isSelected,
         onTap: canTapSelect
             ? () => toggleSelect(chapter)

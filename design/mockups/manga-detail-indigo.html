@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="indigo">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tsumiru — Indigo Night design target</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ── Indigo Night tokens (verbatim from theme-kit/themes/indigo.css) ── */
+:root{
+  --radius:16px; --radius-sm:10px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --bg:#0b0d1a; --bg2:#11142a;
+  --panel:rgba(255,255,255,.04); --panel-brd:rgba(255,255,255,.08);
+  --ink:#eef0fb; --muted:#9aa0c4; --faint:#6b7099;
+  --accent:#7c7bff; --accent2:#33d6ff; --glow:rgba(124,123,255,.35);
+  --success:#34e0a1; --warning:#ffcf5c; --info:#2dd4bf; --danger:#ff6b6b;
+  --grad:linear-gradient(135deg,#7c7bff,#33d6ff);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font); background:#05060f;
+  display:flex; justify-content:center; gap:28px; flex-wrap:wrap;
+  padding:28px 16px 60px; color:var(--ink);
+}
+.phone{
+  width:390px; border-radius:32px; overflow:hidden; background:var(--bg);
+  box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px var(--panel-brd);
+  position:relative;
+}
+.label{width:100%;text-align:center;color:var(--faint);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+
+/* ── Immersive hero ── */
+.hero{position:relative; padding:0 16px 18px; overflow:hidden}
+.hero::before{ /* blurred cover backdrop */
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(120% 90% at 30% 0%, #ff8a3d 0%, #b3253a 32%, #2b1550 60%, transparent 78%),
+    radial-gradient(90% 70% at 90% 10%, var(--accent2) 0%, transparent 55%);
+  filter:blur(26px) saturate(1.25); transform:scale(1.25); opacity:.85;
+}
+.hero::after{ /* indigo tint + fade to surface */
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg,
+    rgba(11,13,26,.12) 0%,
+    rgba(11,13,26,.18) 38%,
+    rgba(11,13,26,.78) 80%,
+    var(--bg) 100%),
+    linear-gradient(180deg, rgba(124,123,255,.20), rgba(51,214,255,.06) 50%, transparent 70%);
+}
+.hero>*{position:relative;z-index:1}
+
+.appbar{display:flex;align-items:center;gap:6px;padding:14px 2px 22px}
+.appbar .sp{flex:1}
+.icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--ink);
+  font-size:18px;background:rgba(255,255,255,.06);border:1px solid var(--panel-brd);backdrop-filter:blur(8px)}
+.icon:hover{background:rgba(255,255,255,.10)}
+
+.head{display:flex;gap:16px}
+.cover{width:118px;height:168px;border-radius:14px;flex:none;overflow:hidden;position:relative;
+  box-shadow:0 12px 30px rgba(0,0,0,.55), 0 0 0 1px var(--panel-brd);
+  background:linear-gradient(160deg,#1a1030,#3a1220 55%,#ff7a2d)}
+.cover .live{position:absolute;top:6px;left:6px;background:#e23b3b;color:#fff;font-size:9px;font-weight:700;
+  padding:2px 6px;border-radius:6px;letter-spacing:.06em}
+.cover .romaji{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-weight:800;font-style:italic;
+  color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);font-size:18px;letter-spacing:.02em}
+.meta{padding-top:4px}
+.title{font-size:23px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+.author{color:var(--ink);opacity:.92;font-weight:600;margin-top:8px;font-size:14px}
+.status{color:var(--muted);font-size:13px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.dot{color:var(--accent2)}
+
+/* ── Actions ── */
+.actions{display:flex;gap:10px;padding:18px 16px 4px}
+.btn{flex:1;height:46px;border-radius:14px;border:1px solid var(--panel-brd);
+  display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:14px;
+  background:rgba(255,255,255,.05);color:var(--ink);cursor:pointer}
+.btn.glass:hover{background:rgba(255,255,255,.09);border-color:rgba(124,123,255,.5)}
+.btn.grad{background:var(--grad);border:none;color:#fff;box-shadow:0 8px 22px var(--glow), inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.grad:hover{filter:brightness(1.06)}
+.btn .heart{color:var(--accent)}
+
+/* ── Description + chips ── */
+.section{padding:16px 16px 4px}
+.desc{color:var(--muted);font-size:13.5px;line-height:1.55;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.chips{display:flex;gap:8px;padding:14px 16px 8px;overflow-x:auto}
+.chip{flex:none;padding:7px 13px;border-radius:11px;font-size:13px;font-weight:500;color:var(--ink);
+  background:rgba(124,123,255,.12); border:1px solid rgba(124,123,255,.34);
+  box-shadow:0 0 14px rgba(124,123,255,.10)}
+.chip.cy{background:rgba(51,214,255,.10);border-color:rgba(51,214,255,.32);box-shadow:0 0 14px rgba(51,214,255,.10)}
+
+/* ── Chapters ── */
+.barhead{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 8px}
+.barhead h3{font-size:16px;font-weight:700}
+.barhead .pill{font-size:12px;color:var(--accent2);background:rgba(51,214,255,.10);
+  border:1px solid rgba(51,214,255,.28);padding:3px 10px;border-radius:20px}
+.chap{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.045)}
+.chap:hover{background:rgba(124,123,255,.06)}
+.chap .n{font-weight:600;font-size:15px}
+.chap .d{color:var(--faint);font-size:12.5px;margin-top:3px}
+.chap .grow{flex:1}
+.check{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;color:#04121a;
+  background:var(--grad);box-shadow:0 0 12px var(--glow)}
+.check.un{background:transparent;border:1.5px solid var(--faint);color:var(--faint)}
+.chap.read .n{color:var(--muted)}
+
+/* ── FAB ── */
+.fab{position:absolute;right:18px;bottom:20px;height:54px;border-radius:18px;padding:0 20px;
+  display:flex;align-items:center;gap:9px;font-weight:700;color:#fff;background:var(--grad);
+  box-shadow:0 12px 30px var(--glow), inset 0 1px 0 rgba(255,255,255,.3);cursor:pointer}
+.glyph{font-family:'Segoe UI Symbol',sans-serif}
+</style>
+</head>
+<body>
+
+<div style="width:100%;max-width:840px">
+  <p class="label">Tsumiru · Indigo Night — design target (manga detail)</p>
+</div>
+
+<div class="phone">
+  <div class="hero">
+    <div class="appbar">
+      <div class="icon glyph">←</div>
+      <div class="sp"></div>
+      <div class="icon glyph">⤓</div>
+      <div class="icon glyph">⛃</div>
+      <div class="icon glyph">⋮</div>
+    </div>
+    <div class="head">
+      <div class="cover">
+        <span class="live glyph">● LIVE</span>
+        <span class="romaji">STREAM</span>
+      </div>
+      <div class="meta">
+        <div class="title">Reincarnator's<br>Stream</div>
+        <div class="author">Heuk Ain</div>
+        <div class="status"><span class="dot glyph">◷</span> Ongoing · Asura Scans (EN)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <div class="btn glass"><span class="heart glyph">♥</span> In Library</div>
+    <div class="btn glass"><span class="glyph">🌐</span> Web View</div>
+  </div>
+
+  <div class="section">
+    <p class="desc">Narukami Subaru, the strongest player and the Master of Lightning, was betrayed and killed by a trusted friend while conquering the Tower. After using up all his power to save his comrades, he dies — yet somehow wakes 20 years in the past…</p>
+  </div>
+
+  <div class="chips">
+    <span class="chip">Action</span>
+    <span class="chip cy">Adventure</span>
+    <span class="chip">Fantasy</span>
+    <span class="chip cy">Murim</span>
+    <span class="chip">Reincarnation</span>
+  </div>
+
+  <div class="barhead">
+    <h3>Chapters</h3>
+    <span class="pill">54 total</span>
+  </div>
+
+  <div class="chap read"><div><div class="n">Chapter 54</div><div class="d">6 days ago</div></div><div class="grow"></div><div class="check glyph">✓</div></div>
+  <div class="chap read"><div><div class="n">Chapter 53</div><div class="d">Jun 6, 2026</div></div><div class="grow"></div><div class="check glyph">✓</div></div>
+  <div class="chap read"><div><div class="n">Chapter 52</div><div class="d">May 30, 2026</div></div><div class="grow"></div><div class="check glyph">✓</div></div>
+  <div class="chap"><div><div class="n">Chapter 51</div><div class="d">May 23, 2026</div></div><div class="grow"></div><div class="check un glyph">✓</div></div>
+  <div class="chap"><div><div class="n">Chapter 50</div><div class="d">May 16, 2026</div></div><div class="grow"></div><div class="check un glyph">✓</div></div>
+  <div class="chap"><div><div class="n">Chapter 49</div><div class="d">May 9, 2026</div></div><div class="grow"></div><div class="check un glyph">✓</div></div>
+  <div style="height:80px"></div>
+
+  <div class="fab"><span class="glyph">▶</span> Resume</div>
+</div>
+
+</body>
+</html>

@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
@@ -16,7 +17,6 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -267,53 +267,20 @@ class MangaDetailsScreen extends HookConsumerWidget {
               : null,
           floatingActionButton:
               firstUnreadChapter != null && selectedChapters.value.isEmpty
-                  ? Builder(
-                      builder: (context) {
-                        final cs = Theme.of(context).colorScheme;
-                        final label = data?.lastReadChapter?.index != null
+                  ? FloatingActionButton.extended(
+                      isExtended: context.isTablet,
+                      label: Text(
+                        data?.lastReadChapter?.index != null
                             ? context.l10n.resume
-                            : context.l10n.start;
-                        return DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: brandGradient(cs),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: brandGlow(cs, opacity: 0.5, blur: 24),
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(18),
-                              onTap: () => ReaderRoute(
-                                mangaId: firstUnreadChapter.mangaId,
-                                chapterId: firstUnreadChapter.id,
-                                showReaderLayoutAnimation: true,
-                              ).push(context),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: context.isTablet ? 20 : 16,
-                                  vertical: 14,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.play_arrow_rounded,
-                                        color: Colors.white),
-                                    if (context.isTablet) ...[
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        label,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
+                            : context.l10n.start,
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      onPressed: () {
+                        ReaderRoute(
+                          mangaId: firstUnreadChapter.mangaId,
+                          chapterId: firstUnreadChapter.id,
+                          showReaderLayoutAnimation: true,
+                        ).push(context);
                       },
                     )
                   : null,
