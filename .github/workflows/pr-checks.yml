@@ -1,0 +1,27 @@
+# Auto-check on every proposed change: generate code, make sure it compiles
+# (no errors) and that all tests pass — before it can go live. Inherited style
+# nits are reported but don't block (only real breakage does).
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  flutter_version: "3.32.4"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.flutter_version }}
+          channel: stable
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: dart run build_runner build --delete-conflicting-outputs
+      # Fail only on real errors, not the repo's inherited warnings/infos.
+      - run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - run: flutter test
