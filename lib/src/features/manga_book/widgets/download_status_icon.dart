@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/theme/brand.dart';
 import '../../../widgets/custom_circular_progress_indicator.dart';
 import '../data/downloads/downloads_repository.dart';
 import '../data/manga_book/manga_book_repository.dart';
@@ -105,7 +106,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
       } else {
         if (isDownloaded) {
           return IconButton(
-            icon: const Icon(Icons.check_circle_rounded),
+            icon: brandGradientIcon(context, Icons.check_circle_rounded),
             onPressed: () async {
               (await AsyncValue.guard(
                 () => ref

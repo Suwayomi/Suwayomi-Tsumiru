@@ -17,6 +17,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -50,6 +51,14 @@ class MangaDetailsScreen extends HookConsumerWidget {
     );
 
     final selectedChapters = useState<Map<int, ChapterDto>>({});
+
+    // Drives the immersive app bar: transparent over the hero, fading to the
+    // surface color as the user scrolls past it (Komikku-style). Updated from a
+    // NotificationListener on the body so only the app bar rebuilds on scroll —
+    // never the chapter list.
+    final scrollPx = useMemoized(() => ValueNotifier<double>(0.0));
+    useEffect(() => scrollPx.dispose, const []);
+    final surface = context.theme.scaffoldBackgroundColor;
 
     // Refresh manga
     final mangaRefresh = useCallback(([bool onlineFetch = false]) async {
@@ -110,6 +119,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) => Scaffold(
+          // Immersive hero: the blurred cover backdrop (top of the body) shows
+          // through behind a transparent app bar.
+          extendBodyBehindAppBar: selectedChapters.value.isEmpty,
           appBar: selectedChapters.value.isNotEmpty
               ? AppBar(
                   leading: IconButton(
@@ -149,9 +161,45 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     ),
                   ],
                 )
-              : AppBar(
-                  title: Text(data?.title ?? context.l10n.manga),
-                  actions: [
+              : PreferredSize(
+                  preferredSize: const Size.fromHeight(kToolbarHeight),
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: scrollPx,
+                    builder: (context, px, _) {
+                      final t = (px / 160).clamp(0.0, 1.0);
+                      return AppBar(
+                        // Explicit back button: wrapping the AppBar in a
+                        // builder defeats automaticallyImplyLeading.
+                        leading: Navigator.of(context).canPop()
+                            ? const BackButton()
+                            : null,
+                        backgroundColor:
+                            Color.lerp(Colors.transparent, surface, t),
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        // Scrim under the icons while the bar is transparent
+                        // (hero showing); fades out as the bar turns opaque.
+                        flexibleSpace: t >= 1
+                            ? null
+                            : DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withValues(alpha: 0.45 * (1 - t)),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        // Title lives in the hero at the top; fade it into the
+                        // bar only once collapsed (avoids a duplicate title).
+                        title: Opacity(
+                          opacity: t,
+                          child: Text(data?.title ?? context.l10n.manga),
+                        ),
+                        actions: [
                     if (context.isTablet) ...[
                       IconButton(
                         onPressed: () => refresh(true),
@@ -251,7 +299,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
                             ),
                         ],
                       )
-                  ],
+                        ],
+                      );
+                    },
+                  ),
                 ),
           endDrawer: Drawer(
             shape: const RoundedRectangleBorder(),
@@ -267,8 +318,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               : null,
           floatingActionButton:
               firstUnreadChapter != null && selectedChapters.value.isEmpty
-                  ? FloatingActionButton.extended(
-                      isExtended: context.isTablet,
+                  ? BrandFab(
                       label: Text(
                         data?.lastReadChapter?.index != null
                             ? context.l10n.resume
@@ -284,7 +334,14 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       },
                     )
                   : null,
-          body: data != null
+          body: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n.metrics.axis == Axis.vertical) {
+                scrollPx.value = n.metrics.pixels;
+              }
+              return false;
+            },
+            child: data != null
               ? context.isTablet
                   ? BigScreenMangaDetails(
                       chapterList: filteredChapterList,
@@ -311,6 +368,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     child: Text(context.l10n.refresh),
                   ),
                 ),
+          ),
         ),
         refresh: refresh,
         wrapper: (body) => Scaffold(

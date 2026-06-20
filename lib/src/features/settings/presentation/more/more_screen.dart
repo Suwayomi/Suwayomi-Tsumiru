@@ -13,7 +13,6 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -43,7 +42,11 @@ class MoreScreen extends ConsumerWidget {
             leading: const Icon(Icons.history_rounded),
             onTap: () => const HistoryRoute().go(context),
           ),
-          const AppThemeModeTile(),
+          ListTile(
+            title: Text(context.l10n.appearance),
+            leading: const Icon(Icons.color_lens_rounded),
+            onTap: () => const AppearanceSettingsRoute().go(context),
+          ),
           ListTile(
             title: Text(context.l10n.backup),
             leading: const Icon(Icons.settings_backup_restore_rounded),

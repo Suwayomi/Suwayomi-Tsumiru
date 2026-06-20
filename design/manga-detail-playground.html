@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tsumiru — Manga Detail Playground</title>
+<style>
+/* ── Theme-kit tokens, VERBATIM from theme-kit/tokens.css + themes/*.css ── */
+:root{
+  --radius:16px; --radius-sm:10px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+[data-theme='indigo']{
+  --bg:#0b0d1a; --bg2:#11142a;
+  --panel:rgba(255,255,255,0.04); --panel-brd:rgba(255,255,255,0.08);
+  --ink:#eef0fb; --muted:#9aa0c4; --faint:#6b7099;
+  --accent:#7c7bff; --accent2:#33d6ff; --glow:rgba(124,123,255,0.35);
+  --success:#34e0a1; --success-bg:rgba(52,224,161,0.12);
+  --warning:#ffcf5c; --warning-bg:rgba(255,207,92,0.12);
+  --info:#2dd4bf; --info-bg:rgba(45,212,191,0.13);
+  --danger:#ff6b6b; --danger-bg:rgba(255,107,107,0.12);
+  --grad:linear-gradient(135deg,#7c7bff,#33d6ff);
+}
+[data-theme='carbon']{
+  --bg:#08100e; --bg2:#0c1714;
+  --panel:rgba(255,255,255,0.035); --panel-brd:rgba(255,255,255,0.07);
+  --ink:#eafcf6; --muted:#8fb6ac; --faint:#5d7e76;
+  --accent:#19e6b0; --accent2:#22d3ee; --glow:rgba(25,230,176,0.3);
+  --success:#39e6a4; --success-bg:rgba(57,230,164,0.12);
+  --warning:#ffce5e; --warning-bg:rgba(255,206,94,0.12);
+  --info:#2dd4bf; --info-bg:rgba(45,212,191,0.13);
+  --danger:#ff6f6f; --danger-bg:rgba(255,111,111,0.12);
+  --grad:linear-gradient(135deg,#19e6b0,#22d3ee);
+}
+[data-theme='plum']{
+  --bg:#120a16; --bg2:#1b0f22;
+  --panel:rgba(255,255,255,0.045); --panel-brd:rgba(255,255,255,0.09);
+  --ink:#fbeefb; --muted:#caa0c9; --faint:#946b93;
+  --accent:#ff5db1; --accent2:#ff9f5c; --glow:rgba(255,93,177,0.32);
+  --success:#4be3a0; --success-bg:rgba(75,227,160,0.12);
+  --warning:#ffc04b; --warning-bg:rgba(255,192,75,0.12);
+  --info:#34d399; --info-bg:rgba(52,211,153,0.13);
+  --danger:#ff7a6b; --danger-bg:rgba(255,122,107,0.12);
+  --grad:linear-gradient(135deg,#ff5db1,#ff9f5c);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font);
+  background:#05060d;color:#e7e9f5;
+  display:flex;min-height:100vh;
+}
+
+/* ── Controls panel ── */
+.controls{
+  width:320px;flex-shrink:0;padding:20px;overflow-y:auto;height:100vh;
+  background:#0a0c16;border-right:1px solid rgba(255,255,255,0.07);
+}
+.controls h1{font-size:15px;font-weight:700;margin-bottom:4px}
+.controls .sub{font-size:11px;color:#7a80a8;margin-bottom:18px;line-height:1.5}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.presets button{
+  flex:1;min-width:70px;padding:8px 6px;font-size:11px;font-weight:600;cursor:pointer;
+  background:rgba(124,123,255,0.12);color:#c9c8ff;border:1px solid rgba(124,123,255,0.3);
+  border-radius:9px;
+}
+.presets button:hover{background:rgba(124,123,255,0.22)}
+.ctl{margin-bottom:16px}
+.ctl label{display:block;font-size:11px;font-weight:600;color:#aeb3d6;margin-bottom:6px}
+.ctl .val{float:right;color:#7c7bff;font-family:monospace}
+.ctl input[type=range]{width:100%;accent-color:#7c7bff}
+.ctl select,.seg{width:100%}
+.seg{display:flex;gap:4px}
+.seg button{
+  flex:1;padding:7px 4px;font-size:11px;cursor:pointer;border-radius:8px;
+  background:rgba(255,255,255,0.04);color:#aeb3d6;border:1px solid rgba(255,255,255,0.08);
+}
+.seg button.active{background:rgba(124,123,255,0.2);color:#fff;border-color:rgba(124,123,255,0.5)}
+.ctl select{padding:8px;background:#11142a;color:#e7e9f5;border:1px solid rgba(255,255,255,0.1);border-radius:8px}
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#aeb3d6}
+
+/* ── Stage ── */
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:30px;overflow-y:auto;height:100vh;gap:18px}
+.phone{
+  width:390px;height:780px;border-radius:34px;overflow:hidden;position:relative;
+  border:10px solid #1a1c28;box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  background:var(--bg);
+}
+.prompt-box{width:760px;max-width:90%;background:#0a0c16;border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;padding:14px 16px}
+.prompt-box .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.prompt-box .ph span{font-size:12px;font-weight:700;color:#aeb3d6}
+.prompt-box .ph button{font-size:11px;padding:5px 12px;cursor:pointer;border-radius:7px;
+  background:rgba(124,123,255,0.18);color:#c9c8ff;border:1px solid rgba(124,123,255,0.4)}
+#prompt{font-size:12px;line-height:1.6;color:#c2c6e6;font-family:monospace;white-space:pre-wrap}
+
+/* ── The screen ── */
+.screen{position:absolute;inset:0;overflow-y:auto;color:var(--ink);background:var(--bg)}
+.hero{position:relative;height:300px;overflow:hidden}
+.hero .cover-bg{
+  position:absolute;inset:-40px;background-size:cover;background-position:center;
+  /* fiery cover-art stand-in, like the real screenshot */
+  background-image:
+    radial-gradient(circle at 30% 20%,#ffb347 0%,transparent 45%),
+    radial-gradient(circle at 70% 35%,#ff5e3a 0%,transparent 50%),
+    radial-gradient(circle at 50% 80%,#c1121f 0%,transparent 55%),
+    linear-gradient(160deg,#7a1f12,#2a0a08);
+}
+.hero .tint{position:absolute;inset:0}
+.hero .fade{position:absolute;left:0;right:0;bottom:0;height:160px;
+  background:linear-gradient(to bottom,transparent,var(--bg))}
+.appbar{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;
+  padding:0 8px;gap:4px;z-index:5}
+.appbar .ico{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;
+  color:#fff;font-size:18px;cursor:pointer}
+.appbar .spacer{flex:1}
+.heroinfo{position:absolute;left:0;right:0;bottom:0;padding:16px;display:flex;gap:14px;z-index:4}
+.heroinfo .cover{width:96px;height:140px;border-radius:10px;flex-shrink:0;background-size:cover;
+  background-position:center;box-shadow:0 8px 24px rgba(0,0,0,0.5);
+  background-image:
+    radial-gradient(circle at 30% 20%,#ffb347 0%,transparent 45%),
+    radial-gradient(circle at 70% 35%,#ff5e3a 0%,transparent 50%),
+    radial-gradient(circle at 50% 80%,#c1121f 0%,transparent 55%),
+    linear-gradient(160deg,#7a1f12,#2a0a08);}
+.heroinfo .meta{align-self:flex-end;min-width:0}
+.heroinfo .title{font-size:21px;font-weight:800;line-height:1.15;margin-bottom:5px}
+.heroinfo .author{font-size:13px;color:var(--muted);margin-bottom:6px}
+.heroinfo .status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.heroinfo .status .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+
+.body{padding:14px 16px 90px}
+.actions{display:flex;gap:10px;margin-bottom:16px}
+.btn{flex:1;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  gap:8px;font-size:14px;font-weight:700;cursor:pointer;border:none}
+.btn.primary{color:#0b0d1a}
+.btn.glass{background:var(--panel);border:1px solid var(--panel-brd)}
+
+.desc{font-size:13px;line-height:1.55;color:var(--muted);margin-bottom:6px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.morebtn{text-align:center;color:var(--faint);margin-bottom:14px;cursor:pointer}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+
+.chaphead{font-size:16px;font-weight:700;margin-bottom:8px}
+.chap{display:flex;align-items:center;padding:12px 2px;gap:12px;border-bottom:1px solid var(--panel-brd)}
+.chap .ct{flex:1;min-width:0}
+.chap .cn{font-size:14px;font-weight:600;margin-bottom:3px}
+.chap .cd{font-size:12px;color:var(--faint)}
+.chap.read .cn,.chap.read .cd{color:var(--faint)}
+.check{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:14px;color:#0b0d1a;font-weight:900}
+
+.fab{position:absolute;right:16px;bottom:20px;height:52px;border-radius:18px;padding:0 22px;
+  display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#0b0d1a;
+  cursor:pointer;z-index:6;border:none}
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>Tsumiru · Manga Detail</h1>
+  <div class="sub">Real theme-kit tokens. Dial in the look, then it gets ported 1:1 to Flutter as global components.</div>
+
+  <div class="presets">
+    <button onclick="preset('subtle')">Subtle</button>
+    <button onclick="preset('immersive')">Immersive</button>
+    <button onclick="preset('maxglow')">Max glow</button>
+  </div>
+
+  <div class="ctl">
+    <label>Theme</label>
+    <div class="seg" id="themeSeg">
+      <button data-theme-btn="indigo" class="active">Indigo</button>
+      <button data-theme-btn="carbon">Carbon</button>
+      <button data-theme-btn="plum">Plum</button>
+    </div>
+  </div>
+
+  <div class="ctl"><label>Hero blur <span class="val" id="blurV"></span></label>
+    <input type="range" id="blur" min="0" max="30" step="1"></div>
+  <div class="ctl"><label>Hero cover opacity <span class="val" id="coverOpV"></span></label>
+    <input type="range" id="coverOp" min="20" max="100" step="5"></div>
+  <div class="ctl"><label>Indigo tint strength <span class="val" id="tintV"></span></label>
+    <input type="range" id="tint" min="0" max="90" step="5"></div>
+  <div class="ctl"><label>Glow intensity (buttons + FAB) <span class="val" id="glowV"></span></label>
+    <input type="range" id="glow" min="0" max="100" step="5"></div>
+
+  <div class="ctl"><label>Genre chip style</label>
+    <div class="seg" id="chipSeg">
+      <button data-chip="glass" class="active">Glass</button>
+      <button data-chip="solid">Solid</button>
+      <button data-chip="outline">Outline</button>
+    </div>
+  </div>
+  <div class="ctl"><label>Per-genre chip color</label>
+    <label class="toggle"><input type="checkbox" id="uniqueChips" checked> Unique color per genre</label>
+  </div>
+
+  <div class="ctl"><label>Read-check style</label>
+    <div class="seg" id="checkSeg">
+      <button data-check="gradient" class="active">Gradient</button>
+      <button data-check="solid">Solid</button>
+      <button data-check="outline">Outline</button>
+    </div>
+  </div>
+
+  <div class="ctl"><label>Surface depth (panels/borders) <span class="val" id="depthV"></span></label>
+    <input type="range" id="depth" min="0" max="100" step="5"></div>
+</div>
+
+<div class="stage">
+  <div class="phone"><div class="screen" id="screen" data-theme="indigo">
+    <div class="hero">
+      <div class="cover-bg" id="coverBg"></div>
+      <div class="tint" id="tintEl"></div>
+      <div class="fade"></div>
+      <div class="appbar">
+        <div class="ico">←</div><div class="spacer"></div>
+        <div class="ico">⤓</div><div class="ico">⚟</div><div class="ico">⋮</div>
+      </div>
+      <div class="heroinfo">
+        <div class="cover"></div>
+        <div class="meta">
+          <div class="title">Reincarnator's Stream</div>
+          <div class="author">Heuk Ain</div>
+          <div class="status"><span class="dot"></span> Ongoing · Asura Scans (EN)</div>
+        </div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="actions">
+        <div class="btn primary" id="btnLib">♥ In library</div>
+        <div class="btn glass" id="btnWeb">🌐 Web View</div>
+      </div>
+      <div class="desc">Narukami Subaru, the strongest player and the Master of Lightning, was betrayed and killed by a trusted friend while conquering the Tower. After using up all his power to save his comrades, he dies. Yet somehow, fully...</div>
+      <div class="morebtn">⌄</div>
+      <div class="chips" id="chips"></div>
+      <div class="chaphead">54 Chapters</div>
+      <div id="chapters"></div>
+    </div>
+    <div class="fab" id="fab">▶ Resume</div>
+  </div></div>
+
+  <div class="prompt-box">
+    <div class="ph"><span>Prompt → paste back to Claude</span><button onclick="copyPrompt()" id="copyBtn">Copy</button></div>
+    <div id="prompt"></div>
+  </div>
+</div>
+
+<script>
+const GENRES=["Action","Adventure","Fantasy","Murim","Reincarnation","Drama"];
+const CHAPTERS=[
+  {n:"Chapter 54",d:"6 days ago",read:true},
+  {n:"Chapter 53",d:"Jun 6, 2026",read:true},
+  {n:"Chapter 52",d:"May 30, 2026",read:true},
+  {n:"Chapter 51",d:"May 23, 2026",read:true},
+  {n:"Chapter 50",d:"May 16, 2026",read:true},
+  {n:"Chapter 49",d:"May 9, 2026",read:false},
+  {n:"Chapter 48",d:"May 2, 2026",read:false},
+];
+const DEFAULTS={blur:14,coverOp:60,tint:55,glow:60,chip:'glass',unique:true,check:'gradient',depth:50,theme:'indigo'};
+const state={...DEFAULTS};
+
+function hueFor(name){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))%360;return h;}
+
+function render(){
+  const s=document.getElementById('screen');
+  s.setAttribute('data-theme',state.theme);
+  const cs=getComputedStyle(s);
+  const accent=cs.getPropertyValue('--accent').trim();
+
+  // hero
+  document.getElementById('coverBg').style.filter=`blur(${state.blur}px)`;
+  document.getElementById('coverBg').style.opacity=state.coverOp/100;
+  const t=state.tint/100;
+  const bg=cs.getPropertyValue('--bg').trim();
+  const a2=cs.getPropertyValue('--accent2').trim();
+  document.getElementById('tintEl').style.background=
+    `linear-gradient(160deg, ${hexA(accent,t*0.55)}, ${hexA(bg,t*0.85)})`;
+
+  // glow + buttons + fab
+  const g=state.glow/100;
+  const grad=cs.getPropertyValue('--grad').trim();
+  const glow=`0 6px ${22*g}px ${hexA(accent,0.45*g)}`;
+  const btnLib=document.getElementById('btnLib');
+  btnLib.style.background=grad; btnLib.style.boxShadow=glow;
+  const fab=document.getElementById('fab');
+  fab.style.background=grad; fab.style.boxShadow=glow;
+
+  // chips
+  const chips=document.getElementById('chips');chips.innerHTML='';
+  GENRES.forEach(name=>{
+    const el=document.createElement('div');el.className='chip';el.textContent=name;
+    const hue=hueFor(name);
+    if(state.unique){
+      if(state.chip==='glass'){el.style.background=`hsla(${hue},70%,55%,0.16)`;el.style.border=`1px solid hsla(${hue},70%,60%,0.45)`;el.style.color=`hsl(${hue},85%,78%)`;}
+      else if(state.chip==='solid'){el.style.background=`hsl(${hue},60%,45%)`;el.style.color='#fff';}
+      else{el.style.border=`1.5px solid hsl(${hue},70%,60%)`;el.style.color=`hsl(${hue},85%,78%)`;}
+    }else{
+      if(state.chip==='glass'){el.style.background=hexA(accent,0.14);el.style.border=`1px solid ${hexA(accent,0.4)}`;el.style.color=accent;}
+      else if(state.chip==='solid'){el.style.background=accent;el.style.color='#0b0d1a';}
+      else{el.style.border=`1.5px solid ${accent}`;el.style.color=accent;}
+    }
+    chips.appendChild(el);
+  });
+
+  // chapters
+  const ch=document.getElementById('chapters');ch.innerHTML='';
+  CHAPTERS.forEach(c=>{
+    const row=document.createElement('div');row.className='chap'+(c.read?' read':'');
+    row.innerHTML=`<div class="ct"><div class="cn">${c.n}</div><div class="cd">${c.d}</div></div>`;
+    const chk=document.createElement('div');chk.className='check';
+    if(c.read){
+      chk.textContent='✓';
+      if(state.check==='gradient'){chk.style.background=grad;chk.style.color='#0b0d1a';}
+      else if(state.check==='solid'){chk.style.background=accent;chk.style.color='#0b0d1a';}
+      else{chk.style.border=`2px solid ${accent}`;chk.style.color=accent;chk.style.fontWeight='900';}
+    }
+    row.appendChild(chk);ch.appendChild(row);
+  });
+
+  // depth on glass surfaces
+  const d=state.depth/100;
+  document.getElementById('btnWeb').style.background=`rgba(255,255,255,${0.02+0.06*d})`;
+
+  // sync controls
+  document.getElementById('blurV').textContent=state.blur+'px';
+  document.getElementById('coverOpV').textContent=state.coverOp+'%';
+  document.getElementById('tintV').textContent=state.tint+'%';
+  document.getElementById('glowV').textContent=state.glow+'%';
+  document.getElementById('depthV').textContent=state.depth+'%';
+  ['blur','coverOp','tint','glow','depth'].forEach(k=>document.getElementById(k).value=state[k]);
+  setSeg('themeSeg','theme-btn',state.theme);
+  setSeg('chipSeg','chip',state.chip);
+  setSeg('checkSeg','check',state.check);
+  document.getElementById('uniqueChips').checked=state.unique;
+
+  updatePrompt();
+}
+function hexA(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(x=>x+x).join('');
+  const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;}
+function setSeg(id,attr,val){document.querySelectorAll(`#${id} button`).forEach(b=>
+  b.classList.toggle('active',b.getAttribute('data-'+attr)===val));}
+
+function updatePrompt(){
+  const p=[];
+  p.push(`Theme: ${state.theme}.`);
+  p.push(`Hero: blurred cover backdrop, blur ${state.blur}px, cover opacity ${state.coverOp}%, indigo/accent tint ${state.tint}%.`);
+  p.push(`Buttons + FAB: brand gradient (--grad), glow ${state.glow}% (shadow blur ~${Math.round(22*state.glow/100)}px @ accent 0.45).`);
+  p.push(`Genre chips: ${state.chip} style, ${state.unique?'UNIQUE color per genre (hue = hash of genre name, glass = hsla(hue,70%,55%,.16) bg / hsla(hue,70%,60%,.45) border / hsl(hue,85%,78%) text)':'single accent color'}.`);
+  p.push(`Read-check: ${state.check} (${state.check==='gradient'?'--grad fill, dark glyph':state.check==='solid'?'accent fill, dark glyph':'accent outline + accent glyph'}).`);
+  p.push(`Surface depth: ${state.depth}%.`);
+  document.getElementById('prompt').textContent=p.join('\n');
+}
+function copyPrompt(){navigator.clipboard.writeText(document.getElementById('prompt').textContent);
+  const b=document.getElementById('copyBtn');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);}
+
+function preset(name){
+  if(name==='subtle')Object.assign(state,{blur:18,coverOp:45,tint:65,glow:35,chip:'glass',unique:true,check:'solid',depth:40});
+  if(name==='immersive')Object.assign(state,{blur:12,coverOp:70,tint:45,glow:55,chip:'glass',unique:true,check:'gradient',depth:55});
+  if(name==='maxglow')Object.assign(state,{blur:8,coverOp:85,tint:35,glow:100,chip:'solid',unique:true,check:'gradient',depth:70});
+  render();
+}
+
+// wire controls
+['blur','coverOp','tint','glow','depth'].forEach(k=>
+  document.getElementById(k).addEventListener('input',e=>{state[k]=+e.target.value;render();}));
+document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>{state.theme=b.getAttribute('data-theme-btn');render();});
+document.querySelectorAll('#chipSeg button').forEach(b=>b.onclick=()=>{state.chip=b.getAttribute('data-chip');render();});
+document.querySelectorAll('#checkSeg button').forEach(b=>b.onclick=()=>{state.check=b.getAttribute('data-check');render();});
+document.getElementById('uniqueChips').onchange=e=>{state.unique=e.target.checked;render();};
+
+render();
+</script>
+</body>
+</html>

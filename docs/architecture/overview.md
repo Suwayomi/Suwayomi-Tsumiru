@@ -8,7 +8,7 @@
 - **graphql_flutter** + **graphql_codegen** for the Suwayomi GraphQL API.
 - **freezed** + **json_serializable** for data classes.
 - **go_router** + **go_router_builder** for typed routing.
-- **flex_color_scheme** for theming.
+- **Curated named-theme system** (no third-party theming lib): explicit Material 3 `ColorScheme`s built from theme-kit tokens + a brand component layer for gradients/glow — see [theming-l10n.md](theming-l10n.md).
 - **scrollable_positioned_list** (a pinned fork) for the multi-image readers.
 - **cached_network_image** + **flutter_cache_manager** for image fetches.
 - **flutter_secure_storage** for credentials; **shared_preferences** for settings; **Hive** for the GraphQL cache store.

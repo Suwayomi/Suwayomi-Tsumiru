@@ -15,7 +15,7 @@ This directory documents how the app is built and how each subsystem works, so c
 | [overview.md](overview.md) | Tech stack, layered structure, the conventions every feature reuses |
 | [app-shell-navigation.md](app-shell-navigation.md) | App bootstrap, `go_router` route tree, the nav shell (rail vs bottom bar) |
 | [data-layer.md](data-layer.md) | GraphQL clients, the repository pattern, Riverpod + codegen, `DBKeys`, image/auth plumbing |
-| [theming-l10n.md](theming-l10n.md) | `ThemeData` construction (flex_color_scheme), Appearance settings, localization |
+| [theming-l10n.md](theming-l10n.md) | Curated named-theme system (`AppTheme` + theme-kit tokens + brand component layer), Appearance settings, localization |
 | [auth.md](auth.md) | Auth modes (none/basic/simpleLogin/uiLogin), token lifecycle, the GraphQL auth link |
 | [reader.md](reader.md) | Reader modes, the webtoon/infinity continuous scroll, pinch-to-zoom |
 | [library.md](library.md) | Categories, sort/filter/display, badges |

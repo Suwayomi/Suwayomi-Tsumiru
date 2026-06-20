@@ -1,4 +1,24 @@
 <!DOCTYPE html><html><head>
+  <!-- Web-only: tag Flutter's WebGL canvas as display-p3 so Chrome
+       color-manages it like DOM/CSS. Without this, dark colors (e.g. #0b0d1a)
+       render lifted/greyed on wide-gamut (P3) screens because the canvas buffer
+       is untagged sRGB. No effect on native builds. Runs before Flutter boots. -->
+  <script>
+    (function () {
+      var orig = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+        var ctx = orig.call(this, type, attrs);
+        try {
+          if (ctx && (type === 'webgl2' || type === 'webgl' ||
+              type === 'experimental-webgl')) {
+            ctx.drawingBufferColorSpace = 'display-p3';
+            if ('unpackColorSpace' in ctx) ctx.unpackColorSpace = 'display-p3';
+          }
+        } catch (e) {}
+        return ctx;
+      };
+    })();
+  </script>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.

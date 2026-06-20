@@ -95,10 +95,10 @@ class MangaBadge extends StatelessWidget {
   final Color textColor;
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
+    // Flat container (no Material elevation/surfaceTint) so the badge renders
+    // the EXACT accent colour at full vividness.
+    return ColoredBox(
       color: color,
-      shape: const RoundedRectangleBorder(),
       child: Padding(
         padding: KEdgeInsets.a4.size,
         child: text.isNotBlank

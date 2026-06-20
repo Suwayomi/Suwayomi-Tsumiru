@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/theme/brand.dart';
 import '../data/updates/updates_repository.dart';
 import '../domain/update_status/update_status_model.dart';
 
@@ -19,7 +20,7 @@ class UpdateStatusFab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final updateStatus = ref.watch(updatesSocketProvider);
     final showStatus = (updateStatus.valueOrNull?.isUpdateChecking).ifNull();
-    return FloatingActionButton.extended(
+    return BrandFab(
       icon: showStatus ? null : const Icon(Icons.refresh_rounded),
       onPressed: () => showStatus
           ? const UpdateStatusRoute().push(context)

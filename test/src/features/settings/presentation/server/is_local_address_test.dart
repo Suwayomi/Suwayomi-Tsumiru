@@ -35,7 +35,7 @@ void main() {
     });
 
     test('public addresses are not local', () {
-      expect(isLocalAddress('http://suwayomi.typhon.one'), isFalse);
+      expect(isLocalAddress('http://manga.example.com'), isFalse);
       expect(isLocalAddress('https://example.com'), isFalse);
       expect(isLocalAddress('http://8.8.8.8'), isFalse);
       expect(isLocalAddress('http://1.1.1.1'), isFalse);

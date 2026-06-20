@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -14,8 +16,9 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
-import '../../../../../widgets/async_buttons/async_text_button_icon.dart';
+import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
+import '../../../../../widgets/server_image.dart';
 import '../../../domain/manga/manga_model.dart';
 
 class MangaDescription extends HookConsumerWidget {
@@ -33,55 +36,115 @@ class MangaDescription extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isExpanded = useState(context.isTablet);
+    final cs = context.theme.colorScheme;
+    final surface = context.theme.scaffoldBackgroundColor;
+    final inLibrary = manga.inLibrary.ifNull();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MangaCoverDescriptiveListTile(
-          manga: manga,
-          showBadges: false,
-          onTitleClicked: (query) =>
-              GlobalSearchRoute(query: query).push(context),
+        // Immersive hero: blurred cover backdrop + accent tint, fading into the
+        // scaffold. Sits behind the cover/title block; no app-bar restructure.
+        Stack(
+          children: [
+            if (manga.thumbnailUrl.isNotBlank)
+              Positioned.fill(
+                child: ClipRect(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: ServerImage(
+                      imageUrl: manga.thumbnailUrl ?? "",
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      cs.primary.withValues(alpha: 0.30),
+                      surface.withValues(alpha: 0.55),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      surface.withValues(alpha: 0.10),
+                      surface.withValues(alpha: 0.70),
+                      surface,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              // Clear the transparent app bar (status bar + toolbar) so the
+              // cover/title sit below the icons while the backdrop fills behind.
+              padding: EdgeInsets.only(
+                top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+              ),
+              child: MangaCoverDescriptiveListTile(
+                manga: manga,
+                showBadges: false,
+                onTitleClicked: (query) =>
+                    GlobalSearchRoute(query: query).push(context),
+              ),
+            ),
+          ],
         ),
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              AsyncTextButtonIcon(
-                onPressed: () async {
-                  final val = await AsyncValue.guard(() async {
-                    if (manga.inLibrary.ifNull()) {
-                      await removeMangaFromLibrary();
-                    } else {
-                      await addMangaToLibrary();
-                    }
-                    await refresh();
-                  });
-                  if (context.mounted) {
-                    val.showToastOnError(ref.read(toastProvider));
-                  }
-                },
-                isPrimary: manga.inLibrary.ifNull(),
-                primaryIcon: const Icon(Icons.favorite_rounded),
-                secondaryIcon: const Icon(Icons.favorite_border_outlined),
-                secondaryStyle:
-                    TextButton.styleFrom(foregroundColor: Colors.grey),
-                primaryLabel: Text(context.l10n.inLibrary),
-                secondaryLabel: Text(context.l10n.addToLibrary),
-              ),
-              if (manga.realUrl.isNotBlank)
-                TextButton.icon(
+              Expanded(
+                child: BrandButton(
+                  icon: Icon(
+                    inLibrary
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                  ),
+                  label: Text(
+                    inLibrary ? context.l10n.inLibrary : context.l10n.addToLibrary,
+                  ),
                   onPressed: () async {
-                    launchUrlInWeb(
+                    final val = await AsyncValue.guard(() async {
+                      if (inLibrary) {
+                        await removeMangaFromLibrary();
+                      } else {
+                        await addMangaToLibrary();
+                      }
+                      await refresh();
+                    });
+                    if (context.mounted) {
+                      val.showToastOnError(ref.read(toastProvider));
+                    }
+                  },
+                ),
+              ),
+              if (manga.realUrl.isNotBlank) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: BrandGlassButton(
+                    icon: const Icon(Icons.public_rounded),
+                    label: Text(context.l10n.webView),
+                    onPressed: () => launchUrlInWeb(
                       context,
                       (manga.realUrl ?? ""),
                       ref.read(toastProvider),
-                    );
-                  },
-                  icon: const Icon(Icons.public_rounded),
-                  style: TextButton.styleFrom(foregroundColor: Colors.grey),
-                  label: Text(context.l10n.webView),
+                    ),
+                  ),
                 ),
+              ],
             ],
           ),
         ),
@@ -135,11 +198,8 @@ class MangaDescription extends HookConsumerWidget {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              // alignment: WrapAlignment.spaceBetween,
               children: [
-                ...manga.genre.map<Widget>(
-                  (e) => Chip(label: Text(e)),
-                )
+                ...manga.genre.map<Widget>((e) => BrandChip(label: e)),
               ],
             ),
           )
@@ -153,7 +213,7 @@ class MangaDescription extends HookConsumerWidget {
                   ...manga.genre.map<Widget>(
                     (e) => Padding(
                       padding: KEdgeInsets.h4.size,
-                      child: Chip(label: Text(e)),
+                      child: BrandChip(label: e),
                     ),
                   )
                 ],
