@@ -21,12 +21,15 @@ class ThemeSelector extends HookConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: SizedBox(
-        height: 132,
+        height: 148,
         child: Scrollbar(
           controller: controller,
+          // Sit the horizontal scrollbar in its own lane below the cards
+          // instead of overlaying their labels.
           child: ListView(
             controller: controller,
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 16),
             children: [
               // Named themes first, Custom last (custom sits mid-enum because
               // values are persisted by index — display order is independent).
