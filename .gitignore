@@ -59,3 +59,9 @@ design/icon-concepts/
 
 # local test launcher (contains a password)
 scripts/run-test.sh
+
+# Local QA screenshots + Flatpak build scratch (generated)
+design/qa-*.png
+flatpak/bundle/
+.flatpak-out/
+.flatpak-builder/
