@@ -67,7 +67,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Check if infinity scrolling mode is enabled
     final infinityScrollingEnabled =
-        ref.watch(infinityScrollingModeEnabledProvider).ifNull(false);
+        ref.watch(infinityScrollingModeEnabledProvider).ifNull(true);
 
     // Use infinity mode for webtoon with infinity scrolling enabled
     if (infinityScrollingEnabled &&

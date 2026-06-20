@@ -62,7 +62,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final infinityScrollingEnabled =
-        ref.watch(infinityScrollingModeEnabledProvider).ifNull(false);
+        ref.watch(infinityScrollingModeEnabledProvider).ifNull(true);
 
     if (!infinityScrollingEnabled || scrollDirection != Axis.vertical) {
       return _buildSingleChapterMode(context, ref);

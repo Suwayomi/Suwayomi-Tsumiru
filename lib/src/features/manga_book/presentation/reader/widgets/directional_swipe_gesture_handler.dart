@@ -151,6 +151,12 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     required SwipeDirection direction,
     required DragEndDetails details,
   }) {
+    // Swipe-to-change-chapter is a manga (horizontal-paging) gesture only.
+    // In webtoon / vertical-scroll modes a horizontal swipe changing chapter
+    // is a terrible experience, so ignore it — the vertical scroll (and
+    // infinite scroll) handle moving between chapters there.
+    if (scrollDirection == Axis.vertical) return;
+
     // In continuous vertical readers, treat drag end as a swipe only at
     // chapter edges to avoid interfering with normal scrolling.
 
@@ -317,6 +323,10 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     required DragEndDetails details,
     required Axis allowedAxis,
   }) {
+    // Manga-only gesture: in vertical/webtoon modes a horizontal swipe must
+    // not change chapter (vertical scroll + infinite scroll handle that).
+    if (scrollDirection == Axis.vertical) return;
+
     if (readerSwipeChapterToggle) {
       _handleOriginalSwipeBehavior(context, details, allowedAxis);
       return;

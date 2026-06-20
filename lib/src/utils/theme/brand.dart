@@ -30,6 +30,15 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
 /// The gradient is bright, so on-gradient content (text/icons) is dark.
 const Color onBrandGradient = Color(0xFF0B0D1A);
 
+/// Translucent theme surface for the reader's vertical nav. The Komikku vertical
+/// slider is one cohesive unit: the page-count capsule AND the chapter jump
+/// buttons share ONE colour, gleaned from the active theme (NOT solid dark, NOT
+/// a gradient), translucent so the page art shows through. Mirrors Komikku's
+/// `surfaceColorAtElevation(3.dp)` at ~0.9 alpha — both call sites must use this
+/// so the buttons and the bar can never theme-drift apart again.
+Color readerNavSurface(ColorScheme cs) =>
+    cs.surfaceContainerHigh.withValues(alpha: 0.82);
+
 /// A lighter, more vibrant accent for text/outline actions (links, "Uninstall").
 Color brandBrightAccent(ColorScheme cs) =>
     Color.lerp(cs.primary, Colors.white, 0.22)!;
@@ -181,6 +190,99 @@ class BrandGlassButton extends StatelessWidget {
                   expand: expand,
                   content: accent,
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small circular **glass** brand button — translucent fill + accent border +
+/// bright accent glyph. Single source for round brand actions (reader
+/// chapter-end jumps, etc.).
+class BrandCircleButton extends StatelessWidget {
+  const BrandCircleButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.size = 42,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.06),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(icon, size: size * 0.55, color: brandBrightAccent(cs)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Komikku-style filled round icon button for the reader vertical nav. Filled
+/// with [color] (the shared [readerNavSurface] so it matches the bar capsule
+/// exactly), glyph in the theme `primary`. [quarterTurns] rotates the icon so
+/// the chapter skip glyphs point up / down like Komikku's vertical slider.
+class BrandFilledCircleButton extends StatelessWidget {
+  const BrandFilledCircleButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    required this.color,
+    this.size = 44,
+    this.quarterTurns = 0,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color color;
+  final double size;
+  final int quarterTurns;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final enabled = onPressed != null;
+    return DecoratedBox(
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: RotatedBox(
+              quarterTurns: quarterTurns,
+              child: Icon(
+                icon,
+                size: size * 0.5,
+                color: enabled
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.3),
               ),
             ),
           ),

@@ -29,7 +29,7 @@ enum DBKeys {
   quickSearchToggle(true),
   swipeToggle(true),
   lastPageSwipeEnabled(false),
-  infinityScrollingMode(false),
+  infinityScrollingMode(true),
   scrollAnimation(true),
   showNSFW(true),
   downloadedBadge(false),
