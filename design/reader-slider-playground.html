@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="indigo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tsumiru — Reader Slider (match Komikku)</title>
+<style>
+/* theme-kit tokens, VERBATIM */
+[data-theme='indigo']{--bg:#0b0d1a;--bg2:#11142a;--ink:#eef0fb;--muted:#9aa0c4;--faint:#6b7099;--accent:#7c7bff;--accent2:#33d6ff;--glow:rgba(124,123,255,.35);--grad:linear-gradient(180deg,#7c7bff,#33d6ff);}
+[data-theme='carbon']{--bg:#08100e;--bg2:#0c1714;--ink:#eafcf6;--muted:#8fb6ac;--faint:#5d7e76;--accent:#19e6b0;--accent2:#22d3ee;--glow:rgba(25,230,176,.3);--grad:linear-gradient(180deg,#19e6b0,#22d3ee);}
+[data-theme='plum']{--bg:#120a16;--bg2:#1b0f22;--ink:#fbeefb;--muted:#caa0c9;--faint:#946b93;--accent:#ff5db1;--accent2:#ff9f5c;--glow:rgba(255,93,177,.32);--grad:linear-gradient(180deg,#ff5db1,#ff9f5c);}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,system-ui,sans-serif;background:#05060d;color:#e7e9f5;display:flex;min-height:100vh}
+
+/* controls */
+.controls{width:320px;flex-shrink:0;height:100vh;overflow-y:auto;padding:20px;background:#0a0c16;border-right:1px solid rgba(255,255,255,.07)}
+.controls h1{font-size:15px;margin-bottom:3px}
+.controls .sub{font-size:11px;color:#7a80a8;margin-bottom:16px;line-height:1.5}
+.presets{display:flex;gap:6px;margin-bottom:18px}
+.presets button{flex:1;padding:8px 4px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(124,123,255,.12);color:#c9c8ff;border:1px solid rgba(124,123,255,.3);border-radius:9px}
+.grp{font-size:11px;font-weight:700;color:#aeb3d6;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px}
+.ctl{margin-bottom:13px}
+.ctl label{display:block;font-size:11px;color:#aeb3d6;margin-bottom:5px}
+.ctl .v{float:right;color:#7c7bff;font-family:monospace}
+.ctl input[type=range]{width:100%;accent-color:#7c7bff}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;padding:6px 4px;font-size:11px;cursor:pointer;border-radius:7px;background:rgba(255,255,255,.04);color:#aeb3d6;border:1px solid rgba(255,255,255,.08)}
+.seg button.on{background:rgba(124,123,255,.2);color:#fff;border-color:rgba(124,123,255,.5)}
+
+/* stage */
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px;overflow-y:auto;height:100vh}
+.phone{width:380px;height:760px;border-radius:30px;border:9px solid #1a1c28;overflow:hidden;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.reader{position:absolute;inset:0;background:
+  radial-gradient(circle at 30% 25%,#ffcaa0 0,transparent 45%),
+  radial-gradient(circle at 65% 60%,#e0a0b0 0,transparent 50%),
+  linear-gradient(160deg,#d8c8c0,#b9a8b8);}
+.topbar{position:absolute;top:0;left:0;right:0;height:56px;display:flex;align-items:center;padding:0 14px;gap:10px;color:var(--ink);z-index:4}
+.botbar{position:absolute;bottom:0;left:0;right:0;height:96px;z-index:4;display:flex;flex-direction:column;justify-content:flex-end}
+.botbar .pg{text-align:center;color:var(--ink);font-size:12px;padding:6px}
+.botbar .acts{display:flex;justify-content:space-evenly;padding:14px;color:var(--ink)}
+
+/* slider */
+.slider{position:absolute;right:8px;z-index:6;display:flex;flex-direction:column;align-items:center}
+.jbtn{flex-shrink:0;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.jbtn svg{width:46%;height:46%}
+.capsule{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;border-radius:999px}
+.capsule .num{flex-shrink:0;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.bar{flex:1;min-height:0;position:relative;display:flex;justify-content:center}
+.track{position:absolute;top:0;bottom:0;border-radius:999px}
+.fill{position:absolute;top:0;left:0;right:0;border-radius:999px;background:var(--grad)}
+.dots{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;justify-content:space-between;align-items:center}
+.dot{border-radius:50%;background:rgba(255,255,255,.55)}
+.marker{position:absolute;left:50%;transform:translate(-50%,-50%);background:var(--grad);border-radius:999px;box-shadow:0 0 8px var(--glow)}
+
+/* prompt */
+.prompt-box{width:760px;max-width:92%;background:#0a0c16;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px}
+.prompt-box .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.prompt-box .ph button{font-size:11px;padding:5px 12px;cursor:pointer;border-radius:7px;background:rgba(124,123,255,.18);color:#c9c8ff;border:1px solid rgba(124,123,255,.4)}
+#prompt{font-size:12px;line-height:1.55;color:#c2c6e6;font-family:monospace;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>Reader slider · match Komikku</h1>
+  <div class="sub">Dials in the webtoon vertical progress slider in our real theme colours. Lock it here, then it goes into Flutter 1:1.</div>
+  <div class="presets">
+    <button onclick="preset('komikku')">Komikku</button>
+    <button onclick="preset('subtle')">Subtle</button>
+    <button onclick="preset('bold')">Bold</button>
+  </div>
+
+  <div class="ctl"><label>Theme</label><div class="seg" id="themeSeg">
+    <button data-t="indigo" class="on">Indigo</button><button data-t="carbon">Carbon</button><button data-t="plum">Plum</button></div></div>
+
+  <div class="grp">Capsule</div>
+  <div class="ctl"><label>Width <span class="v" id="capWv"></span></label><input type="range" id="capW" min="34" max="64" step="1"></div>
+  <div class="ctl"><label>Background opacity <span class="v" id="capOv"></span></label><input type="range" id="capO" min="0" max="100" step="5"></div>
+  <div class="ctl"><label>Height</label><div class="seg" id="fullSeg"><button data-f="1" class="on">Full</button><button data-f="0">Inset</button></div></div>
+  <div class="ctl"><label>Number font <span class="v" id="numFv"></span></label><input type="range" id="numF" min="10" max="18" step="1"></div>
+  <div class="ctl"><label>Number gap from bar <span class="v" id="numGv"></span></label><input type="range" id="numG" min="2" max="24" step="1"></div>
+
+  <div class="grp">Bar</div>
+  <div class="ctl"><label>Track thickness <span class="v" id="trkv"></span></label><input type="range" id="trk" min="4" max="18" step="1"></div>
+  <div class="ctl"><label>Track opacity <span class="v" id="trkOv"></span></label><input type="range" id="trkO" min="0" max="100" step="5"></div>
+  <div class="ctl"><label>Tick dot size <span class="v" id="dotv"></span></label><input type="range" id="dot" min="0" max="8" step="1"></div>
+  <div class="ctl"><label>Marker line length <span class="v" id="mklv"></span></label><input type="range" id="mkl" min="10" max="40" step="2"></div>
+  <div class="ctl"><label>Marker line thickness <span class="v" id="mktv"></span></label><input type="range" id="mkt" min="2" max="8" step="1"></div>
+
+  <div class="grp">Jump buttons</div>
+  <div class="ctl"><label>Size <span class="v" id="btnSv"></span></label><input type="range" id="btnS" min="28" max="52" step="2"></div>
+  <div class="ctl"><label>Button opacity <span class="v" id="btnOv"></span></label><input type="range" id="btnO" min="0" max="100" step="5"></div>
+
+  <div class="grp">Reader bars</div>
+  <div class="ctl"><label>Top/bottom bar opacity <span class="v" id="barOv"></span></label><input type="range" id="barO" min="0" max="100" step="5"></div>
+</div>
+
+<div class="stage">
+  <div class="phone"><div class="reader" id="reader">
+    <div class="topbar" id="topbar">← &nbsp; <b>Reincarnator's Stream</b></div>
+    <div class="slider" id="slider"></div>
+    <div class="botbar" id="botbar"><div class="pg">6 / 15</div><div class="acts">🔖 &nbsp;&nbsp; 🗔 &nbsp;&nbsp; ⚙</div></div>
+  </div></div>
+  <div class="prompt-box"><div class="ph"><span>Prompt → paste back to Claude</span><button onclick="copyP()" id="cpy">Copy</button></div><div id="prompt"></div></div>
+</div>
+
+<script>
+const CUR=5,TOTAL=15; // 0-based current=5 -> shows 6
+const DEF={theme:'indigo',capW:46,capO:52,full:1,numF:13,numG:10,trk:9,trkO:55,dot:4,mkl:26,mkt:4,btnS:42,btnO:52,barO:55};
+const state={...DEF};
+
+const TRI_UP='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7l6 9H6z"/></svg>';
+const TRI_DN='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17l-6-9h12z"/></svg>';
+
+function hexA(varName,a){const c=getComputedStyle(document.documentElement.querySelector? document.body:document.body);return a;}
+
+function render(){
+  const root=document.querySelector('[data-theme]');
+  document.querySelector('.phone [data-theme]');
+  document.querySelector('#reader');
+  document.documentElement.setAttribute('data-theme',state.theme);
+
+  const cs=getComputedStyle(document.documentElement);
+  const ink=cs.getPropertyValue('--ink').trim();
+  const accent=cs.getPropertyValue('--accent').trim();
+  const accent2=cs.getPropertyValue('--accent2').trim();
+  const bg=cs.getPropertyValue('--bg').trim();
+  const bg2=cs.getPropertyValue('--bg2').trim();
+
+  // bars
+  const barCol=`color-mix(in srgb, ${bg} ${state.barO}%, transparent)`;
+  document.getElementById('topbar').style.background=barCol;
+  document.getElementById('botbar').style.background=`linear-gradient(to top, ${bg}, ${barCol}, transparent)`;
+
+  // slider geometry
+  const slider=document.getElementById('slider');
+  slider.style.top = state.full? '60px':'120px';
+  slider.style.bottom = state.full? '100px':'150px';
+  slider.style.width = (state.capW+0) + 'px';
+
+  const progress = CUR/(TOTAL-1); // fraction from top
+  // Capsule + buttons = the ACTIVE THEME's surface, translucent (Komikku-style:
+  // the dark tint is just the theme showing through, art visible behind).
+  const capBg=`color-mix(in srgb, ${bg2} ${state.capO}%, transparent)`;
+  const btnBg=`color-mix(in srgb, ${bg2} ${state.btnO}%, transparent)`;
+  const btnBorder=`1px solid color-mix(in srgb, ${accent} 28%, transparent)`;
+  const btnIcon=`color-mix(in srgb, ${accent} 60%, white)`; // bright theme accent
+
+  // dots
+  let dotsHtml='';
+  if(state.dot>0 && TOTAL<=80){ for(let i=0;i<TOTAL;i++){ dotsHtml+=`<div class="dot" style="width:${state.dot}px;height:${state.dot}px"></div>`; } }
+
+  slider.innerHTML = `
+    <div class="jbtn" style="width:${state.btnS}px;height:${state.btnS}px;background:${btnBg};border:${btnBorder};color:${btnIcon}">${TRI_UP}</div>
+    <div style="height:8px"></div>
+    <div class="capsule" style="width:${state.capW}px;background:${capBg}">
+      <div class="num" style="font-size:${state.numF}px;padding-top:${state.numG}px;padding-bottom:${state.numG}px">6</div>
+      <div class="bar">
+        <div class="track" style="width:${state.trk}px;background:color-mix(in srgb, ${accent} ${state.trkO}%, transparent)"></div>
+        <div class="fill" style="width:${state.trk}px;height:${progress*100}%"></div>
+        <div class="dots">${dotsHtml}</div>
+        <div class="marker" style="top:${progress*100}%;width:${state.mkl}px;height:${state.mkt}px"></div>
+      </div>
+      <div class="num" style="font-size:${state.numF}px;padding-top:${state.numG}px;padding-bottom:${state.numG}px">15</div>
+    </div>
+    <div style="height:8px"></div>
+    <div class="jbtn" style="width:${state.btnS}px;height:${state.btnS}px;background:${btnBg};border:${btnBorder};color:${btnIcon}">${TRI_DN}</div>
+  `;
+
+  // sync control labels
+  const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val;};
+  set('capWv',state.capW+'px');set('capOv',state.capO+'%');set('numFv',state.numF+'px');set('numGv',state.numG+'px');
+  set('trkv',state.trk+'px');set('trkOv',state.trkO+'%');set('dotv',state.dot?state.dot+'px':'off');set('mklv',state.mkl+'px');set('mktv',state.mkt+'px');
+  set('btnSv',state.btnS+'px');set('btnOv',state.btnO+'%');set('barOv',state.barO+'%');
+  ['capW','capO','numF','numG','trk','trkO','dot','mkl','mkt','btnS','btnO','barO'].forEach(k=>{const e=document.getElementById(k);if(e)e.value=state[k];});
+  segOn('themeSeg','t',state.theme);segOn('fullSeg','f',String(state.full));
+  updatePrompt();
+}
+function segOn(id,attr,val){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle('on',b.getAttribute('data-'+attr)===val));}
+
+function updatePrompt(){
+  const p=[];
+  p.push(`Reader vertical slider, ${state.theme} theme, Komikku layout:`);
+  p.push(`• Capsule ${state.capW}px wide, bg opacity ${state.capO}%, ${state.full?'FULL height (top 60 / bottom 100)':'inset'}.`);
+  p.push(`• Bar track ${state.trk}px thick at accent ${state.trkO}% opacity; gradient fill above marker.`);
+  p.push(`• Marker line ${state.mkl}px long × ${state.mkt}px thick, white + glow.`);
+  p.push(`• Tick dots: ${state.dot?state.dot+'px white@55%':'off'}, one per page.`);
+  p.push(`• Numbers ${state.numF}px, ${state.numG}px gap from the bar.`);
+  p.push(`• Jump buttons ${state.btnS}px, translucent theme surface, opacity ${state.btnO}%, bright accent triangle up/down icons.`);
+  p.push(`• Top/bottom reader bars at ${state.barO}% bg opacity.`);
+  document.getElementById('prompt').textContent=p.join('\n');
+}
+function copyP(){navigator.clipboard.writeText(document.getElementById('prompt').textContent);const b=document.getElementById('cpy');b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1200);}
+
+function preset(n){
+  if(n==='komikku')Object.assign(state,{capW:46,capO:52,full:1,numF:13,numG:10,trk:9,trkO:55,dot:4,mkl:26,mkt:4,btnS:42,btnO:52,barO:55});
+  if(n==='subtle')Object.assign(state,{capW:40,capO:38,full:1,numF:12,numG:8,trk:7,trkO:40,dot:3,mkl:20,mkt:3,btnS:36,btnO:36,barO:40});
+  if(n==='bold')Object.assign(state,{capW:54,capO:65,full:1,numF:15,numG:12,trk:13,trkO:75,dot:5,mkl:34,mkt:5,btnS:48,btnO:65,barO:65});
+  render();
+}
+
+// wire
+['capW','capO','numF','numG','trk','trkO','dot','mkl','mkt','btnS','btnO','barO'].forEach(k=>{
+  document.getElementById(k).addEventListener('input',e=>{state[k]=+e.target.value;render();});
+});
+document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>{state.theme=b.getAttribute('data-t');render();});
+document.querySelectorAll('#fullSeg button').forEach(b=>b.onclick=()=>{state.full=+b.getAttribute('data-f');render();});
+
+render();
+</script>
+</body>
+</html>

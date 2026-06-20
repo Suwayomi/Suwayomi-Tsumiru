@@ -439,67 +439,58 @@ class ReaderWrapper extends HookConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        // Chapter prev/next arrows are a manga (horizontal)
-                        // gesture; in webtoon you flow via scroll/infinite.
-                        if (scrollDirection == Axis.horizontal)
+                    // Horizontal (manga): inline seek bar flanked by chapter
+                    // prev/next arrows. Vertical (webtoon): the side bar carries
+                    // the page count + chapter jumps, so this whole row (and its
+                    // redundant "1 / 15") is dropped.
+                    if (scrollDirection == Axis.horizontal) ...[
+                      Row(
+                        children: [
                           Card(
-                          shape: const CircleBorder(),
-                          child: IconButton(
-                            onPressed: nextPrevChapterPair?.second != null
-                                ? () => ReaderRoute(
-                                      mangaId:
-                                          nextPrevChapterPair!.second!.mangaId,
-                                      chapterId: nextPrevChapterPair.second!.id,
-                                      toPrev: true,
-                                      transVertical:
-                                          scrollDirection != Axis.vertical,
-                                    ).pushReplacement(context)
-                                : null,
-                            icon: const Icon(
-                              Icons.skip_previous_rounded,
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              onPressed: nextPrevChapterPair?.second != null
+                                  ? () => ReaderRoute(
+                                        mangaId: nextPrevChapterPair!
+                                            .second!.mangaId,
+                                        chapterId:
+                                            nextPrevChapterPair.second!.id,
+                                        toPrev: true,
+                                        transVertical:
+                                            scrollDirection != Axis.vertical,
+                                      ).pushReplacement(context)
+                                  : null,
+                              icon: const Icon(Icons.skip_previous_rounded),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          // Horizontal (manga) → gradient seek bar inline.
-                          // Vertical (webtoon) → just the page count here; the
-                          // seek bar floats vertically on the side (below).
-                          child: scrollDirection == Axis.horizontal
-                              ? BrandPageSeekBar(
-                                  currentValue: currentIndex,
-                                  maxValue: totalPageCount ??
-                                      chapterPages.chapter.pageCount,
-                                  onChanged: (index) => onChanged(index),
-                                  inverted: invertTap,
-                                )
-                              : Center(
-                                  child: Text(
-                                    "${currentIndex + 1}"
-                                    " / ${totalPageCount ?? chapterPages.chapter.pageCount}",
-                                  ),
-                                ),
-                        ),
-                        if (scrollDirection == Axis.horizontal)
-                          Card(
-                          shape: const CircleBorder(),
-                          child: IconButton(
-                            onPressed: nextPrevChapterPair?.first != null
-                                ? () => ReaderRoute(
-                                      mangaId:
-                                          nextPrevChapterPair!.first!.mangaId,
-                                      chapterId: nextPrevChapterPair.first!.id,
-                                      transVertical:
-                                          scrollDirection != Axis.vertical,
-                                    ).pushReplacement(context)
-                                : null,
-                            icon: const Icon(Icons.skip_next_rounded),
+                          Expanded(
+                            child: BrandPageSeekBar(
+                              currentValue: currentIndex,
+                              maxValue: totalPageCount ??
+                                  chapterPages.chapter.pageCount,
+                              onChanged: (index) => onChanged(index),
+                              inverted: invertTap,
+                            ),
                           ),
-                        )
-                      ],
-                    ),
-                    const Gap(8),
+                          Card(
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              onPressed: nextPrevChapterPair?.first != null
+                                  ? () => ReaderRoute(
+                                        mangaId:
+                                            nextPrevChapterPair!.first!.mangaId,
+                                        chapterId: nextPrevChapterPair.first!.id,
+                                        transVertical:
+                                            scrollDirection != Axis.vertical,
+                                      ).pushReplacement(context)
+                                  : null,
+                              icon: const Icon(Icons.skip_next_rounded),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Gap(8),
+                    ],
                     Card(
                       // Translucent bottom bar (Komikku-style).
                       color: context.theme.cardColor.withValues(alpha: 0.7),
@@ -629,40 +620,51 @@ class ReaderWrapper extends HookConsumerWidget {
             // Webtoon / vertical scroll: the seek bar floats vertically on the
             // side (the bottom bar shows only the page count in this mode).
             if (scrollDirection == Axis.vertical && visibility.value)
-              Positioned(
-                right: 6,
-                top: 80,
-                // Extend down to just above the bottom menu.
-                bottom: 100,
-                width: 66,
-                child: Column(
-                  children: [
-                    // Jump to the start of this chapter.
-                    BrandCircleButton(
-                      icon: Icons.vertical_align_top_rounded,
-                      onPressed: () => onChanged(0),
-                    ),
-                    const Gap(8),
-                    Expanded(
-                      child: BrandPageSeekBar(
-                        currentValue: currentIndex,
-                        maxValue:
-                            totalPageCount ?? chapterPages.chapter.pageCount,
-                        onChanged: (index) => onChanged(index),
-                        axis: Axis.vertical,
+              Builder(builder: (context) {
+                final navSurface =
+                    readerNavSurface(context.theme.colorScheme);
+                final lastPage =
+                    (totalPageCount ?? chapterPages.chapter.pageCount) - 1;
+                return Positioned(
+                  right: 6,
+                  top: 80,
+                  // Extend down to just above the bottom menu.
+                  bottom: 100,
+                  width: 56,
+                  child: Column(
+                    children: [
+                      // Jump to the start of this chapter — Komikku skip-previous
+                      // glyph rotated to point up.
+                      BrandFilledCircleButton(
+                        icon: Icons.skip_previous_rounded,
+                        quarterTurns: 1,
+                        color: navSurface,
+                        onPressed: () => onChanged(0),
                       ),
-                    ),
-                    const Gap(8),
-                    // Jump to the end of this chapter.
-                    BrandCircleButton(
-                      icon: Icons.vertical_align_bottom_rounded,
-                      onPressed: () => onChanged(
-                        (totalPageCount ?? chapterPages.chapter.pageCount) - 1,
+                      const Gap(8),
+                      Expanded(
+                        child: BrandPageSeekBar(
+                          currentValue: currentIndex,
+                          maxValue:
+                              totalPageCount ?? chapterPages.chapter.pageCount,
+                          onChanged: (index) => onChanged(index),
+                          axis: Axis.vertical,
+                          capsuleColor: navSurface,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                      const Gap(8),
+                      // Jump to the end of this chapter — Komikku skip-next
+                      // glyph rotated to point down.
+                      BrandFilledCircleButton(
+                        icon: Icons.skip_next_rounded,
+                        quarterTurns: 1,
+                        color: navSurface,
+                        onPressed: () => onChanged(lastPage),
+                      ),
+                    ],
+                  ),
+                );
+              }),
           ],
         ),
       ),

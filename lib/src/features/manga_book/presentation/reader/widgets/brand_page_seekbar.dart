@@ -26,6 +26,7 @@ class BrandPageSeekBar extends StatelessWidget {
     required this.onChanged,
     this.axis = Axis.horizontal,
     this.inverted = false,
+    this.capsuleColor,
   });
 
   /// 0-based current page.
@@ -38,6 +39,10 @@ class BrandPageSeekBar extends StatelessWidget {
 
   /// Flip the fill/seek direction (RTL paging).
   final bool inverted;
+
+  /// Capsule background. Pass [readerNavSurface] in vertical (webtoon) mode so
+  /// the bar shares ONE theme-surface colour with its jump buttons.
+  final Color? capsuleColor;
 
   void _seek(Offset local, Size size) {
     final lastIndex = max(maxValue - 1, 1);
@@ -81,33 +86,48 @@ class BrandPageSeekBar extends StatelessWidget {
       },
     );
 
-    final current = Text("${(currentValue + 1).clamp(1, maxValue)}");
-    final total = Text("$maxValue");
-    const thickness = 40.0;
+    final numStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: cs.onSurface,
+      fontFeatures: const [ui.FontFeature.tabularFigures()],
+    );
+    final current =
+        Text("${(currentValue + 1).clamp(1, maxValue)}", style: numStyle);
+    final total = Text("$maxValue", style: numStyle);
+    const thickness = 26.0;
+    // Gap between the page numbers and the bar — Komikku keeps them clear of
+    // the slider (the "6 / 15 touching the slider" complaint).
+    const gap = SizedBox.square(dimension: 10);
 
     final content = axis == Axis.horizontal
         ? Row(
             children: [
               inverted ? total : current,
+              gap,
               Expanded(child: SizedBox(height: thickness, child: bar)),
+              gap,
               inverted ? current : total,
             ],
           )
         : Column(
             children: [
               current,
+              gap,
               Expanded(child: SizedBox(width: thickness, child: bar)),
+              gap,
               total,
             ],
           );
 
     return Card(
-      color: context.theme.appBarTheme.backgroundColor?.withValues(alpha: .7),
+      color: capsuleColor ??
+          context.theme.appBarTheme.backgroundColor?.withValues(alpha: .7),
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r32.radius),
       child: Padding(
         padding: axis == Axis.horizontal
-            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 2)
-            : const EdgeInsets.symmetric(horizontal: 2, vertical: 16),
+            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 6)
+            : const EdgeInsets.symmetric(horizontal: 6, vertical: 16),
         child: content,
       ),
     );
@@ -143,10 +163,10 @@ class _SeekPainter extends CustomPainter {
     Offset along(double d) =>
         horizontal ? Offset(d, cross) : Offset(cross, d);
 
-    // Track.
+    // Track — accent-tinted (Komikku's slider inactive track), subtle.
     canvas.drawRRect(
       RRect.fromRectAndRadius(bar(0, length), radius),
-      Paint()..color = scheme.onSurface.withValues(alpha: 0.16),
+      Paint()..color = scheme.primary.withValues(alpha: 0.22),
     );
 
     // Gradient fill up to the current position.
@@ -163,30 +183,35 @@ class _SeekPainter extends CustomPainter {
     if (count > 1 && count <= 80) {
       final dot = Paint()..color = scheme.onSurface.withValues(alpha: 0.5);
       for (var i = 0; i < count; i++) {
-        canvas.drawCircle(along(length * (i / (count - 1))), 2.2, dot);
+        canvas.drawCircle(along(length * (i / (count - 1))), 2.0, dot);
       }
     }
 
-    // Line marker at the current position (perpendicular to the bar).
+    // Marker line at the current position (perpendicular to the bar), painted
+    // with the brand gradient + a soft glow — Komikku's line, our colours.
     final pos = length * fill;
-    const half = 16.0;
+    const half = 13.0;
+    const mkt = 4.0;
     final p1 = horizontal ? Offset(pos, cross - half) : Offset(cross - half, pos);
     final p2 = horizontal ? Offset(pos, cross + half) : Offset(cross + half, pos);
+    // Glow.
     canvas.drawLine(
       p1,
       p2,
       Paint()
-        ..color = scheme.primary.withValues(alpha: 0.5)
-        ..strokeWidth = 9
+        ..color = scheme.primary.withValues(alpha: 0.55)
+        ..strokeWidth = mkt + 5
         ..strokeCap = StrokeCap.round
         ..maskFilter = const ui.MaskFilter.blur(BlurStyle.normal, 5),
     );
+    // Gradient marker.
+    final markerRect = Rect.fromPoints(p1, p2).inflate(mkt);
     canvas.drawLine(
       p1,
       p2,
       Paint()
-        ..color = Colors.white
-        ..strokeWidth = 4
+        ..shader = brandGradient(scheme).createShader(markerRect)
+        ..strokeWidth = mkt
         ..strokeCap = StrokeCap.round,
     );
   }

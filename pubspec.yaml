@@ -2,9 +2,9 @@ name: tsumiru
 description: A manga reader client for Suwayomi Server.
 
 publish_to: "none"
-# Public version matches the Tsumiru release line (v0.4.0); build number keeps
+# Public version matches the Tsumiru release line; build number keeps
 # climbing from the inherited 0.6.4+28 so Android upgrades stay monotonic.
-version: 0.4.1+30
+version: 0.5.0+31
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
