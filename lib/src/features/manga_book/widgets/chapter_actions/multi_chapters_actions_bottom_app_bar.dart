@@ -8,10 +8,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/app_sizes.dart';
-import '../../../../constants/gen/assets.gen.dart';
+import '../../../../features/offline/data/offline_download_providers.dart';
+import '../../../../features/offline/data/offline_repository.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/selection_action_bar.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -31,8 +32,6 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
   final List<ChapterDto>? chapterList;
 
   List<int> get selectedChapterList => selectedChapters.value.keys.toList();
-  ChapterDto get firstChapter =>
-      selectedChapters.value[selectedChapterList.first]!;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,99 +40,114 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
       if (triggerAfterOption) await afterOptionSelected();
     }
 
-    final selectedList = selectedChapters.value.values;
-
-    // This bar is a Scaffold bottomSheet inside the shell navigation, which
-    // zeroes the bottom MediaQuery insets — BOTH padding and viewPadding — for
-    // its descendants (confirmed on-device: MediaQuery reports 0 while the
-    // system navigation bar is really 48dp). Read the inset straight from the
-    // FlutterView, which no MediaQuery ancestor can consume, so the bar clears
-    // the Android navigation buttons.
-    final view = View.of(context);
-    final bottomInset = view.viewPadding.bottom / view.devicePixelRatio;
-    return Padding(
-      padding: KEdgeInsets.a8.size.add(
-        EdgeInsets.only(bottom: bottomInset),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (selectedList.any((e) => e.isBookmarked.ifNull()))
-            MultiChaptersActionIcon(
-              iconData: Icons.bookmark_remove_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isBookmarked: false),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isBookmarked.ifNull())))
-            MultiChaptersActionIcon(
-              iconData: Icons.bookmark_add_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isBookmarked: true),
-              refresh: refresh,
-            ),
-          if (selectedList.isSingletonList && chapterList.isNotBlank)
-            MultiChaptersActionIcon(
-              chapterList: [
-                for (final chapter in chapterList!)
-                  if (firstChapter.index > chapter.index) chapter.id
-              ],
-              icon: ImageIcon(
-                Assets.icons.previousDone.provider(),
-                color: context.theme.cardTheme.color,
-              ),
-              change: ChapterChange(isRead: true),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isRead.ifNull())))
-            MultiChaptersActionIcon(
-              iconData: Icons.done_all_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isRead: true, lastPageRead: 0),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => e.isRead.ifNull()))
-            MultiChaptersActionIcon(
-              iconData: Icons.remove_done_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isRead: false),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isDownloaded.ifNull())))
-            IconButton(
-              icon: Icon(Icons.download_rounded),
-              onPressed: () async {
-                final result = await AsyncValue.guard(
-                  () => ref
-                      .read(downloadsRepositoryProvider)
-                      .addChaptersBatchToDownloadQueue([
-                    for (var e in selectedList)
-                      if (!(e.isDownloaded.ifNull(true))) (e.id)
-                  ]),
-                );
-                if (context.mounted) {
-                  result.showToastOnError(ref.read(toastProvider));
-                }
-                await refresh(true);
-              },
-            ),
-          if (selectedList.any((e) => e.isDownloaded.ifNull()))
-            IconButton(
-              icon: Icon(Icons.delete_rounded),
-              onPressed: () async {
-                final result = await AsyncValue.guard(
-                  () => ref
-                      .read(mangaBookRepositoryProvider)
-                      .deleteChapters(selectedChapterList),
-                );
-                if (context.mounted) {
-                  result.showToastOnError(ref.read(toastProvider));
-                }
-                await refresh(true);
-              },
-            ),
-        ],
-      ),
+    // Same floating action bar as the library multi-select, with parity actions:
+    // a leading clear + count, then mark read / unread, download to device,
+    // download to server, and delete.
+    return SelectionActionBar(
+      clearsSystemNav: true,
+      leading: [
+        IconButton(
+          tooltip: 'Clear',
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => refresh(false),
+        ),
+        Text('${selectedChapters.value.length}',
+            style: context.textTheme.titleMedium),
+      ],
+      actions: [
+        IconButton(
+          tooltip: 'Select all',
+          icon: const Icon(Icons.select_all_rounded),
+          onPressed: chapterList == null
+              ? null
+              : () => selectedChapters.value = {
+                    for (final c in chapterList!) c.id: c,
+                  },
+        ),
+        MultiChaptersActionIcon(
+          iconData: Icons.done_all_rounded,
+          chapterList: selectedChapterList,
+          change: ChapterChange(isRead: true, lastPageRead: 0),
+          refresh: refresh,
+        ),
+        MultiChaptersActionIcon(
+          iconData: Icons.remove_done_rounded,
+          chapterList: selectedChapterList,
+          change: ChapterChange(isRead: false),
+          refresh: refresh,
+        ),
+        IconButton(
+          tooltip: context.l10n.keepOffline,
+          icon: const Icon(Icons.download_for_offline_outlined),
+          onPressed: () async {
+            // Download FIRST, clear selection AFTER: clearing selection disposes
+            // this bar, which would invalidate `ref` mid-loop and silently drop
+            // the remaining downloads.
+            final ids = selectedChapterList;
+            for (final id in ids) {
+              await saveChapterToDevice(ref, id);
+            }
+            await refresh(true);
+          },
+        ),
+        IconButton(
+          tooltip: context.l10n.downloads,
+          icon: const Icon(Icons.cloud_download_outlined),
+          onPressed: () async {
+            final result = await AsyncValue.guard(
+              () => ref
+                  .read(downloadsRepositoryProvider)
+                  .addChaptersBatchToDownloadQueue(selectedChapterList),
+            );
+            if (context.mounted) {
+              result.showToastOnError(ref.read(toastProvider));
+            }
+            await refresh(true);
+          },
+        ),
+        IconButton(
+          tooltip: context.l10n.delete,
+          icon: const Icon(Icons.delete_rounded),
+          onPressed: () async {
+            final repo = ref.read(offlineRepositoryProvider);
+            final onDevice =
+                await repo.deviceDownloadedCount(selectedChapterList);
+            if (onDevice > 0) {
+              if (!context.mounted) return;
+              final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(ctx.l10n.delete),
+                      content:
+                          Text(ctx.l10n.offlineBulkDeleteWarning(onDevice)),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text(ctx.l10n.cancel)),
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: Text(ctx.l10n.delete)),
+                      ],
+                    ),
+                  ) ??
+                  false;
+              if (!ok) return;
+            }
+            final result = await AsyncValue.guard(
+              () => ref
+                  .read(mangaBookRepositoryProvider)
+                  .deleteChapters(selectedChapterList),
+            );
+            if (context.mounted) {
+              result.showToastOnError(ref.read(toastProvider));
+            }
+            if (!result.hasError) {
+              await cascadeServerDeleteToDevice(ref, selectedChapterList);
+            }
+            await refresh(true);
+          },
+        ),
+      ],
     );
   }
 }

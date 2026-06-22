@@ -14,6 +14,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
+import 'widgets/force_portrait_tile.dart';
 
 class GeneralScreen extends ConsumerWidget {
   const GeneralScreen({super.key});
@@ -57,6 +58,7 @@ class GeneralScreen extends ConsumerWidget {
           //   },
           // ),
           const QuickSearchToggleTile(),
+          const ForcePortraitTile(),
           const TimeoutSettingsSection(),
         ],
       ),

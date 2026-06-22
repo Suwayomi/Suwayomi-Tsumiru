@@ -14,10 +14,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../history/presentation/history_controller.dart';
+import '../../../offline/data/offline_download_providers.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
-import '../../data/manga_book/manga_book_repository.dart';
-import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/reader_controller.dart';
@@ -45,6 +44,9 @@ class ReaderScreen extends HookConsumerWidget {
     final ignoreSafeArea = ref.watch(readerIgnoreSafeAreaProvider).ifNull();
 
     final debounce = useRef<Timer?>(null);
+    // Latest page reached, so we can flush it on exit (the debounce below would
+    // otherwise drop the last few pages if you back out before it fires).
+    final latestPage = useRef<int>(-1);
 
     final updateLastRead = useCallback((int currentPage) async {
       final chapterValue = chapter.valueOrNull;
@@ -58,14 +60,13 @@ class ReaderScreen extends HookConsumerWidget {
       final isReadingCompleted =
           (currentPage >= (actualPageCount - 1)) && actualPageCount > 0;
 
-      await AsyncValue.guard(
-        () => ref.read(mangaBookRepositoryProvider).putChapter(
-              chapterId: chapterValue.id,
-              patch: ChapterChange(
-                lastPageRead: isReadingCompleted ? 0 : currentPage,
-                isRead: isReadingCompleted,
-              ),
-            ),
+      // Persist locally first (survives offline + app restart), then push to
+      // the server; if offline it stays pending and up-syncs on reconnect.
+      await recordReadingProgress(
+        ref,
+        chapterId: chapterValue.id,
+        lastPageRead: isReadingCompleted ? 0 : currentPage,
+        isRead: isReadingCompleted,
       );
 
       // Invalidate history to refresh the reading progress
@@ -84,6 +85,7 @@ class ReaderScreen extends HookConsumerWidget {
           return;
         }
 
+        latestPage.value = index;
         final finalDebounce = debounce.value;
         if ((finalDebounce?.isActive).ifNull()) {
           finalDebounce?.cancel();
@@ -116,6 +118,12 @@ class ReaderScreen extends HookConsumerWidget {
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
+          // Flush the latest page reached so progress isn't lost to a pending
+          // debounce when you back out (catalog write is synchronous here).
+          debounce.value?.cancel();
+          if (latestPage.value >= 0) {
+            updateLastRead(latestPage.value);
+          }
           ref.invalidate(chapterProviderWithIndex);
           ref.invalidate(mangaChapterListProvider(mangaId: mangaId));
         }

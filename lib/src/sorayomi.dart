@@ -14,6 +14,7 @@ import 'constants/app_theme.dart';
 import 'features/auth/presentation/reauth_banner.dart';
 import 'features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'features/settings/presentation/appearance/widgets/is_true_black/is_true_black_tile.dart';
+import 'features/settings/presentation/general/widgets/force_portrait_tile.dart';
 import 'features/settings/widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'global_providers/global_providers.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -33,6 +34,9 @@ class Sorayomi extends ConsumerWidget {
     final customSeed = ref.watch(customThemeColorProvider);
     final isTrueBlack = ref.watch(isTrueBlackProvider).ifNull();
     final client = ref.watch(graphQlClientNotifierProvider);
+    // Honour the portrait-lock preference on launch and whenever it changes
+    // (phones only; idempotent so re-applying on rebuild is harmless).
+    applyForcePortrait(ref.watch(forcePortraitProvider).ifNull());
     return GraphQLProvider(
       client: client,
       child: MaterialApp.router(

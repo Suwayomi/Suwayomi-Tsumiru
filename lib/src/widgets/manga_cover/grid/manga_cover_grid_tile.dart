@@ -24,6 +24,7 @@ class MangaCoverGridTile extends StatelessWidget {
     this.showBadges = true,
     this.showCountBadges = false,
     this.showDarkOverlay = true,
+    this.selected = false,
   });
   final MangaDto manga;
   final VoidCallback? onPressed;
@@ -32,6 +33,10 @@ class MangaCoverGridTile extends StatelessWidget {
   final bool showTitle;
   final bool showBadges;
   final bool showDarkOverlay;
+
+  /// Multi-select highlight: a primary-tinted border + check, like Komikku's
+  /// library selection.
+  final bool selected;
   @override
   Widget build(BuildContext context) {
     return InkResponse(
@@ -66,8 +71,34 @@ class MangaCoverGridTile extends StatelessWidget {
       onLongPress: onLongPress,
       child: Card(
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r12.radius),
-        child: GridTile(
+        shape: RoundedRectangleBorder(
+          borderRadius: KBorderRadius.r12.radius,
+          side: selected
+              ? BorderSide(color: context.theme.colorScheme.primary, width: 3)
+              : BorderSide.none,
+        ),
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            _selectableChild(context),
+            if (selected)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  color: context.theme.colorScheme.primary,
+                  shadows: const [Shadow(blurRadius: 4)],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _selectableChild(BuildContext context) {
+    return GridTile(
           header: showBadges
               ? MangaBadgesRow(manga: manga, showCountBadges: showCountBadges)
               : null,
@@ -118,8 +149,6 @@ class MangaCoverGridTile extends StatelessWidget {
                     size: context.height * .2,
                   ),
                 ),
-        ),
-      ),
-    );
+        );
   }
 }

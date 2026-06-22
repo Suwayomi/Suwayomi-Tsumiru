@@ -26,6 +26,7 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
     this.onTitleClicked,
     this.showBadges = true,
     this.showCountBadges = true,
+    this.selected = false,
   });
   final MangaDto manga;
   final bool showBadges;
@@ -33,12 +34,17 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
   final ValueChanged<String?>? onTitleClicked;
+  final bool selected;
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      onLongPress: onLongPress,
-      child: Padding(
+    return ColoredBox(
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        onLongPress: onLongPress,
+        child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -152,6 +158,7 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

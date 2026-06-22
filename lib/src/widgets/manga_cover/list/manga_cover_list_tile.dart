@@ -19,6 +19,7 @@ class MangaCoverListTile extends StatelessWidget {
     this.onLongPress,
     this.showBadges = true,
     this.showCountBadges = false,
+    this.selected = false,
   });
 
   final MangaDto manga;
@@ -26,13 +27,18 @@ class MangaCoverListTile extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool showCountBadges;
   final bool showBadges;
+  final bool selected;
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      onLongPress: onLongPress,
-      child: Row(
-        children: [
+    return ColoredBox(
+      color: selected
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        onLongPress: onLongPress,
+        child: Row(
+          children: [
           Padding(
             padding: KEdgeInsets.a8.size,
             child: ClipRRect(
@@ -53,9 +59,10 @@ class MangaCoverListTile extends StatelessWidget {
               ),
             ),
           ),
-          if (showBadges)
-            MangaBadgesRow(manga: manga, showCountBadges: showCountBadges),
-        ],
+            if (showBadges)
+              MangaBadgesRow(manga: manga, showCountBadges: showCountBadges),
+          ],
+        ),
       ),
     );
   }

@@ -228,9 +228,17 @@ class ReaderWrapper extends HookConsumerWidget {
     );
 
     useEffect(() {
-      if (!visibility.value) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      }
+      // Match Komikku's ReaderActivity.setMenuVisibility: show the system bars
+      // (status bar/clock + navigation/gesture bar) WITH the reader menu, and
+      // hide them again when the menu is dismissed. The page content stays
+      // edge-to-edge under them either way. Previously only the hide branch
+      // existed, so once hidden the bars never came back on tap — leaving no
+      // clock and no gesture/nav controls while the menu was up.
+      SystemChrome.setEnabledSystemUIMode(
+        visibility.value
+            ? SystemUiMode.edgeToEdge
+            : SystemUiMode.immersiveSticky,
+      );
       return null;
     }, [visibility.value]);
 
@@ -445,9 +453,14 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
         bottomSheet: visibility.value
             ? ExcludeFocus(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                // Reader is edge-to-edge now (no outer SafeArea), so pad the
+                // controls above the navigation / gesture bar — otherwise they
+                // sit under it when the menu is shown.
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     // Horizontal (manga): inline seek bar flanked by chapter
                     // prev/next arrows. Vertical (webtoon): the side bar carries
                     // the page count + chapter jumps, so this whole row (and its
@@ -541,6 +554,7 @@ class ReaderWrapper extends HookConsumerWidget {
                       ),
                     ),
                   ],
+                  ),
                 ),
               )
             : null,

@@ -309,13 +309,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
             width: kDrawerWidth,
             child: MangaChapterOrganizer(mangaId: mangaId),
           ),
-          bottomSheet: selectedChapters.value.isNotEmpty
-              ? MultiChaptersActionsBottomAppBar(
-                  afterOptionSelected: chapterListRefresh,
-                  selectedChapters: selectedChapters,
-                  chapterList: filteredChapterList.value,
-                )
-              : null,
           floatingActionButton:
               firstUnreadChapter != null && selectedChapters.value.isEmpty
                   ? BrandFab(
@@ -334,7 +327,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       },
                     )
                   : null,
-          body: NotificationListener<ScrollNotification>(
+          body: Stack(
+            children: [
+              NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n.metrics.axis == Axis.vertical) {
                 scrollPx.value = n.metrics.pixels;
@@ -368,6 +363,19 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     child: Text(context.l10n.refresh),
                   ),
                 ),
+          ),
+              if (selectedChapters.value.isNotEmpty)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: MultiChaptersActionsBottomAppBar(
+                    afterOptionSelected: chapterListRefresh,
+                    selectedChapters: selectedChapters,
+                    chapterList: filteredChapterList.value,
+                  ),
+                ),
+            ],
           ),
         ),
         refresh: refresh,
