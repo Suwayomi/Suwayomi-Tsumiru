@@ -7,6 +7,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../offline_database.dart';
+import '../offline_paths.dart';
+
 sealed class LogEntry {
   const LogEntry();
 }
@@ -87,4 +90,77 @@ class BackgroundCompletionLog {
   Future<void> truncate() async {
     if (await file.exists()) await file.writeAsString('', flush: true);
   }
+}
+
+typedef ChapterBytesMeasurer = Future<int> Function(int mangaId, int chapterId);
+
+Future<void> replayCompletionLog({
+  required OfflineDatabase db,
+  required OfflinePaths paths,
+  required BackgroundCompletionLog log,
+  required ChapterBytesMeasurer measureBytes,
+}) async {
+  final entries = await log.parse();
+  if (entries.isEmpty) return;
+
+  // Which chapters were touched + their terminal status (last one wins).
+  final touched = <int, int>{}; // chapterId -> mangaId
+  final terminal = <int, String>{};
+  for (final e in entries) {
+    switch (e) {
+      case PageEntry(:final chapterId, :final mangaId):
+        touched[chapterId] = mangaId;
+      case ChapterEntry(:final chapterId, :final status):
+        terminal[chapterId] = status;
+        // mangaId for a chapter-only entry comes from drift below
+      case DrainedEntry():
+        break;
+    }
+  }
+
+  for (final chapterId in {...touched.keys, ...terminal.keys}) {
+    final ch = await db.chapterById(chapterId);
+    // Skip deleted/cleared chapters — never resurrect (design: filesystem is
+    // subordinate to drift authority here).
+    if (ch == null || ch.deviceState == OfflineDeviceState.none) continue;
+    final mangaId = touched[chapterId] ?? ch.mangaId;
+
+    // Filesystem is truth: upsert a row for every page file on disk.
+    final dir = Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
+    if (await dir.exists()) {
+      await for (final f in dir.list()) {
+        if (f is! File) continue;
+        final name = f.uri.pathSegments.last; // e.g. 003.jpg
+        final dot = name.indexOf('.');
+        if (dot <= 0) continue;
+        final idx = int.tryParse(name.substring(0, dot));
+        if (idx == null) continue;
+        await db.into(db.offlinePages).insertOnConflictUpdate(
+              OfflinePagesCompanion.insert(
+                chapterId: chapterId,
+                pageIndex: idx,
+                relativePath: paths.pageRel(mangaId, chapterId, idx,
+                    name.substring(dot + 1)),
+              ),
+            );
+      }
+    }
+
+    // Apply terminal state.
+    switch (terminal[chapterId]) {
+      case 'downloaded':
+        final bytes = await measureBytes(mangaId, chapterId);
+        await db.setChapterDeviceState(chapterId, OfflineDeviceState.downloaded,
+            bytes: bytes, downloadedAt: DateTime.now());
+      case 'error':
+      case 'authFailed':
+        await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
+      case 'offline':
+      case null:
+        // leave downloading — resumed later by the pump/worker
+        break;
+    }
+  }
+
+  await log.truncate();
 }
