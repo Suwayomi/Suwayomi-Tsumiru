@@ -15,7 +15,8 @@ class BackgroundWorkOrder {
     required this.addPort,
     required this.wifiOnly,
     required this.auth,
-    required this.rootIsolateToken,
+    required this.baseDir,
+    this.rootIsolateToken = 0,
   });
 
   final List<int> chapterIds;
@@ -25,6 +26,17 @@ class BackgroundWorkOrder {
   final bool addPort;
   final bool wifiOnly;
   final BackgroundTokenRecord auth;
+
+  /// Absolute offline base directory (`<appSupport>/offline`), resolved by the
+  /// MAIN isolate via path_provider and handed to the worker so the worker
+  /// itself stays plugin-free: it builds [OfflinePaths]/[IoOfflinePageStore]
+  /// from this string with only dart:io.
+  final String baseDir;
+
+  /// Vestigial — the plugin-free worker no longer reconstructs a
+  /// [RootIsolateToken] (it touches no platform channels), so this is unused.
+  /// Kept on the model so the JSON shape stays backward-compatible; defaults
+  /// to 0 and is ignored by the worker.
   final int rootIsolateToken;
 
   Map<String, Object?> toJson() => {
@@ -36,6 +48,7 @@ class BackgroundWorkOrder {
         'addPort': addPort,
         'wifiOnly': wifiOnly,
         'auth': auth.toJson(),
+        'baseDir': baseDir,
         'rootIsolateToken': rootIsolateToken,
       };
 
@@ -50,6 +63,7 @@ class BackgroundWorkOrder {
         wifiOnly: j['wifiOnly'] as bool,
         auth: BackgroundTokenRecord.fromJson(
             j['auth'] as Map<String, Object?>),
-        rootIsolateToken: j['rootIsolateToken'] as int,
+        baseDir: j['baseDir'] as String? ?? '',
+        rootIsolateToken: j['rootIsolateToken'] as int? ?? 0,
       );
 }
