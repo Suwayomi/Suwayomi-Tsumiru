@@ -130,6 +130,15 @@ class ReaderWrapper extends HookConsumerWidget {
     );
     final invertTap = ref.watch(invertTapProvider).ifNull();
 
+    // Webtoon (vertical) normally uses the vertical side seek bar, but on a phone
+    // in landscape there's no vertical room for it to be usable — fall back to
+    // the standard horizontal bottom bar, like Komikku.
+    final screenSize = MediaQuery.sizeOf(context);
+    final isLandscapePhone = screenSize.shortestSide < 600 &&
+        screenSize.width > screenSize.height;
+    final useBottomSeekBar = scrollDirection == Axis.horizontal ||
+        (scrollDirection == Axis.vertical && isLandscapePhone);
+
     final bool volumeTap = ref.watch(volumeTapProvider).ifNull();
     final bool volumeTapInvert = ref.watch(volumeTapInvertProvider).ifNull();
 
@@ -443,7 +452,7 @@ class ReaderWrapper extends HookConsumerWidget {
                     // prev/next arrows. Vertical (webtoon): the side bar carries
                     // the page count + chapter jumps, so this whole row (and its
                     // redundant "1 / 15") is dropped.
-                    if (scrollDirection == Axis.horizontal) ...[
+                    if (useBottomSeekBar) ...[
                       Row(
                         children: [
                           Card(
@@ -619,7 +628,9 @@ class ReaderWrapper extends HookConsumerWidget {
             ),
             // Webtoon / vertical scroll: the seek bar floats vertically on the
             // side (the bottom bar shows only the page count in this mode).
-            if (scrollDirection == Axis.vertical && visibility.value)
+            if (scrollDirection == Axis.vertical &&
+                !isLandscapePhone &&
+                visibility.value)
               Builder(builder: (context) {
                 final navSurface =
                     readerNavSurface(context.theme.colorScheme);

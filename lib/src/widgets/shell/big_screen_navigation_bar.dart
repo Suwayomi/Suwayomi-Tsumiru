@@ -36,6 +36,12 @@ class BigScreenNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The rail shows on any wide screen (width >= 600), which includes a phone
+    // in landscape (short side < 600). There the height is tight, so drop the
+    // app-icon header to make room for all destinations ("More" was falling off
+    // the bottom). Real tablets keep the header.
+    final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
+
     final Widget leadingIcon;
     if (context.isDesktop) {
       leadingIcon = SizedBox(
@@ -69,21 +75,34 @@ class BigScreenNavigationBar extends StatelessWidget {
       );
     }
 
-    return NavigationRail(
-      useIndicator: true,
-      elevation: 5,
+    // The rail doesn't scroll on its own, so in landscape (short height) its
+    // destinations overflow the bottom. Let it scroll when it can't fit, while
+    // still filling the height when there's room (so spacing/indicator look
+    // right).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: NavigationRail(
+              useIndicator: true,
+              elevation: 5,
       extended: context.isDesktop,
       minExtendedWidth: _extendedWidth,
       labelType: context.isDesktop
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
-      leading: leadingIcon,
+      leading: isPhone ? null : leadingIcon,
       destinations: NavigationBarData.getNavList(context)
           .map<NavigationRailDestination>(
               (e) => getNavigationRailDestination(context, e))
           .toList(),
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
