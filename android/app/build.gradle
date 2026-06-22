@@ -29,7 +29,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 34 // flutter.compileSdkVersion
+    compileSdkVersion 36 // bumped for background_downloader / flutter_foreground_task
     ndkVersion "27.0.12077973"
     namespace "io.github.aaronbamblett.tsumiru"
     compileOptions {
@@ -50,7 +50,7 @@ android {
         applicationId "io.github.aaronbamblett.tsumiru"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
-        minSdkVersion 21
+        minSdkVersion 23 // raised for flutter_foreground_task (Android 6.0+)
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

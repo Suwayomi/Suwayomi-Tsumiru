@@ -4,24 +4,44 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../../features/offline/data/offline_download_providers.dart';
+import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../offline/data/offline_read_fallback.dart';
 import '../../../data/category_repository.dart';
 import '../../../domain/category/category_model.dart';
 
 part 'library_controller.g.dart';
 
 @riverpod
-Future<List<MangaDto>?> categoryMangaList(Ref ref, int categoryId) => ref
-    .watch(categoryRepositoryProvider)
-    .getMangasFromCategory(categoryId: categoryId);
+Future<List<MangaDto>?> categoryMangaList(Ref ref, int categoryId) async {
+  final list = await libraryWithOfflineFallback(
+    fetch: () => ref
+        .watch(categoryRepositoryProvider)
+        .getMangasFromCategory(categoryId: categoryId),
+    db: ref.watch(offlineDatabaseProvider),
+    offlineEnabled: ref.watch(offlineEnabledProvider),
+  );
+  // Mirror the category's manga into the offline catalog so the whole library
+  // is browsable offline (no-op on web/unset via the null offlineSync).
+  final sync = ref.read(offlineSyncProvider);
+  if (sync != null && list != null) {
+    for (final manga in list) {
+      unawaited(sync.syncManga(manga));
+    }
+  }
+  return list;
+}
 
 @riverpod
 class LibraryDisplayCategory extends _$LibraryDisplayCategory
@@ -44,6 +64,9 @@ class CategoryMangaListWithQueryAndFilter
     final mangaFilterStarted = ref.watch(libraryMangaFilterStartedProvider);
     final mangaFilterBookmarked =
         ref.watch(libraryMangaFilterBookmarkedProvider);
+    final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
+    final offlineMangaIds =
+        ref.watch(offlineDeviceMangaIdsProvider).valueOrNull ?? const <int>{};
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
     final sortedDirection =
@@ -72,6 +95,11 @@ class CategoryMangaListWithQueryAndFilter
 
       if (mangaFilterBookmarked != null &&
           (mangaFilterBookmarked ^ manga.bookmarkCount.isGreaterThan(0))) {
+        return false;
+      }
+
+      if (mangaFilterOffline != null &&
+          (mangaFilterOffline ^ offlineMangaIds.contains(manga.id))) {
         return false;
       }
 
@@ -134,6 +162,13 @@ class LibraryMangaFilterDownloaded extends _$LibraryMangaFilterDownloaded
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.mangaFilterDownloaded);
+}
+
+@riverpod
+class LibraryMangaFilterOffline extends _$LibraryMangaFilterOffline
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.mangaFilterOffline);
 }
 
 @riverpod

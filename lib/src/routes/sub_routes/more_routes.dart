@@ -93,3 +93,10 @@ class DownloadsSettingsRoute extends GoRouteData {
   @override
   Widget build(context, state) => const DownloadsSettingsScreen();
 }
+
+class OfflineSettingsRoute extends GoRouteData {
+  const OfflineSettingsRoute();
+
+  @override
+  Widget build(context, state) => const OfflineSettingsScreen();
+}

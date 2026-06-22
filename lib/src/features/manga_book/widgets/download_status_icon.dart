@@ -14,6 +14,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/theme/brand.dart';
 import '../../../widgets/custom_circular_progress_indicator.dart';
+import '../../offline/data/offline_download_providers.dart';
 import '../data/downloads/downloads_repository.dart';
 import '../data/manga_book/manga_book_repository.dart';
 import '../domain/chapter/chapter_model.dart';
@@ -108,12 +109,15 @@ class DownloadStatusIcon extends HookConsumerWidget {
           return IconButton(
             icon: brandGradientIcon(context, Icons.check_circle_rounded),
             onPressed: () async {
-              (await AsyncValue.guard(
+              final result = await AsyncValue.guard(
                 () => ref
                     .read(mangaBookRepositoryProvider)
                     .deleteChapters([chapter.id]),
-              ))
-                  .showToastOnError(toast);
+              );
+              result.showToastOnError(toast);
+              if (!result.hasError) {
+                await cascadeServerDeleteToDevice(ref, [chapter.id]);
+              }
               await newUpdatePair(ref, (value) => isLoading.value = value);
             },
           );

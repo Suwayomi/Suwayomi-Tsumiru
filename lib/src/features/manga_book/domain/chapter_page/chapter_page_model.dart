@@ -11,3 +11,5 @@ typedef ChapterPageDto = Fragment$ChapterPageDto;
 typedef ChapterPageWithMangaDto = Fragment$ChapterPageWithMangaDto;
 
 typedef ChapterPagesDto = Fragment$ChapterPagesDto;
+
+typedef ChapterPagesChapterDto = Fragment$ChapterPagesDto$chapter;

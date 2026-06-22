@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +21,10 @@ import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
+import 'src/features/offline/data/offline_background_downloads.dart';
+import 'src/features/offline/data/offline_bootstrap.dart';
+import 'src/features/offline/data/offline_download_providers.dart';
+import 'src/features/offline/data/offline_repository.dart';
 import 'src/features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -35,6 +41,17 @@ Future<void> main() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
+  // Open the on-device offline catalog. Null on web (offline disabled there);
+  // failure is non-fatal — the app still launches, offline features stay off.
+  final offlineStorage = await () async {
+    try {
+      return await initOfflineStorage();
+    } catch (e, st) {
+      debugPrint('offline storage init failed: $e\n$st');
+      return null;
+    }
+  }();
+
   // Build a ProviderContainer so we can run migration and preload auth
   // providers before the first frame. Using UncontrolledProviderScope below
   // ensures the widget tree uses this same container instance.
@@ -43,6 +60,12 @@ Future<void> main() async {
       packageInfoProvider.overrideWithValue(packageInfo),
       sharedPreferencesProvider.overrideWithValue(sharedPreferences),
       hiveStoreProvider.overrideWithValue(HiveStore()),
+      if (offlineStorage != null) ...[
+        offlineDatabaseProvider.overrideWithValue(offlineStorage.db),
+        offlinePathsProvider.overrideWithValue(offlineStorage.paths),
+        offlinePageStoreProvider.overrideWithValue(offlineStorage.store),
+        offlineEnabledProvider.overrideWithValue(true),
+      ],
     ],
   );
 
@@ -91,6 +114,20 @@ Future<void> main() async {
     await _seedTestConfig(container);
   } catch (e, st) {
     debugPrint('test-config seed failed: $e\n$st');
+  }
+
+  // 5) Sweep any chapter left mid-download by a prior crash/kill back to a
+  //    clean state so it can be retried. Fire-and-forget; native only.
+  if (offlineStorage != null) {
+    // Push read progress made offline, re-apply keep-rules (queues anything
+    // missing), then resume the download queue: chapters stranded `downloading`
+    // by the last exit and previously-errored ones are retried, one at a time,
+    // re-fetching only pages not already on disk. Fire-and-forget; native only.
+    unawaited(Future(() async {
+      await pushPendingProgress(container);
+      await reconcileAllAtLaunch(container);
+      await initOfflineDownloads(container);
+    }));
   }
 
   runApp(

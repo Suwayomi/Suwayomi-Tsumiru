@@ -17,6 +17,7 @@ import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/offline/data/offline_image_provider.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -36,7 +37,13 @@ class ServerImage extends HookConsumerWidget {
     this.imageBuilder,
     this.wrapper,
     this.showReloadButton = false,
+    this.localFilePath,
   });
+
+  /// When set, the page is rendered straight off disk (downloaded chapter,
+  /// offline reading) instead of fetched from the server. The network path is
+  /// left untouched when this is null.
+  final String? localFilePath;
 
   final String imageUrl;
   final Size? size;
@@ -53,6 +60,35 @@ class ServerImage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
+
+    // Offline: render the downloaded page from disk. Triggered either by an
+    // explicit localFilePath or by a `file://` imageUrl (the offline reader
+    // serves downloaded chapters as file URIs). Returned BEFORE any auth /
+    // server provider reads, so local pages never subscribe to token rotation
+    // (no rebuild storms) and need no network. Both inputs are immutable per
+    // widget instance, so this branch is consistent across rebuilds.
+    final localPath = localFilePath ??
+        (imageUrl.startsWith('file:') ? Uri.parse(imageUrl).toFilePath() : null);
+    if (localPath != null) {
+      final provider = offlineImageProvider(localPath);
+      if (imageBuilder != null) {
+        return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
+      }
+      return AppUtils.wrapOn(
+        wrapper,
+        Image(
+          image: provider,
+          height: size?.height,
+          width: size?.width,
+          fit: fit ?? BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => AppUtils.wrapOn(
+            wrapper,
+            const Icon(Icons.broken_image_rounded, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
     // Providers
     final authType = ref.watch(authTypeKeyProvider);
     final basicToken = ref.watch(credentialsProvider).valueOrNull;
@@ -246,4 +282,53 @@ class ServerImageWithCpi extends StatelessWidget {
       return ServerImage(imageUrl: url, size: outerSize);
     }
   }
+}
+
+/// The exact [ImageProvider] that [ServerImage] would render for [imageUrl],
+/// so callers (the reader's prefetcher) can `precacheImage` the SAME cache
+/// entry the on-screen widget will read — identical cacheKey and auth. This is
+/// the core of smooth webtoon scrolling: decode each page ONCE, off-screen and
+/// ahead of the viewport, so the on-screen build is instant and the page never
+/// resizes (and shoves the scroll) while it's above you. Mirrors the provider
+/// selection in [ServerImage.build]; reads creds non-reactively (ref.read).
+ImageProvider serverPageImageProvider(
+  WidgetRef ref,
+  String imageUrl, {
+  bool appendApiToUrl = false,
+}) {
+  final localPath =
+      imageUrl.startsWith('file:') ? Uri.parse(imageUrl).toFilePath() : null;
+  if (localPath != null) return offlineImageProvider(localPath);
+
+  final authType = ref.read(authTypeKeyProvider);
+  final basicToken = ref.read(credentialsProvider).valueOrNull;
+  final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+
+  final baseApi = "${Endpoints.baseApi(
+    baseUrl: ref.read(serverUrlProvider),
+    port: ref.read(serverPortProvider),
+    addPort: ref.read(serverPortToggleProvider).ifNull(),
+    appendApiToUrl: appendApiToUrl,
+  )}$imageUrl";
+
+  Map<String, String>? httpHeaders;
+  if (authType == AuthType.basic && basicToken != null) {
+    httpHeaders = {"Authorization": basicToken};
+  } else if (authType == AuthType.simpleLogin) {
+    httpHeaders = creds?.simpleLoginCookieHeader;
+  }
+
+  var fetchUrl = baseApi;
+  final uiToken = creds?.uiAccessToken;
+  if (authType == AuthType.uiLogin && uiToken != null && uiToken.isNotEmpty) {
+    final sep = fetchUrl.contains('?') ? '&' : '?';
+    fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiToken)}';
+  }
+
+  return CachedNetworkImageProvider(
+    fetchUrl,
+    cacheKey: baseApi,
+    cacheManager: DefaultCacheManager(),
+    headers: httpHeaders,
+  );
 }
