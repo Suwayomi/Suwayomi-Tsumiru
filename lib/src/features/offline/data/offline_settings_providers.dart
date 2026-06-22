@@ -48,3 +48,10 @@ class OfflineDownloadConcurrency extends _$OfflineDownloadConcurrency
   @override
   int? build() => initialize(DBKeys.offlineDownloadConcurrency);
 }
+
+@riverpod
+class OfflineWifiOnly extends _$OfflineWifiOnly
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.downloadOnlyOverWifi);
+}

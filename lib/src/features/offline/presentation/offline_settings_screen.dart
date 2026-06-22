@@ -78,6 +78,19 @@ class OfflineSettingsScreen extends ConsumerWidget {
                   ),
                   SectionTitle(title: context.l10n.offlineDownloadsSection),
                   SettingsPropTile(
+                    title: context.l10n.downloadOverWifiOnly,
+                    type: SettingsPropType.switchTile(
+                      value:
+                          ref.watch(offlineWifiOnlyProvider) ?? false,
+                      onChanged: (v) async {
+                        ref
+                            .read(offlineWifiOnlyProvider.notifier)
+                            .update(v);
+                        return null;
+                      },
+                    ),
+                  ),
+                  SettingsPropTile(
                     title: context.l10n.offlineConcurrencyLabel,
                     subtitle: context.l10n.offlineConcurrencyValue(
                         ref.watch(offlineDownloadConcurrencyProvider) ?? 2),
