@@ -1,6 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.aaronbamblett.tsumiru">
      <uses-permission android:name="android.permission.INTERNET" />
+     <!-- Background chapter downloads: keep the download orchestration alive with
+          the screen off via a foreground service (dataSync type, Android 14+),
+          with a progress notification (Android 13+). -->
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
    <application
         android:label="Tsumiru"
         android:name="${applicationName}"
@@ -33,5 +40,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- flutter_foreground_task: hosts the background download isolate. -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
     </application>
 </manifest>

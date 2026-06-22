@@ -25,6 +25,7 @@ import '../features/migration/presentation/screens/migration_preview_screen.dart
 import '../features/migration/presentation/screens/migration_progress_screen.dart';
 import '../features/migration/presentation/screens/migration_search_screen.dart';
 import '../features/migration/presentation/screens/migration_source_selection_screen.dart';
+import '../features/offline/presentation/offline_settings_screen.dart';
 import '../features/quick_open/presentation/search_stack/search_stack_screen.dart';
 import '../features/settings/presentation/appearance/appearance_screen.dart';
 import '../features/settings/presentation/backup/backup_screen.dart';
@@ -86,6 +87,7 @@ abstract class Routes {
   static const backup = 'backup';
   static const serverSettings = 'server';
   static const downloadsSettings = 'downloads';
+  static const offlineSettings = 'offline';
 
   // Commons
   static const mangaRoute = '/manga/:mangaId';
@@ -198,6 +200,8 @@ GoRouter routerConfig(ref) {
                     TypedGoRoute<BackupRoute>(path: Routes.backup),
                     TypedGoRoute<DownloadsSettingsRoute>(
                         path: Routes.downloadsSettings),
+                    TypedGoRoute<OfflineSettingsRoute>(
+                        path: Routes.offlineSettings),
                   ],
                 ),
               ],

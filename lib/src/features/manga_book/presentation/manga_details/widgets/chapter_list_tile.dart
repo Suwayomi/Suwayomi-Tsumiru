@@ -10,6 +10,7 @@ import 'package:gap/gap.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../offline/presentation/offline_save_button.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/download_status_icon.dart';
@@ -86,11 +87,20 @@ class ChapterListTile extends StatelessWidget {
               ),
           ],
         ),
-        trailing: DownloadStatusIcon(
-          updateData: updateData,
-          chapter: chapter,
-          mangaId: manga.id,
-          isDownloaded: chapter.isDownloaded.ifNull(),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OfflineSaveButton(
+              chapterId: chapter.id,
+              serverIsDownloaded: chapter.isDownloaded.ifNull(),
+            ),
+            DownloadStatusIcon(
+              updateData: updateData,
+              chapter: chapter,
+              mangaId: manga.id,
+              isDownloaded: chapter.isDownloaded.ifNull(),
+            ),
+          ],
         ),
         selectedColor: context.theme.colorScheme.onSurface,
         selectedTileColor:

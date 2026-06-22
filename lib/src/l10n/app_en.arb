@@ -1282,6 +1282,14 @@
     "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW(18+) content within app",
     "numSelected": "{num} Selected",
     "obsolete": "Obsolete",
+    "onDevice": "On device",
+    "offlineBulkDeleteWarning": "{count} of these are saved on this device and will be removed here too.",
+    "@offlineBulkDeleteWarning": {
+        "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
+        "placeholders": {
+            "count": { "type": "int" }
+        }
+    },
     "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
     "openInWeb": "Open In Web",
     "or": "or",
@@ -1511,5 +1519,139 @@
     "autoRefreshOnTimeoutDescription": "Automatically retries requests that timeout",
     "autoRefreshRetryDelay": "Auto-refresh Retry Delay",
     "@autoRefreshRetryDelay": {"description": "Delay between auto retry attempts in seconds"},
-    "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)"
+    "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)",
+    "offline": "Offline",
+    "@offline": {
+        "description": "Settings entry and screen title for offline downloads"
+    },
+    "offlineStorageSection": "Storage",
+    "@offlineStorageSection": {
+        "description": "Section header in Offline Settings"
+    },
+    "offlineStorageUsage": "Storage used",
+    "@offlineStorageUsage": {
+        "description": "Label for current offline storage usage tile"
+    },
+    "offlineRemoveAllDownloads": "Remove all downloads",
+    "@offlineRemoveAllDownloads": {
+        "description": "Label for the remove-all tile in Offline Settings"
+    },
+    "offlineRemoveAllConfirm": "Remove all downloaded chapters from this device? Your server library is untouched.",
+    "@offlineRemoveAllConfirm": {
+        "description": "Body text for remove-all confirmation dialog"
+    },
+    "offlineSafetyNets": "Safety nets",
+    "@offlineSafetyNets": {
+        "description": "Section header for safety net settings"
+    },
+    "offlineDownloadsSection": "Downloads",
+    "@offlineDownloadsSection": {
+        "description": "Section header for offline download behaviour settings"
+    },
+    "offlineConcurrencyLabel": "Simultaneous downloads",
+    "@offlineConcurrencyLabel": {
+        "description": "Label for the download concurrency slider"
+    },
+    "offlineConcurrencyValue": "{count} at a time",
+    "@offlineConcurrencyValue": {
+        "description": "Value subtitle for the download concurrency slider",
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "offlineStorageCapEnable": "Limit offline storage",
+    "@offlineStorageCapEnable": {
+        "description": "Toggle to enable the storage cap safety net"
+    },
+    "offlineStorageCapLimit": "Storage limit",
+    "@offlineStorageCapLimit": {
+        "description": "Label for the storage cap MB slider"
+    },
+    "offlineMegabytes": "{count} MB",
+    "@offlineMegabytes": {
+        "description": "Storage cap value shown as megabytes",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineTimeEvictEnable": "Auto-remove old downloads",
+    "@offlineTimeEvictEnable": {
+        "description": "Toggle to enable time-based eviction"
+    },
+    "offlineKeepDaysLabel": "Keep downloads for",
+    "@offlineKeepDaysLabel": {
+        "description": "Label for the keep-days slider"
+    },
+    "offlineDays": "{count} days",
+    "@offlineDays": {
+        "description": "Keep-days value shown as days",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "offlineNotAvailable": "Offline downloads aren't available on this platform.",
+    "@offlineNotAvailable": {
+        "description": "Shown in Offline Settings when offline storage is unavailable"
+    },
+    "keepOffline": "Keep offline",
+    "@keepOffline": {
+        "description": "Tooltip for the per-series keep-offline popup button in manga details"
+    },
+    "keepOfflineOff": "Off",
+    "@keepOfflineOff": {
+        "description": "Keep-offline rule: disabled"
+    },
+    "keepOfflineNUnread": "Keep 3 unread",
+    "@keepOfflineNUnread": {
+        "description": "Keep-offline rule: keep the N most recent unread chapters on device"
+    },
+    "keepOfflineAllUnread": "Keep all unread",
+    "@keepOfflineAllUnread": {
+        "description": "Keep-offline rule: keep all unread chapters on device"
+    },
+    "keepOfflineAll": "Keep all",
+    "@keepOfflineAll": {
+        "description": "Keep-offline rule: keep every chapter on device"
+    },
+    "offlineDownloadAction": "Download",
+    "@offlineDownloadAction": {
+        "description": "Series offline button label when nothing is downloaded yet"
+    },
+    "offlineOnDevice": "On device",
+    "@offlineOnDevice": {
+        "description": "Series offline button label when the series has downloads on this device"
+    },
+    "offlineDownloadAll": "Download all chapters",
+    "@offlineDownloadAll": {
+        "description": "Series offline action: download every chapter to this device"
+    },
+    "offlineRemoveSeries": "Remove downloads",
+    "@offlineRemoveSeries": {
+        "description": "Series offline action: remove this series' downloads from the device"
+    },
+    "offlineDownloadingToast": "Downloading to this device…",
+    "@offlineDownloadingToast": {
+        "description": "Snackbar shown after starting a series download"
+    },
+    "offlineDownloadingCount": "Downloading {count}",
+    "@offlineDownloadingCount": {
+        "description": "Series button label while N chapters are downloading",
+        "placeholders": {
+            "count": { "type": "int" }
+        }
+    },
+    "downloadsServerTab": "Server",
+    "@downloadsServerTab": {
+        "description": "Downloads tab: the server download queue"
+    },
+    "downloadsOnDeviceTab": "On device",
+    "@downloadsOnDeviceTab": {
+        "description": "Downloads tab: files downloaded on this device"
+    },
+    "offlineNoFiles": "Nothing downloaded on this device yet",
+    "@offlineNoFiles": {
+        "description": "Empty state for the on-device downloads tab"
+    }
 }

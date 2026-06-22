@@ -85,13 +85,20 @@ Widget _brandRow({
           ),
           const SizedBox(width: 8),
         ],
-        DefaultTextStyle.merge(
-          style: TextStyle(
-            color: content,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
+        // Flexible so a long label (e.g. "Downloading 14") ellipsises instead
+        // of overflowing the button's width.
+        Flexible(
+          child: DefaultTextStyle.merge(
+            style: TextStyle(
+              color: content,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            child: label,
           ),
-          child: label,
         ),
       ],
     );

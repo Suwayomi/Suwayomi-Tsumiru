@@ -41,6 +41,11 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => const DownloadsSettingsRoute().go(context),
           ),
           ListTile(
+            title: Text(context.l10n.offline),
+            leading: const Icon(Icons.offline_pin_rounded),
+            onTap: () => const OfflineSettingsRoute().go(context),
+          ),
+          ListTile(
             title: Text(context.l10n.reader),
             leading: const Icon(Icons.chrome_reader_mode_rounded),
             onTap: () => const ReaderSettingsRoute().go(context),

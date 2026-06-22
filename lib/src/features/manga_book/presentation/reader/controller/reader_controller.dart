@@ -7,6 +7,8 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../offline/data/offline_read_fallback.dart';
+import '../../../../offline/data/offline_repository.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
@@ -18,9 +20,32 @@ FutureOr<ChapterDto?> chapter(
   Ref ref, {
   required int chapterId,
 }) =>
-    ref.watch(mangaBookRepositoryProvider).getChapter(chapterId: chapterId);
+    // Offline: a downloaded chapter must still open when the server is
+    // unreachable, so fall back to the on-device catalog row.
+    chapterMetaWithOfflineFallback(
+      fetch: () =>
+          ref.watch(mangaBookRepositoryProvider).getChapter(chapterId: chapterId),
+      db: ref.watch(offlineDatabaseProvider),
+      offlineEnabled: ref.watch(offlineEnabledProvider),
+      chapterId: chapterId,
+    );
 
 @riverpod
-Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) => ref
-    .watch(mangaBookRepositoryProvider)
-    .getChapterPages(chapterId: chapterId);
+Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
+  // Offline: if this chapter is downloaded on-device, serve its pages from disk
+  // (as file:// URIs that ServerImage renders locally) instead of the server.
+  // Falls through to the network when not downloaded / offline is unavailable.
+  if (ref.watch(offlineEnabledProvider)) {
+    final local =
+        await ref.watch(offlineRepositoryProvider).localChapterPages(chapterId);
+    if (local != null && local.isNotEmpty) {
+      return ChapterPagesDto(
+        chapter: ChapterPagesChapterDto(id: chapterId, pageCount: local.length),
+        pages: [for (final path in local) Uri.file(path).toString()],
+      );
+    }
+  }
+  return ref
+      .watch(mangaBookRepositoryProvider)
+      .getChapterPages(chapterId: chapterId);
+}

@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../offline/presentation/offline_files_view.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
 import 'controller/downloads_controller.dart';
@@ -22,29 +23,63 @@ class DownloadsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final toast = ref.watch(toastProvider);
     final downloadsChapterIds = ref.watch(downloadsChapterIdsProvider);
     final downloadsGlobalStatus = ref.watch(downloaderStateProvider);
     final showDownloadsFAB = ref.watch(showDownloadsFABProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.downloads),
-        actions: [
-          if ((downloadsChapterIds).isNotBlank)
-            IconButton(
-              onPressed: () => AsyncValue.guard(
-                ref.read(downloadsRepositoryProvider).clearDownloads,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.l10n.downloads),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: context.l10n.downloadsServerTab),
+              Tab(text: context.l10n.downloadsOnDeviceTab),
+            ],
+          ),
+          actions: [
+            if ((downloadsChapterIds).isNotBlank)
+              IconButton(
+                onPressed: () => AsyncValue.guard(
+                  ref.read(downloadsRepositoryProvider).clearDownloads,
+                ),
+                icon: const Icon(Icons.delete_sweep_rounded),
               ),
-              icon: const Icon(Icons.delete_sweep_rounded),
+          ],
+        ),
+        floatingActionButton: showDownloadsFAB
+            ? DownloadsFab(
+                status: downloadsGlobalStatus.valueOrNull ??
+                    DownloaderState.STARTED)
+            : null,
+        body: TabBarView(
+          children: [
+            _ServerDownloads(
+              downloadsChapterIds: downloadsChapterIds,
+              downloadsGlobalStatus: downloadsGlobalStatus,
             ),
-        ],
+            const OfflineFilesView(),
+          ],
+        ),
       ),
-      floatingActionButton: showDownloadsFAB
-          ? DownloadsFab(
-              status:
-                  downloadsGlobalStatus.valueOrNull ?? DownloaderState.STARTED)
-          : null,
-      body: downloadsGlobalStatus.showUiWhenData(
+    );
+  }
+}
+
+/// The existing server download-queue view (the "Server" tab).
+class _ServerDownloads extends ConsumerWidget {
+  const _ServerDownloads({
+    required this.downloadsChapterIds,
+    required this.downloadsGlobalStatus,
+  });
+
+  final List<int> downloadsChapterIds;
+  final AsyncValue<DownloaderState?> downloadsGlobalStatus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final toast = ref.watch(toastProvider);
+    return downloadsGlobalStatus.showUiWhenData(
         context,
         (data) {
           if (data == null) {
@@ -74,7 +109,6 @@ class DownloadsScreen extends ConsumerWidget {
           }
         },
         showGenericError: true,
-      ),
     );
   }
 }

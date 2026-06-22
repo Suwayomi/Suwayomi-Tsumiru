@@ -7,6 +7,8 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../features/offline/data/offline_read_fallback.dart';
+import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../data/category_repository.dart';
 import '../../../domain/category/category_model.dart';
@@ -16,8 +18,11 @@ part 'edit_category_controller.g.dart';
 @riverpod
 class CategoryController extends _$CategoryController {
   @override
-  Future<List<CategoryDto>?> build() =>
-      ref.watch(categoryRepositoryProvider).getCategoryList();
+  Future<List<CategoryDto>?> build() => categoriesWithOfflineFallback(
+        fetch: () => ref.watch(categoryRepositoryProvider).getCategoryList(),
+        db: ref.watch(offlineDatabaseProvider),
+        offlineEnabled: ref.watch(offlineEnabledProvider),
+      );
 
   Future<AsyncValue<void>> deleteCategory(int categoryId) async {
     final response = await AsyncValue.guard(() => ref

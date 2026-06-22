@@ -37,6 +37,7 @@ enum DBKeys {
   languageBadge(false),
   l10n(Locale('en')),
   mangaFilterDownloaded(null),
+  mangaFilterOffline(null),
   mangaFilterUnread(null),
   mangaFilterCompleted(null),
   mangaFilterStarted(null),
@@ -56,7 +57,10 @@ enum DBKeys {
   volumeTapInvert(false),
   hideEmptyCategory(false),
   pinchToZoom(true),
-  readerIgnoreSafeArea(false),
+  // Default to edge-to-edge like Komikku (fullscreen=true + drawUnderCutout):
+  // the webtoon strip fills the whole screen, including the status-bar / camera
+  // -cutout row at the top. Users can re-enable insets in reader settings.
+  readerIgnoreSafeArea(true),
   appTheme(AppTheme.indigoNight),
   customThemeColor(0xFF7C7BFF),
   historyEnabled(true),
@@ -65,6 +69,17 @@ enum DBKeys {
   serverRequestTimeout(5000), // milliseconds
   autoRefreshOnTimeout(false),
   autoRefreshRetryDelay(1000), // milliseconds
+  // Offline safety-net settings
+  offlineTimeEvictEnabled(false),
+  offlineKeepDays(30),
+  offlineStorageCapEnabled(false),
+  offlineStorageCapMb(2000),
+  // How many chapter pages download at once. Low by default: a self-hosted
+  // server saturates fast and starts returning 500/503 under heavy parallelism.
+  offlineDownloadConcurrency(2),
+  // Lock phones to portrait (landscape on a phone currently looks broken). Off
+  // by default — many readers prefer landscape; tablets/desktop ignore it.
+  forcePortrait(false),
   ;
 
   const DBKeys(this.initial);

@@ -19,6 +19,7 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../offline/presentation/series_offline_button.dart';
 import '../../../domain/manga/manga_model.dart';
 
 class MangaDescription extends HookConsumerWidget {
@@ -131,17 +132,16 @@ class MangaDescription extends HookConsumerWidget {
                   },
                 ),
               ),
+              const SizedBox(width: 10),
+              Expanded(child: SeriesOfflineButton(mangaId: manga.id)),
               if (manga.realUrl.isNotBlank) ...[
                 const SizedBox(width: 10),
-                Expanded(
-                  child: BrandGlassButton(
-                    icon: const Icon(Icons.public_rounded),
-                    label: Text(context.l10n.webView),
-                    onPressed: () => launchUrlInWeb(
-                      context,
-                      (manga.realUrl ?? ""),
-                      ref.read(toastProvider),
-                    ),
+                BrandCircleButton(
+                  icon: Icons.public_rounded,
+                  onPressed: () => launchUrlInWeb(
+                    context,
+                    (manga.realUrl ?? ""),
+                    ref.read(toastProvider),
                   ),
                 ),
               ],

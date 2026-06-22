@@ -4,11 +4,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../../features/offline/data/offline_download_providers.dart';
+import '../../../../../features/offline/data/offline_read_fallback.dart';
+import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../library/domain/category/category_model.dart';
@@ -21,8 +26,20 @@ part 'manga_details_controller.g.dart';
 @riverpod
 class MangaWithId extends _$MangaWithId {
   @override
-  Future<MangaDto?> build({required int mangaId}) =>
-      ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId);
+  Future<MangaDto?> build({required int mangaId}) async {
+    final manga = await mangaWithOfflineFallback(
+      fetch: () =>
+          ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
+      db: ref.watch(offlineDatabaseProvider),
+      offlineEnabled: ref.watch(offlineEnabledProvider),
+      mangaId: mangaId,
+    );
+    if (manga != null) {
+      unawaited(
+          ref.read(offlineSyncProvider)?.syncManga(manga) ?? Future.value());
+    }
+    return manga;
+  }
 
   Future<void> refresh() async {
     ref.invalidateSelf();
@@ -33,9 +50,20 @@ class MangaWithId extends _$MangaWithId {
 class MangaChapterList extends _$MangaChapterList {
   @override
   Future<List<ChapterDto>?> build({required int mangaId}) async {
-    final result =
-        await ref.watch(mangaBookRepositoryProvider).getChapterList(mangaId);
+    final result = await chaptersWithOfflineFallback(
+      fetch: () =>
+          ref.watch(mangaBookRepositoryProvider).getChapterList(mangaId),
+      db: ref.watch(offlineDatabaseProvider),
+      offlineEnabled: ref.watch(offlineEnabledProvider),
+      mangaId: mangaId,
+    );
     ref.keepAlive();
+    if (result != null) {
+      unawaited(
+          (ref.read(offlineSyncProvider)?.syncChapters(result) ??
+                  Future.value())
+              .then((_) => reconcileManga(ref, mangaId)));
+    }
     return result;
   }
 
