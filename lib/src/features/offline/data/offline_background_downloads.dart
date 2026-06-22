@@ -14,6 +14,7 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
+import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_coordinator.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -95,6 +96,10 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
 /// were the stale-token 401s the run-time-auth engine now avoids.
 Future<void> initOfflineDownloads(ProviderContainer container) async {
   if (!container.read(offlineEnabledProvider)) return;
+  // On Android the foreground-service worker owns downloads (see the corruption
+  // gate in pumpDownloads + BackgroundDownloadController); the launch path calls
+  // the controller instead.
+  if (isAndroidNative) return;
   final coord = container.read(offlineDownloadCoordinatorProvider);
   if (coord == null) return;
   final db = container.read(offlineDatabaseProvider);

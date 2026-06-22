@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../utils/logger/logger.dart';
+import '../../../utils/platform/is_android_native.dart';
 import 'chapter_download_engine.dart';
 import 'offline_database.dart';
 
@@ -172,6 +173,11 @@ class OfflineDownloadCoordinator {
   /// `queued` backlog. Single-flight — a second call while running is a no-op;
   /// the running loop picks up anything newly queued.
   Future<void> pumpDownloads() async {
+    // CORRUPTION GATE: on Android the foreground-service worker isolate is the
+    // sole downloader; the main-isolate pump must NEVER write page files there
+    // (two isolates writing the same files/catalog corrupts it). Downloads on
+    // Android are driven by BackgroundDownloadController instead.
+    if (isAndroidNative) return;
     if (_pumping) return;
     _pumping = true;
     try {

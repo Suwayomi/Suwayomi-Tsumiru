@@ -74,12 +74,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// replay). Idempotent.
   void register() {
     if (!Platform.isAndroid) return;
+    WidgetsBinding.instance.addObserver(this);
     _workerEventCallback ??= _onWorkerEvent;
     FlutterForegroundTask.addTaskDataCallback(_workerEventCallback!);
     _connSub ??= Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
   }
 
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     final cb = _workerEventCallback;
     if (cb != null) FlutterForegroundTask.removeTaskDataCallback(cb);
     unawaited(_connSub?.cancel());
@@ -421,4 +423,33 @@ class BackgroundDownloadController with WidgetsBindingObserver {
             key: kTokenRecordKey, value: jsonEncode(r.toJson())),
         refreshFn: refreshFn,
       );
+}
+
+/// App-lifetime singleton driving the foreground-service downloads on Android.
+/// Read it at launch (to `register()` + replay) and from the enqueue/delete
+/// sites. Self-gates to Android; a no-op on iOS/desktop (main-isolate pump used
+/// there). On web this file is never compiled — the conditional-import shim
+/// (`background_download_controller_shim.dart`) swaps in a no-op stub.
+final backgroundDownloadControllerProvider =
+    Provider<BackgroundDownloadController>(
+        (ref) => BackgroundDownloadController(ref));
+
+/// Initialise `flutter_foreground_task` (communication port + notification
+/// channel/options). Call once early in `main()`. Android-only; no-op elsewhere.
+void initForegroundTaskService() {
+  if (!Platform.isAndroid) return;
+  FlutterForegroundTask.initCommunicationPort();
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'tsumiru_downloads',
+      channelName: 'Downloads',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.nothing(),
+      allowWifiLock: true,
+    ),
+  );
 }
