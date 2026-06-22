@@ -95,17 +95,22 @@ class NavigationShellScreen extends HookConsumerWidget {
 
     if (context.isTablet) {
       return Scaffold(
-        body: Row(
-          children: [
-            BigScreenNavigationBar(
-              selectedIndex: child.currentIndex,
-              onDestinationSelected: (index) => child.goBranch(
-                getAdjustedIndex(index),
-                initialLocation: index == child.currentIndex,
+        // No bottom bar here, so the rail + content would draw under the system
+        // navigation controls (and any landscape cutout). SafeArea keeps both
+        // out of that unusable strip so the controls never overlap a cover.
+        body: SafeArea(
+          child: Row(
+            children: [
+              BigScreenNavigationBar(
+                selectedIndex: child.currentIndex,
+                onDestinationSelected: (index) => child.goBranch(
+                  getAdjustedIndex(index),
+                  initialLocation: index == child.currentIndex,
+                ),
               ),
-            ),
-            Expanded(child: child),
-          ],
+              Expanded(child: child),
+            ],
+          ),
         ),
       );
     } else {
