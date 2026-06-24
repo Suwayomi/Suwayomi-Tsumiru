@@ -84,7 +84,23 @@ Future<void> main() async {
     // Non-fatal: legacy creds stay in SharedPreferences for one more launch.
   }
 
-  // 2) Preload both auth providers BEFORE the first frame so synchronous reads
+  // 2) One-time: installs from before "Ignore Safe Area" defaulted on kept their
+  //    saved `false`, so the reader's SafeArea ate the camera-cutout / notch row
+  //    and the webtoon strip stopped below it. Flip it on once; the guard key
+  //    means a later deliberate toggle-off by the user still sticks.
+  try {
+    const migratedKey = 'readerIgnoreSafeAreaDefaultOnMigrated';
+    if (sharedPreferences.getBool(migratedKey) != true) {
+      if (sharedPreferences.getBool('readerIgnoreSafeArea') == false) {
+        await sharedPreferences.setBool('readerIgnoreSafeArea', true);
+      }
+      await sharedPreferences.setBool(migratedKey, true);
+    }
+  } catch (e, st) {
+    debugPrint('readerIgnoreSafeArea migration failed: $e\n$st');
+  }
+
+  // 3) Preload both auth providers BEFORE the first frame so synchronous reads
   //    (image widgets, GraphQL links) get populated state instead of
   //    AsyncLoading — which would produce tokenless requests that get cached
   //    as 401 failures by cached_network_image.
