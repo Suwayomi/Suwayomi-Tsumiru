@@ -134,8 +134,8 @@ class ReaderWrapper extends HookConsumerWidget {
     // in landscape there's no vertical room for it to be usable — fall back to
     // the standard horizontal bottom bar, like Komikku.
     final screenSize = MediaQuery.sizeOf(context);
-    final isLandscapePhone = screenSize.shortestSide < 600 &&
-        screenSize.width > screenSize.height;
+    final isLandscapePhone =
+        screenSize.shortestSide < 600 && screenSize.width > screenSize.height;
     final useBottomSeekBar = scrollDirection == Axis.horizontal ||
         (scrollDirection == Axis.vertical && isLandscapePhone);
 
@@ -370,8 +370,7 @@ class ReaderWrapper extends HookConsumerWidget {
                       : null,
                 ),
                 // Translucent so the page art shows through (Komikku-style).
-                backgroundColor: context
-                    .theme.appBarTheme.backgroundColor
+                backgroundColor: context.theme.appBarTheme.backgroundColor
                     ?.withValues(alpha: 0.55),
                 elevation: 0,
                 actions: [
@@ -455,189 +454,201 @@ class ReaderWrapper extends HookConsumerWidget {
             ? ExcludeFocus(
                 // Reader is edge-to-edge now (no outer SafeArea), so pad the
                 // controls above the navigation / gesture bar — otherwise they
-                // sit under it when the menu is shown.
-                child: SafeArea(
-                  top: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                    // Horizontal (manga): inline seek bar flanked by chapter
-                    // prev/next arrows. Vertical (webtoon): the side bar carries
-                    // the page count + chapter jumps, so this whole row (and its
-                    // redundant "1 / 15") is dropped.
-                    if (useBottomSeekBar) ...[
-                      Row(
-                        children: [
-                          Card(
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              onPressed: nextPrevChapterPair?.second != null
-                                  ? () => ReaderRoute(
-                                        mangaId: nextPrevChapterPair!
-                                            .second!.mangaId,
-                                        chapterId:
-                                            nextPrevChapterPair.second!.id,
-                                        toPrev: true,
-                                        transVertical:
-                                            scrollDirection != Axis.vertical,
-                                      ).pushReplacement(context)
-                                  : null,
-                              icon: const Icon(Icons.skip_previous_rounded),
-                            ),
-                          ),
-                          Expanded(
-                            child: BrandPageSeekBar(
-                              currentValue: currentIndex,
-                              maxValue: totalPageCount ??
-                                  chapterPages.chapter.pageCount,
-                              onChanged: (index) => onChanged(index),
-                              inverted: invertTap,
-                            ),
-                          ),
-                          Card(
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              onPressed: nextPrevChapterPair?.first != null
-                                  ? () => ReaderRoute(
-                                        mangaId:
-                                            nextPrevChapterPair!.first!.mangaId,
-                                        chapterId: nextPrevChapterPair.first!.id,
-                                        transVertical:
-                                            scrollDirection != Axis.vertical,
-                                      ).pushReplacement(context)
-                                  : null,
-                              icon: const Icon(Icons.skip_next_rounded),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Gap(8),
-                    ],
-                    Card(
-                      // Translucent bottom bar (Komikku-style).
-                      color: context.theme.cardColor.withValues(alpha: 0.7),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: KRadius.r8.radius,
-                        ),
-                      ),
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: KEdgeInsets.h16v8.size,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            SingleChapterActionIcon(
-                              icon: chapter.isBookmarked
-                                  ? Icons.bookmark_rounded
-                                  : Icons.bookmark_outline_rounded,
-                              chapterId: chapter.id,
-                              change: ChapterChange(
-                                  isBookmarked: !chapter.isBookmarked),
-                              refresh: () => ref.refresh(
-                                  chapterProvider(chapterId: chapter.id)
-                                      .future),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.app_settings_alt_outlined),
-                              onPressed: () => showReaderModePopup(),
-                            ),
-                            Builder(builder: (context) {
-                              return IconButton(
-                                onPressed: () =>
-                                    Scaffold.of(context).openEndDrawer(),
-                                icon: const Icon(Icons.settings_rounded),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
+                // sit under it when the menu is shown. SafeArea/MediaQuery can't
+                // do this here: inside a Scaffold bottomSheet (with extendBody)
+                // their bottom inset reads 0, so pad by the raw window inset.
+                child: Builder(builder: (context) {
+                  final view = View.of(context);
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: view.viewPadding.bottom / view.devicePixelRatio,
                     ),
-                  ],
-                  ),
-                ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Horizontal (manga): inline seek bar flanked by chapter
+                        // prev/next arrows. Vertical (webtoon): the side bar carries
+                        // the page count + chapter jumps, so this whole row (and its
+                        // redundant "1 / 15") is dropped.
+                        if (useBottomSeekBar) ...[
+                          Row(
+                            children: [
+                              Card(
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  onPressed: nextPrevChapterPair?.second != null
+                                      ? () => ReaderRoute(
+                                            mangaId: nextPrevChapterPair!
+                                                .second!.mangaId,
+                                            chapterId:
+                                                nextPrevChapterPair.second!.id,
+                                            toPrev: true,
+                                            transVertical: scrollDirection !=
+                                                Axis.vertical,
+                                          ).pushReplacement(context)
+                                      : null,
+                                  icon: const Icon(Icons.skip_previous_rounded),
+                                ),
+                              ),
+                              Expanded(
+                                child: BrandPageSeekBar(
+                                  currentValue: currentIndex,
+                                  maxValue: totalPageCount ??
+                                      chapterPages.chapter.pageCount,
+                                  onChanged: (index) => onChanged(index),
+                                  inverted: invertTap,
+                                ),
+                              ),
+                              Card(
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  onPressed: nextPrevChapterPair?.first != null
+                                      ? () => ReaderRoute(
+                                            mangaId: nextPrevChapterPair!
+                                                .first!.mangaId,
+                                            chapterId:
+                                                nextPrevChapterPair.first!.id,
+                                            transVertical: scrollDirection !=
+                                                Axis.vertical,
+                                          ).pushReplacement(context)
+                                      : null,
+                                  icon: const Icon(Icons.skip_next_rounded),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Gap(8),
+                        ],
+                        Card(
+                          // Translucent bottom bar (Komikku-style).
+                          color: context.theme.cardColor.withValues(alpha: 0.7),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: KRadius.r8.radius,
+                            ),
+                          ),
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: KEdgeInsets.h16v8.size,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SingleChapterActionIcon(
+                                  icon: chapter.isBookmarked
+                                      ? Icons.bookmark_rounded
+                                      : Icons.bookmark_outline_rounded,
+                                  chapterId: chapter.id,
+                                  change: ChapterChange(
+                                      isBookmarked: !chapter.isBookmarked),
+                                  refresh: () => ref.refresh(
+                                      chapterProvider(chapterId: chapter.id)
+                                          .future),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                      Icons.app_settings_alt_outlined),
+                                  onPressed: () => showReaderModePopup(),
+                                ),
+                                Builder(builder: (context) {
+                                  return IconButton(
+                                    onPressed: () =>
+                                        Scaffold.of(context).openEndDrawer(),
+                                    icon: const Icon(Icons.settings_rounded),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               )
             : null,
         body: Stack(
           children: [
             Positioned.fill(
               child: Shortcuts.manager(
-          manager: readerShortcutManager(scrollDirection),
-          child: Actions(
-            actions: {
-              PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(
-                onInvoke: (intent) =>
-                    invertTap ? enhancedOnNext() : enhancedOnPrevious(),
-              ),
-              NextScrollIntent: CallbackAction<NextScrollIntent>(
-                onInvoke: (intent) =>
-                    invertTap ? enhancedOnPrevious() : enhancedOnNext(),
-              ),
-              PreviousChapterIntent: CallbackAction<PreviousChapterIntent>(
-                onInvoke: (intent) {
-                  nextPrevChapterPair?.second != null
-                      ? ReaderRoute(
-                          mangaId: nextPrevChapterPair!.second!.mangaId,
-                          chapterId: nextPrevChapterPair.second!.id,
-                          toPrev: true,
-                          transVertical: scrollDirection != Axis.vertical,
-                        ).pushReplacement(context)
-                      : enhancedOnPrevious();
-                  return null;
-                },
-              ),
-              NextChapterIntent: CallbackAction<NextChapterIntent>(
-                onInvoke: (intent) => nextPrevChapterPair?.first != null
-                    ? ReaderRoute(
-                        mangaId: nextPrevChapterPair!.first!.mangaId,
-                        chapterId: nextPrevChapterPair.first!.id,
-                        transVertical: scrollDirection != Axis.vertical,
-                      ).pushReplacement(context)
-                    : enhancedOnNext(),
-              ),
-              HideQuickOpenIntent: CallbackAction<HideQuickOpenIntent>(
-                onInvoke: (HideQuickOpenIntent intent) {
-                  visibility.value = !visibility.value;
-                  return null;
-                },
-              ),
-            },
-            child: Focus(
-              autofocus: true,
-              child: Listener(
-                child: RepaintBoundary(
-                  child: ReaderView(
-                    toggleVisibility: () =>
-                        visibility.value = !visibility.value,
-                    scrollDirection: scrollDirection,
-                    mangaId: manga.id,
-                    mangaReaderPadding: mangaReaderPadding.value,
-                    mangaReaderMagnifierSize: mangaReaderMagnifierSize.value,
-                    onNext: enhancedOnNext,
-                    onPrevious: enhancedOnPrevious,
-                    mangaReaderNavigationLayout: mangaReaderNavigationLayout,
-                    prevNextChapterPair: nextPrevChapterPair,
-                    readerSwipeChapterToggle: readerSwipeChapterToggle,
-                    lastPageSwipeEnabled: lastPageSwipeEnabled,
-                    resolvedReaderMode: resolvedReaderMode,
-                    currentIndex: currentIndex,
-                    chapterPages: chapterPages,
-                    showReaderLayoutAnimation: showReaderLayoutAnimation,
-                    pageController: pageController,
-                    child: _buildEnhancedChildWithPageDetection(
-                      child,
-                      lastPageSwipeEnabled,
-                      readerSwipeChapterToggle,
-                      onNextChapter,
-                      onPreviousChapter,
-                      resolvedReaderMode,
-                      scrollDirection,
+                manager: readerShortcutManager(scrollDirection),
+                child: Actions(
+                  actions: {
+                    PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(
+                      onInvoke: (intent) =>
+                          invertTap ? enhancedOnNext() : enhancedOnPrevious(),
+                    ),
+                    NextScrollIntent: CallbackAction<NextScrollIntent>(
+                      onInvoke: (intent) =>
+                          invertTap ? enhancedOnPrevious() : enhancedOnNext(),
+                    ),
+                    PreviousChapterIntent:
+                        CallbackAction<PreviousChapterIntent>(
+                      onInvoke: (intent) {
+                        nextPrevChapterPair?.second != null
+                            ? ReaderRoute(
+                                mangaId: nextPrevChapterPair!.second!.mangaId,
+                                chapterId: nextPrevChapterPair.second!.id,
+                                toPrev: true,
+                                transVertical: scrollDirection != Axis.vertical,
+                              ).pushReplacement(context)
+                            : enhancedOnPrevious();
+                        return null;
+                      },
+                    ),
+                    NextChapterIntent: CallbackAction<NextChapterIntent>(
+                      onInvoke: (intent) => nextPrevChapterPair?.first != null
+                          ? ReaderRoute(
+                              mangaId: nextPrevChapterPair!.first!.mangaId,
+                              chapterId: nextPrevChapterPair.first!.id,
+                              transVertical: scrollDirection != Axis.vertical,
+                            ).pushReplacement(context)
+                          : enhancedOnNext(),
+                    ),
+                    HideQuickOpenIntent: CallbackAction<HideQuickOpenIntent>(
+                      onInvoke: (HideQuickOpenIntent intent) {
+                        visibility.value = !visibility.value;
+                        return null;
+                      },
+                    ),
+                  },
+                  child: Focus(
+                    autofocus: true,
+                    child: Listener(
+                      child: RepaintBoundary(
+                        child: ReaderView(
+                          toggleVisibility: () =>
+                              visibility.value = !visibility.value,
+                          scrollDirection: scrollDirection,
+                          mangaId: manga.id,
+                          mangaReaderPadding: mangaReaderPadding.value,
+                          mangaReaderMagnifierSize:
+                              mangaReaderMagnifierSize.value,
+                          onNext: enhancedOnNext,
+                          onPrevious: enhancedOnPrevious,
+                          mangaReaderNavigationLayout:
+                              mangaReaderNavigationLayout,
+                          prevNextChapterPair: nextPrevChapterPair,
+                          readerSwipeChapterToggle: readerSwipeChapterToggle,
+                          lastPageSwipeEnabled: lastPageSwipeEnabled,
+                          resolvedReaderMode: resolvedReaderMode,
+                          currentIndex: currentIndex,
+                          chapterPages: chapterPages,
+                          showReaderLayoutAnimation: showReaderLayoutAnimation,
+                          pageController: pageController,
+                          child: _buildEnhancedChildWithPageDetection(
+                            child,
+                            lastPageSwipeEnabled,
+                            readerSwipeChapterToggle,
+                            onNextChapter,
+                            onPreviousChapter,
+                            resolvedReaderMode,
+                            scrollDirection,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
               ),
             ),
             // Webtoon / vertical scroll: the seek bar floats vertically on the
@@ -646,8 +657,7 @@ class ReaderWrapper extends HookConsumerWidget {
                 !isLandscapePhone &&
                 visibility.value)
               Builder(builder: (context) {
-                final navSurface =
-                    readerNavSurface(context.theme.colorScheme);
+                final navSurface = readerNavSurface(context.theme.colorScheme);
                 final lastPage =
                     (totalPageCount ?? chapterPages.chapter.pageCount) - 1;
                 return Positioned(
