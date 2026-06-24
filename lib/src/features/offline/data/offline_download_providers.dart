@@ -13,7 +13,9 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
+import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import 'background/background_download_controller_shim.dart';
 import 'chapter_download_engine.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -33,6 +35,27 @@ import 'reconcile_types.dart';
 
 part 'offline_download_providers.g.dart';
 
+/// True only on Android native, where the foreground-service worker owns
+/// downloads (web-safe + correct in unit tests — see [isAndroidNative]).
+bool get _useBgService => isAndroidNative;
+
+/// THE single entry point that kicks off downloading after chapters have been
+/// queued into drift. EVERY download trigger must call this — on Android it
+/// starts the foreground-service worker, elsewhere it drains via the
+/// main-isolate pump. Centralised (and overridable in tests) so no trigger can
+/// ever again silently rely on the Android-disabled pump.
+final downloadStarterProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    if (isAndroidNative) {
+      await ref
+          .read(backgroundDownloadControllerProvider)
+          .ensureServiceRunning();
+    } else {
+      await ref.read(offlineDownloadCoordinatorProvider)?.pumpDownloads();
+    }
+  };
+});
+
 /// Live on-device download state for a chapter (none / queued / downloading /
 /// downloaded / error). Always `none` when offline is unavailable.
 @riverpod
@@ -47,21 +70,19 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
 /// total pages), or null when the total isn't known yet — drives the
 /// determinate progress arc on a downloading chapter, like Mihon/Komikku.
 @riverpod
-Stream<double?> offlineChapterProgress(Ref ref, int chapterId) async* {
+Stream<double?> offlineChapterProgress(Ref ref, int chapterId) {
   if (!ref.watch(offlineEnabledProvider)) {
-    yield null;
-    return;
+    return Stream.value(null);
   }
   final repo = ref.watch(offlineRepositoryProvider);
-  final total = (await repo.db.chapterById(chapterId))?.pageCount ?? 0;
-  if (total <= 0) {
-    yield null;
-    return;
-  }
-  yield* repo
-      .watchChapterDownloadedPages(chapterId)
-      .map((done) => (done / total).clamp(0.0, 1.0))
-      .distinct();
+  // Re-read the page total on every downloaded-page tick (instead of once up
+  // front) so the arc flips from indeterminate to a real fraction the moment the
+  // total becomes known — webtoon chapters only learn their page count when the
+  // downloader resolves their pages mid-download.
+  return repo.watchChapterDownloadedPages(chapterId).asyncMap((done) async {
+    final total = (await repo.db.chapterById(chapterId))?.pageCount ?? 0;
+    return total <= 0 ? null : (done / total).clamp(0.0, 1.0);
+  }).distinct();
 }
 
 /// Save a chapter's pages to the device. Looks up the synced catalog row and
@@ -87,10 +108,11 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue([chapterId]);
   }
-  // Queue it and let the pump start it (one chapter at a time). Pages download
-  // in the background and survive the app being backgrounded.
+  // Queue it (drift `queued` is the single source of truth). On Android the
+  // foreground-service worker owns the downloading; elsewhere the main-isolate
+  // pump drains it.
   await coordinator.queueChapter(chapterId);
-  await coordinator.pumpDownloads();
+  await ref.read(downloadStarterProvider)();
 }
 
 /// Record reading progress for a chapter. Persists it to the on-device catalog
@@ -154,6 +176,12 @@ Future<void> cascadeServerDeleteToDevice(
 Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
   final manager = ref.read(offlineDownloadManagerProvider);
   if (manager == null) return;
+  // If the FGS worker is mid-download of this chapter, stop it first so it can't
+  // resurrect files we're about to delete (the worker honours `remove` via the
+  // engine's per-chapter cancel).
+  if (_useBgService) {
+    await ref.read(backgroundDownloadControllerProvider).onRemoved(chapterId);
+  }
   final chapter = await ref.read(offlineRepositoryProvider).chapterById(chapterId);
   if (chapter != null) await manager.deleteChapter(chapter);
   await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
@@ -349,10 +377,10 @@ Future<void> reconcileMangaCore({
     db: db,
     nets: nets,
     now: DateTime.now(),
-    // Only QUEUE chapters here (mark them in the persistent backlog); the pump
-    // below starts them one at a time. This keeps the fragile in-memory holding
-    // queue down to a single chapter, so an app restart can't strand the whole
-    // library as "downloading". One failed queue-mark must NOT abort the rest.
+    // Only QUEUE chapters here (mark them in the persistent backlog). Starting
+    // the download is the caller's job (via downloadStarterProvider) — this core
+    // must NOT start anything itself, so the Ref-less launch path and tests stay
+    // in control. One failed queue-mark must NOT abort the rest.
     onDownload: (id) async {
       try {
         await coordinator.queueChapter(id);
@@ -368,7 +396,7 @@ Future<void> reconcileMangaCore({
         logger.e('Offline: reconcile evict skipped for chapter $id: $e');
       }
     },
-  ).reconcileManga(mangaId).then((_) => coordinator.pumpDownloads());
+  ).reconcileManga(mangaId);
 }
 
 /// Controller / in-app entry point (generated Ref).
@@ -385,6 +413,8 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     nets: ref.read(safetyNetConfigProvider),
     mangaId: mangaId,
   );
+  // Keep-rule sync queued any missing chapters; now start downloading them.
+  await ref.read(downloadStarterProvider)();
 }
 
 /// Widget entry point — same as [reconcileManga] but accepts a [WidgetRef].
@@ -401,6 +431,9 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
     nets: ref.read(safetyNetConfigProvider),
     mangaId: mangaId,
   );
+  // Start downloading the freshly-queued chapters. THIS was the missing wire
+  // that made "Download all / unread" silently do nothing on Android.
+  await ref.read(downloadStarterProvider)();
 }
 
 /// Launch entry point (main.dart holds a ProviderContainer, not a Ref).

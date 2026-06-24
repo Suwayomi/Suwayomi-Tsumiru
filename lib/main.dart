@@ -21,6 +21,7 @@ import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
+import 'src/features/offline/data/background/background_download_controller_shim.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
@@ -31,9 +32,13 @@ import 'src/features/settings/presentation/server/widget/credential_popup/creden
 import 'src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
+import 'src/utils/platform/is_android_native.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
+  // any download service is started. Must run after the binding is ready.
+  initForegroundTaskService();
   final packageInfo = await PackageInfo.fromPlatform();
   final sharedPreferences = await SharedPreferences.getInstance();
   await initHiveForFlutter();
@@ -126,7 +131,16 @@ Future<void> main() async {
     unawaited(Future(() async {
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
-      await initOfflineDownloads(container);
+      if (isAndroidNative) {
+        // Android: the foreground-service worker owns downloads. Register the
+        // lifecycle/connectivity hooks, replay any leftover completion log into
+        // drift, and restart the service if the queue is non-empty.
+        final controller = container.read(backgroundDownloadControllerProvider);
+        controller.register();
+        await controller.replayAtLaunchAndMaybeStart();
+      } else {
+        await initOfflineDownloads(container);
+      }
     }));
   }
 

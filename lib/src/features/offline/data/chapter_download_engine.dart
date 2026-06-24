@@ -15,6 +15,13 @@ class PageAuthException implements Exception {
   const PageAuthException();
 }
 
+/// Thrown by a [PageFetcher] when the device is offline, or Wi-Fi-only is on and
+/// the active connection is metered. Signals the engine to stop this chapter and
+/// report it as paused-offline (leave it resumable), NOT as an error.
+class PageOfflineException implements Exception {
+  const PageOfflineException();
+}
+
 /// One page to download: its server URL and its index within the chapter.
 typedef PageRef = ({int index, String url});
 
@@ -38,6 +45,7 @@ class ChapterDownloadOutcome {
     required this.storedPages,
     required this.cancelled,
     required this.authFailed,
+    required this.offline,
     this.error,
   });
 
@@ -51,10 +59,15 @@ class ChapterDownloadOutcome {
   /// can't proceed until the user re-authenticates.
   final bool authFailed;
 
+  /// True if the run stopped because the device went offline / Wi-Fi-only
+  /// blocked it. The chapter is left resumable (NOT an error).
+  final bool offline;
+
   /// The first non-auth error that ended the run, if any.
   final Object? error;
 
-  bool get succeeded => error == null && !cancelled && !authFailed;
+  bool get succeeded =>
+      error == null && !cancelled && !authFailed && !offline;
 }
 
 /// Downloads a single chapter's pages, Komikku-style: up to
@@ -104,17 +117,23 @@ class ChapterDownloadEngine {
     final stored = <int, ({String relPath, int bytes})>{};
     if (pages.isEmpty) {
       return ChapterDownloadOutcome(
-          storedPages: stored, cancelled: false, authFailed: false);
+          storedPages: stored,
+          cancelled: false,
+          authFailed: false,
+          offline: false);
     }
 
     final queue = List<PageRef>.of(pages);
     var cursor = 0;
     var authFailed = false;
+    var offline = false;
     Object? fatalError;
 
     Future<void> worker() async {
       while (true) {
-        if (isCancelled() || authFailed || fatalError != null) return;
+        if (isCancelled() || authFailed || offline || fatalError != null) {
+          return;
+        }
         if (cursor >= queue.length) return;
         final page = queue[cursor++];
         final result = await _downloadOne(mangaId, chapterId, page);
@@ -126,6 +145,8 @@ class ChapterDownloadEngine {
             }
           case _PageAuthDead():
             authFailed = true;
+          case _PageOffline():
+            offline = true;
           case _PageError(:final error):
             fatalError ??= error;
         }
@@ -140,6 +161,7 @@ class ChapterDownloadEngine {
       storedPages: stored,
       cancelled: isCancelled(),
       authFailed: authFailed,
+      offline: offline,
       error: fatalError,
     );
   }
@@ -158,6 +180,10 @@ class ChapterDownloadEngine {
           bytes.ext,
         );
         return _PageOk(relPath: written.relPath, bytes: written.bytes);
+      } on PageOfflineException {
+        // Device went offline / Wi-Fi-only blocked it — stop this chapter and
+        // leave it resumable. No retry (retrying offline just burns backoff).
+        return const _PageOffline();
       } on PageAuthException {
         // Refresh once; concurrent 401s collapse via the refresher's
         // single-flight. If auth is dead, stop trying.
@@ -195,4 +221,8 @@ class _PageError extends _PageResult {
 
 class _PageAuthDead extends _PageResult {
   const _PageAuthDead();
+}
+
+class _PageOffline extends _PageResult {
+  const _PageOffline();
 }

@@ -77,6 +77,8 @@ enum DBKeys {
   // How many chapter pages download at once. Low by default: a self-hosted
   // server saturates fast and starts returning 500/503 under heavy parallelism.
   offlineDownloadConcurrency(2),
+  // Restrict background downloads to Wi-Fi connections only.
+  downloadOnlyOverWifi(false),
   // Lock phones to portrait (landscape on a phone currently looks broken). Off
   // by default — many readers prefer landscape; tablets/desktop ignore it.
   forcePortrait(false),

@@ -207,6 +207,13 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
           .write(OfflineChaptersCompanion(pinned: Value(pinned)));
 
+  /// Set a chapter's resolved page count (used to drive the determinate
+  /// download progress arc for chapters whose total wasn't known until the
+  /// downloader resolved their pages — e.g. webtoon chapters).
+  Future<void> setChapterPageCount(int chapterId, int pageCount) =>
+      (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
+          .write(OfflineChaptersCompanion(pageCount: Value(pageCount)));
+
   Future<void> setChapterDeviceState(
     int chapterId,
     OfflineDeviceState state, {

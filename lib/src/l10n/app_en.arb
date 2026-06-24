@@ -1548,6 +1548,10 @@
     "@offlineDownloadsSection": {
         "description": "Section header for offline download behaviour settings"
     },
+    "downloadOverWifiOnly": "Download over Wi-Fi only",
+    "@downloadOverWifiOnly": {
+        "description": "Toggle to restrict background downloads to Wi-Fi connections"
+    },
     "offlineConcurrencyLabel": "Simultaneous downloads",
     "@offlineConcurrencyLabel": {
         "description": "Label for the download concurrency slider"
