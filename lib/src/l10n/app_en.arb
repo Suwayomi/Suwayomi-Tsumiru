@@ -1257,6 +1257,14 @@
     "moveToTop": "Move to top",
     "nChapters": "{n, plural, =0{None} =1{1 Chapter} other{{n} Chapters}}",
     "nDays": "{count, select, 01{01 Day} other{{count} Days}}",
+    "soon": "Soon",
+    "inNDays": "{days, plural, =1{In 1 day} other{In {days} days}}",
+    "@inNDays": {
+        "description": "Next-chapter estimate on the manga details page",
+        "placeholders": {
+            "days": { "type": "int" }
+        }
+    },
     "nHours": "{n, plural, =1{1 hour} other{{n} hours}}",
     "nMinutes": "{n, plural, =1{1 Minute} other{{n} Minutes}}",
     "nRepo": "{n, plural, =1{1 Repo} other{{n} Repos}}",

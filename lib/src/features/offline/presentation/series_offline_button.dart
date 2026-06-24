@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../../utils/theme/brand.dart';
+import '../../manga_book/presentation/manga_details/widgets/manga_action_button.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
@@ -33,7 +33,8 @@ class SeriesOfflineButton extends ConsumerWidget {
     final inFlight = progress?.inFlight ?? 0;
     final onDevice = downloaded > 0;
     final downloading = inFlight > 0;
-    return BrandGlassButton(
+    return MangaActionButton(
+      active: onDevice || downloading,
       icon: downloading
           ? const SizedBox(
               width: 18,
@@ -42,11 +43,11 @@ class SeriesOfflineButton extends ConsumerWidget {
           : Icon(onDevice
               ? Icons.offline_pin_rounded
               : Icons.download_rounded),
-      label: Text(downloading
+      label: downloading
           ? context.l10n.offlineDownloadingCount(inFlight)
           : onDevice
               ? context.l10n.offlineOnDevice
-              : context.l10n.offlineDownloadAction),
+              : context.l10n.offlineDownloadAction,
       onPressed: () => _openSheet(context, ref, onDevice),
     );
   }
