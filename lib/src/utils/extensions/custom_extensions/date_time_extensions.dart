@@ -142,6 +142,26 @@ extension DateTimeExtensions on DateTime {
     }
   }
 
+  /// Finer-grained relative time (minutes / hours, then days) for things like
+  /// "Library last updated: 8 hours ago".
+  String convertToTimeAgo(BuildContext context) {
+    final diff = DateTime.now().difference(this);
+    if (diff.inMinutes < 1) {
+      return context.l10n.justNow;
+    } else if (diff.inMinutes < 60) {
+      return context.l10n.minutesAgo(diff.inMinutes);
+    } else if (diff.inHours < 24) {
+      return context.l10n.hoursAgo(diff.inHours);
+    } else if (diff.inDays < 2) {
+      return context.l10n.yesterday;
+    } else if (diff.inDays < 10) {
+      return context.l10n.daysAgo(diff.inDays);
+    } else {
+      return DateFormat.yMMMd(context.currentLocale.toLanguageTag())
+          .format(this);
+    }
+  }
+
   /// Check if this date is today
   bool get isToday {
     final now = DateTime.now();

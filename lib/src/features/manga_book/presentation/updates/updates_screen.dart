@@ -62,6 +62,7 @@ class UpdatesScreen extends HookConsumerWidget {
         .watch(updatesSocketProvider
             .select((value) => value.valueOrNull?.isRunning))
         .ifNull();
+    final lastUpdated = ref.watch(libraryLastUpdatedProvider).valueOrNull;
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     useEffect(() {
       controller.addPageRequestListener((pageKey) => _fetchPage(
@@ -96,7 +97,25 @@ class UpdatesScreen extends HookConsumerWidget {
               ),
             )
           : AppBar(
-              title: Text(context.l10n.updates),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(context.l10n.updates),
+                  if (lastUpdated != null &&
+                      (int.tryParse(lastUpdated) ?? 0) > 0) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      context.l10n.libraryLastUpdated(
+                          int.parse(lastUpdated).toTimeAgo(context)),
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.theme.colorScheme.onSurfaceVariant,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
               actions: const [UpdateStatusPopupMenu()],
             ),
       bottomSheet: selectedChapters.value.isNotEmpty

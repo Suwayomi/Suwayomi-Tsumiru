@@ -86,6 +86,11 @@ class UpdatesRepository {
       .query$UpdateStatusDto(Options$Query$UpdateStatusDto())
       .getData((data) => data.updateStatus);
 
+  /// Epoch-millis (as a string) of the last global library update, or null.
+  Future<String?> lastUpdateTimestamp() async => client
+      .query$LastUpdateTimestamp(Options$Query$LastUpdateTimestamp())
+      .getData((data) => data.lastUpdateTimestamp.timestamp);
+
   Stream<UpdateStatusDto?> updateStatusSubscription() => subscriptionClient
       .subscribe$UpdateStatusChange(Options$Subscription$UpdateStatusChange())
       .getData((data) => data.updateStatusChanged);
@@ -99,6 +104,10 @@ UpdatesRepository updatesRepository(Ref ref) => UpdatesRepository(
 @riverpod
 Future<UpdateStatusDto?> updateSummary(Ref ref) =>
     ref.watch(updatesRepositoryProvider).summaryUpdates();
+
+@riverpod
+Future<String?> libraryLastUpdated(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).lastUpdateTimestamp();
 
 @riverpod
 Stream<UpdateStatusDto?> updatesSocket(Ref ref) =>

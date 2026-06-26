@@ -42,6 +42,12 @@ query UpdateStatusDto {
   }
 }
 
+query LastUpdateTimestamp {
+  lastUpdateTimestamp {
+    timestamp
+  }
+}
+
 subscription UpdateStatusChange {
   updateStatusChanged {
     ...UpdateStatusDto

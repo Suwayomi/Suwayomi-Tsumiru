@@ -49,6 +49,12 @@ extension IntExtensions on int? {
     return DateTime.fromMillisecondsSinceEpoch(this!).convertToDaysAgo(context);
   }
 
+  /// Relative time at minute/hour granularity, from an epoch-millis value.
+  String toTimeAgo(BuildContext context) {
+    if (isNull) return "";
+    return DateTime.fromMillisecondsSinceEpoch(this!).convertToTimeAgo(context);
+  }
+
   bool isSameDayAs(int? anotherDate) {
     if (isNull || anotherDate.isNull) return false;
     return DateTime.fromMillisecondsSinceEpoch(this! * 1000)
