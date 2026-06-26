@@ -29,6 +29,7 @@ class NavigationShellScreen extends HookConsumerWidget {
   Future<void> checkForUpdate({
     required String? title,
     required BuildContext context,
+    required WidgetRef ref,
     required Future<AsyncValue<Version?>> Function() updateCallback,
     required Toast? toast,
   }) async {
@@ -37,14 +38,28 @@ class NavigationShellScreen extends HookConsumerWidget {
     if (!context.mounted) return;
     versionResult.whenOrNull(
       data: (version) {
-        if (version != null) {
-          appUpdateDialog(
-            title: title ?? context.l10n.appTitle,
-            newRelease: "v${version.canonicalizedVersion}",
-            context: context,
-            toast: toast,
-          );
+        if (version == null) return;
+        // Respect a version the user chose to skip: only prompt again once a
+        // release newer than the skipped one is available.
+        final dismissed = ref.read(dismissedUpdateVersionProvider);
+        if (dismissed != null && dismissed.isNotEmpty) {
+          Version? skipped;
+          try {
+            skipped = Version.parse(dismissed);
+          } catch (_) {
+            skipped = null;
+          }
+          if (skipped != null && version.compareTo(skipped) <= 0) return;
         }
+        appUpdateDialog(
+          title: title ?? context.l10n.appTitle,
+          newRelease: "v${version.canonicalizedVersion}",
+          context: context,
+          toast: toast,
+          onSkipChanged: (skip) => ref
+              .read(dismissedUpdateVersionProvider.notifier)
+              .update(skip ? version.canonicalizedVersion : ''),
+        );
       },
     );
   }
@@ -58,6 +73,7 @@ class NavigationShellScreen extends HookConsumerWidget {
           await checkForUpdate(
             title: ref.read(packageInfoProvider).appName,
             context: context,
+            ref: ref,
             updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
             toast: ref.read(toastProvider),
           );

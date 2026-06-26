@@ -1568,6 +1568,7 @@
     "serverUrlHintText": "Server url",
     "serverVersion": "Server version",
     "settings": "Settings",
+    "skipThisVersion": "Don't remind me about this version",
     "skipUpdatingEntries": "Skip updating entries",
     "socksHost": "SOCKS Host",
     "socksPassword": "SOCKS Password",

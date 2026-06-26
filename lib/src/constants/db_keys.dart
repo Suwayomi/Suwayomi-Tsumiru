@@ -85,6 +85,9 @@ enum DBKeys {
   // Lock phones to portrait (landscape on a phone currently looks broken). Off
   // by default — many readers prefer landscape; tablets/desktop ignore it.
   forcePortrait(false),
+  // The release version the user chose to skip in the update prompt. The
+  // prompt stays hidden until a release newer than this one appears.
+  dismissedUpdateVersion(''),
   ;
 
   const DBKeys(this.initial);
