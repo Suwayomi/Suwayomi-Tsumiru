@@ -12,9 +12,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/urls.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../domain/about/about_dto.dart';
 import '../domain/server_update/server_update.dart';
 import '../presentation/about/controllers/about_controller.dart';
@@ -68,3 +70,12 @@ AboutRepository aboutRepository(ref) => AboutRepository(
       client: ref.watch(graphQlClientProvider),
       packageInfo: ref.watch(packageInfoProvider),
     );
+
+/// The release version the user opted to skip in the update prompt. Empty
+/// until they tick "Don't remind me about this version".
+@riverpod
+class DismissedUpdateVersion extends _$DismissedUpdateVersion
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.dismissedUpdateVersion);
+}

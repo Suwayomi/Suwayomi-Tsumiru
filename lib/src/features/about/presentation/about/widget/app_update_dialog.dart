@@ -18,28 +18,49 @@ void appUpdateDialog({
   required BuildContext context,
   required Toast? toast,
   String? url,
+  void Function(bool skip)? onSkipChanged,
 }) =>
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(context.l10n.newUpdateAvailable),
-          content: Text(context.l10n.versionAvailable(title, newRelease)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.close),
+        bool skip = false;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text(context.l10n.newUpdateAvailable),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.l10n.versionAvailable(title, newRelease)),
+                if (onSkipChanged != null)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: skip,
+                    onChanged: (v) {
+                      setState(() => skip = v ?? false);
+                      onSkipChanged(skip);
+                    },
+                    title: Text(context.l10n.skipThisVersion),
+                  ),
+              ],
             ),
-            ElevatedButton.icon(
-              onPressed: () {
-                launchUrlInWeb(context,
-                    url ?? AppUrls.sorayomiLatestReleaseUrl.url, toast);
-                Navigator.pop(context);
-              },
-              icon: const Icon(FontAwesomeIcons.github),
-              label: Text(context.l10n.gitHub),
-            ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(context.l10n.close),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  launchUrlInWeb(context,
+                      url ?? AppUrls.sorayomiLatestReleaseUrl.url, toast);
+                  Navigator.pop(context);
+                },
+                icon: const Icon(FontAwesomeIcons.github),
+                label: Text(context.l10n.gitHub),
+              ),
+            ],
+          ),
         );
       },
     );

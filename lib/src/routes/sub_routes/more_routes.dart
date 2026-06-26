@@ -100,3 +100,10 @@ class OfflineSettingsRoute extends GoRouteData {
   @override
   Widget build(context, state) => const OfflineSettingsScreen();
 }
+
+class ConnectionRoute extends GoRouteData {
+  const ConnectionRoute();
+
+  @override
+  Widget build(context, state) => const ConnectionScreen();
+}

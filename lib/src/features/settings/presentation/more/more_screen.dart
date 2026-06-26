@@ -9,11 +9,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
+import '../../../../global_providers/global_providers.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../auth/data/auth_state.dart';
+import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
+import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -32,7 +36,33 @@ class MoreScreen extends ConsumerWidget {
             size: context.height * .2,
           ),
           const Divider(),
-          const ServerUrlTile(),
+          Builder(
+            builder: (context) {
+              final host = formatServerHost(
+                ref.watch(serverUrlProvider),
+                ref.watch(serverPortProvider),
+                ref.watch(serverPortToggleProvider).ifNull(),
+              );
+              final statusLabel = switch (connectionAuthStatus(
+                ref.watch(authTypeKeyProvider),
+                ref.watch(needsReauthProvider),
+              )) {
+                ConnectionAuthStatus.signedIn =>
+                  context.l10n.connectionAuthSignedIn,
+                ConnectionAuthStatus.noAuth => context.l10n.connectionAuthNone,
+                ConnectionAuthStatus.signInNeeded =>
+                  context.l10n.connectionAuthSignInNeeded,
+              };
+              final subtitle =
+                  host.isEmpty ? statusLabel : '$host · $statusLabel';
+              return ListTile(
+                leading: const Icon(Icons.dns_rounded),
+                title: Text(context.l10n.connection),
+                subtitle: Text(subtitle),
+                onTap: () => const ConnectionRoute().go(context),
+              );
+            },
+          ),
           SwitchListTile(
             secondary: const Icon(Icons.no_accounts_rounded),
             title: Text(context.l10n.incognitoMode),

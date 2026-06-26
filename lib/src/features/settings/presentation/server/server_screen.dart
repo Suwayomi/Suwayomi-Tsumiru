@@ -4,19 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/endpoints.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/launch_url_in_web.dart';
-import '../../../../utils/misc/toast/toast.dart';
 import '../../controller/server_controller.dart';
-import 'widget/authentication/authentication_section.dart';
-import 'widget/client/client_section.dart';
-import 'widget/client/server_port_tile/server_port_tile.dart';
-import 'widget/client/server_url_tile/server_url_tile.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
 import 'widget/server_binding/server_binding_section.dart';
@@ -41,34 +33,25 @@ class ServerScreen extends ConsumerWidget {
           ),
           child: ListView(
             children: [
-              const ClientSection(),
-              const AuthenticationSection(),
-              if (!kIsWeb)
-                ListTile(
-                  leading: const Icon(Icons.web_rounded),
-                  title: Text(context.l10n.webUI),
-                  onTap: () {
-                    final url = Endpoints.baseApi(
-                      baseUrl: ref.read(serverUrlProvider),
-                      port: ref.read(serverPortProvider),
-                      addPort: ref.watch(serverPortToggleProvider).ifNull(),
-                      appendApiToUrl: false,
-                    );
-                    if (url.isNotBlank) {
-                      launchUrlInWeb(
-                        context,
-                        url,
-                        ref.read(toastProvider),
-                      );
-                    }
-                  },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text(
+                  context.l10n.serverOwnSettingsCaption,
+                  style: context.textTheme.bodySmall
+                      ?.copyWith(color: Colors.grey),
+                ),
+              ),
+              if (serverSettings.isLoading && !serverSettings.hasValue)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
               if (serverSettings.valueOrNull != null) ...[
                 ServerBindingSection(serverBindingDto: serverSettings.value!),
                 SocksProxySection(socksProxyDto: serverSettings.value!),
                 CloudFlareSection(cloudFlareDto: serverSettings.value!),
                 MiscSettingsSection(miscSettingsDto: serverSettings.value!),
-              ]
+              ],
             ],
           ),
         ),
