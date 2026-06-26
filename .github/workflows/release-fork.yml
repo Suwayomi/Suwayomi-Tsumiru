@@ -1,6 +1,6 @@
 # Multi-platform release builder for Aaron's fork.
 #
-# Triggered by pushing a v*.*.* tag (or manually). Builds Android, Linux,
+# Triggered by pushing a v*.*.* tag (or manually). Builds Android, iOS, Linux,
 # Windows, macOS and Web from the tagged commit and attaches the artifacts to
 # the GitHub release. Distinct from the inherited upstream `publish.yml`
 # (which targets winget/homebrew/Play Store and uses unpinned Flutter).
@@ -8,6 +8,10 @@
 # Android is signed with the repo's debug keystore (stored as secrets) so CI
 # builds keep the same signature as locally-built debug APKs — installs upgrade
 # cleanly instead of being rejected for a signature mismatch.
+#
+# iOS is built UNSIGNED (no Apple Developer account needed). The resulting
+# .ipa is not installable directly — users re-sign it themselves via AltStore /
+# SideStore / TrollStore. See the release notes / docs install section.
 name: Release (fork)
 
 on:
@@ -39,6 +43,8 @@ jobs:
             target: web
           - os: macos-latest
             target: macos
+          - os: macos-latest
+            target: ios
           # Pinned to 2022: windows-latest (Server 2025) ships VS 2022 in a
           # layout Flutter 3.32.4 fails to detect, so CMake falls back to the
           # "Visual Studio 16 2019" generator and can't find an instance.
@@ -104,8 +110,15 @@ jobs:
 
       - name: Build ${{ matrix.target }}
         # Linux is built by fastforge in the AppImage step below (and by the Flatpak workflow).
-        if: matrix.target != 'android' && matrix.target != 'linux'
+        # iOS needs --no-codesign, handled in its own step below.
+        if: matrix.target != 'android' && matrix.target != 'linux' && matrix.target != 'ios'
         run: flutter build ${{ matrix.target }} --release
+
+      - name: Build iOS (unsigned)
+        if: matrix.target == 'ios'
+        # No Apple Developer account / signing certs in CI — build an unsigned
+        # binary. Flutter runs `pod install` automatically as part of this.
+        run: flutter build ios --release --no-codesign
 
       # ---- package into dist/ ----
       - name: Package Android
@@ -152,6 +165,16 @@ jobs:
           mkdir -p dist
           APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
           ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-x64.zip"
+
+      - name: Package iOS (unsigned IPA)
+        if: matrix.target == 'ios'
+        # An .ipa is just a zip with the .app inside a top-level Payload/ dir.
+        run: |
+          mkdir -p dist Payload
+          APP=$(find build/ios/iphoneos -maxdepth 1 -name "*.app" | head -1)
+          cp -R "$APP" Payload/
+          zip -r -y "dist/${pkg_name}-${{ github.ref_name }}-ios.ipa" Payload
+          rm -rf Payload
 
       - name: Package Windows
         if: matrix.target == 'windows'
