@@ -183,6 +183,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath "dist\${env:pkg_name}-${{ github.ref_name }}-windows-x64.zip"
 
+      # TEMPORARY: lets a manual (non-tag) run expose the built artifacts for
+      # download so the unsigned iOS IPA can be inspected before a real release.
+      # Skipped on tagged release runs. Remove once iOS is verified.
+      - name: Upload artifacts (manual test runs only)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: ignore
+
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
