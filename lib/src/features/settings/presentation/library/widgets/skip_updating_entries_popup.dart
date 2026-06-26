@@ -26,7 +26,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
           children: [
             CheckboxListTile(
               controlAffinity: ListTileControlAffinity.leading,
-              activeColor: context.theme.indicatorColor,
+              activeColor: context.theme.colorScheme.primary,
               title: Text(context.l10n.withCompletedStatus),
               value: librarySettingsDto?.excludeCompleted.ifNull(),
               onChanged: (value) async {
@@ -41,7 +41,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
             ),
             CheckboxListTile(
               controlAffinity: ListTileControlAffinity.leading,
-              activeColor: context.theme.indicatorColor,
+              activeColor: context.theme.colorScheme.primary,
               title: Text(context.l10n.thatHaventBeenStarted),
               value: librarySettingsDto?.excludeNotStarted.ifNull(),
               onChanged: (value) async {
@@ -56,7 +56,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
             ),
             CheckboxListTile(
               controlAffinity: ListTileControlAffinity.leading,
-              activeColor: context.theme.indicatorColor,
+              activeColor: context.theme.colorScheme.primary,
               title: Text(context.l10n.withUnreadChapter),
               value: librarySettingsDto?.excludeUnreadChapters.ifNull(),
               onChanged: (value) async {

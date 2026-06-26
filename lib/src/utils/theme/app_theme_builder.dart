@@ -1,5 +1,6 @@
 // lib/src/utils/theme/app_theme_builder.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../constants/app_theme.dart';
 import 'app_color_scheme.dart';
@@ -47,6 +48,20 @@ ThemeData buildAppTheme({
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
+      // Make the status-bar and bottom system-navigation-bar icons track the
+      // theme brightness. Without this the system nav-bar icons stayed light
+      // and went invisible on the light surface in light themes.
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        statusBarBrightness:
+            brightness == Brightness.dark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness:
+            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
     ),
     tabBarTheme: const TabBarThemeData(tabAlignment: TabAlignment.center),
     // Bottom navigation: brand-tinted selected indicator + accent selection.

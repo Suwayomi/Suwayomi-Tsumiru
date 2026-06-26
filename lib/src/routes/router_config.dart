@@ -260,6 +260,10 @@ class QuickSearchRoute extends ShellRouteData {
               .colorScheme
               .surface
               .withValues(alpha: 0.60),
+          systemNavigationBarIconBrightness:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Brightness.light
+                  : Brightness.dark,
           systemNavigationBarDividerColor: Colors.transparent,
         ),
         child: SearchStackScreen(child: navigator),

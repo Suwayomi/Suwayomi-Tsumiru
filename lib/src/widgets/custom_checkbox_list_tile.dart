@@ -42,7 +42,7 @@ class CustomCheckboxListTile<NotifierT extends AutoDisposeNotifier<bool?>>
   }
 
   Widget _tristateLeading(BuildContext context, bool? value) {
-    final activeColor = context.theme.indicatorColor;
+    final activeColor = context.theme.colorScheme.primary;
     final excludeColor = context.theme.colorScheme.error;
     if (value == null) {
       return Icon(
@@ -62,7 +62,7 @@ class CustomCheckboxListTile<NotifierT extends AutoDisposeNotifier<bool?>>
     if (!tristate) {
       return CheckboxListTile(
         controlAffinity: ListTileControlAffinity.leading,
-        activeColor: context.theme.indicatorColor,
+        activeColor: context.theme.colorScheme.primary,
         value: val.ifNull(true),
         title: Text(title),
         tristate: false,

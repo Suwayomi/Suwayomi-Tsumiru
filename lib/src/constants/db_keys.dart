@@ -56,6 +56,9 @@ enum DBKeys {
   sourceDisplayMode(DisplayMode.grid),
   gridMangaCoverWidth(192.0),
   readerOverlay(true),
+  // Show the continuous-reader feedback snackbars ("loading next chapter",
+  // "no more chapters", etc.). Off = a quiet reading experience.
+  readerFeedbackToasts(true),
   volumeTap(false),
   volumeTapInvert(false),
   hideEmptyCategory(false),

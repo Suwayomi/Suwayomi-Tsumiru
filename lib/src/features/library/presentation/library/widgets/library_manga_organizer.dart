@@ -24,6 +24,11 @@ class LibraryMangaOrganizer extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: TabBar(
+          // Non-scrollable tabs: fill alignment keeps the selection underline
+          // aligned under every tab. The global theme defaults to
+          // TabAlignment.center (for the scrollable category tabs), which
+          // misaligns the indicator under the last tab here.
+          tabAlignment: TabAlignment.fill,
           tabs: [
             Tab(text: context.l10n.filter),
             Tab(text: context.l10n.sort),

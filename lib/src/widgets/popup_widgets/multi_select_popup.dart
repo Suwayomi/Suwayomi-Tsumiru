@@ -99,7 +99,7 @@ class _CheckboxSelectListState<T> extends State<CheckboxSelectList<T>> {
   ) {
     return CheckboxListTile(
       key: Key(value.key.hashCode.toString()),
-      activeColor: context.theme.indicatorColor,
+      activeColor: context.theme.colorScheme.primary,
       title: Text(
         widget.getTitle?.call(value.key) ?? value.toString(),
       ),

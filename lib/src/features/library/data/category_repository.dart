@@ -117,10 +117,23 @@ class CategoryRepository {
       ferryClient
           .query$GetCategoryMangas(
             Options$Query$GetCategoryMangas(
-              variables: Variables$Query$GetCategoryMangas(id: categoryId),
+              variables: Variables$Query$GetCategoryMangas(
+                // Fetch the library entries for this category via the top-level
+                // mangas filter (not the category->manga relation, which also
+                // returns entries removed from the library — they linger in the
+                // DB with inLibrary=false). The virtual "Default" category
+                // (id 0) is "in library and uncategorized", so match a null
+                // categoryId for it; real categories match by id.
+                filter: Input$MangaFilterInput(
+                  inLibrary: Input$BooleanFilterInput(equalTo: true),
+                  categoryId: categoryId == 0
+                      ? Input$IntFilterInput(isNull: true)
+                      : Input$IntFilterInput(equalTo: categoryId),
+                ),
+              ),
             ),
           )
-          .getData((data) => data.category.mangas.nodes);
+          .getData((data) => data.mangas.nodes);
 }
 
 @riverpod

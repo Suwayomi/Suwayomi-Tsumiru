@@ -19,6 +19,9 @@ class MangaChapterOrganizer extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: TabBar(
+          // Fill alignment so the underline aligns under each tab (the global
+          // theme's center alignment is for the scrollable category tabs).
+          tabAlignment: TabAlignment.fill,
           tabs: [
             Tab(text: context.l10n.filter),
             Tab(text: context.l10n.sort),

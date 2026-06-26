@@ -58,21 +58,17 @@ mutation DeleteCategoryMeta($input: DeleteCategoryMetaInput!) {
   }
 }
 
-query GetCategoryMangas($id: Int!) {
-  category(id: $id) {
-    id
-    mangas {
-      nodes {
-        ...MangaDto
-        __typename
-      }
-      pageInfo {
-        ...PageInfoDto
-        __typename
-      }
-      totalCount
+query GetCategoryMangas($filter: MangaFilterInput) {
+  mangas(filter: $filter) {
+    nodes {
+      ...MangaDto
       __typename
     }
+    pageInfo {
+      ...PageInfoDto
+      __typename
+    }
+    totalCount
     __typename
   }
 }

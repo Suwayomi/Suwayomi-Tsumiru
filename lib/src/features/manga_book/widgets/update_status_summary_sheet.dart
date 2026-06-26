@@ -83,8 +83,8 @@ class UpdateStatusExpansionTile extends StatelessWidget {
     return ExpansionTile(
       title: Text("$title (${mangas.length.padLeft()})"),
       initiallyExpanded: initiallyExpanded,
-      textColor: context.theme.indicatorColor,
-      iconColor: context.theme.indicatorColor,
+      textColor: context.theme.colorScheme.primary,
+      iconColor: context.theme.colorScheme.primary,
       shape: const RoundedRectangleBorder(),
       children: mangas
           .map((e) => MangaCoverListTile(

@@ -31,7 +31,7 @@ class SortListTile extends StatelessWidget {
 
     return ListTile(
       leading: selected
-          ? Icon(icon, color: context.theme.indicatorColor)
+          ? Icon(icon, color: context.theme.colorScheme.primary)
           : SizedBox(width: context.theme.iconTheme.size),
       title: title,
       subtitle: subtitle,

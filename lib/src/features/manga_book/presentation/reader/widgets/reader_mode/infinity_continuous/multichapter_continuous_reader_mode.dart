@@ -18,6 +18,7 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../data/manga_book/manga_book_repository.dart';
@@ -79,6 +80,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Whether the reader feedback snackbars are enabled (user setting). Read
+    // live so toggling the setting applies without reopening the reader.
+    bool readerToastsEnabled() =>
+        ref.read(readerFeedbackToastsProvider).ifNull(true);
     final ItemScrollController itemScrollController =
         useMemoized(() => ItemScrollController());
     final ItemPositionsListener positionsListener =
@@ -269,7 +274,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (loadedRef.value.any((e) => e.chapterId == next.id)) return;
       loadingNext.value = true;
       try {
-        if (context.mounted) {
+        if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showLoadingNextChapterFeedback(
               context, next.name);
         }
@@ -286,7 +291,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ];
         // Decode the appended chapter's pages ahead of the user reaching them.
         prefetchPagesFrom(currentGlobalIndex());
-        if (context.mounted) {
+        if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showNextChapterLoadedFeedback(
               context, next.name);
         }
@@ -302,7 +307,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (loadedRef.value.any((e) => e.chapterId == prev.id)) return;
       loadingPrevious.value = true;
       try {
-        if (context.mounted) {
+        if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showLoadingPreviousChapterFeedback(
               context, prev.name);
         }
@@ -353,7 +358,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           });
         }
 
-        if (context.mounted) {
+        if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showPreviousChapterLoadedFeedback(
               context, prev.name);
         }
@@ -465,15 +470,26 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           if (next != null) {
             loadNextChapter(next);
           } else if (!hasReachedEnd.value) {
-            InfinityContinuousFeedback.showEndOfMangaFeedback(
-                context, lastEndFeedbackTime);
+            // Only surface the end-of-manga toast once the bottom of the very
+            // last page is actually on screen. On long webtoon pages the last
+            // page item becomes "visible" (counts toward maxIdx) long before
+            // the reader reaches its end, which previously spammed the toast on
+            // every scroll. itemTrailingEdge <= 1.0 means the page bottom has
+            // reached (or passed) the viewport bottom.
+            final lastPage = positions.where((p) => p.index == total - 1);
+            final atBottom =
+                lastPage.isNotEmpty && lastPage.first.itemTrailingEdge <= 1.0;
+            if (atBottom && readerToastsEnabled()) {
+              InfinityContinuousFeedback.showEndOfMangaFeedback(
+                  context, lastEndFeedbackTime);
+            }
           }
         }
         if (scrollingUp && minIdx <= 0) {
           final prev = nextPrevChapterPair.value?.second;
           if (prev != null) {
             loadPreviousChapter(prev);
-          } else if (!hasReachedStart.value) {
+          } else if (!hasReachedStart.value && readerToastsEnabled()) {
             InfinityContinuousFeedback.showStartOfMangaFeedback(
                 context, lastStartFeedbackTime);
           }
