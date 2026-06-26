@@ -62,6 +62,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           ListTile(
             title: Text(context.l10n.server),
+            subtitle: Text(context.l10n.serverSettingsSubtitle),
             leading: const Icon(Icons.computer_rounded),
             onTap: () => const ServerSettingsRoute().go(context),
           ),
