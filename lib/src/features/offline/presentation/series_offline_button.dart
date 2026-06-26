@@ -42,7 +42,7 @@ class SeriesOfflineButton extends ConsumerWidget {
               child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(onDevice
               ? Icons.offline_pin_rounded
-              : Icons.download_rounded),
+              : Icons.download_for_offline_outlined),
       label: downloading
           ? context.l10n.offlineDownloadingCount(inFlight)
           : onDevice
@@ -61,7 +61,33 @@ class SeriesOfflineButton extends ConsumerWidget {
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Explain what this sheet does — offline (device) copies, distinct
+            // from the server download up top.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sheetContext.l10n.offlineSheetTitle,
+                    style: sheetContext.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    sheetContext.l10n.offlineSheetSubtitle,
+                    style: TextStyle(
+                      color: sheetContext.theme.colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.download_rounded),
               title: Text(sheetContext.l10n.offlineDownloadAll),

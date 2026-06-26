@@ -1226,6 +1226,7 @@
       "placeholders": { "n": { "type": "int" } }
     },
     "downloads": "Downloads",
+    "downloadToServer": "Download to server",
     "downloadUnreadChapters": "Unread",
     "@downloadUnreadChapters": { "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters." },
     "edit": "Edit",
@@ -1699,7 +1700,7 @@
     "@keepOfflineAll": {
         "description": "Keep-offline rule: keep every chapter on device"
     },
-    "offlineDownloadAction": "Download",
+    "offlineDownloadAction": "Offline",
     "@offlineDownloadAction": {
         "description": "Series offline button label when nothing is downloaded yet"
     },
@@ -1707,6 +1708,8 @@
     "@offlineOnDevice": {
         "description": "Series offline button label when the series has downloads on this device"
     },
+    "offlineSheetTitle": "Offline reading",
+    "offlineSheetSubtitle": "Keep chapters on this device so you can read them without a connection to your server. This is separate from server downloads (the cloud icon up top).",
     "offlineDownloadAll": "Download all chapters",
     "@offlineDownloadAll": {
         "description": "Series offline action: download every chapter to this device"

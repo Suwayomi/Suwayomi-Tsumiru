@@ -64,8 +64,8 @@ class ChapterDownloadPresetsButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<DownloadPreset>(
-      icon: const Icon(Icons.download_outlined),
-      tooltip: context.l10n.downloads,
+      icon: const Icon(Icons.cloud_download_outlined),
+      tooltip: context.l10n.downloadToServer,
       onSelected: (preset) => _handlePreset(context, ref, preset),
       itemBuilder: (context) => <PopupMenuEntry<DownloadPreset>>[
         PopupMenuItem(
