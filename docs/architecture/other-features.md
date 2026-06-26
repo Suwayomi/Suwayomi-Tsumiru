@@ -30,14 +30,7 @@ Migrate a manga from one source to another (status/categories/progress/bookmarks
 
 ## offline
 
-On-device storage so saved chapters read with **no server connection**, with automatic fallback to local copies when the server is unreachable. A full subsystem under `lib/src/features/offline/` (shipped, on `main`).
-
-- **Catalog** (`data/offline_database.dart`, Drift/SQLite): `offline_mangas`, `offline_chapters` (`deviceState` enum, `pageCount`, `bytes`), `offline_categories`, `offline_manga_categories`, `offline_pages`. `OfflinePaths` resolves the on-device file locations; pages are written via an atomic page store.
-- **Download engine** (`data/`): a background page-download engine + coordinator that keeps running after you leave the app, and a reconciler that applies each series' keep-rule (`OfflineKeepRule`: off / keep N unread / keep all unread / all) plus hand-pinned chapters.
-- **Sync + read fallback**: the device catalog is kept in step with the server library; the reader serves local pages when the server can't be reached.
-- **Providers:** `offlineEnabledProvider` (default false, overridden to true on native platforms at startup — web has no `dart:io` file store), `offlineDatabaseProvider`, `offlineRepositoryProvider`, `offlinePathsProvider`, `mangaOfflineProgressProvider`, `mangaKeepRuleProvider`.
-- **UI:** the manga-details action-row **Offline** button (`presentation/series_offline_button.dart`) opens the keep-rule sheet; an app-wide state lives in the reader/chapter list.
-- **Gotcha:** offline is native-only (`offlineEnabledProvider` stays false on web), and the controls hide themselves when it's off.
+Offline reading is a full subsystem with its own doc — see [offline.md](offline.md).
 
 ## quick_open
 
