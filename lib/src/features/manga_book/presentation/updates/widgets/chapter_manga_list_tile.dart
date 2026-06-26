@@ -33,62 +33,86 @@ class ChapterMangaListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = (chapterWithMangaDto.isRead).ifNull() ? Colors.grey : null;
-    return GestureDetector(
-      onSecondaryTap: () => toggleSelect(chapterWithMangaDto),
-      child: ListTile(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if ((chapterWithMangaDto.isBookmarked).ifNull()) ...[
-              const Icon(Icons.bookmark_rounded, size: 20),
-              const Gap(4),
-            ],
-            Expanded(
-              child: Text(
-                chapterWithMangaDto.manga.title,
-                style: TextStyle(color: color),
-              ),
-            ),
-          ],
-        ),
-        leading: chapterWithMangaDto.manga.thumbnailUrl != null
-            ? ClipRRect(
-                borderRadius: KBorderRadius.r8.radius,
-                child: InkWell(
-                  onTap: () => MangaRoute(
-                    mangaId: chapterWithMangaDto.manga.id,
-                  ).push(context),
-                  child: ServerImage(
-                    imageUrl: chapterWithMangaDto.manga.thumbnailUrl ?? "",
-                    size: const Size.square(48),
-                  ),
-                ),
-              )
-            : null,
-        subtitle:
-            Text(chapterWithMangaDto.name, style: TextStyle(color: color)),
-        trailing: DownloadStatusIcon(
-          isDownloaded: (chapterWithMangaDto.isDownloaded).ifNull(),
-          mangaId: chapterWithMangaDto.manga.id,
-          chapter: chapterWithMangaDto,
-          updateData: updatePair,
-        ),
-        selectedColor: context.theme.colorScheme.onSurface,
-        selectedTileColor:
-            context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-        selected: isSelected,
+    final manga = chapterWithMangaDto.manga;
+    // Custom Row (rather than ListTile's height-constrained `leading`) so the
+    // cover renders at the standard portrait size used on the History list.
+    return Material(
+      color: isSelected
+          ? (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300)
+          : Colors.transparent,
+      child: InkWell(
         onTap: () {
           if (canTapSelect) {
             toggleSelect(chapterWithMangaDto);
           } else {
             ReaderRoute(
-              mangaId: chapterWithMangaDto.manga.id,
+              mangaId: manga.id,
               chapterId: chapterWithMangaDto.id,
               showReaderLayoutAnimation: true,
             ).push(context);
           }
         },
         onLongPress: () => toggleSelect(chapterWithMangaDto),
+        onSecondaryTap: () => toggleSelect(chapterWithMangaDto),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              if (manga.thumbnailUrl != null)
+                ClipRRect(
+                  borderRadius: KBorderRadius.r8.radius,
+                  child: InkWell(
+                    onTap: () => MangaRoute(mangaId: manga.id).push(context),
+                    child: ServerImage(
+                      imageUrl: manga.thumbnailUrl ?? "",
+                      size: const Size(56, 80),
+                    ),
+                  ),
+                ),
+              const Gap(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        if ((chapterWithMangaDto.isBookmarked).ifNull()) ...[
+                          const Icon(Icons.bookmark_rounded, size: 20),
+                          const Gap(4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            manga.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: color),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Gap(4),
+                    Text(
+                      chapterWithMangaDto.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color ?? context.theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Gap(8),
+              DownloadStatusIcon(
+                isDownloaded: (chapterWithMangaDto.isDownloaded).ifNull(),
+                mangaId: manga.id,
+                chapter: chapterWithMangaDto,
+                updateData: updatePair,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
