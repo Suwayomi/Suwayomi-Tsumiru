@@ -52,12 +52,7 @@ class AboutRepository {
         Version? latestReleaseBuildNumber = tag != null
             ? Version.parse(tag.startsWith('v') ? tag.substring(1) : tag)
             : null;
-        Version packageBuildNumber = Version.parse(packageInfo.version);
-        // Dev/test builds carry a pre-release suffix (e.g. 0.6.0-dev) and are
-        // pre-releases of the very release published on GitHub — so semver
-        // treats that release as "newer". Don't nag a dev build to update to
-        // the release it's a pre-release of.
-        if (packageBuildNumber.isPreRelease) return null;
+        Version? packageBuildNumber = Version.parse(packageInfo.version);
         if (latestReleaseBuildNumber != null &&
             latestReleaseBuildNumber
                 .compareTo(packageBuildNumber)
