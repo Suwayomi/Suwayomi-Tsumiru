@@ -43,7 +43,10 @@ class DownloadsSettingsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.downloads)),
         body: RefreshIndicator(
-          onRefresh: () => ref.refresh(settingsProvider.future),
+          onRefresh: () => Future.wait([
+            ref.refresh(settingsProvider.future),
+            ref.refresh(deleteChaptersSettingsControllerProvider.future),
+          ]),
           child: serverSettings.showUiWhenData(
             context,
             (data) {

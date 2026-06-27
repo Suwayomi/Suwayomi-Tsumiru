@@ -56,6 +56,17 @@ void main() {
     expect(c.progressDirty, true); // still pending up-sync
   });
 
+  test('down-sync preserves a dirty local bookmark (#33)', () async {
+    await seed(7);
+    await db.setChapterBookmark(7, true); // bookmarked offline, pending up-sync
+    // Server still reports it un-bookmarked; a down-sync must not revert us.
+    await OfflineSync(db)
+        .syncChapters([serverChapter(7, lastPageRead: 0, isRead: false)]);
+    final c = await db.chapterById(7);
+    expect(c!.isBookmarked, true); // local kept, not clobbered
+    expect(c.progressDirty, true); // still pending up-sync
+  });
+
   test('down-sync applies server progress for non-dirty chapters', () async {
     await seed(6, lastPageRead: 0);
     await OfflineSync(db)

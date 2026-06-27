@@ -164,10 +164,23 @@ Future<void> recordBookmark(
         .read(offlineDatabaseProvider)
         .setChapterBookmark(chapterId, isBookmarked);
   }
+  // Bookmarks share the one `progressDirty` flag with read progress, so the
+  // row may also carry an offline read that hasn't reached the server. Push the
+  // full state (not just the bookmark) — otherwise clearing the flag below
+  // would silently drop that pending read progress.
+  final row = offline
+      ? await ref.read(offlineRepositoryProvider).chapterById(chapterId)
+      : null;
   final result = await AsyncValue.guard(
     () => ref.read(mangaBookRepositoryProvider).putChapter(
           chapterId: chapterId,
-          patch: ChapterChange(isBookmarked: isBookmarked),
+          patch: row == null
+              ? ChapterChange(isBookmarked: isBookmarked)
+              : ChapterChange(
+                  isBookmarked: isBookmarked,
+                  isRead: row.isRead,
+                  lastPageRead: row.lastPageRead,
+                ),
         ),
   );
   if (offline && !result.hasError) {
@@ -195,6 +208,10 @@ Future<void> maybeDeleteLocalDownloadOnRead(
   if (c.isBookmarked && !ref.read(allowDeleteLocalBookmarkedProvider).ifNull()) {
     return;
   }
+  // A manually-saved (pinned) chapter is an explicit keep — leave it alone.
+  // Deleting it without also un-pinning would just get it re-downloaded on the
+  // next reconcile (pinned chapters are always in the desired set).
+  if (c.pinned) return;
   await manager.deleteChapter(c);
 }
 
@@ -302,8 +319,14 @@ Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
   if (!ref.read(offlineEnabledProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
-  for (final c in await db.downloadedChaptersForManga(mangaId)) {
-    await deleteChapterFromDevice(ref, c.id);
+  // Purge every chapter that has any on-device footprint — not just the fully
+  // downloaded ones. Queued / downloading / errored chapters must also be
+  // cancelled and cleaned up, or an in-flight download could finish (and leave
+  // files) after the series has already left the library.
+  for (final c in await db.chaptersForManga(mangaId)) {
+    if (c.deviceState != OfflineDeviceState.none) {
+      await deleteChapterFromDevice(ref, c.id);
+    }
   }
 }
 

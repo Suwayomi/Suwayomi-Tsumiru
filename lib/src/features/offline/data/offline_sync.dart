@@ -43,7 +43,10 @@ class OfflineSync {
         chapterIndex: c.sourceOrder,
         isRead: local?.isRead ?? c.isRead,
         lastPageRead: local?.lastPageRead ?? c.lastPageRead,
-        isBookmarked: c.isBookmarked,
+        // Bookmarks are dirty-tracked too (#33) — preserve a local bookmark that
+        // hasn't been pushed yet, or a down-sync would revert it to the stale
+        // server value before the up-sync gets a chance to send it.
+        isBookmarked: local?.isBookmarked ?? c.isBookmarked,
         serverIsDownloaded: c.isDownloaded,
         pageCount: c.pageCount,
         updatedAt: now,

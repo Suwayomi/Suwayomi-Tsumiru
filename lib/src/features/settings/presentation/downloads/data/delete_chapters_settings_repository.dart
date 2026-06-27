@@ -101,12 +101,19 @@ class DeleteChaptersSettingsController
     return DeleteChaptersSettings.fromMeta(byKey);
   }
 
-  Future<void> _write(String key, String value, DeleteChaptersSettings next) {
+  Future<void> _write(String key, String value, DeleteChaptersSettings next) async {
     // Optimistic: reflect the toggle immediately, then persist to the server.
+    final previous = state;
     state = AsyncData(next);
-    return ref
-        .read(deleteChaptersSettingsRepositoryProvider)
-        .setGlobalMeta(key, value);
+    try {
+      await ref
+          .read(deleteChaptersSettingsRepositoryProvider)
+          .setGlobalMeta(key, value);
+    } catch (_) {
+      // The server didn't take it — revert so the UI doesn't lie about state.
+      state = previous;
+      rethrow;
+    }
   }
 
   DeleteChaptersSettings get _current =>
