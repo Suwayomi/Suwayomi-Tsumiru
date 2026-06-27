@@ -109,9 +109,20 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
   if (chapter == null) return;
   // Manual save is sticky.
   await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, true);
-  if (!chapter.serverIsDownloaded) {
-    // Cascade: also commit a server download (grows the server library). The
-    // device copy doesn't wait on it — the server streams pages from source.
+  // Ensure the SERVER also has the chapter (device ⊆ server). The cached
+  // `serverIsDownloaded` flag can be stale (e.g. it isn't reset when a chapter is
+  // deleted), so when it claims the server already has the chapter, verify
+  // against the server before skipping — otherwise the device keeps a copy the
+  // server never saved. A failed/offline check falls back to the cached value.
+  var serverHasIt = chapter.serverIsDownloaded;
+  if (serverHasIt) {
+    final fresh = await AsyncValue.guard(() =>
+        ref.read(mangaBookRepositoryProvider).getChapter(chapterId: chapterId));
+    serverHasIt = fresh.valueOrNull?.isDownloaded ?? serverHasIt;
+  }
+  if (!serverHasIt) {
+    // Commit a server download too (grows the server library). The device copy
+    // doesn't wait on it — the server streams pages from source meanwhile.
     await ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue([chapterId]);
