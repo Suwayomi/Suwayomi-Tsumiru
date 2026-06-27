@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/emoticons.dart';
+import '../../../../offline/data/offline_download_providers.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -46,9 +47,8 @@ class BigScreenMangaDetails extends ConsumerWidget {
             child: SingleChildScrollView(
               child: MangaDescription(
                 manga: manga,
-                removeMangaFromLibrary: (() => ref
-                    .read(mangaBookRepositoryProvider)
-                    .removeMangaFromLibrary(mangaId)),
+                removeMangaFromLibrary: (() =>
+                    removeMangaFromLibraryAndPurge(ref, mangaId)),
                 addMangaToLibrary: (() => ref
                     .read(mangaBookRepositoryProvider)
                     .addMangaToLibrary(mangaId)),

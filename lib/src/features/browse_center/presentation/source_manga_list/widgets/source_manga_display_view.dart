@@ -13,6 +13,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/source/source_model.dart';
 import '../controller/source_manga_controller.dart';
 import 'source_manga_grid_view.dart';
@@ -62,9 +63,8 @@ class SourceMangaDisplayView extends ConsumerWidget {
           ),
         );
         return removeManga
-            ? await AsyncValue.guard(() => ref
-                .read(mangaBookRepositoryProvider)
-                .removeMangaFromLibrary(item.id))
+            ? await AsyncValue.guard(
+                () => removeMangaFromLibraryAndPurge(ref, item.id))
             : null;
       } else {
         return AsyncValue.guard(() =>

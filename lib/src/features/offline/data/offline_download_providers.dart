@@ -293,6 +293,20 @@ Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
   await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
 }
 
+/// Remove a series from the library AND clean up its on-device downloads, so
+/// they aren't left orphaned (the offline catalog is library-scoped). Clears
+/// the keep-rule and deletes every device copy. The SERVER's own download is
+/// left alone — it isn't tied to library membership (see #34, #36).
+Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
+  await ref.read(mangaBookRepositoryProvider).removeMangaFromLibrary(mangaId);
+  if (!ref.read(offlineEnabledProvider)) return;
+  final db = ref.read(offlineDatabaseProvider);
+  await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
+  for (final c in await db.downloadedChaptersForManga(mangaId)) {
+    await deleteChapterFromDevice(ref, c.id);
+  }
+}
+
 /// The offline download orchestrator, wired with real network dependencies:
 /// `fetchChapterPages` for the page URL list and an auth'd HTTP GET for each
 /// page's bytes. Null on web / when offline storage is unavailable, so callers
