@@ -85,11 +85,21 @@ class ReaderScreen extends HookConsumerWidget {
       ));
 
       // Delete the on-device copy once read, if the user opted in.
-      unawaited(maybeDeleteLocalDownloadOnRead(
-        ref,
-        chapterId: chapterValue.id,
-        isRead: isReadingCompleted,
-      ));
+      // On a new read, auto-delete behind the reader — both the on-device copy
+      // and (per the server settings) the server copy. Each no-ops if its own
+      // setting is off.
+      if (isReadingCompleted) {
+        unawaited(maybeDeleteOnReadLocal(
+          ref,
+          mangaId: mangaId,
+          readChapterId: chapterValue.id,
+        ));
+        unawaited(maybeDeleteOnReadServer(
+          ref,
+          mangaId: mangaId,
+          readChapterId: chapterValue.id,
+        ));
+      }
 
       // Invalidate history to refresh the reading progress
       ref.invalidate(readingHistoryProvider);

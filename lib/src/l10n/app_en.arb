@@ -1234,6 +1234,8 @@
     "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
     "deleteCategoryTitle": "Are you sure?",
     "deleteChapters": "Delete chapters",
+    "deleteOnDeviceDownloads": "Delete on-device downloads",
+    "deleteServerDownloads": "Delete server downloads",
     "deleteChapterAfterManuallyMarkedRead": "Delete chapter after manually marking it as read",
     "deleteFinishedChaptersWhileReading": "Delete finished chapters while reading",
     "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
@@ -1694,22 +1696,6 @@
     "downloadOverWifiOnly": "Download over Wi-Fi only",
     "@downloadOverWifiOnly": {
         "description": "Toggle to restrict background downloads to Wi-Fi connections"
-    },
-    "deleteLocalAfterRead": "Delete downloads after reading",
-    "@deleteLocalAfterRead": {
-        "description": "Toggle to delete a chapter's on-device download once it is read"
-    },
-    "deleteLocalAfterReadSubtitle": "Remove the on-device copy of a chapter once you've read it. The server copy is kept.",
-    "@deleteLocalAfterReadSubtitle": {
-        "description": "Subtitle explaining the delete-downloads-after-reading toggle"
-    },
-    "allowDeleteLocalBookmarked": "Allow deleting bookmarked chapters",
-    "@allowDeleteLocalBookmarked": {
-        "description": "Toggle to let delete-after-reading also remove bookmarked chapters"
-    },
-    "allowDeleteLocalBookmarkedSubtitle": "Bookmarked chapters are kept by default.",
-    "@allowDeleteLocalBookmarkedSubtitle": {
-        "description": "Subtitle explaining bookmarked chapters are protected by default"
     },
     "offlineConcurrencyLabel": "Simultaneous downloads",
     "@offlineConcurrencyLabel": {

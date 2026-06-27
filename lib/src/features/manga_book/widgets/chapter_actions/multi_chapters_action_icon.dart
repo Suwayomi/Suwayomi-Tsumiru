@@ -66,11 +66,9 @@ class MultiChaptersActionIcon extends ConsumerWidget {
           ));
           // Delete the on-device copies once read, if the user opted in.
           for (final cid in chapterList) {
-            unawaited(maybeDeleteLocalDownloadOnRead(
-              ref,
-              chapterId: cid,
-              isRead: true,
-            ));
+            unawaited(maybeDeleteOnManualLocal(ref, chapterId: cid));
+            unawaited(
+                maybeDeleteOnManualServer(ref, mangaId: id, chapterId: cid));
           }
         }
         await refresh(true);

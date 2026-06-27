@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/endpoints.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
@@ -19,6 +20,8 @@ import '../../auth/data/auth_credentials_store.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
+import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -188,31 +191,133 @@ Future<void> recordBookmark(
   }
 }
 
-/// Deletes a chapter's ON-DEVICE copy once it's read, when the user enabled
-/// "delete local downloads on read". Bookmarked chapters are protected unless
-/// the user allows deleting them. No-op when offline is off, the toggle is off,
-/// the chapter isn't read, or it isn't downloaded on the device. The server
-/// copy is never touched (that's the server-side delete setting, #36).
-Future<void> maybeDeleteLocalDownloadOnRead(
+// === Delete-on-read =========================================================
+// Two INDEPENDENT features, each with its own settings (see
+// delete_chapters_settings_repository): the on-device set (local prefs) deletes
+// THIS phone's copy; the server set (global meta, shared with the WebUI) deletes
+// the server's copy, which then cascades to the device (device ⊆ server). On a
+// read we fire both; each no-ops if its own setting is off. The N-behind target
+// only ever lands on a chapter already behind the reader, so the continuous
+// reader never loses pages it still needs.
+
+/// Resolve the chapter to delete `slots` behind [readChapterId] in the manga's
+/// reading order (1 = the just-read chapter). Null if out of range or the list
+/// isn't loaded.
+int? _whileReadingTarget(
+    WidgetRef ref, int mangaId, int readChapterId, int slots) {
+  final chapters =
+      ref.read(mangaChapterListWithFilterProvider(mangaId: mangaId)).valueOrNull;
+  if (chapters == null) return null;
+  final isAsc = ref.read(mangaChapterSortDirectionProvider) ??
+      (DBKeys.chapterSortDirection.initial as bool);
+  return chapterIdToDeleteWhileReading(chapters, isAsc, readChapterId, slots);
+}
+
+/// The server delete settings, loaded from the server (null offline / on error,
+/// so the server delete simply doesn't run — it needs a connection anyway).
+Future<DeleteChaptersSettings?> _serverDeleteSettings(WidgetRef ref) async {
+  try {
+    return await ref.read(deleteChaptersSettingsControllerProvider.future);
+  } catch (_) {
+    return null;
+  }
+}
+
+// --- on-device (local) ------------------------------------------------------
+
+/// Delete THIS phone's copy of the chapter N slots behind the one just read.
+Future<void> maybeDeleteOnReadLocal(
+  WidgetRef ref, {
+  required int mangaId,
+  required int readChapterId,
+}) async {
+  if (!ref.read(offlineEnabledProvider)) return;
+  final s = ref.read(localDeleteSettingsProvider);
+  if (s.deleteWhileReading <= 0) return;
+  final targetId =
+      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  if (targetId == null) return;
+  await _deleteDeviceCopyIfDeletable(ref, targetId, s.deleteWithBookmark);
+}
+
+/// Delete THIS phone's copy when a chapter is manually marked read.
+Future<void> maybeDeleteOnManualLocal(
   WidgetRef ref, {
   required int chapterId,
-  required bool isRead,
 }) async {
-  if (!isRead) return;
   if (!ref.read(offlineEnabledProvider)) return;
-  if (!ref.read(deleteLocalAfterReadProvider).ifNull()) return;
-  final manager = ref.read(offlineDownloadManagerProvider);
-  if (manager == null) return;
+  final s = ref.read(localDeleteSettingsProvider);
+  if (!s.deleteManuallyMarkedRead) return;
+  await _deleteDeviceCopyIfDeletable(ref, chapterId, s.deleteWithBookmark);
+}
+
+/// Delete a chapter's device copy iff it's downloaded on the device and the
+/// bookmark gate allows it. A manually-saved (pinned) chapter IS deleted on a
+/// new read — and un-pinned (via [deleteChapterFromDevice]) so the reconciler
+/// doesn't simply re-download it. The server copy is untouched.
+Future<void> _deleteDeviceCopyIfDeletable(
+  WidgetRef ref,
+  int chapterId,
+  bool allowBookmarked,
+) async {
+  if (ref.read(offlineDownloadManagerProvider) == null) return;
   final c = await ref.read(offlineRepositoryProvider).chapterById(chapterId);
   if (c == null || c.deviceState != OfflineDeviceState.downloaded) return;
-  if (c.isBookmarked && !ref.read(allowDeleteLocalBookmarkedProvider).ifNull()) {
-    return;
-  }
-  // A manually-saved (pinned) chapter is an explicit keep — leave it alone.
-  // Deleting it without also un-pinning would just get it re-downloaded on the
-  // next reconcile (pinned chapters are always in the desired set).
-  if (c.pinned) return;
-  await manager.deleteChapter(c);
+  if (c.isBookmarked && !allowBookmarked) return;
+  await deleteChapterFromDevice(ref, chapterId);
+}
+
+// --- server -----------------------------------------------------------------
+
+/// Tell the SERVER to delete its copy of the chapter N slots behind the one just
+/// read (per the WebUI's delete-while-reading). The cascade then drops the
+/// device copy too.
+Future<void> maybeDeleteOnReadServer(
+  WidgetRef ref, {
+  required int mangaId,
+  required int readChapterId,
+}) async {
+  final s = await _serverDeleteSettings(ref);
+  if (s == null || s.deleteWhileReading <= 0) return;
+  final targetId =
+      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  if (targetId == null) return;
+  await _deleteServerCopyIfDeletable(
+      ref, mangaId, targetId, s.deleteWithBookmark);
+}
+
+/// Tell the SERVER to delete its copy when a chapter is manually marked read.
+Future<void> maybeDeleteOnManualServer(
+  WidgetRef ref, {
+  required int? mangaId,
+  required int chapterId,
+}) async {
+  if (mangaId == null) return;
+  final s = await _serverDeleteSettings(ref);
+  if (s == null || !s.deleteManuallyMarkedRead) return;
+  await _deleteServerCopyIfDeletable(
+      ref, mangaId, chapterId, s.deleteWithBookmark);
+}
+
+/// Delete a chapter's SERVER copy iff it's downloaded on the server and the
+/// bookmark gate allows it, then cascade to drop the device copy. Gated off the
+/// manga's chapter list (the reader's own list), so it no-ops if the chapter
+/// isn't there.
+Future<void> _deleteServerCopyIfDeletable(
+  WidgetRef ref,
+  int mangaId,
+  int chapterId,
+  bool allowBookmarked,
+) async {
+  final chapters =
+      ref.read(mangaChapterListWithFilterProvider(mangaId: mangaId)).valueOrNull;
+  final idx = chapters?.indexWhere((e) => e.id == chapterId) ?? -1;
+  if (chapters == null || idx < 0) return;
+  final c = chapters[idx];
+  if (!c.isDownloaded) return;
+  if (c.isBookmarked && !allowBookmarked) return;
+  await ref.read(mangaBookRepositoryProvider).deleteChapters([chapterId]);
+  await cascadeServerDeleteToDevice(ref, [chapterId]);
 }
 
 /// Push any locally-recorded read progress that hasn't reached the server yet

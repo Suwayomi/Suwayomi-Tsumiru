@@ -55,19 +55,3 @@ class OfflineWifiOnly extends _$OfflineWifiOnly
   @override
   bool? build() => initialize(DBKeys.downloadOnlyOverWifi);
 }
-
-/// Delete a chapter's on-device copy once it's read.
-@riverpod
-class DeleteLocalAfterRead extends _$DeleteLocalAfterRead
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.deleteLocalAfterRead);
-}
-
-/// Allow [DeleteLocalAfterRead] to delete bookmarked chapters too.
-@riverpod
-class AllowDeleteLocalBookmarked extends _$AllowDeleteLocalBookmarked
-    with SharedPreferenceClientMixin<bool> {
-  @override
-  bool? build() => initialize(DBKeys.allowDeleteLocalBookmarked);
-}

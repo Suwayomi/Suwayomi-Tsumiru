@@ -12,8 +12,8 @@ import '../../domain/settings/settings.dart';
 import 'data/delete_chapters_settings_repository.dart';
 import 'data/downloads_settings_repository.dart';
 
-/// Labels for the "delete while reading" select (0 = disabled, N = the Nth
-/// chapter behind), matching the Suwayomi-WebUI wording.
+/// Labels for the "after reading automatically delete" select (0 = disabled,
+/// N = the Nth chapter behind), matching the Suwayomi-WebUI wording.
 String _deleteWhileReadingLabel(BuildContext context, int value) =>
     switch (value) {
       1 => context.l10n.deleteWhileReadingLastRead,
@@ -24,6 +24,53 @@ String _deleteWhileReadingLabel(BuildContext context, int value) =>
       _ => context.l10n.deleteWhileReadingDisabled,
     };
 
+/// One "Delete chapters" section (used for both the on-device and the server
+/// copies — identical controls, different backing settings).
+List<Widget> _deleteSection(
+  BuildContext context, {
+  required String title,
+  required DeleteChaptersSettings settings,
+  required Future<void> Function(bool) onManual,
+  required void Function(int) onWhileReading,
+  required Future<void> Function(bool) onBookmark,
+}) =>
+    [
+      SectionTitle(title: title),
+      SettingsPropTile(
+        title: context.l10n.deleteChapterAfterManuallyMarkedRead,
+        type: SettingsPropType.switchTile(
+          value: settings.deleteManuallyMarkedRead,
+          onChanged: onManual,
+        ),
+      ),
+      ListTile(
+        title: Text(context.l10n.deleteFinishedChaptersWhileReading),
+        subtitle: Text(
+          _deleteWhileReadingLabel(context, settings.deleteWhileReading),
+        ),
+        onTap: () => showDialog(
+          context: context,
+          builder: (context) => RadioListPopup<int>(
+            title: context.l10n.deleteFinishedChaptersWhileReading,
+            optionList: const [0, 1, 2, 3, 4, 5],
+            getOptionTitle: (value) => _deleteWhileReadingLabel(context, value),
+            value: settings.deleteWhileReading,
+            onChange: (value) {
+              onWhileReading(value);
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+        ),
+      ),
+      SettingsPropTile(
+        title: context.l10n.allowDeletingBookmarkedChapters,
+        type: SettingsPropType.switchTile(
+          value: settings.deleteWithBookmark,
+          onChanged: onBookmark,
+        ),
+      ),
+    ];
+
 class DownloadsSettingsScreen extends ConsumerWidget {
   const DownloadsSettingsScreen({super.key});
 
@@ -31,10 +78,13 @@ class DownloadsSettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(downloadsSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
-    final deleteSettings =
+    // On-device delete settings (local prefs — offline-safe).
+    final localDelete = ref.watch(localDeleteSettingsProvider);
+    // Server delete settings (the WebUI's, from global meta).
+    final serverDelete =
         ref.watch(deleteChaptersSettingsControllerProvider).valueOrNull ??
             const DeleteChaptersSettings();
-    final deleteController =
+    final serverDeleteController =
         ref.read(deleteChaptersSettingsControllerProvider.notifier);
     return ListTileTheme(
       data: const ListTileThemeData(
@@ -43,10 +93,7 @@ class DownloadsSettingsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.downloads)),
         body: RefreshIndicator(
-          onRefresh: () => Future.wait([
-            ref.refresh(settingsProvider.future),
-            ref.refresh(deleteChaptersSettingsControllerProvider.future),
-          ]),
+          onRefresh: () => ref.refresh(settingsProvider.future),
           child: serverSettings.showUiWhenData(
             context,
             (data) {
@@ -77,45 +124,29 @@ class DownloadsSettingsScreen extends ConsumerWidget {
                       onChanged: repository.updateDownloadAsCbz,
                     ),
                   ),
-                  SectionTitle(title: context.l10n.deleteChapters),
-                  SettingsPropTile(
-                    title:
-                        context.l10n.deleteChapterAfterManuallyMarkedRead,
-                    type: SettingsPropType.switchTile(
-                      value: deleteSettings.deleteManuallyMarkedRead,
-                      onChanged: deleteController.setDeleteManuallyMarkedRead,
-                    ),
+                  // On-device downloads (this phone). Independent, default off.
+                  ..._deleteSection(
+                    context,
+                    title: context.l10n.deleteOnDeviceDownloads,
+                    settings: localDelete,
+                    onManual: (v) async => ref
+                        .read(localDeleteManuallyMarkedReadProvider.notifier)
+                        .update(v),
+                    onWhileReading: (v) => ref
+                        .read(localDeleteWhileReadingProvider.notifier)
+                        .update(v),
+                    onBookmark: (v) async => ref
+                        .read(localDeleteWithBookmarkProvider.notifier)
+                        .update(v),
                   ),
-                  ListTile(
-                    title: Text(
-                      context.l10n.deleteFinishedChaptersWhileReading,
-                    ),
-                    subtitle: Text(_deleteWhileReadingLabel(
-                      context,
-                      deleteSettings.deleteWhileReading,
-                    )),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (context) => RadioListPopup<int>(
-                        title:
-                            context.l10n.deleteFinishedChaptersWhileReading,
-                        optionList: const [0, 1, 2, 3, 4, 5],
-                        getOptionTitle: (value) =>
-                            _deleteWhileReadingLabel(context, value),
-                        value: deleteSettings.deleteWhileReading,
-                        onChange: (value) {
-                          deleteController.setDeleteWhileReading(value);
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                  ),
-                  SettingsPropTile(
-                    title: context.l10n.allowDeletingBookmarkedChapters,
-                    type: SettingsPropType.switchTile(
-                      value: deleteSettings.deleteWithBookmark,
-                      onChanged: deleteController.setDeleteWithBookmark,
-                    ),
+                  // Server downloads (shared with the web interface). Default off.
+                  ..._deleteSection(
+                    context,
+                    title: context.l10n.deleteServerDownloads,
+                    settings: serverDelete,
+                    onManual: serverDeleteController.setDeleteManuallyMarkedRead,
+                    onWhileReading: serverDeleteController.setDeleteWhileReading,
+                    onBookmark: serverDeleteController.setDeleteWithBookmark,
                   ),
                   SectionTitle(title: context.l10n.autoDownload),
                   SettingsPropTile(

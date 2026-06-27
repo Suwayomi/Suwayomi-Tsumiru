@@ -716,10 +716,18 @@ void _markChapterRead(
       manual: false,
     ));
     // Delete the on-device copy once read, if the user opted in.
-    unawaited(maybeDeleteLocalDownloadOnRead(
+    // The chapter just crossed is behind the reader now → auto-delete it (both
+    // the on-device copy and, per the server settings, the server copy). Each
+    // no-ops if its own setting is off.
+    unawaited(maybeDeleteOnReadLocal(
       ref,
-      chapterId: chapter.id,
-      isRead: true,
+      mangaId: mangaId,
+      readChapterId: chapter.id,
+    ));
+    unawaited(maybeDeleteOnReadServer(
+      ref,
+      mangaId: mangaId,
+      readChapterId: chapter.id,
     ));
     // NOTE: deliberately do NOT invalidate chapterProvider / mangaChapterList
     // here. Doing so while reading rebuilds ReaderScreen through an async reload,

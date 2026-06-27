@@ -107,34 +107,6 @@ class OfflineSettingsScreen extends ConsumerWidget {
                       },
                     ),
                   ),
-                  SettingsPropTile(
-                    title: context.l10n.deleteLocalAfterRead,
-                    subtitle: context.l10n.deleteLocalAfterReadSubtitle,
-                    type: SettingsPropType.switchTile(
-                      value: ref.watch(deleteLocalAfterReadProvider) ?? false,
-                      onChanged: (v) async {
-                        ref
-                            .read(deleteLocalAfterReadProvider.notifier)
-                            .update(v);
-                        return null;
-                      },
-                    ),
-                  ),
-                  if (ref.watch(deleteLocalAfterReadProvider) ?? false)
-                    SettingsPropTile(
-                      title: context.l10n.allowDeleteLocalBookmarked,
-                      subtitle: context.l10n.allowDeleteLocalBookmarkedSubtitle,
-                      type: SettingsPropType.switchTile(
-                        value: ref.watch(allowDeleteLocalBookmarkedProvider) ??
-                            false,
-                        onChanged: (v) async {
-                          ref
-                              .read(allowDeleteLocalBookmarkedProvider.notifier)
-                              .update(v);
-                          return null;
-                        },
-                      ),
-                    ),
                   SectionTitle(title: context.l10n.offlineSafetyNets),
                   SettingsPropTile(
                     title: context.l10n.offlineStorageCapEnable,
