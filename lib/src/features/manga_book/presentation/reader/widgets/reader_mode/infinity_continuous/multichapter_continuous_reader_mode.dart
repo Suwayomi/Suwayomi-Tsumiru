@@ -597,6 +597,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           image: imageProvider,
           fit: BoxFit.fitWidth,
           width: double.infinity,
+          // A page file deleted while still loaded (e.g. delete-on-read, then
+          // scrolling back to it offline) would otherwise throw and paint
+          // Flutter's red error widget for every page. Show a stable-height
+          // broken-image placeholder instead.
+          errorBuilder: (context, error, stackTrace) => SizedBox(
+            height: placeholderHeight,
+            width: double.infinity,
+            child: const Center(
+              child: Icon(Icons.broken_image_rounded, color: Colors.grey),
+            ),
+          ),
           // Reserve the page's height UNTIL the bitmap decodes. The network path
           // gets this for free via progressIndicatorBuilder, but the offline
           // (file://) ServerImage branch skips that and renders the bare Image —
