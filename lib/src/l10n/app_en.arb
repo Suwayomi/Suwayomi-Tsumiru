@@ -1792,5 +1792,141 @@
     "offlineNoFiles": "Nothing downloaded on this device yet",
     "@offlineNoFiles": {
         "description": "Empty state for the on-device downloads tab"
+    },
+    "tracking": "Tracking",
+    "@tracking": {
+        "description": "Settings entry and screen title for the Tracking screen"
+    },
+    "updateProgressAfterReading": "Update progress after reading",
+    "@updateProgressAfterReading": {
+        "description": "Toggle label: automatically sync reading progress after a chapter is read"
+    },
+    "updateProgressManualMarkRead": "Update progress when marking as read",
+    "@updateProgressManualMarkRead": {
+        "description": "Toggle label: sync progress when a chapter is manually marked as read"
+    },
+    "updateProgressManualMarkReadDesc": "Does not apply to bulk mark as read",
+    "@updateProgressManualMarkReadDesc": {
+        "description": "Subtitle for the manual-mark-read progress toggle"
+    },
+    "trackers": "Trackers",
+    "@trackers": {
+        "description": "Section header listing connected tracker accounts"
+    },
+    "logIn": "Log in",
+    "@logIn": {
+        "description": "Button label to log in to a tracker account"
+    },
+    "logOut": "Log out",
+    "@logOut": {
+        "description": "Button label to log out of a tracker account"
+    },
+    "reLogin": "Token expired — log in again",
+    "@reLogin": {
+        "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
+    },
+    "trackerLoginSuccess": "Logged in to {trackerName}",
+    "@trackerLoginSuccess": {
+        "description": "Toast shown after a successful tracker login",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "manageTrackers": "Manage trackers",
+    "@manageTrackers": {
+        "description": "Button / list-tile label that opens the Tracking settings screen from the track hub sheet"
+    },
+    "noTrackersLoggedIn": "Log in to a tracker",
+    "@noTrackersLoggedIn": {
+        "description": "Empty-state message shown in the track hub sheet when no tracker account is logged in"
+    },
+    "addTracking": "Add tracking",
+    "@addTracking": {
+        "description": "Button label on an unbound tracker card in the hub sheet; tapping opens the tracker search to bind a remote entry"
+    },
+    "logInToEdit": "Log in to edit",
+    "@logInToEdit": {
+        "description": "Button shown on a read-only tracker card when the tracker account is logged out but the manga already has a bound record; tapping pops the sheet and opens Tracking Settings"
+    },
+    "track": "Track",
+    "@track": {
+        "description": "Primary button label in the tracker search sheet; tapping binds the selected remote entry to the manga"
+    },
+    "trackPrivately": "Track privately",
+    "@trackPrivately": {
+        "description": "Secondary button label in the tracker search sheet; tapping binds the selected entry with the private flag enabled"
+    },
+    "trackBindSuccess": "Added to {trackerName}",
+    "@trackBindSuccess": {
+        "description": "Success toast shown after a manga is successfully bound to a tracker",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackStatus": "Status",
+    "@trackStatus": {
+        "description": "Row label for the track status field in the track editor"
+    },
+    "trackScore": "Score",
+    "@trackScore": {
+        "description": "Row label for the track score field in the track editor"
+    },
+    "trackChaptersRead": "Chapters read",
+    "@trackChaptersRead": {
+        "description": "Row label for the chapters-read field in the track editor"
+    },
+    "trackStartDate": "Start date",
+    "@trackStartDate": {
+        "description": "Row label for the start-date field in the track editor"
+    },
+    "trackFinishDate": "Finish date",
+    "@trackFinishDate": {
+        "description": "Row label for the finish-date field in the track editor"
+    },
+    "trackRemoveEntry": "Remove tracking",
+    "@trackRemoveEntry": {
+        "description": "Overflow menu item that removes the track record"
+    },
+    "trackRemoveConfirmTitle": "Remove tracking?",
+    "@trackRemoveConfirmTitle": {
+        "description": "Title of the confirmation dialog when removing a track record"
+    },
+    "trackRemoveConfirmBody": "This will remove the tracking entry from {trackerName}.",
+    "@trackRemoveConfirmBody": {
+        "description": "Body of the remove-tracking confirmation dialog",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackRemoveAlsoOnRemote": "Also remove from {trackerName}",
+    "@trackRemoveAlsoOnRemote": {
+        "description": "Checkbox in the remove-tracking dialog that also deletes the entry on the tracker service",
+        "placeholders": {
+            "trackerName": {
+                "type": "String"
+            }
+        }
+    },
+    "trackMarkPrivate": "Track privately",
+    "@trackMarkPrivate": {
+        "description": "Overflow menu item that marks the track record as private"
+    },
+    "trackMarkPublic": "Track publicly",
+    "@trackMarkPublic": {
+        "description": "Overflow menu item that marks the track record as public"
+    },
+    "trackChangeEntry": "Change entry",
+    "@trackChangeEntry": {
+        "description": "Overflow menu item that opens the tracker search to rebind to a different entry"
+    },
+    "trackPrivateBadge": "Private",
+    "@trackPrivateBadge": {
+        "description": "Badge shown on a private track record in the track editor header"
     }
 }

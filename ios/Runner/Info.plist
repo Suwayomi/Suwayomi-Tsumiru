@@ -72,5 +72,18 @@
 			<string>vi</string>
 			<string>fil</string>
 		</array>
-	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tsumiru</string>
+			</array>
+		</dict>
+	</array>
+		<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+</dict>
 </plist>

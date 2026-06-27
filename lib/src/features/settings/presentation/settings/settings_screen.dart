@@ -61,6 +61,11 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => const BackupRoute().go(context),
           ),
           ListTile(
+            title: Text(context.l10n.tracking),
+            leading: const Icon(Icons.sync_rounded),
+            onTap: () => const TrackingSettingsRoute().go(context),
+          ),
+          ListTile(
             title: Text(context.l10n.server),
             subtitle: Text(context.l10n.serverSettingsSubtitle),
             leading: const Icon(Icons.computer_rounded),

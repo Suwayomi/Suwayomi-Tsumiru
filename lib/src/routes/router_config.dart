@@ -42,6 +42,7 @@ import '../features/settings/presentation/more/more_screen.dart';
 import '../features/settings/presentation/reader/reader_settings_screen.dart';
 import '../features/settings/presentation/server/server_screen.dart';
 import '../features/settings/presentation/settings/settings_screen.dart';
+import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
@@ -95,6 +96,7 @@ abstract class Routes {
   static const downloadsSettings = 'downloads';
   static const offlineSettings = 'offline';
   static const connection = 'connection';
+  static const trackingSettings = 'tracking';
 
   // Commons
   static const mangaRoute = '/manga/:mangaId';
@@ -223,6 +225,8 @@ GoRouter routerConfig(ref) {
                         path: Routes.downloadsSettings),
                     TypedGoRoute<OfflineSettingsRoute>(
                         path: Routes.offlineSettings),
+                    TypedGoRoute<TrackingSettingsRoute>(
+                        path: Routes.trackingSettings),
                   ],
                 ),
               ],

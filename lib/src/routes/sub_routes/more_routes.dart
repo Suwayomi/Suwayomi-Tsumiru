@@ -107,3 +107,10 @@ class ConnectionRoute extends GoRouteData {
   @override
   Widget build(context, state) => const ConnectionScreen();
 }
+
+class TrackingSettingsRoute extends GoRouteData {
+  const TrackingSettingsRoute();
+
+  @override
+  Widget build(context, state) => const TrackingSettingsScreen();
+}
