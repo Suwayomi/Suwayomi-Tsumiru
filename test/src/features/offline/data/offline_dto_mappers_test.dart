@@ -26,6 +26,18 @@ void main() {
     expect(await db.mangaById(999), isNull);
   });
 
+  test('offlineMangaToDto carries lastReadAt for the "Last Read" sort',
+      () async {
+    await db.upsertMangaMetadata(id: 7, title: 'Solo', updatedAt: DateTime(2026));
+    final m = (await db.mangaById(7))!;
+
+    final withRead = offlineMangaToDto(m, lastReadAt: '1700000000000');
+    expect(withRead.lastReadChapter?.lastReadAt, '1700000000000');
+
+    final neverRead = offlineMangaToDto(m);
+    expect(neverRead.lastReadChapter, isNull);
+  });
+
   test('offlineChapterToDto maps fields from a catalog row', () async {
     await db.upsertChapterMetadata(id: 3, mangaId: 7, name: 'Ch 3',
         chapterIndex: 3, isRead: true, lastPageRead: 4, isBookmarked: false,

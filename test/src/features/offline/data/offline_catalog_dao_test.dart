@@ -83,6 +83,32 @@ void main() {
     expect(list.map((c) => c.id), [11, 10]);
   });
 
+  test('lastReadAtByManga takes the max and drops unread mangas', () async {
+    // Manga 7: two read chapters — the newer timestamp wins.
+    await db.upsertChapterMetadata(
+        id: 1, mangaId: 7, name: 'a', chapterIndex: 1, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: false,
+        pageCount: 1, updatedAt: DateTime.utc(2026),
+        lastReadAt: '1700000000000');
+    await db.upsertChapterMetadata(
+        id: 2, mangaId: 7, name: 'b', chapterIndex: 2, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: false,
+        pageCount: 1, updatedAt: DateTime.utc(2026),
+        lastReadAt: '1800000000000');
+    // Manga 8: never read (server default '0') — excluded.
+    await db.upsertChapterMetadata(
+        id: 3, mangaId: 8, name: 'c', chapterIndex: 1, isRead: false,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: false,
+        pageCount: 1, updatedAt: DateTime.utc(2026), lastReadAt: '0');
+    // Manga 9: no lastReadAt supplied at all (NULL) — excluded.
+    await db.upsertChapterMetadata(
+        id: 4, mangaId: 9, name: 'd', chapterIndex: 1, isRead: false,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: false,
+        pageCount: 1, updatedAt: DateTime.utc(2026));
+
+    expect(await db.lastReadAtByManga(), {7: '1800000000000'});
+  });
+
   test('totalDownloadedBytes sums bytes', () async {
     await seedChapter(id: 1, mangaId: 7);
     await seedChapter(id: 2, mangaId: 7);

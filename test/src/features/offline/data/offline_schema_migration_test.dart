@@ -6,7 +6,6 @@
 
 import 'dart:io';
 
-import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -68,6 +67,39 @@ void main() {
           .getSingle();
       expect(c.pinned, true);
       expect(c.downloadedAt, DateTime(2026, 3, 15));
+      await db.close();
+    }
+  });
+
+  test('v4 lastReadAt persists across close/reopen', () async {
+    final dbPath = p.join(tmp.path, 'test.db');
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 3,
+        updatedAt: DateTime(2026),
+        lastReadAt: '1700000000000',
+      );
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(c.lastReadAt, '1700000000000');
+      expect(await db.lastReadAtByManga(), {1: '1700000000000'});
       await db.close();
     }
   });

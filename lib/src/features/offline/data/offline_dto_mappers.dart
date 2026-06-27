@@ -17,7 +17,11 @@ import 'offline_database.dart';
 /// fallback when the server is unreachable. Fields the catalog doesn't store
 /// (counts, genre, status, url) get safe defaults; the list UI reads cover +
 /// title + inLibrary, which are accurate.
-MangaDto offlineMangaToDto(OfflineManga m, {int chapterCount = 0}) =>
+MangaDto offlineMangaToDto(
+  OfflineManga m, {
+  int chapterCount = 0,
+  String? lastReadAt,
+}) =>
     Fragment$MangaDto(
       id: m.id,
       title: m.title,
@@ -29,6 +33,28 @@ MangaDto offlineMangaToDto(OfflineManga m, {int chapterCount = 0}) =>
       inLibrary: true,
       inLibraryAt: '0',
       initialized: true,
+      // Carries the manga's most-recent read timestamp so the offline library's
+      // "Last Read" sort works; only this field is read off it (see the sort in
+      // library_controller). Null when nothing in the manga has been read.
+      lastReadChapter: lastReadAt == null
+          ? null
+          : Fragment$ChapterDto(
+              id: 0,
+              mangaId: m.id,
+              name: '',
+              chapterNumber: 0,
+              sourceOrder: 0,
+              isRead: true,
+              isBookmarked: false,
+              isDownloaded: false,
+              lastPageRead: 0,
+              pageCount: 0,
+              fetchedAt: '0',
+              uploadDate: '0',
+              lastReadAt: lastReadAt,
+              url: '',
+              meta: const <Fragment$ChapterDto$meta>[],
+            ),
       meta: const <Fragment$MangaDto$meta>[],
       sourceId: '0',
       status: Enum$MangaStatus.UNKNOWN,

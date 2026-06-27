@@ -64,6 +64,11 @@ class OfflineChapters extends Table {
   BoolColumn get progressDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// The server's last-read timestamp (epoch millis as a string, matching the
+  /// server's LongString) — synced down so the offline library can sort by
+  /// "Last Read". Server is the source of truth; this is never the device clock.
+  TextColumn get lastReadAt => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -110,7 +115,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +129,9 @@ class OfflineDatabase extends _$OfflineDatabase {
           }
           if (from < 3) {
             await m.addColumn(offlineChapters, offlineChapters.progressDirty);
+          }
+          if (from < 4) {
+            await m.addColumn(offlineChapters, offlineChapters.lastReadAt);
           }
         },
       );
@@ -163,6 +171,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     required bool serverIsDownloaded,
     required int pageCount,
     required DateTime updatedAt,
+    String? lastReadAt,
   }) =>
       into(offlineChapters).insertOnConflictUpdate(
         OfflineChaptersCompanion(
@@ -176,6 +185,10 @@ class OfflineDatabase extends _$OfflineDatabase {
           serverIsDownloaded: Value(serverIsDownloaded),
           pageCount: Value(pageCount),
           updatedAt: Value(updatedAt),
+          // lastReadAt is server-managed: always take the server's value on
+          // re-sync (absent only when an older caller doesn't supply it).
+          lastReadAt:
+              lastReadAt == null ? const Value.absent() : Value(lastReadAt),
           // deviceState + bytes intentionally absent — device-managed.
         ),
       );
@@ -277,6 +290,27 @@ class OfflineDatabase extends _$OfflineDatabase {
   Future<List<OfflineManga>> libraryManga() =>
       (select(offlineMangas)..orderBy([(t) => OrderingTerm(expression: t.title)]))
           .get();
+
+  /// Most-recent read timestamp per manga (the max chapter `lastReadAt`), for
+  /// the offline library's "Last Read" sort. Mangas with no read chapter are
+  /// absent from the map. Values are the server's epoch-millis strings, so the
+  /// max is taken numerically to match how the sort parses them.
+  Future<Map<int, String>> lastReadAtByManga() async {
+    final maxExpr = offlineChapters.lastReadAt.cast<int>().max();
+    final query = selectOnly(offlineChapters)
+      ..addColumns([offlineChapters.mangaId, maxExpr])
+      ..where(offlineChapters.lastReadAt.isNotNull())
+      ..groupBy([offlineChapters.mangaId]);
+    final result = <int, String>{};
+    for (final row in await query.get()) {
+      final mangaId = row.read(offlineChapters.mangaId);
+      final value = row.read(maxExpr);
+      if (mangaId != null && value != null && value > 0) {
+        result[mangaId] = '$value';
+      }
+    }
+    return result;
+  }
 
   Future<List<OfflineChapter>> chaptersForManga(int mangaId) =>
       (select(offlineChapters)

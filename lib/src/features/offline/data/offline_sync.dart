@@ -47,6 +47,9 @@ class OfflineSync {
         serverIsDownloaded: c.isDownloaded,
         pageCount: c.pageCount,
         updatedAt: now,
+        // Server-managed: always the server's value (drives the offline
+        // "Last Read" sort). Never preserve the local one, unlike read progress.
+        lastReadAt: c.lastReadAt,
       );
     }
   }

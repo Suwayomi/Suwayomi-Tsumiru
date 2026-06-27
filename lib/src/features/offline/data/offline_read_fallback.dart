@@ -24,7 +24,11 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     if (!offlineEnabled) rethrow;
     final rows = await db.libraryManga();
     if (rows.isEmpty) rethrow;
-    return [for (final m in rows) offlineMangaToDto(m)];
+    final lastReadByManga = await db.lastReadAtByManga();
+    return [
+      for (final m in rows)
+        offlineMangaToDto(m, lastReadAt: lastReadByManga[m.id]),
+    ];
   }
 }
 
