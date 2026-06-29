@@ -18,14 +18,15 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
+import '../../../../../../history/presentation/history_controller.dart';
 import '../../../../../../offline/data/offline_download_providers.dart';
+import '../../../../../../offline/data/offline_repository.dart';
+import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../tracking/domain/track_progress_gate.dart';
-import '../../../../../data/manga_book/manga_book_repository.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
-import '../../../../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../../domain/manga/manga_model.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
@@ -163,10 +164,118 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [currentVisibleChapter.value.id]);
 
-    useEffect(() {
-      onPageChanged?.call(currentChapterPageIndex.value);
+    // --- reading-progress recording -------------------------------------
+    // Record progress for the CURRENTLY VISIBLE chapter, not the chapter the
+    // reader was opened with. In a multi-chapter session the visible chapter
+    // changes as you scroll across boundaries; the old code forwarded a
+    // visible-chapter-relative page index up to ReaderScreen, which wrote it to
+    // the OPENED chapter's id — corrupting that chapter's resume state and
+    // losing the visible chapter's. We also go through the offline-safe
+    // recordReadingProgress path so a read made offline is queued, not lost.
+    final progressDebounce = useRef<Timer?>(null);
+    final latestProgress = useRef<({int chapterId, int rel})?>(null);
+
+    _LoadedChapter? loadedById(int id) {
+      for (final c in loadedRef.value) {
+        if (c.chapterId == id) return c;
+      }
       return null;
-    }, [currentChapterPageIndex.value]);
+    }
+
+    Future<void> writeVisibleProgress(int chapterId, int rel) async {
+      if (ref.read(incognitoModeProvider)) return;
+      // We've already moved past this chapter — a late debounced partial must
+      // not revert what the boundary mark-read recorded for it. Let that path
+      // own the chapter's final state.
+      if (chapterId != currentVisibleChapter.value.id) return;
+      // Already finished this session (by us or the boundary handler): don't
+      // re-record or re-fire side effects.
+      if (completedChapterIds.value.contains(chapterId)) return;
+      final lc = loadedById(chapterId);
+      if (lc == null) return;
+      // Already read in a prior session: leave it alone (mirrors the single-page
+      // reader, which skips progress writes for read chapters).
+      if (lc.chapter.isRead.ifNull()) return;
+      final pageCount = lc.pages.pages.length;
+      final completed = rel >= (pageCount - 1) && pageCount > 0;
+      // Don't write a lower page than what's already saved (at-open snapshot),
+      // unless we're completing the chapter.
+      if (!completed &&
+          lc.chapter.lastPageRead.getValueOnNullOrNegative() >= rel) {
+        return;
+      }
+      await recordReadingProgress(
+        ref,
+        chapterId: chapterId,
+        lastPageRead: completed ? 0 : rel,
+        isRead: completed,
+      );
+      if (completed && !completedChapterIds.value.contains(chapterId)) {
+        completedChapterIds.value = {...completedChapterIds.value, chapterId};
+        unawaited(maybeTrackProgressOnReadFetch(
+            ref, mangaId: manga.id, isRead: true, manual: false));
+        unawaited(maybeDeleteOnReadLocal(
+            ref, mangaId: manga.id, readChapterId: chapterId));
+        unawaited(maybeDeleteOnReadServer(
+            ref, mangaId: manga.id, readChapterId: chapterId));
+      }
+      ref.invalidate(readingHistoryProvider);
+    }
+
+    void scheduleVisibleProgress(int chapterId, int rel) {
+      if (ref.read(incognitoModeProvider)) return;
+      latestProgress.value = (chapterId: chapterId, rel: rel);
+      progressDebounce.value?.cancel();
+      final pageCount = loadedById(chapterId)?.pages.pages.length ?? 0;
+      if (rel >= (pageCount - 1) && pageCount > 0) {
+        // Completion: write immediately so finishing a chapter isn't lost to a
+        // pending debounce.
+        unawaited(writeVisibleProgress(chapterId, rel));
+      } else {
+        progressDebounce.value = Timer(
+          const Duration(seconds: 2),
+          () => unawaited(writeVisibleProgress(chapterId, rel)),
+        );
+      }
+    }
+
+    useEffect(() {
+      scheduleVisibleProgress(
+          currentVisibleChapter.value.id, currentChapterPageIndex.value);
+      return null;
+    }, [currentChapterPageIndex.value, currentVisibleChapter.value.id]);
+
+    // Flush any pending debounced progress when the reader is torn down, so
+    // exiting mid-chapter still saves the visible chapter's position. The db +
+    // flags are captured at build so the teardown never touches `ref` after the
+    // element starts disposing; the write goes straight to the on-device
+    // catalog (left dirty, so it up-syncs on reconnect) instead of the
+    // ref-dependent recordReadingProgress path.
+    final offlineEnabledForFlush = ref.read(offlineEnabledProvider);
+    final offlineDbForFlush =
+        offlineEnabledForFlush ? ref.read(offlineDatabaseProvider) : null;
+    final incognitoForFlush = ref.read(incognitoModeProvider);
+    useEffect(() {
+      return () {
+        progressDebounce.value?.cancel();
+        final p = latestProgress.value;
+        if (p == null) return;
+        // Already finished (an earlier in-session completion): nothing to flush.
+        if (completedChapterIds.value.contains(p.chapterId)) return;
+        if (incognitoForFlush || offlineDbForFlush == null) return;
+        // If the pending position is itself a completion (last page), write
+        // isRead:true — so a teardown that races the still-in-flight completion
+        // write (which may not have updated completedChapterIds yet) records the
+        // read instead of reverting it to unread. Otherwise save the partial.
+        final lc = loadedById(p.chapterId);
+        final pageCount = lc?.pages.pages.length ?? 0;
+        final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
+        unawaited(offlineDbForFlush
+            .setChapterProgress(p.chapterId,
+                lastPageRead: isCompletion ? 0 : p.rel, isRead: isCompletion)
+            .catchError((_) {}));
+      };
+    }, const []);
 
     final bool isAnimationEnabled =
         ref.read(readerScrollAnimationProvider).ifNull(true);
@@ -704,21 +813,24 @@ void _markChapterRead(
   ObjectRef<Set<int>> completedChapterIds,
   BuildContext context,
 ) {
+  // Incognito: don't mark chapters read or fire history/tracker/delete on a
+  // boundary crossing — leave no trace (parity with ReaderScreen's writes).
+  if (ref.read(incognitoModeProvider)) return;
   if (chapter.isRead.ifNull()) return;
   if (completedChapterIds.value.contains(chapter.id)) return;
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};
-  AsyncValue.guard(
-    () => ref.read(mangaBookRepositoryProvider).putChapter(
-          chapterId: chapter.id,
-          patch: ChapterChange(isRead: true, lastPageRead: 0),
-        ),
-  ).then((result) {
+  // Record through the offline-safe path: persists to the on-device catalog
+  // first (survives offline + restart), then pushes to the server and up-syncs
+  // on reconnect. Previously this used a raw putChapter mutation, so a chapter
+  // finished at a boundary while offline was never queued and the read was
+  // silently lost.
+  unawaited(recordReadingProgress(
+    ref,
+    chapterId: chapter.id,
+    lastPageRead: 0,
+    isRead: true,
+  ).then((_) {
     if (!context.mounted) return;
-    if (result.hasError) {
-      completedChapterIds.value = {...completedChapterIds.value}
-        ..remove(chapter.id);
-      return;
-    }
     // Push progress to external trackers (fire-and-forget).
     unawaited(maybeTrackProgressOnReadFetch(
       ref,
@@ -726,7 +838,6 @@ void _markChapterRead(
       isRead: true,
       manual: false,
     ));
-    // Delete the on-device copy once read, if the user opted in.
     // The chapter just crossed is behind the reader now → auto-delete it (both
     // the on-device copy and, per the server settings, the server copy). Each
     // no-ops if its own setting is off.
@@ -740,13 +851,13 @@ void _markChapterRead(
       mangaId: mangaId,
       readChapterId: chapter.id,
     ));
-    // NOTE: deliberately do NOT invalidate chapterProvider / mangaChapterList
-    // here. Doing so while reading rebuilds ReaderScreen through an async reload,
-    // which remounts this list and re-applies initialScrollIndex (now 0 from the
-    // mark-read above) — yanking the reader back to the start of the opening
-    // chapter. Read-state is tracked in-session via completedChapterIds, and
-    // ReaderScreen refreshes these providers on exit (its PopScope).
-  });
+  }));
+  // NOTE: deliberately do NOT invalidate chapterProvider / mangaChapterList
+  // here. Doing so while reading rebuilds ReaderScreen through an async reload,
+  // which remounts this list and re-applies initialScrollIndex (now 0 from the
+  // mark-read above) — yanking the reader back to the start of the opening
+  // chapter. Read-state is tracked in-session via completedChapterIds, and
+  // ReaderScreen refreshes these providers on exit (its PopScope).
 }
 
 class _PageLoc {
