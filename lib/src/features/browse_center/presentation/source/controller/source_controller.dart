@@ -19,20 +19,52 @@ part 'source_controller.g.dart';
 Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
 
+int _byName(SourceDto a, SourceDto b) =>
+    a.name.toLowerCase().compareTo(b.name.toLowerCase());
+
+/// Pure: pinned sources sorted alphabetically. Pin state lives in server meta
+/// (`webUI_isPinned`), so it syncs with WebUI. Exposed for testing.
+List<SourceDto> pinnedSourcesFrom(List<SourceDto> sources) =>
+    [...sources.where((e) => e.isPinned)]..sort(_byName);
+
+/// Pure: group NON-pinned sources by language code (pinned live in their own
+/// top section, so they're excluded here to avoid showing twice), with the
+/// last-used source lifted into a "lastUsed" bucket. Every group is sorted
+/// alphabetically by name. Exposed for testing.
+Map<String, List<SourceDto>> groupSourcesByLanguage(
+  List<SourceDto> sources,
+  String? lastUsedId,
+) {
+  final sourceMap = <String, List<SourceDto>>{};
+  for (final e in sources) {
+    if (!e.isPinned) {
+      sourceMap.update(
+        e.language?.code ?? "other",
+        (value) => [...value, e],
+        ifAbsent: () => [e],
+      );
+    }
+    if (e.id == lastUsedId) sourceMap["lastUsed"] = [e];
+  }
+  for (final list in sourceMap.values) {
+    list.sort(_byName);
+  }
+  return sourceMap;
+}
+
+/// Pinned sources, surfaced as their own top section regardless of the active
+/// language filter.
+@riverpod
+List<SourceDto> pinnedSources(Ref ref) =>
+    pinnedSourcesFrom(ref.watch(sourceListProvider).valueOrNull ?? const []);
+
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
-  final sourceMap = <String, List<SourceDto>>{};
   final sourceListData = ref.watch(sourceListProvider);
   final sourceLastUsed = ref.watch(sourceLastUsedProvider);
-  for (final e in [...?sourceListData.valueOrNull]) {
-    sourceMap.update(
-      e.language?.code ?? "other",
-      (value) => [...value, e],
-      ifAbsent: () => [e],
-    );
-    if (e.id == sourceLastUsed) sourceMap["lastUsed"] = [e];
-  }
-  return sourceListData.copyWithData((e) => sourceMap);
+  return sourceListData.copyWithData(
+    (data) => groupSourcesByLanguage(data ?? const [], sourceLastUsed),
+  );
 }
 
 @riverpod
@@ -71,6 +103,23 @@ AsyncValue<Map<String, List<SourceDto>>?> sourceMapFiltered(Ref ref) {
     if (sourceMap.containsKey(e)) sourceMapFiltered[e] = sourceMap[e]!;
   }
   return sourceMapData.copyWithData((e) => sourceMapFiltered);
+}
+
+/// Every source to search across, **pinned first** — for global search,
+/// migration, and any other "search all sources" consumer. Pinned sources are
+/// excluded from the grouped/filtered map (they get their own top section on the
+/// Sources screen), so without prepending them here they'd be silently skipped.
+@riverpod
+AsyncValue<List<SourceDto>> searchableSources(Ref ref) {
+  final mapData = ref.watch(sourceMapFilteredProvider);
+  final pinned = ref.watch(pinnedSourcesProvider);
+  return mapData.copyWithData((map) {
+    final rest = <SourceDto>[];
+    (map ?? const <String, List<SourceDto>>{}).forEach((key, value) {
+      if (key != 'lastUsed') rest.addAll(value);
+    });
+    return [...pinned, ...rest];
+  });
 }
 
 @riverpod

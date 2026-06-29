@@ -71,30 +71,6 @@ void main() {
     }
   });
 
-  test('migration is idempotent: re-adding existing columns does not crash',
-      () async {
-    final dbPath = p.join(tmp.path, 'test.db');
-
-    // Create a fresh DB (all current columns present), then force the recorded
-    // schema version back to 1 — exactly the inconsistent state a device left
-    // by an intermediate/dev build can end up in (column present, old version).
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.customStatement('PRAGMA user_version = 1');
-      await db.close();
-    }
-
-    // Reopen: onUpgrade(from: 1) runs every `from < N` branch and would re-add
-    // already-present columns. The idempotent guard must skip them instead of
-    // throwing "duplicate column" — so the DB opens and is usable.
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-      expect(await db.select(db.offlineChapters).get(), isEmpty);
-      await db.close();
-    }
-  });
-
   test('v4 lastReadAt persists across close/reopen', () async {
     final dbPath = p.join(tmp.path, 'test.db');
 

@@ -42,3 +42,13 @@ mutation UpdateSourcePreference($input: UpdateSourcePreferenceInput!) {
         }
     }
 }
+
+mutation SetSourceMeta($input: SetSourceMetaInput!) {
+    setSourceMeta(input: $input) {
+        meta {
+            key
+            sourceId
+            value
+        }
+    }
+}

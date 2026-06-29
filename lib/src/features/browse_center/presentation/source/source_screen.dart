@@ -21,6 +21,7 @@ class SourceScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sourceMapData = ref.watch(sourceMapFilteredProvider);
+    final pinned = ref.watch(pinnedSourcesProvider);
 
     final sourceMap = {...?sourceMapData.valueOrNull};
     final localSource = sourceMap.remove("localsourcelang");
@@ -44,7 +45,10 @@ class SourceScreen extends HookConsumerWidget {
     return sourceMapData.showUiWhenData(
       context,
       (data) {
-        if ((sourceMap.isEmpty && localSource.isBlank && lastUsed.isBlank)) {
+        if ((sourceMap.isEmpty &&
+            localSource.isBlank &&
+            lastUsed.isBlank &&
+            pinned.isEmpty)) {
           return Emoticons(
             title: context.l10n.noSourcesFound,
             button: TextButton(
@@ -57,6 +61,19 @@ class SourceScreen extends HookConsumerWidget {
           onRefresh: refresh,
           child: CustomScrollView(
             slivers: [
+              if (pinned.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: ListTile(
+                    title: Text(languageMap["pinned"]?.displayName ?? ""),
+                  ),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => SourceListTile(source: pinned[index]),
+                    childCount: pinned.length,
+                  ),
+                ),
+              ],
               if (lastUsed.isNotBlank) ...[
                 SliverToBoxAdapter(
                   child: ListTile(

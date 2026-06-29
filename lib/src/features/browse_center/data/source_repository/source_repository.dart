@@ -80,6 +80,24 @@ class SourceRepository {
             ),
           )
           .getData((data) => data.updateSourcePreference?.preferences);
+
+  /// Pins/unpins a source by writing the `webUI_isPinned` server meta key
+  /// (the exact key WebUI uses, so the state syncs across clients).
+  Future<void> setSourcePinned(String sourceId, bool pinned) => ferryClient
+      .mutate$SetSourceMeta(
+        Options$Mutation$SetSourceMeta(
+          variables: Variables$Mutation$SetSourceMeta(
+            input: Input$SetSourceMetaInput(
+              meta: Input$SourceMetaTypeInput(
+                sourceId: sourceId,
+                key: kSourcePinnedMetaKey,
+                value: pinned ? 'true' : 'false',
+              ),
+            ),
+          ),
+        ),
+      )
+      .getData((data) => data.setSourceMeta?.meta);
 }
 
 @riverpod

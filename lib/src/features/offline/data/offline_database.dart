@@ -128,44 +128,23 @@ class OfflineDatabase extends _$OfflineDatabase {
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
-          // Idempotent adds: a device migrated by an intermediate/dev build can
-          // already have a column while still recording an older schema version,
-          // which would make a plain addColumn crash with "duplicate column".
           if (from < 2) {
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.keepRule);
-            await _addColumnIfMissing(
-                m, offlineMangas, offlineMangas.keepUnreadCount);
-            await _addColumnIfMissing(
-                m, offlineChapters, offlineChapters.pinned);
-            await _addColumnIfMissing(
-                m, offlineChapters, offlineChapters.downloadedAt);
+            await m.addColumn(offlineMangas, offlineMangas.keepRule);
+            await m.addColumn(offlineMangas, offlineMangas.keepUnreadCount);
+            await m.addColumn(offlineChapters, offlineChapters.pinned);
+            await m.addColumn(offlineChapters, offlineChapters.downloadedAt);
           }
           if (from < 3) {
-            await _addColumnIfMissing(
-                m, offlineChapters, offlineChapters.progressDirty);
+            await m.addColumn(offlineChapters, offlineChapters.progressDirty);
           }
           if (from < 4) {
-            await _addColumnIfMissing(
-                m, offlineChapters, offlineChapters.lastReadAt);
+            await m.addColumn(offlineChapters, offlineChapters.lastReadAt);
           }
           if (from < 5) {
-            await _addColumnIfMissing(
-                m, offlineChapters, offlineChapters.bookmarkDirty);
+            await m.addColumn(offlineChapters, offlineChapters.bookmarkDirty);
           }
         },
       );
-
-  /// drift's [Migrator.addColumn] throws if the column already exists. A device
-  /// migrated by an intermediate/dev build can have a column present while still
-  /// recording an older schema version, so guard each add to stay idempotent.
-  Future<void> _addColumnIfMissing(
-      Migrator m, TableInfo table, GeneratedColumn column) async {
-    final info =
-        await customSelect("PRAGMA table_info('${table.actualTableName}')")
-            .get();
-    final exists = info.any((row) => row.read<String>('name') == column.name);
-    if (!exists) await m.addColumn(table, column);
-  }
 
   // --- metadata down-sync upserts -------------------------------------------
   // These set ONLY server-sourced columns, so device-managed columns

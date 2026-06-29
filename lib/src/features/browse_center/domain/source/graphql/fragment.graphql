@@ -7,6 +7,10 @@ fragment SourceDto on SourceType {
   lang
   name
   supportsLatest
+  meta {
+    key
+    value
+  }
   extension {
         pkgName
         repo

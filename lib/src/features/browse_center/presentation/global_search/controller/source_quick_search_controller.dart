@@ -16,6 +16,19 @@ import '../../source/controller/source_controller.dart';
 
 part 'source_quick_search_controller.g.dart';
 
+/// Global-search source scope (Komikku parity): search only pinned sources, or
+/// all of them.
+enum GlobalSearchSourceFilter { pinned, all }
+
+/// Search scope for global search. Defaults to pinned (matches Komikku); the
+/// search falls back to "all" when there are no pinned sources.
+final globalSearchSourceFilterProvider =
+    StateProvider<GlobalSearchSourceFilter>(
+        (ref) => GlobalSearchSourceFilter.pinned);
+
+/// When true, only sources that returned results are shown (hide empty/loading).
+final globalSearchOnlyHasResultsProvider = StateProvider<bool>((ref) => false);
+
 typedef QuickSearchResults = ({
   SourceDto source,
   AsyncValue<List<MangaDto>> mangaList
@@ -41,13 +54,18 @@ Future<List<MangaDto>> sourceQuickSearchMangaList(
 @riverpod
 AsyncValue<List<QuickSearchResults>> quickSearchResults(Ref ref,
     {String? query}) {
-  final sourceMapData = ref.watch(sourceMapFilteredProvider);
+  // Pinned-first list of every searchable source (pinned sources are otherwise
+  // excluded from the grouped map and would never be searched). The Pinned/All
+  // chip narrows it to just the pinned ones; with no pinned, it's always "all".
+  final sourcesData = ref.watch(searchableSourcesProvider);
+  final scope = ref.watch(globalSearchSourceFilterProvider);
+  final pinned = ref.watch(pinnedSourcesProvider);
+  final allSources = sourcesData.valueOrNull ?? const <SourceDto>[];
+  final sourceList =
+      (scope == GlobalSearchSourceFilter.pinned && pinned.isNotEmpty)
+          ? pinned
+          : allSources;
 
-  final sourceMap = {...?sourceMapData.valueOrNull}..remove("lastUsed");
-  final sourceList = sourceMap.values.fold(
-    <SourceDto>[],
-    (prev, cur) => [...prev, ...cur],
-  );
   final List<QuickSearchResults> sourceMangaListPairList = [];
   for (SourceDto source in sourceList) {
     if (source.id.isNotBlank) {
@@ -58,5 +76,5 @@ AsyncValue<List<QuickSearchResults>> quickSearchResults(Ref ref,
     }
   }
 
-  return sourceMapData.copyWithData((_) => sourceMangaListPairList);
+  return sourcesData.copyWithData((_) => sourceMangaListPairList);
 }

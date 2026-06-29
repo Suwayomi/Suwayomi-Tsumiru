@@ -24,6 +24,9 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final query = useState(initialQuery);
     final quickSearchResult =
         ref.watch(quickSearchResultsProvider(query: query.value));
+    final scope = ref.watch(globalSearchSourceFilterProvider);
+    final onlyHasResults = ref.watch(globalSearchOnlyHasResultsProvider);
+    final hasPinned = ref.watch(pinnedSourcesProvider).isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.globalSearch),
@@ -42,26 +45,80 @@ class GlobalSearchScreen extends HookConsumerWidget {
           ),
         ),
       ),
-      body: quickSearchResult.showUiWhenData(
-        context,
-        (data) => data.isBlank
-            ? Emoticons(
-                title: context.l10n.noSourcesFound,
-                button: TextButton(
-                  onPressed: () => ref.invalidate(sourceListProvider),
-                  child: Text(context.l10n.refresh),
+      body: Column(
+        children: [
+          // Komikku-style filter chips: Pinned / All source scope + Has results.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                if (hasPinned) ...[
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: const Icon(Icons.push_pin_outlined, size: 18),
+                    label: Text(context.l10n.pinnedSources),
+                    selected: scope == GlobalSearchSourceFilter.pinned,
+                    onSelected: (_) =>
+                        ref.read(globalSearchSourceFilterProvider.notifier).state =
+                            GlobalSearchSourceFilter.pinned,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                FilterChip(
+                  showCheckmark: false,
+                  avatar: const Icon(Icons.done_all_rounded, size: 18),
+                  label: Text(context.l10n.all),
+                  selected: !hasPinned || scope == GlobalSearchSourceFilter.all,
+                  onSelected: (_) =>
+                      ref.read(globalSearchSourceFilterProvider.notifier).state =
+                          GlobalSearchSourceFilter.all,
                 ),
-              )
-            : ListView.builder(
-                itemBuilder: (context, index) {
-                  return SourceShortSearch(
-                    source: data[index].source,
-                    mangaList: data[index].mangaList,
-                    query: query.value,
+                const SizedBox(width: 12),
+                FilterChip(
+                  showCheckmark: false,
+                  avatar: const Icon(Icons.filter_list_rounded, size: 18),
+                  label: Text(context.l10n.hasResults),
+                  selected: onlyHasResults,
+                  onSelected: (_) => ref
+                      .read(globalSearchOnlyHasResultsProvider.notifier)
+                      .state = !onlyHasResults,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: quickSearchResult.showUiWhenData(
+              context,
+              (data) {
+                if (data.isBlank) {
+                  return Emoticons(
+                    title: context.l10n.noSourcesFound,
+                    button: TextButton(
+                      onPressed: () => ref.invalidate(sourceListProvider),
+                      child: Text(context.l10n.refresh),
+                    ),
                   );
-                },
-                itemCount: data.length,
-              ),
+                }
+                // "Has results" hides sources still loading / that returned none.
+                final visible = onlyHasResults
+                    ? data
+                        .where((e) =>
+                            (e.mangaList.valueOrNull?.isNotEmpty).ifNull())
+                        .toList()
+                    : data;
+                return ListView.builder(
+                  itemBuilder: (context, index) => SourceShortSearch(
+                    source: visible[index].source,
+                    mangaList: visible[index].mangaList,
+                    query: query.value,
+                  ),
+                  itemCount: visible.length,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

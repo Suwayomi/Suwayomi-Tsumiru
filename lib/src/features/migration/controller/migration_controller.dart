@@ -90,14 +90,11 @@ Future<List<MangaDto>> migrationSourceQuickSearchMangaList(
 AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
     Ref ref,
     {String? query}) {
-  final sourceMapData = ref.watch(sourceMapFilteredProvider);
+  // Pinned-first list of every searchable source (shared with global search;
+  // pinned sources are otherwise excluded from the grouped map).
+  final sourcesData = ref.watch(searchableSourcesProvider);
+  final sourceList = sourcesData.valueOrNull ?? const <SourceDto>[];
 
-  final sourceMap = <String, List<SourceDto>>{...?sourceMapData.valueOrNull}
-    ..remove("lastUsed");
-  final sourceList = sourceMap.values.fold(
-    <SourceDto>[],
-    (prev, cur) => [...prev, ...cur],
-  );
   final List<MigrationQuickSearchResults> sourceMangaListPairList = [];
   for (SourceDto source in sourceList) {
     if (source.id.isNotBlank) {
@@ -108,7 +105,7 @@ AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
     }
   }
 
-  return sourceMapData.copyWithData((_) => sourceMangaListPairList);
+  return sourcesData.copyWithData((_) => sourceMangaListPairList);
 }
 
 @riverpod

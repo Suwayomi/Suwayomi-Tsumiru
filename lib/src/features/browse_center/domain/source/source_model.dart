@@ -19,8 +19,17 @@ typedef SourceDto = Fragment$SourceDto;
 
 typedef SourceType = Enum$FetchSourceMangaType;
 
+/// Server meta key WebUI uses to mark a source pinned. Matching it exactly is
+/// what makes pins sync across clients (WebUI <-> Tsumiru). It is a *global*
+/// WebUI meta key, so there is no device-name segment. Value is the plain
+/// string "true"/"false".
+const kSourcePinnedMetaKey = 'webUI_isPinned';
+
 extension SourceExtensions on SourceDto {
   Language? get language => LanguageJsonConverter.fromJson(lang);
+
+  bool get isPinned =>
+      meta.any((m) => m.key == kSourcePinnedMetaKey && m.value == 'true');
 }
 
 extension SourceMangaTypeExtension on SourceType {

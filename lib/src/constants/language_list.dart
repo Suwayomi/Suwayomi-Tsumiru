@@ -43,6 +43,7 @@ const customLanguageList = [
   },
   {"code": 'installed', "name": 'Installed', "nativeName": 'Installed'},
   {"code": "lastUsed", "name": "Last Used", "nativeName": "Last Used"},
+  {"code": "pinned", "name": "Pinned", "nativeName": "Pinned"},
   {
     "code": 'update',
     "name": 'Updates pending',
