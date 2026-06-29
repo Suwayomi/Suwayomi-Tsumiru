@@ -33,44 +33,50 @@ class ExtensionRepository {
     if (!(file!.name.endsWith('.apk'))) {
       throw context.l10n.errorFilePickUnknownExtension(".apk");
     }
-    await client.mutate$InstallExternalExtension(
-      Options$Mutation$InstallExternalExtension(
-        variables: Variables$Mutation$InstallExternalExtension(
-          extensionFile:
-              await http.MultipartFile.fromPath("extensionFile", file.path!),
-        ),
-      ),
-    );
+    await client
+        .mutate$InstallExternalExtension(
+          Options$Mutation$InstallExternalExtension(
+            variables: Variables$Mutation$InstallExternalExtension(
+              extensionFile: await http.MultipartFile.fromPath(
+                  "extensionFile", file.path!),
+            ),
+          ),
+        )
+        .getData((data) => null);
   }
 
-  Future<void> installExtension(String pkgName) =>
-      client.mutate$UpdateExtension(
+  Future<void> installExtension(String pkgName) => client
+      .mutate$UpdateExtension(
         Options$Mutation$UpdateExtension(
           variables: Variables$Mutation$UpdateExtension(
             id: pkgName,
             install: true,
           ),
         ),
-      );
+      )
+      .getData((data) => null);
 
-  Future<void> uninstallExtension(String pkgName) =>
-      client.mutate$UpdateExtension(
+  Future<void> uninstallExtension(String pkgName) => client
+      .mutate$UpdateExtension(
         Options$Mutation$UpdateExtension(
           variables: Variables$Mutation$UpdateExtension(
             id: pkgName,
             uninstall: true,
           ),
         ),
-      );
+      )
+      .getData((data) => null);
 
-  Future<void> updateExtension(String pkgName) => client.mutate$UpdateExtension(
+  Future<void> updateExtension(String pkgName) => client
+      .mutate$UpdateExtension(
         Options$Mutation$UpdateExtension(
           variables: Variables$Mutation$UpdateExtension(
             id: pkgName,
             update: true,
           ),
         ),
-      );
+      )
+      .getData((data) => null);
 
   Future<List<Extension>?> getExtensionListStream() => client
       .mutate$FetchExtensionList()

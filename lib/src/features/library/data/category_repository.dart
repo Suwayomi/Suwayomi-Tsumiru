@@ -28,87 +28,98 @@ class CategoryRepository {
       .query$AllCategories()
       .getData((data) => data.categories.nodes);
 
-  Future<void> createCategory({required CategoryCreate category}) =>
-      ferryClient.mutate$CreateCategory(
+  Future<void> createCategory({required CategoryCreate category}) => ferryClient
+      .mutate$CreateCategory(
         Options$Mutation$CreateCategory(
           variables: Variables$Mutation$CreateCategory(input: category),
         ),
-      );
+      )
+      .getData((data) => null);
 
   Future<void> editCategory({
     required int categoryId,
     required CategoryUpdate category,
   }) =>
-      ferryClient.mutate$UpdateCategory(
-        Options$Mutation$UpdateCategory(
-          variables: Variables$Mutation$UpdateCategory(
-            input: Input$UpdateCategoryInput(
-              id: categoryId,
-              patch: category,
+      ferryClient
+          .mutate$UpdateCategory(
+            Options$Mutation$UpdateCategory(
+              variables: Variables$Mutation$UpdateCategory(
+                input: Input$UpdateCategoryInput(
+                  id: categoryId,
+                  patch: category,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => null);
 
   Future<void> deleteCategory({
     required int categoryId,
   }) =>
-      ferryClient.mutate$DeleteCategory(
-        Options$Mutation$DeleteCategory(
-          variables: Variables$Mutation$DeleteCategory(
-            input: Input$DeleteCategoryInput(categoryId: categoryId),
-          ),
-        ),
-      );
+      ferryClient
+          .mutate$DeleteCategory(
+            Options$Mutation$DeleteCategory(
+              variables: Variables$Mutation$DeleteCategory(
+                input: Input$DeleteCategoryInput(categoryId: categoryId),
+              ),
+            ),
+          )
+          .getData((data) => null);
 
   Future<void> reorderCategory({
     required int categoryId,
     required int position,
   }) =>
-      ferryClient.mutate$UpdateCategoryOrder(
-        Options$Mutation$UpdateCategoryOrder(
-          variables: Variables$Mutation$UpdateCategoryOrder(
-            input: Input$UpdateCategoryOrderInput(
-              id: categoryId,
-              position: position,
+      ferryClient
+          .mutate$UpdateCategoryOrder(
+            Options$Mutation$UpdateCategoryOrder(
+              variables: Variables$Mutation$UpdateCategoryOrder(
+                input: Input$UpdateCategoryOrderInput(
+                  id: categoryId,
+                  position: position,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => null);
 
   Future<void> setCategoryMeta({
     required int categoryId,
     required String key,
     required String value,
   }) =>
-      ferryClient.mutate$SetCategoryMeta(
-        Options$Mutation$SetCategoryMeta(
-          variables: Variables$Mutation$SetCategoryMeta(
-            input: Input$SetCategoryMetaInput(
-              meta: Input$CategoryMetaTypeInput(
-                categoryId: categoryId,
-                key: key,
-                value: value,
+      ferryClient
+          .mutate$SetCategoryMeta(
+            Options$Mutation$SetCategoryMeta(
+              variables: Variables$Mutation$SetCategoryMeta(
+                input: Input$SetCategoryMetaInput(
+                  meta: Input$CategoryMetaTypeInput(
+                    categoryId: categoryId,
+                    key: key,
+                    value: value,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => null);
 
   Future<void> deleteCategoryMeta({
     required int categoryId,
     required String key,
   }) =>
-      ferryClient.mutate$DeleteCategoryMeta(
-        Options$Mutation$DeleteCategoryMeta(
-          variables: Variables$Mutation$DeleteCategoryMeta(
-            input: Input$DeleteCategoryMetaInput(
-              categoryId: categoryId,
-              key: key,
+      ferryClient
+          .mutate$DeleteCategoryMeta(
+            Options$Mutation$DeleteCategoryMeta(
+              variables: Variables$Mutation$DeleteCategoryMeta(
+                input: Input$DeleteCategoryMetaInput(
+                  categoryId: categoryId,
+                  key: key,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => null);
 
   //  Manga
   Future<List<MangaDto>?> getMangasFromCategory({

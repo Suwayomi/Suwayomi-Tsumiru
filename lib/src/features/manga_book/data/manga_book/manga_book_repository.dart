@@ -50,25 +50,25 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateManga?.manga);
 
-  Future<void> modifyBulkChapters(ChapterBatch batch) =>
-      client.mutate$UpdateChapters(
+  Future<void> modifyBulkChapters(ChapterBatch batch) => client
+      .mutate$UpdateChapters(
         Options$Mutation$UpdateChapters(
           variables: Variables$Mutation$UpdateChapters(input: batch),
         ),
-      );
+      )
+      .getData((data) => null);
 
-  Future<void> deleteChapters(List<int> chapterIds) =>
-      client
-          .mutate$DeleteDownloadedChapters(
-            Options$Mutation$DeleteDownloadedChapters(
-              variables: Variables$Mutation$DeleteDownloadedChapters(
-                input: Input$DeleteDownloadedChaptersInput(ids: chapterIds),
-              ),
-            ),
-          )
-          // Surface failure as a throw so callers don't cascade a device delete
-          // when the server delete didn't actually happen.
-          .getData((data) => null);
+  Future<void> deleteChapters(List<int> chapterIds) => client
+      .mutate$DeleteDownloadedChapters(
+        Options$Mutation$DeleteDownloadedChapters(
+          variables: Variables$Mutation$DeleteDownloadedChapters(
+            input: Input$DeleteDownloadedChaptersInput(ids: chapterIds),
+          ),
+        ),
+      )
+      // Surface failure as a throw so callers don't cascade a device delete
+      // when the server delete didn't actually happen.
+      .getData((data) => null);
 
   // Mangas
   Future<MangaDto?> getManga({
@@ -91,8 +91,8 @@ class MangaBookRepository {
           )
           .getData((data) => data.manga.categories.nodes);
 
-  Future<void> addMangaToCategory(int mangaId, int categoryId) =>
-      client.mutate$UpdateMangaCategories(
+  Future<void> addMangaToCategory(int mangaId, int categoryId) => client
+      .mutate$UpdateMangaCategories(
         Options$Mutation$UpdateMangaCategories(
           variables: Variables$Mutation$UpdateMangaCategories(
             updateCategoryInput: Input$UpdateMangaCategoriesInput(
@@ -103,10 +103,11 @@ class MangaBookRepository {
             ),
           ),
         ),
-      );
+      )
+      .getData((data) => null);
 
-  Future<void> removeMangaFromCategory(int mangaId, int categoryId) =>
-      client.mutate$UpdateMangaCategories(
+  Future<void> removeMangaFromCategory(int mangaId, int categoryId) => client
+      .mutate$UpdateMangaCategories(
         Options$Mutation$UpdateMangaCategories(
           variables: Variables$Mutation$UpdateMangaCategories(
             updateCategoryInput: Input$UpdateMangaCategoriesInput(
@@ -117,7 +118,8 @@ class MangaBookRepository {
             ),
           ),
         ),
-      );
+      )
+      .getData((data) => null);
 
   // Chapters
 
@@ -171,19 +173,21 @@ class MangaBookRepository {
     required String key,
     required dynamic value,
   }) async =>
-      client.mutate$SetMangaMeta(
-        Options$Mutation$SetMangaMeta(
-          variables: Variables$Mutation$SetMangaMeta(
-            input: Input$SetMangaMetaInput(
-              meta: Input$MangaMetaTypeInput(
-                key: key,
-                mangaId: mangaId,
-                value: value,
+      client
+          .mutate$SetMangaMeta(
+            Options$Mutation$SetMangaMeta(
+              variables: Variables$Mutation$SetMangaMeta(
+                input: Input$SetMangaMetaInput(
+                  meta: Input$MangaMetaTypeInput(
+                    key: key,
+                    mangaId: mangaId,
+                    value: value,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => null);
 
   /// Fetches the chapter list FROM THE SOURCE (the server re-scrapes the source
   /// site). Returns nothing if the source is down/gone — callers that need to
