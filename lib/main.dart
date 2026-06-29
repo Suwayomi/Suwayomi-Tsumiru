@@ -36,11 +36,25 @@ import 'src/features/tracking/data/tracker_repository.dart';
 import 'src/features/tracking/domain/tracker_oauth_helpers.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
+import 'src/utils/crash/crash_log.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/platform/is_android_native.dart';
+import 'src/widgets/app_error_app.dart';
 
-Future<void> main() async {
+/// Absolute path of the crash-log file (native only; null on web / if setup
+/// fails). The error handlers append to it synchronously.
+String? _crashLogPath;
+
+void main() {
+  // Run everything inside a guarded zone so a fatal error — sync, async, or
+  // framework — is caught, written to a log file, and shown as a readable
+  // screen instead of a blank white window (release desktop has no console).
+  runZonedGuarded<Future<void>>(_startApp, _onFatalError);
+}
+
+Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _setUpCrashReporting();
   // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
   // any download service is started. Must run after the binding is ready.
   initForegroundTaskService();
@@ -187,6 +201,40 @@ Future<void> main() async {
       child: const Sorayomi(),
     ),
   );
+}
+
+/// Install the framework + async error handlers and resolve the crash-log file.
+/// Each handler is best-effort and never throws, so crash reporting can't itself
+/// crash startup.
+Future<void> _setUpCrashReporting() async {
+  _crashLogPath = await initCrashLog();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    _logCrash(details.exception, details.stack);
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    _logCrash(error, stack);
+    return true;
+  };
+  ErrorWidget.builder = (details) =>
+      AppErrorApp(message: details.exceptionAsString(), logPath: _crashLogPath);
+}
+
+void _logCrash(Object error, StackTrace? stack) {
+  debugPrint('Tsumiru fatal: $error\n$stack');
+  writeCrashLog(
+    _crashLogPath,
+    '[${DateTime.now().toIso8601String()}] $error\n$stack\n\n',
+  );
+}
+
+void _onFatalError(Object error, StackTrace stack) {
+  _logCrash(error, stack);
+  // A failure before/around runApp would otherwise leave a blank white window;
+  // best-effort show the error screen so there's something to act on.
+  try {
+    runApp(AppErrorApp(message: error.toString(), logPath: _crashLogPath));
+  } catch (_) {}
 }
 
 /// Sets up the AppLinks deep-link listener so that OAuth callbacks of the form
