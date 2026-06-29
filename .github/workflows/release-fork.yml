@@ -181,6 +181,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
+          # Bundle the MSVC runtime DLLs (msvcp140 / vcruntime140 / *_1) next to
+          # the exe, so the app runs on machines WITHOUT the Visual C++
+          # Redistributable installed. Without these the window opens but never
+          # paints — a blank white screen — on otherwise-fine PCs.
+          $redist = vswhere -latest -find 'VC\Redist\MSVC\*\x64\*\*.dll'
+          Copy-Item $redist build\windows\x64\runner\Release\ -Force
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath "dist\${env:pkg_name}-${{ github.ref_name }}-windows-x64.zip"
 
       - name: Attach to release
