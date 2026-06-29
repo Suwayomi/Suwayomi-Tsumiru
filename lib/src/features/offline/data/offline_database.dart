@@ -387,6 +387,15 @@ class OfflineDatabase extends _$OfflineDatabase {
             ..orderBy([(t) => OrderingTerm(expression: t.chapterIndex)]))
           .get();
 
+  /// Mark chapters as orphaned (server-gone) so the next reconcile pass evicts
+  /// their on-device copies — keeping the device set a subset of the server.
+  Future<void> markChaptersOrphaned(List<int> chapterIds) =>
+      (update(offlineChapters)..where((t) => t.id.isIn(chapterIds))).write(
+        const OfflineChaptersCompanion(
+          deviceState: Value(OfflineDeviceState.orphaned),
+        ),
+      );
+
   /// Live stream of a manga's chapter rows — drives the series download
   /// progress UI (emits as device states change during a background download).
   Stream<List<OfflineChapter>> watchChaptersForManga(int mangaId) =>

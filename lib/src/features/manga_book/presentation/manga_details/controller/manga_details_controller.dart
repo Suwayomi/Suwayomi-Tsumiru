@@ -105,6 +105,17 @@ class MangaChapterList extends _$MangaChapterList {
       state = result.copyWithPrevious(state);
     } else {
       state = result;
+      final chapters = result.valueOrNull;
+      if (chapters != null) {
+        // Mirror build(): down-sync the fresh list (which orphans chapters the
+        // server no longer lists) then reconcile to evict them — so a
+        // server-side delete discovered via pull-to-refresh is cleaned up too,
+        // not only on a cold provider rebuild.
+        unawaited(
+            (ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
+                    Future.value())
+                .then((_) => reconcileManga(ref, mangaId)));
+      }
     }
   }
 
