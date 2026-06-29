@@ -52,7 +52,7 @@ jobs:
       # Install Android dependencies
       - name: Install Android dependencies
         if: matrix.target == 'android'
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: "zulu"
           java-version: "17.x"
@@ -67,7 +67,7 @@ jobs:
 
       # Recreating the project
       - run: flutter doctor -v
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       # - run: flutter create .
       - run: flutter pub get
       - run: flutter gen-l10n
@@ -182,7 +182,7 @@ jobs:
           Move-Item "${{ env.pkg_name }}-${{ github.ref_name }}-${{ matrix.target }}-x64.msi" "${env:GITHUB_WORKSPACE}"
 
       - name: Add packaged build to release draft
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           draft: false

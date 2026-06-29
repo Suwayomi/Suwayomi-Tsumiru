@@ -15,14 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3 # Only works with v2
+      - uses: actions/checkout@v5 # Only works with v2
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
       # Recreating the project
       - run: flutter doctor -v
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       # - run: flutter create .
       - run: flutter pub get
       - run: flutter gen-l10n
