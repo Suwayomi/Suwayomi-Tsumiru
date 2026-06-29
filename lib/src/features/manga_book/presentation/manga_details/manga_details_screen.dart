@@ -187,7 +187,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black.withValues(alpha: 0.45 * (1 - t)),
+                                      Colors.black
+                                          .withValues(alpha: 0.45 * (1 - t)),
                                       Colors.transparent,
                                     ],
                                   ),
@@ -200,105 +201,108 @@ class MangaDetailsScreen extends HookConsumerWidget {
                           child: Text(data?.title ?? context.l10n.manga),
                         ),
                         actions: [
-                    if (context.isTablet) ...[
-                      IconButton(
-                        onPressed: () => refresh(true),
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
-                      IconButton(
-                        onPressed: () => showDialog(
-                          context: context,
-                          builder: (context) =>
-                              EditMangaCategoryDialog(mangaId: mangaId),
-                        ),
-                        icon: const Icon(Icons.category_rounded),
-                      ),
-                      IconButton(
-                        onPressed: () => startMigration(context, mangaId, data),
-                        icon: const Icon(Icons.swap_horiz_rounded),
-                        tooltip: context.l10n.migrate,
-                      ),
-                      IconButton(
-                        onPressed: AppUtils.returnIf(
-                          data!.realUrl != null,
-                          () => launchUrlInWeb(
-                            context,
-                            data.realUrl!,
-                            ref.read(toastProvider),
-                          ),
-                        ),
-                        icon: const Icon(Icons.open_in_new_rounded),
-                      )
-                    ],
-                    ChapterDownloadPresetsButton(
-                      chapterList: chapterList,
-                      refresh: refresh,
-                    ),
-                    Builder(
-                      builder: (context) => IconButton(
-                        onPressed: () {
-                          if (context.isTablet) {
-                            Scaffold.of(context).openEndDrawer();
-                          } else {
-                            showModalBottomSheet(
-                              context: context,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: KBorderRadius.rT16.radius,
+                          if (context.isTablet) ...[
+                            IconButton(
+                              onPressed: () => refresh(true),
+                              icon: const Icon(Icons.refresh_rounded),
+                            ),
+                            IconButton(
+                              onPressed: () => showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    EditMangaCategoryDialog(mangaId: mangaId),
                               ),
-                              clipBehavior: Clip.hardEdge,
-                              builder: (_) =>
-                                  MangaChapterOrganizer(mangaId: mangaId),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.filter_list_rounded),
-                      ),
-                    ),
-                    if (!context.isTablet)
-                      PopupMenuButton(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: KBorderRadius.r16.radius,
-                        ),
-                        icon: const Icon(Icons.more_vert_rounded),
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            onTap: () => Future.microtask(
-                              () {
-                                if (!context.mounted) return null;
-                                return showDialog(
-                                  context: context,
-                                  builder: (context) =>
-                                      EditMangaCategoryDialog(mangaId: mangaId),
-                                );
+                              icon: const Icon(Icons.category_rounded),
+                            ),
+                            IconButton(
+                              onPressed: () =>
+                                  startMigration(context, mangaId, data),
+                              icon: const Icon(Icons.swap_horiz_rounded),
+                              tooltip: context.l10n.migrate,
+                            ),
+                            IconButton(
+                              onPressed: AppUtils.returnIf(
+                                data!.realUrl != null,
+                                () => launchUrlInWeb(
+                                  context,
+                                  data.realUrl!,
+                                  ref.read(toastProvider),
+                                ),
+                              ),
+                              icon: const Icon(Icons.open_in_new_rounded),
+                            )
+                          ],
+                          ChapterDownloadPresetsButton(
+                            chapterList: chapterList,
+                            refresh: refresh,
+                          ),
+                          Builder(
+                            builder: (context) => IconButton(
+                              onPressed: () {
+                                if (context.isTablet) {
+                                  Scaffold.of(context).openEndDrawer();
+                                } else {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: KBorderRadius.rT16.radius,
+                                    ),
+                                    clipBehavior: Clip.hardEdge,
+                                    builder: (_) =>
+                                        MangaChapterOrganizer(mangaId: mangaId),
+                                  );
+                                }
                               },
-                            ),
-                            child: Text(context.l10n.editCategory),
-                          ),
-                          PopupMenuItem(
-                            onTap: () => startMigration(context, mangaId, data),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.swap_horiz_rounded),
-                                const SizedBox(width: 8),
-                                Text(context.l10n.migrate),
-                              ],
+                              icon: const Icon(Icons.filter_list_rounded),
                             ),
                           ),
-                          PopupMenuItem(
-                            onTap: () => refresh(true),
-                            child: Text(context.l10n.refresh),
-                          ),
-                          if (data?.realUrl != null)
-                            PopupMenuItem(
-                              onTap: () => launchUrlInWeb(
-                                context,
-                                data!.realUrl!,
-                                ref.read(toastProvider),
+                          if (!context.isTablet)
+                            PopupMenuButton(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: KBorderRadius.r16.radius,
                               ),
-                              child: Text(context.l10n.openInWeb),
-                            ),
-                        ],
-                      )
+                              icon: const Icon(Icons.more_vert_rounded),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  onTap: () => Future.microtask(
+                                    () {
+                                      if (!context.mounted) return null;
+                                      return showDialog(
+                                        context: context,
+                                        builder: (context) =>
+                                            EditMangaCategoryDialog(
+                                                mangaId: mangaId),
+                                      );
+                                    },
+                                  ),
+                                  child: Text(context.l10n.editCategory),
+                                ),
+                                PopupMenuItem(
+                                  onTap: () =>
+                                      startMigration(context, mangaId, data),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.swap_horiz_rounded),
+                                      const SizedBox(width: 8),
+                                      Text(context.l10n.migrate),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  onTap: () => refresh(true),
+                                  child: Text(context.l10n.refresh),
+                                ),
+                                if (data?.realUrl != null)
+                                  PopupMenuItem(
+                                    onTap: () => launchUrlInWeb(
+                                      context,
+                                      data!.realUrl!,
+                                      ref.read(toastProvider),
+                                    ),
+                                    child: Text(context.l10n.openInWeb),
+                                  ),
+                              ],
+                            )
                         ],
                       );
                     },
@@ -330,40 +334,40 @@ class MangaDetailsScreen extends HookConsumerWidget {
           body: Stack(
             children: [
               NotificationListener<ScrollNotification>(
-            onNotification: (n) {
-              if (n.metrics.axis == Axis.vertical) {
-                scrollPx.value = n.metrics.pixels;
-              }
-              return false;
-            },
-            child: data != null
-              ? context.isTablet
-                  ? BigScreenMangaDetails(
-                      chapterList: filteredChapterList,
-                      manga: data,
-                      mangaId: mangaId,
-                      onRefresh: refresh,
-                      onDescriptionRefresh: mangaRefresh,
-                      onListRefresh: chapterListRefresh,
-                      selectedChapters: selectedChapters,
-                    )
-                  : SmallScreenMangaDetails(
-                      chapterList: filteredChapterList,
-                      manga: data,
-                      mangaId: mangaId,
-                      onRefresh: refresh,
-                      onDescriptionRefresh: mangaRefresh,
-                      onListRefresh: chapterListRefresh,
-                      selectedChapters: selectedChapters,
-                    )
-              : Emoticons(
-                  title: context.l10n.noMangaFound,
-                  button: TextButton(
-                    onPressed: refresh,
-                    child: Text(context.l10n.refresh),
-                  ),
-                ),
-          ),
+                onNotification: (n) {
+                  if (n.metrics.axis == Axis.vertical) {
+                    scrollPx.value = n.metrics.pixels;
+                  }
+                  return false;
+                },
+                child: data != null
+                    ? context.isTablet
+                        ? BigScreenMangaDetails(
+                            chapterList: filteredChapterList,
+                            manga: data,
+                            mangaId: mangaId,
+                            onRefresh: refresh,
+                            onDescriptionRefresh: mangaRefresh,
+                            onListRefresh: chapterListRefresh,
+                            selectedChapters: selectedChapters,
+                          )
+                        : SmallScreenMangaDetails(
+                            chapterList: filteredChapterList,
+                            manga: data,
+                            mangaId: mangaId,
+                            onRefresh: refresh,
+                            onDescriptionRefresh: mangaRefresh,
+                            onListRefresh: chapterListRefresh,
+                            selectedChapters: selectedChapters,
+                          )
+                    : Emoticons(
+                        title: context.l10n.noMangaFound,
+                        button: TextButton(
+                          onPressed: refresh,
+                          child: Text(context.l10n.refresh),
+                        ),
+                      ),
+              ),
               if (selectedChapters.value.isNotEmpty)
                 Positioned(
                   left: 0,
@@ -373,7 +377,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     afterOptionSelected: chapterListRefresh,
                     selectedChapters: selectedChapters,
                     chapterList: filteredChapterList.value,
-                    mangaId: mangaId,
                   ),
                 ),
             ],

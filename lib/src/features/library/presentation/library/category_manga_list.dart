@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -28,6 +30,7 @@ import '../../../offline/data/offline_database.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
+import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
 
 class CategoryMangaList extends HookConsumerWidget {
@@ -90,6 +93,16 @@ class CategoryMangaList extends HookConsumerWidget {
         if (cids.isNotEmpty) {
           await repo.modifyBulkChapters(
               ChapterBatch(ids: cids, patch: ChapterChange(isRead: read)));
+          // Marking a whole series read here bypasses the reader, so push the
+          // new progress to the bound tracker(s) explicitly (manual path).
+          if (read) {
+            unawaited(maybeTrackProgressOnReadFetch(
+              ref,
+              mangaId: id,
+              isRead: true,
+              manual: true,
+            ));
+          }
         }
       }
       refresh();
@@ -186,7 +199,8 @@ class CategoryMangaList extends HookConsumerWidget {
                       final ids = selection.value.toList();
                       if (ids.length > 1 &&
                           !await confirmBulkDownload(context,
-                              summary: '${ids.length} series', toDevice: true)) {
+                              summary: '${ids.length} series',
+                              toDevice: true)) {
                         return;
                       }
                       selection.value = const {};
@@ -223,8 +237,8 @@ class CategoryMangaList extends HookConsumerWidget {
                       }
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text('Downloading ${ids.length} series to server'),
+                          content: Text(
+                              'Downloading ${ids.length} series to server'),
                         ));
                       }
                     },
@@ -233,8 +247,7 @@ class CategoryMangaList extends HookConsumerWidget {
                       // multi-manga category editing is a follow-up.
                       if (selection.value.length == 1) {
                         final id = selection.value.first;
-                        final manga =
-                            items.firstWhere((m) => m.id == id);
+                        final manga = items.firstWhere((m) => m.id == id);
                         selection.value = const {};
                         await showDialog(
                           context: context,
