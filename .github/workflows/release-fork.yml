@@ -5,6 +5,16 @@
 # the GitHub release. Distinct from the inherited upstream `publish.yml`
 # (which targets winget/homebrew/Play Store and uses unpinned Flutter).
 #
+# Release stays a DRAFT until complete: every platform attaches its artifact to
+# a draft release, and the separate `publish` job flips it to published only
+# after all six builds succeed. A failed platform leaves the release a draft.
+# So the release is never public with missing artifacts.
+#
+# Maintainer flow for a release (e.g. v0.7.2):
+#   1. gh release create v0.7.2 --target <sha> --notes-file notes.md --draft
+#   2. git tag v0.7.2 <sha> && git push origin v0.7.2   # triggers this build
+# The draft (with its notes) is filled in by the builds, then auto-published.
+#
 # Android is signed with the repo's debug keystore (stored as secrets) so CI
 # builds keep the same signature as locally-built debug APKs — installs upgrade
 # cleanly instead of being rejected for a signature mismatch.
@@ -189,11 +199,45 @@ jobs:
           Copy-Item $redist build\windows\x64\runner\Release\ -Force
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath "dist\${env:pkg_name}-${{ github.ref_name }}-windows-x64.zip"
 
-      - name: Attach to release
+      - name: Attach to the draft release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           fail_on_unmatched_files: true
+          # Keep the release a DRAFT while every platform attaches. It is
+          # published only by the `publish` job below, once all six builds
+          # have succeeded, so users never see a release with missing or
+          # partial artifacts. action-gh-release leaves an existing release's
+          # body untouched when no body is given, so notes set on the draft
+          # beforehand are preserved.
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish the release
+    # Runs only after EVERY matrix build job succeeds. If any platform fails,
+    # this job is skipped and the release stays a draft for the maintainer to
+    # fix and re-run, so an incomplete release is never made public.
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish now that all six platforms have attached
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Guard: refuse to publish a release with empty notes (the draft
+          # should have been created with notes before tagging). Leaving it a
+          # draft is safer than publishing a blank release.
+          body=$(gh release view "$TAG" --repo "$REPO" --json body -q .body)
+          if [ -z "${body// /}" ]; then
+            echo "::error::Release $TAG has an empty body; leaving it as a draft. Add notes, then re-run this job."
+            exit 1
+          fi
+          gh release edit "$TAG" --repo "$REPO" --draft=false --latest
