@@ -5,13 +5,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 enum AppUrls {
-  sorayomiGithubUrl(url: "https://github.com/tsumiru-app/tsumiru"),
+  sorayomiGithubUrl(url: "https://github.com/Suwayomi/Suwayomi-Tsumiru"),
   sorayomiLatestReleaseUrl(
-      url: "https://github.com/tsumiru-app/tsumiru/releases/latest"),
+      url: "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest"),
   tachideskHelp(url: "https://tsumiru-app.github.io/docs/guides/getting-started"),
-  sorayomiWhatsNew(url: "https://tsumiru-app.github.io/changelogs/"),
+  // What's New points at the GitHub Releases page so it always shows the
+  // current release notes — the old docs-site changelog was hand-maintained and
+  // went stale (stuck at v0.6.1 while the app shipped v0.7.1).
+  sorayomiWhatsNew(url: "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases"),
   sorayomiLatestReleaseApiUrl(
-    url: "https://api.github.com/repos/tsumiru-app/tsumiru/releases/latest",
+    url: "https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest",
   ),
   flareSolverr(
       url:
