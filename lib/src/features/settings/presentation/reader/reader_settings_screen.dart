@@ -17,6 +17,7 @@ import 'widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import 'widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import 'widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import 'widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
+import 'widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import 'widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
 import 'widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import 'widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -51,6 +52,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
           const ReaderMagnifierSizeSlider(),
           if (!kIsWeb) ...[
             if (Platform.isAndroid || Platform.isIOS) ...[
+              const ReaderKeepScreenOnTile(),
               const ReaderPinchToZoom(),
               const ReaderIgnoreSafeAreaTile(),
             ],

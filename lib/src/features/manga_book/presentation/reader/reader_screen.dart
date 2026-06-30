@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -18,6 +19,7 @@ import '../../../library/presentation/library/controller/library_controller.dart
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
+import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import '../../domain/manga/manga_model.dart';
@@ -149,6 +151,19 @@ class ReaderScreen extends HookConsumerWidget {
             overlays: SystemUiOverlay.values,
           );
     }, []);
+
+    // Keep the screen awake while reading when the user opted in. The cleanup
+    // only exists when we actually enabled (returning null when off), so leaving
+    // the reader — or flipping the toggle off mid-read — releases the wakelock
+    // and we never disable one we didn't take. Calls are fire-and-forget and
+    // their errors ignored, so a platform hiccup (e.g. no foreground activity
+    // during a transition) can never crash the reader.
+    final keepScreenOn = ref.watch(keepScreenOnProvider).ifNull(true);
+    useEffect(() {
+      if (!keepScreenOn) return null;
+      WakelockPlus.enable().ignore();
+      return () => WakelockPlus.disable().ignore();
+    }, [keepScreenOn]);
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
