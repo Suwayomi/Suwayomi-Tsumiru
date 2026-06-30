@@ -45,6 +45,11 @@ import 'src/widgets/app_error_app.dart';
 /// fails). The error handlers append to it synchronously.
 String? _crashLogPath;
 
+/// True once the app has painted its first frame. Distinguishes a genuine
+/// startup failure (show the error screen) from a recoverable runtime async
+/// error (log only; keep the app running). See [_onFatalError].
+bool _appRendered = false;
+
 void main() {
   // Run everything inside a guarded zone so a fatal error — sync, async, or
   // framework — is caught, written to a log file, and shown as a readable
@@ -201,6 +206,10 @@ Future<void> _startApp() async {
       child: const Sorayomi(),
     ),
   );
+  // Mark the app as up once it has painted a frame. After this, a stray
+  // uncaught async error is recoverable and must NOT replace the whole UI with
+  // the fatal screen (see [_onFatalError]).
+  WidgetsBinding.instance.addPostFrameCallback((_) => _appRendered = true);
 }
 
 /// Install the framework + async error handlers and resolve the crash-log file.
@@ -221,17 +230,24 @@ Future<void> _setUpCrashReporting() async {
 }
 
 void _logCrash(Object error, StackTrace? stack) {
-  debugPrint('Tsumiru fatal: $error\n$stack');
+  // Include the runtime type — some exceptions (e.g. wrapped GraphQL ones) have
+  // an empty toString(), which would otherwise log a blank line.
+  final line = '${error.runtimeType}: $error';
+  debugPrint('Tsumiru error: $line\n$stack');
   writeCrashLog(
     _crashLogPath,
-    '[${DateTime.now().toIso8601String()}] $error\n$stack\n\n',
+    '[${DateTime.now().toIso8601String()}] $line\n$stack\n\n',
   );
 }
 
 void _onFatalError(Object error, StackTrace stack) {
   _logCrash(error, stack);
-  // A failure before/around runApp would otherwise leave a blank white window;
-  // best-effort show the error screen so there's something to act on.
+  // Only a failure BEFORE the first frame is truly fatal (it would otherwise
+  // leave a blank white window) — show the error screen then. Once the app has
+  // painted, a stray uncaught async error (e.g. a failed network call in a
+  // button handler) is recoverable: it's logged, but it must not replace the
+  // running app with a "couldn't start" screen.
+  if (_appRendered) return;
   try {
     runApp(AppErrorApp(message: error.toString(), logPath: _crashLogPath));
   } catch (_) {}
