@@ -294,6 +294,9 @@
     "@downloading": {
         "description": "Text to show chapters downloading"
     },
+    "@onDeviceDownloads": {
+        "description": "Settings entry: on-device (offline) downloads screen"
+    },
     "@downloads": {
         "description": "Screen title and Navigation text of Downloads screen"
     },
@@ -694,6 +697,12 @@
     "@openInWeb": {
         "description": "Button title text for open the url in web"
     },
+    "@openSourceInBrowser": {
+        "description": "Menu item: open the manga page on the original source website"
+    },
+    "@openOnServer": {
+        "description": "Menu item: open the manga in the Suwayomi server WebUI"
+    },
     "@or": {
         "description": "text literal for word or"
     },
@@ -852,6 +861,12 @@
     },
     "@readerVolumeTapSubtitle": {
         "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
+    },
+    "@readerKeepScreenOn": {
+        "description": "Reader switch tile title: keep the screen awake while reading"
+    },
+    "@readerKeepScreenOnSubtitle": {
+        "description": "Reader switch tile subtitle for keep screen on"
     },
     "@readerIgnoreSafeAreaToggle": {
         "description": "Toggle text to ignore safe area in reader"
@@ -1282,6 +1297,7 @@
       "placeholders": { "n": { "type": "int" } }
     },
     "downloads": "Downloads",
+    "onDeviceDownloads": "On-device downloads",
     "downloadToServer": "Download to server",
     "downloadUnreadChapters": "Unread",
     "@downloadUnreadChapters": { "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters." },
@@ -1443,6 +1459,8 @@
     },
     "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
     "openInWeb": "Open In Web",
+    "openSourceInBrowser": "Open source page",
+    "openOnServer": "Open on server",
     "or": "or",
     "page": "Page: {number}",
     "parallelSourceRequest": "Parallel source requests",
@@ -1512,6 +1530,8 @@
     "readerVolumeTap": "Volume Keys",
     "readerVolumeTapInvert": "Invert Volume Keys",
     "readerVolumeTapSubtitle": "Navigate with Volume Keys",
+    "readerKeepScreenOn": "Keep screen on",
+    "readerKeepScreenOnSubtitle": "Prevent the screen from sleeping while reading",
     "readerIgnoreSafeAreaToggle": "Ignore Safe Area",
     "readerIgnoreSafeAreaToggleDescription": "Allow content to extend into notch and home indicator areas",
     "reddit": "Reddit",
@@ -1614,6 +1634,10 @@
     "serverPort": "Server Port",
     "serverPortHintText": "Server port",
     "serverSettingsSubtitle": "Configure the Suwayomi server itself.",
+    "copyCrashLog": "Copy crash log",
+    "copyCrashLogSubtitle": "For bug reports — copies the latest error log to the clipboard",
+    "crashLogCopied": "Crash log copied to clipboard",
+    "noCrashLog": "No crash log found",
     "serverUrl": "Server URL",
     "serverUrlHintText": "Server url",
     "serverVersion": "Server version",

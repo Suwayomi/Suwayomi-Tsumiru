@@ -30,3 +30,17 @@ void writeCrashLog(String? path, String content) {
     File(path).writeAsStringSync(content, mode: FileMode.append, flush: true);
   } catch (_) {}
 }
+
+/// Read the whole crash log so the UI can let a user copy it — they can't reach
+/// the app's private files directory themselves. Null if missing/empty.
+String? readCrashLog(String? path) {
+  if (path == null) return null;
+  try {
+    final file = File(path);
+    if (!file.existsSync()) return null;
+    final content = file.readAsStringSync();
+    return content.isEmpty ? null : content;
+  } catch (_) {
+    return null;
+  }
+}

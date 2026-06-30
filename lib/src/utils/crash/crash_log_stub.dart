@@ -8,3 +8,5 @@
 Future<String?> initCrashLog() async => null;
 
 void writeCrashLog(String? path, String content) {}
+
+String? readCrashLog(String? path) => null;
