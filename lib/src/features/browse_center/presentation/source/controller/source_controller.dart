@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/source/source_model.dart';
 
@@ -18,6 +19,20 @@ part 'source_controller.g.dart';
 @riverpod
 Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
+
+/// The source list with NSFW sources removed when "Show NSFW" is off. Every
+/// displayed source list derives from this (the grouped/filtered map, the
+/// pinned section, global search, migration), so the toggle hides NSFW sources
+/// everywhere — matching how the extensions list already behaves. Defaults to
+/// showing NSFW (no filtering) when the setting is unset.
+@riverpod
+AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
+  return ref.watch(sourceListProvider).copyWithData(
+        (list) =>
+            list == null || showNsfw ? list : [...list.where((e) => !e.isNsfw)],
+      );
+}
 
 int _byName(SourceDto a, SourceDto b) =>
     a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -55,12 +70,12 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
 /// Pinned sources, surfaced as their own top section regardless of the active
 /// language filter.
 @riverpod
-List<SourceDto> pinnedSources(Ref ref) =>
-    pinnedSourcesFrom(ref.watch(sourceListProvider).valueOrNull ?? const []);
+List<SourceDto> pinnedSources(Ref ref) => pinnedSourcesFrom(
+    ref.watch(visibleSourceListProvider).valueOrNull ?? const []);
 
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
-  final sourceListData = ref.watch(sourceListProvider);
+  final sourceListData = ref.watch(visibleSourceListProvider);
   final sourceLastUsed = ref.watch(sourceLastUsedProvider);
   return sourceListData.copyWithData(
     (data) => groupSourcesByLanguage(data ?? const [], sourceLastUsed),

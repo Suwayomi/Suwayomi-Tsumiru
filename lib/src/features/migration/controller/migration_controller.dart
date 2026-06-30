@@ -17,6 +17,7 @@ import '../../library/presentation/library/controller/library_controller.dart';
 import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../data/migration_repository.dart';
 import '../domain/migration_models.dart';
 
@@ -26,7 +27,21 @@ part 'migration_controller.g.dart';
 class MigrationSources extends _$MigrationSources {
   @override
   Future<List<MigrationSource>?> build({required int mangaId}) async {
-    return ref.watch(migrationRepositoryProvider).getMigrationSources(mangaId);
+    final sources = await ref
+        .watch(migrationRepositoryProvider)
+        .getMigrationSources(mangaId);
+    if (sources == null) return null;
+    // Respect "Show NSFW" here too: MigrationSource carries no nsfw flag, so
+    // exclude any migration source whose id is a known NSFW source. Defaults to
+    // showing NSFW (no filtering) when the setting is unset, matching the
+    // Sources/Extensions lists.
+    if (ref.watch(showNSFWProvider).ifNull(true)) return sources;
+    final nsfwIds = {
+      for (final e
+          in await ref.watch(sourceListProvider.future) ?? const <SourceDto>[])
+        if (e.isNsfw) e.id,
+    };
+    return [...sources.where((e) => !nsfwIds.contains(e.id))];
   }
 
   Future<void> refresh() async {
