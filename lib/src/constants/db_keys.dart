@@ -137,6 +137,14 @@ enum DBKeys {
   filterCategoriesExclude(<String>[]),
   // Seed for the Random library sort. Incrementing this re-rolls the order.
   librarySortRandomSeed(0),
+  // Reader seekbar layout. When false (default, Komikku parity), webtoon uses
+  // the vertical side seekbar. When true, the Mihon-style horizontal bottom
+  // seekbar is shown in all modes (including webtoon).
+  forceHorizontalSeekbar(false),
+  // Reader side seekbar handedness. When false (default), the vertical side
+  // seekbar is anchored to the right edge. When true, it is anchored to the
+  // left edge for left-handed reading.
+  leftHandedVerticalSeekbar(false),
   ;
 
   const DBKeys(this.initial);

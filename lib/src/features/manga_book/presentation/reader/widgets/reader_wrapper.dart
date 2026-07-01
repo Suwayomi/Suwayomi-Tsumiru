@@ -7,10 +7,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_android_volume_keydown/flutter_android_volume_keydown.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -21,9 +19,6 @@ import '../../../../../constants/enum.dart';
 import '../../../../../constants/reader_keyboard_shortcuts.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
-import '../../../../../utils/misc/toast/toast.dart';
-import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../settings/presentation/reader/widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
@@ -36,14 +31,11 @@ import '../../../../settings/presentation/reader/widgets/reader_volume_tap_inver
 import '../../../../settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
-import '../../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../domain/manga/manga_model.dart';
-import '../../../widgets/chapter_actions/single_chapter_action_icon.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
-import '../controller/reader_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
-import 'brand_page_seekbar.dart';
+import 'chrome/reader_chrome.dart';
 import 'directional_swipe_gesture_handler.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
 
@@ -227,20 +219,12 @@ class ReaderWrapper extends HookConsumerWidget {
       [mangaReaderNavigationLayout],
     );
 
-    useEffect(() {
-      // Match Komikku's ReaderActivity.setMenuVisibility: show the system bars
-      // (status bar/clock + navigation/gesture bar) WITH the reader menu, and
-      // hide them again when the menu is dismissed. The page content stays
-      // edge-to-edge under them either way. Previously only the hide branch
-      // existed, so once hidden the bars never came back on tap — leaving no
-      // clock and no gesture/nav controls while the menu was up.
-      SystemChrome.setEnabledSystemUIMode(
-        visibility.value
-            ? SystemUiMode.edgeToEdge
-            : SystemUiMode.immersiveSticky,
-      );
-      return null;
-    }, [visibility.value]);
+    // NOTE: The visibility→SystemUiMode transition is now driven by
+    // ReaderChrome's AnimationController status listener (Inc-1), not here.
+    // edgeToEdge is requested when the controller starts going forward;
+    // immersiveSticky is requested when it reaches dismissed — so the OS bars
+    // move *with* the animated Material bars rather than snapping at t=0 (C1).
+    // reader_screen.dart's mount/unmount immersive effect is left untouched.
 
     // Enhanced navigation callbacks with last-page swipe logic
     final enhancedOnNext = useCallback(() {
@@ -353,42 +337,6 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: visibility.value
-            ? AppBar(
-                title: ListTile(
-                  title: (manga.title).isNotBlank
-                      ? Text(
-                          manga.title,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  subtitle: (chapter.name).isNotBlank
-                      ? Text(
-                          chapter.name,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                ),
-                // Translucent so the page art shows through (Komikku-style).
-                backgroundColor: context.theme.appBarTheme.backgroundColor
-                    ?.withValues(alpha: 0.55),
-                elevation: 0,
-                actions: [
-                  chapter.realUrl.isBlank
-                      ? const SizedBox.shrink()
-                      : IconButton(
-                          onPressed: () async {
-                            launchUrlInWeb(
-                              context,
-                              (chapter.realUrl ?? ""),
-                              ref.read(toastProvider),
-                            );
-                          },
-                          icon: const Icon(Icons.public_rounded),
-                        )
-                ],
-              )
-            : null,
         extendBodyBehindAppBar: true,
         extendBody: true,
         endDrawerEnableOpenDragGesture: false,
@@ -450,115 +398,6 @@ class ReaderWrapper extends HookConsumerWidget {
             ],
           ),
         ),
-        bottomSheet: visibility.value
-            ? ExcludeFocus(
-                // Reader is edge-to-edge now (no outer SafeArea), so pad the
-                // controls above the navigation / gesture bar — otherwise they
-                // sit under it when the menu is shown. SafeArea/MediaQuery can't
-                // do this here: inside a Scaffold bottomSheet (with extendBody)
-                // their bottom inset reads 0, so pad by the raw window inset.
-                child: Builder(builder: (context) {
-                  final view = View.of(context);
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      bottom: view.viewPadding.bottom / view.devicePixelRatio,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Horizontal (manga): inline seek bar flanked by chapter
-                        // prev/next arrows. Vertical (webtoon): the side bar carries
-                        // the page count + chapter jumps, so this whole row (and its
-                        // redundant "1 / 15") is dropped.
-                        if (useBottomSeekBar) ...[
-                          Row(
-                            children: [
-                              Card(
-                                shape: const CircleBorder(),
-                                child: IconButton(
-                                  onPressed: nextPrevChapterPair?.second != null
-                                      ? () => ReaderRoute(
-                                            mangaId: nextPrevChapterPair!
-                                                .second!.mangaId,
-                                            chapterId:
-                                                nextPrevChapterPair.second!.id,
-                                            toPrev: true,
-                                            transVertical: scrollDirection !=
-                                                Axis.vertical,
-                                          ).pushReplacement(context)
-                                      : null,
-                                  icon: const Icon(Icons.skip_previous_rounded),
-                                ),
-                              ),
-                              Expanded(
-                                child: BrandPageSeekBar(
-                                  currentValue: currentIndex,
-                                  maxValue: totalPageCount ??
-                                      chapterPages.chapter.pageCount,
-                                  onChanged: (index) => onChanged(index),
-                                  inverted: invertTap,
-                                ),
-                              ),
-                              Card(
-                                shape: const CircleBorder(),
-                                child: IconButton(
-                                  onPressed: nextPrevChapterPair?.first != null
-                                      ? () => ReaderRoute(
-                                            mangaId: nextPrevChapterPair!
-                                                .first!.mangaId,
-                                            chapterId:
-                                                nextPrevChapterPair.first!.id,
-                                            transVertical: scrollDirection !=
-                                                Axis.vertical,
-                                          ).pushReplacement(context)
-                                      : null,
-                                  icon: const Icon(Icons.skip_next_rounded),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Gap(8),
-                        ],
-                        Card(
-                          // Translucent bottom bar (Komikku-style).
-                          color: context.theme.cardColor.withValues(alpha: 0.7),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: KRadius.r8.radius,
-                            ),
-                          ),
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: KEdgeInsets.h16v8.size,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _ReaderBookmarkButton(
-                                  chapterId: chapter.id,
-                                  fallbackIsBookmarked: chapter.isBookmarked,
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                      Icons.app_settings_alt_outlined),
-                                  onPressed: () => showReaderModePopup(),
-                                ),
-                                Builder(builder: (context) {
-                                  return IconButton(
-                                    onPressed: () =>
-                                        Scaffold.of(context).openEndDrawer(),
-                                    icon: const Icon(Icons.settings_rounded),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              )
-            : null,
         body: Stack(
           children: [
             Positioned.fill(
@@ -644,55 +483,31 @@ class ReaderWrapper extends HookConsumerWidget {
                 ),
               ),
             ),
-            // Webtoon / vertical scroll: the seek bar floats vertically on the
-            // side (the bottom bar shows only the page count in this mode).
-            if (scrollDirection == Axis.vertical &&
-                !isLandscapePhone &&
-                visibility.value)
-              Builder(builder: (context) {
-                final navSurface = readerNavSurface(context.theme.colorScheme);
-                final lastPage =
-                    (totalPageCount ?? chapterPages.chapter.pageCount) - 1;
-                return Positioned(
-                  right: 6,
-                  top: 80,
-                  // Extend down to just above the bottom menu.
-                  bottom: 100,
-                  width: 56,
-                  child: Column(
-                    children: [
-                      // Jump to the start of this chapter — Komikku skip-previous
-                      // glyph rotated to point up.
-                      BrandFilledCircleButton(
-                        icon: Icons.skip_previous_rounded,
-                        quarterTurns: 1,
-                        color: navSurface,
-                        onPressed: () => onChanged(0),
-                      ),
-                      const Gap(8),
-                      Expanded(
-                        child: BrandPageSeekBar(
-                          currentValue: currentIndex,
-                          maxValue:
-                              totalPageCount ?? chapterPages.chapter.pageCount,
-                          onChanged: (index) => onChanged(index),
-                          axis: Axis.vertical,
-                          capsuleColor: navSurface,
-                        ),
-                      ),
-                      const Gap(8),
-                      // Jump to the end of this chapter — Komikku skip-next
-                      // glyph rotated to point down.
-                      BrandFilledCircleButton(
-                        icon: Icons.skip_next_rounded,
-                        quarterTurns: 1,
-                        color: navSurface,
-                        onPressed: () => onChanged(lastPage),
-                      ),
-                    ],
-                  ),
+            // Chrome: top bar, bottom controls, and optional side seek bar.
+            // All chrome is managed by ReaderChrome, which applies the same
+            // visibility conditional as before (still instant show/hide; the
+            // synchronized animation is a later increment).
+            Positioned.fill(
+              child: Builder(builder: (context) {
+                return ReaderChrome(
+                  manga: manga,
+                  chapter: chapter,
+                  chapterPages: chapterPages,
+                  currentIndex: currentIndex,
+                  totalPageCount: totalPageCount,
+                  visibility: visibility,
+                  useBottomSeekBar: useBottomSeekBar,
+                  showSideSeekBar:
+                      scrollDirection == Axis.vertical && !isLandscapePhone,
+                  scrollDirection: scrollDirection,
+                  nextPrevChapterPair: nextPrevChapterPair,
+                  invertTap: invertTap,
+                  onChanged: onChanged,
+                  onOpenSettings: () => Scaffold.of(context).openEndDrawer(),
+                  onOpenReaderMode: showReaderModePopup,
                 );
               }),
+            ),
           ],
         ),
       ),
@@ -1049,34 +864,3 @@ class ReaderView extends HookWidget {
   }
 }
 
-/// The reader's bookmark toggle. Watches the chapter's bookmark state directly
-/// so the icon flips the moment a toggle lands — the surrounding controls live
-/// in a persistent Scaffold bottomSheet that doesn't rebuild when the chapter
-/// refreshes, so drawing the icon from a passed-in [ChapterDto] snapshot left it
-/// stale until the reader was reopened.
-class _ReaderBookmarkButton extends ConsumerWidget {
-  const _ReaderBookmarkButton({
-    required this.chapterId,
-    required this.fallbackIsBookmarked,
-  });
-
-  final int chapterId;
-  final bool fallbackIsBookmarked;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isBookmarked = ref.watch(
-          chapterProvider(chapterId: chapterId)
-              .select((c) => c.valueOrNull?.isBookmarked),
-        ) ??
-        fallbackIsBookmarked;
-    return SingleChapterActionIcon(
-      icon: isBookmarked
-          ? Icons.bookmark_rounded
-          : Icons.bookmark_outline_rounded,
-      chapterId: chapterId,
-      change: ChapterChange(isBookmarked: !isBookmarked),
-      refresh: () => ref.refresh(chapterProvider(chapterId: chapterId).future),
-    );
-  }
-}

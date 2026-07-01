@@ -179,11 +179,14 @@ class _SeekPainter extends CustomPainter {
       );
     }
 
-    // Per-page tick dots — skip when too dense to stay clean.
-    if (count > 1 && count <= 80) {
-      final dot = Paint()..color = scheme.onSurface.withValues(alpha: 0.5);
+    // Per-page tick dots (Komikku): dark over the filled portion, light over the
+    // unfilled track so they read on both.
+    if (count > 1) {
+      final onFill = Paint()..color = onBrandGradient.withValues(alpha: 0.45);
+      final onTrack = Paint()..color = scheme.onSurface.withValues(alpha: 0.4);
       for (var i = 0; i < count; i++) {
-        canvas.drawCircle(along(length * (i / (count - 1))), 2.0, dot);
+        final frac = i / (count - 1);
+        canvas.drawCircle(along(length * frac), 1.0, frac <= fill ? onFill : onTrack);
       }
     }
 

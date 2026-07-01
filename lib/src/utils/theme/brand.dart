@@ -30,14 +30,12 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
 /// The gradient is bright, so on-gradient content (text/icons) is dark.
 const Color onBrandGradient = Color(0xFF0B0D1A);
 
-/// Translucent theme surface for the reader's vertical nav. The Komikku vertical
-/// slider is one cohesive unit: the page-count capsule AND the chapter jump
-/// buttons share ONE colour, gleaned from the active theme (NOT solid dark, NOT
-/// a gradient), translucent so the page art shows through. Mirrors Komikku's
-/// `surfaceColorAtElevation(3.dp)` at ~0.9 alpha — both call sites must use this
-/// so the buttons and the bar can never theme-drift apart again.
-Color readerNavSurface(ColorScheme cs) =>
-    cs.surfaceContainerHigh.withValues(alpha: 0.82);
+/// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so
+/// the chrome reads uniform. Near-opaque — Komikku's 0.9 dark / 0.95 light; a
+/// lower alpha washes out over white webtoon pages.
+Color readerNavSurface(ColorScheme cs) => cs.surface.withValues(
+      alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95,
+    );
 
 /// A lighter, more vibrant accent for text/outline actions (links, "Uninstall").
 Color brandBrightAccent(ColorScheme cs) =>
