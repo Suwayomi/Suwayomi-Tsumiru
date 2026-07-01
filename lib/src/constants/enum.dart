@@ -187,6 +187,48 @@ enum CenterMarginType {
       };
 }
 
+/// Reader page background (Komikku readerTheme). Declaration order matches
+/// Komikku's stored ints 0-3; the chip row shows Black/Gray/White/Auto.
+enum ReaderBackgroundColor {
+  white,
+  black,
+  gray,
+  automatic;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ReaderBackgroundColor.white => context.l10n.backgroundColorWhite,
+        ReaderBackgroundColor.black => context.l10n.backgroundColorBlack,
+        ReaderBackgroundColor.gray => context.l10n.backgroundColorGray,
+        ReaderBackgroundColor.automatic => context.l10n.backgroundColorAuto,
+      };
+
+  /// Gray is Komikku's literal 0x202125; automatic = Komikku's mapping
+  /// (dark theme → gray, light → white).
+  Color color(BuildContext context) => switch (this) {
+        ReaderBackgroundColor.white => Colors.white,
+        ReaderBackgroundColor.black => Colors.black,
+        ReaderBackgroundColor.gray => const Color(0xFF202125),
+        ReaderBackgroundColor.automatic =>
+          Theme.of(context).colorScheme.brightness == Brightness.dark
+              ? const Color(0xFF202125)
+              : Colors.white,
+      };
+}
+
+/// Flash-on-page-change color (Komikku FlashColor). whiteBlack = white for the
+/// first half of the flash, black for the second.
+enum FlashColor {
+  black,
+  white,
+  whiteBlack;
+
+  String toLocale(BuildContext context) => switch (this) {
+        FlashColor.black => context.l10n.flashColorBlack,
+        FlashColor.white => context.l10n.flashColorWhite,
+        FlashColor.whiteBlack => context.l10n.flashColorWhiteBlack,
+      };
+}
+
 /// Long-strip smart scale on wide screens (Komikku WebtoonScaleType).
 enum WebtoonScaleType {
   fitScreen,

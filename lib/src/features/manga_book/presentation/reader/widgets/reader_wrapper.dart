@@ -19,6 +19,8 @@ import '../../../../../constants/reader_keyboard_shortcuts.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
+import '../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
@@ -124,12 +126,22 @@ class ReaderWrapper extends HookConsumerWidget {
 
     // Webtoon (vertical) normally uses the vertical side seek bar, but on a phone
     // in landscape there's no vertical room for it to be usable — fall back to
-    // the standard horizontal bottom bar, like Komikku.
+    // the standard horizontal bottom bar, like Komikku. Two General-tab prefs
+    // adjust the chain: force-horizontal wins everywhere; the landscape
+    // sub-toggle keeps the side seekbar on a landscape phone.
     final screenSize = MediaQuery.sizeOf(context);
     final isLandscapePhone =
         screenSize.shortestSide < 600 && screenSize.width > screenSize.height;
-    final useBottomSeekBar = scrollDirection == Axis.horizontal ||
-        (scrollDirection == Axis.vertical && isLandscapePhone);
+    final forceHorizontalSeekbar =
+        ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
+    final landscapeVerticalSeekbar =
+        ref.watch(landscapeVerticalSeekbarProvider).ifNull(false);
+    final showSideSeekBar = scrollDirection == Axis.vertical &&
+        !forceHorizontalSeekbar &&
+        (!isLandscapePhone || landscapeVerticalSeekbar);
+    // Exactly one seekbar: whenever the side seekbar is out, the horizontal
+    // bottom one serves (paged, landscape fallback, forced horizontal).
+    final useBottomSeekBar = !showSideSeekBar;
 
     final bool volumeTap = ref.watch(volumeTapProvider).ifNull();
     final bool volumeTapInvert = ref.watch(volumeTapInvertProvider).ifNull();
@@ -316,6 +328,10 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
       ),
       child: Scaffold(
+        // Reader background pref (Komikku readerTheme); default black.
+        backgroundColor: (ref.watch(readerBackgroundColorKeyProvider) ??
+                DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor)
+            .color(context),
         extendBodyBehindAppBar: true,
         extendBody: true,
         body: Stack(
@@ -417,8 +433,7 @@ class ReaderWrapper extends HookConsumerWidget {
                 totalPageCount: totalPageCount,
                 visibility: visibility,
                 useBottomSeekBar: useBottomSeekBar,
-                showSideSeekBar:
-                    scrollDirection == Axis.vertical && !isLandscapePhone,
+                showSideSeekBar: showSideSeekBar,
                 scrollDirection: scrollDirection,
                 nextPrevChapterPair: nextPrevChapterPair,
                 invertTap: invertTap,

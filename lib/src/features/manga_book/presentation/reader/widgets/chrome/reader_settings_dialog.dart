@@ -171,7 +171,7 @@ class ReaderSettingsDialog extends HookConsumerWidget {
                     readerPadding: readerPadding,
                     magnifierSize: magnifierSize,
                   ),
-                  const GeneralTab(),
+                  GeneralTab(mangaId: mangaId),
                   const CustomFilterTab(),
                 ],
               ),

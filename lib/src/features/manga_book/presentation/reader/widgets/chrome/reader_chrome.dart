@@ -10,16 +10,24 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../../constants/db_keys.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import 'chrome_extents.dart';
 import 'mihon_bottom_controls.dart';
+import 'reader_flash_overlay.dart';
 import 'reader_side_seekbar.dart';
 import 'reader_top_bar.dart';
+
+/// UI mode while the chrome is hidden: fullscreen hides the OS bars; with
+/// fullscreen OFF they stay visible (edgeToEdge) even when the chrome goes.
+SystemUiMode hiddenChromeUiMode({required bool fullscreen}) =>
+    fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge;
 
 /// Stack-based host that layers the reader chrome (top bar, bottom controls,
 /// side seek bar) over the viewer content.
@@ -125,6 +133,9 @@ class ReaderChrome extends HookConsumerWidget {
     // it sets the initial immersiveSticky state and restores on exit; the two
     // do not conflict because reader_screen sets on mount (once) while this
     // listener updates only on animation-status transitions.
+    // Fullscreen OFF keeps the OS bars up even while the chrome is hidden.
+    final fullscreen = ref.watch(readerFullscreenProvider) ??
+        DBKeys.readerFullscreen.initial as bool;
     useEffect(() {
       void onStatus(AnimationStatus status) {
         switch (status) {
@@ -134,7 +145,9 @@ class ReaderChrome extends HookConsumerWidget {
             SystemChrome.setSystemUIOverlayStyle(readerOverlayStyle);
           case AnimationStatus.dismissed:
             // Slide-out complete → hide OS bars after the chrome has gone.
-            SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+            SystemChrome.setEnabledSystemUIMode(
+              hiddenChromeUiMode(fullscreen: fullscreen),
+            );
           case AnimationStatus.reverse:
           case AnimationStatus.completed:
             break;
@@ -144,14 +157,17 @@ class ReaderChrome extends HookConsumerWidget {
       controller.addStatusListener(onStatus);
 
       // Sync OS bars to the initial chrome state (status listeners only fire on
-      // transitions, so the first frame needs an explicit apply).
+      // transitions, so the first frame needs an explicit apply). Re-runs when
+      // the fullscreen pref flips, so a hidden-chrome reader updates live.
       SystemChrome.setEnabledSystemUIMode(
-        visibility.value ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+        visibility.value
+            ? SystemUiMode.edgeToEdge
+            : hiddenChromeUiMode(fullscreen: fullscreen),
       );
       SystemChrome.setSystemUIOverlayStyle(readerOverlayStyle);
 
       return () => controller.removeStatusListener(onStatus);
-    }, [controller, darkIcons]);
+    }, [controller, darkIcons, fullscreen]);
 
     // ── Drive the controller from the visibility notifier ─────────────────────
     useEffect(() {
@@ -209,6 +225,13 @@ class ReaderChrome extends HookConsumerWidget {
       builder: (context, visible, _) {
         return Stack(
           children: [
+            // ── Flash on page change ──────────────────────────────────────────
+            // Chrome-layer leaf under the bars; IgnorePointer inside, so it can
+            // never eat taps or touch the frozen viewer engines.
+            Positioned.fill(
+              child: ReaderFlashOverlay(currentIndex: currentIndex),
+            ),
+
             // ── Top bar ───────────────────────────────────────────────────────
             // SlideTransition from Offset(0, -1) (fully above viewport) → zero.
             // FadeTransition from 0 → 1, driven by the same curved animation.

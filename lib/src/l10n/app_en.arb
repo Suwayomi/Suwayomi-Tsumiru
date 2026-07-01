@@ -1363,6 +1363,44 @@
     "readerSectionTapZones": "Tap zones",
     "rotateWidePagesToFit": "Rotate wide pages to fit",
     "splitWidePages": "Split wide pages",
+    "alwaysShowChapterTransition": "Always show chapter transition",
+    "autoWebtoonMode": "Auto Webtoon Mode",
+    "autoWebtoonModeSubtitle": "Use auto webtoon mode for entries that are detected to likely use the long strip format",
+    "backgroundColorAuto": "Auto",
+    "backgroundColorBlack": "Black",
+    "backgroundColorGray": "Gray",
+    "backgroundColorWhite": "White",
+    "flashColorBlack": "Black",
+    "flashColorWhite": "White",
+    "flashColorWhiteBlack": "White and Black",
+    "flashDuration": "Flash duration",
+    "flashDurationMs": "{ms} ms",
+    "@flashDurationMs": {
+        "placeholders": {
+            "ms": {
+                "type": "int"
+            }
+        }
+    },
+    "flashEvery": "Flash every",
+    "flashEveryPages": "{count, plural, =1{1 page} other{{count} pages}}",
+    "@flashEveryPages": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "flashOnPageChange": "Flash on page change",
+    "flashWith": "Flash with",
+    "forceHorizontalSeekbar": "Force horizontal seekbar",
+    "leftHandedVerticalSeekbar": "Left-handed vertical seekbar",
+    "readerBackgroundColor": "Background color",
+    "readerFullscreen": "Fullscreen",
+    "showActionsOnLongTap": "Show actions on long tap",
+    "showContentInCutoutArea": "Show content in cutout area",
+    "showPageNumber": "Show page number",
+    "showVerticalSeekbarInLandscape": "Show vertical seekbar in landscape",
     "refreshChaptersFromSource": "Refresh chapters from source",
     "refreshChaptersFromSourceSubtitle": "When off, opening an entry shows the chapters already on the server. When on, also check the source for new chapters.",
     "automaticallyRefreshMetadata": "Automatically refresh metadata",

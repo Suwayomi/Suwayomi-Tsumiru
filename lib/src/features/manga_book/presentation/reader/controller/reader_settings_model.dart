@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import '../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -235,6 +236,73 @@ abstract final class ReaderSettings {
     global: dualPageInvertWebtoonProvider,
     fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
   );
+
+  // General-tab prefs (Komikku GeneralSettingsPage — all global).
+  static final backgroundColor = ReaderSetting<ReaderBackgroundColor>(
+    scope: ReaderSettingScope.global,
+    global: readerBackgroundColorKeyProvider,
+    fallback: DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor,
+  );
+
+  static final showPageNumber = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: showPageNumberProvider,
+    fallback: DBKeys.showPageNumber.initial as bool,
+  );
+
+  static final landscapeVerticalSeekbar = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: landscapeVerticalSeekbarProvider,
+    fallback: DBKeys.landscapeVerticalSeekbar.initial as bool,
+  );
+
+  static final readerFullscreen = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: readerFullscreenProvider,
+    fallback: DBKeys.readerFullscreen.initial as bool,
+  );
+
+  static final drawUnderCutout = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: drawUnderCutoutProvider,
+    fallback: DBKeys.drawUnderCutout.initial as bool,
+  );
+
+  static final readWithLongTap = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: readWithLongTapProvider,
+    fallback: DBKeys.readWithLongTap.initial as bool,
+  );
+
+  static final alwaysShowChapterTransition = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: alwaysShowChapterTransitionProvider,
+    fallback: DBKeys.alwaysShowChapterTransition.initial as bool,
+  );
+
+  static final flashOnPageChange = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: flashOnPageChangeProvider,
+    fallback: DBKeys.flashOnPageChange.initial as bool,
+  );
+
+  static final flashDuration = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: flashDurationProvider,
+    fallback: DBKeys.flashDuration.initial as int,
+  );
+
+  static final flashPageInterval = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: flashPageIntervalProvider,
+    fallback: DBKeys.flashPageInterval.initial as int,
+  );
+
+  static final flashColor = ReaderSetting<FlashColor>(
+    scope: ReaderSettingScope.global,
+    global: flashColorKeyProvider,
+    fallback: DBKeys.flashColor.initial as FlashColor,
+  );
 }
 
 @freezed
@@ -272,6 +340,17 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required bool smoothAutoScroll,
     required bool dualPageSplitWebtoon,
     required bool dualPageInvertWebtoon,
+    required ReaderBackgroundColor backgroundColor,
+    required bool showPageNumber,
+    required bool landscapeVerticalSeekbar,
+    required bool readerFullscreen,
+    required bool drawUnderCutout,
+    required bool readWithLongTap,
+    required bool alwaysShowChapterTransition,
+    required bool flashOnPageChange,
+    required int flashDuration,
+    required int flashPageInterval,
+    required FlashColor flashColor,
   }) = _ReaderSettingsState;
 }
 
@@ -306,6 +385,17 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late SmoothAutoScroll _smoothAutoScroll;
   late DualPageSplitWebtoon _dualPageSplitWebtoon;
   late DualPageInvertWebtoon _dualPageInvertWebtoon;
+  late ReaderBackgroundColorKey _backgroundColor;
+  late ShowPageNumber _showPageNumber;
+  late LandscapeVerticalSeekbar _landscapeVerticalSeekbar;
+  late ReaderFullscreen _readerFullscreen;
+  late DrawUnderCutout _drawUnderCutout;
+  late ReadWithLongTap _readWithLongTap;
+  late AlwaysShowChapterTransition _alwaysShowChapterTransition;
+  late FlashOnPageChange _flashOnPageChange;
+  late FlashDuration _flashDuration;
+  late FlashPageInterval _flashPageInterval;
+  late FlashColorKey _flashColor;
   // Globals of the per-series fields, for the "For this series" OFF path.
   late ReaderModeKey _readerModeKey;
   late ReaderNavigationLayoutKey _navigationLayoutKey;
@@ -341,6 +431,19 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
     _dualPageSplitWebtoon = ref.read(dualPageSplitWebtoonProvider.notifier);
     _dualPageInvertWebtoon = ref.read(dualPageInvertWebtoonProvider.notifier);
+    _backgroundColor = ref.read(readerBackgroundColorKeyProvider.notifier);
+    _showPageNumber = ref.read(showPageNumberProvider.notifier);
+    _landscapeVerticalSeekbar =
+        ref.read(landscapeVerticalSeekbarProvider.notifier);
+    _readerFullscreen = ref.read(readerFullscreenProvider.notifier);
+    _drawUnderCutout = ref.read(drawUnderCutoutProvider.notifier);
+    _readWithLongTap = ref.read(readWithLongTapProvider.notifier);
+    _alwaysShowChapterTransition =
+        ref.read(alwaysShowChapterTransitionProvider.notifier);
+    _flashOnPageChange = ref.read(flashOnPageChangeProvider.notifier);
+    _flashDuration = ref.read(flashDurationProvider.notifier);
+    _flashPageInterval = ref.read(flashPageIntervalProvider.notifier);
+    _flashColor = ref.read(flashColorKeyProvider.notifier);
     _readerModeKey = ref.read(readerModeKeyProvider.notifier);
     _navigationLayoutKey = ref.read(readerNavigationLayoutKeyProvider.notifier);
     _readerOrientationKey = ref.read(readerOrientationKeyProvider.notifier);
@@ -395,6 +498,21 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.dualPageSplitWebtoon.resolveWith(ref, null),
       dualPageInvertWebtoon:
           ReaderSettings.dualPageInvertWebtoon.resolveWith(ref, null),
+      backgroundColor: ReaderSettings.backgroundColor.resolveWith(ref, null),
+      showPageNumber: ReaderSettings.showPageNumber.resolveWith(ref, null),
+      landscapeVerticalSeekbar:
+          ReaderSettings.landscapeVerticalSeekbar.resolveWith(ref, null),
+      readerFullscreen: ReaderSettings.readerFullscreen.resolveWith(ref, null),
+      drawUnderCutout: ReaderSettings.drawUnderCutout.resolveWith(ref, null),
+      readWithLongTap: ReaderSettings.readWithLongTap.resolveWith(ref, null),
+      alwaysShowChapterTransition:
+          ReaderSettings.alwaysShowChapterTransition.resolveWith(ref, null),
+      flashOnPageChange:
+          ReaderSettings.flashOnPageChange.resolveWith(ref, null),
+      flashDuration: ReaderSettings.flashDuration.resolveWith(ref, null),
+      flashPageInterval:
+          ReaderSettings.flashPageInterval.resolveWith(ref, null),
+      flashColor: ReaderSettings.flashColor.resolveWith(ref, null),
     );
   }
 
@@ -454,6 +572,32 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setDualPageInvertWebtoon(bool value) =>
       _dualPageInvertWebtoon.update(value);
+
+  // General-tab prefs are global too.
+  void setBackgroundColor(ReaderBackgroundColor value) =>
+      _backgroundColor.update(value);
+
+  void setShowPageNumber(bool value) => _showPageNumber.update(value);
+
+  void setLandscapeVerticalSeekbar(bool value) =>
+      _landscapeVerticalSeekbar.update(value);
+
+  void setReaderFullscreen(bool value) => _readerFullscreen.update(value);
+
+  void setDrawUnderCutout(bool value) => _drawUnderCutout.update(value);
+
+  void setReadWithLongTap(bool value) => _readWithLongTap.update(value);
+
+  void setAlwaysShowChapterTransition(bool value) =>
+      _alwaysShowChapterTransition.update(value);
+
+  void setFlashOnPageChange(bool value) => _flashOnPageChange.update(value);
+
+  void setFlashDuration(int value) => _flashDuration.update(value);
+
+  void setFlashPageInterval(int value) => _flashPageInterval.update(value);
+
+  void setFlashColor(FlashColor value) => _flashColor.update(value);
 
   // Per-series-capable setters. perSeries=false is the "For this series" OFF
   // path (§2.6): set the app-wide default and drop this series' override.

@@ -188,6 +188,22 @@ enum DBKeys {
   smoothAutoScroll(true),
   dualPageSplitWebtoon(false),
   dualPageInvertWebtoon(false),
+  // Reader General tab (Komikku GeneralSettingsPage parity, all global).
+  readerBackgroundColor(ReaderBackgroundColor.black),
+  showPageNumber(true),
+  // Sub-toggle of the seekbar chain: keep the vertical side seekbar even on a
+  // landscape phone (SY pref_show_vert_seekbar_landscape).
+  landscapeVerticalSeekbar(false),
+  readerFullscreen(true),
+  // Only meaningful with fullscreen ON; needs platform window attrs (inert).
+  drawUnderCutout(true),
+  readWithLongTap(true),
+  alwaysShowChapterTransition(true),
+  flashOnPageChange(false),
+  // Stored as slider ticks ×100 ms (Komikku stores millis, MILLI_CONVERSION).
+  flashDuration(1),
+  flashPageInterval(1),
+  flashColor(FlashColor.black),
   ;
 
   const DBKeys(this.initial);

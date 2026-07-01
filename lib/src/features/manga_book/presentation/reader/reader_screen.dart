@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -22,6 +23,7 @@ import '../../../offline/data/offline_download_providers.dart';
 import '../../../settings/presentation/general/widgets/force_portrait_tile.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
+import '../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -31,6 +33,7 @@ import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/auto_webtoon.dart';
 import 'controller/reader_controller.dart';
+import 'widgets/chrome/reader_chrome.dart';
 import 'widgets/reader_mode/continuous_reader_mode.dart';
 import 'widgets/reader_mode/single_page_reader_mode.dart';
 
@@ -170,7 +173,13 @@ class ReaderScreen extends HookConsumerWidget {
     );
 
     useEffect(() {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      // Fullscreen OFF keeps the OS bars for the whole session (read once at
+      // mount; ReaderChrome handles live changes on chrome transitions).
+      final fullscreen = ref.read(readerFullscreenProvider) ??
+          DBKeys.readerFullscreen.initial as bool;
+      SystemChrome.setEnabledSystemUIMode(
+        hiddenChromeUiMode(fullscreen: fullscreen),
+      );
       return () => SystemChrome.setEnabledSystemUIMode(
             SystemUiMode.manual,
             overlays: SystemUiOverlay.values,
