@@ -44,3 +44,20 @@ class SmoothAutoScroll extends _$SmoothAutoScroll
   @override
   bool? build() => initialize(DBKeys.smoothAutoScroll);
 }
+
+// Webtoon wide-page split (+invert): persists for a later engine PR — the
+// frozen webtoon engine can't remap 1 page → 2 entries yet.
+
+@riverpod
+class DualPageSplitWebtoon extends _$DualPageSplitWebtoon
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.dualPageSplitWebtoon);
+}
+
+@riverpod
+class DualPageInvertWebtoon extends _$DualPageInvertWebtoon
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.dualPageInvertWebtoon);
+}

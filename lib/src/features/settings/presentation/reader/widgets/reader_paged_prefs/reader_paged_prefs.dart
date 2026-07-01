@@ -89,3 +89,41 @@ class AnimatePageTransitions extends _$AnimatePageTransitions
   @override
   bool? build() => initialize(DBKeys.animatePageTransitions);
 }
+
+// Wide-page handling. Split (+invert) and the dual-page spread persist for a
+// later engine PR; rotate (+invert) is consumed live by the paged viewer.
+
+@riverpod
+class DualPageSplitPaged extends _$DualPageSplitPaged
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.dualPageSplitPaged);
+}
+
+@riverpod
+class DualPageInvertPaged extends _$DualPageInvertPaged
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.dualPageInvertPaged);
+}
+
+@riverpod
+class RotateWidePages extends _$RotateWidePages
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.rotateWidePages);
+}
+
+@riverpod
+class RotateWideInvert extends _$RotateWideInvert
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.rotateWideInvert);
+}
+
+@riverpod
+class TrueDualPageSpread extends _$TrueDualPageSpread
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.trueDualPageSpread);
+}

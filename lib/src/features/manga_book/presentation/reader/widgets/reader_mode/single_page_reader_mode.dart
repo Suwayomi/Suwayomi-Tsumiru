@@ -19,12 +19,14 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../reader_wrapper.dart';
+import 'rotate_wide_page.dart';
 
 class SinglePageReaderMode extends HookConsumerWidget {
   const SinglePageReaderMode({
@@ -98,6 +100,10 @@ class SinglePageReaderMode extends HookConsumerWidget {
     // Paged "Disable zoom in" drops the whole zoom wrapper (pinch AND the
     // double-tap-drag zoom) — Komikku's pref_paged_disable_zoom_in.
     final isZoomDisabled = ref.read(disableZoomInProvider).ifNull();
+    // "Rotate wide pages to fit": per-image render transform, applied on next
+    // reader open like the other toggles.
+    final rotateWide = ref.read(rotateWidePagesProvider).ifNull();
+    final rotateWideInvert = ref.read(rotateWideInvertProvider).ifNull();
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapter: chapter,
@@ -157,6 +163,14 @@ class SinglePageReaderMode extends HookConsumerWidget {
               size: Size.fromHeight(context.height),
               appendApiToUrl: false,
               imageUrl: chapterPages.pages[index],
+              // Only set when rotating, so the default render path is
+              // untouched while the toggle is off.
+              imageBuilder: rotateWide
+                  ? (context, imageProvider) => RotateWidePage(
+                        imageProvider: imageProvider,
+                        invert: rotateWideInvert,
+                      )
+                  : null,
               progressIndicatorBuilder: (context, url, downloadProgress) =>
                   CenterSorayomiShimmerIndicator(
                 value: downloadProgress.progress,

@@ -167,6 +167,38 @@ abstract final class ReaderSettings {
     fallback: DBKeys.animatePageTransitions.initial as bool,
   );
 
+  // Wide-page handling (paged). Rotate is live; split + spread persist-only
+  // until the engine can remap the page list.
+  static final dualPageSplitPaged = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: dualPageSplitPagedProvider,
+    fallback: DBKeys.dualPageSplitPaged.initial as bool,
+  );
+
+  static final dualPageInvertPaged = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: dualPageInvertPagedProvider,
+    fallback: DBKeys.dualPageInvertPaged.initial as bool,
+  );
+
+  static final rotateWidePages = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: rotateWidePagesProvider,
+    fallback: DBKeys.rotateWidePages.initial as bool,
+  );
+
+  static final rotateWideInvert = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: rotateWideInvertProvider,
+    fallback: DBKeys.rotateWideInvert.initial as bool,
+  );
+
+  static final trueDualPageSpread = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: trueDualPageSpreadProvider,
+    fallback: DBKeys.trueDualPageSpread.initial as bool,
+  );
+
   // Long-strip parity prefs (all global).
   static final webtoonScaleType = ReaderSetting<WebtoonScaleType>(
     scope: ReaderSettingScope.global,
@@ -190,6 +222,18 @@ abstract final class ReaderSettings {
     scope: ReaderSettingScope.global,
     global: smoothAutoScrollProvider,
     fallback: DBKeys.smoothAutoScroll.initial as bool,
+  );
+
+  static final dualPageSplitWebtoon = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: dualPageSplitWebtoonProvider,
+    fallback: DBKeys.dualPageSplitWebtoon.initial as bool,
+  );
+
+  static final dualPageInvertWebtoon = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: dualPageInvertWebtoonProvider,
+    fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
   );
 }
 
@@ -217,10 +261,17 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required bool cropBorders,
     required bool smallerTapZones,
     required bool animatePageTransitions,
+    required bool dualPageSplitPaged,
+    required bool dualPageInvertPaged,
+    required bool rotateWidePages,
+    required bool rotateWideInvert,
+    required bool trueDualPageSpread,
     required WebtoonScaleType webtoonScaleType,
     required bool cropBordersWebtoon,
     required bool cropBordersGaps,
     required bool smoothAutoScroll,
+    required bool dualPageSplitWebtoon,
+    required bool dualPageInvertWebtoon,
   }) = _ReaderSettingsState;
 }
 
@@ -244,10 +295,17 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late CropBorders _cropBorders;
   late SmallerTapZones _smallerTapZones;
   late AnimatePageTransitions _animatePageTransitions;
+  late DualPageSplitPaged _dualPageSplitPaged;
+  late DualPageInvertPaged _dualPageInvertPaged;
+  late RotateWidePages _rotateWidePages;
+  late RotateWideInvert _rotateWideInvert;
+  late TrueDualPageSpread _trueDualPageSpread;
   late WebtoonScaleTypeKey _webtoonScaleType;
   late CropBordersWebtoon _cropBordersWebtoon;
   late CropBordersGaps _cropBordersGaps;
   late SmoothAutoScroll _smoothAutoScroll;
+  late DualPageSplitWebtoon _dualPageSplitWebtoon;
+  late DualPageInvertWebtoon _dualPageInvertWebtoon;
   // Globals of the per-series fields, for the "For this series" OFF path.
   late ReaderModeKey _readerModeKey;
   late ReaderNavigationLayoutKey _navigationLayoutKey;
@@ -272,10 +330,17 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _cropBorders = ref.read(cropBordersProvider.notifier);
     _smallerTapZones = ref.read(smallerTapZonesProvider.notifier);
     _animatePageTransitions = ref.read(animatePageTransitionsProvider.notifier);
+    _dualPageSplitPaged = ref.read(dualPageSplitPagedProvider.notifier);
+    _dualPageInvertPaged = ref.read(dualPageInvertPagedProvider.notifier);
+    _rotateWidePages = ref.read(rotateWidePagesProvider.notifier);
+    _rotateWideInvert = ref.read(rotateWideInvertProvider.notifier);
+    _trueDualPageSpread = ref.read(trueDualPageSpreadProvider.notifier);
     _webtoonScaleType = ref.read(webtoonScaleTypeKeyProvider.notifier);
     _cropBordersWebtoon = ref.read(cropBordersWebtoonProvider.notifier);
     _cropBordersGaps = ref.read(cropBordersGapsProvider.notifier);
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
+    _dualPageSplitWebtoon = ref.read(dualPageSplitWebtoonProvider.notifier);
+    _dualPageInvertWebtoon = ref.read(dualPageInvertWebtoonProvider.notifier);
     _readerModeKey = ref.read(readerModeKeyProvider.notifier);
     _navigationLayoutKey = ref.read(readerNavigationLayoutKeyProvider.notifier);
     _readerOrientationKey = ref.read(readerOrientationKeyProvider.notifier);
@@ -313,11 +378,23 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       smallerTapZones: ReaderSettings.smallerTapZones.resolveWith(ref, null),
       animatePageTransitions:
           ReaderSettings.animatePageTransitions.resolveWith(ref, null),
+      dualPageSplitPaged:
+          ReaderSettings.dualPageSplitPaged.resolveWith(ref, null),
+      dualPageInvertPaged:
+          ReaderSettings.dualPageInvertPaged.resolveWith(ref, null),
+      rotateWidePages: ReaderSettings.rotateWidePages.resolveWith(ref, null),
+      rotateWideInvert: ReaderSettings.rotateWideInvert.resolveWith(ref, null),
+      trueDualPageSpread:
+          ReaderSettings.trueDualPageSpread.resolveWith(ref, null),
       webtoonScaleType: ReaderSettings.webtoonScaleType.resolveWith(ref, null),
       cropBordersWebtoon:
           ReaderSettings.cropBordersWebtoon.resolveWith(ref, null),
       cropBordersGaps: ReaderSettings.cropBordersGaps.resolveWith(ref, null),
       smoothAutoScroll: ReaderSettings.smoothAutoScroll.resolveWith(ref, null),
+      dualPageSplitWebtoon:
+          ReaderSettings.dualPageSplitWebtoon.resolveWith(ref, null),
+      dualPageInvertWebtoon:
+          ReaderSettings.dualPageInvertWebtoon.resolveWith(ref, null),
     );
   }
 
@@ -361,6 +438,22 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setCropBordersGaps(bool value) => _cropBordersGaps.update(value);
 
   void setSmoothAutoScroll(bool value) => _smoothAutoScroll.update(value);
+
+  void setDualPageSplitPaged(bool value) => _dualPageSplitPaged.update(value);
+
+  void setDualPageInvertPaged(bool value) => _dualPageInvertPaged.update(value);
+
+  void setRotateWidePages(bool value) => _rotateWidePages.update(value);
+
+  void setRotateWideInvert(bool value) => _rotateWideInvert.update(value);
+
+  void setTrueDualPageSpread(bool value) => _trueDualPageSpread.update(value);
+
+  void setDualPageSplitWebtoon(bool value) =>
+      _dualPageSplitWebtoon.update(value);
+
+  void setDualPageInvertWebtoon(bool value) =>
+      _dualPageInvertWebtoon.update(value);
 
   // Per-series-capable setters. perSeries=false is the "For this series" OFF
   // path (§2.6): set the app-wide default and drop this series' override.

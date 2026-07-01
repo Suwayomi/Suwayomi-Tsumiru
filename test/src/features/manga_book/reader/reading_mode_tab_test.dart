@@ -19,6 +19,8 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -269,5 +271,118 @@ void main() {
 
     expect(repo.patches, [('flutter_readerMode', 'webtoon')]);
     expect(repo.deletes, isEmpty);
+  });
+
+  testWidgets(
+      'paged wide-page toggles sit between Pan wide images and Animate page '
+      'transitions; invert sub-toggles hidden while parents are OFF',
+      (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
+
+    await tester.scrollUntilVisible(
+      find.text('Animate page transitions'),
+      200,
+      scrollable: tabScrollable(),
+    );
+
+    double dy(String text) => tester.getTopLeft(find.text(text)).dy;
+    expect(dy('Pan wide images'), lessThan(dy('Split wide pages')));
+    expect(dy('Split wide pages'), lessThan(dy('Rotate wide pages to fit')));
+    expect(
+      dy('Rotate wide pages to fit'),
+      lessThan(dy('Animate page transitions')),
+    );
+    expect(find.text('Invert split pages placement'), findsNothing);
+    expect(find.text('Invert rotation of wide pages'), findsNothing);
+    // KEEP extra lives in the paged section too.
+    expect(find.text('Dual page spread in landscape'), findsOneWidget);
+  });
+
+  testWidgets(
+      'paged split ON reveals its invert sub-toggle and writes the global '
+      'providers', (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
+
+    await tester.scrollUntilVisible(
+      find.text('Split wide pages'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    await tester.tap(find.text('Split wide pages'));
+    await tester.pumpAndSettle();
+
+    expect(container(tester).read(dualPageSplitPagedProvider), isTrue);
+    expect(find.text('Invert split pages placement'), findsOneWidget);
+
+    await tester.tap(find.text('Invert split pages placement'));
+    await tester.pumpAndSettle();
+    expect(container(tester).read(dualPageInvertPagedProvider), isTrue);
+    expect(repo.patches, isEmpty, reason: 'global prefs never touch meta');
+  });
+
+  testWidgets(
+      'rotate-wide ON reveals its invert sub-toggle and writes the global '
+      'providers', (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
+
+    await tester.scrollUntilVisible(
+      find.text('Rotate wide pages to fit'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    await tester.tap(find.text('Rotate wide pages to fit'));
+    await tester.pumpAndSettle();
+
+    expect(container(tester).read(rotateWidePagesProvider), isTrue);
+    expect(find.text('Invert rotation of wide pages'), findsOneWidget);
+
+    await tester.tap(find.text('Invert rotation of wide pages'));
+    await tester.pumpAndSettle();
+    expect(container(tester).read(rotateWideInvertProvider), isTrue);
+  });
+
+  testWidgets('dual page spread toggle writes its global provider',
+      (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
+
+    await tester.scrollUntilVisible(
+      find.text('Dual page spread in landscape'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    await tester.tap(find.text('Dual page spread in landscape'));
+    await tester.pumpAndSettle();
+
+    expect(container(tester).read(trueDualPageSpreadProvider), isTrue);
+  });
+
+  testWidgets(
+      'long-strip split sits after Disable zoom out, writes the webtoon '
+      'providers, and gates its invert sub-toggle', (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'webtoon'});
+
+    await tester.scrollUntilVisible(
+      find.text('Split wide pages'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    double dy(String text) => tester.getTopLeft(find.text(text)).dy;
+    expect(dy('Disable zoom out'), lessThan(dy('Split wide pages')));
+    expect(find.text('Invert split pages placement'), findsNothing);
+    // Paged-only rows must not leak into the long-strip section.
+    expect(find.text('Rotate wide pages to fit'), findsNothing);
+    expect(find.text('Dual page spread in landscape'), findsNothing);
+
+    await tester.tap(find.text('Split wide pages'));
+    await tester.pumpAndSettle();
+
+    expect(container(tester).read(dualPageSplitWebtoonProvider), isTrue);
+    expect(container(tester).read(dualPageSplitPagedProvider), isNot(isTrue),
+        reason: 'webtoon split has its own key');
+    expect(find.text('Invert split pages placement'), findsOneWidget);
+
+    await tester.tap(find.text('Invert split pages placement'));
+    await tester.pumpAndSettle();
+    expect(container(tester).read(dualPageInvertWebtoonProvider), isTrue);
   });
 }

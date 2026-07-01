@@ -172,11 +172,22 @@ enum DBKeys {
   // Shared by the paged and long-strip sections (Komikku smallerTapZone).
   smallerTapZones(false),
   animatePageTransitions(true),
+  // Wide-page handling (Komikku pref_dual_page_split/_rotate). Split needs
+  // page-list remapping, so it persists here and the engine wires it later;
+  // rotate is live in the paged viewer.
+  dualPageSplitPaged(false),
+  dualPageInvertPaged(false),
+  rotateWidePages(false),
+  rotateWideInvert(false),
+  // KEEP-style extra: show two pages side-by-side in landscape (inert).
+  trueDualPageSpread(false),
   // Long-strip parity prefs; crop-borders is scoped per mode like Komikku.
   webtoonScaleType(WebtoonScaleType.fitScreen),
   cropBordersWebtoon(false),
   cropBordersGaps(false),
   smoothAutoScroll(true),
+  dualPageSplitWebtoon(false),
+  dualPageInvertWebtoon(false),
   ;
 
   const DBKeys(this.initial);

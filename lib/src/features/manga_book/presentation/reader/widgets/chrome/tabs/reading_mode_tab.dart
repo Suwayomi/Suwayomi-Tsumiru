@@ -164,8 +164,8 @@ class ReadingModeTab extends HookConsumerWidget {
   }
 }
 
-/// Paged-only settings (Komikku PagerViewerSettings minus the Task-10
-/// wide-page toggles). All fields are global prefs.
+/// Paged-only settings (Komikku PagerViewerSettings). All fields are global
+/// prefs.
 class _PagedSection extends ConsumerWidget {
   const _PagedSection({super.key, required this.mangaId});
 
@@ -253,6 +253,30 @@ class _PagedSection extends ConsumerWidget {
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.splitWidePages),
+          value: settings.dualPageSplitPaged,
+          onChanged: model.setDualPageSplitPaged,
+        ),
+        if (settings.dualPageSplitPaged)
+          _SubSwitchTile(
+            title: context.l10n.invertSplitPagesPlacement,
+            value: settings.dualPageInvertPaged,
+            onChanged: model.setDualPageInvertPaged,
+          ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.rotateWidePagesToFit),
+          value: settings.rotateWidePages,
+          onChanged: model.setRotateWidePages,
+        ),
+        if (settings.rotateWidePages)
+          _SubSwitchTile(
+            title: context.l10n.invertWidePageRotation,
+            value: settings.rotateWideInvert,
+            onChanged: model.setRotateWideInvert,
+          ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.animatePageTransitions),
           value: settings.animatePageTransitions,
           onChanged: model.setAnimatePageTransitions,
@@ -262,6 +286,12 @@ class _PagedSection extends ConsumerWidget {
           title: Text(context.l10n.invertDoublePages),
           value: settings.invertDoublePages,
           onChanged: model.setInvertDoublePages,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.dualPageSpreadInLandscape),
+          value: settings.trueDualPageSpread,
+          onChanged: model.setTrueDualPageSpread,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
@@ -364,6 +394,18 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.disableZoomOut,
           onChanged: model.setDisableZoomOut,
         ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.splitWidePages),
+          value: settings.dualPageSplitWebtoon,
+          onChanged: model.setDualPageSplitWebtoon,
+        ),
+        if (settings.dualPageSplitWebtoon)
+          _SubSwitchTile(
+            title: context.l10n.invertSplitPagesPlacement,
+            value: settings.dualPageInvertWebtoon,
+            onChanged: model.setDualPageInvertWebtoon,
+          ),
         if (showGapsSettings) ...[
           _SectionLabel(context.l10n.readerModeChipLongStripGaps),
           SwitchListTile(
@@ -374,6 +416,30 @@ class _LongStripSection extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Indented dependent toggle, shown only while its parent switch is ON.
+class _SubSwitchTile extends StatelessWidget {
+  const _SubSwitchTile({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
+      title: Text(title),
+      value: value,
+      onChanged: onChanged,
     );
   }
 }
