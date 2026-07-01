@@ -10,6 +10,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../controller/reader_preview_channel.dart';
+import '../../controller/reader_settings_model.dart';
 import 'tabs/custom_filter_tab.dart';
 import 'tabs/general_tab.dart';
 import 'tabs/reading_mode_tab.dart';
@@ -94,6 +96,14 @@ Future<void> showReaderSettingsSheet({
     if (dismissed) return;
     dismissed = true;
     subscription.close();
+    // Flush any live slider draft the dismissal interrupted mid-drag (§2.4).
+    final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
+    final brightnessDraft = readerBrightnessPreview.value;
+    if (brightnessDraft != null) model.setCustomBrightnessValue(brightnessDraft);
+    final colorDraft = readerColorFilterPreview.value;
+    if (colorDraft != null) model.setColorFilterValue(colorDraft);
+    readerBrightnessPreview.value = null;
+    readerColorFilterPreview.value = null;
     visibility.value = wasVisible;
     ref.invalidate(readerSettingsPreviewProvider);
   }
@@ -172,7 +182,7 @@ class ReaderSettingsDialog extends HookConsumerWidget {
                     magnifierSize: magnifierSize,
                   ),
                   GeneralTab(mangaId: mangaId),
-                  const CustomFilterTab(),
+                  CustomFilterTab(mangaId: mangaId),
                 ],
               ),
             ),

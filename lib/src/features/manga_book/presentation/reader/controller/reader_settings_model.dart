@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../settings/presentation/reader/widgets/reader_filter_prefs/reader_filter_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
@@ -303,6 +304,49 @@ abstract final class ReaderSettings {
     global: flashColorKeyProvider,
     fallback: DBKeys.flashColor.initial as FlashColor,
   );
+
+  // Custom-filter tab prefs (Komikku ColorFilterPage — all global).
+  static final customBrightness = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: customBrightnessProvider,
+    fallback: DBKeys.customBrightness.initial as bool,
+  );
+
+  static final customBrightnessValue = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: customBrightnessValueProvider,
+    fallback: DBKeys.customBrightnessValue.initial as int,
+  );
+
+  static final customColorFilter = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: customColorFilterProvider,
+    fallback: DBKeys.customColorFilter.initial as bool,
+  );
+
+  static final colorFilterValue = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: colorFilterValueProvider,
+    fallback: DBKeys.colorFilterValue.initial as int,
+  );
+
+  static final colorFilterBlendMode = ReaderSetting<ColorFilterBlendMode>(
+    scope: ReaderSettingScope.global,
+    global: colorFilterBlendModeKeyProvider,
+    fallback: DBKeys.colorFilterBlendMode.initial as ColorFilterBlendMode,
+  );
+
+  static final grayscale = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: grayscaleProvider,
+    fallback: DBKeys.grayscale.initial as bool,
+  );
+
+  static final invertedColors = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: invertedColorsProvider,
+    fallback: DBKeys.invertedColors.initial as bool,
+  );
 }
 
 @freezed
@@ -351,6 +395,13 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required int flashDuration,
     required int flashPageInterval,
     required FlashColor flashColor,
+    required bool customBrightness,
+    required int customBrightnessValue,
+    required bool customColorFilter,
+    required int colorFilterValue,
+    required ColorFilterBlendMode colorFilterBlendMode,
+    required bool grayscale,
+    required bool invertedColors,
   }) = _ReaderSettingsState;
 }
 
@@ -396,6 +447,13 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late FlashDuration _flashDuration;
   late FlashPageInterval _flashPageInterval;
   late FlashColorKey _flashColor;
+  late CustomBrightness _customBrightness;
+  late CustomBrightnessValue _customBrightnessValue;
+  late CustomColorFilter _customColorFilter;
+  late ColorFilterValue _colorFilterValue;
+  late ColorFilterBlendModeKey _colorFilterBlendMode;
+  late Grayscale _grayscale;
+  late InvertedColors _invertedColors;
   // Globals of the per-series fields, for the "For this series" OFF path.
   late ReaderModeKey _readerModeKey;
   late ReaderNavigationLayoutKey _navigationLayoutKey;
@@ -444,6 +502,13 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _flashDuration = ref.read(flashDurationProvider.notifier);
     _flashPageInterval = ref.read(flashPageIntervalProvider.notifier);
     _flashColor = ref.read(flashColorKeyProvider.notifier);
+    _customBrightness = ref.read(customBrightnessProvider.notifier);
+    _customBrightnessValue = ref.read(customBrightnessValueProvider.notifier);
+    _customColorFilter = ref.read(customColorFilterProvider.notifier);
+    _colorFilterValue = ref.read(colorFilterValueProvider.notifier);
+    _colorFilterBlendMode = ref.read(colorFilterBlendModeKeyProvider.notifier);
+    _grayscale = ref.read(grayscaleProvider.notifier);
+    _invertedColors = ref.read(invertedColorsProvider.notifier);
     _readerModeKey = ref.read(readerModeKeyProvider.notifier);
     _navigationLayoutKey = ref.read(readerNavigationLayoutKeyProvider.notifier);
     _readerOrientationKey = ref.read(readerOrientationKeyProvider.notifier);
@@ -513,6 +578,16 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       flashPageInterval:
           ReaderSettings.flashPageInterval.resolveWith(ref, null),
       flashColor: ReaderSettings.flashColor.resolveWith(ref, null),
+      customBrightness: ReaderSettings.customBrightness.resolveWith(ref, null),
+      customBrightnessValue:
+          ReaderSettings.customBrightnessValue.resolveWith(ref, null),
+      customColorFilter:
+          ReaderSettings.customColorFilter.resolveWith(ref, null),
+      colorFilterValue: ReaderSettings.colorFilterValue.resolveWith(ref, null),
+      colorFilterBlendMode:
+          ReaderSettings.colorFilterBlendMode.resolveWith(ref, null),
+      grayscale: ReaderSettings.grayscale.resolveWith(ref, null),
+      invertedColors: ReaderSettings.invertedColors.resolveWith(ref, null),
     );
   }
 
@@ -598,6 +673,23 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setFlashPageInterval(int value) => _flashPageInterval.update(value);
 
   void setFlashColor(FlashColor value) => _flashColor.update(value);
+
+  // Custom-filter tab prefs are global too.
+  void setCustomBrightness(bool value) => _customBrightness.update(value);
+
+  void setCustomBrightnessValue(int value) =>
+      _customBrightnessValue.update(value);
+
+  void setCustomColorFilter(bool value) => _customColorFilter.update(value);
+
+  void setColorFilterValue(int value) => _colorFilterValue.update(value);
+
+  void setColorFilterBlendMode(ColorFilterBlendMode value) =>
+      _colorFilterBlendMode.update(value);
+
+  void setGrayscale(bool value) => _grayscale.update(value);
+
+  void setInvertedColors(bool value) => _invertedColors.update(value);
 
   // Per-series-capable setters. perSeries=false is the "For this series" OFF
   // path (§2.6): set the app-wide default and drop this series' override.

@@ -204,6 +204,17 @@ enum DBKeys {
   flashDuration(1),
   flashPageInterval(1),
   flashColor(FlashColor.black),
+  // Custom filter tab (Komikku ColorFilterPage parity, all global).
+  customBrightness(false),
+  // -75..100. Negatives dim via a black overlay; positives are Komikku's
+  // window screen-brightness attr — no Flutter plugin, so persist-but-inert.
+  customBrightnessValue(0),
+  customColorFilter(false),
+  // Packed ARGB int, mirroring Komikku's color_filter_value.
+  colorFilterValue(0),
+  colorFilterBlendMode(ColorFilterBlendMode.defaultBlend),
+  grayscale(false),
+  invertedColors(false),
   ;
 
   const DBKeys(this.initial);

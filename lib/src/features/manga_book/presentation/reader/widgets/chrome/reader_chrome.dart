@@ -20,6 +20,7 @@ import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import 'chrome_extents.dart';
 import 'mihon_bottom_controls.dart';
+import 'reader_color_overlays.dart';
 import 'reader_flash_overlay.dart';
 import 'reader_side_seekbar.dart';
 import 'reader_top_bar.dart';
@@ -225,6 +226,12 @@ class ReaderChrome extends HookConsumerWidget {
       builder: (context, visible, _) {
         return Stack(
           children: [
+            // ── Custom filter overlays ────────────────────────────────────────
+            // Lowest chrome layer: tints only the page beneath. Below the flash
+            // (which must stay visible with filters on) and below the bars
+            // (which must never get tinted).
+            const Positioned.fill(child: ReaderColorOverlays()),
+
             // ── Flash on page change ──────────────────────────────────────────
             // Chrome-layer leaf under the bars; IgnorePointer inside, so it can
             // never eat taps or touch the frozen viewer engines.

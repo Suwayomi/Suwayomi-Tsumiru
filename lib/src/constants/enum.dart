@@ -229,6 +229,32 @@ enum FlashColor {
       };
 }
 
+/// Custom color-filter blend (Komikku ColorFilterMode order 0-5). Komikku
+/// gates the last three behind Android P+; Flutter's BlendMode supports all
+/// six everywhere, so no gate. "Multiply" is Compose Modulate (src×dst).
+enum ColorFilterBlendMode {
+  defaultBlend(BlendMode.srcOver),
+  multiply(BlendMode.modulate),
+  screen(BlendMode.screen),
+  overlay(BlendMode.overlay),
+  lighten(BlendMode.lighten),
+  darken(BlendMode.darken);
+
+  const ColorFilterBlendMode(this.blendMode);
+
+  final BlendMode blendMode;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ColorFilterBlendMode.defaultBlend =>
+          context.l10n.colorFilterModeDefault,
+        ColorFilterBlendMode.multiply => context.l10n.colorFilterModeMultiply,
+        ColorFilterBlendMode.screen => context.l10n.colorFilterModeScreen,
+        ColorFilterBlendMode.overlay => context.l10n.colorFilterModeOverlay,
+        ColorFilterBlendMode.lighten => context.l10n.colorFilterModeLighten,
+        ColorFilterBlendMode.darken => context.l10n.colorFilterModeDarken,
+      };
+}
+
 /// Long-strip smart scale on wide screens (Komikku WebtoonScaleType).
 enum WebtoonScaleType {
   fitScreen,

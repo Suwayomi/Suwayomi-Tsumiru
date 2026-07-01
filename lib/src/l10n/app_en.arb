@@ -1693,6 +1693,44 @@
     "@customFilter": {
         "description": "Reader settings sheet tab for brightness/color filters"
     },
+    "customBrightness": "Custom brightness",
+    "@customBrightness": {
+        "description": "Custom-filter tab: brightness toggle + slider label"
+    },
+    "customColorFilter": "Custom color filter",
+    "@customColorFilter": {
+        "description": "Custom-filter tab: RGBA color filter toggle"
+    },
+    "colorFilterRed": "Red",
+    "@colorFilterRed": {},
+    "colorFilterGreen": "Green",
+    "@colorFilterGreen": {},
+    "colorFilterBlue": "Blue",
+    "@colorFilterBlue": {},
+    "colorFilterAlpha": "Alpha",
+    "@colorFilterAlpha": {},
+    "colorFilterBlendMode": "Color filter blend mode",
+    "@colorFilterBlendMode": {
+        "description": "Section label for the blend-mode chips"
+    },
+    "colorFilterModeDefault": "Default",
+    "@colorFilterModeDefault": {},
+    "colorFilterModeMultiply": "Multiply",
+    "@colorFilterModeMultiply": {},
+    "colorFilterModeScreen": "Screen",
+    "@colorFilterModeScreen": {},
+    "colorFilterModeOverlay": "Overlay",
+    "@colorFilterModeOverlay": {},
+    "colorFilterModeLighten": "Dodge / Lighten",
+    "@colorFilterModeLighten": {},
+    "colorFilterModeDarken": "Burn / Darken",
+    "@colorFilterModeDarken": {},
+    "grayscale": "Grayscale",
+    "@grayscale": {},
+    "invertedColors": "Inverted",
+    "@invertedColors": {
+        "description": "Custom-filter tab: invert page colors toggle"
+    },
     "pureBlackAmoled": "Pure black (AMOLED)",
     "@pureBlackAmoled": {
         "description": "AMOLED dark variant toggle"
