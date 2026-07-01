@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -18,8 +19,10 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/r
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_settings_model.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -30,6 +33,20 @@ class _FakeMangaWithId extends MangaWithId {
 
   @override
   Future<MangaDto?> build({required int mangaId}) async => manga;
+}
+
+/// Records every per-series meta patch so tests can pin exactly which keys
+/// a mutation writes (and, critically, which it does NOT).
+class _RecordingRepo extends Fake implements MangaBookRepository {
+  final calls = <({int mangaId, String key, dynamic value})>[];
+
+  @override
+  Future<void> patchMangaMeta({
+    required int mangaId,
+    required String key,
+    required dynamic value,
+  }) async =>
+      calls.add((mangaId: mangaId, key: key, value: value));
 }
 
 MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
@@ -56,13 +73,18 @@ MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
       url: '/manga/1',
     );
 
-Future<ProviderContainer> _container(MangaDto manga) async {
+Future<ProviderContainer> _container(
+  MangaDto manga, {
+  MangaBookRepository? repository,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final container = ProviderContainer(overrides: [
     sharedPreferencesProvider.overrideWithValue(prefs),
     mangaWithIdProvider(mangaId: 1)
         .overrideWith(() => _FakeMangaWithId(manga)),
+    if (repository != null)
+      mangaBookRepositoryProvider.overrideWithValue(repository),
   ]);
   addTearDown(container.dispose);
   return container;
@@ -120,6 +142,19 @@ void main() {
       // Global-only today: the reader never reads the per-series invert meta.
       expect(ReaderSettings.invertTap.scope, ReaderSettingScope.global);
       expect(ReaderSettings.invertTap.perSeriesKey, isNull);
+
+      // New in Task 9: per-series with a global default (Komikku Tab-1 scope).
+      expect(
+          ReaderSettings.readerOrientation.scope, ReaderSettingScope.perSeries);
+      expect(ReaderSettings.readerOrientation.perSeriesKey,
+          MangaMetaKeys.readerOrientation);
+      expect(ReaderSettings.readerOrientation.fallback,
+          ReaderOrientation.defaultRotation);
+
+      expect(ReaderSettings.tapInvert.scope, ReaderSettingScope.perSeries);
+      expect(
+          ReaderSettings.tapInvert.perSeriesKey, MangaMetaKeys.readerTapInvert);
+      expect(ReaderSettings.tapInvert.fallback, TapInvert.none);
     });
 
     test('zoom toggles are global-only (Komikku parity, no per-series meta)',
@@ -239,6 +274,113 @@ void main() {
       final state = await _resolvedState(container);
       expect(state.invertTap, false,
           reason: 'no code path reads the per-series invert meta today');
+    });
+
+    test('orientation resolves per-series ?? global ?? defaultRotation',
+        () async {
+      // Unset everywhere → the do-nothing default.
+      var container = await _container(_manga());
+      expect((await _resolvedState(container)).readerOrientation,
+          ReaderOrientation.defaultRotation);
+
+      // Global set, no meta → global.
+      container = await _container(_manga());
+      container
+          .read(readerOrientationKeyProvider.notifier)
+          .update(ReaderOrientation.landscape);
+      expect((await _resolvedState(container)).readerOrientation,
+          ReaderOrientation.landscape);
+
+      // Per-series meta beats the global.
+      container = await _container(
+          _manga(meta: {'flutter_readerOrientation': 'lockedPortrait'}));
+      container
+          .read(readerOrientationKeyProvider.notifier)
+          .update(ReaderOrientation.landscape);
+      expect((await _resolvedState(container)).readerOrientation,
+          ReaderOrientation.lockedPortrait);
+    });
+
+    test('setReaderOrientation writes only the per-series orientation key',
+        () async {
+      final repo = _RecordingRepo();
+      final container = await _container(_manga(), repository: repo);
+      await _resolvedState(container);
+
+      await container
+          .read(readerSettingsModelProvider(1).notifier)
+          .setReaderOrientation(ReaderOrientation.free);
+
+      expect(repo.calls.single.key, MangaMetaKeys.readerOrientation.key);
+      expect(repo.calls.single.value, 'free');
+    });
+
+    test('tapInvert compat: legacy bool true→both, false/unset→none',
+        () async {
+      var container = await _container(_manga());
+      expect((await _resolvedState(container)).tapInvert, TapInvert.none);
+
+      container = await _container(_manga());
+      container.read(invertTapProvider.notifier).update(true);
+      expect((await _resolvedState(container)).tapInvert, TapInvert.both);
+    });
+
+    test('tapInvert: the new key wins over the legacy bool', () async {
+      final container = await _container(_manga());
+      container.read(invertTapProvider.notifier).update(true);
+      container
+          .read(readerTapInvertKeyProvider.notifier)
+          .update(TapInvert.horizontal);
+      expect(
+          (await _resolvedState(container)).tapInvert, TapInvert.horizontal);
+    });
+
+    test('tapInvert: per-series meta wins over both globals', () async {
+      final container = await _container(
+          _manga(meta: {'flutter_readerTapInvert': 'vertical'}));
+      container.read(invertTapProvider.notifier).update(true);
+      container
+          .read(readerTapInvertKeyProvider.notifier)
+          .update(TapInvert.horizontal);
+      expect((await _resolvedState(container)).tapInvert, TapInvert.vertical);
+    });
+
+    test('setTapInvert writes ONLY the new key; legacy bool never rewritten',
+        () async {
+      final repo = _RecordingRepo();
+      final container = await _container(_manga(), repository: repo);
+      container.read(invertTapProvider.notifier).update(true);
+      await _resolvedState(container);
+
+      await container
+          .read(readerSettingsModelProvider(1).notifier)
+          .setTapInvert(TapInvert.vertical);
+
+      expect(repo.calls.single.key, MangaMetaKeys.readerTapInvert.key);
+      expect(repo.calls.single.value, 'vertical');
+      // The legacy global bool is untouched (compat read stays valid).
+      expect(container.read(invertTapProvider), true);
+    });
+
+    test('orphan reader mode survives every non-chip write (§2.5)', () async {
+      final repo = _RecordingRepo();
+      final container = await _container(
+        _manga(meta: {'flutter_readerMode': 'continuousHorizontalRTL'}),
+        repository: repo,
+      );
+      final state = await _resolvedState(container);
+      expect(state.readerMode, ReaderMode.continuousHorizontalRTL);
+
+      final model = container.read(readerSettingsModelProvider(1).notifier);
+      await model.setReaderOrientation(ReaderOrientation.landscape);
+      await model.setTapInvert(TapInvert.horizontal);
+      await model.setSidePadding(0.1);
+
+      // No write ever touched the stored mode; the orphan is preserved.
+      expect(repo.calls.map((c) => c.key),
+          isNot(contains(MangaMetaKeys.readerMode.key)));
+      expect(container.read(readerSettingsModelProvider(1)).readerMode,
+          ReaderMode.continuousHorizontalRTL);
     });
 
     test('readerEffectiveSettingsProvider is the model family', () async {

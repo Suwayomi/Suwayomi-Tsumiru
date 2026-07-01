@@ -10,9 +10,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/app_constants.dart';
 import '../../../../../../constants/enum.dart';
-import '../../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 import 'layouts/edge_layout.dart';
 import 'layouts/kindlish_layout.dart';
 import 'layouts/l_shaped_layout.dart';
@@ -22,11 +21,15 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
   const ReaderNavigationLayoutWidget({
     super.key,
     this.navigationLayout,
+    this.tapInvert,
     required this.onPrevious,
     required this.onNext,
     this.showReaderLayoutAnimation = false,
   });
   final ReaderNavigationLayout? navigationLayout;
+
+  /// Per-series override; null falls back to the global compat value.
+  final TapInvert? tapInvert;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final bool showReaderLayoutAnimation;
@@ -50,22 +53,20 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
             navigationLayout == ReaderNavigationLayout.defaultNavigation
         ? ref.watch(readerNavigationLayoutKeyProvider)
         : navigationLayout;
-    final invertTap = ref.watch(invertTapProvider).ifNull();
-    final VoidCallback? onLeftTap;
-    final VoidCallback? onRightTap;
-    final Color? leftColor;
-    final Color? rightColor;
-    if (invertTap) {
-      onLeftTap = onNext;
-      onRightTap = onPrevious;
-      leftColor = nextColorTween;
-      rightColor = prevColorTween;
-    } else {
-      onLeftTap = onPrevious;
-      onRightTap = onNext;
-      leftColor = prevColorTween;
-      rightColor = nextColorTween;
-    }
+    // Axis-wise inversion (Komikku TappingInvertMode): horizontal swaps the
+    // left/right zones, vertical swaps the L-shaped top/bottom rows.
+    final TapInvert invert =
+        tapInvert ?? ref.watch(readerTapInvertCompatProvider);
+    final invertH = invert.invertsHorizontal;
+    final invertV = invert.invertsVertical;
+    final onLeftTap = invertH ? onNext : onPrevious;
+    final onRightTap = invertH ? onPrevious : onNext;
+    final leftColor = invertH ? nextColorTween : prevColorTween;
+    final rightColor = invertH ? prevColorTween : nextColorTween;
+    final onTopTap = invertV ? onNext : onPrevious;
+    final onBottomTap = invertV ? onPrevious : onNext;
+    final topColor = invertV ? nextColorTween : prevColorTween;
+    final bottomColor = invertV ? prevColorTween : nextColorTween;
     return switch (layout) {
       ReaderNavigationLayout.edge => EdgeLayout(
           onLeftTap: onLeftTap,
@@ -84,6 +85,10 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
           onRightTap: onRightTap,
           leftColor: leftColor,
           rightColor: rightColor,
+          onTopTap: onTopTap,
+          onBottomTap: onBottomTap,
+          topColor: topColor,
+          bottomColor: bottomColor,
         ),
       ReaderNavigationLayout.rightAndLeft => RightAndLeftLayout(
           onLeftTap: onLeftTap,

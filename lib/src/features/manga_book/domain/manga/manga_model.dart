@@ -57,6 +57,9 @@ class MangaMeta with _$MangaMeta {
       fromJson: MangaMeta.fromJsonToDouble,
     )
     double? readerMagnifierSize,
+    @JsonKey(name: "flutter_readerOrientation")
+    ReaderOrientation? readerOrientation,
+    @JsonKey(name: "flutter_readerTapInvert") TapInvert? readerTapInvert,
     @JsonKey(name: "flutter_scanlator") String? scanlator,
   }) = _MangaMeta;
 
@@ -76,6 +79,8 @@ enum MangaMetaKeys {
   readerMode("flutter_readerMode"),
   readerPadding("flutter_readerPadding"),
   readerMagnifierSize("flutter_readerMagnifierSize"),
+  readerOrientation("flutter_readerOrientation"),
+  readerTapInvert("flutter_readerTapInvert"),
   scanlator("flutter_scanlator"),
   ;
 

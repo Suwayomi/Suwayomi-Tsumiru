@@ -11,8 +11,10 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
+import '../../../../settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import '../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
+import '../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 import '../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -59,6 +61,22 @@ abstract final class ReaderSettings {
     fallback: DBKeys.invertTap.initial as bool,
   );
 
+  static final readerOrientation = ReaderSetting<ReaderOrientation>(
+    scope: ReaderSettingScope.perSeries,
+    perSeriesKey: MangaMetaKeys.readerOrientation,
+    global: readerOrientationKeyProvider,
+    fallback: ReaderOrientation.defaultRotation,
+  );
+
+  /// 4-value successor of invertTap. Global side is the compat provider:
+  /// new key ?? legacy bool (true→both). Writes only ever hit the new key.
+  static final tapInvert = ReaderSetting<TapInvert>(
+    scope: ReaderSettingScope.perSeries,
+    perSeriesKey: MangaMetaKeys.readerTapInvert,
+    global: readerTapInvertCompatProvider,
+    fallback: TapInvert.none,
+  );
+
   // Zoom toggles are global reader prefs (Komikku parity — no per-series meta).
   static final pinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
@@ -93,6 +111,8 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required double sidePadding,
     required double magnifierSize,
     required bool invertTap,
+    required ReaderOrientation readerOrientation,
+    required TapInvert tapInvert,
     required bool pinchToZoom,
     required bool doubleTapToZoom,
     required bool disableZoomOut,
@@ -128,6 +148,10 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       magnifierSize: ReaderSettings.magnifierSize
           .resolveWith(ref, meta?.readerMagnifierSize),
       invertTap: ReaderSettings.invertTap.resolveWith(ref, null),
+      readerOrientation: ReaderSettings.readerOrientation
+          .resolveWith(ref, meta?.readerOrientation),
+      tapInvert:
+          ReaderSettings.tapInvert.resolveWith(ref, meta?.readerTapInvert),
       pinchToZoom: ReaderSettings.pinchToZoom.resolveWith(ref, null),
       doubleTapToZoom: ReaderSettings.doubleTapToZoom.resolveWith(ref, null),
       disableZoomOut: ReaderSettings.disableZoomOut.resolveWith(ref, null),
@@ -155,6 +179,14 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   Future<void> setMagnifierSize(double value) =>
       _patchMeta(MangaMetaKeys.readerMagnifierSize, value);
+
+  Future<void> setReaderOrientation(ReaderOrientation orientation) =>
+      _patchMeta(MangaMetaKeys.readerOrientation, orientation.name);
+
+  /// Writes the NEW 4-value key only; the legacy invertTap bool is never
+  /// destructively rewritten (compat read stays valid for a downgrade).
+  Future<void> setTapInvert(TapInvert value) =>
+      _patchMeta(MangaMetaKeys.readerTapInvert, value.name);
 
   /// Per-series write, mirroring the old drawer: patchMangaMeta then
   /// invalidate mangaWithIdProvider so every watcher re-reads fresh meta.

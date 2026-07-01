@@ -13,12 +13,23 @@ class LShapedLayout extends StatelessWidget {
     this.onRightTap,
     this.leftColor,
     this.rightColor,
+    this.onTopTap,
+    this.onBottomTap,
+    this.topColor,
+    this.bottomColor,
   });
 
   final VoidCallback? onLeftTap;
   final VoidCallback? onRightTap;
   final Color? leftColor;
   final Color? rightColor;
+
+  // Vertical-axis zones (top/bottom rows); fall back to the horizontal
+  // assignments so callers without axis-wise invert keep the old behavior.
+  final VoidCallback? onTopTap;
+  final VoidCallback? onBottomTap;
+  final Color? topColor;
+  final Color? bottomColor;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -26,8 +37,8 @@ class LShapedLayout extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: onLeftTap,
-            child: Container(color: leftColor),
+            onTap: onTopTap ?? onLeftTap,
+            child: Container(color: topColor ?? leftColor),
           ),
         ),
         Expanded(
@@ -55,8 +66,8 @@ class LShapedLayout extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: onRightTap,
-            child: Container(color: rightColor),
+            onTap: onBottomTap ?? onRightTap,
+            child: Container(color: bottomColor ?? rightColor),
           ),
         ),
       ],

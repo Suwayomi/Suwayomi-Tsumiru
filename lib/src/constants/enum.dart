@@ -74,6 +74,56 @@ enum ReaderNavigationLayout {
       };
 }
 
+/// Reader rotation lock (Komikku ReaderOrientation order). defaultRotation
+/// means "leave the platform alone" so existing users see zero change.
+enum ReaderOrientation {
+  defaultRotation,
+  free,
+  portrait,
+  landscape,
+  lockedPortrait,
+  lockedLandscape,
+  reversePortrait;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ReaderOrientation.defaultRotation =>
+          context.l10n.readerOrientationDefault,
+        ReaderOrientation.free => context.l10n.readerOrientationFree,
+        ReaderOrientation.portrait => context.l10n.readerOrientationPortrait,
+        ReaderOrientation.landscape => context.l10n.readerOrientationLandscape,
+        ReaderOrientation.lockedPortrait =>
+          context.l10n.readerOrientationLockedPortrait,
+        ReaderOrientation.lockedLandscape =>
+          context.l10n.readerOrientationLockedLandscape,
+        ReaderOrientation.reversePortrait =>
+          context.l10n.readerOrientationReversePortrait,
+      };
+}
+
+/// 4-value tap-zone inversion (Komikku TappingInvertMode). Successor of the
+/// legacy invertTap bool: true→both, false→none; the old key is never rewritten.
+enum TapInvert {
+  none,
+  horizontal,
+  vertical,
+  both;
+
+  static TapInvert fromLegacyInvert(bool? invert) =>
+      invert.ifNull() ? TapInvert.both : TapInvert.none;
+
+  bool get invertsHorizontal =>
+      this == TapInvert.horizontal || this == TapInvert.both;
+  bool get invertsVertical =>
+      this == TapInvert.vertical || this == TapInvert.both;
+
+  String toLocale(BuildContext context) => switch (this) {
+        TapInvert.none => context.l10n.readerTapInvertNone,
+        TapInvert.horizontal => context.l10n.readerTapInvertHorizontal,
+        TapInvert.vertical => context.l10n.readerTapInvertVertical,
+        TapInvert.both => context.l10n.readerTapInvertBoth,
+      };
+}
+
 enum MangaSort {
   alphabetical,
   dateAdded,

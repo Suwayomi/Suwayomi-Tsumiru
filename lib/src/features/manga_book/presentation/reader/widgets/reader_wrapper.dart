@@ -159,6 +159,9 @@ class ReaderWrapper extends HookConsumerWidget {
         manga.metaData.readerMode ?? ReaderMode.defaultReader;
     final mangaReaderNavigationLayout = manga.metaData.readerNavigationLayout ??
         ReaderNavigationLayout.defaultNavigation;
+    // Per-series 4-value tap-invert; null lets the layout fall back to the
+    // global compat value (new key ?? legacy bool).
+    final mangaTapInvert = manga.metaData.readerTapInvert;
 
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
 
@@ -376,6 +379,7 @@ class ReaderWrapper extends HookConsumerWidget {
                           onPrevious: enhancedOnPrevious,
                           mangaReaderNavigationLayout:
                               mangaReaderNavigationLayout,
+                          mangaTapInvert: mangaTapInvert,
                           prevNextChapterPair: nextPrevChapterPair,
                           readerSwipeChapterToggle: readerSwipeChapterToggle,
                           lastPageSwipeEnabled: lastPageSwipeEnabled,
@@ -671,6 +675,7 @@ class ReaderView extends HookWidget {
     required this.onPrevious,
     required this.prevNextChapterPair,
     required this.mangaReaderNavigationLayout,
+    this.mangaTapInvert,
     required this.readerSwipeChapterToggle,
     required this.lastPageSwipeEnabled,
     required this.resolvedReaderMode,
@@ -690,6 +695,7 @@ class ReaderView extends HookWidget {
   final VoidCallback onPrevious;
   final ({ChapterDto? first, ChapterDto? second})? prevNextChapterPair;
   final ReaderNavigationLayout mangaReaderNavigationLayout;
+  final TapInvert? mangaTapInvert;
   final bool readerSwipeChapterToggle;
   final bool lastPageSwipeEnabled;
   final ReaderMode resolvedReaderMode;
@@ -763,6 +769,7 @@ class ReaderView extends HookWidget {
           onNext: onNext,
           onPrevious: onPrevious,
           navigationLayout: mangaReaderNavigationLayout,
+          tapInvert: mangaTapInvert,
           showReaderLayoutAnimation: showReaderLayoutAnimation,
         ),
         if (showMagnification.value)

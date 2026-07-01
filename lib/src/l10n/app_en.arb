@@ -778,6 +778,27 @@
     "@readerMode": {
         "description": "Popup title and Button text of Reader Mode popup"
     },
+    "@readerModeChipDefault": {
+        "description": "Reading-mode chip - Default"
+    },
+    "@readerModeChipLegacyContinuous": {
+        "description": "Reading-mode chip shown when a series still uses the legacy continuous-horizontal mode"
+    },
+    "@readerModeChipLongStrip": {
+        "description": "Reading-mode chip - Long strip (webtoon)"
+    },
+    "@readerModeChipLongStripGaps": {
+        "description": "Reading-mode chip - Long strip with gaps (continuous vertical)"
+    },
+    "@readerModeChipPagedLtr": {
+        "description": "Reading-mode chip - Paged (left to right)"
+    },
+    "@readerModeChipPagedRtl": {
+        "description": "Reading-mode chip - Paged (right to left)"
+    },
+    "@readerModeChipPagedVertical": {
+        "description": "Reading-mode chip - Paged (vertical)"
+    },
     "@readerModeContinuousHorizontalLTR": {
         "description": "Radio button text for Reader Mode Type - Continuous Horizontal (LTR)"
     },
@@ -826,6 +847,27 @@
     "@readerNavigationLayoutRightAndLeft": {
         "description": "Radio button text for Reader Navigation Layout - Right And Left"
     },
+    "@readerOrientationDefault": {
+        "description": "Rotation chip - Default (follow the app)"
+    },
+    "@readerOrientationFree": {
+        "description": "Rotation chip - Free rotation"
+    },
+    "@readerOrientationLandscape": {
+        "description": "Rotation chip - Landscape (sensor)"
+    },
+    "@readerOrientationLockedLandscape": {
+        "description": "Rotation chip - Locked landscape"
+    },
+    "@readerOrientationLockedPortrait": {
+        "description": "Rotation chip - Locked portrait"
+    },
+    "@readerOrientationPortrait": {
+        "description": "Rotation chip - Portrait (sensor)"
+    },
+    "@readerOrientationReversePortrait": {
+        "description": "Rotation chip - Reverse portrait"
+    },
     "@readerOverlay": {
         "description": "Toggle subtile text for Initial Reader Overlay"
     },
@@ -861,6 +903,18 @@
     },
     "@readerInfinityScrollingModeDescription": {
         "description": "Switch tile description for infinity scrolling mode in webtoon mode"
+    },
+    "@readerTapInvertBoth": {
+        "description": "Tap-invert option - both axes"
+    },
+    "@readerTapInvertHorizontal": {
+        "description": "Tap-invert option - horizontal axis"
+    },
+    "@readerTapInvertNone": {
+        "description": "Tap-invert option - none"
+    },
+    "@readerTapInvertVertical": {
+        "description": "Tap-invert option - vertical axis"
     },
     "@readerVolumeTap": {
         "description": "Switch button text for Reader Page Navigation with Volume Tap"
@@ -1538,6 +1592,13 @@
     "reader": "Reader",
     "readerMagnifierSize": "Magnifier Size",
     "readerMode": "Reading Mode",
+    "readerModeChipDefault": "Default",
+    "readerModeChipLegacyContinuous": "Continuous horizontal (legacy)",
+    "readerModeChipLongStrip": "Long strip",
+    "readerModeChipLongStripGaps": "Long strip with gaps",
+    "readerModeChipPagedLtr": "Paged (left to right)",
+    "readerModeChipPagedRtl": "Paged (right to left)",
+    "readerModeChipPagedVertical": "Paged (vertical)",
     "readerModeContinuousHorizontalLTR": "Continuous Horizontal (LTR)",
     "readerModeContinuousHorizontalRTL": "Continuous Horizontal (RTL)",
     "readerModeContinuousVertical": "Continuous Vertical",
@@ -1554,6 +1615,13 @@
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "readerNavigationLayoutLShaped": "L Shaped",
     "readerNavigationLayoutRightAndLeft": "Right And Left",
+    "readerOrientationDefault": "Default",
+    "readerOrientationFree": "Free",
+    "readerOrientationLandscape": "Landscape",
+    "readerOrientationLockedLandscape": "Locked landscape",
+    "readerOrientationLockedPortrait": "Locked portrait",
+    "readerOrientationPortrait": "Portrait",
+    "readerOrientationReversePortrait": "Reverse portrait",
     "readerOverlay": "Reader initial overlay",
     "readerOverlaySubtitle": "Shows title and quick settings when opening a chapter",
     "readerPadding": "Reader Padding",
@@ -1579,6 +1647,10 @@
     "failedToLoadPreviousChapter": "Failed to load previous chapter",
     "chapterCompleted": "Chapter Completed",
     "finished": "Finished",
+    "readerTapInvertBoth": "Both",
+    "readerTapInvertHorizontal": "Horizontal",
+    "readerTapInvertNone": "None",
+    "readerTapInvertVertical": "Vertical",
     "readerVolumeTap": "Volume Keys",
     "readerVolumeTapInvert": "Invert Volume Keys",
     "readerVolumeTapSubtitle": "Navigate with Volume Keys",

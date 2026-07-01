@@ -154,6 +154,11 @@ enum DBKeys {
   // Auto Webtoon Mode (Komikku parity): series whose tags/source say
   // long-strip read in webtoon mode when their per-series mode is Default.
   autoWebtoonMode(true),
+  // Reader rotation lock (Komikku parity). Default = never touch the platform.
+  readerOrientation(ReaderOrientation.defaultRotation),
+  // 4-value tap-zone invert. null initial keeps "unset" representable so the
+  // legacy invertTap bool still decides for users who never set this.
+  readerTapInvert(null),
   ;
 
   const DBKeys(this.initial);

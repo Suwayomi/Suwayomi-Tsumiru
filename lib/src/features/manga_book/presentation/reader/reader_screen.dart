@@ -19,11 +19,13 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../offline/data/offline_download_providers.dart';
+import '../../../settings/presentation/general/widgets/force_portrait_tile.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
+import '../../../settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
@@ -174,6 +176,25 @@ class ReaderScreen extends HookConsumerWidget {
             overlays: SystemUiOverlay.values,
           );
     }, []);
+
+    // Rotation lock: applied once the per-series ?? global value resolves
+    // (null until the manga loads, Default never touches the platform).
+    // Companion to the immersive effect above — same lifecycle, different
+    // platform surface, so the two can't race.
+    final readerOrientation = mangaData == null
+        ? null
+        : mangaData.metaData.readerOrientation ??
+            ref.watch(readerOrientationKeyProvider) ??
+            ReaderOrientation.defaultRotation;
+    useEffect(() {
+      final lock = readerOrientation?.deviceOrientations;
+      if (lock == null) return null;
+      SystemChrome.setPreferredOrientations(lock);
+      // Restore the app-wide state on exit — that's portrait-locked when the
+      // global "Lock to portrait" toggle is on, fully unlocked otherwise.
+      final forcePortrait = ref.read(forcePortraitProvider).ifNull();
+      return () => applyForcePortrait(forcePortrait);
+    }, [readerOrientation]);
 
     // Keep the screen awake while reading when the user opted in. The cleanup
     // only exists when we actually enabled (returning null when off), so leaving
