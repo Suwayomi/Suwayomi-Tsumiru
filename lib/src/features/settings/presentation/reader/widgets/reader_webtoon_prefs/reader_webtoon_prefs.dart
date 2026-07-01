@@ -1,0 +1,46 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../../../../../constants/db_keys.dart';
+import '../../../../../../constants/enum.dart';
+import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+
+part 'reader_webtoon_prefs.g.dart';
+
+// Global long-strip prefs (Komikku parity). Persisted now; the webtoon engine
+// consumes them in a later task.
+
+@riverpod
+class WebtoonScaleTypeKey extends _$WebtoonScaleTypeKey
+    with SharedPreferenceEnumClientMixin<WebtoonScaleType> {
+  @override
+  WebtoonScaleType? build() =>
+      initialize(DBKeys.webtoonScaleType, enumList: WebtoonScaleType.values);
+}
+
+@riverpod
+class CropBordersWebtoon extends _$CropBordersWebtoon
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.cropBordersWebtoon);
+}
+
+/// Own key for "Long strip with gaps" (Komikku cropBordersContinuousVertical).
+@riverpod
+class CropBordersGaps extends _$CropBordersGaps
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.cropBordersGaps);
+}
+
+@riverpod
+class SmoothAutoScroll extends _$SmoothAutoScroll
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.smoothAutoScroll);
+}

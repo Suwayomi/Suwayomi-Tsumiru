@@ -159,6 +159,24 @@ enum DBKeys {
   // 4-value tap-zone invert. null initial keeps "unset" representable so the
   // legacy invertTap bool still decides for users who never set this.
   readerTapInvert(null),
+  // Paged parity prefs (Komikku ReaderPreferences defaults). Persisted now,
+  // consumed by the paged engine in a later increment.
+  imageScaleType(ImageScaleType.fitScreen),
+  zoomStart(ZoomStart.automatic),
+  pageLayout(PageLayout.automatic),
+  centerMarginType(CenterMarginType.none),
+  landscapeZoom(true),
+  navigateToPan(true),
+  invertDoublePages(false),
+  cropBorders(false),
+  // Shared by the paged and long-strip sections (Komikku smallerTapZone).
+  smallerTapZones(false),
+  animatePageTransitions(true),
+  // Long-strip parity prefs; crop-borders is scoped per mode like Komikku.
+  webtoonScaleType(WebtoonScaleType.fitScreen),
+  cropBordersWebtoon(false),
+  cropBordersGaps(false),
+  smoothAutoScroll(true),
   ;
 
   const DBKeys(this.initial);

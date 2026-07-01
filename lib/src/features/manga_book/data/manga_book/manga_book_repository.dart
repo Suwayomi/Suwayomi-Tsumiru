@@ -189,6 +189,24 @@ class MangaBookRepository {
           )
           .getData((data) => null);
 
+  /// Removes a per-series meta override so the app-wide default applies again.
+  Future<void> deleteMangaMeta({
+    required int mangaId,
+    required String key,
+  }) async =>
+      client
+          .mutate$DeleteMangaMeta(
+            Options$Mutation$DeleteMangaMeta(
+              variables: Variables$Mutation$DeleteMangaMeta(
+                input: Input$DeleteMangaMetaInput(
+                  key: key,
+                  mangaId: mangaId,
+                ),
+              ),
+            ),
+          )
+          .getData<Object>((data) => null);
+
   /// Fetches the chapter list FROM THE SOURCE (the server re-scrapes the source
   /// site). Returns nothing if the source is down/gone — callers that need to
   /// survive a dead source should fall back to [getStoredChapterList].

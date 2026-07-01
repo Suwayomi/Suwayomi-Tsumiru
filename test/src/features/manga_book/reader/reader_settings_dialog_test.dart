@@ -16,6 +16,7 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_settings_dialog.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -123,16 +124,26 @@ void main() {
     expect(find.byType(ReaderSettingsDialog), findsOneWidget);
   }
 
-  testWidgets('Reading-mode tab renders the drawer\'s 4 options',
-      (tester) async {
+  Finder tabScrollable() => find
+      .descendant(
+        of: find.byType(ReadingModeTab),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+
+  testWidgets('Reading-mode tab renders the parity chip rows', (tester) async {
     await pumpHost(tester);
     await openSheet(tester);
 
-    // 'Reading Mode' appears twice: tab label + mode ListTile title.
-    expect(find.text('Reading Mode'), findsNWidgets(2));
-    expect(find.text('Navigation layout'), findsOneWidget);
-    expect(find.text('Reader Padding'), findsOneWidget);
-    expect(find.text('Magnifier Size'), findsOneWidget);
+    expect(find.text('For this series'), findsOneWidget);
+    expect(find.text('Paged (left to right)'), findsOneWidget);
+    expect(find.text('Rotation'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Tap zones'),
+      100,
+      scrollable: tabScrollable(),
+    );
+    expect(find.text('Tap zones'), findsOneWidget);
   });
 
   testWidgets(
@@ -142,8 +153,11 @@ void main() {
     await pumpHost(tester);
     await openSheet(tester);
 
-    await tester.drag(find.text('Navigation layout'), const Offset(0, -400));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Disable zoom out'),
+      200,
+      scrollable: tabScrollable(),
+    );
 
     expect(find.text('Double tap to zoom'), findsOneWidget);
     expect(find.text('Pinch to Zoom'), findsOneWidget);
@@ -156,8 +170,11 @@ void main() {
     await pumpHost(tester, meta: {'flutter_readerMode': 'singleHorizontalRTL'});
     await openSheet(tester);
 
-    await tester.drag(find.text('Navigation layout'), const Offset(0, -400));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Disable zoom in'),
+      200,
+      scrollable: tabScrollable(),
+    );
 
     expect(find.text('Disable zoom in'), findsOneWidget);
     expect(find.text('Double tap to zoom'), findsNothing);
@@ -171,8 +188,8 @@ void main() {
     await pumpHost(tester);
     await openSheet(tester);
 
-    // Scroll inside the Reading-mode tab (drag from a tile, not a slider).
-    await tester.drag(find.text('Navigation layout'), const Offset(0, -60));
+    // Scroll inside the Reading-mode tab (drag from a label, not a slider).
+    await tester.drag(find.text('Rotation'), const Offset(0, -60));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 

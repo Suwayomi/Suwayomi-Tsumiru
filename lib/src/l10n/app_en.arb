@@ -15,6 +15,9 @@
     "@allScanlators": {
         "description": "Text for all Scanlators in manga description screen chapter filter"
     },
+    "@animatePageTransitions": {
+        "description": "Reader toggle: animate page transitions"
+    },
     "@appLanguage": {
         "description": "Popup title and Button text to change App Language"
     },
@@ -104,6 +107,84 @@
     },
     "@automaticUpdate": {
         "description": "Popup title and Settings text to update Automatic Global Update interval"
+    },
+    "@centerMarginDoubleAndWide": {
+        "description": "Center margin chip"
+    },
+    "@centerMarginDoublePages": {
+        "description": "Center margin chip"
+    },
+    "@centerMarginNone": {
+        "description": "Center margin chip"
+    },
+    "@centerMarginType": {
+        "description": "Section label for the paged center-margin chip row"
+    },
+    "@centerMarginWidePages": {
+        "description": "Center margin chip"
+    },
+    "@cropBorders": {
+        "description": "Reader toggle: crop page borders"
+    },
+    "@imageScaleType": {
+        "description": "Section label for the paged image scale-type chip row"
+    },
+    "@imageScaleTypeFitHeight": {
+        "description": "Image scale type chip"
+    },
+    "@imageScaleTypeFitScreen": {
+        "description": "Image scale type chip"
+    },
+    "@imageScaleTypeFitWidth": {
+        "description": "Image scale type chip"
+    },
+    "@imageScaleTypeOriginalSize": {
+        "description": "Image scale type chip"
+    },
+    "@imageScaleTypeSmartFit": {
+        "description": "Image scale type chip"
+    },
+    "@imageScaleTypeStretch": {
+        "description": "Image scale type chip"
+    },
+    "@invertDoublePages": {
+        "description": "Paged reader toggle"
+    },
+    "@landscapeZoom": {
+        "description": "Paged reader toggle (Komikku landscape zoom)"
+    },
+    "@navigateToPan": {
+        "description": "Paged reader toggle (Komikku navigate-to-pan)"
+    },
+    "@pageLayout": {
+        "description": "Section label for the paged page-layout chip row"
+    },
+    "@pageLayoutAutomatic": {
+        "description": "Page layout chip"
+    },
+    "@pageLayoutDoublePages": {
+        "description": "Page layout chip"
+    },
+    "@pageLayoutSinglePage": {
+        "description": "Page layout chip"
+    },
+    "@readerForThisSeries": {
+        "description": "Header toggle in the reader settings sheet: per-series vs app-wide writes"
+    },
+    "@readerSectionPaged": {
+        "description": "Heading for the paged-only reader settings section"
+    },
+    "@readerSectionReadingMode": {
+        "description": "Section label for the reading-mode chip row"
+    },
+    "@readerSectionRotation": {
+        "description": "Section label for the rotation chip row"
+    },
+    "@readerSectionTapInvert": {
+        "description": "Section label for the tap-invert chip row"
+    },
+    "@readerSectionTapZones": {
+        "description": "Section label for the tap-zone chip row"
     },
     "@refreshChaptersFromSource": {
         "description": "Switch title for refreshing chapters from the source when opening an entry"
@@ -246,7 +327,9 @@
     "@daysAgo": {
         "description": "Days ago text to show the release date of manga",
         "placeholders": {
-            "days": { "type": "int" }
+            "days": {
+                "type": "int"
+            }
         }
     },
     "@debugLogs": {
@@ -382,7 +465,7 @@
         "description": "Button text of Find Server"
     },
     "@finished": {
-        "description": "Text to show the Currently Finished reading chapter in Reader Screen"
+        "description": "Text shown when a chapter is finished in continuous reading"
     },
     "@firstChapterNotification": {
         "description": "Notification text shown when user is at the first chapter"
@@ -512,9 +595,6 @@
     },
     "@chapterCompleted": {
         "description": "Text shown when a chapter is completed in continuous reading"
-    },
-    "@finished": {
-        "description": "Text shown when a chapter is finished in continuous reading"
     },
     "@manga": {
         "description": "Screen title and Button text of Manga details screen"
@@ -1030,6 +1110,12 @@
     "@skipUpdatingEntries": {
         "description": "Settings Text to update skip Updating Entries"
     },
+    "@smallerTapZones": {
+        "description": "Reader toggle: shrink the tap navigation zones"
+    },
+    "@smoothAutoScroll": {
+        "description": "Long-strip reader toggle (Komikku wording)"
+    },
     "@socksProxy": {
         "description": "Section title for SOCKS Proxy settings"
     },
@@ -1139,6 +1225,24 @@
     "@webView": {
         "description": "Button text to open manga website"
     },
+    "@webtoonScaleType": {
+        "description": "Section label for the long-strip smart-scale chip row"
+    },
+    "@webtoonScaleTypeFitScreen": {
+        "description": "Smart scale chip"
+    },
+    "@webtoonScaleTypeRatio16to9": {
+        "description": "Smart scale chip"
+    },
+    "@webtoonScaleTypeRatio20to9": {
+        "description": "Smart scale chip"
+    },
+    "@webtoonScaleTypeRatio3to2": {
+        "description": "Smart scale chip"
+    },
+    "@webtoonScaleTypeRatio4to3": {
+        "description": "Smart scale chip"
+    },
     "@whatsNew": {
         "description": "Button text to open whats new page of app in web"
     },
@@ -1154,11 +1258,27 @@
     "@recentlyRead": {
         "description": "Recently Read Text to show reading history grouping"
     },
+    "@zoomStart": {
+        "description": "Section label for the paged zoom-start chip row"
+    },
+    "@zoomStartAutomatic": {
+        "description": "Zoom start position chip"
+    },
+    "@zoomStartCenter": {
+        "description": "Zoom start position chip"
+    },
+    "@zoomStartLeft": {
+        "description": "Zoom start position chip"
+    },
+    "@zoomStartRight": {
+        "description": "Zoom start position chip"
+    },
     "about": "About",
     "addCategory": "Add Category",
     "addToLibrary": "Add to Library",
     "advanced": "Advanced",
     "allScanlators": "All Scanlators",
+    "animatePageTransitions": "Animate page transitions",
     "appLanguage": "App Language",
     "appTheme": "App Theme Mode",
     "appTitle": "Tsumiru",
@@ -1192,16 +1312,52 @@
     "autoDownloadCategoriesHint": "Auto-download new chapters only for included categories (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
     "autoDownloadCategoriesIncluded": "Included: {names}",
     "@autoDownloadCategoriesIncluded": {
-        "placeholders": { "names": { "type": "String" } }
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
     },
     "autoDownloadCategoriesExcluded": "Excluded: {names}",
     "@autoDownloadCategoriesExcluded": {
-        "placeholders": { "names": { "type": "String" } }
+        "placeholders": {
+            "names": {
+                "type": "String"
+            }
+        }
     },
     "autoWebtoonSnack": "Reading webtoon style",
-    "@autoWebtoonSnack": { "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)" },
+    "@autoWebtoonSnack": {
+        "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
+    },
     "automaticBackup": "Automatic Backup",
     "automaticUpdate": "Automatic Update",
+    "centerMarginDoubleAndWide": "Double and wide",
+    "centerMarginDoublePages": "Double pages",
+    "centerMarginNone": "None",
+    "centerMarginType": "Center margin type",
+    "centerMarginWidePages": "Wide pages",
+    "cropBorders": "Crop borders",
+    "imageScaleType": "Scale type",
+    "imageScaleTypeFitHeight": "Fit height",
+    "imageScaleTypeFitScreen": "Fit screen",
+    "imageScaleTypeFitWidth": "Fit width",
+    "imageScaleTypeOriginalSize": "Original size",
+    "imageScaleTypeSmartFit": "Smart fit",
+    "imageScaleTypeStretch": "Stretch",
+    "invertDoublePages": "Invert double pages",
+    "landscapeZoom": "Automatically zoom into wide images",
+    "navigateToPan": "Pan wide images",
+    "pageLayout": "Page layout",
+    "pageLayoutAutomatic": "Automatic",
+    "pageLayoutDoublePages": "Double pages",
+    "pageLayoutSinglePage": "Single page",
+    "readerForThisSeries": "For this series",
+    "readerSectionPaged": "Paged",
+    "readerSectionReadingMode": "Reading mode",
+    "readerSectionRotation": "Rotation",
+    "readerSectionTapInvert": "Invert tap zones",
+    "readerSectionTapZones": "Tap zones",
     "refreshChaptersFromSource": "Refresh chapters from source",
     "refreshChaptersFromSourceSubtitle": "When off, opening an entry shows the chapters already on the server. When on, also check the source for new chapters.",
     "automaticallyRefreshMetadata": "Automatically refresh metadata",
@@ -1228,6 +1384,8 @@
     "@showHiddenCategories": {
         "description": "Library Display > Tabs: checkbox to include categories marked as hidden in the tab bar"
     },
+    "smallerTapZones": "Smaller tap zones",
+    "smoothAutoScroll": "Smooth Auto Scroll",
     "tabs": "Tabs",
     "@tabs": {
         "description": "Library Display sheet section heading for tab-related toggles"
@@ -1288,13 +1446,17 @@
     "onboardingResolvedAddress": "Found your server at {url}",
     "@onboardingResolvedAddress": {
         "placeholders": {
-            "url": { "type": "String" }
+            "url": {
+                "type": "String"
+            }
         }
     },
     "onboardingFoundAt": "at {address}",
     "@onboardingFoundAt": {
         "placeholders": {
-            "address": { "type": "String" }
+            "address": {
+                "type": "String"
+            }
         }
     },
     "onboardingResolvedNoAuth": "This server is ready — no sign-in needed.",
@@ -1315,13 +1477,17 @@
     "onboardingResolvedBasicGated": "Something answered at {url} but it's behind a sign-in we can't read past. Pick 'Username & password' and enter your credentials.",
     "@onboardingResolvedBasicGated": {
         "placeholders": {
-            "url": { "type": "String" }
+            "url": {
+                "type": "String"
+            }
         }
     },
     "onboardingResolvedUnconfirmed": "Reached {url}, but it didn't respond as a Suwayomi server — often that's a router or another app, not your server. Double-check the address and port, or use it anyway.",
     "@onboardingResolvedUnconfirmed": {
         "placeholders": {
-            "url": { "type": "String" }
+            "url": {
+                "type": "String"
+            }
         }
     },
     "onboardingNotReached": "Couldn't reach a server at that address. Check it's running and reachable from this device.",
@@ -1329,7 +1495,9 @@
     "onboardingConnected": "Connected — Suwayomi v{version}",
     "@onboardingConnected": {
         "placeholders": {
-            "version": { "type": "String" }
+            "version": {
+                "type": "String"
+            }
         }
     },
     "onboardingConnectFailed": "Couldn't reach that server. Check the address (and login, if it needs one).",
@@ -1339,9 +1507,21 @@
     "daysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
     "justNow": "Just now",
     "minutesAgo": "{minutes, plural, =1{1 minute ago} other{{minutes} minutes ago}}",
-    "@minutesAgo": { "placeholders": { "minutes": { "type": "int" } } },
+    "@minutesAgo": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
     "hoursAgo": "{hours, plural, =1{1 hour ago} other{{hours} hours ago}}",
-    "@hoursAgo": { "placeholders": { "hours": { "type": "int" } } },
+    "@hoursAgo": {
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
     "libraryLastUpdated": "Library last updated: {time}",
     "debugLogs": "Debug logs",
     "defaultCategory": "Default category when adding new manga to library",
@@ -1370,23 +1550,33 @@
     "displayModeGrid": "Grid",
     "displayModeList": "List",
     "downloadAllChapters": "All",
-    "@downloadAllChapters": { "description": "Bulk-download menu item: queue every not-yet-downloaded chapter." },
+    "@downloadAllChapters": {
+        "description": "Bulk-download menu item: queue every not-yet-downloaded chapter."
+    },
     "downloadLocation": "Download location",
     "downloadLocationHint": "The path to the directory on the server where downloaded files should get saved in",
     "downloaded": "Downloaded",
     "downloading": "Downloading",
     "downloadNextChapter": "Next chapter",
-    "@downloadNextChapter": { "description": "Bulk-download menu item: queue the next single chapter after the last read." },
+    "@downloadNextChapter": {
+        "description": "Bulk-download menu item: queue the next single chapter after the last read."
+    },
     "downloadNextChaptersN": "Next {n} chapters",
     "@downloadNextChaptersN": {
-      "description": "Bulk-download menu item: queue the next N chapters after the last read.",
-      "placeholders": { "n": { "type": "int" } }
+        "description": "Bulk-download menu item: queue the next N chapters after the last read.",
+        "placeholders": {
+            "n": {
+                "type": "int"
+            }
+        }
     },
     "downloads": "Downloads",
     "onDeviceDownloads": "On-device downloads",
     "downloadToServer": "Download to server",
     "downloadUnreadChapters": "Unread",
-    "@downloadUnreadChapters": { "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters." },
+    "@downloadUnreadChapters": {
+        "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters."
+    },
     "edit": "Edit",
     "editCategory": "Edit Category",
     "hideCategory": "Hide category",
@@ -1441,7 +1631,9 @@
     "ipHintText": "Enter server binding IP address",
     "isTrueBlack": "True Black",
     "appThemeTitle": "Theme",
-    "@appThemeTitle": { "description": "Header for the color theme picker" },
+    "@appThemeTitle": {
+        "description": "Header for the color theme picker"
+    },
     "appThemeIndigoNight": "Indigo Night",
     "@appThemeIndigoNight": {},
     "appThemeCarbon": "Carbon",
@@ -1451,11 +1643,17 @@
     "appThemeCustom": "Custom",
     "@appThemeCustom": {},
     "customColor": "Custom color",
-    "@customColor": { "description": "Tile to pick a custom seed color" },
+    "@customColor": {
+        "description": "Tile to pick a custom seed color"
+    },
     "customFilter": "Custom filter",
-    "@customFilter": { "description": "Reader settings sheet tab for brightness/color filters" },
+    "@customFilter": {
+        "description": "Reader settings sheet tab for brightness/color filters"
+    },
     "pureBlackAmoled": "Pure black (AMOLED)",
-    "@pureBlackAmoled": { "description": "AMOLED dark variant toggle" },
+    "@pureBlackAmoled": {
+        "description": "AMOLED dark variant toggle"
+    },
     "languages": "Languages",
     "latest": "Latest",
     "lewd": "Lewd",
@@ -1506,21 +1704,29 @@
     "@inNDays": {
         "description": "Next-chapter estimate on the manga details page",
         "placeholders": {
-            "days": { "type": "int" }
+            "days": {
+                "type": "int"
+            }
         }
     },
     "smartUpdate": "Smart update",
     "smartUpdateExpected": "New chapters predicted to be released in around {predicted}, checking around every {interval}.",
     "@smartUpdateExpected": {
         "placeholders": {
-            "predicted": { "type": "String" },
-            "interval": { "type": "String" }
+            "predicted": {
+                "type": "String"
+            },
+            "interval": {
+                "type": "String"
+            }
         }
     },
     "dayCount": "{count, plural, =1{1 day} other{{count} days}}",
     "@dayCount": {
         "placeholders": {
-            "count": { "type": "int" }
+            "count": {
+                "type": "int"
+            }
         }
     },
     "nHours": "{n, plural, =1{1 hour} other{{n} hours}}",
@@ -1532,7 +1738,9 @@
     "newUpdateAvailable": "New update available",
     "nextChapter": "Next: {chapterTitle}",
     "nothingToDownload": "Nothing to download",
-    "@nothingToDownload": { "description": "Toast shown when a bulk-download preset would queue zero chapters." },
+    "@nothingToDownload": {
+        "description": "Toast shown when a bulk-download preset would queue zero chapters."
+    },
     "noCategoriesFound": "You don't have any Categories. \n(Tip: Tap the Plus button to create one for organizing your library)",
     "noCategoriesFoundAlt": "You don't have any Categories. \nCreate one in settings for organizing your library",
     "noCategoryMangaFound": "No manga found in this Category. \n(Tip: Check your search & filters!)",
@@ -1557,7 +1765,9 @@
     "@offlineBulkDeleteWarning": {
         "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
         "placeholders": {
-            "count": { "type": "int" }
+            "count": {
+                "type": "int"
+            }
         }
     },
     "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
@@ -1646,7 +1856,6 @@
     "failedToLoadNextChapter": "Failed to load next chapter",
     "failedToLoadPreviousChapter": "Failed to load previous chapter",
     "chapterCompleted": "Chapter Completed",
-    "finished": "Finished",
     "readerTapInvertBoth": "Both",
     "readerTapInvertHorizontal": "Horizontal",
     "readerTapInvertNone": "None",
@@ -1666,8 +1875,8 @@
     "migrationPreview": "Migration Preview",
     "migrationInProgress": "Migration in Progress",
     "migrationComplete": "Migration completed successfully",
-    "migrationFailed": "Migration failed",
-    "migrationCancelled": "Migration cancelled",
+    "migrationFailed": "Migration Failed",
+    "migrationCancelled": "Migration Cancelled",
     "migrateChapters": "Migrate Chapters",
     "migrateChaptersDescription": "Copy chapter read status to new source",
     "migrateCategories": "Migrate Categories",
@@ -1676,8 +1885,6 @@
     "migrateDownloadsDescription": "Move downloaded chapters to new source",
     "migrateTracking": "Migrate Tracking",
     "migrateTrackingDescription": "Copy tracking information to new source",
-    "migrationPreview": "Migration Preview",
-    "migrationInProgress": "Migration in Progress",
     "migrationOptions": "Migration Options",
     "migrationSettings": "Migration Settings",
     "selectTargetSource": "Select Target Source",
@@ -1699,7 +1906,7 @@
     "tryDifferentSearch": "Try a different search term",
     "searchError": "Search error",
     "importantNotice": "Important Notice",
-    "migrationWarning": "Migration will replace the current manga with the selected one. This action cannot be undone. Make sure you have selected the correct target manga.",
+    "migrationWarning": "This will permanently move your manga data. This action cannot be undone.",
     "deleteSourceWarning": "The original manga will be removed from your library after migration.",
     "confirmMigration": "Confirm Migration",
     "migrationConfirmationMessage": "Are you sure you want to migrate this manga? This action cannot be undone.",
@@ -1707,8 +1914,6 @@
     "preparingMigration": "Preparing migration...",
     "migrationCompleted": "Migration Completed!",
     "migrationSuccessMessage": "Your manga has been successfully migrated to the new source.",
-    "migrationFailed": "Migration Failed",
-    "migrationCancelled": "Migration Cancelled",
     "migrationCancelledMessage": "The migration process has been cancelled. No changes were made.",
     "cancelMigration": "Cancel Migration",
     "cancelMigrationConfirmation": "Are you sure you want to cancel the migration? This action cannot be undone.",
@@ -1719,6 +1924,12 @@
     "deleteSourceManga": "Delete Source Manga",
     "deleteSourceMangaDescription": "Remove the original manga from library after migration",
     "done": "Done",
+    "webtoonScaleType": "Smart scale on wide screen",
+    "webtoonScaleTypeFitScreen": "Fit screen",
+    "webtoonScaleTypeRatio16to9": "16:9",
+    "webtoonScaleTypeRatio20to9": "20:9",
+    "webtoonScaleTypeRatio3to2": "3:2",
+    "webtoonScaleTypeRatio4to3": "4:3",
     "yes": "Yes",
     "no": "No",
     "from": "From",
@@ -1729,8 +1940,6 @@
     "searchingAllSources": "Searching across all available sources...",
     "noMatchingMangaFound": "No matching manga found in any source",
     "deleteSourceAfterMigration": "Delete source manga after migration",
-    "confirmMigration": "Confirm Migration",
-    "migrationWarning": "This will permanently move your manga data. This action cannot be undone.",
     "reload": "Reload",
     "remove": "Remove",
     "removeFromLibrary": "Remove from Library?",
@@ -1775,7 +1984,6 @@
     "socksUserName": "SOCKS UserName",
     "socksVersion": "SOCKS Version",
     "sort": "Sort",
-    "source": "Source",
     "sourceTypeFilter": "Filter",
     "sourceTypeLatest": "Latest",
     "sourceTypePopular": "Popular",
@@ -1827,13 +2035,19 @@
     "removeFromHistoryConfirmation": "Are you sure you want to remove this chapter from your reading history?",
     "timeoutSettings": "Timeout Settings",
     "serverRequestTimeout": "Server Request Timeout",
-    "@serverRequestTimeout": {"description": "Controls how long to wait for server responses"},
+    "@serverRequestTimeout": {
+        "description": "Controls how long to wait for server responses"
+    },
     "serverRequestTimeoutDescription": "Time to wait for server responses (in seconds)",
     "autoRefreshOnTimeout": "Auto-refresh on Timeout",
-    "@autoRefreshOnTimeout": {"description": "Toggle automatic retry on timeout"},
+    "@autoRefreshOnTimeout": {
+        "description": "Toggle automatic retry on timeout"
+    },
     "autoRefreshOnTimeoutDescription": "Automatically retries requests that timeout",
     "autoRefreshRetryDelay": "Auto-refresh Retry Delay",
-    "@autoRefreshRetryDelay": {"description": "Delay between auto retry attempts in seconds"},
+    "@autoRefreshRetryDelay": {
+        "description": "Delay between auto retry attempts in seconds"
+    },
     "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)",
     "offline": "Offline",
     "@offline": {
@@ -1874,7 +2088,11 @@
     "offlineConcurrencyValue": "{count} at a time",
     "@offlineConcurrencyValue": {
         "description": "Value subtitle for the download concurrency slider",
-        "placeholders": { "count": { "type": "int" } }
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     },
     "offlineStorageCapEnable": "Limit offline storage",
     "@offlineStorageCapEnable": {
@@ -1925,7 +2143,11 @@
     "keepOfflineNextUnread": "Keep next {count} unread",
     "@keepOfflineNextUnread": {
         "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
-        "placeholders": { "count": { "type": "int" } }
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     },
     "keepOfflineAllUnread": "Keep all unread",
     "@keepOfflineAllUnread": {
@@ -1970,21 +2192,35 @@
     "manageDownloadsStopDelete": "Stop keeping & delete files",
     "manageDownloadsKeepFilesConfirm": "Stop auto-keeping {count} series but leave the chapters already downloaded on this device?",
     "@manageDownloadsKeepFilesConfirm": {
-        "placeholders": { "count": { "type": "int" } }
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     },
     "manageDownloadsDeleteConfirm": "Stop keeping {count} series and delete their downloaded chapters from this device? The server copies are untouched.",
     "@manageDownloadsDeleteConfirm": {
-        "placeholders": { "count": { "type": "int" } }
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     },
     "manageDownloadsGrowConfirm": "This will download more chapters for {count} series. Continue?",
     "@manageDownloadsGrowConfirm": {
-        "placeholders": { "count": { "type": "int" } }
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     },
     "offlineDownloadingCount": "Downloading {count}",
     "@offlineDownloadingCount": {
         "description": "Series button label while N chapters are downloading",
         "placeholders": {
-            "count": { "type": "int" }
+            "count": {
+                "type": "int"
+            }
         }
     },
     "downloadsServerTab": "Server",
@@ -2162,5 +2398,10 @@
     "filterTracked": "Tracked",
     "@filterTracked": {
         "description": "Filter section heading shown when at least one tracker is logged in"
-    }
+    },
+    "zoomStart": "Zoom start position",
+    "zoomStartAutomatic": "Automatic",
+    "zoomStartCenter": "Center",
+    "zoomStartLeft": "Left",
+    "zoomStartRight": "Right"
 }

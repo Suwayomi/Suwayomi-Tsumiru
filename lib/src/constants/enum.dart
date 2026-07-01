@@ -124,6 +124,86 @@ enum TapInvert {
       };
 }
 
+/// Paged image scale (Komikku ImageScaleType, default fit-screen).
+enum ImageScaleType {
+  fitScreen,
+  stretch,
+  fitWidth,
+  fitHeight,
+  originalSize,
+  smartFit;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ImageScaleType.fitScreen => context.l10n.imageScaleTypeFitScreen,
+        ImageScaleType.stretch => context.l10n.imageScaleTypeStretch,
+        ImageScaleType.fitWidth => context.l10n.imageScaleTypeFitWidth,
+        ImageScaleType.fitHeight => context.l10n.imageScaleTypeFitHeight,
+        ImageScaleType.originalSize => context.l10n.imageScaleTypeOriginalSize,
+        ImageScaleType.smartFit => context.l10n.imageScaleTypeSmartFit,
+      };
+}
+
+/// Paged zoom start position (Komikku ZoomStart, default automatic).
+enum ZoomStart {
+  automatic,
+  left,
+  right,
+  center;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ZoomStart.automatic => context.l10n.zoomStartAutomatic,
+        ZoomStart.left => context.l10n.zoomStartLeft,
+        ZoomStart.right => context.l10n.zoomStartRight,
+        ZoomStart.center => context.l10n.zoomStartCenter,
+      };
+}
+
+/// Paged single/double-page layout (Komikku PageLayouts, default automatic).
+enum PageLayout {
+  singlePage,
+  doublePages,
+  automatic;
+
+  String toLocale(BuildContext context) => switch (this) {
+        PageLayout.singlePage => context.l10n.pageLayoutSinglePage,
+        PageLayout.doublePages => context.l10n.pageLayoutDoublePages,
+        PageLayout.automatic => context.l10n.pageLayoutAutomatic,
+      };
+}
+
+/// Foldable dead-space spacer (Komikku CenterMarginTypes, default none).
+enum CenterMarginType {
+  none,
+  doublePage,
+  widePage,
+  doubleAndWide;
+
+  String toLocale(BuildContext context) => switch (this) {
+        CenterMarginType.none => context.l10n.centerMarginNone,
+        CenterMarginType.doublePage => context.l10n.centerMarginDoublePages,
+        CenterMarginType.widePage => context.l10n.centerMarginWidePages,
+        CenterMarginType.doubleAndWide =>
+          context.l10n.centerMarginDoubleAndWide,
+      };
+}
+
+/// Long-strip smart scale on wide screens (Komikku WebtoonScaleType).
+enum WebtoonScaleType {
+  fitScreen,
+  ratio4to3,
+  ratio3to2,
+  ratio16to9,
+  ratio20to9;
+
+  String toLocale(BuildContext context) => switch (this) {
+        WebtoonScaleType.fitScreen => context.l10n.webtoonScaleTypeFitScreen,
+        WebtoonScaleType.ratio4to3 => context.l10n.webtoonScaleTypeRatio4to3,
+        WebtoonScaleType.ratio3to2 => context.l10n.webtoonScaleTypeRatio3to2,
+        WebtoonScaleType.ratio16to9 => context.l10n.webtoonScaleTypeRatio16to9,
+        WebtoonScaleType.ratio20to9 => context.l10n.webtoonScaleTypeRatio20to9,
+      };
+}
+
 enum MangaSort {
   alphabetical,
   dateAdded,
