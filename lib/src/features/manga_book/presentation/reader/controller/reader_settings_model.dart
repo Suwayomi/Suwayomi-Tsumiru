@@ -12,6 +12,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import '../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
+import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import 'reader_setting.dart';
@@ -86,6 +87,38 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           .resolveWith(ref, meta?.readerMagnifierSize),
       invertTap: ReaderSettings.invertTap.resolveWith(ref, null),
     );
+  }
+
+  Future<void> setReaderMode(ReaderMode mode) =>
+      _patchMeta(MangaMetaKeys.readerMode, mode.name);
+
+  Future<void> setNavigationLayout(ReaderNavigationLayout layout) =>
+      _patchMeta(MangaMetaKeys.readerNavigationLayout, layout.name);
+
+  Future<void> setSidePadding(double value) =>
+      _patchMeta(MangaMetaKeys.readerPadding, value);
+
+  Future<void> setMagnifierSize(double value) =>
+      _patchMeta(MangaMetaKeys.readerMagnifierSize, value);
+
+  /// Per-series write, mirroring the old drawer: patchMangaMeta then
+  /// invalidate mangaWithIdProvider so every watcher re-reads fresh meta.
+  Future<void> _patchMeta(MangaMetaKeys key, dynamic value) async {
+    // Hold this autoDispose family open across the round-trip so a sheet
+    // dismissed mid-write can't tear down ref before the invalidate.
+    final link = ref.keepAlive();
+    try {
+      await AsyncValue.guard(
+        () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
+              mangaId: mangaId,
+              key: key.key,
+              value: value,
+            ),
+      );
+      ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    } finally {
+      link.close();
+    }
   }
 }
 

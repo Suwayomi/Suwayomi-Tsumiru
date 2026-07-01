@@ -1396,6 +1396,8 @@
     "@appThemeCustom": {},
     "customColor": "Custom color",
     "@customColor": { "description": "Tile to pick a custom seed color" },
+    "customFilter": "Custom filter",
+    "@customFilter": { "description": "Reader settings sheet tab for brightness/color filters" },
     "pureBlackAmoled": "Pure black (AMOLED)",
     "@pureBlackAmoled": { "description": "AMOLED dark variant toggle" },
     "languages": "Languages",

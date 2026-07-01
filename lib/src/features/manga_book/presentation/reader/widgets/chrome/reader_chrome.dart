@@ -38,9 +38,8 @@ import 'reader_top_bar.dart';
 /// [visibility] (owned by [ReaderWrapper]) remains the single source of truth —
 /// the controller is a pure render concern driven by a [useEffect].
 ///
-/// The [endDrawer] settings drawer is NOT touched here — that host swap is a
-/// later increment ([onOpenSettings] still calls
-/// [Scaffold.of(ctx).openEndDrawer()]).
+/// [onOpenSettings] opens the 3-tab settings bottom sheet
+/// (`showReaderSettingsSheet`), which replaced the old endDrawer.
 class ReaderChrome extends HookConsumerWidget {
   const ReaderChrome({
     super.key,

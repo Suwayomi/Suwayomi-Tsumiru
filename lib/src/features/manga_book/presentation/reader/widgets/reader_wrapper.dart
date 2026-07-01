@@ -9,7 +9,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_android_volume_keydown/flutter_android_volume_keydown.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_constants.dart';
@@ -36,6 +35,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
 import 'chrome/reader_chrome.dart';
+import 'chrome/reader_settings_dialog.dart';
 import 'directional_swipe_gesture_handler.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
 
@@ -195,30 +195,6 @@ class ReaderWrapper extends HookConsumerWidget {
       [mangaReaderMode],
     );
 
-    final showReaderNavigationLayoutPopup = useCallback(
-      () => showDialog(
-        context: context,
-        builder: (context) => RadioListPopup<ReaderNavigationLayout>(
-          optionList: ReaderNavigationLayout.values,
-          getOptionTitle: (value) => value.toLocale(context),
-          title: context.l10n.readerNavigationLayout,
-          value: mangaReaderNavigationLayout,
-          onChange: (enumValue) async {
-            if (context.mounted) Navigator.pop(context);
-            await AsyncValue.guard(
-              () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
-                    mangaId: manga.id,
-                    key: MangaMetaKeys.readerNavigationLayout.key,
-                    value: enumValue.name,
-                  ),
-            );
-            ref.invalidate(mangaWithIdProvider(mangaId: manga.id));
-          },
-        ),
-      ),
-      [mangaReaderNavigationLayout],
-    );
-
     // NOTE: The visibility→SystemUiMode transition is now driven by
     // ReaderChrome's AnimationController status listener (Inc-1), not here.
     // edgeToEdge is requested when the controller starts going forward;
@@ -339,65 +315,6 @@ class ReaderWrapper extends HookConsumerWidget {
       child: Scaffold(
         extendBodyBehindAppBar: true,
         extendBody: true,
-        endDrawerEnableOpenDragGesture: false,
-        endDrawer: Drawer(
-          width: kDrawerWidth,
-          shape: const RoundedRectangleBorder(),
-          child: ListView(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.close_rounded),
-                onTap: context.pop,
-              ),
-              ListTile(
-                style: ListTileStyle.drawer,
-                leading: const Icon(Icons.app_settings_alt_outlined),
-                title: Text(context.l10n.readerMode),
-                subtitle: Text(mangaReaderMode.toLocale(context)),
-                onTap: () {
-                  context.pop();
-                  showReaderModePopup();
-                },
-              ),
-              ListTile(
-                style: ListTileStyle.drawer,
-                leading: const Icon(Icons.touch_app_rounded),
-                title: Text(context.l10n.readerNavigationLayout),
-                subtitle: Text(mangaReaderNavigationLayout.toLocale(context)),
-                onTap: () {
-                  context.pop();
-                  showReaderNavigationLayoutPopup();
-                },
-              ),
-              AsyncReaderPaddingSlider(
-                readerPadding: mangaReaderPadding,
-                onChanged: (value) {
-                  AsyncValue.guard(
-                    () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
-                          mangaId: manga.id,
-                          key: MangaMetaKeys.readerPadding.key,
-                          value: value,
-                        ),
-                  );
-                  ref.invalidate(mangaWithIdProvider(mangaId: manga.id));
-                },
-              ),
-              AsyncReaderMagnifierSizeSlider(
-                readerMagnifierSize: mangaReaderMagnifierSize,
-                onChanged: (value) {
-                  AsyncValue.guard(
-                    () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
-                          mangaId: manga.id,
-                          key: MangaMetaKeys.readerMagnifierSize.key,
-                          value: value,
-                        ),
-                  );
-                  ref.invalidate(mangaWithIdProvider(mangaId: manga.id));
-                },
-              ),
-            ],
-          ),
-        ),
         body: Stack(
           children: [
             Positioned.fill(
@@ -488,25 +405,30 @@ class ReaderWrapper extends HookConsumerWidget {
             // visibility conditional as before (still instant show/hide; the
             // synchronized animation is a later increment).
             Positioned.fill(
-              child: Builder(builder: (context) {
-                return ReaderChrome(
-                  manga: manga,
-                  chapter: chapter,
-                  chapterPages: chapterPages,
-                  currentIndex: currentIndex,
-                  totalPageCount: totalPageCount,
+              child: ReaderChrome(
+                manga: manga,
+                chapter: chapter,
+                chapterPages: chapterPages,
+                currentIndex: currentIndex,
+                totalPageCount: totalPageCount,
+                visibility: visibility,
+                useBottomSeekBar: useBottomSeekBar,
+                showSideSeekBar:
+                    scrollDirection == Axis.vertical && !isLandscapePhone,
+                scrollDirection: scrollDirection,
+                nextPrevChapterPair: nextPrevChapterPair,
+                invertTap: invertTap,
+                onChanged: onChanged,
+                onOpenSettings: () => showReaderSettingsSheet(
+                  context: context,
+                  ref: ref,
+                  mangaId: manga.id,
                   visibility: visibility,
-                  useBottomSeekBar: useBottomSeekBar,
-                  showSideSeekBar:
-                      scrollDirection == Axis.vertical && !isLandscapePhone,
-                  scrollDirection: scrollDirection,
-                  nextPrevChapterPair: nextPrevChapterPair,
-                  invertTap: invertTap,
-                  onChanged: onChanged,
-                  onOpenSettings: () => Scaffold.of(context).openEndDrawer(),
-                  onOpenReaderMode: showReaderModePopup,
-                );
-              }),
+                  readerPadding: mangaReaderPadding,
+                  magnifierSize: mangaReaderMagnifierSize,
+                ),
+                onOpenReaderMode: showReaderModePopup,
+              ),
             ),
           ],
         ),
