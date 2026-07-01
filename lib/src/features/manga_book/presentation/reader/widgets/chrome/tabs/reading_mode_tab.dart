@@ -11,6 +11,7 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../controller/reader_settings_model.dart';
 
@@ -32,6 +33,19 @@ class ReadingModeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
+    final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
+    // "Default" dereferences the app-wide mode, mirroring reader_screen.
+    final mode = settings.readerMode == ReaderMode.defaultReader
+        ? (ref.watch(readerModeKeyProvider) ?? ReaderMode.webtoon)
+        : settings.readerMode;
+    final isLongStrip = switch (mode) {
+      ReaderMode.webtoon ||
+      ReaderMode.continuousVertical ||
+      ReaderMode.continuousHorizontalLTR ||
+      ReaderMode.continuousHorizontalRTL =>
+        true,
+      _ => false,
+    };
     // I7: own scroll view; never the sheet's controller.
     return ListView(
       primary: false,
@@ -88,6 +102,37 @@ class ReadingModeTab extends ConsumerWidget {
               .read(readerSettingsModelProvider(mangaId).notifier)
               .setMagnifierSize(value),
         ),
+        // Zoom toggles are mode-contextual (Komikku: webtoon vs paged prefs).
+        if (isLongStrip) ...[
+          SwitchListTile(
+            controlAffinity: ListTileControlAffinity.trailing,
+            secondary: const Icon(Icons.ads_click_rounded),
+            title: Text(context.l10n.doubleTapToZoom),
+            value: settings.doubleTapToZoom,
+            onChanged: model.setDoubleTapToZoom,
+          ),
+          SwitchListTile(
+            controlAffinity: ListTileControlAffinity.trailing,
+            secondary: const Icon(Icons.pinch_rounded),
+            title: Text(context.l10n.pinchToZoom),
+            value: settings.pinchToZoom,
+            onChanged: model.setPinchToZoom,
+          ),
+          SwitchListTile(
+            controlAffinity: ListTileControlAffinity.trailing,
+            secondary: const Icon(Icons.zoom_out_rounded),
+            title: Text(context.l10n.disableZoomOut),
+            value: settings.disableZoomOut,
+            onChanged: model.setDisableZoomOut,
+          ),
+        ] else
+          SwitchListTile(
+            controlAffinity: ListTileControlAffinity.trailing,
+            secondary: const Icon(Icons.zoom_in_rounded),
+            title: Text(context.l10n.disableZoomIn),
+            value: settings.disableZoomIn,
+            onChanged: model.setDisableZoomIn,
+          ),
       ],
     );
   }

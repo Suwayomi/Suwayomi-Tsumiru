@@ -145,6 +145,12 @@ enum DBKeys {
   // seekbar is anchored to the right edge. When true, it is anchored to the
   // left edge for left-handed reading.
   leftHandedVerticalSeekbar(false),
+  // Webtoon/long-strip zoom gestures (Komikku WebtoonRecyclerView parity):
+  // double-tap zoom on, zoom-out below 1x allowed (down to 0.5x) unless disabled.
+  doubleTapToZoom(true),
+  disableZoomOut(false),
+  // Paged "Disable zoom in": turns off the paged viewer's zoom wrapper.
+  disableZoomIn(false),
   ;
 
   const DBKeys(this.initial);

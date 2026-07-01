@@ -22,6 +22,7 @@ import '../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
@@ -173,6 +174,9 @@ class ContinuousReaderMode extends HookConsumerWidget {
         ref.read(readerScrollAnimationProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
         ref.read(pinchToZoomProvider).ifNull(true);
+    final bool isDoubleTapZoomEnabled =
+        ref.read(doubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
 
     return ReaderWrapper(
       scrollDirection: scrollDirection,
@@ -224,7 +228,9 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   controller: zoomScrollController,
                   scrollAxis: scrollDirection,
                   maxScale: 5,
-                  doubleTapDrag: true,
+                  // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
+                  minScale: isZoomOutDisabled ? 1 : 0.5,
+                  doubleTapDrag: isDoubleTapZoomEnabled,
                   // Required so the scale recognizer wins the gesture
                   // arena against the underlying scrollable's drag
                   // recognizer (closes #256).

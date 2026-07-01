@@ -12,6 +12,8 @@ import '../../../../../constants/enum.dart';
 import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import '../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
+import '../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
+import '../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
@@ -56,6 +58,31 @@ abstract final class ReaderSettings {
     global: invertTapProvider,
     fallback: DBKeys.invertTap.initial as bool,
   );
+
+  // Zoom toggles are global reader prefs (Komikku parity — no per-series meta).
+  static final pinchToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: pinchToZoomProvider,
+    fallback: DBKeys.pinchToZoom.initial as bool,
+  );
+
+  static final doubleTapToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: doubleTapToZoomProvider,
+    fallback: DBKeys.doubleTapToZoom.initial as bool,
+  );
+
+  static final disableZoomOut = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: disableZoomOutProvider,
+    fallback: DBKeys.disableZoomOut.initial as bool,
+  );
+
+  static final disableZoomIn = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: disableZoomInProvider,
+    fallback: DBKeys.disableZoomIn.initial as bool,
+  );
 }
 
 @freezed
@@ -66,6 +93,10 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required double sidePadding,
     required double magnifierSize,
     required bool invertTap,
+    required bool pinchToZoom,
+    required bool doubleTapToZoom,
+    required bool disableZoomOut,
+    required bool disableZoomIn,
   }) = _ReaderSettingsState;
 }
 
@@ -73,8 +104,19 @@ class ReaderSettingsState with _$ReaderSettingsState {
 /// the existing providers/meta — the state home for the settings sheet.
 @riverpod
 class ReaderSettingsModel extends _$ReaderSettingsModel {
+  // Captured at build: setters write via these, since the model's own ref is
+  // outdated (assert-crash) between a global write and the rebuild it triggers.
+  late PinchToZoom _pinchToZoom;
+  late DoubleTapToZoom _doubleTapToZoom;
+  late DisableZoomOut _disableZoomOut;
+  late DisableZoomIn _disableZoomIn;
+
   @override
   ReaderSettingsState build(int mangaId) {
+    _pinchToZoom = ref.read(pinchToZoomProvider.notifier);
+    _doubleTapToZoom = ref.read(doubleTapToZoomProvider.notifier);
+    _disableZoomOut = ref.read(disableZoomOutProvider.notifier);
+    _disableZoomIn = ref.read(disableZoomInProvider.notifier);
     final meta =
         ref.watch(mangaWithIdProvider(mangaId: mangaId)).valueOrNull?.metaData;
     return ReaderSettingsState(
@@ -86,8 +128,21 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       magnifierSize: ReaderSettings.magnifierSize
           .resolveWith(ref, meta?.readerMagnifierSize),
       invertTap: ReaderSettings.invertTap.resolveWith(ref, null),
+      pinchToZoom: ReaderSettings.pinchToZoom.resolveWith(ref, null),
+      doubleTapToZoom: ReaderSettings.doubleTapToZoom.resolveWith(ref, null),
+      disableZoomOut: ReaderSettings.disableZoomOut.resolveWith(ref, null),
+      disableZoomIn: ReaderSettings.disableZoomIn.resolveWith(ref, null),
     );
   }
+
+  // Zoom toggles are global: write the app-wide provider, never manga meta.
+  void setPinchToZoom(bool value) => _pinchToZoom.update(value);
+
+  void setDoubleTapToZoom(bool value) => _doubleTapToZoom.update(value);
+
+  void setDisableZoomOut(bool value) => _disableZoomOut.update(value);
+
+  void setDisableZoomIn(bool value) => _disableZoomIn.update(value);
 
   Future<void> setReaderMode(ReaderMode mode) =>
       _patchMeta(MangaMetaKeys.readerMode, mode.name);

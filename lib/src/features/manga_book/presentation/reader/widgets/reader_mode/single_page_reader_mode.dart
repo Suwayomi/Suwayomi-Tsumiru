@@ -20,6 +20,7 @@ import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
@@ -94,6 +95,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
     }, [scrollController]);
     final isAnimationEnabled =
         ref.read(readerScrollAnimationProvider).ifNull(true);
+    // Paged "Disable zoom in" drops the whole zoom wrapper (pinch AND the
+    // double-tap-drag zoom) — Komikku's pref_paged_disable_zoom_in.
+    final isZoomDisabled = ref.read(disableZoomInProvider).ifNull();
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapter: chapter,
@@ -112,7 +116,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
       ),
       pageController: scrollController,
       child: AppUtils.wrapOn(
-        !kIsWeb && (Platform.isAndroid || Platform.isIOS)
+        !kIsWeb && (Platform.isAndroid || Platform.isIOS) && !isZoomDisabled
             ? (Widget child) => ZoomView(
                   controller: scrollController,
                   scrollAxis: scrollDirection,

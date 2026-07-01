@@ -25,6 +25,7 @@ import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../../../tracking/domain/track_progress_gate.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
@@ -281,6 +282,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ref.read(readerScrollAnimationProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
         ref.read(pinchToZoomProvider).ifNull(true);
+    final bool isDoubleTapZoomEnabled =
+        ref.read(doubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
 
     // Decode a page's image off-screen AND record its true rendered height from
     // the decoded aspect ratio (Mihon/Mangayomi technique). Caching the height
@@ -779,7 +783,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 controller: zoomScrollController,
                 scrollAxis: scrollDirection,
                 maxScale: InfinityContinuousConfig.maxZoomScale,
-                doubleTapDrag: true,
+                // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
+                minScale: isZoomOutDisabled ? 1 : 0.5,
+                doubleTapDrag: isDoubleTapZoomEnabled,
                 forceHoldOnPointerDown: true,
                 child: child,
               )

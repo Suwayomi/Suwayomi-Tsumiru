@@ -19,6 +19,8 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/r
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
@@ -120,6 +122,24 @@ void main() {
       expect(ReaderSettings.invertTap.perSeriesKey, isNull);
     });
 
+    test('zoom toggles are global-only (Komikku parity, no per-series meta)',
+        () {
+      for (final setting in [
+        ReaderSettings.pinchToZoom,
+        ReaderSettings.doubleTapToZoom,
+        ReaderSettings.disableZoomOut,
+        ReaderSettings.disableZoomIn,
+      ]) {
+        expect(setting.scope, ReaderSettingScope.global);
+        expect(setting.perSeriesKey, isNull);
+      }
+      // Defaults: gestures on, nothing disabled.
+      expect(ReaderSettings.pinchToZoom.fallback, true);
+      expect(ReaderSettings.doubleTapToZoom.fallback, true);
+      expect(ReaderSettings.disableZoomOut.fallback, false);
+      expect(ReaderSettings.disableZoomIn.fallback, false);
+    });
+
     test('mode/nav fall back to the sentinel, not the app-wide default', () {
       // The drawer shows "Default" when no override is set; the app-wide mode
       // is dereferenced later by the engine. Folding it in here would make the
@@ -167,6 +187,47 @@ void main() {
       expect(state.sidePadding, 0.0);
       expect(state.magnifierSize, 1.0);
       expect(state.invertTap, false);
+      expect(state.pinchToZoom, true);
+      expect(state.doubleTapToZoom, true);
+      expect(state.disableZoomOut, false);
+      expect(state.disableZoomIn, false);
+    });
+
+    test('zoom toggles resolve the live global providers', () async {
+      final container = await _container(_manga());
+      container.read(pinchToZoomProvider.notifier).update(false);
+      container.read(doubleTapToZoomProvider.notifier).update(false);
+      container.read(disableZoomOutProvider.notifier).update(true);
+      container.read(disableZoomInProvider.notifier).update(true);
+
+      final state = await _resolvedState(container);
+      expect(state.pinchToZoom, false);
+      expect(state.doubleTapToZoom, false);
+      expect(state.disableZoomOut, true);
+      expect(state.disableZoomIn, true);
+    });
+
+    test('zoom setters write the global providers, not manga meta', () async {
+      final container = await _container(_manga());
+      await _resolvedState(container);
+
+      final model = container.read(readerSettingsModelProvider(1).notifier);
+      model.setPinchToZoom(false);
+      model.setDoubleTapToZoom(false);
+      model.setDisableZoomOut(true);
+      model.setDisableZoomIn(true);
+
+      expect(container.read(pinchToZoomProvider), false);
+      expect(container.read(doubleTapToZoomProvider), false);
+      expect(container.read(disableZoomOutProvider), true);
+      expect(container.read(disableZoomInProvider), true);
+
+      await Future<void>.value();
+      final state = container.read(readerSettingsModelProvider(1));
+      expect(state.pinchToZoom, false);
+      expect(state.doubleTapToZoom, false);
+      expect(state.disableZoomOut, true);
+      expect(state.disableZoomIn, true);
     });
 
     test('invertTap ignores stale per-series meta (global-only today)',

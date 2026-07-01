@@ -28,7 +28,7 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-MangaDto _manga() => Fragment$MangaDto(
+MangaDto _manga({Map<String, String> meta = const {}}) => Fragment$MangaDto(
       id: 1,
       title: 'Test Manga',
       bookmarkCount: 0,
@@ -38,7 +38,10 @@ MangaDto _manga() => Fragment$MangaDto(
       inLibrary: true,
       inLibraryAt: '0',
       initialized: true,
-      meta: const [],
+      meta: [
+        for (final e in meta.entries)
+          Fragment$MangaDto$meta(key: e.key, value: e.value),
+      ],
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
@@ -85,7 +88,10 @@ class _SheetHost extends ConsumerWidget {
 void main() {
   late ValueNotifier<bool> visibility;
 
-  Future<void> pumpHost(WidgetTester tester) async {
+  Future<void> pumpHost(
+    WidgetTester tester, {
+    Map<String, String> meta = const {},
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     visibility = ValueNotifier(true);
@@ -96,7 +102,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
+              .overrideWith(() => _FakeMangaWithId(_manga(meta: meta))),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -127,6 +133,36 @@ void main() {
     expect(find.text('Navigation layout'), findsOneWidget);
     expect(find.text('Reader Padding'), findsOneWidget);
     expect(find.text('Magnifier Size'), findsOneWidget);
+  });
+
+  testWidgets(
+      'zoom toggles: webtoon-resolved mode shows the 3 long-strip switches',
+      (tester) async {
+    // No meta: stored mode is Default, which dereferences to webtoon.
+    await pumpHost(tester);
+    await openSheet(tester);
+
+    await tester.drag(find.text('Navigation layout'), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Double tap to zoom'), findsOneWidget);
+    expect(find.text('Pinch to Zoom'), findsOneWidget);
+    expect(find.text('Disable zoom out'), findsOneWidget);
+    expect(find.text('Disable zoom in'), findsNothing);
+  });
+
+  testWidgets('zoom toggles: paged mode shows only Disable zoom in',
+      (tester) async {
+    await pumpHost(tester, meta: {'flutter_readerMode': 'singleHorizontalRTL'});
+    await openSheet(tester);
+
+    await tester.drag(find.text('Navigation layout'), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Disable zoom in'), findsOneWidget);
+    expect(find.text('Double tap to zoom'), findsNothing);
+    expect(find.text('Pinch to Zoom'), findsNothing);
+    expect(find.text('Disable zoom out'), findsNothing);
   });
 
   testWidgets(
