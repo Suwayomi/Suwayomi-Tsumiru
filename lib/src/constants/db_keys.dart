@@ -151,6 +151,9 @@ enum DBKeys {
   disableZoomOut(false),
   // Paged "Disable zoom in": turns off the paged viewer's zoom wrapper.
   disableZoomIn(false),
+  // Auto Webtoon Mode (Komikku parity): series whose tags/source say
+  // long-strip read in webtoon mode when their per-series mode is Default.
+  autoWebtoonMode(true),
   ;
 
   const DBKeys(this.initial);

@@ -14,17 +14,20 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
+import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
+import 'controller/auto_webtoon.dart';
 import 'controller/reader_controller.dart';
 import 'widgets/reader_mode/continuous_reader_mode.dart';
 import 'widgets/reader_mode/single_page_reader_mode.dart';
@@ -48,6 +51,25 @@ class ReaderScreen extends HookConsumerWidget {
     final chapter = ref.watch(chapterProviderWithIndex);
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
     final ignoreSafeArea = ref.watch(readerIgnoreSafeAreaProvider).ifNull();
+
+    // Auto Webtoon (Komikku): long-strip series read webtoon THIS session when
+    // their per-series mode is Default; never written to meta.
+    final mangaData = manga.valueOrNull;
+    final autoWebtoon = ref.watch(autoWebtoonModeProvider).ifNull(true) &&
+        mangaData != null &&
+        (mangaData.metaData.readerMode ?? ReaderMode.defaultReader) ==
+            ReaderMode.defaultReader &&
+        detectsWebtoon(
+          genres: mangaData.genre,
+          sourceName: mangaData.source?.name,
+        );
+    final toast = ref.watch(toastProvider);
+    useEffect(() {
+      if (autoWebtoon) {
+        toast?.show(context.l10n.autoWebtoonSnack, withMicrotask: true);
+      }
+      return null;
+    }, [autoWebtoon]);
 
     final debounce = useRef<Timer?>(null);
     // Latest page reached, so we can flush it on exit (the debounce below would
@@ -208,8 +230,9 @@ class ReaderScreen extends HookConsumerWidget {
                       if (chapterPagesData == null) {
                         return const SizedBox.shrink();
                       }
-                      return switch (
-                          data.metaData.readerMode ?? defaultReaderMode) {
+                      return switch (autoWebtoon
+                          ? ReaderMode.webtoon
+                          : data.metaData.readerMode ?? defaultReaderMode) {
                         ReaderMode.singleVertical => SinglePageReaderMode(
                             chapter: chapterData,
                             manga: data,

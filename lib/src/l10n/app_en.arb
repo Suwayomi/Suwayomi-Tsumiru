@@ -1144,6 +1144,8 @@
     "@autoDownloadCategoriesExcluded": {
         "placeholders": { "names": { "type": "String" } }
     },
+    "autoWebtoonSnack": "Reading webtoon style",
+    "@autoWebtoonSnack": { "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)" },
     "automaticBackup": "Automatic Backup",
     "automaticUpdate": "Automatic Update",
     "refreshChaptersFromSource": "Refresh chapters from source",
