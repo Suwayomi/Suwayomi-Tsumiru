@@ -6,7 +6,7 @@ A fast, multiplatform reader for your [Suwayomi](https://suwayomi.org/) server.
 
 ## Install
 
-You'll need a running Suwayomi server. See [Getting started](https://tsumiru-app.github.io/docs/guides/getting-started).
+You'll need a running Suwayomi server. See [Getting started](https://tsumiru.app/docs/guides/getting-started).
 
 **Linux - Flatpak (recommended, auto-updates):**
 ```sh
@@ -27,4 +27,4 @@ flatpak install tsumiru io.github.aaronbamblett.tsumiru
 
 With SideStore or AltStore the app must be re-signed periodically (the tools automate this); only TrollStore avoids that. There is no App Store build.
 
-Full docs at [tsumiru-app.github.io](https://tsumiru-app.github.io/).
+Full docs at [tsumiru.app](https://tsumiru.app/).

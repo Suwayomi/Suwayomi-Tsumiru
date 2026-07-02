@@ -39,7 +39,7 @@ Pushing a `v*.*.*` tag fires two workflows in parallel:
 - Linux build deps: `clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libblkid-dev liblzma-dev libsecret-1-dev libjsoncpp-dev` (last two needed for `flutter_secure_storage_linux`).
 - Artifacts attach to the release only on a tag push (guarded by `startsWith(github.ref, 'refs/tags/')`); `workflow_dispatch` builds but does not attach.
 
-**`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build the Linux bundle, package + GPG-sign in the `freedesktop:24.08` flatter container, deploy to Pages at `suwayomi.github.io/Suwayomi-Tsumiru` (the app repo's own Pages — it moved with the repo; the docs site stayed at `tsumiru-app.github.io`). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Manifest id is still `io.github.aaronbamblett.tsumiru`.
+**`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build the Linux bundle, package + GPG-sign in the `freedesktop:24.08` flatter container, deploy to Pages at `suwayomi.github.io/Suwayomi-Tsumiru` (the app repo's own Pages — it moved with the repo; the docs site lives at `tsumiru.app`, served from `tsumiru-app/tsumiru-app.github.io` behind Cloudflare). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Manifest id is still `io.github.aaronbamblett.tsumiru`.
 
 **Manual-only / vestigial:**
 - `publish.yml` — inherited upstream (winget/homebrew/Play/iOS). Stale: still names `tachidesk-sorayomi`, needs secrets this fork lacks. `workflow_dispatch` only; do not run.
