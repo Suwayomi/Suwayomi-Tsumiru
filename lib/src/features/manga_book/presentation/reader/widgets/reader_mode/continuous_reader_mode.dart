@@ -15,13 +15,16 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:zoom_view/zoom_view.dart';
 
+import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
@@ -179,6 +182,19 @@ class ContinuousReaderMode extends HookConsumerWidget {
         ref.read(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
 
+    // Komikku "always show chapter transition": ON keeps the full prev/next
+    // transition separator; OFF minimizes it.
+    final bool alwaysShowTransition =
+        ref.watch(alwaysShowChapterTransitionProvider).ifNull(true);
+
+    // Long-strip smart scale: cap the strip width on wide/landscape screens
+    // (vertical only, mirroring Komikku CONTINUOUS_VERTICAL). Render-only.
+    final WebtoonScaleType scaleType =
+        ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
+    final double maxContentWidth = scrollDirection == Axis.vertical
+        ? scaleType.maxContentWidth(context.width, context.height)
+        : context.width;
+
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapterPages: chapterPages,
@@ -255,7 +271,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
           separatorBuilder: (BuildContext context, int index) =>
               showSeparator ? const Gap(16) : const SizedBox.shrink(),
           itemBuilder: (BuildContext context, int index) {
-            final Widget image = ServerImage(
+            Widget image = ServerImage(
               showReloadButton: true,
               fit: scrollDirection == Axis.vertical
                   ? BoxFit.fitWidth
@@ -278,6 +294,17 @@ class ContinuousReaderMode extends HookConsumerWidget {
               ),
             );
 
+            // Smart-scale: centre the narrower strip on wide screens.
+            if (scrollDirection == Axis.vertical &&
+                maxContentWidth < context.width) {
+              image = Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: image,
+                ),
+              );
+            }
+
             if (index == 0 || index == chapterPages.chapter.pageCount - 1) {
               final bool reverseDirection =
                   scrollDirection == Axis.horizontal && reverse;
@@ -289,6 +316,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   manga: manga,
                   chapter: chapter,
                   isPreviousChapterSeparator: (index == 0),
+                  alwaysShow: alwaysShowTransition,
                 ),
               );
               return Flex(

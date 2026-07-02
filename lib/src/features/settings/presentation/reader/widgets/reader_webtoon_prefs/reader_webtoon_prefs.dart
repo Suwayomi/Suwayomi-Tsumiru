@@ -12,8 +12,9 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_webtoon_prefs.g.dart';
 
-// Global long-strip prefs (Komikku parity). Persisted now; the webtoon engine
-// consumes them in a later task.
+// Global long-strip prefs (Komikku parity). Smart-scale is wired on the
+// non-infinity webtoon path; the infinity path's height-cache math is the
+// frozen scroll boundary (see docs/architecture/reader.md).
 
 @riverpod
 class WebtoonScaleTypeKey extends _$WebtoonScaleTypeKey

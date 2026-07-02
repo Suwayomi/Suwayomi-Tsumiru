@@ -281,6 +281,27 @@ enum WebtoonScaleType {
         WebtoonScaleType.ratio16to9 => context.l10n.webtoonScaleTypeRatio16to9,
         WebtoonScaleType.ratio20to9 => context.l10n.webtoonScaleTypeRatio20to9,
       };
+
+  /// Target column width/height ratio (Komikku WebtoonScaleType.ratio).
+  /// FIT = 0 → no cap.
+  double get _ratio => switch (this) {
+        WebtoonScaleType.fitScreen => 0,
+        WebtoonScaleType.ratio4to3 => 3 / 4,
+        WebtoonScaleType.ratio3to2 => 2 / 3,
+        WebtoonScaleType.ratio16to9 => 9 / 16,
+        WebtoonScaleType.ratio20to9 => 9 / 20,
+      };
+
+  /// Max long-strip content width for a [screenWidth]×[screenHeight] viewport.
+  /// Caps the strip to the target aspect only when the screen is wider than
+  /// that column (Komikku shrinks iff screenRatio > desiredRatio); otherwise
+  /// full width. Pure/render-only — no scroll math.
+  double maxContentWidth(double screenWidth, double screenHeight) {
+    final ratio = _ratio;
+    if (ratio <= 0) return screenWidth;
+    final desiredWidth = screenHeight * ratio;
+    return desiredWidth < screenWidth ? desiredWidth : screenWidth;
+  }
 }
 
 enum MangaSort {

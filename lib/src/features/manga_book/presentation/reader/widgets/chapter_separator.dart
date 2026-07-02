@@ -23,12 +23,31 @@ class ChapterSeparator extends ConsumerWidget {
     required this.manga,
     required this.chapter,
     required this.isPreviousChapterSeparator,
+    this.alwaysShow = true,
   });
   final MangaDto manga;
   final ChapterDto chapter;
   final bool isPreviousChapterSeparator;
+
+  /// Komikku "always show chapter transition". OFF collapses the prev/next
+  /// transition to a slim label so chapters flow with less interruption.
+  final bool alwaysShow;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!alwaysShow) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            isPreviousChapterSeparator
+                ? context.l10n.start
+                : context.l10n.finished,
+            style: context.textTheme.bodySmall,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
     final nextPrevChapterPair = ref.watch(
       getNextAndPreviousChaptersProvider(
           mangaId: manga.id, chapterId: chapter.id),
