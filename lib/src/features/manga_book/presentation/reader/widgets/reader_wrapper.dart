@@ -37,6 +37,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
 import 'chrome/reader_chrome.dart';
+import 'chrome/reader_page_actions_sheet.dart';
 import 'chrome/reader_settings_dialog.dart';
 import 'directional_swipe_gesture_handler.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
@@ -558,11 +559,15 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
   void _checkScrollAttemptAtBoundary(ScrollMetrics metrics) {
     // Handle both PageMetrics (for PageView) and general ScrollMetrics (for Webtoon)
     if (metrics is PageMetrics) {
-      // PageView-based readers (horizontal modes)
+      // PageView-based readers (horizontal modes). Derive the last index from
+      // the scroll extent, not the raw page count, so edge-swipe chapter nav is
+      // correct under double-page/split (item count != raw page count).
       final currentPage = metrics.page?.round() ?? 0;
-      final totalPages = widget.chapterPages.pages.length;
+      final lastPageIndex = metrics.viewportDimension > 0
+          ? (metrics.maxScrollExtent / metrics.viewportDimension).round()
+          : (widget.chapterPages.pages.length - 1);
 
-      final bool atLastPage = currentPage >= (totalPages - 1);
+      final bool atLastPage = currentPage >= lastPageIndex;
       final bool atFirstPage = currentPage <= 0;
 
       // Trigger immediately when user drags past edge more than 10 logical pixels
@@ -678,7 +683,7 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
   }
 }
 
-class ReaderView extends HookWidget {
+class ReaderView extends HookConsumerWidget {
   const ReaderView({
     super.key,
     required this.toggleVisibility,
@@ -727,9 +732,14 @@ class ReaderView extends HookWidget {
   /// - Basic UI state management
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final showMagnification = useState(false);
     final dragGesturePosition = useState(Offset.zero);
+
+    // Komikku "Show actions on long tap" (default ON): long-press opens the
+    // page-actions sheet instead of the magnifier. OFF keeps the magnifier.
+    final readWithLongTap =
+        ref.watch(readWithLongTapProvider) ?? DBKeys.readWithLongTap.initial;
     final positionOffset = kMagnifierPosition(
       dragGesturePosition.value,
       context.mediaQuerySize,
@@ -755,14 +765,26 @@ class ReaderView extends HookWidget {
     content = DirectionalSwipeGestureHandler(
       onTap: toggleVisibility,
       onLongPressStart: (details) {
+        if (readWithLongTap) {
+          showReaderPageActionsSheet(
+            context: context,
+            ref: ref,
+            chapterPages: chapterPages,
+            pageIndex: currentIndex,
+          );
+          return;
+        }
         dragGesturePosition.value = details.localPosition;
         showMagnification.value = true;
       },
       onLongPressEnd: (details) {
+        if (readWithLongTap) return;
         showMagnification.value = false;
       },
-      onLongPressMoveUpdate: (details) =>
-          dragGesturePosition.value = details.localPosition,
+      onLongPressMoveUpdate: (details) {
+        if (readWithLongTap) return;
+        dragGesturePosition.value = details.localPosition;
+      },
       scrollDirection: scrollDirection,
       readerSwipeChapterToggle: readerSwipeChapterToggle,
       lastPageSwipeEnabled: lastPageSwipeEnabled,

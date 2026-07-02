@@ -57,7 +57,8 @@ class DrawUnderCutout extends _$DrawUnderCutout
   bool? build() => initialize(DBKeys.drawUnderCutout);
 }
 
-/// Inert: the reader's long-press is the magnifier, not a page-actions sheet.
+/// When ON, a reader long-press opens the page-actions sheet; OFF keeps the
+/// magnifier.
 @riverpod
 class ReadWithLongTap extends _$ReadWithLongTap
     with SharedPreferenceClientMixin<bool> {
@@ -65,7 +66,7 @@ class ReadWithLongTap extends _$ReadWithLongTap
   bool? build() => initialize(DBKeys.readWithLongTap);
 }
 
-/// Inert: transition pages live in the frozen webtoon engine.
+/// OFF minimizes the between-chapter transition in the continuous paged viewer.
 @riverpod
 class AlwaysShowChapterTransition extends _$AlwaysShowChapterTransition
     with SharedPreferenceClientMixin<bool> {
