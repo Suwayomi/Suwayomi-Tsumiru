@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku "always show chapter transition": ON renders the full prev/next
+// "Always show chapter transition": ON renders the full prev/next
 // transition (label + chapter name); OFF collapses to a slim label only.
 
 import 'package:flutter/material.dart';

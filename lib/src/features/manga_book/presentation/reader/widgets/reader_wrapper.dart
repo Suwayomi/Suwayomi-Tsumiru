@@ -127,7 +127,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     // Webtoon (vertical) normally uses the vertical side seek bar, but on a phone
     // in landscape there's no vertical room for it to be usable — fall back to
-    // the standard horizontal bottom bar, like Komikku. Two General-tab prefs
+    // the standard horizontal bottom bar. Two General-tab prefs
     // adjust the chain: force-horizontal wins everywhere; the landscape
     // sub-toggle keeps the side seekbar on a landscape phone.
     final screenSize = MediaQuery.sizeOf(context);
@@ -329,7 +329,7 @@ class ReaderWrapper extends HookConsumerWidget {
         ),
       ),
       child: Scaffold(
-        // Reader background pref (Komikku readerTheme); default black.
+        // Reader background pref; default black.
         backgroundColor: (ref.watch(readerBackgroundColorKeyProvider) ??
                 DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor)
             .color(context),
@@ -736,7 +736,7 @@ class ReaderView extends HookConsumerWidget {
     final showMagnification = useState(false);
     final dragGesturePosition = useState(Offset.zero);
 
-    // Komikku "Show actions on long tap" (default ON): long-press opens the
+    // "Show actions on long tap" (default ON): long-press opens the
     // page-actions sheet instead of the magnifier. OFF keeps the magnifier.
     final readWithLongTap =
         ref.watch(readWithLongTapProvider) ?? DBKeys.readWithLongTap.initial;

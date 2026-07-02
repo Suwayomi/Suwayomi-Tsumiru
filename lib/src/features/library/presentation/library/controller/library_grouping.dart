@@ -105,7 +105,7 @@ List<GroupedTab> _groupByDefault(
   final Map<int, List<int>> buckets = {};
 
   // Seed with all visible categories so empty tabs still appear
-  // (mirrors Komikku: existing category tabs stay even if 0 manga match).
+  // (existing category tabs stay even if 0 manga match).
   for (final cat in categories) {
     buckets[cat.id] = [];
   }
@@ -195,7 +195,6 @@ String _statusLabel(String status) => switch (status) {
 List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
   // Fan-out: a manga with N distinct track statuses appears in all N tabs.
   // Manga with no track records go to the "Other" bucket (id 99).
-  // See Komikku LibraryScreenModel.kt:1517-1526.
   final Map<int, List<int>> buckets = {};
 
   for (final m in all) {

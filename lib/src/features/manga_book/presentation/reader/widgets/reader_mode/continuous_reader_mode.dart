@@ -173,7 +173,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [currentIndex.value]); // Only watch currentIndex changes
 
-    // Komikku "animate page transitions": animate next/prev when ON, else jump.
+    // "Animate page transitions": animate next/prev when ON, else jump.
     final bool isAnimationEnabled =
         ref.watch(animatePageTransitionsProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
@@ -182,19 +182,19 @@ class ContinuousReaderMode extends HookConsumerWidget {
         ref.watch(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
 
-    // Komikku "always show chapter transition": ON keeps the full prev/next
+    // "Always show chapter transition": ON keeps the full prev/next
     // transition separator; OFF minimizes it.
     final bool alwaysShowTransition =
         ref.watch(alwaysShowChapterTransitionProvider).ifNull(true);
 
     // Long-strip smart scale: cap the strip width on wide/landscape screens
-    // (vertical only, mirroring Komikku CONTINUOUS_VERTICAL). Render-only.
+    // (vertical only). Render-only.
     final WebtoonScaleType scaleType =
         ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
     final double maxContentWidth = scrollDirection == Axis.vertical
         ? scaleType.maxContentWidth(context.width, context.height)
         : context.width;
-    // Auto-crop solid borders in the long-strip (Komikku cropBordersWebtoon).
+    // Auto-crop solid borders in the long-strip.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     return ReaderWrapper(
@@ -247,7 +247,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   controller: zoomScrollController,
                   scrollAxis: scrollDirection,
                   maxScale: 5,
-                  // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
+                  // Webtoon min zoom-out rate is 0.5 unless disabled.
                   minScale: isZoomOutDisabled ? 1 : 0.5,
                   pinchEnabled: isPinchToZoomEnabled,
                   doubleTapToZoom: isDoubleTapZoomEnabled,

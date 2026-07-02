@@ -63,7 +63,7 @@ void main() {
     });
 
     test('overdue rolls forward to the next future cycle (Komikku)', () {
-      // weekly, latest 10 days ago. Komikku projects whole cycles forward:
+      // weekly, latest 10 days ago. Projects whole cycles forward:
       // cycle = 10 // 7 = 1, nextUpdate = latest + 2*7 = 4 days out.
       final p = predictNextUpdate([up(10), up(17), up(24), up(31)], now: now);
       expect(p.daysUntil(now), 4);

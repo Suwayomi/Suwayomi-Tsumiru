@@ -31,7 +31,7 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
 const Color onBrandGradient = Color(0xFF0B0D1A);
 
 /// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so
-/// the chrome reads uniform. Near-opaque — Komikku's 0.9 dark / 0.95 light; a
+/// the chrome reads uniform. Near-opaque — 0.9 dark / 0.95 light; a
 /// lower alpha washes out over white webtoon pages.
 Color readerNavSurface(ColorScheme cs) => cs.surface.withValues(
       alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95,
@@ -245,10 +245,10 @@ class BrandCircleButton extends StatelessWidget {
   }
 }
 
-/// Komikku-style filled round icon button for the reader vertical nav. Filled
+/// Filled round icon button for the reader vertical nav. Filled
 /// with [color] (the shared [readerNavSurface] so it matches the bar capsule
 /// exactly), glyph in the theme `primary`. [quarterTurns] rotates the icon so
-/// the chapter skip glyphs point up / down like Komikku's vertical slider.
+/// the chapter skip glyphs point up / down like the vertical slider.
 class BrandFilledCircleButton extends StatelessWidget {
   const BrandFilledCircleButton({
     super.key,

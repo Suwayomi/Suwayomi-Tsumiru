@@ -11,8 +11,8 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_zoom_toggles.g.dart';
 
-// Global zoom-gesture prefs (Komikku parity — zoom toggles are never
-// per-series). Pinch-to-zoom lives in reader_pinch_to_zoom.dart.
+// Global zoom-gesture prefs — zoom toggles are never
+// per-series. Pinch-to-zoom lives in reader_pinch_to_zoom.dart.
 
 @riverpod
 class DoubleTapToZoom extends _$DoubleTapToZoom

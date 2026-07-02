@@ -16,8 +16,7 @@ import '../../../../../utils/theme/brand.dart';
 /// Reading-progress bar, themed with the brand gradient. Lays out **horizontal**
 /// (page-flip manga) or **vertical** (webtoon / vertical scroll); tap or drag
 /// anywhere along it to seek. The filled portion is the indigo→cyan brand
-/// gradient with a soft glow, on a subtle rounded track — Komikku-clean but in
-/// our theme.
+/// gradient with a soft glow, on a subtle rounded track, in our theme.
 class BrandPageSeekBar extends StatelessWidget {
   const BrandPageSeekBar({
     super.key,
@@ -96,7 +95,7 @@ class BrandPageSeekBar extends StatelessWidget {
         Text("${(currentValue + 1).clamp(1, maxValue)}", style: numStyle);
     final total = Text("$maxValue", style: numStyle);
     const thickness = 26.0;
-    // Gap between the page numbers and the bar — Komikku keeps them clear of
+    // Gap between the page numbers and the bar — keeps them clear of
     // the slider (the "6 / 15 touching the slider" complaint).
     const gap = SizedBox.square(dimension: 10);
 
@@ -146,7 +145,7 @@ class _SeekPainter extends CustomPainter {
   final double fill;
   final ColorScheme scheme;
 
-  /// Page count — one tick dot per page (Komikku style).
+  /// Page count — one tick dot per page.
   final int count;
 
   @override
@@ -163,7 +162,7 @@ class _SeekPainter extends CustomPainter {
     Offset along(double d) =>
         horizontal ? Offset(d, cross) : Offset(cross, d);
 
-    // Track — accent-tinted (Komikku's slider inactive track), subtle.
+    // Track — accent-tinted inactive track, subtle.
     canvas.drawRRect(
       RRect.fromRectAndRadius(bar(0, length), radius),
       Paint()..color = scheme.primary.withValues(alpha: 0.22),
@@ -179,7 +178,7 @@ class _SeekPainter extends CustomPainter {
       );
     }
 
-    // Per-page tick dots (Komikku): dark over the filled portion, light over the
+    // Per-page tick dots: dark over the filled portion, light over the
     // unfilled track so they read on both.
     if (count > 1) {
       final onFill = Paint()..color = onBrandGradient.withValues(alpha: 0.45);
@@ -191,7 +190,7 @@ class _SeekPainter extends CustomPainter {
     }
 
     // Marker line at the current position (perpendicular to the bar), painted
-    // with the brand gradient + a soft glow — Komikku's line, our colours.
+    // with the brand gradient + a soft glow.
     final pos = length * fill;
     const half = 13.0;
     const mkt = 4.0;

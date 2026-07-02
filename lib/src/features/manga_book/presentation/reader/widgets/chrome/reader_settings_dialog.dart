@@ -21,7 +21,7 @@ part 'reader_settings_dialog.g.dart';
 typedef ReaderSettingsPreviewState = ({Color scrim, bool chromeHidden});
 
 /// Live-preview state driven by the sheet's tab: the Custom-filter tab clears
-/// the scrim and hides the chrome (Komikku's onHideMenus) so the page shows.
+/// the scrim and hides the chrome so the page shows.
 @riverpod
 class ReaderSettingsPreview extends _$ReaderSettingsPreview {
   static const ReaderSettingsPreviewState _shown =

@@ -12,8 +12,8 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_paged_prefs.g.dart';
 
-// Global paged-viewer prefs (Komikku parity — kept in ReaderPreferences, never
-// per-series). Consumed by the paged viewer.
+// Global paged-viewer prefs — never
+// per-series. Consumed by the paged viewer.
 
 @riverpod
 class ImageScaleTypeKey extends _$ImageScaleTypeKey
@@ -74,7 +74,7 @@ class CropBorders extends _$CropBorders with SharedPreferenceClientMixin<bool> {
   bool? build() => initialize(DBKeys.cropBorders);
 }
 
-// Shared with the long-strip section (one key for both, like Komikku).
+// Shared with the long-strip section (one key for both).
 
 @riverpod
 class SmallerTapZones extends _$SmallerTapZones

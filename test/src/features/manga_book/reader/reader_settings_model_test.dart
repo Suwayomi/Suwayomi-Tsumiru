@@ -143,7 +143,7 @@ void main() {
       expect(ReaderSettings.invertTap.scope, ReaderSettingScope.global);
       expect(ReaderSettings.invertTap.perSeriesKey, isNull);
 
-      // New in Task 9: per-series with a global default (Komikku Tab-1 scope).
+      // New in Task 9: per-series with a global default (Tab-1 scope).
       expect(
           ReaderSettings.readerOrientation.scope, ReaderSettingScope.perSeries);
       expect(ReaderSettings.readerOrientation.perSeriesKey,

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku "smaller tap zones": the active edge regions shrink from 0.33 to
+// "Smaller tap zones": the active edge regions shrink from 0.33 to
 // 0.25 of the axis, widening the center dead-zone. Default OFF must be
 // byte-identical (thirds); ON shrinks the measured tap-zone geometry.
 

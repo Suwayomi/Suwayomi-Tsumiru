@@ -8,7 +8,7 @@ import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dar
 
 /// Track-status integer values and their display labels/sort order.
 ///
-/// Mirrors Komikku's TrackStatus enum (TrackerStatus.kt). The server uses
+/// The server uses
 /// small positive integers for status; the common set across MAL/AniList/Kitsu is:
 ///   1 = Reading
 ///   2 = Completed
@@ -39,8 +39,7 @@ int trackStatusOrder(int status) => kTrackStatusInfo[status]?.order ?? 99;
 
 /// Normalizes [score] on a [scaleMax] scale to a 0–10 value.
 ///
-/// Cite: Komikku `get10PointScore()` in TrackManager.kt — divides the raw
-/// score by the tracker's max score and multiplies by 10.
+/// Divides the raw score by the tracker's max score and multiplies by 10.
 ///
 /// [scaleMax] is the tracker-specific maximum score value, derived from the
 /// numeric value of the last entry in `tracker.scores` (e.g. "9.9" → 9.9 for

@@ -16,7 +16,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_padding_sl
 import '../../../controller/reader_mode_adapter.dart';
 import '../../../controller/reader_settings_model.dart';
 
-/// Mihon/Komikku-parity Reading-mode tab: chip rows for the common settings,
+/// Reading-mode tab: chip rows for the common settings,
 /// then a paged / long-strip section swapped on the resolved mode.
 class ReadingModeTab extends ConsumerWidget {
   const ReadingModeTab({
@@ -32,7 +32,7 @@ class ReadingModeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Pure-Komikku scope: the settings under the "For this series" heading are
+    // The settings under the "For this series" heading are
     // ALWAYS per-manga overrides; the viewer/global settings below are global
     // defaults. There is no scope toggle.
     const perSeries = true;
@@ -119,8 +119,8 @@ class ReadingModeTab extends ConsumerWidget {
               ),
           ],
         ),
-        // Inverting tap zones is meaningless while they're disabled (Komikku
-        // hides the row the same way).
+        // Inverting tap zones is meaningless while they're disabled, so the
+        // row is hidden.
         if (resolvedNav != ReaderNavigationLayout.disabled) ...[
           _SectionLabel(context.l10n.readerSectionTapInvert),
           _ChipRow(
@@ -173,7 +173,7 @@ class ReadingModeTab extends ConsumerWidget {
   }
 }
 
-/// Paged-only settings (Komikku PagerViewerSettings). All fields are global
+/// Paged-only settings. All fields are global
 /// prefs.
 class _PagedSection extends ConsumerWidget {
   const _PagedSection({super.key, required this.mangaId});
@@ -293,7 +293,7 @@ class _PagedSection extends ConsumerWidget {
   }
 }
 
-/// Long-strip settings (Komikku WebtoonViewerSettings), incl. the legacy
+/// Long-strip settings, incl. the legacy
 /// continuous-horizontal orphans; gaps sub-settings only for that mode.
 class _LongStripSection extends ConsumerWidget {
   const _LongStripSection({
@@ -402,7 +402,7 @@ class _SubSwitchTile extends StatelessWidget {
   }
 }
 
-/// A top-level group header (Komikku HeadingItem) — separates the "For this
+/// A top-level group header — separates the "For this
 /// series" per-manga block from the global "Viewer defaults" block so scope is
 /// unambiguous.
 class _GroupHeading extends StatelessWidget {
@@ -454,7 +454,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row, Komikku SettingsChipRow feel.
+/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

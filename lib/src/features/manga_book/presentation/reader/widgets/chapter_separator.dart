@@ -29,7 +29,7 @@ class ChapterSeparator extends ConsumerWidget {
   final ChapterDto chapter;
   final bool isPreviousChapterSeparator;
 
-  /// Komikku "always show chapter transition". OFF collapses the prev/next
+  /// "Always show chapter transition": OFF collapses the prev/next
   /// transition to a slim label so chapters flow with less interruption.
   final bool alwaysShow;
   @override

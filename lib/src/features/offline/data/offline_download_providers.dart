@@ -113,7 +113,7 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
 
 /// Live download progress for a chapter as a fraction 0..1 (pages on disk /
 /// total pages), or null when the total isn't known yet — drives the
-/// determinate progress arc on a downloading chapter, like Mihon/Komikku.
+/// determinate progress arc on a downloading chapter.
 @riverpod
 Stream<double?> offlineChapterProgress(Ref ref, int chapterId) {
   if (!ref.watch(offlineEnabledProvider)) {

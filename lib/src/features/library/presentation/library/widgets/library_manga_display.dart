@@ -38,8 +38,8 @@ class LibraryMangaDisplay extends ConsumerWidget {
       shrinkWrap: true,
       children: [
         _Heading(context.l10n.displayMode),
-        // Komikku uses a chip row (SettingsChipRow) for display mode, not a
-        // tall radio list — matches parity and keeps the sheet compact.
+        // A chip row for display mode, not a tall radio list — keeps
+        // the sheet compact.
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
           child: Wrap(
@@ -164,8 +164,8 @@ class LibraryMangaDisplay extends ConsumerWidget {
   }
 }
 
-/// Compact section header matching Komikku's HeadingItem (24dp/tight padding,
-/// primary-tinted label), consistent with the filter tab's "Tracked" heading.
+/// Compact section header (24dp/tight padding, primary-tinted label),
+/// consistent with the filter tab's "Tracked" heading.
 class _Heading extends StatelessWidget {
   const _Heading(this.text);
   final String text;

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku "Show actions on long tap" wiring: with the pref ON a long-press on
+// "Show actions on long tap" wiring: with the pref ON a long-press on
 // a reader page opens the page-actions sheet; with it OFF the long-press keeps
 // today's magnifier behaviour.
 
@@ -98,7 +98,7 @@ void main() {
     await tester.longPress(find.byType(ReaderView));
     await tester.pumpAndSettle();
 
-    // Sheet with the mobile (Komikku) actions is shown.
+    // Sheet with the mobile actions is shown.
     expect(find.byKey(_copyKey), findsOneWidget);
     expect(find.byKey(_shareKey), findsOneWidget);
     // Magnifier must not be active in this mode.

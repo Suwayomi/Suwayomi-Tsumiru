@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Custom-filter tab parity contract (Komikku ColorFilterPage): toggles reveal
+// Custom-filter tab parity contract: toggles reveal
 // their sliders/chips, slider drags write ONLY the preview channel until
 // onChangeEnd commits to the global providers, blend chips write, and sheet
 // dismissal flushes an interrupted draft.
@@ -227,7 +227,7 @@ void main() {
       'colorFilterValue': committed,
     });
 
-    // First slider is Red (Komikku order R/G/B/A).
+    // First slider is Red (order R/G/B/A).
     final red = find.byType(Slider).first;
     final gesture = await tester.startGesture(tester.getCenter(red));
     await tester.pump();

@@ -58,7 +58,7 @@ class ReaderScreen extends HookConsumerWidget {
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
     final ignoreSafeArea = ref.watch(readerIgnoreSafeAreaProvider).ifNull();
 
-    // Auto Webtoon (Komikku): long-strip series read webtoon THIS session when
+    // Auto Webtoon: long-strip series read webtoon THIS session when
     // their per-series mode is Default; never written to meta.
     final mangaData = manga.valueOrNull;
     final autoWebtoon = ref.watch(autoWebtoonModeProvider).ifNull(true) &&

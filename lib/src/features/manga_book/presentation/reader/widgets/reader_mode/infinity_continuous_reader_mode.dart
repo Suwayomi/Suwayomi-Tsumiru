@@ -173,7 +173,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
                   controller: zoomScrollController,
                   scrollAxis: scrollDirection,
                   maxScale: InfinityContinuousConfig.maxZoomScale,
-                  // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
+                  // Webtoon min zoom-out rate is 0.5 unless disabled.
                   minScale: isZoomOutDisabled ? 1 : 0.5,
                   pinchEnabled: isPinchToZoomEnabled,
                   doubleTapToZoom: isDoubleTapZoomEnabled,

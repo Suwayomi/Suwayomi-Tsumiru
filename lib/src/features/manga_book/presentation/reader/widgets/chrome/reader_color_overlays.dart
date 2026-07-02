@@ -16,7 +16,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_filter_prefs/reader_filter_prefs.dart';
 import '../../controller/reader_preview_channel.dart';
 
-/// Komikku setCustomBrightnessValue: negatives dim via a black overlay at
+/// Custom brightness: negatives dim via a black overlay at
 /// abs(value)/100 (-75 → 0.75); 0 and positives draw nothing (positive raises
 /// the app window brightness instead — see [applicationBrightnessFor]).
 double brightnessOverlayAlpha(int value) =>
@@ -55,7 +55,7 @@ Future<void> _resetScreenBrightness() async {
   } catch (_) {}
 }
 
-/// Android ColorMatrix.setSaturation(0) — Komikku's grayscale paint.
+/// Android ColorMatrix.setSaturation(0) — the grayscale paint.
 const List<double> kGrayscaleColorMatrix = [
   0.213, 0.715, 0.072, 0, 0, //
   0.213, 0.715, 0.072, 0, 0, //
@@ -63,7 +63,7 @@ const List<double> kGrayscaleColorMatrix = [
   0, 0, 0, 1, 0,
 ];
 
-/// Komikku getCombinedPaint's inversion matrix.
+/// The combined-paint inversion matrix.
 const List<double> kInvertColorMatrix = [
   -1, 0, 0, 0, 255, //
   0, -1, 0, 0, 255, //
@@ -88,7 +88,7 @@ List<double> composeColorMatrices(List<double> outer, List<double> inner) {
 }
 
 /// The matrix for the active grayscale/invert combination; grayscale applies
-/// first when both are on, matching Komikku's getCombinedPaint.
+/// first when both are on.
 List<double> grayscaleInvertMatrix({
   required bool grayscale,
   required bool inverted,
@@ -145,7 +145,7 @@ class ReaderColorOverlays extends HookConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // Komikku paint order: matrix on the viewer layer, brightness dim on top,
+    // Paint order: matrix on the viewer layer, brightness dim on top,
     // then the blended color rect.
     return IgnorePointer(
       child: Stack(
@@ -187,7 +187,7 @@ class _BrightnessOverlay extends StatelessWidget {
   }
 }
 
-/// ARGB color blended over the page (Komikku drawRect(color, blendMode)).
+/// ARGB color blended over the page via a drawRect(color, blendMode).
 class _ColorFilterOverlay extends StatelessWidget {
   const _ColorFilterOverlay({required this.committed, required this.blend});
 

@@ -18,7 +18,7 @@ class ChapterDownloadCandidate {
 }
 
 /// The six presets exposed by the manga-details bulk-download menu.
-/// Order matches the menu display order (Komikku parity).
+/// Order matches the menu display order.
 enum DownloadPreset {
   nextChapter,
   next5,

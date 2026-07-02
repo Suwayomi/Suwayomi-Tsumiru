@@ -19,7 +19,7 @@ import 'crop_isolate.dart';
 /// off-thread ([cropImageBytes]), and yields the cropped frame. When no border
 /// is found the original image is decoded unchanged. Because it's an
 /// [ImageProvider], every consumer (single/double/split/rotate/webtoon) gets
-/// crop for free — mirroring Mihon's decoder-level `cropBorders`.
+/// crop for free — decoder-level border cropping.
 ///
 /// Identity ([==]/[hashCode]) keys Flutter's [ImageCache], so a re-scrolled page
 /// reuses the already-cropped decode instead of re-running the isolate.

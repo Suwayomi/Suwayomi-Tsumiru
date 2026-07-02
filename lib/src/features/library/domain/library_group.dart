@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Library grouping modes (mirrors Komikku's LibraryGroup).
+/// Library grouping modes.
 class LibraryGroup {
   static const byDefault = 0;
   static const bySource = 1;
@@ -13,8 +13,7 @@ class LibraryGroup {
   static const ungrouped = 4;
 }
 
-/// Maps Suwayomi status strings → display order (Komikku parity,
-/// LibraryScreenModel.kt:1603-1610). Lower = shown first.
+/// Maps Suwayomi status strings → display order. Lower = shown first.
 const statusOrder = <String, int>{
   'ONGOING': 1,
   'COMPLETED': 2,

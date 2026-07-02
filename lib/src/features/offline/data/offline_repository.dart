@@ -85,7 +85,7 @@ class OfflineRepository {
           .distinct();
 
   /// Live count of pages already on disk for a chapter — drives the per-chapter
-  /// download progress arc (like Mihon/Komikku). distinct() so a row only
+  /// download progress arc. distinct() so a row only
   /// rebuilds when its page count actually advances.
   Stream<int> watchChapterDownloadedPages(int chapterId) {
     final cnt = db.offlinePages.pageIndex.count();

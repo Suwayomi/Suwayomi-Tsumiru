@@ -16,7 +16,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_keep_scree
 import '../../../../../../settings/presentation/reader/widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.dart';
 import '../../../controller/reader_settings_model.dart';
 
-/// Komikku-parity General tab (GeneralSettingsPage order): background color,
+/// General tab: background color,
 /// page number, seekbar chain, fullscreen, keep-screen-on, long-tap actions,
 /// chapter transition, flash-on-page-change, Auto Webtoon Mode.
 class GeneralTab extends ConsumerWidget {
@@ -41,7 +41,7 @@ class GeneralTab extends ConsumerWidget {
       primary: false,
       children: [
         _SectionLabel(context.l10n.readerBackgroundColor),
-        // Chip order is Komikku's UI order, not the stored-int order.
+        // Chip order is the UI order, not the stored-int order.
         _ChipRow(
           children: [
             for (final bg in const [
@@ -163,7 +163,7 @@ class GeneralTab extends ConsumerWidget {
   }
 }
 
-/// Discrete int slider with a trailing value readout (Komikku SliderItem feel).
+/// Discrete int slider with a trailing value readout.
 class _IntSliderTile extends StatelessWidget {
   const _IntSliderTile({
     required this.title,
@@ -250,7 +250,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row, Komikku SettingsChipRow feel.
+/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

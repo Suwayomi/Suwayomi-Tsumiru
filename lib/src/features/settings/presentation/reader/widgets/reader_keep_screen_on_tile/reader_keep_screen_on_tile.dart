@@ -16,7 +16,7 @@ part 'reader_keep_screen_on_tile.g.dart';
 
 /// Persisted reader preference: keep the device screen awake while reading.
 /// Default ON — reading is low-interaction, so we'd rather hold the screen than
-/// let it sleep mid-page (deviates from Mihon's off-by-default).
+/// let it sleep mid-page.
 @riverpod
 class KeepScreenOn extends _$KeepScreenOn
     with SharedPreferenceClientMixin<bool> {

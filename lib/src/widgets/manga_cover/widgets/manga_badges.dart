@@ -46,7 +46,7 @@ class MangaBadgesRow extends ConsumerWidget {
     final hasEndBadges = showCountBadges && (hasLangBadge || hasLocalBadge || hasSourceBadge);
 
     // When we have end badges, expand the row to full width so the end cluster
-    // sits at the top-right corner (matching Komikku's badgesEnd placement).
+    // sits at the top-right corner.
     Widget startBadges = Row(
       mainAxisSize: MainAxisSize.min,
       children: [

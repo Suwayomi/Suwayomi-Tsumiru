@@ -7,7 +7,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/auto_webtoon.dart';
 
-// Pins the Komikku MangaType.kt port: tag precedence, source-name lists,
+// Pins the manga-type detection: tag precedence, source-name lists,
 // Cyrillic variants, and the WEBTOON/MANHWA/MANHUA → webtoon mapping.
 void main() {
   group('detectsWebtoon', () {

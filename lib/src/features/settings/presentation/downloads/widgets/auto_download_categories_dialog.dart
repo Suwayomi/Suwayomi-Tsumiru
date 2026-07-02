@@ -23,7 +23,7 @@ Enum$IncludeOrExclude coerceInclude(Enum$IncludeOrExclude? v) =>
 
 /// Summary line for the "Categories" row under Settings → Download → Auto
 /// download. "All categories" when nothing is included/excluded, else a
-/// short "Included … / Excluded …" string (mirrors Komikku).
+/// short "Included … / Excluded …" string.
 String autoDownloadCategoriesSummary(
     BuildContext context, List<CategoryDto> categories) {
   final included = categories

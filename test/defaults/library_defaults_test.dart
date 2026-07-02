@@ -8,8 +8,8 @@ void main() {
   });
 
   test('default sort direction is descending (newest-read first for lastRead)', () {
-    // The lastRead comparator matches Komikku now (ascending = oldest-read
-    // first), so the default direction is descending to keep the library
+    // The lastRead comparator is now ascending = oldest-read
+    // first, so the default direction is descending to keep the library
     // opening newest-read first.
     expect(DBKeys.mangaSortDirection.initial, false);
   });

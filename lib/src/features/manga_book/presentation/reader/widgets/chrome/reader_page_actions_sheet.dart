@@ -26,14 +26,13 @@ import '../../../../../settings/presentation/server/widget/credential_popup/cred
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import 'image_clipboard.dart';
 
-/// Komikku "Show actions on long tap": long-pressing a reader page opens this
+/// "Show actions on long tap": long-pressing a reader page opens this
 /// page-actions bar instead of the magnifier — a compact horizontal row of
-/// icon buttons docked at the bottom (Komikku `ReaderPageActionsDialog` /
-/// `ActionButton`). On mobile it mirrors Komikku's single-page set exactly:
+/// icon buttons docked at the bottom. On mobile it's a single-page set:
 /// Copy (the image itself, to the clipboard), Share image, Save to gallery.
-/// Komikku's "Set as cover" is omitted — Suwayomi exposes no cover mutation
+/// "Set as cover" is omitted — Suwayomi exposes no cover mutation
 /// (schema `UpdateMangaPatchInput` is `inLibrary`-only). "Open in web" is shown
-/// only on desktop/web, where Komikku's image actions can't run, so it's the
+/// only on desktop/web, where native image actions can't run, so it's the
 /// one universally-working fallback there.
 Future<void> showReaderPageActionsSheet({
   required BuildContext context,
@@ -97,7 +96,7 @@ Future<void> showReaderPageActionsSheet({
     backgroundColor: Colors.transparent,
     useSafeArea: true,
     builder: (sheetContext) => _PageActionsSheet(
-      // Komikku's "Copy to clipboard" copies the image itself, not a link.
+      // "Copy to clipboard" copies the image itself, not a link.
       // Native ClipData.newUri path is Android-only.
       onCopyImage: !imageClipboardSupported
           ? null
@@ -117,7 +116,7 @@ Future<void> showReaderPageActionsSheet({
                 toast?.showError(errorMsg, instantShow: true);
               }
             },
-      // Not a Komikku action — only surfaced on desktop/web, where the
+      // Only surfaced on desktop/web, where the
       // image-copy/share/save actions can't run, so the menu isn't empty.
       onOpenInWeb: (isMobile || openUrl == null)
           ? null
@@ -227,7 +226,7 @@ class _PageActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Komikku layout: a compact horizontal row of equal-weight icon buttons
+    // Layout: a compact horizontal row of equal-weight icon buttons
     // (icon above a centred, ≤2-line label) docked at the bottom.
     return Material(
       color: context.theme.colorScheme.surface,
@@ -278,7 +277,7 @@ class _PageActionsSheet extends StatelessWidget {
   }
 }
 
-/// One Komikku-style page action: a full-height [TextButton] with the icon
+/// One page action: a full-height [TextButton] with the icon
 /// stacked above a centred label, taking an equal share of the row.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({

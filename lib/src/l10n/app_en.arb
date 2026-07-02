@@ -151,10 +151,10 @@
         "description": "Paged reader toggle"
     },
     "@landscapeZoom": {
-        "description": "Paged reader toggle (Komikku landscape zoom)"
+        "description": "Paged reader toggle: disable landscape zoom-in"
     },
     "@navigateToPan": {
-        "description": "Paged reader toggle (Komikku navigate-to-pan)"
+        "description": "Paged reader toggle: navigate-to-pan"
     },
     "@pageLayout": {
         "description": "Section label for the paged page-layout chip row"
@@ -1120,7 +1120,7 @@
         "description": "Reader toggle: shrink the tap navigation zones"
     },
     "@smoothAutoScroll": {
-        "description": "Long-strip reader toggle (Komikku wording)"
+        "description": "Long-strip reader toggle"
     },
     "@socksProxy": {
         "description": "Section title for SOCKS Proxy settings"
@@ -2494,7 +2494,7 @@
     },
     "copyImageToClipboard": "Copy",
     "@copyImageToClipboard": {
-        "description": "Reader page-actions sheet: copy the current page image itself to the clipboard (Komikku parity)"
+        "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
     },
     "copiedImage": "Image copied",
     "@copiedImage": {

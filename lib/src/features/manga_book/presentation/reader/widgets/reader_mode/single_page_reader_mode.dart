@@ -30,7 +30,7 @@ import 'paged_spread_mapping.dart';
 import 'reader_zoom_view.dart';
 import 'rotate_wide_page.dart';
 
-/// Komikku "animate page transitions": paged next/prev animate over
+/// "Animate page transitions": paged next/prev animate over
 /// [kDuration] when ON, else jump instantly ([kInstantDuration]).
 Duration pagedNavDuration({required bool animate}) =>
     animate ? kDuration : kInstantDuration;
@@ -59,7 +59,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
     final cacheManager = useMemoized(() => DefaultCacheManager());
 
     // --- Page composition settings (double-page / dual-split). ---
-    // Double-page pairing is a HORIZONTAL-paged feature only (Komikku: pager).
+    // Double-page pairing is a HORIZONTAL-paged feature only (paged viewer).
     // pageLayout automatic → double in landscape, single in portrait.
     final pageLayout = ref.read(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final trueDual = ref.read(trueDualPageSpreadProvider).ifNull();
@@ -180,13 +180,13 @@ class SinglePageReaderMode extends HookConsumerWidget {
       });
     }
 
-    // Komikku "animate page transitions": animate next/prev when ON, else jump.
+    // "Animate page transitions": animate next/prev when ON, else jump.
     final isAnimationEnabled =
         ref.read(animatePageTransitionsProvider).ifNull(true);
     // Paged "Disable zoom in" drops the whole zoom wrapper (pinch AND the
-    // double-tap-drag zoom) — Komikku's pref_paged_disable_zoom_in.
+    // double-tap-drag zoom).
     final isZoomDisabled = ref.watch(disableZoomInProvider).ifNull();
-    // Double-tap-to-zoom + disable-zoom-out (Komikku) — consumed by ZoomView.
+    // Double-tap-to-zoom + disable-zoom-out — consumed by ZoomView.
     final isDoubleTapZoomEnabled =
         ref.watch(doubleTapToZoomProvider).ifNull(true);
     final isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
@@ -194,7 +194,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
     // reader open like the other toggles.
     final rotateWide = ref.read(rotateWidePagesProvider).ifNull();
     final rotateWideInvert = ref.read(rotateWideInvertProvider).ifNull();
-    // Auto-crop solid borders (Komikku cropBorders) — decoder-level via
+    // Auto-crop solid borders — decoder-level via
     // ServerImage, so it composes with rotate/split/double.
     final cropBorders = ref.read(cropBordersProvider).ifNull();
     // Image scale type → the page's BoxFit + decode size.

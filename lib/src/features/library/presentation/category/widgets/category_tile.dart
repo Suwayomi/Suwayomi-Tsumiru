@@ -14,9 +14,8 @@ import '../../../domain/category/category_model.dart';
 import '../controller/edit_category_controller.dart';
 import 'edit_category_dialog.dart';
 
-/// A category row in the Edit Categories screen, matching Komikku's
-/// CategoryListItem: drag handle · name (struck-through + dimmed when hidden) ·
-/// edit · hide-toggle · delete.
+/// A category row in the Edit Categories screen: drag handle · name
+/// (struck-through + dimmed when hidden) · edit · hide-toggle · delete.
 class CategoryTile extends HookConsumerWidget {
   const CategoryTile({
     super.key,

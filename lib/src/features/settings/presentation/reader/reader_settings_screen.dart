@@ -37,7 +37,7 @@ import 'widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import 'widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 
-/// Global reader defaults (Komikku SettingsReaderScreen). A few of these settings
+/// Global reader defaults. A few of these settings
 /// can be overridden per-manga from the in-reader sheet's "For this series"
 /// block; the rest apply to every series.
 class ReaderSettingsScreen extends ConsumerWidget {

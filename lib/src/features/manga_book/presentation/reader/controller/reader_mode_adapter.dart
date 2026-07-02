@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// Mihon parity chips for the Reading-mode row. Pure presentation: the stored
+/// Parity chips for the Reading-mode row. Pure presentation: the stored
 /// 8-value ReaderMode stays byte-for-byte; chips are a view over it (§2.5).
 enum ReadingModeChip {
   defaultChip,

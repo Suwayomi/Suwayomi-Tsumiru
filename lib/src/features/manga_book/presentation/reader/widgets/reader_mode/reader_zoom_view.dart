@@ -9,22 +9,15 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../../../../../widgets/zoom/zoom_view.dart';
 
-/// The reader's [ZoomView] wrapper.
+/// The reader's [ZoomView] wrapper, controlling pinch and double-tap zoom
+/// independently.
 ///
-/// Pinch-to-zoom and double-tap-to-zoom are controlled independently:
-///
-///   * [pinchEnabled] toggles the two-finger pinch gesture. When off, the zoom
-///     level resets to 1x — but double-tap still works, so callers keep this
-///     mounted whenever EITHER gesture is enabled.
-///   * [doubleTapToZoom] wires a real double-tap that toggles 1x <-> ~3x at the
-///     tapped point (Mihon/Komikku behaviour) via a persistent
-///     [ZoomViewController]. Without it, zoom_view's plain double-tap does
-///     nothing and the reader's single-tap menu wins.
-///
-/// [minScale] / [maxScale] apply live (the vendored ZoomView reads them each
-/// frame), so "disable zoom out" takes effect without reopening the reader. The
-/// controller survives rebuilds ([useMemoized]) so it stays attached to the
-/// ZoomView across the reader's frequent rebuilds.
+/// [pinchEnabled] toggles the two-finger pinch (resetting to 1x when off);
+/// [doubleTapToZoom] adds a double-tap that toggles 1x <-> ~3x at the tapped
+/// point. Either being on keeps this mounted. [minScale] / [maxScale] apply
+/// live, so "disable zoom out" needs no reader restart. The [ZoomViewController]
+/// survives rebuilds ([useMemoized]) to stay attached across the reader's
+/// frequent rebuilds.
 class ReaderZoomView extends HookWidget {
   const ReaderZoomView({
     super.key,

@@ -53,7 +53,7 @@ class ReaderTopBar extends ConsumerWidget {
         // status-bar padding baked in via Padding(top: systemTopInset) below.
         // Adding systemTopInset again would double-count it, pushing the side
         // seekbar ~44 dp too low on notch devices.  Mirror the bottom bar:
-        //   MihonBottomControls.onChange uses `bottomInset: size.height` for
+        //   its onChange uses `bottomInset: size.height` for
         //   the same reason — the nav-bar Padding is inside the measured subtree.
         final next = ChromeExtents(
           topInset: size.height,

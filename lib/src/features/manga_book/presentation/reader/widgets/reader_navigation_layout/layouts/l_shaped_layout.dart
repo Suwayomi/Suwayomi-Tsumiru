@@ -32,7 +32,7 @@ class LShapedLayout extends StatelessWidget {
   final Color? topColor;
   final Color? bottomColor;
 
-  /// Komikku "smaller tap zones": prev/next bands 0.25 (flex 1:2:1) vs 0.33.
+  /// "Smaller tap zones": prev/next bands 0.25 (flex 1:2:1) vs 0.33.
   final bool smaller;
   @override
   Widget build(BuildContext context) {

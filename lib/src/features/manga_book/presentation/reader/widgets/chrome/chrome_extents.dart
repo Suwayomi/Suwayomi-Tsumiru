@@ -18,7 +18,7 @@ part 'chrome_extents.g.dart';
 ///                 status-bar inset — do NOT add it again at the call site.
 ///
 /// [bottomInset] = system nav-bar inset (`View.viewPadding.bottom / dpr`)
-///                 + measured [MihonBottomControls] height.
+///                 + measured bottom-controls height.
 ///                 The bottom bar is **shorter in webtoon mode** (no horizontal
 ///                 seek row), so the extent is mode-specific and must be
 ///                 measured — a constant can't capture it.

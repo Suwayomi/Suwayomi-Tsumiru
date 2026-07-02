@@ -54,11 +54,11 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
             navigationLayout == ReaderNavigationLayout.defaultNavigation
         ? ref.watch(readerNavigationLayoutKeyProvider)
         : navigationLayout;
-    // Axis-wise inversion (Komikku TappingInvertMode): horizontal swaps the
+    // Axis-wise inversion: horizontal swaps the
     // left/right zones, vertical swaps the L-shaped top/bottom rows.
     final TapInvert invert =
         tapInvert ?? ref.watch(readerTapInvertCompatProvider);
-    // Komikku "smaller tap zones": shrinks the active edge regions (0.25 vs
+    // "Smaller tap zones": shrinks the active edge regions (0.25 vs
     // 0.33 of the axis), widening the center dead-zone.
     final bool smaller = ref.watch(smallerTapZonesProvider) ?? false;
     final invertH = invert.invertsHorizontal;

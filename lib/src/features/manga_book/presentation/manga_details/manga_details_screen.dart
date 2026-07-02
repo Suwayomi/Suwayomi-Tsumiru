@@ -54,7 +54,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
 
     // Drives the immersive app bar: transparent over the hero, fading to the
-    // surface color as the user scrolls past it (Komikku-style). Updated from a
+    // surface color as the user scrolls past it. Updated from a
     // NotificationListener on the body so only the app bar rebuilds on scroll —
     // never the chapter list.
     final scrollPx = useMemoized(() => ValueNotifier<double>(0.0));

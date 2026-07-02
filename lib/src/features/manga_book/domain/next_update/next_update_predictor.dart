@@ -6,7 +6,7 @@
 
 import 'dart:math' as math;
 
-/// Maximum predicted interval, in days (Komikku `FetchInterval.MAX_INTERVAL`).
+/// Maximum predicted interval, in days.
 const int kMaxFetchIntervalDays = 28;
 
 /// One chapter's relevant timestamps, epoch milliseconds (0 = absent).
@@ -31,15 +31,13 @@ class NextUpdatePrediction {
 
 /// Predict when a manga's next chapter is due, from its own release history.
 ///
-/// The release [intervalDays] is computed exactly like Komikku/Mihon
-/// `tachiyomi.domain.manga.interactor.FetchInterval.calculateInterval`: the
-/// median gap between recent distinct release days (upload dates, falling back
-/// to fetch dates, else a 7-day default), clamped to 1..28 days.
+/// The release [intervalDays] is computed as the median gap between recent
+/// distinct release days (upload dates, falling back to fetch dates, else a
+/// 7-day default), clamped to 1..28 days.
 ///
 /// The next date projects forward WHOLE cycles from the latest release to the
-/// next future occurrence (`FetchInterval.calculateNextUpdate`), so a series
-/// whose last chapter is weeks old still reports a real "in N days" rather than
-/// flooring to "Soon".
+/// next future occurrence, so a series whose last chapter is weeks old still
+/// reports a real "in N days" rather than flooring to "Soon".
 NextUpdatePrediction predictNextUpdate(
   List<ChapterRelease> chapters, {
   DateTime? now,
@@ -52,9 +50,9 @@ NextUpdatePrediction predictNextUpdate(
     return NextUpdatePrediction(intervalDays: interval, nextUpdate: null);
   }
 
-  // Project forward whole cycles to the next FUTURE date, exactly like
-  // Komikku's FetchInterval.calculateNextUpdate: a series whose last chapter is
-  // long past still gets a real upcoming date instead of flooring to "Soon".
+  // Project forward whole cycles to the next FUTURE date: a series whose
+  // last chapter is long past still gets a real upcoming date instead of
+  // flooring to "Soon".
   final nowTime = now ?? DateTime.now();
   final timeSinceLatest = math.max(0, nowTime.difference(latestDate).inDays);
   final cycle =
@@ -65,7 +63,7 @@ NextUpdatePrediction predictNextUpdate(
   );
 }
 
-/// Komikku's `FetchInterval.increaseInterval`: when a series has missed many
+/// When a series has missed many
 /// expected cycles, widen the effective interval (doubling) so we don't keep
 /// predicting an imminent release for something long-dormant. Capped at 28.
 int _increaseInterval(int delta, int timeSinceLatest, int increaseWhenOver) {
@@ -77,7 +75,7 @@ int _increaseInterval(int delta, int timeSinceLatest, int increaseWhenOver) {
 }
 
 int _calculateInterval(List<ChapterRelease> chapters) {
-  // Wider sampling window once there's a decent backlog (Komikku: 3 vs 10).
+  // Wider sampling window once there's a decent backlog (3 vs 10).
   final window = chapters.length <= 8 ? 3 : 10;
 
   final uploadDays = _recentDistinctDays(
@@ -122,8 +120,8 @@ List<DateTime> _recentDistinctDays(
 }
 
 /// Median gap (days) between consecutive [days] (descending). Needs >= 3 days
-/// (i.e. >= 2 gaps) to be meaningful; null otherwise. Matches Komikku's
-/// `ranges[(ranges.size - 1) / 2]` lower-median.
+/// (i.e. >= 2 gaps) to be meaningful; null otherwise. Uses the
+/// lower-median of the gap list.
 int? _medianGapDays(List<DateTime> days) {
   if (days.length < 3) return null;
   final gaps = <int>[

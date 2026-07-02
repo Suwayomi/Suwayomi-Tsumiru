@@ -25,7 +25,7 @@ int _ensureVisibleAlpha(int argb, int shift) =>
         ? _withArgbChannel(argb, 24, 255)
         : argb;
 
-/// Komikku-parity Custom-filter tab (ColorFilterPage): custom brightness,
+/// Custom-filter tab: custom brightness,
 /// RGBA color filter + blend mode, grayscale, inverted colors. Sliders
 /// live-preview through the channels in reader_preview_channel.dart and
 /// commit on onChangeEnd.
@@ -69,7 +69,7 @@ class CustomFilterTab extends ConsumerWidget {
           onChanged: model.setCustomColorFilter,
         ),
         if (settings.customColorFilter) ...[
-          // Komikku slider order R/G/B/A over one packed ARGB pref.
+          // Slider order R/G/B/A over one packed ARGB pref.
           for (final (title, shift) in [
             (context.l10n.colorFilterRed, 16),
             (context.l10n.colorFilterGreen, 8),
@@ -210,7 +210,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Single-select chip row, Komikku SettingsChipRow feel.
+/// Single-select chip row.
 class _ChipRow extends StatelessWidget {
   const _ChipRow({required this.children});
 

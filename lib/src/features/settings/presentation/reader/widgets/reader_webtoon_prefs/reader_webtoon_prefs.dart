@@ -12,7 +12,7 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_webtoon_prefs.g.dart';
 
-// Global long-strip prefs (Komikku parity). Smart-scale is wired on the
+// Global long-strip prefs. Smart-scale is wired on the
 // non-infinity webtoon path; the infinity path's height-cache math is the
 // frozen scroll boundary (see docs/architecture/reader.md).
 
@@ -31,7 +31,7 @@ class CropBordersWebtoon extends _$CropBordersWebtoon
   bool? build() => initialize(DBKeys.cropBordersWebtoon);
 }
 
-/// Own key for "Long strip with gaps" (Komikku cropBordersContinuousVertical).
+/// Own key for "Long strip with gaps".
 @riverpod
 class CropBordersGaps extends _$CropBordersGaps
     with SharedPreferenceClientMixin<bool> {

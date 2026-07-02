@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Pure mappings: ReaderOrientation → platform orientations (Komikku parity)
+// Pure mappings: ReaderOrientation → platform orientations
 // and TapInvert legacy-bool migration + axis truth table.
 
 import 'package:flutter/services.dart';

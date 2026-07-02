@@ -6,8 +6,8 @@
 
 import 'package:flutter/material.dart';
 
-/// Rotates a wide (landscape) page 90° so it fills a portrait viewport —
-/// Komikku dualPageRotateToFit (+90° default, -90° inverted). Aspect comes
+/// Rotates a wide (landscape) page 90° so it fills a portrait viewport
+/// (+90° default, -90° inverted). Aspect comes
 /// from the already-decoded image (ServerImage.imageBuilder only fires once
 /// loaded, so resolving here is a cache hit, never a new fetch/decode).
 class RotateWidePage extends StatefulWidget {

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku "show page number": a subtle "n / m" pill in the reader chrome.
+// "Show page number": a subtle "n / m" pill in the reader chrome.
 // It is an always-mounted leaf gated ONLY by the pref (not the chrome
 // animation), so it stays visible while reading (chrome hidden), shows
 // "currentPage / totalPages", and disappears when the pref is OFF.

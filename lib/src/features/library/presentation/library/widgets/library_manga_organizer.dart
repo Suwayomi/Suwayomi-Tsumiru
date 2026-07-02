@@ -15,7 +15,7 @@ import 'library_manga_group.dart';
 import 'library_manga_sort_tile.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 
-/// Sort-key display order, matching Komikku's SortPage. Kept separate from the
+/// Sort-key display order. Kept separate from the
 /// `MangaSort` enum declaration because that is persisted by index.
 const List<MangaSort> _sortDisplayOrder = [
   MangaSort.alphabetical,
@@ -57,7 +57,7 @@ class _OrganizerBody extends StatelessWidget {
     final maxHeight = MediaQuery.sizeOf(context).height * 0.72;
     final tabs = <Widget>[
       const LibraryMangaFilter(),
-      // Sort — display order matches Komikku's SortPage: Alphabetical, Total
+      // Sort — display order: Alphabetical, Total
       // chapters, Last read, Last update, Unread, Latest chapter, Chapter fetch
       // date, Date added, [Tracker score], Random. (Enum declaration order
       // differs because prefs are stored by index.)

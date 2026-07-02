@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// General-tab parity contract (Komikku GeneralSettingsPage): control order,
+// General-tab parity contract: control order,
 // the seekbar-chain / fullscreen / flash sub-toggle visibility rules, the
 // background-color chip write, and the fullscreen→SystemUiMode branch.
 

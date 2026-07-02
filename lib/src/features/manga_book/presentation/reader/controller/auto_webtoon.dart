@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Port of Komikku's exh/util/MangaType.kt (mangaType + defaultReaderType).
+// Derives the reader type from the series type (mangaType + defaultReaderType).
 // Keep the lists and precedence verbatim — parity source, don't "improve".
 
 enum _MangaType { manga, manhwa, manhua, comic, webtoon }
 
-/// True iff the series resolves to WEBTOON/MANHWA/MANHUA — i.e. Komikku's
-/// defaultReaderType() would pick the webtoon viewer.
+/// True iff the series resolves to WEBTOON/MANHWA/MANHUA — i.e. the default
+/// reader type would pick the webtoon viewer.
 bool detectsWebtoon({required List<String>? genres, String? sourceName}) {
   final type = _mangaType(genres ?? const [], sourceName);
   return type == _MangaType.webtoon ||

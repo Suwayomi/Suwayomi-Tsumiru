@@ -18,9 +18,8 @@ class LibraryMangaFilter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Order matches Komikku's FilterPage (LibrarySettingsDialog.kt):
-    // Downloaded, Unread, Started, Bookmarked, Completed, [Lewd], [Categories],
-    // [Trackers]. Our extra "On device" filter (Komikku has no equivalent) sits
+    // Order: Downloaded, Unread, Started, Bookmarked, Completed, [Lewd],
+    // [Categories], [Trackers]. Our extra "On device" filter sits
     // next to Downloaded since both concern on-device download state.
     return ListView(
       shrinkWrap: true,
@@ -75,8 +74,7 @@ class LibraryMangaFilter extends ConsumerWidget {
 
 /// Per-tracker filter rows, shown only when at least one tracker is logged in.
 ///
-/// Single tracker: collapses heading + row into one "Tracked" toggle row
-/// (Komikku parity, LibrarySettingsDialog.kt:190-215).
+/// Single tracker: collapses heading + row into one "Tracked" toggle row.
 /// Multiple trackers: "Tracked" section heading + one tri-state row per tracker.
 class _TrackerFilterSection extends ConsumerWidget {
   @override

@@ -41,7 +41,7 @@ class MangaCoverGridTile extends StatelessWidget {
   final bool showBadges;
   final bool showDarkOverlay;
 
-  /// Multi-select highlight: a primary-tinted border + check, like Komikku's
+  /// Multi-select highlight: a primary-tinted border + check on the
   /// library selection.
   final bool selected;
   @override

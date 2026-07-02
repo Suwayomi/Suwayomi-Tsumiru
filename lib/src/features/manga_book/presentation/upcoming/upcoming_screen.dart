@@ -21,8 +21,7 @@ import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
 
 /// "Upcoming" calendar: predicted next-release dates across the library, on a
-/// month grid with a date-grouped list below. Faithful to Komikku's
-/// `UpcomingScreenContent.kt`.
+/// month grid with a date-grouped list below.
 class UpcomingScreen extends HookConsumerWidget {
   const UpcomingScreen({super.key});
 

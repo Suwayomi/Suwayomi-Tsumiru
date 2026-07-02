@@ -12,7 +12,7 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_filter_prefs.g.dart';
 
-// Global Custom-filter tab prefs (Komikku ColorFilterPage parity).
+// Global Custom-filter tab prefs.
 
 @riverpod
 class CustomBrightness extends _$CustomBrightness
@@ -22,7 +22,7 @@ class CustomBrightness extends _$CustomBrightness
 }
 
 /// -75..100. Negatives render the black dim overlay; positives are inert
-/// (Komikku sets the Android window brightness attr — no plugin here).
+/// (sets the Android window brightness attr — no plugin here).
 @riverpod
 class CustomBrightnessValue extends _$CustomBrightnessValue
     with SharedPreferenceClientMixin<int> {
@@ -37,7 +37,7 @@ class CustomColorFilter extends _$CustomColorFilter
   bool? build() => initialize(DBKeys.customColorFilter);
 }
 
-/// Packed ARGB, like Komikku's color_filter_value.
+/// Packed ARGB int.
 @riverpod
 class ColorFilterValue extends _$ColorFilterValue
     with SharedPreferenceClientMixin<int> {

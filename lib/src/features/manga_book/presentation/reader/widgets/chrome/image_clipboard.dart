@@ -7,7 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Copy an on-disk image file to the system clipboard as an image (Komikku's
+/// Copy an on-disk image file to the system clipboard as an image (the
 /// "Copy to clipboard" page action). Android-only: routes to a native
 /// `ClipData.newUri` on a FileProvider `content://` URI (no re-encode). Other
 /// platforms have no image-clipboard path here.

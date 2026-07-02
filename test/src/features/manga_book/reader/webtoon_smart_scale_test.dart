@@ -4,10 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku long-strip smart scale: on wide screens the webtoon strip is capped
-// to the chosen aspect column; on tall/portrait screens it stays full width.
-// Mirrors WebtoonViewer.webtoonScaleTypeChangedListener (shrink iff
-// screenRatio > desiredRatio).
+// Long-strip smart scale: on wide screens the webtoon strip is capped
+// to the chosen aspect column; on tall/portrait screens it stays full width
+// (shrink iff screenRatio > desiredRatio).
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';

@@ -20,7 +20,7 @@ class EdgeLayout extends StatelessWidget {
   final Color? leftColor;
   final Color? rightColor;
 
-  /// Komikku "smaller tap zones": edge width 0.25 (flex 1:2:1) vs 0.33 (1:1:1).
+  /// "Smaller tap zones": edge width 0.25 (flex 1:2:1) vs 0.33 (1:1:1).
   final bool smaller;
   @override
   Widget build(BuildContext context) {

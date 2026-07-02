@@ -47,7 +47,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Komikku-style filter chips: Pinned / All source scope + Has results.
+          // Filter chips: Pinned / All source scope + Has results.
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

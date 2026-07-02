@@ -139,7 +139,7 @@ Future<void> _startApp() async {
   }
 
   // 3.5) One-time: the Last-Read sort comparator was un-inverted so its
-  //    ascending/descending now match Komikku (ascending = oldest-read first).
+  //    ascending/descending is now ascending = oldest-read first.
   //    A user whose CURRENT sort is Last-Read and who had an explicit direction
   //    saved would otherwise see their order silently flip; flip their saved
   //    direction once to preserve their view. Only touch it when they're on

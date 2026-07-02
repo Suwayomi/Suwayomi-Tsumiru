@@ -8,8 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 
-/// Compact icon-over-label action button for the manga-details action row,
-/// matching Komikku's `MangaActionButton` (MangaInfoHeader.kt:1014): a
+/// Compact icon-over-label action button for the manga-details action row: a
 /// weight-1 TextButton wrapping a centered Column of a 20dp icon, a 4dp gap and
 /// a 12sp centered label. Active items use the primary color; the rest recede.
 ///

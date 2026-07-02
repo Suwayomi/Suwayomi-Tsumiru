@@ -16,11 +16,11 @@ import '../../source/controller/source_controller.dart';
 
 part 'source_quick_search_controller.g.dart';
 
-/// Global-search source scope (Komikku parity): search only pinned sources, or
+/// Global-search source scope: search only pinned sources, or
 /// all of them.
 enum GlobalSearchSourceFilter { pinned, all }
 
-/// Search scope for global search. Defaults to pinned (matches Komikku); the
+/// Search scope for global search. Defaults to pinned; the
 /// search falls back to "all" when there are no pinned sources.
 final globalSearchSourceFilterProvider =
     StateProvider<GlobalSearchSourceFilter>(

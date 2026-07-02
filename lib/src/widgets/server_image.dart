@@ -60,7 +60,7 @@ class ServerImage extends HookConsumerWidget {
   final Widget Function(Widget child)? wrapper;
   final bool showReloadButton;
 
-  /// Trim solid page borders before display (Komikku cropBorders). Routes the
+  /// Trim solid page borders before display. Routes the
   /// page through [CroppedImageProvider] so crop composes with rotate/split/
   /// double via the existing [imageBuilder]. No-op on web.
   final bool cropBorders;

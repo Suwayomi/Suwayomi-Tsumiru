@@ -17,7 +17,7 @@ typedef ChapterBytesMeasurer = Future<int> Function(int mangaId, int chapterId);
 
 /// Orchestrates background chapter downloads on top of [ChapterDownloadEngine].
 ///
-/// Komikku's model: download ONE chapter at a time (everything comes from our
+/// Download ONE chapter at a time (everything comes from our
 /// own server, so there's nothing to spread chapter-level load against), with
 /// page-level parallelism inside the engine. Auth is resolved at request time
 /// by the engine's fetcher and refreshed on a 401 — nothing is baked at enqueue,

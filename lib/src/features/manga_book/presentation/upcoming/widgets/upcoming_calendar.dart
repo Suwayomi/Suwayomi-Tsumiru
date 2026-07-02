@@ -10,9 +10,8 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 
 /// Month calendar for the Upcoming screen — a header (month/year + prev/next)
 /// over a 7-column day grid. Each day shows its number, a small count of
-/// predicted releases (top-right), and up to three dots. Ported from Komikku's
-/// `Calendar.kt` / `CalendarDay.kt` (16sp labels, today ring, dimmed past days,
-/// dots tinted by `(index + 1) * 0.3` alpha).
+/// predicted releases (top-right), and up to three dots (16sp labels, today
+/// ring, dimmed past days, dots tinted by `(index + 1) * 0.3` alpha).
 class UpcomingCalendar extends StatelessWidget {
   const UpcomingCalendar({
     super.key,

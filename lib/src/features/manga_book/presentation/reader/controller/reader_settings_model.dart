@@ -83,7 +83,7 @@ abstract final class ReaderSettings {
     fallback: TapInvert.none,
   );
 
-  // Zoom toggles are global reader prefs (Komikku parity — no per-series meta).
+  // Zoom toggles are global reader prefs — no per-series meta.
   static final pinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: pinchToZoomProvider,
@@ -108,7 +108,7 @@ abstract final class ReaderSettings {
     fallback: DBKeys.disableZoomIn.initial as bool,
   );
 
-  // Paged parity prefs (Komikku ReaderPreferences — all global).
+  // Paged parity prefs — all global.
   static final imageScaleType = ReaderSetting<ImageScaleType>(
     scope: ReaderSettingScope.global,
     global: imageScaleTypeKeyProvider,
@@ -238,7 +238,7 @@ abstract final class ReaderSettings {
     fallback: DBKeys.dualPageInvertWebtoon.initial as bool,
   );
 
-  // General-tab prefs (Komikku GeneralSettingsPage — all global).
+  // General-tab prefs — all global.
   static final backgroundColor = ReaderSetting<ReaderBackgroundColor>(
     scope: ReaderSettingScope.global,
     global: readerBackgroundColorKeyProvider,
@@ -305,7 +305,7 @@ abstract final class ReaderSettings {
     fallback: DBKeys.flashColor.initial as FlashColor,
   );
 
-  // Custom-filter tab prefs (Komikku ColorFilterPage — all global).
+  // Custom-filter tab prefs — all global.
   static final customBrightness = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: customBrightnessProvider,
@@ -600,7 +600,7 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setDisableZoomIn(bool value) => _disableZoomIn.update(value);
 
-  // Parity prefs are global too (Komikku keeps them in ReaderPreferences).
+  // Parity prefs are global too.
   void setImageScaleType(ImageScaleType value) => _imageScaleType.update(value);
 
   void setZoomStart(ZoomStart value) => _zoomStart.update(value);

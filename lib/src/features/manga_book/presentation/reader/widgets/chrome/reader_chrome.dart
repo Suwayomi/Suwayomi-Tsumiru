@@ -37,7 +37,7 @@ SystemUiMode hiddenChromeUiMode({required bool fullscreen}) =>
 /// All three chrome bars are **always mounted**. A single [AnimationController]
 /// (200 ms) drives their show/hide via [SlideTransition] + [FadeTransition],
 /// so top and bottom move in perfect lockstep — no more "instant-pop top,
-/// sliding bottom" desync (Bug B). Matching Komikku, the slide runs the full
+/// sliding bottom" desync (Bug B). The slide runs the full
 /// 200 ms on [Curves.fastOutSlowIn] while the fade completes faster (~150 ms
 /// via an [Interval]) for a snappier feel.
 ///
@@ -185,8 +185,8 @@ class ReaderChrome extends HookConsumerWidget {
       return () => visibility.removeListener(onVisibilityChanged);
     }, [visibility, controller]);
 
-    // Two curves off the ONE controller, matching Komikku's reader bars:
-    // slide = tween(200) and fade = tween(150) (the fade is FASTER than the
+    // Two curves off the ONE controller: slide = tween(200) and
+    // fade = tween(150) (the fade is FASTER than the
     // slide), both on FastOutSlowIn (Material standard) rather than a flat
     // easeInOut. The fade uses an Interval covering the first 150/200 = 0.75 of
     // the timeline so it completes in ~150 ms while the bar slides over 200 ms —
@@ -209,7 +209,7 @@ class ReaderChrome extends HookConsumerWidget {
     //                               height (dp). [ChromeExtents.bottomInset] =
     //                               system nav-bar inset + measured bottom-bar
     //                               height (already includes the nav clearance
-    //                               baked inside [MihonBottomControls]).
+    //                               baked inside the bottom controls).
     //
     // Adding 8 dp of breathing room keeps the seekbar from kissing the bar edge.
     // When [forceHorizontalSeekbar] is true, the vertical side seekbar is hidden
@@ -219,7 +219,7 @@ class ReaderChrome extends HookConsumerWidget {
         ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
     final leftHanded =
         ref.watch(leftHandedVerticalSeekbarProvider).ifNull(false);
-    // Komikku "show page number": a subtle "n / m" pill near the bottom, always
+    // "Show page number": a subtle "n / m" pill near the bottom, always
     // mounted (outside the animated bars) so it stays visible while reading.
     final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
     final pageCount = totalPageCount ?? chapterPages.chapter.pageCount;
@@ -305,7 +305,7 @@ class ReaderChrome extends HookConsumerWidget {
             // [top]    = e.topInset + 8 dp breathing room.
             // [bottom] = e.bottomInset + 8 dp breathing room.
             //            (bottomInset already includes the nav-bar clearance
-            //             that MihonBottomControls bakes in.)
+            //             that the bottom controls bake in.)
             //
             // Fade only — no slide, to avoid fighting the seek gesture.
             if (showSideSeekBar && !forceHorizontal)
@@ -340,7 +340,7 @@ class ReaderChrome extends HookConsumerWidget {
 
             // ── Bottom controls ───────────────────────────────────────────────
             // SlideTransition from Offset(0, 1) (fully below viewport) → zero.
-            // The nav-inset padding is applied INSIDE MihonBottomControls,
+            // The nav-inset padding is applied INSIDE the bottom controls,
             // so it slides as one rigid unit with the bar — no stutter.
             Positioned(
               bottom: 0,

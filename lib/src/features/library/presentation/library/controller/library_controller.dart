@@ -156,16 +156,16 @@ List<MangaDto> applyLibraryFilterSort(
                       0),
           MangaSort.totalChapters =>
             m1.chapters.totalCount.compareTo(m2.chapters.totalCount),
-          // Komikku "Last update" = the manga's library-update time. Suwayomi's
+          // "Last update" = the manga's library-update time. Suwayomi's
           // chaptersLastFetchedAt is when this manga's chapter list was last
           // refreshed (distinct from ChapterFetchDate/LatestChapter above).
           MangaSort.lastUpdate =>
             (int.tryParse(m1.chaptersLastFetchedAt ?? '0') ?? 0)
                 .compareTo(int.tryParse(m2.chaptersLastFetchedAt ?? '0') ?? 0),
-          // Normal order (m1 vs m2) to match Komikku's LastRead comparator
-          // exactly: ascending = oldest-read first, descending = newest-read
-          // first. (Previously the operands were swapped, which inverted our
-          // arrows vs Komikku — our "ascending" showed newest first.)
+          // Normal order (m1 vs m2): ascending = oldest-read first,
+          // descending = newest-read first. (Previously the operands were
+          // swapped, which inverted our arrows — our "ascending" showed
+          // newest first.)
           MangaSort.lastRead =>
             (int.tryParse(m1.lastReadChapter?.lastReadAt ?? '0') ?? 0)
                 .compareTo(

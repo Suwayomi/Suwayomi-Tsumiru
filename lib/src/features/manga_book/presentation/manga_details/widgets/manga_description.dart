@@ -202,7 +202,7 @@ class MangaDescription extends HookConsumerWidget {
           ],
         ),
         Builder(builder: (context) {
-          // Komikku-style action row: equal-width icon-over-label columns.
+          // Action row: equal-width icon-over-label columns.
           final offlineEnabled = ref.watch(offlineEnabledProvider);
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),

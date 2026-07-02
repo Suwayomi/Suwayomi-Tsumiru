@@ -43,7 +43,7 @@ const double _minRetainedAreaFraction = 0.10;
 /// "border" pixel when each of its R/G/B channels is within [threshold] of the
 /// reference. Rows/columns that are (near-)entirely border pixels are trimmed
 /// from each side; left/right are scanned only within the found [top,bottom)
-/// band, matching Mihon's findBorder.
+/// band.
 ContentRect? findContentRect(
   Uint8List rgba,
   int width,

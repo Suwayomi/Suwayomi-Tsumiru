@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 
 /// A small rounded-square play button overlaid on / beside a library cover that
-/// jumps straight into the next unread chapter. Matches Komikku: a filled icon
+/// jumps straight into the next unread chapter: a filled icon
 /// button with the `small` shape, a `primaryContainer` fill, and a play glyph.
 /// Its own [InkWell] wins the tap over the cover's gesture, so opening the
 /// reader never also opens the details page.

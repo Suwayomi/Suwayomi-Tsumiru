@@ -20,7 +20,7 @@ class KindlishLayout extends StatelessWidget {
   final Color? leftColor;
   final Color? rightColor;
 
-  /// Komikku "smaller tap zones": prev band 0.25 (flex 1:3) vs 0.33 (1:2).
+  /// "Smaller tap zones": prev band 0.25 (flex 1:3) vs 0.33 (1:2).
   final bool smaller;
   @override
   Widget build(BuildContext context) {

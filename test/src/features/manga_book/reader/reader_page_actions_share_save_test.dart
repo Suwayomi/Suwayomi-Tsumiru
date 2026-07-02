@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Reader page-actions sheet: on mobile the sheet mirrors Komikku's single-page
+// Reader page-actions sheet: on mobile the sheet shows a single-page
 // set — Copy (image), Share image, Save to gallery — and does NOT show the
 // desktop-only "Open in web" fallback. The tiles are gated to Android/iOS (gal +
 // the image-clipboard channel are mobile-only), so this test drives the mobile
@@ -88,7 +88,7 @@ void main() {
       (tester) async {
     await _openSheet(tester);
 
-    // Pure-Komikku single-page actions on mobile; the desktop-only "Open in
+    // Single-page actions on mobile; the desktop-only "Open in
     // web" fallback is hidden.
     expect(find.byKey(_copyKey), findsOneWidget);
     expect(find.byKey(_shareKey), findsOneWidget);

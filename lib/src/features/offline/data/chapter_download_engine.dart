@@ -70,14 +70,14 @@ class ChapterDownloadOutcome {
       error == null && !cancelled && !authFailed && !offline;
 }
 
-/// Downloads a single chapter's pages, Komikku-style: up to
+/// Downloads a single chapter's pages: up to
 /// [parallelPageLimit] pages in flight at once (default 5), each retried a few
 /// times with short backoff for transient blips, and auth refreshed once on a
 /// 401 before retrying. Pure Dart and dependency-injected so it runs the same
 /// on Android and the Linux desktop build and is testable without HTTP, dart:io
 /// or the real auth stack.
 ///
-/// Deliberately does ONE chapter: like Komikku's single-source model, the
+/// Deliberately does ONE chapter: with a single-source model, the
 /// orchestrator runs chapters one at a time (everything comes from our own
 /// server, so there's nothing to spread chapter-level load against). The win is
 /// page-level parallelism, which also hides the server's cold upstream-fetch

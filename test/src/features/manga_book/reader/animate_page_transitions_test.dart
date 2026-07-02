@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Komikku "animate page transitions": the paged next/prev animation branch.
+// "Animate page transitions": the paged next/prev animation branch.
 // ON → animate over kDuration; OFF → jump instantly (kInstantDuration).
 
 import 'package:flutter_test/flutter_test.dart';

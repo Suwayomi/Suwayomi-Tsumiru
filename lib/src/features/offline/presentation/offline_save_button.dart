@@ -71,7 +71,7 @@ class OfflineSaveButton extends ConsumerWidget {
 }
 
 /// Determinate download arc for a chapter, showing how many of its pages are
-/// on disk (Mihon/Komikku show the same). Falls back to an indeterminate
+/// on disk. Falls back to an indeterminate
 /// spinner until the page total is known.
 class _DownloadingIndicator extends ConsumerWidget {
   const _DownloadingIndicator({required this.chapterId});
@@ -82,7 +82,7 @@ class _DownloadingIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progress =
         ref.watch(offlineChapterProgressProvider(chapterId)).valueOrNull;
-    // Like Komikku: spin (indeterminate) while queued or at 0% so the icon is
+    // Spin (indeterminate) while queued or at 0% so the icon is
     // never invisible; switch to a determinate fill only once pages land.
     final value = (progress == null || progress <= 0.0) ? null : progress;
     return SizedBox(

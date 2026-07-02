@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Custom-filter overlay contract (design §2.4 layer 3): the Komikku math
+// Custom-filter overlay contract (design §2.4 layer 3): the color math
 // (brightness alpha, grayscale/invert matrices), the leaf-overlay behavior
 // (draft ?? committed, inert-positive brightness), the chrome z-order
 // (filters < flash < bars), and the zero-viewer-rebuild preview discipline.

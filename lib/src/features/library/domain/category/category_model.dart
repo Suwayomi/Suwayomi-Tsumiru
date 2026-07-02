@@ -14,7 +14,7 @@ typedef CategoryUpdate = Input$UpdateCategoryPatchInput;
 
 /// Meta key marking a category hidden from the Library tab bar. Stored as a
 /// per-category meta flag on the server so it's a property of the category
-/// (Komikku parity) and syncs across devices.
+/// and syncs across devices.
 const String kCategoryHiddenMetaKey = 'tsumiru.hidden';
 
 extension CategoryHiddenX on CategoryDto {

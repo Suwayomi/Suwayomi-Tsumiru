@@ -12,8 +12,8 @@
 /// this builds an internal DISPLAY LIST and translates display-index ↔
 /// raw-page. Kept pure (no Flutter deps) so the index contract is unit-tested.
 ///
-/// Semantics mirror Komikku's PagerViewerAdapter.setJoinedItems (double →
-/// chunked pairs, wide "fullPage" isolates) and PagerPageHolder split.
+/// Double-page mode chunks pages into pairs, isolating wide pages as their
+/// own full-width "solo" spread, then splits them for dual-page view.
 library;
 
 /// Which portion of a source page a display slot renders.
@@ -131,7 +131,7 @@ SpreadMapping buildSpreadMapping({
   }
 
   // Stage B — double: greedily pair units. A full-width WIDE page isolates
-  // (solos) and breaks the pairing run (Komikku fullPage). Split halves are
+  // (solos) and breaks the pairing run. Split halves are
   // never "wide" (half != full) so they pair normally.
   bool wideSolo(PageUnit u) => u.half == PageHalf.full && isWide(u.raw);
 

@@ -286,14 +286,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isDoubleTapZoomEnabled =
         ref.watch(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
-    // Auto-crop borders (Komikku cropBordersWebtoon). Render-only: the crop
+    // Auto-crop borders. Render-only: the crop
     // provider's async decode is handled by the imageBuilder's frameBuilder
     // below, which still reserves placeholderHeight and measures the cropped
     // strip — the scroll/height math is untouched.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     // Decode a page's image off-screen AND record its true rendered height from
-    // the decoded aspect ratio (Mihon/Mangayomi technique). Caching the height
+    // the decoded aspect ratio (the Mangayomi technique). Caching the height
     // is the load-bearing part: a page then ALWAYS lays out at its real height —
     // even before its widget is built, and even if its bitmap was later evicted
     // — so it never resizes on landing/scroll-in and never shoves the viewport.
@@ -792,7 +792,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 controller: zoomScrollController,
                 scrollAxis: scrollDirection,
                 maxScale: InfinityContinuousConfig.maxZoomScale,
-                // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
+                // Webtoon min zoom-out rate is 0.5 unless disabled.
                 minScale: isZoomOutDisabled ? 1 : 0.5,
                 pinchEnabled: isPinchToZoomEnabled,
                 doubleTapToZoom: isDoubleTapZoomEnabled,

@@ -35,7 +35,7 @@ part 'offline_background_downloads.g.dart';
 @riverpod
 ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   if (!ref.watch(offlineEnabledProvider)) return null;
-  // Page-level parallelism (Komikku's parallelPageLimit). One chapter downloads
+  // Page-level parallelism. One chapter downloads
   // at a time; this is how many of its pages are in flight at once.
   final parallel = (ref.watch(offlineDownloadConcurrencyProvider) ??
           DBKeys.offlineDownloadConcurrency.initial as int)
@@ -69,7 +69,7 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   );
 }
 
-/// The offline download orchestrator (Komikku-style: one chapter at a time,
+/// The offline download orchestrator (one chapter at a time,
 /// page-parallel inside the engine, run-time auth). Null on web / when offline
 /// storage is unavailable.
 @riverpod

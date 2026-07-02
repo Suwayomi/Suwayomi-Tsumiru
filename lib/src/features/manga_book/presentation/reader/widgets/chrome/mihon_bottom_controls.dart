@@ -157,7 +157,7 @@ class MihonBottomControls extends ConsumerWidget {
               shape: const RoundedRectangleBorder(),
               margin: EdgeInsets.zero,
               child: Padding(
-                // Horizontal + nav-bar inset only — flat and compact like Komikku.
+                // Horizontal + nav-bar inset only — flat and compact.
                 padding: KEdgeInsets.h16.size +
                     EdgeInsets.only(bottom: systemBottomInset),
                 child: Row(

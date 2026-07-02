@@ -12,10 +12,10 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_general_prefs.g.dart';
 
-/// Komikku MILLI_CONVERSION: flashDuration slider ticks → milliseconds.
+/// flashDuration slider ticks → milliseconds.
 const kFlashMsPerTick = 100;
 
-// Global General-tab reader prefs (Komikku GeneralSettingsPage parity).
+// Global General-tab reader prefs.
 
 @riverpod
 class ReaderBackgroundColorKey extends _$ReaderBackgroundColorKey

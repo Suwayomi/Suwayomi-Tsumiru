@@ -83,7 +83,7 @@ void main() {
   // Adding systemTopInset again double-counts it → seekbar top edge 44 dp too low.
   //
   // Fix: use `topInset: size.height` (mirrors `bottomInset: size.height` in
-  // MihonBottomControls where the nav-bar Padding is inside the measured subtree).
+  // the bottom controls, where the nav-bar Padding is inside the measured subtree).
   //
   // These tests verify the formula contract directly without needing a widget pump.
   group('topInset formula — no double-counting (Bug B fix)', () {
@@ -123,7 +123,7 @@ void main() {
       const bottomMaterialHeight = 64.0; // nav-bar 24 + content 40
       const e = ChromeExtents(
         topInset: materialHeight,      // fix: size.height only
-        bottomInset: bottomMaterialHeight, // already correct in MihonBottomControls
+        bottomInset: bottomMaterialHeight, // already correct in the bottom controls
       );
       expect(e.topInset, materialHeight,
           reason: 'topInset must equal measured Material height (symmetric with bottomInset)');

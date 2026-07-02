@@ -65,7 +65,7 @@ class CategoryMangaList extends HookConsumerWidget {
       return;
     }, []);
 
-    // Multi-select: long-press starts selection (Komikku-style), tap toggles
+    // Multi-select: long-press starts selection, tap toggles
     // while selecting else opens the manga. Selection is per this category list.
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
@@ -204,7 +204,7 @@ class CategoryMangaList extends HookConsumerWidget {
         );
 
         // While selecting, swallow the system back to exit selection first, and
-        // show a contextual action bar (Komikku-style) over the grid.
+        // show a contextual action bar over the grid.
         return PopScope(
           canPop: !selecting,
           onPopInvokedWithResult: (didPop, _) {
@@ -306,10 +306,9 @@ class CategoryMangaList extends HookConsumerWidget {
   }
 }
 
-/// Bottom action bar shown while library manga are multi-selected. Mirrors
-/// Komikku's library selection menu, scoped to the actions we can wire to
-/// existing APIs (sync offline / download to server). Mark-read and multi-manga
-/// category edits are a follow-up.
+/// Bottom action bar shown while library manga are multi-selected. Scoped to
+/// the actions we can wire to existing APIs (sync offline / download to
+/// server). Mark-read and multi-manga category edits are a follow-up.
 class _SelectionBar extends StatelessWidget {
   const _SelectionBar({
     required this.count,

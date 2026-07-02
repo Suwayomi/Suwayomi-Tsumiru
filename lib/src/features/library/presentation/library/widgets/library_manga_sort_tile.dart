@@ -48,7 +48,7 @@ class LibraryMangaSortTile extends ConsumerWidget {
 
     // Non-random: tapping an unselected key selects it; tapping the selected
     // key toggles ascending/descending. The leading arrow shows the direction
-    // only for the active key (Komikku SortItem parity).
+    // only for the active key.
     return _CompactSortRow(
       label: sortType.toLocale(context),
       leading: isSelected
@@ -72,7 +72,7 @@ class LibraryMangaSortTile extends ConsumerWidget {
   }
 }
 
-/// Compact sort row matching Komikku's SortItem: 24dp/10dp padding, a 24dp
+/// Compact sort row: 24dp/10dp padding, a 24dp
 /// leading slot (direction arrow or empty), then the label.
 class _CompactSortRow extends StatelessWidget {
   const _CompactSortRow({

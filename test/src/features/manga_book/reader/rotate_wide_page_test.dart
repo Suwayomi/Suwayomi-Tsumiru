@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Rotate-wide contract (Komikku dualPageRotateToFit): a landscape page gets a
+// Rotate-wide contract: a landscape page gets a
 // +90° quarter turn (-90° inverted); a portrait page renders untouched.
 
 import 'dart:ui' as ui;

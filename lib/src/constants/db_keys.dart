@@ -42,7 +42,7 @@ enum DBKeys {
   sourceBadge(false),
   useLangIcon(false),
   // Library display: overlay a play button on covers that jumps straight into
-  // the next unread chapter. Off by default, matching Mihon/Komikku/WebUI.
+  // the next unread chapter. Off by default, matching Suwayomi-WebUI.
   showContinueReadingButton(false),
   l10n(Locale('en')),
   mangaFilterDownloaded(null),
@@ -56,7 +56,7 @@ enum DBKeys {
   chapterFilterBookmarked(null),
   mangaSort(MangaSort.lastRead),
   // Default descending so the default Last-Read sort opens newest-read first
-  // (matches Komikku's last-read-descending). asc=true, dsc=false.
+  // (last-read-descending). asc=true, dsc=false.
   mangaSortDirection(false),
   chapterSort(ChapterSort.source),
   chapterSortDirection(false), // asc=true, dsc=false
@@ -71,12 +71,12 @@ enum DBKeys {
   volumeTapInvert(false),
   keepScreenOn(true),
   hideEmptyCategory(false),
-  // When false (default, Mihon-style), opening an entry shows the chapters the
+  // When false (default), opening an entry shows the chapters the
   // server already has, without re-scraping the source. When true, also refresh
   // from the source on open.
   refreshChaptersFromSource(false),
   pinchToZoom(true),
-  // Default to edge-to-edge like Komikku (fullscreen=true + drawUnderCutout):
+  // Default to edge-to-edge (fullscreen=true + drawUnderCutout):
   // the webtoon strip fills the whole screen, including the status-bar / camera
   // -cutout row at the top. Users can re-enable insets in reader settings.
   readerIgnoreSafeArea(true),
@@ -137,29 +137,29 @@ enum DBKeys {
   filterCategoriesExclude(<String>[]),
   // Seed for the Random library sort. Incrementing this re-rolls the order.
   librarySortRandomSeed(0),
-  // Reader seekbar layout. When false (default, Komikku parity), webtoon uses
-  // the vertical side seekbar. When true, the Mihon-style horizontal bottom
+  // Reader seekbar layout. When false (default), webtoon uses
+  // the vertical side seekbar. When true, a horizontal bottom
   // seekbar is shown in all modes (including webtoon).
   forceHorizontalSeekbar(false),
   // Reader side seekbar handedness. When false (default), the vertical side
   // seekbar is anchored to the right edge. When true, it is anchored to the
   // left edge for left-handed reading.
   leftHandedVerticalSeekbar(false),
-  // Webtoon/long-strip zoom gestures (Komikku WebtoonRecyclerView parity):
-  // double-tap zoom on, zoom-out below 1x allowed (down to 0.5x) unless disabled.
+  // Webtoon/long-strip zoom gestures: double-tap zoom on, zoom-out below 1x
+  // allowed (down to 0.5x) unless disabled.
   doubleTapToZoom(true),
   disableZoomOut(false),
   // Paged "Disable zoom in": turns off the paged viewer's zoom wrapper.
   disableZoomIn(false),
-  // Auto Webtoon Mode (Komikku parity): series whose tags/source say
+  // Auto Webtoon Mode: series whose tags/source say
   // long-strip read in webtoon mode when their per-series mode is Default.
   autoWebtoonMode(true),
-  // Reader rotation lock (Komikku parity). Default = never touch the platform.
+  // Reader rotation lock. Default = never touch the platform.
   readerOrientation(ReaderOrientation.defaultRotation),
   // 4-value tap-zone invert. null initial keeps "unset" representable so the
   // legacy invertTap bool still decides for users who never set this.
   readerTapInvert(null),
-  // Paged parity prefs (Komikku ReaderPreferences defaults). Persisted now,
+  // Paged parity prefs. Persisted now,
   // consumed by the paged engine in a later increment.
   imageScaleType(ImageScaleType.fitScreen),
   zoomStart(ZoomStart.automatic),
@@ -169,10 +169,10 @@ enum DBKeys {
   navigateToPan(true),
   invertDoublePages(false),
   cropBorders(false),
-  // Shared by the paged and long-strip sections (Komikku smallerTapZone).
+  // Shared by the paged and long-strip sections.
   smallerTapZones(false),
   animatePageTransitions(true),
-  // Wide-page handling (Komikku pref_dual_page_split/_rotate). Split needs
+  // Wide-page handling. Split needs
   // page-list remapping, so it persists here and the engine wires it later;
   // rotate is live in the paged viewer.
   dualPageSplitPaged(false),
@@ -181,14 +181,14 @@ enum DBKeys {
   rotateWideInvert(false),
   // KEEP-style extra: show two pages side-by-side in landscape (inert).
   trueDualPageSpread(false),
-  // Long-strip parity prefs; crop-borders is scoped per mode like Komikku.
+  // Long-strip parity prefs; crop-borders is scoped per mode.
   webtoonScaleType(WebtoonScaleType.fitScreen),
   cropBordersWebtoon(false),
   cropBordersGaps(false),
   smoothAutoScroll(true),
   dualPageSplitWebtoon(false),
   dualPageInvertWebtoon(false),
-  // Reader General tab (Komikku GeneralSettingsPage parity, all global).
+  // Reader General tab (all global).
   readerBackgroundColor(ReaderBackgroundColor.black),
   showPageNumber(true),
   // Sub-toggle of the seekbar chain: keep the vertical side seekbar even on a
@@ -200,17 +200,17 @@ enum DBKeys {
   readWithLongTap(true),
   alwaysShowChapterTransition(true),
   flashOnPageChange(false),
-  // Stored as slider ticks ×100 ms (Komikku stores millis, MILLI_CONVERSION).
+  // Stored as slider ticks ×100 ms, converted to milliseconds internally.
   flashDuration(1),
   flashPageInterval(1),
   flashColor(FlashColor.black),
-  // Custom filter tab (Komikku ColorFilterPage parity, all global).
+  // Custom filter tab (all global).
   customBrightness(false),
-  // -75..100. Negatives dim via a black overlay; positives are Komikku's
+  // -75..100. Negatives dim via a black overlay; positives set the
   // window screen-brightness attr — no Flutter plugin, so persist-but-inert.
   customBrightnessValue(0),
   customColorFilter(false),
-  // Packed ARGB int, mirroring Komikku's color_filter_value.
+  // Packed ARGB int.
   colorFilterValue(0),
   colorFilterBlendMode(ColorFilterBlendMode.defaultBlend),
   grayscale(false),

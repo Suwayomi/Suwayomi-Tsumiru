@@ -74,7 +74,7 @@ enum ReaderNavigationLayout {
       };
 }
 
-/// Reader rotation lock (Komikku ReaderOrientation order). defaultRotation
+/// Reader rotation lock. defaultRotation
 /// means "leave the platform alone" so existing users see zero change.
 enum ReaderOrientation {
   defaultRotation,
@@ -100,7 +100,7 @@ enum ReaderOrientation {
       };
 }
 
-/// 4-value tap-zone inversion (Komikku TappingInvertMode). Successor of the
+/// 4-value tap-zone inversion. Successor of the
 /// legacy invertTap bool: true→both, false→none; the old key is never rewritten.
 enum TapInvert {
   none,
@@ -124,7 +124,7 @@ enum TapInvert {
       };
 }
 
-/// Paged image scale (Komikku ImageScaleType, default fit-screen).
+/// Paged image scale (default fit-screen).
 enum ImageScaleType {
   fitScreen,
   stretch,
@@ -154,7 +154,7 @@ enum ImageScaleType {
       };
 }
 
-/// Paged zoom start position (Komikku ZoomStart, default automatic).
+/// Paged zoom start position (default automatic).
 enum ZoomStart {
   automatic,
   left,
@@ -169,7 +169,7 @@ enum ZoomStart {
       };
 }
 
-/// Paged single/double-page layout (Komikku PageLayouts, default automatic).
+/// Paged single/double-page layout (default automatic).
 enum PageLayout {
   singlePage,
   doublePages,
@@ -182,7 +182,7 @@ enum PageLayout {
       };
 }
 
-/// Foldable dead-space spacer (Komikku CenterMarginTypes, default none).
+/// Foldable dead-space spacer (default none).
 enum CenterMarginType {
   none,
   doublePage,
@@ -198,8 +198,8 @@ enum CenterMarginType {
       };
 }
 
-/// Reader page background (Komikku readerTheme). Declaration order matches
-/// Komikku's stored ints 0-3; the chip row shows Black/Gray/White/Auto.
+/// Reader page background. Declaration order matches
+/// the stored ints 0-3; the chip row shows Black/Gray/White/Auto.
 enum ReaderBackgroundColor {
   white,
   black,
@@ -213,7 +213,7 @@ enum ReaderBackgroundColor {
         ReaderBackgroundColor.automatic => context.l10n.backgroundColorAuto,
       };
 
-  /// Gray is Komikku's literal 0x202125; automatic = Komikku's mapping
+  /// Gray is the literal 0x202125; automatic maps
   /// (dark theme → gray, light → white).
   Color color(BuildContext context) => switch (this) {
         ReaderBackgroundColor.white => Colors.white,
@@ -226,7 +226,7 @@ enum ReaderBackgroundColor {
       };
 }
 
-/// Flash-on-page-change color (Komikku FlashColor). whiteBlack = white for the
+/// Flash-on-page-change color. whiteBlack = white for the
 /// first half of the flash, black for the second.
 enum FlashColor {
   black,
@@ -240,8 +240,8 @@ enum FlashColor {
       };
 }
 
-/// Custom color-filter blend (Komikku ColorFilterMode order 0-5). Komikku
-/// gates the last three behind Android P+; Flutter's BlendMode supports all
+/// Custom color-filter blend (order 0-5). Native Android
+/// gates the last three behind API level P+; Flutter's BlendMode supports all
 /// six everywhere, so no gate. "Multiply" is Compose Modulate (src×dst).
 enum ColorFilterBlendMode {
   defaultBlend(BlendMode.srcOver),
@@ -266,7 +266,7 @@ enum ColorFilterBlendMode {
       };
 }
 
-/// Long-strip smart scale on wide screens (Komikku WebtoonScaleType).
+/// Long-strip smart scale on wide screens.
 enum WebtoonScaleType {
   fitScreen,
   ratio4to3,
@@ -282,8 +282,7 @@ enum WebtoonScaleType {
         WebtoonScaleType.ratio20to9 => context.l10n.webtoonScaleTypeRatio20to9,
       };
 
-  /// Target column width/height ratio (Komikku WebtoonScaleType.ratio).
-  /// FIT = 0 → no cap.
+  /// Target column width/height ratio. FIT = 0 → no cap.
   double get _ratio => switch (this) {
         WebtoonScaleType.fitScreen => 0,
         WebtoonScaleType.ratio4to3 => 3 / 4,
@@ -294,7 +293,7 @@ enum WebtoonScaleType {
 
   /// Max long-strip content width for a [screenWidth]×[screenHeight] viewport.
   /// Caps the strip to the target aspect only when the screen is wider than
-  /// that column (Komikku shrinks iff screenRatio > desiredRatio); otherwise
+  /// that column (shrinks iff screenRatio > desiredRatio); otherwise
   /// full width. Pure/render-only — no scroll math.
   double maxContentWidth(double screenWidth, double screenHeight) {
     final ratio = _ratio;

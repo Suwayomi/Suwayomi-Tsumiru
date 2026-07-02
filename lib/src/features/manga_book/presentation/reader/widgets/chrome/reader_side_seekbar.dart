@@ -41,8 +41,8 @@ class ReaderSideSeekBar extends StatelessWidget {
 
     return Column(
       children: [
-        // Jump to the start of this chapter — Komikku skip-previous
-        // glyph rotated to point up.
+        // Jump to the start of this chapter (skip-previous glyph rotated
+        // to point up).
         BrandFilledCircleButton(
           icon: Icons.skip_previous_rounded,
           quarterTurns: 1,
@@ -60,8 +60,8 @@ class ReaderSideSeekBar extends StatelessWidget {
           ),
         ),
         const Gap(8),
-        // Jump to the end of this chapter — Komikku skip-next
-        // glyph rotated to point down.
+        // Jump to the end of this chapter (skip-next glyph rotated
+        // to point down).
         BrandFilledCircleButton(
           icon: Icons.skip_next_rounded,
           quarterTurns: 1,
