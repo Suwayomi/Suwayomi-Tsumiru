@@ -94,14 +94,14 @@ void main() {
     expect(find.byKey(_saveKey), findsOneWidget);
   });
 
-  testWidgets('mobile: Share and Save tiles are tappable ListTiles',
+  testWidgets('mobile: Share and Save are tappable action buttons',
       (tester) async {
     await _openSheet(tester);
 
-    final shareTile = tester.widget<ListTile>(find.byKey(_shareKey));
-    final saveTile = tester.widget<ListTile>(find.byKey(_saveKey));
+    final shareBtn = tester.widget<TextButton>(find.byKey(_shareKey));
+    final saveBtn = tester.widget<TextButton>(find.byKey(_saveKey));
 
-    expect(shareTile.onTap, isNotNull);
-    expect(saveTile.onTap, isNotNull);
+    expect(shareBtn.onPressed, isNotNull);
+    expect(saveBtn.onPressed, isNotNull);
   });
 }

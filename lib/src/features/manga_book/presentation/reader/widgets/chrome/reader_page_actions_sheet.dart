@@ -27,11 +27,13 @@ import '../../../../../settings/presentation/server/widget/credential_popup/cred
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 
 /// Komikku "Show actions on long tap": long-pressing a reader page opens this
-/// page-actions sheet instead of the magnifier. Copy link / Open in web work
-/// for server pages; Share image and Save to gallery (mobile-only) fetch the
-/// real page bytes and hand them to the system share sheet / photo gallery.
-/// Only "Set as cover" is still unsupported — Suwayomi exposes no mutation for
-/// it.
+/// page-actions bar instead of the magnifier — a compact horizontal row of
+/// icon buttons docked at the bottom (Komikku `ReaderPageActionsDialog` /
+/// `ActionButton`). Copy link / Open in web work for server pages; Share image
+/// and Save to gallery (mobile-only) fetch the real page bytes and hand them to
+/// the system share sheet / photo gallery. Komikku's "Set as cover" is omitted —
+/// Suwayomi exposes no cover mutation (schema `UpdateMangaPatchInput` is
+/// `inLibrary`-only).
 Future<void> showReaderPageActionsSheet({
   required BuildContext context,
   required WidgetRef ref,
@@ -86,7 +88,6 @@ Future<void> showReaderPageActionsSheet({
   final isMobile = !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
-  final pageLabel = context.l10n.page(pageIndex + 1);
 
   return showModalBottomSheet<void>(
     context: context,
@@ -95,7 +96,6 @@ Future<void> showReaderPageActionsSheet({
     backgroundColor: Colors.transparent,
     useSafeArea: true,
     builder: (sheetContext) => _PageActionsSheet(
-      pageLabel: pageLabel,
       onCopyLink: shareUrl == null
           ? null
           : () {
@@ -200,14 +200,12 @@ Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
 
 class _PageActionsSheet extends StatelessWidget {
   const _PageActionsSheet({
-    required this.pageLabel,
     required this.onCopyLink,
     required this.onOpenInWeb,
     required this.onShare,
     required this.onSave,
   });
 
-  final String pageLabel;
   final VoidCallback? onCopyLink;
   final VoidCallback? onOpenInWeb;
   final VoidCallback? onShare;
@@ -215,67 +213,95 @@ class _PageActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Komikku layout: a compact horizontal row of equal-weight icon buttons
+    // (icon above a centred, ≤2-line label) docked at the bottom.
     return Material(
       color: context.theme.colorScheme.surface,
       clipBehavior: Clip.antiAlias,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
         top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (onCopyLink != null)
+                _ActionButton(
+                  actionKey: const ValueKey('reader-page-action-copy-link'),
+                  icon: Icons.content_copy_rounded,
+                  label: context.l10n.copyPageLink,
+                  onTap: onCopyLink!,
+                ),
+              if (onOpenInWeb != null)
+                _ActionButton(
+                  actionKey: const ValueKey('reader-page-action-open-web'),
+                  icon: Icons.public_rounded,
+                  label: context.l10n.openInWeb,
+                  onTap: onOpenInWeb!,
+                ),
+              if (onShare != null)
+                _ActionButton(
+                  actionKey: const ValueKey('reader-page-action-share'),
+                  icon: Icons.share_rounded,
+                  label: context.l10n.shareImage,
+                  onTap: onShare!,
+                ),
+              if (onSave != null)
+                _ActionButton(
+                  actionKey: const ValueKey('reader-page-action-save'),
+                  icon: Icons.save_alt_rounded,
+                  label: context.l10n.saveToGallery,
+                  onTap: onSave!,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One Komikku-style page action: a full-height [TextButton] with the icon
+/// stacked above a centred label, taking an equal share of the row.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.actionKey,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Key actionKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: TextButton(
+        key: actionKey,
+        onPressed: onTap,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 32,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: context.theme.colorScheme.onSurfaceVariant
-                    .withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
+            Icon(icon, size: 26),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: context.textTheme.labelMedium,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  pageLabel,
-                  style: context.textTheme.titleSmall
-                      ?.copyWith(color: context.theme.colorScheme.primary),
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            if (onCopyLink != null)
-              ListTile(
-                key: const ValueKey('reader-page-action-copy-link'),
-                leading: const Icon(Icons.link_rounded),
-                title: Text(context.l10n.copyPageLink),
-                onTap: onCopyLink,
-              ),
-            if (onOpenInWeb != null)
-              ListTile(
-                key: const ValueKey('reader-page-action-open-web'),
-                leading: const Icon(Icons.open_in_browser_rounded),
-                title: Text(context.l10n.openInWeb),
-                onTap: onOpenInWeb,
-              ),
-            if (onShare != null)
-              ListTile(
-                key: const ValueKey('reader-page-action-share'),
-                leading: const Icon(Icons.share_rounded),
-                title: Text(context.l10n.shareImage),
-                onTap: onShare,
-              ),
-            if (onSave != null)
-              ListTile(
-                key: const ValueKey('reader-page-action-save'),
-                leading: const Icon(Icons.download_rounded),
-                title: Text(context.l10n.saveToGallery),
-                onTap: onSave,
-              ),
           ],
         ),
       ),
