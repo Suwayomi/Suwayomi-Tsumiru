@@ -365,12 +365,18 @@ class _ServerStep extends HookConsumerWidget {
       return true;
     }
 
-    // Web can't run the redirect-OFF/short-timeout probe (CORS), so test
-    // exactly what's typed via the about/version query.
+    // Web can't run the redirect-OFF candidate ladder, so test the typed
+    // address (scheme filled in — a scheme-less URL would resolve relative to
+    // the page origin) via the about query, then detect auth with the same
+    // @RequireAuth probe the native resolver uses.
     Future<void> testWeb() async {
-      final url = urlController.text.trim();
-      if (url.isBlank) return;
+      final typed = urlController.text.trim();
+      if (typed.isBlank) return;
+      final url = normalisedFallbackUrl(typed);
       state.value = _TestState.testing;
+      version.value = null;
+      errorDetail.value = null;
+      credsRejected.value = false;
       onVerifiedChanged(false);
       ref.read(serverPortToggleProvider.notifier).update(false);
       ref.read(serverUrlProvider.notifier).update(url);
@@ -381,11 +387,29 @@ class _ServerStep extends HookConsumerWidget {
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
         onVerifiedChanged(false);
-      } else {
-        version.value = result.value?.version;
-        resolvedUrl.value = url;
-        state.value = _TestState.connected;
-        onVerifiedChanged(true);
+        return;
+      }
+      version.value = result.value?.version;
+      resolvedUrl.value = url;
+      final client = ref.read(onboardingHttpClientProvider)();
+      try {
+        if (!await webAuthRequired(url, client: client)) {
+          state.value = _TestState.connected;
+          onVerifiedChanged(true);
+          return;
+        }
+        final hasCreds = userController.text.trim().isNotEmpty &&
+            passController.text.isNotEmpty;
+        if (hasCreds && await validateCredentials(url, client)) {
+          state.value = _TestState.connected;
+          onVerifiedChanged(true);
+        } else {
+          if (hasCreds) credsRejected.value = true;
+          state.value = _TestState.needsLogin;
+          onVerifiedChanged(false);
+        }
+      } finally {
+        client.close();
       }
     }
 
@@ -701,7 +725,9 @@ List<Widget> _buildTestStatus(
           color: Colors.green,
           icon: Icons.check_circle_rounded,
           text: (version != null && version.isNotEmpty)
-              ? context.l10n.onboardingConnected(version)
+              // The server reports "v2.3.x"; the l10n string adds its own "v".
+              ? context.l10n.onboardingConnected(
+                  version.startsWith('v') ? version.substring(1) : version)
               : context.l10n.onboardingResolvedAddress(addr ?? ''),
         ),
         if (addr != null) ...[

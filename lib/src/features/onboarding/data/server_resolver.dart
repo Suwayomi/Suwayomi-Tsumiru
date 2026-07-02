@@ -513,7 +513,7 @@ Future<ProbeResult> probeServer(
   // Auth probe (request B). Failure here doesn't sink the candidate — we can
   // still confirm Suwayomi from request A and assume auth-required if B is
   // unreadable.
-  String authBody = '';
+  String? authBody;
   try {
     final (_, body) = await _sendNoRedirect(
       client,
@@ -523,12 +523,27 @@ Future<ProbeResult> probeServer(
     );
     authBody = body;
   } catch (_) {
-    authBody = '';
+    authBody = null;
   }
 
-  final classified =
-      classifyProbeBody(url: baseUrl, aboutBody: aboutBody, authBody: authBody);
-  if (classified != null) return classified;
+  final classified = classifyProbeBody(
+      url: baseUrl, aboutBody: aboutBody, authBody: authBody ?? '');
+  if (classified != null) {
+    if (authBody == null && classified.confirmed) {
+      // B unreadable: we can't prove the server is open, and reading it as
+      // open would onboard an auth server with no login step.
+      return ProbeResult(
+        url: classified.url,
+        confirmed: true,
+        reached: true,
+        basicGated: false,
+        authMode: ProbeAuthMode.authRequired,
+        serverName: classified.serverName,
+        serverVersion: classified.serverVersion,
+      );
+    }
+    return classified;
+  }
 
   return ProbeResult.reachedUnconfirmed(baseUrl);
 }
@@ -660,6 +675,33 @@ String normalisedFallbackUrl(String rawInput) {
   final first = connectionCandidates(input);
   if (first.isNotEmpty) return first.first;
   return 'http://$input';
+}
+
+/// Web "Test connection" auth detection. The full [probeServer] protocol can't
+/// run in a browser (redirects can't be switched off), but the auth probe
+/// itself can: POST [kAuthProbeQuery] with redirects left on and read the
+/// body. Unreadable / 401 / 403 reads as auth-required — the caller has
+/// already confirmed `aboutServer`, and a dead read here must never onboard an
+/// auth server without its login step.
+Future<bool> webAuthRequired(
+  String baseUrl, {
+  required http.Client client,
+  Duration timeout = const Duration(seconds: 4),
+}) async {
+  final uri = graphqlUriFor(baseUrl);
+  try {
+    final resp = await client
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'query': kAuthProbeQuery}),
+        )
+        .timeout(timeout);
+    if (resp.statusCode == 401 || resp.statusCode == 403) return true;
+    return _bodyIndicatesUnauthorised(resp.body);
+  } catch (_) {
+    return true;
+  }
 }
 
 // ---------------------------------------------------------------------------

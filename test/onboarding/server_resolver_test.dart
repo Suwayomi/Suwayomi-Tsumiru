@@ -411,6 +411,68 @@ void main() {
       expect(r.confirmed, isFalse);
       expect(r.reached, isTrue);
     });
+
+    test('auth probe unreadable (request throws) → assume authRequired',
+        () async {
+      // The doc contract: "assume auth-required if B is unreadable". An open
+      // read here onboards an auth server with no login step → Unauthorized
+      // on first real query.
+      var calls = 0;
+      final mock = MockClient.streaming((request, bodyStream) async {
+        calls++;
+        if (calls == 1) {
+          return http.StreamedResponse(
+              Stream.value(utf8.encode(_aboutOk)), 200);
+        }
+        throw http.ClientException('boom');
+      });
+      final r = await probeServer('http://h:4567', client: mock);
+      expect(r.confirmed, isTrue);
+      expect(r.authMode, ProbeAuthMode.authRequired);
+    });
+  });
+
+  group('webAuthRequired — the web Test-connection auth probe', () {
+    test('unauthorized errors body → true', () async {
+      final mock = MockClient((_) async =>
+          http.Response(_authUnauthorized, 200));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
+    });
+
+    test('open data body → false', () async {
+      final mock = MockClient((_) async => http.Response(_authOpen, 200));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isFalse);
+    });
+
+    test('401 status → true', () async {
+      final mock = MockClient((_) async => http.Response('', 401));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
+    });
+
+    test('transport failure → true (safe default; about already confirmed)',
+        () async {
+      final mock = MockClient((_) async =>
+          throw http.ClientException('network'));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
+    });
+
+    test('posts the @RequireAuth probe to /api/graphql with redirects ON',
+        () async {
+      late http.Request seen;
+      final mock = MockClient((req) async {
+        seen = req;
+        return http.Response(_authOpen, 200);
+      });
+      await webAuthRequired('http://h:4568/base', client: mock);
+      expect(seen.url.toString(), 'http://h:4568/base/api/graphql');
+      expect(seen.body, contains('downloadStatus'));
+      // Browsers cannot disable redirect-following; the web probe must not try.
+      expect(seen.followRedirects, isTrue);
+    });
   });
 
   group('shouldSuggestHttps — reverse-proxy hint only when https not tried', () {
