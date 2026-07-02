@@ -1,9 +1,14 @@
 package io.github.aaronbamblett.tsumiru
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Build
 import android.view.WindowManager
+import androidx.core.content.FileProvider
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 import dev.darttools.flutter_android_volume_keydown.FlutterAndroidVolumeKeydownActivity;
 
@@ -27,6 +32,29 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
                             }
                         }
                         result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // Copy a reader page image to the system clipboard (Komikku parity —
+        // ClipData.newUri on a FileProvider content:// URI, no re-encode).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "tsumiru/clipboard")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "copyImage" -> {
+                        try {
+                            val path = call.argument<String>("path")!!
+                            val uri = FileProvider.getUriForFile(
+                                this, "$packageName.fileprovider", File(path)
+                            )
+                            val clip = ClipData.newUri(contentResolver, "image", uri)
+                            val cm = getSystemService(Context.CLIPBOARD_SERVICE)
+                                as ClipboardManager
+                            cm.setPrimaryClip(clip)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("COPY_FAILED", e.message, null)
+                        }
                     }
                     else -> result.notImplemented()
                 }

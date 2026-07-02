@@ -4,12 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// Reader page-actions sheet: on mobile the Share image / Save to gallery tiles
-// are offered alongside Copy link / Open in web. The tiles are gated to
-// Android/iOS (gal is mobile-only), so this test drives the mobile path via
-// debugDefaultTargetPlatformOverride. Tapping the tiles hits real platform
-// channels that don't exist in a unit env, so we only assert the tiles render
-// and are tappable — not that the share/save actually completed.
+// Reader page-actions sheet: on mobile the sheet mirrors Komikku's single-page
+// set — Copy (image), Share image, Save to gallery — and does NOT show the
+// desktop-only "Open in web" fallback. The tiles are gated to Android/iOS (gal +
+// the image-clipboard channel are mobile-only), so this test drives the mobile
+// path via debugDefaultTargetPlatformOverride. Tapping the tiles hits real
+// platform channels that don't exist in a unit env, so we only assert the tiles
+// render and are tappable — not that the share/save/copy actually completed.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,7 @@ ChapterPagesDto _pages() => ChapterPagesDto(
       ],
     );
 
-const _copyKey = ValueKey('reader-page-action-copy-link');
+const _copyKey = ValueKey('reader-page-action-copy-image');
 const _openKey = ValueKey('reader-page-action-open-web');
 const _shareKey = ValueKey('reader-page-action-share');
 const _saveKey = ValueKey('reader-page-action-save');
@@ -83,15 +84,16 @@ Future<void> _openSheet(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('mobile: sheet shows Share image and Save to gallery tiles',
+  testWidgets('mobile: Komikku set — Copy image, Share, Save; no Open in web',
       (tester) async {
     await _openSheet(tester);
 
-    // The two URL actions plus the two new mobile-only actions are present.
+    // Pure-Komikku single-page actions on mobile; the desktop-only "Open in
+    // web" fallback is hidden.
     expect(find.byKey(_copyKey), findsOneWidget);
-    expect(find.byKey(_openKey), findsOneWidget);
     expect(find.byKey(_shareKey), findsOneWidget);
     expect(find.byKey(_saveKey), findsOneWidget);
+    expect(find.byKey(_openKey), findsNothing);
   });
 
   testWidgets('mobile: Share and Save are tappable action buttons',

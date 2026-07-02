@@ -2492,6 +2492,14 @@
     "@copyPageLink": {
         "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
     },
+    "copyImageToClipboard": "Copy",
+    "@copyImageToClipboard": {
+        "description": "Reader page-actions sheet: copy the current page image itself to the clipboard (Komikku parity)"
+    },
+    "copiedImage": "Image copied",
+    "@copiedImage": {
+        "description": "Toast shown after the current page image was copied to the clipboard"
+    },
     "shareImage": "Share image",
     "@shareImage": {
         "description": "Reader page-actions sheet: share the current page image file via the system share sheet"

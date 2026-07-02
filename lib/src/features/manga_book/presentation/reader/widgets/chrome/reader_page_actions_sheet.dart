@@ -8,7 +8,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:gal/gal.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -25,15 +24,17 @@ import '../../../../../settings/presentation/server/widget/client/server_port_ti
 import '../../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
+import 'image_clipboard.dart';
 
 /// Komikku "Show actions on long tap": long-pressing a reader page opens this
 /// page-actions bar instead of the magnifier — a compact horizontal row of
 /// icon buttons docked at the bottom (Komikku `ReaderPageActionsDialog` /
-/// `ActionButton`). Copy link / Open in web work for server pages; Share image
-/// and Save to gallery (mobile-only) fetch the real page bytes and hand them to
-/// the system share sheet / photo gallery. Komikku's "Set as cover" is omitted —
-/// Suwayomi exposes no cover mutation (schema `UpdateMangaPatchInput` is
-/// `inLibrary`-only).
+/// `ActionButton`). On mobile it mirrors Komikku's single-page set exactly:
+/// Copy (the image itself, to the clipboard), Share image, Save to gallery.
+/// Komikku's "Set as cover" is omitted — Suwayomi exposes no cover mutation
+/// (schema `UpdateMangaPatchInput` is `inLibrary`-only). "Open in web" is shown
+/// only on desktop/web, where Komikku's image actions can't run, so it's the
+/// one universally-working fallback there.
 Future<void> showReaderPageActionsSheet({
   required BuildContext context,
   required WidgetRef ref,
@@ -96,16 +97,29 @@ Future<void> showReaderPageActionsSheet({
     backgroundColor: Colors.transparent,
     useSafeArea: true,
     builder: (sheetContext) => _PageActionsSheet(
-      onCopyLink: shareUrl == null
+      // Komikku's "Copy to clipboard" copies the image itself, not a link.
+      // Native ClipData.newUri path is Android-only.
+      onCopyImage: !imageClipboardSupported
           ? null
-          : () {
-              Clipboard.setData(ClipboardData(text: shareUrl));
+          : () async {
+              final toast = ref.read(toastProvider);
+              final copiedMsg = context.l10n.copiedImage;
+              final errorMsg = context.l10n.errorSomethingWentWrong;
               Navigator.pop(sheetContext);
-              ref
-                  .read(toastProvider)
-                  ?.show(sheetContext.l10n.copied, instantShow: true);
+              try {
+                final file = await resolvePageFile();
+                if (await copyImageToClipboard(file.path)) {
+                  toast?.show(copiedMsg, instantShow: true);
+                } else {
+                  toast?.showError(errorMsg, instantShow: true);
+                }
+              } catch (_) {
+                toast?.showError(errorMsg, instantShow: true);
+              }
             },
-      onOpenInWeb: openUrl == null
+      // Not a Komikku action — only surfaced on desktop/web, where the
+      // image-copy/share/save actions can't run, so the menu isn't empty.
+      onOpenInWeb: (isMobile || openUrl == null)
           ? null
           : () {
               Navigator.pop(sheetContext);
@@ -200,13 +214,13 @@ Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
 
 class _PageActionsSheet extends StatelessWidget {
   const _PageActionsSheet({
-    required this.onCopyLink,
+    required this.onCopyImage,
     required this.onOpenInWeb,
     required this.onShare,
     required this.onSave,
   });
 
-  final VoidCallback? onCopyLink;
+  final VoidCallback? onCopyImage;
   final VoidCallback? onOpenInWeb;
   final VoidCallback? onShare;
   final VoidCallback? onSave;
@@ -228,12 +242,12 @@ class _PageActionsSheet extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (onCopyLink != null)
+              if (onCopyImage != null)
                 _ActionButton(
-                  actionKey: const ValueKey('reader-page-action-copy-link'),
+                  actionKey: const ValueKey('reader-page-action-copy-image'),
                   icon: Icons.content_copy_rounded,
-                  label: context.l10n.copyPageLink,
-                  onTap: onCopyLink!,
+                  label: context.l10n.copyImageToClipboard,
+                  onTap: onCopyImage!,
                 ),
               if (onOpenInWeb != null)
                 _ActionButton(

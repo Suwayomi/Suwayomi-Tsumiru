@@ -36,8 +36,8 @@ ChapterPagesDto _pages() => ChapterPagesDto(
       ],
     );
 
-const _copyKey = ValueKey('reader-page-action-copy-link');
-const _openKey = ValueKey('reader-page-action-open-web');
+const _copyKey = ValueKey('reader-page-action-copy-image');
+const _shareKey = ValueKey('reader-page-action-share');
 
 Future<void> _pumpReader(
   WidgetTester tester, {
@@ -98,9 +98,9 @@ void main() {
     await tester.longPress(find.byType(ReaderView));
     await tester.pumpAndSettle();
 
-    // Sheet with both feasible actions is shown.
+    // Sheet with the mobile (Komikku) actions is shown.
     expect(find.byKey(_copyKey), findsOneWidget);
-    expect(find.byKey(_openKey), findsOneWidget);
+    expect(find.byKey(_shareKey), findsOneWidget);
     // Magnifier must not be active in this mode.
     expect(find.byType(RawMagnifier), findsNothing);
   });
