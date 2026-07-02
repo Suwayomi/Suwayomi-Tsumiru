@@ -4,8 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
@@ -14,10 +17,43 @@ import '../../../../../settings/presentation/reader/widgets/reader_filter_prefs/
 import '../../controller/reader_preview_channel.dart';
 
 /// Komikku setCustomBrightnessValue: negatives dim via a black overlay at
-/// abs(value)/100 (-75 → 0.75); 0 and positives draw nothing (positive =
-/// Android window brightness attr, inert here).
+/// abs(value)/100 (-75 → 0.75); 0 and positives draw nothing (positive raises
+/// the app window brightness instead — see [applicationBrightnessFor]).
 double brightnessOverlayAlpha(int value) =>
     value < 0 ? (value.abs() / 100).clamp(0.0, 1.0) : 0.0;
+
+/// Positive custom-brightness → app-window brightness target 0..1 for
+/// [ScreenBrightness]; 0 and negatives return null (the black dim covers those).
+double? applicationBrightnessFor(int value) =>
+    value > 0 ? (value / 100).clamp(0.0, 1.0) : null;
+
+/// screen_brightness ships only Android/iOS/macOS/Windows; elsewhere no-op.
+bool get _screenBrightnessSupported =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows);
+
+/// >0 target sets the app window brightness; null resets it. Throws are
+/// non-fatal (missing plugin / denied permission).
+Future<void> _applyScreenBrightness(double? target) async {
+  if (!_screenBrightnessSupported) return;
+  try {
+    if (target != null) {
+      await ScreenBrightness.instance.setApplicationScreenBrightness(target);
+    } else {
+      await ScreenBrightness.instance.resetApplicationScreenBrightness();
+    }
+  } catch (_) {}
+}
+
+Future<void> _resetScreenBrightness() async {
+  if (!_screenBrightnessSupported) return;
+  try {
+    await ScreenBrightness.instance.resetApplicationScreenBrightness();
+  } catch (_) {}
+}
 
 /// Android ColorMatrix.setSaturation(0) — Komikku's grayscale paint.
 const List<double> kGrayscaleColorMatrix = [
@@ -71,7 +107,7 @@ List<double> grayscaleInvertMatrix({
 /// leaf [ColorFiltered] only filters its own child, never the pixels below.
 /// Each overlay listens to `draft ?? committed`, so slider drags repaint just
 /// this subtree.
-class ReaderColorOverlays extends ConsumerWidget {
+class ReaderColorOverlays extends HookConsumerWidget {
   const ReaderColorOverlays({super.key});
 
   @override
@@ -86,6 +122,24 @@ class ReaderColorOverlays extends ConsumerWidget {
         DBKeys.colorFilterValue.initial as int;
     final blend = ref.watch(colorFilterBlendModeKeyProvider) ??
         DBKeys.colorFilterBlendMode.initial as ColorFilterBlendMode;
+
+    // Positive custom-brightness raises the app window brightness live. Listen
+    // to the preview channel so slider drags apply with no rebuild; re-sync on
+    // toggle/committed change. brightnessOn off (or <=0) → reset to system.
+    useEffect(() {
+      void sync() {
+        final value =
+            brightnessOn ? (readerBrightnessPreview.value ?? brightness) : 0;
+        _applyScreenBrightness(applicationBrightnessFor(value));
+      }
+
+      sync();
+      readerBrightnessPreview.addListener(sync);
+      return () => readerBrightnessPreview.removeListener(sync);
+    }, [brightnessOn, brightness]);
+
+    // Reader teardown → drop the override so it never leaks app-wide.
+    useEffect(() => _resetScreenBrightness, const []);
 
     if (!grayscale && !inverted && !brightnessOn && !colorFilterOn) {
       return const SizedBox.shrink();
