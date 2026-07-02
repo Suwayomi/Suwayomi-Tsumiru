@@ -19,10 +19,12 @@ part 'library_manga_list.g.dart';
 
 @riverpod
 Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
+  final offlineEnabled = ref.watch(offlineEnabledProvider);
   final list = await libraryWithOfflineFallback(
     fetch: () => ref.watch(categoryRepositoryProvider).getAllLibraryMangas(),
-    db: ref.watch(offlineDatabaseProvider),
-    offlineEnabled: ref.watch(offlineEnabledProvider),
+    // Only read the native-only DB when offline is available (never on web).
+    db: offlineEnabled ? ref.watch(offlineDatabaseProvider) : null,
+    offlineEnabled: offlineEnabled,
   );
   final sync = ref.read(offlineSyncProvider);
   if (sync != null && list != null) {

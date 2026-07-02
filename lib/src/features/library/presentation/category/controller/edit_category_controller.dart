@@ -23,10 +23,11 @@ part 'edit_category_controller.g.dart';
 class CategoryController extends _$CategoryController {
   @override
   Future<List<CategoryDto>?> build() async {
+    final offlineEnabled = ref.watch(offlineEnabledProvider);
     final result = await categoriesWithOfflineFallback(
       fetch: () => ref.watch(categoryRepositoryProvider).getCategoryList(),
-      db: ref.watch(offlineDatabaseProvider),
-      offlineEnabled: ref.watch(offlineEnabledProvider),
+      db: offlineEnabled ? ref.watch(offlineDatabaseProvider) : null,
+      offlineEnabled: offlineEnabled,
     );
     final sync = ref.read(offlineSyncProvider);
     if (sync != null && result != null) {

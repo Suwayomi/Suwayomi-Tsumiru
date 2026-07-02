@@ -17,21 +17,21 @@ import 'offline_dto_mappers.dart';
 /// mapped to the server DTO type. Otherwise rethrows the original error.
 Future<List<MangaDto>?> libraryWithOfflineFallback({
   required Future<List<MangaDto>?> Function() fetch,
-  required OfflineDatabase db,
+  required OfflineDatabase? db,
   required bool offlineEnabled,
 }) async {
   try {
     return await fetch();
   } catch (_) {
     if (!offlineEnabled) rethrow;
-    final rows = await db.libraryManga();
+    final rows = await db!.libraryManga();
     if (rows.isEmpty) rethrow;
-    final lastReadByManga = await db.lastReadAtByManga();
-    final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
+    final lastReadByManga = await db!.lastReadAtByManga();
+    final firstUnreadByManga = await db!.firstUnreadDownloadedChapterByManga();
     // Load all category memberships in one pass keyed by mangaId
     final categoryMap = <int, List<OfflineCategory>>{};
     for (final m in rows) {
-      categoryMap[m.id] = await db.categoriesForManga(m.id);
+      categoryMap[m.id] = await db!.categoriesForManga(m.id);
     }
     return [
       for (final m in rows)
@@ -47,7 +47,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
 
 Future<MangaDto?> mangaWithOfflineFallback({
   required Future<MangaDto?> Function() fetch,
-  required OfflineDatabase db,
+  required OfflineDatabase? db,
   required bool offlineEnabled,
   required int mangaId,
 }) async {
@@ -55,7 +55,7 @@ Future<MangaDto?> mangaWithOfflineFallback({
     return await fetch();
   } catch (_) {
     if (!offlineEnabled) rethrow;
-    final m = await db.mangaById(mangaId);
+    final m = await db!.mangaById(mangaId);
     if (m == null) rethrow;
     final count = (await db.chaptersForManga(mangaId)).length;
     final cats = await db.categoriesForManga(mangaId);
@@ -67,7 +67,7 @@ Future<MangaDto?> mangaWithOfflineFallback({
 /// must still open offline, so fall back to the on-device catalog row.
 Future<ChapterDto?> chapterMetaWithOfflineFallback({
   required Future<ChapterDto?> Function() fetch,
-  required OfflineDatabase db,
+  required OfflineDatabase? db,
   required bool offlineEnabled,
   required int chapterId,
 }) async {
@@ -75,7 +75,7 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
     return await fetch();
   } catch (_) {
     if (!offlineEnabled) rethrow;
-    final c = await db.chapterById(chapterId);
+    final c = await db!.chapterById(chapterId);
     if (c == null) rethrow;
     return offlineChapterToDto(c);
   }
@@ -87,14 +87,14 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
 /// library renders the on-device catalog as one flat tab.
 Future<List<CategoryDto>?> categoriesWithOfflineFallback({
   required Future<List<CategoryDto>?> Function() fetch,
-  required OfflineDatabase db,
+  required OfflineDatabase? db,
   required bool offlineEnabled,
 }) async {
   try {
     return await fetch();
   } catch (_) {
     if (!offlineEnabled) rethrow;
-    final count = (await db.libraryManga()).length;
+    final count = (await db!.libraryManga()).length;
     if (count == 0) rethrow;
     final storedCats = await db.allOfflineCategories();
     if (storedCats.isNotEmpty) {
@@ -118,7 +118,7 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
 
 Future<List<ChapterDto>?> chaptersWithOfflineFallback({
   required Future<List<ChapterDto>?> Function() fetch,
-  required OfflineDatabase db,
+  required OfflineDatabase? db,
   required bool offlineEnabled,
   required int mangaId,
 }) async {
@@ -126,7 +126,7 @@ Future<List<ChapterDto>?> chaptersWithOfflineFallback({
     return await fetch();
   } catch (_) {
     if (!offlineEnabled) rethrow;
-    final rows = await db.chaptersForManga(mangaId);
+    final rows = await db!.chaptersForManga(mangaId);
     if (rows.isEmpty) rethrow;
     return [for (final c in rows) offlineChapterToDto(c)];
   }

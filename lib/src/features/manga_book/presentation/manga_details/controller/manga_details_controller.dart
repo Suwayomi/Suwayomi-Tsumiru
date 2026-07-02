@@ -31,7 +31,9 @@ class MangaWithId extends _$MangaWithId {
     final manga = await mangaWithOfflineFallback(
       fetch: () =>
           ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
-      db: ref.watch(offlineDatabaseProvider),
+      db: ref.watch(offlineEnabledProvider)
+          ? ref.watch(offlineDatabaseProvider)
+          : null,
       offlineEnabled: ref.watch(offlineEnabledProvider),
       mangaId: mangaId,
     );
@@ -79,7 +81,9 @@ class MangaChapterList extends _$MangaChapterList {
         }
         return stored;
       },
-      db: ref.watch(offlineDatabaseProvider),
+      db: ref.watch(offlineEnabledProvider)
+          ? ref.watch(offlineDatabaseProvider)
+          : null,
       offlineEnabled: ref.watch(offlineEnabledProvider),
       mangaId: mangaId,
     );

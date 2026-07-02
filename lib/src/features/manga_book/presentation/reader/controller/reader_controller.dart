@@ -25,7 +25,10 @@ FutureOr<ChapterDto?> chapter(
     chapterMetaWithOfflineFallback(
       fetch: () =>
           ref.watch(mangaBookRepositoryProvider).getChapter(chapterId: chapterId),
-      db: ref.watch(offlineDatabaseProvider),
+      // Only read the native-only DB when offline is available (never on web).
+      db: ref.watch(offlineEnabledProvider)
+          ? ref.watch(offlineDatabaseProvider)
+          : null,
       offlineEnabled: ref.watch(offlineEnabledProvider),
       chapterId: chapterId,
     );
