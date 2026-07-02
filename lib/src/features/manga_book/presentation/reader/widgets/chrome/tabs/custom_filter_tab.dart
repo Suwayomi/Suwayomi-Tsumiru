@@ -17,6 +17,14 @@ int _argbChannel(int argb, int shift) => (argb >> shift) & 0xFF;
 int _withArgbChannel(int argb, int shift, int value) =>
     (argb & ~(0xFF << shift)) | (value << shift);
 
+/// Moving a colour channel (R/G/B, shift ≠ 24) while Alpha is 0 would be
+/// invisible — the colour is fully transparent. Bump Alpha to full so the tint
+/// shows immediately; the user can then dial Alpha back for subtlety.
+int _ensureVisibleAlpha(int argb, int shift) =>
+    (shift != 24 && _argbChannel(argb, 24) == 0)
+        ? _withArgbChannel(argb, 24, 255)
+        : argb;
+
 /// Komikku-parity Custom-filter tab (ColorFilterPage): custom brightness,
 /// RGBA color filter + blend mode, grayscale, inverted colors. Sliders
 /// live-preview through the channels in reader_preview_channel.dart and
@@ -75,16 +83,22 @@ class CustomFilterTab extends ConsumerWidget {
               channel: readerColorFilterPreview,
               valueOf: (draft) =>
                   _argbChannel(draft ?? settings.colorFilterValue, shift),
-              onDrag: (v) => readerColorFilterPreview.value = _withArgbChannel(
-                readerColorFilterPreview.value ?? settings.colorFilterValue,
-                shift,
-                v,
-              ),
-              onCommit: (v) {
-                model.setColorFilterValue(_withArgbChannel(
+              onDrag: (v) => readerColorFilterPreview.value = _ensureVisibleAlpha(
+                _withArgbChannel(
                   readerColorFilterPreview.value ?? settings.colorFilterValue,
                   shift,
                   v,
+                ),
+                shift,
+              ),
+              onCommit: (v) {
+                model.setColorFilterValue(_ensureVisibleAlpha(
+                  _withArgbChannel(
+                    readerColorFilterPreview.value ?? settings.colorFilterValue,
+                    shift,
+                    v,
+                  ),
+                  shift,
                 ));
                 readerColorFilterPreview.value = null;
               },
