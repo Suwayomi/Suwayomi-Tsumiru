@@ -13,10 +13,9 @@ import '../utils/extensions/custom_extensions.dart';
 /// Tri-state filter tile used across the library and chapter filter sheets.
 ///
 /// Tristate cycle on tap: `null` (ignore) → `true` (include / require) →
-/// `false` (exclude) → `null`. This matches the convention users carry over
-/// from Tachiyomi and its forks, where the default empty state means
-/// "do not filter" and the two active states clearly distinguish include
-/// from exclude with different icons.
+/// `false` (exclude) → `null`. This matches the tri-state filter convention
+/// users expect: the default empty state means "do not filter" and the two
+/// active states clearly distinguish include from exclude with different icons.
 ///
 /// In binary mode (`tristate: false`) the widget falls back to Flutter's
 /// `CheckboxListTile`, which is what existing display-preference callers

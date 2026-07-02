@@ -20,7 +20,7 @@ import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import 'chrome_extents.dart';
-import 'mihon_bottom_controls.dart';
+import 'reader_bottom_controls.dart';
 import 'reader_color_overlays.dart';
 import 'reader_flash_overlay.dart';
 import 'reader_side_seekbar.dart';
@@ -355,7 +355,7 @@ class ReaderChrome extends HookConsumerWidget {
                       begin: const Offset(0, 1),
                       end: Offset.zero,
                     ).animate(slide),
-                    child: MihonBottomControls(
+                    child: ReaderBottomControls(
                       chapter: chapter,
                       chapterPages: chapterPages,
                       currentIndex: currentIndex,

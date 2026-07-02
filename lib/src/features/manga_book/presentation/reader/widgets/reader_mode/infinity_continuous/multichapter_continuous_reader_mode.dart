@@ -125,7 +125,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // settling. The position listener otherwise reads its transient positions
     // as a user scroll and can auto-load a neighbour chapter mid-seek — which
     // shifts every index and bounces the landing (the single-tap seek bug).
-    // Mangayomi guards its progress listener the same way (_isAdjustingScroll).
+    // The isAdjustingScroll flag below (+ adjustIdleTimer) is that guard.
     final isAdjustingScroll = useRef<bool>(false);
     final adjustIdleTimer = useRef<Timer?>(null);
 
@@ -293,7 +293,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     // Decode a page's image off-screen AND record its true rendered height from
-    // the decoded aspect ratio (the Mangayomi technique). Caching the height
+    // the decoded aspect ratio. Caching the height
     // is the load-bearing part: a page then ALWAYS lays out at its real height —
     // even before its widget is built, and even if its bitmap was later evicted
     // — so it never resizes on landing/scroll-in and never shoves the viewport.
@@ -633,8 +633,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
       currentChapterPageIndex.value = chapterIdx;
-      // Jump IMMEDIATELY (Mangayomi parity: services/page_navigation_service.dart
-      // jumpToPage -> itemScrollController.jumpTo(index:), no await). The old
+      // Jump IMMEDIATELY — itemScrollController.jumpTo(index:), no await, so the
+      // landing is instant instead of deferred. The old
       // path awaited ~10 sequential off-screen image decodes BEFORE jumping —
       // a multi-second window (2.4s on-device, worse under download load) in
       // which the position listener auto-loaded a neighbour chapter and shifted

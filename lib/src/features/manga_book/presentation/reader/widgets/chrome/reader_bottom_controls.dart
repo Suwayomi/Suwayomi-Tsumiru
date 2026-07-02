@@ -32,8 +32,8 @@ import 'chrome_extents.dart';
 ///   bottomSheet did when `useBottomSeekBar` was false.
 ///
 /// Visual output is byte-identical to the old bottomSheet content.
-class MihonBottomControls extends ConsumerWidget {
-  const MihonBottomControls({
+class ReaderBottomControls extends ConsumerWidget {
+  const ReaderBottomControls({
     super.key,
     required this.chapter,
     required this.chapterPages,

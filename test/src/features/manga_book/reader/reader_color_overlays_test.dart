@@ -21,7 +21,7 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_preview_channel.dart';
-import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/mihon_bottom_controls.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_bottom_controls.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_chrome.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_color_overlays.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_flash_overlay.dart';
@@ -362,7 +362,7 @@ void main() {
       final filters = childIndexOf(ReaderColorOverlays);
       final flash = childIndexOf(ReaderFlashOverlay);
       final topBar = childIndexOf(ReaderTopBar);
-      final bottomBar = childIndexOf(MihonBottomControls);
+      final bottomBar = childIndexOf(ReaderBottomControls);
 
       expect(filters, isNonNegative);
       expect(filters, lessThan(flash),
