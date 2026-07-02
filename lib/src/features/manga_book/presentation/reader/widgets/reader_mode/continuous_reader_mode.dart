@@ -194,6 +194,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final double maxContentWidth = scrollDirection == Axis.vertical
         ? scaleType.maxContentWidth(context.width, context.height)
         : context.width;
+    // Auto-crop solid borders in the long-strip (Komikku cropBordersWebtoon).
+    final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     return ReaderWrapper(
       scrollDirection: scrollDirection,
@@ -277,6 +279,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   ? BoxFit.fitWidth
                   : BoxFit.fitHeight,
               appendApiToUrl: false,
+              cropBorders: cropBorders,
               imageUrl: chapterPages.pages[index],
               progressIndicatorBuilder: (_, __, downloadProgress) => Center(
                 child: CircularProgressIndicator(

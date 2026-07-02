@@ -6,6 +6,7 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -17,6 +18,7 @@ import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/manga_book/presentation/reader/crop/cropped_image_provider.dart';
 import '../features/offline/data/offline_image_provider.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -38,6 +40,7 @@ class ServerImage extends HookConsumerWidget {
     this.wrapper,
     this.showReloadButton = false,
     this.localFilePath,
+    this.cropBorders = false,
   });
 
   /// When set, the page is rendered straight off disk (downloaded chapter,
@@ -57,9 +60,40 @@ class ServerImage extends HookConsumerWidget {
   final Widget Function(Widget child)? wrapper;
   final bool showReloadButton;
 
+  /// Trim solid page borders before display (Komikku cropBorders). Routes the
+  /// page through [CroppedImageProvider] so crop composes with rotate/split/
+  /// double via the existing [imageBuilder]. No-op on web.
+  final bool cropBorders;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
+
+    // Renders a crop provider through the same imageBuilder/wrapper contract as
+    // the normal paths (imageBuilder fires immediately with the provider, like
+    // the offline branch; consumers show the frame once it decodes).
+    Widget renderCrop(ImageProvider provider) {
+      if (imageBuilder != null) {
+        return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
+      }
+      return AppUtils.wrapOn(
+        wrapper,
+        Image(
+          image: provider,
+          width: size?.width,
+          height: size?.height,
+          fit: fit ?? BoxFit.cover,
+          frameBuilder: (ctx, child, frame, wasSync) =>
+              frame != null ? child : const CenterSorayomiShimmerIndicator(),
+          errorBuilder: (ctx, error, stack) => AppUtils.wrapOn(
+            wrapper,
+            const Icon(Icons.broken_image_rounded, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    final wantCrop = cropBorders && !kIsWeb;
 
     // Offline: render the downloaded page from disk. Triggered either by an
     // explicit localFilePath or by a `file://` imageUrl (the offline reader
@@ -70,6 +104,13 @@ class ServerImage extends HookConsumerWidget {
     final localPath = localFilePath ??
         (imageUrl.startsWith('file:') ? Uri.parse(imageUrl).toFilePath() : null);
     if (localPath != null) {
+      if (wantCrop) {
+        return renderCrop(CroppedImageProvider(
+          fetchUrl: imageUrl,
+          cacheKey: localPath,
+          localPath: localPath,
+        ));
+      }
       final provider = offlineImageProvider(localPath);
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
@@ -228,6 +269,14 @@ class ServerImage extends HookConsumerWidget {
       }
     }
 
+    if (wantCrop) {
+      return renderCrop(CroppedImageProvider(
+        fetchUrl: fetchUrl,
+        cacheKey: baseApi,
+        headers: httpHeaders,
+      ));
+    }
+
     return CachedNetworkImage(
       key: key.value,
       imageUrl: fetchUrl,
@@ -282,6 +331,49 @@ class ServerImageWithCpi extends StatelessWidget {
       return ServerImage(imageUrl: url, size: outerSize);
     }
   }
+}
+
+/// The fetch URL, cache key and auth headers [ServerImage] would use for
+/// [imageUrl] — so a caller that needs the raw bytes (e.g. the crop-borders
+/// path) hits the SAME cache entry with the SAME auth instead of re-deriving.
+/// [localPath] is set for offline/`file://` pages (bytes come from disk).
+({String fetchUrl, String cacheKey, Map<String, String>? headers, String? localPath})
+    serverImageRequest(
+  WidgetRef ref,
+  String imageUrl, {
+  bool appendApiToUrl = false,
+}) {
+  final localPath =
+      imageUrl.startsWith('file:') ? Uri.parse(imageUrl).toFilePath() : null;
+  if (localPath != null) {
+    return (fetchUrl: imageUrl, cacheKey: imageUrl, headers: null, localPath: localPath);
+  }
+
+  final authType = ref.read(authTypeKeyProvider);
+  final basicToken = ref.read(credentialsProvider).valueOrNull;
+  final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+
+  final cacheKey = "${Endpoints.baseApi(
+    baseUrl: ref.read(serverUrlProvider),
+    port: ref.read(serverPortProvider),
+    addPort: ref.read(serverPortToggleProvider).ifNull(),
+    appendApiToUrl: appendApiToUrl,
+  )}$imageUrl";
+
+  Map<String, String>? headers;
+  if (authType == AuthType.basic && basicToken != null) {
+    headers = {"Authorization": basicToken};
+  } else if (authType == AuthType.simpleLogin) {
+    headers = creds?.simpleLoginCookieHeader;
+  }
+
+  var fetchUrl = cacheKey;
+  final uiToken = creds?.uiAccessToken;
+  if (authType == AuthType.uiLogin && uiToken != null && uiToken.isNotEmpty) {
+    final sep = fetchUrl.contains('?') ? '&' : '?';
+    fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiToken)}';
+  }
+  return (fetchUrl: fetchUrl, cacheKey: cacheKey, headers: headers, localPath: null);
 }
 
 /// The exact [ImageProvider] that [ServerImage] would render for [imageUrl],

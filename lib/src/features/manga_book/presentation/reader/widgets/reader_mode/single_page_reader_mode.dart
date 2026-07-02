@@ -182,6 +182,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
     // reader open like the other toggles.
     final rotateWide = ref.read(rotateWidePagesProvider).ifNull();
     final rotateWideInvert = ref.read(rotateWideInvertProvider).ifNull();
+    // Auto-crop solid borders (Komikku cropBorders) — decoder-level via
+    // ServerImage, so it composes with rotate/split/double.
+    final cropBorders = ref.read(cropBordersProvider).ifNull();
     // Image scale type → the page's BoxFit + decode size.
     final scaleType =
         ref.read(imageScaleTypeKeyProvider) ?? ImageScaleType.fitScreen;
@@ -256,6 +259,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
                 rotateWideInvert: rotateWideInvert,
                 reversePair: reversePair,
                 onPageWide: onPageWide,
+                cropBorders: cropBorders,
               );
             }
 
@@ -271,6 +275,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
               fit: pageFit,
               size: pageSize,
               appendApiToUrl: false,
+              cropBorders: cropBorders,
               imageUrl: chapterPages.pages[index],
               // Only set when rotating, so the default render path is
               // untouched while the toggle is off.

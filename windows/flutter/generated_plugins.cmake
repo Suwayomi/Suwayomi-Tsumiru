@@ -6,8 +6,10 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   connectivity_plus
   flutter_secure_storage_windows
+  gal
   permission_handler_windows
   screen_brightness_windows
+  share_plus
   sqlite3_flutter_libs
   url_launcher_windows
 )

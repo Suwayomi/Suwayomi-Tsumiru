@@ -20,6 +20,7 @@ import '../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
@@ -139,6 +140,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
     final bool isDoubleTapZoomEnabled =
         ref.read(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
+    final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     return ReaderWrapper(
       scrollDirection: scrollDirection,
@@ -195,20 +197,21 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
                   InfinityContinuousConfig.horizontalCacheMultiplier,
           separatorBuilder: (_, __) => const SizedBox.shrink(),
           itemBuilder: (BuildContext context, int index) {
-            return _buildPageItem(context, index);
+            return _buildPageItem(context, index, cropBorders);
           },
         ),
       ),
     );
   }
 
-  Widget _buildPageItem(BuildContext context, int index) {
+  Widget _buildPageItem(BuildContext context, int index, bool cropBorders) {
     return ServerImage(
       showReloadButton: true,
       fit: scrollDirection == Axis.vertical
           ? BoxFit.fitWidth
           : BoxFit.fitHeight,
       appendApiToUrl: false,
+      cropBorders: cropBorders,
       imageUrl: chapterPages.pages[index],
       progressIndicatorBuilder: (_, __, downloadProgress) => Center(
         child: CircularProgressIndicator(value: downloadProgress.progress),

@@ -32,6 +32,7 @@ class DoublePageView extends StatelessWidget {
     required this.rotateWideInvert,
     required this.reversePair,
     required this.onPageWide,
+    this.cropBorders = false,
   });
 
   final SpreadEntry entry;
@@ -54,6 +55,9 @@ class DoublePageView extends StatelessWidget {
   /// Reports a page's wide/portrait aspect once its image resolves, so the
   /// mapping can isolate/split it. Fires only for full-page slots.
   final void Function(int raw, bool isWide) onPageWide;
+
+  /// Auto-crop solid borders — threaded to each slot's [ServerImage].
+  final bool cropBorders;
 
   bool get _marginOnDouble =>
       centerMargin == CenterMarginType.doublePage ||
@@ -109,6 +113,7 @@ class DoublePageView extends StatelessWidget {
       fit: pageFit,
       size: pageSize,
       appendApiToUrl: false,
+      cropBorders: cropBorders,
       imageUrl: pages[unit.raw],
       imageBuilder: (context, imageProvider) => _SpreadImage(
         imageProvider: imageProvider,

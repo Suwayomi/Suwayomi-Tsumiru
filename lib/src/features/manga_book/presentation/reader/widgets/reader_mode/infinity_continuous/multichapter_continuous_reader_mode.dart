@@ -25,6 +25,7 @@ import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../../../tracking/domain/track_progress_gate.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
@@ -285,6 +286,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isDoubleTapZoomEnabled =
         ref.read(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
+    // Auto-crop borders (Komikku cropBordersWebtoon). Render-only: the crop
+    // provider's async decode is handled by the imageBuilder's frameBuilder
+    // below, which still reserves placeholderHeight and measures the cropped
+    // strip — the scroll/height math is untouched.
+    final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     // Decode a page's image off-screen AND record its true rendered height from
     // the decoded aspect ratio (Mihon/Mangayomi technique). Caching the height
@@ -699,6 +705,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         showReloadButton: true,
         fit: BoxFit.fitWidth,
         appendApiToUrl: false,
+        cropBorders: cropBorders,
         imageUrl: loc.imageUrl,
         progressIndicatorBuilder: (_, __, progress) => SizedBox(
           height: placeholderHeight,
