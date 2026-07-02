@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:zoom_view/zoom_view.dart';
 
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
@@ -34,6 +33,7 @@ import '../../../../../domain/manga/manga_model.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
 import '../../../controller/reader_controller.dart';
 import '../../reader_wrapper.dart';
+import '../reader_zoom_view.dart';
 import 'infinity_continuous_config.dart';
 import 'infinity_continuous_feedback.dart';
 import 'infinity_continuous_utils.dart';
@@ -214,12 +214,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
       if (completed && !completedChapterIds.value.contains(chapterId)) {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
-        unawaited(maybeTrackProgressOnReadFetch(
-            ref, mangaId: manga.id, isRead: true, manual: false));
-        unawaited(maybeDeleteOnReadLocal(
-            ref, mangaId: manga.id, readChapterId: chapterId));
-        unawaited(maybeDeleteOnReadServer(
-            ref, mangaId: manga.id, readChapterId: chapterId));
+        unawaited(maybeTrackProgressOnReadFetch(ref,
+            mangaId: manga.id, isRead: true, manual: false));
+        unawaited(maybeDeleteOnReadLocal(ref,
+            mangaId: manga.id, readChapterId: chapterId));
+        unawaited(maybeDeleteOnReadServer(ref,
+            mangaId: manga.id, readChapterId: chapterId));
       }
       ref.invalidate(readingHistoryProvider);
     }
@@ -316,8 +316,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final h = info.image.height;
       if (w > 0 && h > 0 && context.mounted) {
         // Rendered height for a fitWidth strip spanning the viewport width.
-        pageHeights.value[url] =
-            MediaQuery.sizeOf(context).width * h / w;
+        pageHeights.value[url] = MediaQuery.sizeOf(context).width * h / w;
       }
       info.dispose();
     }
@@ -737,7 +736,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           // keeps every page size-stable, so jumpTo(index) lands true.
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
             if (frame == null && !wasSynchronouslyLoaded) {
-              return SizedBox(height: placeholderHeight, width: double.infinity);
+              return SizedBox(
+                  height: placeholderHeight, width: double.infinity);
             }
             // Only measure the REAL decoded image — never the placeholder — so a
             // strip re-entering the viewport reserves its true height.
@@ -785,15 +785,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     );
 
     final child = AppUtils.wrapOn(
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS) && isPinchToZoomEnabled
-          ? (Widget child) => ZoomView(
+      !kIsWeb &&
+              (Platform.isAndroid || Platform.isIOS) &&
+              (isPinchToZoomEnabled || isDoubleTapZoomEnabled)
+          ? (Widget child) => ReaderZoomView(
                 controller: zoomScrollController,
                 scrollAxis: scrollDirection,
                 maxScale: InfinityContinuousConfig.maxZoomScale,
                 // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
                 minScale: isZoomOutDisabled ? 1 : 0.5,
-                doubleTapDrag: isDoubleTapZoomEnabled,
-                forceHoldOnPointerDown: true,
+                pinchEnabled: isPinchToZoomEnabled,
+                doubleTapToZoom: isDoubleTapZoomEnabled,
                 child: child,
               )
           : null,

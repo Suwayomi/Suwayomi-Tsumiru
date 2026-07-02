@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
-import 'package:zoom_view/zoom_view.dart';
 
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
@@ -30,6 +29,7 @@ import 'infinity_continuous/infinity_continuous_config.dart';
 import 'infinity_continuous/infinity_continuous_navigation.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
 import 'infinity_continuous/multichapter_continuous_reader_mode.dart';
+import 'reader_zoom_view.dart';
 
 /// Continuous reader mode entry point.
 ///
@@ -168,15 +168,15 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       child: AppUtils.wrapOn(
         !kIsWeb &&
                 (Platform.isAndroid || Platform.isIOS) &&
-                isPinchToZoomEnabled
-            ? (Widget child) => ZoomView(
+                (isPinchToZoomEnabled || isDoubleTapZoomEnabled)
+            ? (Widget child) => ReaderZoomView(
                   controller: zoomScrollController,
                   scrollAxis: scrollDirection,
                   maxScale: InfinityContinuousConfig.maxZoomScale,
                   // Komikku WebtoonRecyclerView: min rate 0.5 unless disabled.
                   minScale: isZoomOutDisabled ? 1 : 0.5,
-                  doubleTapDrag: isDoubleTapZoomEnabled,
-                  forceHoldOnPointerDown: true,
+                  pinchEnabled: isPinchToZoomEnabled,
+                  doubleTapToZoom: isDoubleTapZoomEnabled,
                   child: child,
                 )
             : null,
@@ -207,9 +207,8 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
   Widget _buildPageItem(BuildContext context, int index, bool cropBorders) {
     return ServerImage(
       showReloadButton: true,
-      fit: scrollDirection == Axis.vertical
-          ? BoxFit.fitWidth
-          : BoxFit.fitHeight,
+      fit:
+          scrollDirection == Axis.vertical ? BoxFit.fitWidth : BoxFit.fitHeight,
       appendApiToUrl: false,
       cropBorders: cropBorders,
       imageUrl: chapterPages.pages[index],

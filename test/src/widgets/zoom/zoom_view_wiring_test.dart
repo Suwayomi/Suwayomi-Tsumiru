@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:tsumiru/src/widgets/zoom/scroll_offset_to_scroll_controller.dart';
-import 'package:zoom_view/zoom_view.dart';
+import 'package:tsumiru/src/widgets/zoom/zoom_view.dart';
 
 const double _viewportWidth = 400.0;
 const double _viewportHeight = 800.0;
@@ -28,6 +28,7 @@ Future<void> _pumpZoomWrappedList(
   WidgetTester tester, {
   required bool forceHoldOnPointerDown,
   required void Function(double scale) onScaleChanged,
+  bool pinchEnabled = true,
 }) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(_viewportWidth, _viewportHeight);
@@ -50,6 +51,7 @@ Future<void> _pumpZoomWrappedList(
             ),
             scrollAxis: Axis.vertical,
             maxScale: 5,
+            pinchEnabled: pinchEnabled,
             forceHoldOnPointerDown: forceHoldOnPointerDown,
             onScaleChanged: onScaleChanged,
             child: ScrollablePositionedList.builder(
@@ -109,6 +111,23 @@ void main() {
               'is set — that is the whole point of the flag for SPL');
       expect(lastScale!, greaterThan(1.0),
           reason: 'pinch-out should produce a scale > 1.0');
+    });
+
+    testWidgets(
+        'WITH pinchEnabled=false: a two-finger pinch does NOT change the scale '
+        '(so double-tap zoom can work without pinch)', (tester) async {
+      double? lastScale;
+      await _pumpZoomWrappedList(
+        tester,
+        forceHoldOnPointerDown: true,
+        pinchEnabled: false,
+        onScaleChanged: (scale) => lastScale = scale,
+      );
+
+      await _simulatePinchOut(tester);
+
+      expect(lastScale, isNull,
+          reason: 'with pinch disabled the scale gesture must be ignored');
     });
 
     testWidgets(

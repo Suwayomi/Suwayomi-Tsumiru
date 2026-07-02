@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:zoom_view/zoom_view.dart';
 
 import '../../../../../../constants/app_constants.dart';
 import '../../../../../../constants/enum.dart';
@@ -28,6 +27,7 @@ import '../../../../domain/manga/manga_model.dart';
 import '../reader_wrapper.dart';
 import 'double_page_view.dart';
 import 'paged_spread_mapping.dart';
+import 'reader_zoom_view.dart';
 import 'rotate_wide_page.dart';
 
 /// Komikku "animate page transitions": paged next/prev animate over
@@ -61,8 +61,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
     // --- Page composition settings (double-page / dual-split). ---
     // Double-page pairing is a HORIZONTAL-paged feature only (Komikku: pager).
     // pageLayout automatic → double in landscape, single in portrait.
-    final pageLayout =
-        ref.read(pageLayoutKeyProvider) ?? PageLayout.automatic;
+    final pageLayout = ref.read(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final trueDual = ref.read(trueDualPageSpreadProvider).ifNull();
     final splitWide = ref.read(dualPageSplitPagedProvider).ifNull();
     final splitInvert = ref.read(dualPageInvertPagedProvider).ifNull();
@@ -220,16 +219,15 @@ class SinglePageReaderMode extends HookConsumerWidget {
       pageController: scrollController,
       child: AppUtils.wrapOn(
         !kIsWeb && (Platform.isAndroid || Platform.isIOS) && !isZoomDisabled
-            ? (Widget child) => ZoomView(
+            ? (Widget child) => ReaderZoomView(
                   controller: scrollController,
                   scrollAxis: scrollDirection,
                   maxScale: 5,
                   minScale: isZoomOutDisabled ? 1 : 0.5,
-                  doubleTapDrag: isDoubleTapZoomEnabled,
-                  // Required so the scale recognizer wins the gesture
-                  // arena against the underlying PageView's pan
-                  // recognizer (closes #256).
-                  forceHoldOnPointerDown: true,
+                  // Paged zoom is gated wholesale by "disable zoom in"; when the
+                  // wrapper is present, pinch is available.
+                  pinchEnabled: true,
+                  doubleTapToZoom: isDoubleTapZoomEnabled,
                   child: child,
                 )
             : null,

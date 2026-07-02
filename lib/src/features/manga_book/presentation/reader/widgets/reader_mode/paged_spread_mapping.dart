@@ -61,7 +61,8 @@ class SpreadEntry {
   int get hashCode => Object.hash(first, second);
 
   @override
-  String toString() => 'SpreadEntry($first${second == null ? '' : ', $second'})';
+  String toString() =>
+      'SpreadEntry($first${second == null ? '' : ', $second'})';
 }
 
 /// The built display list plus the display↔raw translation the viewer needs.
