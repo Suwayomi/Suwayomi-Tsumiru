@@ -4,9 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:gal/gal.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
@@ -17,29 +23,23 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
 import '../../../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../../../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 
 /// Komikku "Show actions on long tap": long-pressing a reader page opens this
-/// page-actions sheet instead of the magnifier. Only offers what the
-/// server-client model supports without a new pub dependency:
-///   • Copy page link   (clean, token-less resource URL)
-///   • Open page in web  (token-appended so it opens immediately)
-///
-/// Komikku's other long-tap actions (Share image, Save to gallery, Set as
-/// cover) need image bytes + platform plugins the app doesn't ship (share_plus,
-/// gal) or a server mutation Suwayomi doesn't expose — see the module notes.
+/// page-actions sheet instead of the magnifier. Copy link / Open in web work
+/// for server pages; Share image and Save to gallery (mobile-only) fetch the
+/// real page bytes and hand them to the system share sheet / photo gallery.
+/// Only "Set as cover" is still unsupported — Suwayomi exposes no mutation for
+/// it.
 Future<void> showReaderPageActionsSheet({
   required BuildContext context,
   required WidgetRef ref,
   required ChapterPagesDto chapterPages,
   required int pageIndex,
 }) {
-  // Token-less URL is copied (avoids leaking the ui_login token into whatever
-  // the user pastes into); token-appended URL is opened locally so it works.
-  final shareUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: false);
-  final openUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: true);
-
-  if (shareUrl == null || openUrl == null) {
+  final pages = chapterPages.pages;
+  if (pageIndex < 0 || pageIndex >= pages.length) {
     ref.read(toastProvider)?.showError(
           context.l10n.errorSomethingWentWrong,
           instantShow: true,
@@ -47,6 +47,45 @@ Future<void> showReaderPageActionsSheet({
     return Future<void>.value();
   }
 
+  final relative = pages[pageIndex];
+  // Downloaded/offline pages are served as `file://` URIs — there's no server
+  // URL to copy or open, but the local file can still be shared/saved.
+  final localPath =
+      relative.startsWith('file:') ? Uri.parse(relative).toFilePath() : null;
+
+  // Token-less URL is copied (avoids leaking the ui_login token into whatever
+  // the user pastes into); token-appended URL is opened/fetched locally so it
+  // works. Both null for offline pages (handled via [localPath]).
+  final shareUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: false);
+  final openUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: true);
+
+  // A server page with no derivable URL is an unexpected state — bail loudly.
+  if (localPath == null && (shareUrl == null || openUrl == null)) {
+    ref.read(toastProvider)?.showError(
+          context.l10n.errorSomethingWentWrong,
+          instantShow: true,
+        );
+    return Future<void>.value();
+  }
+
+  // Resolves the on-disk image file for the current page: straight off disk for
+  // offline pages, otherwise via the shared image cache (same cacheKey + auth
+  // headers ServerImage uses, so it reuses the already-decoded page).
+  Future<File> resolvePageFile() async {
+    if (localPath != null) return File(localPath);
+    return DefaultCacheManager().getSingleFile(
+      openUrl!,
+      key: shareUrl!,
+      headers: _buildHttpHeaders(ref) ?? const {},
+    );
+  }
+
+  // gal is mobile-only, so both extra actions are gated to real Android/iOS.
+  // defaultTargetPlatform (not dart:io Platform) so widget tests can drive the
+  // mobile path without faking the production gate.
+  final isMobile = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
   final pageLabel = context.l10n.page(pageIndex + 1);
 
   return showModalBottomSheet<void>(
@@ -57,17 +96,54 @@ Future<void> showReaderPageActionsSheet({
     useSafeArea: true,
     builder: (sheetContext) => _PageActionsSheet(
       pageLabel: pageLabel,
-      onCopyLink: () {
-        Clipboard.setData(ClipboardData(text: shareUrl));
-        Navigator.pop(sheetContext);
-        ref
-            .read(toastProvider)
-            ?.show(sheetContext.l10n.copied, instantShow: true);
-      },
-      onOpenInWeb: () {
-        Navigator.pop(sheetContext);
-        launchUrlInWeb(context, openUrl, ref.read(toastProvider));
-      },
+      onCopyLink: shareUrl == null
+          ? null
+          : () {
+              Clipboard.setData(ClipboardData(text: shareUrl));
+              Navigator.pop(sheetContext);
+              ref
+                  .read(toastProvider)
+                  ?.show(sheetContext.l10n.copied, instantShow: true);
+            },
+      onOpenInWeb: openUrl == null
+          ? null
+          : () {
+              Navigator.pop(sheetContext);
+              launchUrlInWeb(context, openUrl, ref.read(toastProvider));
+            },
+      onShare: !isMobile
+          ? null
+          : () async {
+              final toast = ref.read(toastProvider);
+              final errorMsg = context.l10n.errorSomethingWentWrong;
+              Navigator.pop(sheetContext);
+              try {
+                final file = await resolvePageFile();
+                await SharePlus.instance
+                    .share(ShareParams(files: [XFile(file.path)]));
+              } catch (_) {
+                toast?.showError(errorMsg, instantShow: true);
+              }
+            },
+      onSave: !isMobile
+          ? null
+          : () async {
+              final toast = ref.read(toastProvider);
+              final savedMsg = context.l10n.savedToGallery;
+              final errorMsg = context.l10n.errorSomethingWentWrong;
+              Navigator.pop(sheetContext);
+              try {
+                final file = await resolvePageFile();
+                if (!await Gal.requestAccess()) {
+                  toast?.showError(errorMsg, instantShow: true);
+                  return;
+                }
+                await Gal.putImage(file.path);
+                toast?.show(savedMsg, instantShow: true);
+              } catch (_) {
+                toast?.showError(errorMsg, instantShow: true);
+              }
+            },
     ),
   );
 }
@@ -105,16 +181,37 @@ String? _buildPageUrl(
   return url;
 }
 
+/// The auth headers [ServerImage] attaches when fetching a page: basic auth →
+/// `Authorization`; simple-login → the session cookie; ui_login → none (the
+/// token rides in the URL query instead). Mirrors [ServerImage.build].
+Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
+  final authType = ref.read(authTypeKeyProvider);
+  if (authType == AuthType.basic) {
+    final basicToken = ref.read(credentialsProvider).valueOrNull;
+    if (basicToken != null) return {"Authorization": basicToken};
+  } else if (authType == AuthType.simpleLogin) {
+    return ref
+        .read(authCredentialsStoreProvider)
+        .valueOrNull
+        ?.simpleLoginCookieHeader;
+  }
+  return null;
+}
+
 class _PageActionsSheet extends StatelessWidget {
   const _PageActionsSheet({
     required this.pageLabel,
     required this.onCopyLink,
     required this.onOpenInWeb,
+    required this.onShare,
+    required this.onSave,
   });
 
   final String pageLabel;
-  final VoidCallback onCopyLink;
-  final VoidCallback onOpenInWeb;
+  final VoidCallback? onCopyLink;
+  final VoidCallback? onOpenInWeb;
+  final VoidCallback? onShare;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -151,20 +248,34 @@ class _PageActionsSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            ListTile(
-              key: const ValueKey('reader-page-action-copy-link'),
-              leading: const Icon(Icons.link_rounded),
-              // No dedicated l10n key for "copy link" exists and the arb is out
-              // of scope here; label is plain text (flagged for the controller).
-              title: const Text('Copy page link'),
-              onTap: onCopyLink,
-            ),
-            ListTile(
-              key: const ValueKey('reader-page-action-open-web'),
-              leading: const Icon(Icons.open_in_browser_rounded),
-              title: Text(context.l10n.openInWeb),
-              onTap: onOpenInWeb,
-            ),
+            if (onCopyLink != null)
+              ListTile(
+                key: const ValueKey('reader-page-action-copy-link'),
+                leading: const Icon(Icons.link_rounded),
+                title: Text(context.l10n.copyPageLink),
+                onTap: onCopyLink,
+              ),
+            if (onOpenInWeb != null)
+              ListTile(
+                key: const ValueKey('reader-page-action-open-web'),
+                leading: const Icon(Icons.open_in_browser_rounded),
+                title: Text(context.l10n.openInWeb),
+                onTap: onOpenInWeb,
+              ),
+            if (onShare != null)
+              ListTile(
+                key: const ValueKey('reader-page-action-share'),
+                leading: const Icon(Icons.share_rounded),
+                title: Text(context.l10n.shareImage),
+                onTap: onShare,
+              ),
+            if (onSave != null)
+              ListTile(
+                key: const ValueKey('reader-page-action-save'),
+                leading: const Icon(Icons.download_rounded),
+                title: Text(context.l10n.saveToGallery),
+                onTap: onSave,
+              ),
           ],
         ),
       ),

@@ -2480,6 +2480,22 @@
     "@filterTracked": {
         "description": "Filter section heading shown when at least one tracker is logged in"
     },
+    "copyPageLink": "Copy page link",
+    "@copyPageLink": {
+        "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
+    },
+    "shareImage": "Share image",
+    "@shareImage": {
+        "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
+    },
+    "saveToGallery": "Save to gallery",
+    "@saveToGallery": {
+        "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
+    },
+    "savedToGallery": "Saved to gallery",
+    "@savedToGallery": {
+        "description": "Toast shown after the current page image was saved to the device gallery"
+    },
     "zoomStart": "Zoom start position",
     "zoomStartAutomatic": "Automatic",
     "zoomStartCenter": "Center",
