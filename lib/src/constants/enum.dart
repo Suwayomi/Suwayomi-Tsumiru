@@ -141,6 +141,17 @@ enum ImageScaleType {
         ImageScaleType.originalSize => context.l10n.imageScaleTypeOriginalSize,
         ImageScaleType.smartFit => context.l10n.imageScaleTypeSmartFit,
       };
+
+  /// Paged page render: the BoxFit + decode-size hint for a page image on a
+  /// [width]×[height] screen. smartFit ≈ fit-width (most manga pages are tall).
+  (BoxFit, Size?) pagedFit(double width, double height) => switch (this) {
+        ImageScaleType.fitScreen => (BoxFit.contain, Size.fromHeight(height)),
+        ImageScaleType.stretch => (BoxFit.fill, Size(width, height)),
+        ImageScaleType.fitWidth => (BoxFit.fitWidth, Size.fromWidth(width)),
+        ImageScaleType.fitHeight => (BoxFit.fitHeight, Size.fromHeight(height)),
+        ImageScaleType.originalSize => (BoxFit.none, null),
+        ImageScaleType.smartFit => (BoxFit.fitWidth, Size.fromWidth(width)),
+      };
 }
 
 /// Paged zoom start position (Komikku ZoomStart, default automatic).

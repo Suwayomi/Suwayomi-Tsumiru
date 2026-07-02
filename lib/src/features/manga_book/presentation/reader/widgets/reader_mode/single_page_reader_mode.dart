@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:zoom_view/zoom_view.dart';
 
 import '../../../../../../constants/app_constants.dart';
+import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/cache_manager_extensions.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
@@ -104,6 +105,11 @@ class SinglePageReaderMode extends HookConsumerWidget {
     // reader open like the other toggles.
     final rotateWide = ref.read(rotateWidePagesProvider).ifNull();
     final rotateWideInvert = ref.read(rotateWideInvertProvider).ifNull();
+    // Image scale type → the page's BoxFit + decode size.
+    final scaleType =
+        ref.read(imageScaleTypeKeyProvider) ?? ImageScaleType.fitScreen;
+    final (pageFit, pageSize) =
+        scaleType.pagedFit(context.width, context.height);
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapter: chapter,
@@ -159,8 +165,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
 
             return ServerImage(
               showReloadButton: true,
-              fit: BoxFit.contain,
-              size: Size.fromHeight(context.height),
+              fit: pageFit,
+              size: pageSize,
               appendApiToUrl: false,
               imageUrl: chapterPages.pages[index],
               // Only set when rotating, so the default render path is
