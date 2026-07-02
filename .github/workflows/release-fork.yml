@@ -241,3 +241,18 @@ jobs:
             exit 1
           fi
           gh release edit "$TAG" --repo "$REPO" --draft=false --latest
+      # The docs site bakes release data in at build time; nudge it to rebuild
+      # so tsumiru.app shows this release immediately instead of on the next
+      # scheduled refresh. Best-effort: never fail the release over it.
+      - name: Trigger docs-site rebuild
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "WEBSITE_DISPATCH_TOKEN not set; skipping site refresh (6h schedule will pick it up)."
+            exit 0
+          fi
+          gh api repos/tsumiru-app/tsumiru-app.github.io/dispatches \
+            -f event_type=app-release
