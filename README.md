@@ -25,15 +25,15 @@ built for long webtoon binges on your phone.
 
 ## What it is
 
-Tsumiru is a fork of [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi),
-the Flutter client for the self-hosted [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server)
-manga server. It connects to a Suwayomi server you already run. Tsumiru itself is only the reader (the server handles sources and downloads).
+Tsumiru is a Flutter client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server),
+the self-hosted manga server. You point it at a server you already run. Tsumiru itself
+is only the reader (the server handles sources and downloads).
 
 Runs on **Android, Linux, Windows, macOS, and Web**.
 
-## What's different from upstream Sorayomi
+## Feature highlights
 
-This fork focuses on making it a great daily driver, especially for **webtoon / manhwa** reading:
+Tsumiru is built for daily reading, especially **webtoons / manhwa**:
 
 - **Offline reading:** download chapters to your device and read them with no connection to your server. Tsumiru keeps an on-device catalog with auto-keep rules and falls back to local copies automatically when the server isn't reachable.
 - **Rebuilt webtoon reader:** multi-chapter continuous scrolling tuned for long manhwa strips, with pinch-to-zoom that keeps working while you scroll.
@@ -71,10 +71,9 @@ flutter build apk            # or: linux / windows / macos / web
 
 ## Credits & license
 
-Tsumiru stands on the work of the [Suwayomi](https://github.com/Suwayomi) project:
-[Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) (the client this
-forks) and [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) (the server it
-talks to). Huge thanks to those maintainers and contributors.
+Tsumiru stands on the work of the [Suwayomi](https://github.com/Suwayomi) project,
+including [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) and the client
+Tsumiru grew from. Huge thanks to those maintainers and contributors.
 
 Licensed under the **Mozilla Public License 2.0** (see [LICENSE](LICENSE)). As with the
 upstream project, source files retain their MPL-2.0 headers.

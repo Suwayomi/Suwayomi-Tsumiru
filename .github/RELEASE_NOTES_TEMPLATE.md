@@ -1,4 +1,4 @@
-A fast, multiplatform reader for your [Suwayomi](https://suwayomi.org/) server.
+A manga and webtoon reader for your [Suwayomi](https://suwayomi.org/) server.
 
 ## What's new in vX.Y.Z
 

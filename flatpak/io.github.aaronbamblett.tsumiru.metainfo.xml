@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>io.github.aaronbamblett.tsumiru</id>
   <name>Tsumiru</name>
-  <summary>A fast, multiplatform reader for your Suwayomi server</summary>
+  <summary>Manga and webtoon reader for your Suwayomi server</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MPL-2.0</project_license>
   <developer id="io.github.aaronbamblett">
