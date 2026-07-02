@@ -32,6 +32,7 @@ import '../../../tracking/domain/track_progress_gate.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/auto_webtoon.dart';
+import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
 import 'widgets/chrome/reader_chrome.dart';
 import 'widgets/reader_mode/continuous_reader_mode.dart';
@@ -69,9 +70,12 @@ class ReaderScreen extends HookConsumerWidget {
           sourceName: mangaData.source?.name,
         );
     final toast = ref.watch(toastProvider);
+    // Resolve the l10n string in build (safe); the effect runs during hook-init
+    // where an inherited-widget lookup (context.l10n) throws _debugIsInitHook.
+    final autoWebtoonSnack = context.l10n.autoWebtoonSnack;
     useEffect(() {
       if (autoWebtoon) {
-        toast?.show(context.l10n.autoWebtoonSnack, withMicrotask: true);
+        toast?.show(autoWebtoonSnack, withMicrotask: true);
       }
       return null;
     }, [autoWebtoon]);
@@ -184,6 +188,15 @@ class ReaderScreen extends HookConsumerWidget {
             SystemUiMode.manual,
             overlays: SystemUiOverlay.values,
           );
+    }, []);
+
+    // Draw reader content into the display cutout (notch/punch-hole) when opted
+    // in; restore the default window mode on exit. Android-only native attr.
+    useEffect(() {
+      final underCutout = ref.read(drawUnderCutoutProvider) ??
+          DBKeys.drawUnderCutout.initial as bool;
+      setDrawUnderCutout(underCutout);
+      return () => setDrawUnderCutout(false);
     }, []);
 
     // Rotation lock: applied once the per-series ?? global value resolves
