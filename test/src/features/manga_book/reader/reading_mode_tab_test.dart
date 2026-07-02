@@ -243,27 +243,22 @@ void main() {
     expect(find.text('Crop borders'), findsNWidgets(2));
   });
 
-  testWidgets(
-      '"For this series" OFF routes a mode write to the global provider '
-      'and clears the per-series override (§2.6)', (tester) async {
+  testWidgets('pure Komikku: "For this series" is a heading, not a scope switch',
+      (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
-
-    await tester.tap(find.text('For this series'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Long strip'));
-    await tester.pumpAndSettle();
-
-    expect(repo.patches, isEmpty, reason: 'no per-series write when OFF');
-    expect(repo.deletes, ['flutter_readerMode']);
+    // The group heading is present...
+    expect(find.text('For this series'), findsOneWidget);
+    // ...and it is a plain heading, not a scope toggle (no switch on that row).
     expect(
-      container(tester).read(readerModeKeyProvider),
-      ReaderMode.webtoon,
-      reason: 'global default now Long strip',
+      find.ancestor(
+        of: find.text('For this series'),
+        matching: find.byType(SwitchListTile),
+      ),
+      findsNothing,
     );
   });
 
-  testWidgets('"For this series" ON (default) keeps the per-series write',
-      (tester) async {
+  testWidgets('reading mode always writes a per-series override', (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
 
     await tester.tap(find.text('Long strip'));

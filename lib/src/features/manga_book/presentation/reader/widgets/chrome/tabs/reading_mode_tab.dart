@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../../constants/enum.dart';
@@ -19,7 +18,7 @@ import '../../../controller/reader_settings_model.dart';
 
 /// Mihon/Komikku-parity Reading-mode tab: chip rows for the common settings,
 /// then a paged / long-strip section swapped on the resolved mode.
-class ReadingModeTab extends HookConsumerWidget {
+class ReadingModeTab extends ConsumerWidget {
   const ReadingModeTab({
     super.key,
     required this.mangaId,
@@ -33,9 +32,10 @@ class ReadingModeTab extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Ephemeral by design (§2.6): every sheet opens back in per-series mode.
-    final forThisSeries = useState(true);
-    final perSeries = forThisSeries.value;
+    // Pure-Komikku scope: the settings under the "For this series" heading are
+    // ALWAYS per-manga overrides; the viewer/global settings below are global
+    // defaults. There is no scope toggle.
+    const perSeries = true;
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
     // "Default" dereferences the app-wide mode, mirroring reader_screen.
@@ -63,12 +63,8 @@ class ReadingModeTab extends HookConsumerWidget {
     return ListView(
       primary: false,
       children: [
-        SwitchListTile(
-          controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.readerForThisSeries),
-          value: perSeries,
-          onChanged: (value) => forThisSeries.value = value,
-        ),
+        // ── For this series (per-manga overrides) ──
+        _GroupHeading(context.l10n.readerForThisSeries),
         _SectionLabel(context.l10n.readerSectionReadingMode),
         _ChipRow(
           children: [
@@ -142,15 +138,28 @@ class ReadingModeTab extends HookConsumerWidget {
             ],
           ),
         ],
+        // Padding + magnifier are per-manga overrides too, so they live under
+        // "For this series", not the global viewer block.
+        AsyncReaderPaddingSlider(
+          readerPadding: readerPadding,
+          onChanged: (value) =>
+              model.setSidePadding(value, perSeries: perSeries),
+        ),
+        AsyncReaderMagnifierSizeSlider(
+          readerMagnifierSize: magnifierSize,
+          onChanged: (value) =>
+              model.setMagnifierSize(value, perSeries: perSeries),
+        ),
+        // ── Viewer defaults (global, apply to every series) ──
+        _GroupHeading(isLongStrip
+            ? context.l10n.readerGroupWebtoonViewer
+            : context.l10n.readerGroupPagerViewer),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: isLongStrip
               ? _LongStripSection(
                   key: const ValueKey('longStrip'),
                   mangaId: mangaId,
-                  readerPadding: readerPadding,
-                  magnifierSize: magnifierSize,
-                  perSeries: perSeries,
                   showGapsSettings:
                       resolvedMode == ReaderMode.continuousVertical,
                 )
@@ -290,16 +299,10 @@ class _LongStripSection extends ConsumerWidget {
   const _LongStripSection({
     super.key,
     required this.mangaId,
-    required this.readerPadding,
-    required this.magnifierSize,
-    required this.perSeries,
     required this.showGapsSettings,
   });
 
   final int mangaId;
-  final ValueNotifier<double> readerPadding;
-  final ValueNotifier<double> magnifierSize;
-  final bool perSeries;
   final bool showGapsSettings;
 
   @override
@@ -309,7 +312,6 @@ class _LongStripSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionLabel(context.l10n.readerModeChipLongStrip),
         _SectionLabel(context.l10n.webtoonScaleType),
         _ChipRow(
           children: [
@@ -321,16 +323,6 @@ class _LongStripSection extends ConsumerWidget {
                 onSelected: (_) => model.setWebtoonScaleType(scale),
               ),
           ],
-        ),
-        AsyncReaderPaddingSlider(
-          readerPadding: readerPadding,
-          onChanged: (value) =>
-              model.setSidePadding(value, perSeries: perSeries),
-        ),
-        AsyncReaderMagnifierSizeSlider(
-          readerMagnifierSize: magnifierSize,
-          onChanged: (value) =>
-              model.setMagnifierSize(value, perSeries: perSeries),
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
@@ -406,6 +398,36 @@ class _SubSwitchTile extends StatelessWidget {
       title: Text(title),
       value: value,
       onChanged: onChanged,
+    );
+  }
+}
+
+/// A top-level group header (Komikku HeadingItem) — separates the "For this
+/// series" per-manga block from the global "Viewer defaults" block so scope is
+/// unambiguous.
+class _GroupHeading extends StatelessWidget {
+  const _GroupHeading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            style: context.theme.textTheme.titleSmall?.copyWith(
+              color: context.theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

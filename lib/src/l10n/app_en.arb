@@ -169,7 +169,13 @@
         "description": "Page layout chip"
     },
     "@readerForThisSeries": {
-        "description": "Header toggle in the reader settings sheet: per-series vs app-wide writes"
+        "description": "Group heading for the per-manga override settings in the reader sheet"
+    },
+    "@readerGroupPagerViewer": {
+        "description": "Group heading for the global paged-viewer defaults in the reader sheet"
+    },
+    "@readerGroupWebtoonViewer": {
+        "description": "Group heading for the global long-strip-viewer defaults in the reader sheet"
     },
     "@readerSectionPaged": {
         "description": "Heading for the paged-only reader settings section"
@@ -1356,6 +1362,8 @@
     "pageLayoutDoublePages": "Double pages",
     "pageLayoutSinglePage": "Single page",
     "readerForThisSeries": "For this series",
+    "readerGroupPagerViewer": "Pager viewer defaults",
+    "readerGroupWebtoonViewer": "Long strip viewer defaults",
     "readerSectionPaged": "Paged",
     "readerSectionReadingMode": "Reading mode",
     "readerSectionRotation": "Rotation",
