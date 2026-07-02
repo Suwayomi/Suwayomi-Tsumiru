@@ -315,8 +315,17 @@ class ReaderChrome extends HookConsumerWidget {
                 top: extents.topInset + 8,
                 bottom: extents.bottomInset + 8,
                 width: 56,
-                child: IgnorePointer(
-                  ignoring: controller.isDismissed,
+                // Fade-only (no slide), so at opacity 0 it still hit-tests. The
+                // enclosing builder only rebuilds on visibility changes, not on
+                // the fade settling — AnimatedBuilder re-evaluates `ignoring` on
+                // the final dismissed tick so a tap on this edge column after
+                // hiding re-shows the menu instead of scrubbing.
+                child: AnimatedBuilder(
+                  animation: controller,
+                  builder: (context, child) => IgnorePointer(
+                    ignoring: controller.isDismissed,
+                    child: child,
+                  ),
                   child: FadeTransition(
                     opacity: fade,
                     child: ReaderSideSeekBar(

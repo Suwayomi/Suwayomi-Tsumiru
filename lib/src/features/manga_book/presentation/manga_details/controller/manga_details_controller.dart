@@ -117,6 +117,8 @@ class MangaChapterList extends _$MangaChapterList {
     // tries the source and falls back to stored if it's unavailable.
     final refreshFromSource =
         onlineFetch || ref.read(refreshChaptersFromSourceProvider).ifNull();
+    // offlineDatabaseProvider throws on web; only touch it when offline is on.
+    final offlineEnabled = ref.read(offlineEnabledProvider);
     // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
     // refresh while the device is offline serves the on-device catalog instead
     // of erroring/clearing the list.
@@ -134,8 +136,8 @@ class MangaChapterList extends _$MangaChapterList {
             }
             return stored;
           },
-          db: ref.read(offlineDatabaseProvider),
-          offlineEnabled: ref.read(offlineEnabledProvider),
+          db: offlineEnabled ? ref.read(offlineDatabaseProvider) : null,
+          offlineEnabled: offlineEnabled,
           mangaId: mangaId,
         ));
     ref.keepAlive();

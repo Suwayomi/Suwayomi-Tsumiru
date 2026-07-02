@@ -93,6 +93,13 @@ class SinglePageReaderMode extends HookConsumerWidget {
           )
         : null;
 
+    // Latest mapping, read by the (once-bound) scroll listener below. The
+    // listener effect can't re-bind on every mapping change (a wide page
+    // resolving keeps it non-null), so it would otherwise translate the new
+    // display position through a stale mapping and mis-report the raw page.
+    final mappingRef = useRef(mapping);
+    mappingRef.value = mapping;
+
     // currentIndex is ALWAYS the RAW page (read-tracking + seekbar contract).
     final initialRaw = chapter.isRead.ifNull()
         ? 0
@@ -135,15 +142,17 @@ class SinglePageReaderMode extends HookConsumerWidget {
       listener() {
         final currentPage = scrollController.page;
         if (currentPage == null) return;
-        // Translate the controller's DISPLAY position back to a raw page.
-        currentIndex.value = mapping == null
+        // Translate the controller's DISPLAY position back to a raw page, always
+        // through the latest mapping (see [mappingRef]).
+        final currentMapping = mappingRef.value;
+        currentIndex.value = currentMapping == null
             ? currentPage.toInt()
-            : mapping.displayToRaw(currentPage.toInt());
+            : currentMapping.displayToRaw(currentPage.toInt());
       }
 
       scrollController.addListener(listener);
       return () => scrollController.removeListener(listener);
-    }, [scrollController, mapping == null]);
+    }, [scrollController]);
     // Re-anchor when the display list reshapes (a wide page resolved, or the
     // composite/orientation flipped) so the current RAW page stays put — the
     // seekbar/tracking never jump even as the item layout shifts.

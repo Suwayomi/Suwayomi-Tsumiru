@@ -114,6 +114,9 @@ class ZoomViewController {
       return;
     }
 
+    // Detach any listeners from a still-running animation before starting a new
+    // one, so a rapid second double-tap (or a pan mid-zoom) doesn't stack them.
+    state._clearScaleAnimationListeners();
     state._masterAnimationController.stop();
     state._masterAnimationController.duration = duration;
 
@@ -160,6 +163,7 @@ class ZoomViewController {
       firstFrame = false;
     }
 
+    state._activeScaleListener = listener;
     state._masterAnimationController.addListener(listener);
 
     void statusListener(status) {
@@ -167,11 +171,11 @@ class ZoomViewController {
         //ensure final value is correct
         setScale(1 / internalNewScale, focalPoint: focus);
         state._updateLastScale(internalNewScale);
-        state._masterAnimationController.removeStatusListener(statusListener);
-        state._masterAnimationController.removeListener(listener);
+        state._clearScaleAnimationListeners();
       }
     }
 
+    state._activeScaleStatusListener = statusListener;
     state._masterAnimationController.addStatusListener(statusListener);
     state._masterAnimationController.forward(from: 0.0);
   }
@@ -391,6 +395,11 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
   void _resetScaleToOne() {
     final size = context.size;
     if (size == null) return;
+    // Both scroll positions must be attached before we read pixels / jumpTo —
+    // during a mode transition a child scrollable can be momentarily detached.
+    if (!_verticalController.hasClients || !_horizontalController.hasClients) {
+      return;
+    }
     final focus = Offset(size.width / 2, size.height / 2);
     final currentInternalScale = _scale;
     const internalNewScale = 1.0;
@@ -410,6 +419,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    _clearScaleAnimationListeners();
     _masterAnimationController.dispose();
     if (widget.scrollAxis == Axis.vertical) {
       _horizontalController.dispose();
@@ -433,6 +443,27 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
   Size _globalTrackpadDistance = Size.zero;
 
   late final AnimationController _masterAnimationController;
+
+  // The listener + status listener registered by the currently-running
+  // setScaleWithAnimation. Tracked so a new zoom (or an interrupting pan) can
+  // detach the previous ones first — a stopped (never "completed") animation
+  // otherwise leaves them attached and the next run drives several accumulated
+  // listeners that fight over _scale.
+  VoidCallback? _activeScaleListener;
+  void Function(AnimationStatus)? _activeScaleStatusListener;
+
+  void _clearScaleAnimationListeners() {
+    final listener = _activeScaleListener;
+    if (listener != null) {
+      _masterAnimationController.removeListener(listener);
+      _activeScaleListener = null;
+    }
+    final statusListener = _activeScaleStatusListener;
+    if (statusListener != null) {
+      _masterAnimationController.removeStatusListener(statusListener);
+      _activeScaleStatusListener = null;
+    }
+  }
 
   late final ScrollController _verticalController;
   late final ScrollController _horizontalController;
@@ -503,6 +534,7 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
             behavior: HitTestBehavior.translucent,
             onScaleStart: (ScaleStartDetails details) {
               _localFocalPoint = details.localFocalPoint;
+              _clearScaleAnimationListeners();
               _masterAnimationController.stop();
               _trackPadState = details.kind == PointerDeviceKind.trackpad
                   ? TrackPadState.waiting
@@ -591,6 +623,12 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   _verticalTouchHandler.handleDragUpdate(verticalDetails);
                   _horizontalTouchHandler.handleDragUpdate(horizontalDetails);
                 case DragMode.pinchScale:
+                  // Honour a live pinch-off even if the gesture was already in
+                  // pinch mode when the setting flipped.
+                  if (!widget.pinchEnabled) {
+                    _dragMode = DragMode.none;
+                    break;
+                  }
                   final newScale = _clampDouble(
                     _lastScale / details.scale,
                     _minInternalScale,

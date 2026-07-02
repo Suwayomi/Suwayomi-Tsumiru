@@ -26,12 +26,12 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     if (!offlineEnabled) rethrow;
     final rows = await db!.libraryManga();
     if (rows.isEmpty) rethrow;
-    final lastReadByManga = await db!.lastReadAtByManga();
-    final firstUnreadByManga = await db!.firstUnreadDownloadedChapterByManga();
+    final lastReadByManga = await db.lastReadAtByManga();
+    final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
     // Load all category memberships in one pass keyed by mangaId
     final categoryMap = <int, List<OfflineCategory>>{};
     for (final m in rows) {
-      categoryMap[m.id] = await db!.categoriesForManga(m.id);
+      categoryMap[m.id] = await db.categoriesForManga(m.id);
     }
     return [
       for (final m in rows)
