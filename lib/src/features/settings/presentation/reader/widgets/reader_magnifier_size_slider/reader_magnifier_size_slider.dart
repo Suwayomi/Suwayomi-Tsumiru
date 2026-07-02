@@ -60,6 +60,9 @@ class AsyncReaderMagnifierSizeSlider extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final debounce = useRef<Timer?>(null);
+    // Subscribe so the thumb tracks the live notifier during a drag — the
+    // Slider is controlled and won't move unless this rebuilds.
+    final magnifier = useValueListenable(readerMagnifierSize);
 
     final onDebounceChanged = useCallback<ValueSetter<double>>(
       (double magnifierSizeValue) async {
@@ -79,7 +82,7 @@ class AsyncReaderMagnifierSizeSlider extends HookConsumerWidget {
     return SliderSettingTile(
       icon: Icons.search_rounded,
       title: context.l10n.readerMagnifierSize,
-      value: readerMagnifierSize.value,
+      value: magnifier,
       getSliderLabel: (val) => val.toStringAsFixed(2),
       onChanged: onDebounceChanged,
       defaultValue: DBKeys.readerMagnifierSize.initial,

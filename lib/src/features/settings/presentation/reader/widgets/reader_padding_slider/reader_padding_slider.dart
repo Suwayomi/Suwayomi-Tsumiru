@@ -59,6 +59,9 @@ class AsyncReaderPaddingSlider extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final debounce = useRef<Timer?>(null);
+    // Subscribe so the thumb tracks the live notifier during a drag — the
+    // Slider is controlled and won't move unless this rebuilds.
+    final padding = useValueListenable(readerPadding);
 
     final onDebounceChanged = useCallback<ValueSetter<double>>(
       (double paddingValue) async {
@@ -78,7 +81,7 @@ class AsyncReaderPaddingSlider extends HookConsumerWidget {
     return SliderSettingTile(
       icon: Icons.width_wide_rounded,
       title: context.l10n.readerPadding,
-      value: readerPadding.value,
+      value: padding,
       getSliderLabel: (val) => (val * 2.5).toStringAsFixed(2),
       onChanged: onDebounceChanged,
       defaultValue: DBKeys.readerPadding.initial,
