@@ -134,12 +134,12 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
     }, [currentIndex.value]);
 
     final bool isAnimationEnabled =
-        ref.read(readerScrollAnimationProvider).ifNull(true);
+        ref.watch(readerScrollAnimationProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
-        ref.read(pinchToZoomProvider).ifNull(true);
+        ref.watch(pinchToZoomProvider).ifNull(true);
     final bool isDoubleTapZoomEnabled =
-        ref.read(doubleTapToZoomProvider).ifNull(true);
-    final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
+        ref.watch(doubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
 
     return ReaderWrapper(

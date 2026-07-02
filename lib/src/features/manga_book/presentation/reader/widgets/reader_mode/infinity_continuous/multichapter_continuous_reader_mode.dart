@@ -280,12 +280,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }, const []);
 
     final bool isAnimationEnabled =
-        ref.read(readerScrollAnimationProvider).ifNull(true);
+        ref.watch(readerScrollAnimationProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
-        ref.read(pinchToZoomProvider).ifNull(true);
+        ref.watch(pinchToZoomProvider).ifNull(true);
     final bool isDoubleTapZoomEnabled =
-        ref.read(doubleTapToZoomProvider).ifNull(true);
-    final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
+        ref.watch(doubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
     // Auto-crop borders (Komikku cropBordersWebtoon). Render-only: the crop
     // provider's async decode is handled by the imageBuilder's frameBuilder
     // below, which still reserves placeholderHeight and measures the cropped

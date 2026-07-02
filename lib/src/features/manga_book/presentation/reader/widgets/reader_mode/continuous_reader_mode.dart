@@ -175,12 +175,12 @@ class ContinuousReaderMode extends HookConsumerWidget {
 
     // Komikku "animate page transitions": animate next/prev when ON, else jump.
     final bool isAnimationEnabled =
-        ref.read(animatePageTransitionsProvider).ifNull(true);
+        ref.watch(animatePageTransitionsProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
-        ref.read(pinchToZoomProvider).ifNull(true);
+        ref.watch(pinchToZoomProvider).ifNull(true);
     final bool isDoubleTapZoomEnabled =
-        ref.read(doubleTapToZoomProvider).ifNull(true);
-    final bool isZoomOutDisabled = ref.read(disableZoomOutProvider).ifNull();
+        ref.watch(doubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
 
     // Komikku "always show chapter transition": ON keeps the full prev/next
     // transition separator; OFF minimizes it.

@@ -192,12 +192,12 @@ class ReaderScreen extends HookConsumerWidget {
 
     // Draw reader content into the display cutout (notch/punch-hole) when opted
     // in; restore the default window mode on exit. Android-only native attr.
+    final underCutout = ref.watch(drawUnderCutoutProvider) ??
+        DBKeys.drawUnderCutout.initial as bool;
     useEffect(() {
-      final underCutout = ref.read(drawUnderCutoutProvider) ??
-          DBKeys.drawUnderCutout.initial as bool;
       setDrawUnderCutout(underCutout);
       return () => setDrawUnderCutout(false);
-    }, []);
+    }, [underCutout]);
 
     // Rotation lock: applied once the per-series ?? global value resolves
     // (null until the manga loads, Default never touches the platform).

@@ -177,7 +177,11 @@ class SinglePageReaderMode extends HookConsumerWidget {
         ref.read(animatePageTransitionsProvider).ifNull(true);
     // Paged "Disable zoom in" drops the whole zoom wrapper (pinch AND the
     // double-tap-drag zoom) — Komikku's pref_paged_disable_zoom_in.
-    final isZoomDisabled = ref.read(disableZoomInProvider).ifNull();
+    final isZoomDisabled = ref.watch(disableZoomInProvider).ifNull();
+    // Double-tap-to-zoom + disable-zoom-out (Komikku) — consumed by ZoomView.
+    final isDoubleTapZoomEnabled =
+        ref.watch(doubleTapToZoomProvider).ifNull(true);
+    final isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
     // "Rotate wide pages to fit": per-image render transform, applied on next
     // reader open like the other toggles.
     final rotateWide = ref.read(rotateWidePagesProvider).ifNull();
@@ -220,7 +224,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
                   controller: scrollController,
                   scrollAxis: scrollDirection,
                   maxScale: 5,
-                  doubleTapDrag: true,
+                  minScale: isZoomOutDisabled ? 1 : 0.5,
+                  doubleTapDrag: isDoubleTapZoomEnabled,
                   // Required so the scale recognizer wins the gesture
                   // arena against the underlying PageView's pan
                   // recognizer (closes #256).
