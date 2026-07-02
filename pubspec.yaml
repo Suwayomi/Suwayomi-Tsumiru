@@ -4,7 +4,7 @@ description: A manga reader client for Suwayomi Server.
 publish_to: "none"
 # Public version matches the Tsumiru release line; build number keeps
 # climbing from the inherited 0.6.4+28 so Android upgrades stay monotonic.
-version: 0.7.2+36
+version: 0.8.0+37
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
