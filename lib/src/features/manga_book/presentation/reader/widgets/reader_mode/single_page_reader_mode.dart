@@ -26,6 +26,8 @@ import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../reader_wrapper.dart';
+import 'double_page_view.dart';
+import 'paged_spread_mapping.dart';
 import 'rotate_wide_page.dart';
 
 /// Komikku "animate page transitions": paged next/prev animate over
@@ -55,12 +57,51 @@ class SinglePageReaderMode extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cacheManager = useMemoized(() => DefaultCacheManager());
-    final scrollController = usePageController(
-      initialPage: chapter.isRead.ifNull()
-          ? 0
-          : chapter.lastPageRead.getValueOnNullOrNegative(),
-    );
-    final currentIndex = useState(scrollController.initialPage);
+
+    // --- Page composition settings (double-page / dual-split). ---
+    // Double-page pairing is a HORIZONTAL-paged feature only (Komikku: pager).
+    // pageLayout automatic → double in landscape, single in portrait.
+    final pageLayout =
+        ref.read(pageLayoutKeyProvider) ?? PageLayout.automatic;
+    final trueDual = ref.read(trueDualPageSpreadProvider).ifNull();
+    final splitWide = ref.read(dualPageSplitPagedProvider).ifNull();
+    final splitInvert = ref.read(dualPageInvertPagedProvider).ifNull();
+    final invertDouble = ref.read(invertDoublePagesProvider).ifNull();
+    final centerMargin =
+        ref.read(centerMarginTypeKeyProvider) ?? CenterMarginType.none;
+    final isLandscape = context.width > context.height;
+    final isHorizontal = scrollDirection == Axis.horizontal;
+    final wantDouble = isHorizontal &&
+        (pageLayout == PageLayout.doublePages ||
+            (pageLayout == PageLayout.automatic && isLandscape) ||
+            trueDual);
+    // Composite render path: only when the layout actually changes what a
+    // PageView item is. Otherwise the OFF path below is byte-identical.
+    final composite = wantDouble || (splitWide && isHorizontal);
+
+    // Wide-page cache — a page joins as its image resolves ([onPageWide]).
+    final widePages = useState(const <int>{});
+    bool isWide(int raw) => widePages.value.contains(raw);
+
+    // Build the display list (pairs / split halves). Null on the OFF path.
+    final mapping = composite
+        ? buildSpreadMapping(
+            pageCount: chapterPages.pages.length,
+            doublePages: wantDouble,
+            splitWide: splitWide && isHorizontal,
+            splitInvert: splitInvert,
+            isWide: isWide,
+          )
+        : null;
+
+    // currentIndex is ALWAYS the RAW page (read-tracking + seekbar contract).
+    final initialRaw = chapter.isRead.ifNull()
+        ? 0
+        : chapter.lastPageRead.getValueOnNullOrNegative();
+    final initialDisplay =
+        mapping == null ? initialRaw : mapping.rawToDisplay(initialRaw);
+    final scrollController = usePageController(initialPage: initialDisplay);
+    final currentIndex = useState(initialRaw);
 
     useEffect(() {
       if (onPageChanged != null) onPageChanged!(currentIndex.value);
@@ -94,12 +135,43 @@ class SinglePageReaderMode extends HookConsumerWidget {
     useEffect(() {
       listener() {
         final currentPage = scrollController.page;
-        if (currentPage != null) currentIndex.value = (currentPage.toInt());
+        if (currentPage == null) return;
+        // Translate the controller's DISPLAY position back to a raw page.
+        currentIndex.value = mapping == null
+            ? currentPage.toInt()
+            : mapping.displayToRaw(currentPage.toInt());
       }
 
       scrollController.addListener(listener);
       return () => scrollController.removeListener(listener);
-    }, [scrollController]);
+    }, [scrollController, mapping == null]);
+    // Re-anchor when the display list reshapes (a wide page resolved, or the
+    // composite/orientation flipped) so the current RAW page stays put — the
+    // seekbar/tracking never jump even as the item layout shifts.
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!scrollController.hasClients) return;
+        final target = mapping == null
+            ? currentIndex.value
+            : mapping.rawToDisplay(currentIndex.value);
+        if (scrollController.page?.round() != target) {
+          scrollController.jumpToPage(target);
+        }
+      });
+      return null;
+    }, [composite, widePages.value]);
+
+    // Reports a page's aspect the first time its image resolves; a wide page
+    // then isolates/splits on the next build. Deferred to dodge build-phase
+    // writes; aspect is stable so we only ever add.
+    void onPageWide(int raw, bool wide) {
+      if (!wide || widePages.value.contains(raw)) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted || widePages.value.contains(raw)) return;
+        widePages.value = {...widePages.value, raw};
+      });
+    }
+
     // Komikku "animate page transitions": animate next/prev when ON, else jump.
     final isAnimationEnabled =
         ref.read(animatePageTransitionsProvider).ifNull(true);
@@ -115,13 +187,20 @@ class SinglePageReaderMode extends HookConsumerWidget {
         ref.read(imageScaleTypeKeyProvider) ?? ImageScaleType.fitScreen;
     final (pageFit, pageSize) =
         scaleType.pagedFit(context.width, context.height);
+    // Intra-pair slot order: invertDoublePages, flipped again under RTL.
+    final reversePair = invertDouble != reverse;
+    final itemCount = composite
+        ? (mapping!.isEmpty ? 1 : mapping.length)
+        : (chapterPages.pages.isEmpty ? 1 : chapterPages.pages.length);
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapter: chapter,
       manga: manga,
       chapterPages: chapterPages,
       currentIndex: currentIndex.value,
-      onChanged: (index) => scrollController.jumpToPage(index),
+      // Seekbar addresses RAW pages → map to the display position.
+      onChanged: (index) => scrollController
+          .jumpToPage(mapping == null ? index : mapping.rawToDisplay(index)),
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       onPrevious: () => scrollController.previousPage(
         duration: pagedNavDuration(animate: isAnimationEnabled),
@@ -161,6 +240,25 @@ class SinglePageReaderMode extends HookConsumerWidget {
               );
             }
 
+            // Composite path: render a spread / split half for this display
+            // position. RAW-page reporting stays intact via [mapping].
+            if (mapping != null) {
+              if (index >= mapping.length) {
+                return const Center(child: CenterSorayomiShimmerIndicator());
+              }
+              return DoublePageView(
+                entry: mapping.entries[index],
+                pages: chapterPages.pages,
+                pageFit: pageFit,
+                pageSize: pageSize,
+                centerMargin: centerMargin,
+                rotateWide: rotateWide,
+                rotateWideInvert: rotateWideInvert,
+                reversePair: reversePair,
+                onPageWide: onPageWide,
+              );
+            }
+
             // Add bounds checking to prevent accessing non-existent pages
             if (index >= chapterPages.pages.length) {
               return const Center(
@@ -188,7 +286,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
               ),
             );
           },
-          itemCount: chapterPages.pages.isEmpty ? 1 : chapterPages.pages.length,
+          itemCount: itemCount,
         ),
       ),
     );
