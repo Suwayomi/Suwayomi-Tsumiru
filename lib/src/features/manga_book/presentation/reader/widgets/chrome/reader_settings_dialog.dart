@@ -140,9 +140,9 @@ class ReaderSettingsDialog extends HookConsumerWidget {
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.75,
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
       // I7: the sheet's scroll controller is deliberately attached to NOTHING —
       // sharing it across the tabs is a hard "attached to multiple scroll
       // views" crash. Each tab owns its own scroll view (primary: false).
