@@ -20,8 +20,8 @@ import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
-import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
@@ -170,8 +170,9 @@ class ContinuousReaderMode extends HookConsumerWidget {
       return null;
     }, [currentIndex.value]); // Only watch currentIndex changes
 
+    // Komikku "animate page transitions": animate next/prev when ON, else jump.
     final bool isAnimationEnabled =
-        ref.read(readerScrollAnimationProvider).ifNull(true);
+        ref.read(animatePageTransitionsProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
         ref.read(pinchToZoomProvider).ifNull(true);
     final bool isDoubleTapZoomEnabled =

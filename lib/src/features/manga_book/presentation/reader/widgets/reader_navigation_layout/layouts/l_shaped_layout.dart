@@ -17,6 +17,7 @@ class LShapedLayout extends StatelessWidget {
     this.onBottomTap,
     this.topColor,
     this.bottomColor,
+    this.smaller = false,
   });
 
   final VoidCallback? onLeftTap;
@@ -30,6 +31,9 @@ class LShapedLayout extends StatelessWidget {
   final VoidCallback? onBottomTap;
   final Color? topColor;
   final Color? bottomColor;
+
+  /// Komikku "smaller tap zones": prev/next bands 0.25 (flex 1:2:1) vs 0.33.
+  final bool smaller;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -42,6 +46,7 @@ class LShapedLayout extends StatelessWidget {
           ),
         ),
         Expanded(
+          flex: smaller ? 2 : 1,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -52,7 +57,7 @@ class LShapedLayout extends StatelessWidget {
                   child: Container(color: leftColor),
                 ),
               ),
-              const Expanded(child: SizedBox.expand()),
+              Expanded(flex: smaller ? 2 : 1, child: const SizedBox.expand()),
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,

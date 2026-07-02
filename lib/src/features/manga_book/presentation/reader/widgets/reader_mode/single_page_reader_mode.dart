@@ -21,13 +21,17 @@ import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
-import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/reader_zoom_toggles.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../reader_wrapper.dart';
 import 'rotate_wide_page.dart';
+
+/// Komikku "animate page transitions": paged next/prev animate over
+/// [kDuration] when ON, else jump instantly ([kInstantDuration]).
+Duration pagedNavDuration({required bool animate}) =>
+    animate ? kDuration : kInstantDuration;
 
 class SinglePageReaderMode extends HookConsumerWidget {
   const SinglePageReaderMode({
@@ -96,8 +100,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
       scrollController.addListener(listener);
       return () => scrollController.removeListener(listener);
     }, [scrollController]);
+    // Komikku "animate page transitions": animate next/prev when ON, else jump.
     final isAnimationEnabled =
-        ref.read(readerScrollAnimationProvider).ifNull(true);
+        ref.read(animatePageTransitionsProvider).ifNull(true);
     // Paged "Disable zoom in" drops the whole zoom wrapper (pinch AND the
     // double-tap-drag zoom) — Komikku's pref_paged_disable_zoom_in.
     final isZoomDisabled = ref.read(disableZoomInProvider).ifNull();
@@ -119,11 +124,11 @@ class SinglePageReaderMode extends HookConsumerWidget {
       onChanged: (index) => scrollController.jumpToPage(index),
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       onPrevious: () => scrollController.previousPage(
-        duration: isAnimationEnabled ? kDuration : kInstantDuration,
+        duration: pagedNavDuration(animate: isAnimationEnabled),
         curve: kCurve,
       ),
       onNext: () => scrollController.nextPage(
-        duration: isAnimationEnabled ? kDuration : kInstantDuration,
+        duration: pagedNavDuration(animate: isAnimationEnabled),
         curve: kCurve,
       ),
       pageController: scrollController,

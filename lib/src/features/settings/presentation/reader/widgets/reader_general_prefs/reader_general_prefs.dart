@@ -27,8 +27,8 @@ class ReaderBackgroundColorKey extends _$ReaderBackgroundColorKey
       );
 }
 
-/// Inert for now: no standalone page-number indicator exists outside the
-/// seekbars (page_number_slider.dart is dead code).
+/// Drives the reader-chrome page-number pill (ReaderChrome), an always-mounted
+/// "n / m" leaf visible while reading.
 @riverpod
 class ShowPageNumber extends _$ShowPageNumber
     with SharedPreferenceClientMixin<bool> {

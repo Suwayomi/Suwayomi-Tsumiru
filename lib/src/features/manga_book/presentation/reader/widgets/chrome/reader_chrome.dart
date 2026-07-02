@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/theme/brand.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.dart';
@@ -218,6 +219,10 @@ class ReaderChrome extends HookConsumerWidget {
         ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
     final leftHanded =
         ref.watch(leftHandedVerticalSeekbarProvider).ifNull(false);
+    // Komikku "show page number": a subtle "n / m" pill near the bottom, always
+    // mounted (outside the animated bars) so it stays visible while reading.
+    final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
+    final pageCount = totalPageCount ?? chapterPages.chapter.pageCount;
 
     return ValueListenableBuilder<bool>(
       valueListenable: visibility,
@@ -238,6 +243,31 @@ class ReaderChrome extends HookConsumerWidget {
             Positioned.fill(
               child: ReaderFlashOverlay(currentIndex: currentIndex),
             ),
+
+            // ── Page-number indicator ─────────────────────────────────────────
+            // Always-mounted leaf gated only by the pref (NOT the chrome
+            // animation), so it stays visible while reading. Sits under the
+            // bottom bar in the Stack, so the visible menu covers it.
+            if (showPageNumber && pageCount > 0)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Center(
+                        child: _PageNumberIndicator(
+                          currentPage: currentIndex + 1,
+                          pageCount: pageCount,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Top bar ───────────────────────────────────────────────────────
             // SlideTransition from Offset(0, -1) (fully above viewport) → zero.
@@ -336,6 +366,34 @@ class ReaderChrome extends HookConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Subtle "n / m" pill, styled off the shared reader-nav surface token so it
+/// matches the bar capsules.
+class _PageNumberIndicator extends StatelessWidget {
+  const _PageNumberIndicator({
+    required this.currentPage,
+    required this.pageCount,
+  });
+
+  final int currentPage;
+  final int pageCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: readerNavSurface(cs),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$currentPage / $pageCount',
+        style: context.textTheme.labelMedium?.copyWith(color: cs.onSurface),
+      ),
     );
   }
 }

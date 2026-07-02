@@ -13,11 +13,15 @@ class KindlishLayout extends StatelessWidget {
     this.onRightTap,
     this.leftColor,
     this.rightColor,
+    this.smaller = false,
   });
   final VoidCallback? onLeftTap;
   final VoidCallback? onRightTap;
   final Color? leftColor;
   final Color? rightColor;
+
+  /// Komikku "smaller tap zones": prev band 0.25 (flex 1:3) vs 0.33 (1:2).
+  final bool smaller;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -25,7 +29,7 @@ class KindlishLayout extends StatelessWidget {
       children: [
         const Expanded(child: SizedBox.expand()),
         Expanded(
-          flex: 2,
+          flex: smaller ? 3 : 2,
           child: Row(
             children: [
               Expanded(
@@ -36,7 +40,7 @@ class KindlishLayout extends StatelessWidget {
                 ),
               ),
               Expanded(
-                flex: 2,
+                flex: smaller ? 3 : 2,
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onTap: onRightTap,

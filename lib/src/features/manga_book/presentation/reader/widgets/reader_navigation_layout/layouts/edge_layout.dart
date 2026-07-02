@@ -13,11 +13,15 @@ class EdgeLayout extends StatelessWidget {
     this.onRightTap,
     this.leftColor,
     this.rightColor,
+    this.smaller = false,
   });
   final VoidCallback? onLeftTap;
   final VoidCallback? onRightTap;
   final Color? leftColor;
   final Color? rightColor;
+
+  /// Komikku "smaller tap zones": edge width 0.25 (flex 1:2:1) vs 0.33 (1:1:1).
+  final bool smaller;
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -31,11 +35,12 @@ class EdgeLayout extends StatelessWidget {
           ),
         ),
         Expanded(
+          flex: smaller ? 2 : 1,
           child: Column(
             children: [
-              const Expanded(
-                flex: 2,
-                child: SizedBox.expand(),
+              Expanded(
+                flex: smaller ? 3 : 2,
+                child: const SizedBox.expand(),
               ),
               Expanded(
                 child: GestureDetector(
