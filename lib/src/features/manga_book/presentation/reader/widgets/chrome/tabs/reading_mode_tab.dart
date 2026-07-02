@@ -191,18 +191,8 @@ class _PagedSection extends ConsumerWidget {
               ),
           ],
         ),
-        _SectionLabel(context.l10n.zoomStart),
-        _ChipRow(
-          children: [
-            for (final start in ZoomStart.values)
-              FilterChip(
-                selected: settings.zoomStart == start,
-                showCheckmark: false,
-                label: Text(start.toLocale(context)),
-                onSelected: (_) => model.setZoomStart(start),
-              ),
-          ],
-        ),
+        // zoomStart hidden: per-page pan focus can't be expressed on the
+        // list-level zoom_view; see docs/architecture/reader.md (zoom trio).
         _SectionLabel(context.l10n.pageLayout),
         _ChipRow(
           children: [
@@ -239,18 +229,8 @@ class _PagedSection extends ConsumerWidget {
           value: settings.cropBorders,
           onChanged: model.setCropBorders,
         ),
-        SwitchListTile(
-          controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.landscapeZoom),
-          value: settings.landscapeZoom,
-          onChanged: model.setLandscapeZoom,
-        ),
-        SwitchListTile(
-          controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.navigateToPan),
-          value: settings.navigateToPan,
-          onChanged: model.setNavigateToPan,
-        ),
+        // landscapeZoom + navigateToPan hidden: both need per-page pan on the
+        // list-level zoom_view; see docs/architecture/reader.md (zoom trio).
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.splitWidePages),
@@ -364,12 +344,8 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.cropBordersWebtoon,
           onChanged: model.setCropBordersWebtoon,
         ),
-        SwitchListTile(
-          controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.smoothAutoScroll),
-          value: settings.smoothAutoScroll,
-          onChanged: model.setSmoothAutoScroll,
-        ),
+        // smoothAutoScroll hidden: no auto-scroll driver exists yet (a webtoon
+        // auto-advance feature); see docs/architecture/reader.md.
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.animatePageTransitions),
@@ -394,18 +370,8 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.disableZoomOut,
           onChanged: model.setDisableZoomOut,
         ),
-        SwitchListTile(
-          controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.splitWidePages),
-          value: settings.dualPageSplitWebtoon,
-          onChanged: model.setDualPageSplitWebtoon,
-        ),
-        if (settings.dualPageSplitWebtoon)
-          _SubSwitchTile(
-            title: context.l10n.invertSplitPagesPlacement,
-            value: settings.dualPageInvertWebtoon,
-            onChanged: model.setDualPageInvertWebtoon,
-          ),
+        // Webtoon split-wide hidden: splitting one strip page into two entries
+        // needs a page-list remap in the frozen webtoon engine; see reader.md.
         if (showGapsSettings) ...[
           _SectionLabel(context.l10n.readerModeChipLongStripGaps),
           SwitchListTile(

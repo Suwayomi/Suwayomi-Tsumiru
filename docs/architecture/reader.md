@@ -90,29 +90,27 @@ Slider drags in the Custom-filter tab must not rebuild the viewer or the tab. `r
 
 Reader DBKeys: `readerMode` (webtoon), `readerPadding` (0.0), `readerMagnifierSize` (1.0), `readerNavigationLayout` (disabled), `swipeToggle` (true), `lastPageSwipeEnabled` (false), `infinityScrollingMode` (false), `readerOverlay` (true), `pinchToZoom` (true), `readerIgnoreSafeArea` (false). Per-manga overrides via `MangaMetaKeys` take precedence. Many more zoom/filter/general keys added this branch (see below); most are settings-complete but engine-inert.
 
-## Persisted but not yet wired
+## Settings wiring status
 
-These settings persist and round-trip through the UI, but the frozen reader engines don't consume them yet — a follow-up engine PR wires each. **Do not "fix" them here** (intentional; wiring is a page-list-remap / platform-attr / plugin change that would breach the frozen-engine boundary).
+Nearly every reader-experience setting is now consumed by the viewers. The few
+that aren't are **hidden from the settings UI** (not shipped as dead toggles) —
+each with a concrete architectural blocker below.
 
-| Setting | Why inert |
+**Hidden — engine/architecture blocked** (removed from `reading_mode_tab.dart`):
+
+| Setting(s) | Blocker |
 |---|---|
-| `dualPageSplitPaged` (+`Invert`) | needs page-list remap (split one wide image into two entries) — frozen engine |
-| `dualPageSplitWebtoon` (+`Invert`) | same page-list remap in the webtoon engine |
-| `trueDualPageSpread` | needs paired-page layout in the pager — frozen engine |
-| `imageScaleType`, `zoomStart`, `pageLayout`, `centerMarginType`, `webtoonScaleType` | paged/webtoon scale + zoom-start + layout are baked into the frozen viewers |
-| `landscapeZoom`, `navigateToPan` | pan/zoom-on-landscape gestures live in the frozen `ZoomView` path |
-| `smallerTapZones` | tap-zone geometry is fixed in the nav-layout widgets |
-| `cropBorders`, `cropBordersWebtoon`, `cropBordersGaps` | needs image-edge cropping in the decode path |
-| `animatePageTransitions` | `PageView`/SPL transition curves are engine-owned |
-| `smoothAutoScroll` | no auto-scroll driver exists yet |
-| `invertDoublePages` | pairs with dual-page split (also inert) |
-| positive `customBrightnessValue` | needs the window `screenBrightness` plugin (negative values ARE wired via the dim overlay) |
-| `showPageNumber` | the only page-number indicator (`page_number_slider.dart`) is dead code — no indicator to toggle |
-| `drawUnderCutout` | Android window display-cutout attribute, not a Flutter render concern |
-| `readWithLongTap` | no page-actions sheet exists to long-press into |
-| `alwaysShowChapterTransition` | chapter-transition rendering is in the frozen continuous engines |
+| `zoomStart`, `landscapeZoom`, `navigateToPan` | Per-page pan / zoom focus. The paged viewer zooms via a **list-level `ZoomView`** — one shared transform, no per-page pan. Expressing these needs per-page gesture zoom, i.e. the `InteractiveViewer` path **deliberately removed in #147 / #25105497**: its scale recognizer loses the gesture arena to the swipe recognizers, so pinch became "almost unusable". Reintroducing it regresses the hard-won pinch/page-turn fixes (#80, #91143ccd, #e92f3c83). Needs a purpose-built per-page gesture-zoom engine that wins the arena — a scoped follow-up, not a settings change. |
+| `dualPageSplitWebtoon` (+`Invert`) | Splitting one strip page into two entries needs a page-list remap (1→2) inside the **frozen** webtoon scroll/index math. |
+| `smoothAutoScroll` | No auto-scroll driver exists yet (a webtoon auto-advance feature); the toggle has nothing to modify. |
 
-**Wired this branch (for contrast):** zoom toggles (double-tap / pinch / disable zoom-out→min 0.5 / disable zoom-in), rotate-wide-pages (+invert), background color, seekbar chain + landscape/left-handed, fullscreen, page-change flash, keep-screen-on, auto-webtoon, orientation, tap-invert (4-value), tap-zone layouts, and all custom-filter overlays (grayscale / invert / negative brightness / blended color).
+**Still shown but inert (niche):** `cropBordersGaps` — appears only in the
+non-default "Long strip with gaps" mode; its own key isn't read by an engine
+(the wired crop uses `cropBorders` / `cropBordersWebtoon`).
+
+**Wired this branch:** image scale type · double-page / wide-split / true-dual-spread / center-margin (paged) · webtoon smart-scale (non-infinity) · **auto-crop borders** (decoder-level `CroppedImageProvider` → pure-Dart isolate edge-scan, applied across single/double/split/webtoon engines) · always-show-chapter-transition · smaller tap zones · page-number indicator · animate page transitions · positive custom brightness (`screen_brightness`) · **long-tap page actions** (copy link / open in web / share image / save to gallery) · **draw-under-cutout** (native `MethodChannel` → `layoutInDisplayCutoutMode`) · plus the earlier zoom toggles (double-tap / pinch / disable zoom-out→min 0.5 / disable zoom-in) · rotate-wide (+invert) · background color · seekbar chain + landscape/left-handed · fullscreen · page-change flash · keep-screen-on · auto-webtoon · orientation · tap-invert (4-value) · tap-zone layouts · all custom-filter overlays (grayscale / invert / negative brightness / blended color).
+
+**Crop-borders render path:** `ServerImage(cropBorders: true)` swaps in `CroppedImageProvider` (`reader/crop/`), which fetches the page's encoded bytes through the SAME cache entry (shared `cacheKey` + auth headers via `serverImageRequest`), runs `findContentRect` in a `compute()` isolate (`image` pkg decode → per-edge threshold scan, corner-reference, ≥10%-area guard), and yields the cropped frame via `ui.decodeImageFromPixels`. Because it's an `ImageProvider`, crop composes with rotate/split/double through the existing `imageBuilder`. In the multichapter engine the crop frame decodes under the imageBuilder's own `frameBuilder`, so the reserved-height / `MeasureSize` scroll-anchor contract is untouched.
 
 Page-progress: `onPageChanged` debounces 2s then `putChapter` (`lastPageRead`); final page fires immediately with `isRead: true, lastPageRead: 0`. Uses actual loaded page count, not metadata.
 
@@ -126,5 +124,5 @@ Page-progress: `onPageChanged` debounces 2s then `putChapter` (`lastPageRead`); 
 - **`infinityScrollingMode` toggle only shows when the global default is `webtoon`** — hidden if global is `continuousVertical` but per-manga is `webtoon`.
 - **`minVisibleAreaThreshold = 0.4` is duplicated** in `_ScrollConfig` and `InfinityContinuousConfig` (not shared).
 - **Requires the pinned `scrollable_positioned_list` fork** (exposes `ScrollOffsetController.position`) — won't compile against pub.dev.
-- **FROZEN reader-engine boundary:** the viewer engines (`multichapter_continuous_reader_mode.dart`, `continuous_reader_mode.dart`, `single_page_reader_mode.dart`, `infinity_continuous/*`, `reader_chapter_logic.dart`) are treated as frozen — the reader-experience settings work touched them only *parametrically* (the multichapter change is a purely parametric zoom exception: 1 import + 2 `ref.read`s + `minScale`/`doubleTapDrag` args on the existing `ZoomView`). Any setting that would need a page-list remap, new gesture, or decode-path change (see "Persisted but not yet wired") is deferred to a dedicated engine PR rather than breaching this boundary.
-- **`page_number_slider.dart` is dead code** (0 real usages) — its `showPageNumber` pref has no indicator to drive.
+- **FROZEN reader-engine boundary (narrowed):** only the **scroll / position / index math** in `multichapter_continuous_reader_mode.dart` + `reader_chapter_logic.dart` is frozen. Render-only, parametric changes to `ServerImage` in the viewers are allowed (precedent: the multichapter zoom `minScale`/`doubleTapDrag` args, and this branch's `cropBorders:` arg — a render-only decode swap that the imageBuilder's own `frameBuilder` absorbs, leaving the height-reservation math untouched). Anything needing a **page-list remap** (webtoon dual-split) or a **new per-page gesture** (zoom trio) still stays out — see "Settings wiring status".
+- **`reader_screen` hook effects must not read inherited widgets inside the effect body** — a `useEffect` that called `context.l10n` fired during hook-init and threw `_debugIsInitHook` (crashed the reader for webtoon series). Resolve l10n/theme/media in `build` and capture the value; only use the captured value inside the effect.

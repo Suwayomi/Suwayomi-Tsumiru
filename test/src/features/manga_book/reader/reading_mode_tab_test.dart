@@ -20,7 +20,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
-import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -205,7 +204,8 @@ void main() {
       scrollable: tabScrollable(),
     );
     expect(find.text('Scale type'), findsOneWidget);
-    expect(find.text('Zoom start position'), findsOneWidget);
+    // Zoom start position is hidden (per-page pan on list-level zoom; reader.md).
+    expect(find.text('Zoom start position'), findsNothing);
     expect(find.text('Smart scale on wide screen'), findsNothing);
     expect(find.text('Smooth Auto Scroll'), findsNothing);
   });
@@ -274,8 +274,8 @@ void main() {
   });
 
   testWidgets(
-      'paged wide-page toggles sit between Pan wide images and Animate page '
-      'transitions; invert sub-toggles hidden while parents are OFF',
+      'paged wide-page toggles ordered before Animate page transitions; '
+      'invert sub-toggles hidden while OFF; Pan wide images hidden',
       (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
 
@@ -285,8 +285,9 @@ void main() {
       scrollable: tabScrollable(),
     );
 
+    // Pan wide images (navigateToPan) is hidden (per-page pan; see reader.md).
+    expect(find.text('Pan wide images'), findsNothing);
     double dy(String text) => tester.getTopLeft(find.text(text)).dy;
-    expect(dy('Pan wide images'), lessThan(dy('Split wide pages')));
     expect(dy('Split wide pages'), lessThan(dy('Rotate wide pages to fit')));
     expect(
       dy('Rotate wide pages to fit'),
@@ -357,32 +358,21 @@ void main() {
   });
 
   testWidgets(
-      'long-strip split sits after Disable zoom out, writes the webtoon '
-      'providers, and gates its invert sub-toggle', (tester) async {
+      'webtoon split-wide is hidden (frozen page-list remap); no paged-only '
+      'rows leak into the long-strip section', (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'webtoon'});
 
     await tester.scrollUntilVisible(
-      find.text('Split wide pages'),
+      find.text('Disable zoom out'),
       200,
       scrollable: tabScrollable(),
     );
-    double dy(String text) => tester.getTopLeft(find.text(text)).dy;
-    expect(dy('Disable zoom out'), lessThan(dy('Split wide pages')));
+    // Webtoon dual-split (+invert) is hidden — a 1→2 page-list remap would
+    // breach the frozen webtoon scroll math (see reader.md).
+    expect(find.text('Split wide pages'), findsNothing);
     expect(find.text('Invert split pages placement'), findsNothing);
-    // Paged-only rows must not leak into the long-strip section.
+    // Paged-only rows must not leak into the long-strip section either.
     expect(find.text('Rotate wide pages to fit'), findsNothing);
     expect(find.text('Dual page spread in landscape'), findsNothing);
-
-    await tester.tap(find.text('Split wide pages'));
-    await tester.pumpAndSettle();
-
-    expect(container(tester).read(dualPageSplitWebtoonProvider), isTrue);
-    expect(container(tester).read(dualPageSplitPagedProvider), isNot(isTrue),
-        reason: 'webtoon split has its own key');
-    expect(find.text('Invert split pages placement'), findsOneWidget);
-
-    await tester.tap(find.text('Invert split pages placement'));
-    await tester.pumpAndSettle();
-    expect(container(tester).read(dualPageInvertWebtoonProvider), isTrue);
   });
 }
