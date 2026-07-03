@@ -26,6 +26,11 @@ name: Release (fork)
 
 on:
   workflow_dispatch:
+  # Weekly all-platform dry run: catches iOS/macOS breakage before release day
+  # (the PR check builds a single platform). Without a tag ref, the
+  # release-attach and publish steps are skipped, so nothing is published.
+  schedule:
+    - cron: '0 6 * * 1'
   push:
     tags:
       - "v*.*.*"
