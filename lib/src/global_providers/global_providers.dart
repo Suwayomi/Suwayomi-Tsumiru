@@ -14,6 +14,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/db_keys.dart';
+import '../constants/timeout_constants.dart';
 import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
@@ -43,13 +44,13 @@ GraphQLClient graphQlClient(Ref ref) {
   final retryDelayMs = ref.watch(autoRefreshRetryDelayProvider) ??
       DBKeys.autoRefreshRetryDelay.initial as int;
 
-  final effectiveTimeoutMs = autoRetry
-      ? (retryDelayMs < timeoutMs ? retryDelayMs : timeoutMs)
-      : timeoutMs;
-
-  final retryCount = autoRetry
-      ? ((timeoutMs / retryDelayMs).ceil() - 1).clamp(0, 10)
-      : 0; // cap at 10 retries for safety
+  // Every attempt gets the FULL timeout. Subdividing the budget into
+  // delay-sized attempts (the old model) rapid-fires aborts while the server
+  // keeps fetching each one from the source; the stacked fetches have been
+  // observed to drive a server to 2GB RAM / 70% CPU. Few, full-length
+  // attempts keep retry pressure bounded.
+  final effectiveTimeoutMs = timeoutMs;
+  final retryCount = autoRetry ? TimeoutConstants.autoRefreshMaxRetries : 0;
 
   Link link = HttpLink(
     Endpoints.baseApi(
@@ -131,9 +132,12 @@ GraphQLClient graphQlClient(Ref ref) {
     ),
     // The package layers its own query timeout (default 5s) on top of the
     // HTTP client's; without this the Server Request Timeout setting can't
-    // reach past 5s ("TimeoutException ... No stream event"). The 2s grace
-    // keeps the HTTP layer (and its retries) resolving first.
-    queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
+    // reach past 5s ("TimeoutException ... No stream event"). Sized to cover
+    // the HTTP layer's whole retry window plus 2s grace, so the HTTP layer
+    // always resolves first and keeps its error semantics.
+    queryRequestTimeout: Duration(
+        milliseconds:
+            timeoutMs * (retryCount + 1) + retryDelayMs * retryCount + 2000),
     cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
   );
 }

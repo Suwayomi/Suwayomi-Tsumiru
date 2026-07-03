@@ -17,6 +17,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/constants/enum.dart';
+import 'src/constants/timeout_constants.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
 import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
@@ -161,6 +162,23 @@ Future<void> _startApp() async {
     }
   } catch (e, st) {
     debugPrint('lastRead sort direction migration failed: $e\n$st');
+  }
+
+  // 3.6) One-time: the old request-timeout model was broken twice over (a
+  //    hidden 5s graphql-layer cap the setting never reached, and retries
+  //    subdivided into delay-sized attempts). Any saved value was tuned
+  //    against that broken behavior, so move EVERY install to the new model:
+  //    30s timeout, auto-retry on. Deliberate full override, per Aaron.
+  try {
+    const migratedKey = 'requestTimeout30sMigrated';
+    if (sharedPreferences.getBool(migratedKey) != true) {
+      await sharedPreferences.setInt(
+          'serverRequestTimeout', TimeoutConstants.requestTimeoutDefaultMs);
+      await sharedPreferences.setBool('autoRefreshOnTimeout', true);
+      await sharedPreferences.setBool(migratedKey, true);
+    }
+  } catch (e, st) {
+    debugPrint('request timeout migration failed: $e\n$st');
   }
 
   // 4) Preload both auth providers BEFORE the first frame so synchronous reads
