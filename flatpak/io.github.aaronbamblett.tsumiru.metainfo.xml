@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>io.github.aaronbamblett.tsumiru</id>
   <name>Tsumiru</name>
-  <summary>A fast, multiplatform reader for your Suwayomi server</summary>
+  <summary>Manga and webtoon reader for your Suwayomi server</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MPL-2.0</project_license>
   <developer id="io.github.aaronbamblett">
@@ -11,7 +11,7 @@
   <description>
     <p>
       Tsumiru is a client for a Suwayomi (Tachidesk) server. Your sources,
-      extensions, downloads, and library all live on your own server — Tsumiru
+      extensions, downloads, and library all live on your own server. Tsumiru
       is the reader you point at it, so the same library is available on every
       device.
     </p>
@@ -24,7 +24,7 @@
   </description>
   <launchable type="desktop-id">io.github.aaronbamblett.tsumiru.desktop</launchable>
   <url type="homepage">https://tsumiru.app/</url>
-  <url type="bugtracker">https://github.com/tsumiru-app/tsumiru/issues</url>
+  <url type="bugtracker">https://github.com/Suwayomi/Suwayomi-Tsumiru/issues</url>
   <url type="help">https://tsumiru.app/docs/guides/getting-started</url>
   <content_rating type="oars-1.1"/>
   <releases>

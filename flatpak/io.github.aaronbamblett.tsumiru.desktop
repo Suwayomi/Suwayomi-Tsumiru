@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Tsumiru
-Comment=A fast, multiplatform reader for your Suwayomi server
+Comment=A manga and webtoon reader for your Suwayomi server
 Exec=tsumiru
 Icon=io.github.aaronbamblett.tsumiru
 Terminal=false
