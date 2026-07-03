@@ -71,9 +71,10 @@ flutter build apk            # or: linux / windows / macos / web
 
 ## Credits & license
 
-Tsumiru stands on the work of the [Suwayomi](https://github.com/Suwayomi) project,
-including [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) and the client
-Tsumiru grew from. Huge thanks to those maintainers and contributors.
+Tsumiru stands on the work of the [Suwayomi](https://github.com/Suwayomi) project:
+[Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) (the client Tsumiru
+grew from) and [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) (the server
+it talks to). Huge thanks to those maintainers and contributors.
 
 Licensed under the **Mozilla Public License 2.0** (see [LICENSE](LICENSE)). As with the
 upstream project, source files retain their MPL-2.0 headers.
