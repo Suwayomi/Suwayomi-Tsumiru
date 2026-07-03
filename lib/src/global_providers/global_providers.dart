@@ -109,6 +109,7 @@ GraphQLClient graphQlClient(Ref ref) {
             addPort: ref.read(serverPortToggleProvider).ifNull(),
             isGraphQl: true,
           )),
+          queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
           cache: GraphQLCache(),
         );
         return await ref
@@ -128,6 +129,11 @@ GraphQLClient graphQlClient(Ref ref) {
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),
+    // The package layers its own query timeout (default 5s) on top of the
+    // HTTP client's; without this the Server Request Timeout setting can't
+    // reach past 5s ("TimeoutException ... No stream event"). The 2s grace
+    // keeps the HTTP layer (and its retries) resolving first.
+    queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
     cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
   );
 }
@@ -201,11 +207,15 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   ref.onDispose(() => unawaited(wsLink.dispose().catchError((_) {})));
 
   final loggerLink = LoggerLink();
+  final timeoutMs = ref.watch(serverRequestTimeoutProvider) ??
+      DBKeys.serverRequestTimeout.initial as int;
   return GraphQLClient(
     link: loggerLink.concat(wsLink),
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),
+    // Same package-level timeout as the query client (default is a hard 5s).
+    queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
     cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
   );
 }
