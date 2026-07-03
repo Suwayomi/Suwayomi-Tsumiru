@@ -85,7 +85,9 @@ enum DBKeys {
   historyEnabled(true),
   historyRetentionDays(90),
   // Timeout Settings
-  serverRequestTimeout(5000), // milliseconds
+  // 30s matches Komikku's source read timeout; pages proxied live from a
+  // source routinely exceed 5s on first fetch.
+  serverRequestTimeout(30000), // milliseconds
   autoRefreshOnTimeout(false),
   autoRefreshRetryDelay(1000), // milliseconds
   // Offline safety-net settings
