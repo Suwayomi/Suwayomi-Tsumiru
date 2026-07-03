@@ -7,12 +7,15 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
 import '../data/auth_state.dart';
+
 
 /// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
 /// `ScaffoldMessenger` when the session has expired. Returns its child
@@ -66,19 +69,27 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   }
 
   MaterialBanner _buildBanner() {
-    final authType = ref.read(authTypeKeyProvider);
+    // Fall back to the stored default (as the GraphQL clients do) so a
+    // not-yet-hydrated pref reads as its real value, not null.
+    final authType =
+        ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     return MaterialBanner(
       content: Text(context.l10n.authSessionExpired),
       leading: const Icon(Icons.warning_amber_rounded),
       actions: [
         TextButton(
+          // The button must never be a dead end. For a known credential mode
+          // pop the quick login dialog; otherwise send the user to the
+          // Connection screen, where they can set the mode and sign in.
           onPressed: () {
             if (authType == AuthType.simpleLogin ||
                 authType == AuthType.uiLogin) {
               showDialog(
                 context: context,
-                builder: (_) => LoginCredentialsPopup(authType: authType!),
+                builder: (_) => LoginCredentialsPopup(authType: authType),
               );
+            } else {
+              const ConnectionRoute().go(context);
             }
           },
           child: Text(context.l10n.authReauthenticate),
