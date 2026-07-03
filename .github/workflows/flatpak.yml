@@ -72,6 +72,15 @@ jobs:
           path: flatpak/bundle
       - name: Import GPG signing key
         run: echo "${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}" | gpg --batch --import
+      - name: Stamp the app version into the AppStream metainfo
+        # The checked-in <releases> list goes stale the moment it's written;
+        # generate the current entry from pubspec.yaml at package time instead.
+        run: |
+          version="$(sed -n 's/^version: \([0-9.]*\)+.*/\1/p' pubspec.yaml)"
+          today="$(date -u +%F)"
+          entry="<releases>\n    <release version=\"$version\" date=\"$today\">\n      <url>https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v$version</url>\n    </release>\n  </releases>"
+          perl -0pi -e "s|<releases>.*</releases>|$entry|s" flatpak/io.github.aaronbamblett.tsumiru.metainfo.xml
+          grep -A3 "<releases>" flatpak/io.github.aaronbamblett.tsumiru.metainfo.xml | head -5
       - uses: andyholmes/flatter@main
         with:
           files: flatpak/io.github.aaronbamblett.tsumiru.yml
