@@ -126,6 +126,15 @@ class MangaCoverGridTile extends StatelessWidget {
                     manga.title,
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
+                    // Drawn on the cover art, not the theme surface: always
+                    // white over the black scrim, shadowed for light covers
+                    // (Komikku's CoverTextOverlay values).
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      height: 1.5,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                    ),
                   ),
                   // The button shares the footer row: the title takes the
                   // remaining width, so it can never sit under the button.
@@ -153,14 +162,16 @@ class MangaCoverGridTile extends StatelessWidget {
                             )
                           ]
                         : null,
+                    // Theme-independent scrim (Komikku: transparent → 67%
+                    // black over the bottom third) — the title always reads
+                    // white-on-dark in both light and dark mode.
                     gradient: showTitle
-                        ? LinearGradient(
-                            begin: Alignment.center,
+                        ? const LinearGradient(
+                            begin: Alignment(0, 1 / 3),
                             end: Alignment.bottomCenter,
                             colors: [
-                              context.theme.canvasColor.withValues(alpha: 0),
-                              context.theme.canvasColor.withValues(alpha: 0.4),
-                              context.theme.canvasColor.withValues(alpha: 0.9),
+                              Colors.transparent,
+                              Color(0xAA000000),
                             ],
                           )
                         : null,
