@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,12 +24,12 @@ import '../../../../helpers/offline_test_db.dart';
 
 class _ThrowingCategoryRepo implements CategoryRepository {
   @override
-  dynamic noSuchMethod(Invocation i) => throw Exception('offline');
+  dynamic noSuchMethod(Invocation i) => throw const SocketException('offline');
 }
 
 class _ThrowingMangaBookRepo implements MangaBookRepository {
   @override
-  dynamic noSuchMethod(Invocation i) => throw Exception('offline');
+  dynamic noSuchMethod(Invocation i) => throw const SocketException('offline');
 }
 
 Future<ProviderContainer> _container(
@@ -59,7 +61,7 @@ void main() {
   });
 
   group('categoriesWithOfflineFallback', () {
-    Future<Never> boom() async => throw Exception('server down');
+    Future<Never> boom() async => throw const SocketException('offline');
 
     test('returns a single default category (count) when fetch throws', () async {
       await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
@@ -83,7 +85,7 @@ void main() {
   });
 
   group('chapterMetaWithOfflineFallback', () {
-    Future<Never> boom() async => throw Exception('server down');
+    Future<Never> boom() async => throw const SocketException('offline');
 
     test('falls back to the catalog chapter row on throw', () async {
       await db.upsertChapterMetadata(

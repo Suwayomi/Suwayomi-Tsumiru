@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,14 +19,14 @@ import '../../../../helpers/offline_test_db.dart';
 class _ThrowingCategoryRepo implements CategoryRepository {
   @override
   Future<List<MangaDto>?> getMangasFromCategory({required int categoryId}) =>
-      throw Exception('offline');
+      throw const SocketException('offline');
 
   @override
-  dynamic noSuchMethod(Invocation i) => throw Exception('offline');
+  dynamic noSuchMethod(Invocation i) => throw const SocketException('offline');
 }
 
 void main() {
-  test('categoryMangaList falls back to the offline catalog on server error',
+  test('categoryMangaList falls back to the offline catalog on connection loss',
       () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
