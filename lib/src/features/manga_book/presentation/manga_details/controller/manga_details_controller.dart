@@ -37,7 +37,8 @@ class MangaWithId extends _$MangaWithId {
       offlineEnabled: ref.watch(offlineEnabledProvider),
       mangaId: mangaId,
     );
-    if (manga != null) {
+    // Don't mirror browsed (non-library) manga into the offline catalog.
+    if (manga != null && manga.inLibrary) {
       unawaited(
           ref.read(offlineSyncProvider)?.syncManga(manga) ?? Future.value());
     }

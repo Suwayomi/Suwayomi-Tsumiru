@@ -230,6 +230,15 @@ Future<void> _startApp() async {
     unawaited(Future(() async {
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
+      // One-time sweep of phantom (browsed-not-added) catalog entries.
+      if (sharedPreferences.getBool('offlinePhantomCleanupDone') != true) {
+        try {
+          await container.read(offlineDatabaseProvider).purgeNonLibraryManga();
+          await sharedPreferences.setBool('offlinePhantomCleanupDone', true);
+        } catch (e, st) {
+          debugPrint('phantom cleanup failed: $e\n$st');
+        }
+      }
       if (isAndroidNative) {
         // Android: the foreground-service worker owns downloads. Register the
         // lifecycle/connectivity hooks, replay any leftover completion log into

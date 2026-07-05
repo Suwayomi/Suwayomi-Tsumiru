@@ -446,6 +446,21 @@ class OfflineDatabase extends _$OfflineDatabase {
       (select(offlineMangas)..orderBy([(t) => OrderingTerm(expression: t.title)]))
           .get();
 
+  /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
+  /// (null/'0') and no on-device chapters, so real entries and downloads stay.
+  Future<int> purgeNonLibraryManga() {
+    final withDeviceContent = selectOnly(offlineChapters)
+      ..addColumns([offlineChapters.mangaId])
+      ..where(offlineChapters.deviceState
+          .equalsValue(OfflineDeviceState.none)
+          .not());
+    return (delete(offlineMangas)
+          ..where((t) =>
+              (t.inLibraryAt.isNull() | t.inLibraryAt.equals('0')) &
+              t.id.isNotInQuery(withDeviceContent)))
+        .go();
+  }
+
   /// Most-recent read timestamp per manga (the max chapter `lastReadAt`), for
   /// the offline library's "Last Read" sort. Mangas with no read chapter are
   /// absent from the map. Values are the server's epoch-millis strings, so the
