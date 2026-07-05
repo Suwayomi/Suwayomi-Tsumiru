@@ -307,7 +307,9 @@ class MangaDescription extends HookConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...manga.genre.map<Widget>((e) => BrandChip(label: e)),
+                ...manga.genre
+                    .where((e) => e.isNotBlank)
+                    .map<Widget>((e) => BrandChip(label: e)),
               ],
             ),
           )
@@ -318,7 +320,7 @@ class MangaDescription extends HookConsumerWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  ...manga.genre.map<Widget>(
+                  ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
                     (e) => Padding(
                       padding: KEdgeInsets.h4.size,
                       child: BrandChip(label: e),
