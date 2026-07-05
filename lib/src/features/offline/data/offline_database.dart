@@ -447,7 +447,8 @@ class OfflineDatabase extends _$OfflineDatabase {
           .get();
 
   /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
-  /// (null/'0') and no on-device chapters, so real entries and downloads stay.
+  /// (null/'0') and nothing downloaded. Never touches downloads; a stray library
+  /// row swept here just re-mirrors on the next online load.
   Future<int> purgeNonLibraryManga() {
     final withDeviceContent = selectOnly(offlineChapters)
       ..addColumns([offlineChapters.mangaId])

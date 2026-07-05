@@ -110,7 +110,7 @@ GraphQLClient graphQlClient(Ref ref) {
             port: ref.read(serverPortProvider),
             addPort: ref.read(serverPortToggleProvider).ifNull(),
             isGraphQl: true,
-          )),
+          ), httpResponseDecoder: tsumiruHttpResponseDecoder),
           queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
           cache: GraphQLCache(),
         );
