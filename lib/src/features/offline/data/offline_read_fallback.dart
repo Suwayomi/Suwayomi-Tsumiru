@@ -5,12 +5,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/network/graphql_errors.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
 import 'offline_dto_mappers.dart';
+
+/// Fall back to the on-device cache only on a genuine loss of connectivity; a
+/// server that answered with an error must surface, not be masked as offline.
+bool _shouldFallBack(Object e) =>
+    isConnectionError(e is OperationMessageException ? e.exception : e);
 
 /// Network-first read with on-device catalog fallback. Tries [fetch]; if it
 /// throws and offline is available with catalog data, returns the catalog
@@ -22,8 +29,8 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
 }) async {
   try {
     return await fetch();
-  } catch (_) {
-    if (!offlineEnabled) rethrow;
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final rows = await db!.libraryManga();
     if (rows.isEmpty) rethrow;
     final lastReadByManga = await db.lastReadAtByManga();
@@ -53,8 +60,8 @@ Future<MangaDto?> mangaWithOfflineFallback({
 }) async {
   try {
     return await fetch();
-  } catch (_) {
-    if (!offlineEnabled) rethrow;
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final m = await db!.mangaById(mangaId);
     if (m == null) rethrow;
     final count = (await db.chaptersForManga(mangaId)).length;
@@ -73,8 +80,8 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
 }) async {
   try {
     return await fetch();
-  } catch (_) {
-    if (!offlineEnabled) rethrow;
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final c = await db!.chapterById(chapterId);
     if (c == null) rethrow;
     return offlineChapterToDto(c);
@@ -92,8 +99,8 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
 }) async {
   try {
     return await fetch();
-  } catch (_) {
-    if (!offlineEnabled) rethrow;
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final count = (await db!.libraryManga()).length;
     if (count == 0) rethrow;
     final storedCats = await db.allOfflineCategories();
@@ -124,8 +131,8 @@ Future<List<ChapterDto>?> chaptersWithOfflineFallback({
 }) async {
   try {
     return await fetch();
-  } catch (_) {
-    if (!offlineEnabled) rethrow;
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final rows = await db!.chaptersForManga(mangaId);
     if (rows.isEmpty) rethrow;
     return [for (final c in rows) offlineChapterToDto(c)];

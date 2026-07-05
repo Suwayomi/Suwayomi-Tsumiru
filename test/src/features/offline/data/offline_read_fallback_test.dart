@@ -1,4 +1,6 @@
 // test/src/features/offline/data/offline_read_fallback_test.dart
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
@@ -9,7 +11,10 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  Future<Never> boom() async => throw Exception('server unreachable');
+  // A genuine loss of connectivity — the only case that should fall back.
+  Future<Never> boom() async => throw const SocketException('unreachable');
+  // The server answered with an error — must surface, never be masked.
+  Future<Never> serverError() async => throw Exception('HTTP 500');
 
   test('library: returns server result when fetch succeeds', () async {
     final r = await libraryWithOfflineFallback(
@@ -86,5 +91,14 @@ void main() {
     final r = await chaptersWithOfflineFallback(
         fetch: boom, db: db, offlineEnabled: true, mangaId: 5);
     expect(r!.single.id, 10);
+  });
+
+  test('library: rethrows a server error rather than masking it with the '
+      'catalog', () async {
+    await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+    expect(
+        libraryWithOfflineFallback(
+            fetch: serverError, db: db, offlineEnabled: true),
+        throwsA(predicate((e) => e.toString().contains('HTTP 500'))));
   });
 }

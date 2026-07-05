@@ -28,6 +28,7 @@ import '../features/settings/presentation/server/widget/credential_popup/credent
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/logger/logger_link.dart';
 import '../utils/mixin/shared_preferences_client_mixin.dart';
+import '../utils/network/graphql_errors.dart';
 import '../utils/network/timeout_http_client.dart';
 
 part 'global_providers.g.dart';
@@ -60,7 +61,7 @@ GraphQLClient graphQlClient(Ref ref) {
       isGraphQl: true,
     ),
     followRedirects: true,
-    // httpResponseDecoder: httpResponseDecoder,
+    httpResponseDecoder: tsumiruHttpResponseDecoder,
     defaultHeaders: {'Content-Type': 'application/json; charset=utf-8'},
     httpClient: TimeoutHttpClient(
       Duration(milliseconds: effectiveTimeoutMs),
