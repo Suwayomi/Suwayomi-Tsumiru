@@ -50,8 +50,15 @@ class SpreadEntry {
   bool get isPair => second != null;
 
   /// The RAW source page reported outward for this display position — always
-  /// the reading-first source page (read-tracking + seekbar contract).
+  /// the reading-first source page (seekbar contract).
   int get primaryRaw => first.raw;
+
+  /// The furthest RAW source page in this display position. A shown spread
+  /// exposes both its pages, so read-progress is the last one, not the first —
+  /// otherwise a double-page chapter's final spread never reports its last page
+  /// and the chapter never auto-marks read. `second.raw >= first.raw` by build
+  /// order (units are paired in ascending raw order).
+  int get progressRaw => second?.raw ?? first.raw;
 
   @override
   bool operator ==(Object other) =>
@@ -80,6 +87,14 @@ class SpreadMapping {
     if (entries.isEmpty) return 0;
     final i = displayIndex.clamp(0, entries.length - 1).toInt();
     return entries[i].primaryRaw;
+  }
+
+  /// display position → the furthest raw page it shows (read-progress contract,
+  /// see [SpreadEntry.progressRaw]). Clamped like [displayToRaw].
+  int displayToProgressRaw(int displayIndex) {
+    if (entries.isEmpty) return 0;
+    final i = displayIndex.clamp(0, entries.length - 1).toInt();
+    return entries[i].progressRaw;
   }
 
   /// raw source page → display position that shows it. Matches either slot, so

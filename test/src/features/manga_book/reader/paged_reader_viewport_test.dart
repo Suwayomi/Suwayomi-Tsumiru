@@ -370,7 +370,8 @@ void main() {
     expect(boundaryHits, 1);
   });
 
-  testWidgets('short drag turns a double-page spread', (tester) async {
+  testWidgets('sub-threshold drag does not turn a double-page spread',
+      (tester) async {
     final pages = _localPages(4);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -393,6 +394,8 @@ void main() {
     );
     reported.clear();
 
+    // A slow 80px drag (~0.1 of the viewport) is below the turn threshold — a
+    // spread must not commit a turn any easier than a single page does.
     await tester.timedDrag(
       find.byType(PagedReaderViewport),
       const Offset(-80, 0),
@@ -400,7 +403,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(reported, [2]);
+    expect(reported, isEmpty);
   });
 
   testWidgets('short fling turns a double-page spread', (tester) async {
@@ -433,7 +436,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(reported, [2]);
+    expect(reported, [3]);
   });
 
   testWidgets('reverse short fling turns a double-page spread', (tester) async {
@@ -467,7 +470,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(reported, [2]);
+    expect(reported, [3]);
   });
 
   testWidgets('paged reader starts at neutral zoom', (tester) async {

@@ -94,6 +94,15 @@ class ReaderScreen extends HookConsumerWidget {
     // Latest page reached, so we can flush it on exit (the debounce below would
     // otherwise drop the last few pages if you back out before it fires).
     final latestPage = useRef<int>(-1);
+    // The first onPageChanged is the initial restore, fired on mount by the
+    // reader host. It must never count as reading — otherwise opening a chapter
+    // already sitting on its last page (paging back into a previous chapter, or
+    // a double-page spread whose last page is the final page) marks it read and
+    // wipes the resume position on open.
+    final initialEmitConsumed = useRef<bool>(false);
+    // Set once a flush has run, so the unmount cleanup doesn't re-flush after a
+    // PopScope pop already did.
+    final didFlush = useRef<bool>(false);
 
     final updateLastRead = useCallback((int currentPage) async {
       // Incognito: leave no trace. Skip every progress/history write (covers
@@ -168,6 +177,12 @@ class ReaderScreen extends HookConsumerWidget {
         final chapterPagesValue = chapterPages.valueOrNull;
         if (chapterValue == null || chapterPagesValue == null) return;
 
+        // Consume the initial restore emit — don't record or complete off it.
+        if (!initialEmitConsumed.value) {
+          initialEmitConsumed.value = true;
+          return;
+        }
+
         // Skip if chapter is already read or if we're going backwards
         if ((chapterValue.isRead).ifNull() ||
             (chapterValue.lastPageRead).getValueOnNullOrNegative() >= index) {
@@ -199,8 +214,21 @@ class ReaderScreen extends HookConsumerWidget {
       [chapter, chapterPages, updateLastRead],
     );
 
+    // Hold the latest updateLastRead so the []-deps unmount cleanup below flushes
+    // with current chapter data, not the stale callback captured at first build.
+    final updateRef = useRef(updateLastRead);
+    updateRef.value = updateLastRead;
     useEffect(() {
-      return () => debounce.value?.cancel();
+      return () {
+        debounce.value?.cancel();
+        // Chapter-skip transitions use pushReplacement, which disposes the
+        // reader without a PopScope pop — the pending page would otherwise be
+        // dropped. Flush it here (fire-and-forget; the widget is gone) unless
+        // the pop path already flushed.
+        if (!didFlush.value && latestPage.value >= 0) {
+          unawaited(updateRef.value(latestPage.value));
+        }
+      };
     }, []);
 
     useEffect(() {
@@ -268,6 +296,7 @@ class ReaderScreen extends HookConsumerWidget {
           debounce.value?.cancel();
           try {
             if (latestPage.value >= 0) {
+              didFlush.value = true;
               await updateLastRead(latestPage.value);
             }
           } finally {
@@ -416,9 +445,11 @@ class ReaderScreen extends HookConsumerWidget {
                   );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),
+                addScaffoldWrapper: true,
               );
             },
             refresh: () => ref.refresh(mangaProvider.future),
+            addScaffoldWrapper: true,
           ),
         ),
       ),

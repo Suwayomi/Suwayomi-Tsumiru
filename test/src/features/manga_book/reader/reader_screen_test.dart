@@ -106,13 +106,31 @@ ChapterDto _chapter() => Fragment$ChapterDto(
       meta: const [],
     );
 
+ChapterDto _partReadChapter() => Fragment$ChapterDto(
+      chapterNumber: 1,
+      fetchedAt: '0',
+      id: 1,
+      isBookmarked: false,
+      isDownloaded: false,
+      isRead: false,
+      lastPageRead: 1,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: 'Chapter 1',
+      pageCount: 3,
+      sourceOrder: 1,
+      uploadDate: '0',
+      url: '/chapter/1',
+      meta: const [],
+    );
+
 ChapterPagesDto _chapterPages() => ChapterPagesDto(
       chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
       pages: _localPages(3),
     );
 
 void main() {
-  testWidgets('cancels debounced progress when the reader unmounts',
+  testWidgets('flushes debounced progress when the reader unmounts without a pop',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -157,7 +175,12 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
 
     expect(tester.takeException(), isNull);
-    expect(repo.putChapterCalls, isEmpty);
+    // Chapter-skip transitions dispose the reader via pushReplacement, without a
+    // PopScope pop — the pending page must be flushed here, not dropped.
+    expect(repo.putChapterCalls, hasLength(1));
+    expect(repo.putChapterCalls.single.chapterId, 1);
+    expect(repo.putChapterCalls.single.patch.lastPageRead, 1);
+    expect(repo.putChapterCalls.single.patch.isRead, isFalse);
   });
 
   testWidgets('flushes debounced progress when the reader route pops',
@@ -223,5 +246,45 @@ void main() {
     expect(repo.putChapterCalls.single.chapterId, 1);
     expect(repo.putChapterCalls.single.patch.lastPageRead, 1);
     expect(repo.putChapterCalls.single.patch.isRead, isFalse);
+  });
+
+  testWidgets('opening at the end does not mark an unread chapter read',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = _RecordingRepo();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(chapterId: 1)
+              .overrideWith((ref) => _partReadChapter()),
+          chapterPagesProvider(chapterId: 1)
+              .overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ReaderScreen(mangaId: 1, chapterId: 1, openAtEnd: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Paging back into a chapter opens it on its last page. The on-mount emit
+    // must not count as reading — otherwise the chapter is marked read and its
+    // resume position wiped just by navigating to it.
+    expect(find.text('3 / 3'), findsOneWidget);
+    expect(repo.putChapterCalls, isEmpty);
   });
 }

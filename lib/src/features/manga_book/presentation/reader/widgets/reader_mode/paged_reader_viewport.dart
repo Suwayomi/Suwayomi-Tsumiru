@@ -108,7 +108,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const double _panFlingDistanceFactor = 0.2;
   static const double _neutralScale = 1;
   static const Duration _tapDelay = Duration(milliseconds: 220);
-  static const Duration _doubleTapWindow = Duration(milliseconds: 260);
+  // Must stay shorter than _tapDelay: a double-tap has to be recognised before
+  // the single-tap timer fires, or a slow double-tap runs both actions.
+  static const Duration _doubleTapWindow = Duration(milliseconds: 200);
   static const Duration _longPressDelay = Duration(milliseconds: 480);
   static const Duration _maxSettleDuration = Duration(milliseconds: 180);
   static const Duration _minSettleDuration = Duration(milliseconds: 70);
@@ -130,6 +132,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   _DragOwner? _dragOwner;
   bool _multiTouchActive = false;
   bool _gestureHadMultiplePointers = false;
+  bool _interruptedByAnimation = false;
   bool _longPressActive = false;
   Timer? _longPressTimer;
   Timer? _singleTapTimer;
@@ -255,7 +258,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _emitRawPage() {
     if (widget.mapping.isEmpty || _isBoundaryDisplay(_displayIndex)) return;
-    widget.onRawPageChanged(widget.mapping.displayToRaw(_displayIndex));
+    widget.onRawPageChanged(widget.mapping.displayToProgressRaw(_displayIndex));
   }
 
   bool _isPreviousBoundary(int index) => index < 0;
@@ -313,6 +316,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       );
 
   void _onPointerDown(PointerDownEvent event) {
+    // A touch that lands mid-settle is an interrupt, not a nav tap — remember
+    // so the ensuing tap is swallowed (the in-flight turn still commits on
+    // cancel, so we must not also fire a second tap action on top of it).
+    if (_pointers.isEmpty) {
+      _interruptedByAnimation =
+          _pageAnimation.isAnimating || _panAnimation.isAnimating;
+    }
     _pageAnimation.stop();
     _stopPanAnimation();
     _singleTapTimer?.cancel();
@@ -429,7 +439,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (_multiTouchActive) {
       if (_pointers.isEmpty) {
         _resetGesture();
-      } else {
+      } else if (_pointers.length == 1) {
+        // Dropped back to one finger — resume single-touch from it. With 2+
+        // still down we stay in multi-touch (and `.single` would throw).
         _lastSinglePosition = _pointers.values.single;
       }
       return;
@@ -445,7 +457,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     } else if (_dragOwner == _DragOwner.page) {
       _settlePagePan(releaseVelocity);
     } else if (_totalDrag.distance <= _tapSlop) {
-      _handleTap(event.localPosition);
+      if (!_interruptedByAnimation) _handleTap(event.localPosition);
     }
 
     _resetGesture();
@@ -465,6 +477,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _dragOwner = null;
     _multiTouchActive = false;
     _gestureHadMultiplePointers = false;
+    _interruptedByAnimation = false;
     _pinchStartDistance = null;
     _pinchStartFocal = null;
     _velocityPointer = null;
@@ -526,6 +539,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _handleTap(Offset position) {
+    // No double-tap-to-zoom → nothing to disambiguate, so act immediately
+    // instead of holding every tap for _tapDelay (a felt page-turn latency).
+    if (!widget.doubleTapToZoom || widget.disableZoomIn) {
+      _handleSingleTap(position);
+      return;
+    }
+
     final now = DateTime.now();
     final previousTapAt = _lastTapAt;
     final previousTapPosition = _lastTapPosition;
@@ -544,6 +564,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
 
     _singleTapTimer = Timer(_tapDelay, () {
+      _lastTapAt = null;
+      _lastTapPosition = null;
       if (!mounted) return;
       _handleSingleTap(position);
     });
@@ -678,14 +700,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _animateOffsetTo(0);
   }
 
-  double get _pageTurnExtent {
-    if (widget.mapping.isEmpty || _isBoundaryDisplay(_displayIndex)) {
-      return _axisExtent;
-    }
-    return widget.mapping.entries[_displayIndex].isPair
-        ? _axisExtent / 2
-        : _axisExtent;
-  }
+  // One display slot (single page or a full spread) always travels a full
+  // viewport, so the turn threshold is the full extent for both — halving it
+  // for spreads made them commit a turn at half the drag distance.
+  double get _pageTurnExtent => _axisExtent;
 
   double _mainAxisDelta(Offset offset) =>
       widget.axis == Axis.horizontal ? offset.dx : offset.dy;

@@ -110,6 +110,22 @@ void main() {
       expect(m.displayToRaw(m.rawToDisplay(0)), 0);
       expect(m.displayToRaw(m.rawToDisplay(2)), 2);
     });
+
+    test('displayToProgressRaw reports the furthest page of the pair', () {
+      final m = buildSpreadMapping(
+        pageCount: 4,
+        doublePages: true,
+        splitWide: false,
+        splitInvert: false,
+        isWide: wideSet(noWide),
+      );
+      // Read-progress is the last page shown, not the first — so the final
+      // spread reports the chapter's last page and it can auto-mark read.
+      expect(m.entries[0].progressRaw, 1);
+      expect(m.entries[1].progressRaw, 3);
+      expect(m.displayToProgressRaw(0), 1);
+      expect(m.displayToProgressRaw(1), 3);
+    });
   });
 
   group('double mode — wide page isolation (Komikku fullPage)', () {

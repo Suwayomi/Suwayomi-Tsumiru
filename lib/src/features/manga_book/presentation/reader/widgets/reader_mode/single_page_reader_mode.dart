@@ -96,7 +96,13 @@ class SinglePageReaderMode extends HookConsumerWidget {
       openAtEnd: openAtEnd,
     );
     final initialDisplay = mapping.rawToDisplay(initialRaw);
-    final currentIndex = useState(initialRaw);
+    // Seed the tracked page from the initial spread's furthest page so the
+    // viewport's mount emit (which reports that page) doesn't rewind the
+    // seekbar or double-fire onPageChanged.
+    final initialProgressRaw = mapping.isEmpty
+        ? initialRaw
+        : mapping.displayToProgressRaw(initialDisplay);
+    final currentIndex = useState(initialProgressRaw);
 
     useEffect(() {
       onPageChanged?.call(currentIndex.value);
