@@ -234,10 +234,11 @@ class ReaderScreen extends HookConsumerWidget {
       SystemChrome.setEnabledSystemUIMode(
         hiddenChromeUiMode(fullscreen: fullscreen),
       );
-      return () => SystemChrome.setEnabledSystemUIMode(
-            SystemUiMode.manual,
-            overlays: SystemUiOverlay.values,
-          );
+      // Don't restore the OS bars on dispose: a chapter change is a
+      // pushReplacement (old screen disposes as the new one mounts), so
+      // restoring here flashes the system bars mid-transition. They're restored
+      // on a real exit in the pop handler below instead.
+      return null;
     }, []);
 
     // Draw reader content into the display cutout (notch/punch-hole) when opted
@@ -284,6 +285,12 @@ class ReaderScreen extends HookConsumerWidget {
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
+          // Leaving the reader for real — bring the OS bars back (kept hidden
+          // across chapter transitions by dropping the dispose-time restore).
+          SystemChrome.setEnabledSystemUIMode(
+            SystemUiMode.manual,
+            overlays: SystemUiOverlay.values,
+          );
           // Flush the latest page reached so progress isn't lost to a pending
           // debounce when you back out. AWAIT it so the read write lands before
           // we invalidate the lists below — otherwise they re-fetch the stale
