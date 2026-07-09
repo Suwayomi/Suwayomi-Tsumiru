@@ -53,11 +53,9 @@ class SpreadEntry {
   /// the reading-first source page (seekbar contract).
   int get primaryRaw => first.raw;
 
-  /// The furthest RAW source page in this display position. A shown spread
-  /// exposes both its pages, so read-progress is the last one, not the first —
-  /// otherwise a double-page chapter's final spread never reports its last page
-  /// and the chapter never auto-marks read. `second.raw >= first.raw` by build
-  /// order (units are paired in ascending raw order).
+  /// The furthest raw page in this slot (read-progress). A spread shows both
+  /// pages, so progress is the last, not the first — else a double-page
+  /// chapter's final spread never reports its last page and never marks read.
   int get progressRaw => second?.raw ?? first.raw;
 
   @override
