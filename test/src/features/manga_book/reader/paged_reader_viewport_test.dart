@@ -35,6 +35,8 @@ ReaderInputCallbacks _callbacks({
   VoidCallback? onTap,
   bool Function()? onNextBoundary,
   bool Function()? onPreviousBoundary,
+  bool Function()? hasNextBoundary,
+  bool Function()? hasPreviousBoundary,
   ValueChanged<Offset>? onLongPressStart,
   VoidCallback? onLongPressEnd,
   VoidCallback? onLongPressCancel,
@@ -49,6 +51,10 @@ ReaderInputCallbacks _callbacks({
       onPrevious: () {},
       onNextBoundary: onNextBoundary ?? () => false,
       onPreviousBoundary: onPreviousBoundary ?? () => false,
+      // Default to "a chapter exists" so boundary-move tests fire; the
+      // no-adjacent-chapter case passes () => false explicitly.
+      hasNextBoundary: hasNextBoundary ?? () => true,
+      hasPreviousBoundary: hasPreviousBoundary ?? () => true,
       navigationLayout: ReaderNavigationLayout.disabled,
       tapInvert: TapInvert.none,
       smallerTapZones: false,
@@ -317,6 +323,49 @@ void main() {
     expect(boundaryHits, 0);
     await tester.pumpAndSettle();
     expect(boundaryHits, 1);
+  });
+
+  testWidgets('no adjacent chapter settles back without a boundary slide',
+      (tester) async {
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    var boundaryAttempts = 0;
+
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 2,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(
+        onNextBoundary: () {
+          boundaryAttempts += 1;
+          return false;
+        },
+        hasNextBoundary: () => false,
+      ),
+      animateTransitions: true,
+    );
+
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-80, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pumpAndSettle();
+
+    // No chapter to move to: the viewport must not attempt the move at all —
+    // attempting it is what slid the page fully off-screen and flashed an empty
+    // slot before bouncing back.
+    expect(boundaryAttempts, 0);
   });
 
   testWidgets('last display swipe settles on the chapter transition first',

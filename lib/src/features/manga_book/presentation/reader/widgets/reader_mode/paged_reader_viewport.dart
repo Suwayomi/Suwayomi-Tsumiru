@@ -774,12 +774,28 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _animateThroughBoundary(int direction) {
+    // Only slide the page off-screen if there's a chapter to land on. Without
+    // this, reaching the last page of the last chapter animates the page fully
+    // out — flashing an empty slot — before discovering there's nowhere to go
+    // and bouncing back. When a chapter exists, keep the slide-then-navigate.
+    if (!_hasBoundaryChapter(direction)) {
+      _animateOffsetTo(0);
+      return;
+    }
     final targetOffset = -direction * _axisSign * _axisExtent;
     _animateOffsetTo(targetOffset, onComplete: () {
       if (!mounted) return;
       final movedChapter = _requestBoundaryMove(direction);
       if (!movedChapter) _animateOffsetTo(0);
     });
+  }
+
+  bool _hasBoundaryChapter(int direction) {
+    final callbacks = ReaderInputScope.maybeOf(context);
+    if (callbacks == null) return false;
+    return direction < 0
+        ? callbacks.hasPreviousBoundary()
+        : callbacks.hasNextBoundary();
   }
 
   void _moveFromBoundary(int delta) {

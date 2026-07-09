@@ -61,6 +61,8 @@ class ReaderInputCallbacks {
     required this.navigationLayout,
     required this.tapInvert,
     required this.smallerTapZones,
+    this.hasNextBoundary = _noBoundaryNavigation,
+    this.hasPreviousBoundary = _noBoundaryNavigation,
   });
 
   final VoidCallback onTap;
@@ -75,6 +77,12 @@ class ReaderInputCallbacks {
   final ReaderNavigationLayout navigationLayout;
   final TapInvert tapInvert;
   final bool smallerTapZones;
+
+  /// Whether an adjacent chapter exists to move to — lets the paged viewport
+  /// decide before animating, so it doesn't slide a page fully off-screen only
+  /// to bounce back when there's no chapter there.
+  final bool Function() hasNextBoundary;
+  final bool Function() hasPreviousBoundary;
 }
 
 class ReaderInputScope extends InheritedWidget {
@@ -546,6 +554,12 @@ class ReaderWrapper extends HookConsumerWidget {
                           onPrevious: onReaderPrevious,
                           onNextBoundary: tryNextChapter,
                           onPreviousBoundary: tryPreviousChapter,
+                          hasNextBoundary: () =>
+                              canSwipeAcrossChapterBoundary &&
+                              nextPrevChapterPair?.first != null,
+                          hasPreviousBoundary: () =>
+                              canSwipeAcrossChapterBoundary &&
+                              nextPrevChapterPair?.second != null,
                           mangaReaderNavigationLayout:
                               mangaReaderNavigationLayout,
                           mangaTapInvert: mangaTapInvert,
@@ -821,6 +835,8 @@ class ReaderView extends HookConsumerWidget {
     this.mangaTapInvert,
     this.onNextBoundary = _noBoundaryNavigation,
     this.onPreviousBoundary = _noBoundaryNavigation,
+    this.hasNextBoundary = _noBoundaryNavigation,
+    this.hasPreviousBoundary = _noBoundaryNavigation,
     required this.readerSwipeChapterToggle,
     required this.lastPageSwipeEnabled,
     required this.resolvedReaderMode,
@@ -842,6 +858,8 @@ class ReaderView extends HookConsumerWidget {
   final VoidCallback onPrevious;
   final bool Function() onNextBoundary;
   final bool Function() onPreviousBoundary;
+  final bool Function() hasNextBoundary;
+  final bool Function() hasPreviousBoundary;
   final ({ChapterDto? first, ChapterDto? second})? prevNextChapterPair;
   final ReaderNavigationLayout mangaReaderNavigationLayout;
   final TapInvert? mangaTapInvert;
@@ -952,6 +970,8 @@ class ReaderView extends HookConsumerWidget {
           onPrevious: onPrevious,
           onNextBoundary: onNextBoundary,
           onPreviousBoundary: onPreviousBoundary,
+          hasNextBoundary: hasNextBoundary,
+          hasPreviousBoundary: hasPreviousBoundary,
           navigationLayout: layout,
           tapInvert: tapInvert,
           smallerTapZones: smallerTapZones,
