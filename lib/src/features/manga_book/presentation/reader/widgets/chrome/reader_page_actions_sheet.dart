@@ -275,6 +275,9 @@ Future<void> showReaderPageActionsSheet({
 
 Future<File> _combineSpreadImages(File firstFile, File secondFile) async {
   final tempDir = await getTemporaryDirectory();
+  // Sweep spread PNGs left by earlier shares/saves so they don't accumulate —
+  // each call leaves at most the one file it's about to hand off.
+  await _cleanStaleSpreadTemps(tempDir);
   final outputPath =
       '${tempDir.path}/tsumiru-spread-${DateTime.now().microsecondsSinceEpoch}.png';
   await compute(
@@ -282,6 +285,20 @@ Future<File> _combineSpreadImages(File firstFile, File secondFile) async {
     [firstFile.path, secondFile.path, outputPath],
   );
   return File(outputPath);
+}
+
+Future<void> _cleanStaleSpreadTemps(Directory tempDir) async {
+  try {
+    await for (final entity in tempDir.list()) {
+      if (entity is File &&
+          entity.uri.pathSegments.last.startsWith('tsumiru-spread-') &&
+          entity.path.endsWith('.png')) {
+        await entity.delete();
+      }
+    }
+  } catch (_) {
+    // Best-effort — cleanup must never break a share/save.
+  }
 }
 
 void _combineSpreadImagesSync(List<String> paths) {

@@ -20,6 +20,7 @@ import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../widgets/download_status_icon.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
+import '../../utils/reader_mode_kind.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chrome_extents.dart';
@@ -75,7 +76,7 @@ class ReaderBottomControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final view = View.of(context);
     final systemBottomInset = view.viewPadding.bottom / view.devicePixelRatio;
-    final isPagedMode = _isPagedReaderMode(resolvedReaderMode);
+    final isPagedMode = isPagedReaderMode(resolvedReaderMode);
     final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
     final cropBorders = isPagedMode
@@ -216,19 +217,6 @@ class ReaderBottomControls extends ConsumerWidget {
     );
   }
 }
-
-bool _isPagedReaderMode(ReaderMode mode) => switch (mode) {
-      ReaderMode.singleHorizontalLTR ||
-      ReaderMode.singleHorizontalRTL ||
-      ReaderMode.singleVertical ||
-      ReaderMode.continuousHorizontalLTR ||
-      ReaderMode.continuousHorizontalRTL =>
-        true,
-      ReaderMode.defaultReader ||
-      ReaderMode.continuousVertical ||
-      ReaderMode.webtoon =>
-        false,
-    };
 
 IconData _readerModeIcon(ReaderMode mode) => switch (mode) {
       ReaderMode.webtoon ||

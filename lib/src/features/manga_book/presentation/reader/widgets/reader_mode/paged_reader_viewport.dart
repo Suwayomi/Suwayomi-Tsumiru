@@ -125,7 +125,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   double _dragOffset = 0;
   Size _viewportSize = Size.zero;
   final Map<int, Offset> _pointers = {};
-  final Map<int, _PageZoomController> _zoomControllers = {};
+  // Keyed by page identity (the entry's first unit), not display index — a late
+  // wide page re-chunks the mapping and shifts display indices, which would
+  // otherwise bind a page's zoom/pan state to whatever page later takes its slot.
+  final Map<PageUnit, _PageZoomController> _zoomControllers = {};
 
   Offset? _lastSinglePosition;
   Offset _totalDrag = Offset.zero;
@@ -176,6 +179,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     });
     widget.controller._attach(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _emitRawPage();
     });
   }
@@ -308,7 +312,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   _PageZoomController _zoomControllerFor(int displayIndex) =>
       _zoomControllers.putIfAbsent(
-        displayIndex,
+        widget.mapping.entries[displayIndex].first,
         () => _PageZoomController(
           minScale: _minScale,
           maxScale: _maxScale,
@@ -806,7 +810,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (duration == Duration.zero || _axisExtent <= 0) {
       setState(() => _dragOffset = target == 0 ? 0 : target);
       onComplete?.call();
-      if (target != 0) setState(() => _dragOffset = 0);
+      // onComplete may navigate to another chapter (pushReplacement) and tear
+      // this down — don't setState afterwards if we're gone.
+      if (target != 0 && mounted) setState(() => _dragOffset = 0);
       return;
     }
     _pageAnimation

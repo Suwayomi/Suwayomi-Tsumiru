@@ -40,6 +40,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
 import '../controller/reader_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
+import '../utils/reader_mode_kind.dart';
 import 'chrome/reader_chrome.dart';
 import 'chrome/reader_page_actions_sheet.dart';
 import 'chrome/reader_settings_dialog.dart';
@@ -110,19 +111,6 @@ final _readerChromeSessionVisibilityProvider =
     ..onDispose(() => timer?.cancel());
   return null;
 });
-
-bool _isPagedReaderMode(ReaderMode mode) => switch (mode) {
-      ReaderMode.singleHorizontalLTR ||
-      ReaderMode.singleHorizontalRTL ||
-      ReaderMode.singleVertical ||
-      ReaderMode.continuousHorizontalLTR ||
-      ReaderMode.continuousHorizontalRTL =>
-        true,
-      ReaderMode.defaultReader ||
-      ReaderMode.continuousVertical ||
-      ReaderMode.webtoon =>
-        false,
-    };
 
 class ReaderWrapper extends HookConsumerWidget {
   const ReaderWrapper({
@@ -332,7 +320,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
       final pair = nextPrevChapterPair;
       final pageCount = chapterPages.pages.length;
-      if (_isPagedReaderMode(resolvedReaderMode) &&
+      if (isPagedReaderMode(resolvedReaderMode) &&
           pair != null &&
           pageCount > 0) {
         if (currentIndex >= pageCount - 2) {
