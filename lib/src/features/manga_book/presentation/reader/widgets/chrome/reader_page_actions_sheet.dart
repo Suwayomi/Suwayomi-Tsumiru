@@ -5,12 +5,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:gal/gal.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../../../constants/endpoints.dart';
@@ -39,9 +42,20 @@ Future<void> showReaderPageActionsSheet({
   required WidgetRef ref,
   required ChapterPagesDto chapterPages,
   required int pageIndex,
+  int? secondaryPageIndex,
+  List<int>? spreadPageIndexes,
 }) {
   final pages = chapterPages.pages;
-  if (pageIndex < 0 || pageIndex >= pages.length) {
+  bool isValidPage(int index) => index >= 0 && index < pages.length;
+  bool canResolvePage(int index) {
+    if (!isValidPage(index)) return false;
+    final relative = pages[index];
+    if (relative.startsWith('file:')) return true;
+    return _buildPageUrl(ref, chapterPages, index, withToken: false) != null &&
+        _buildPageUrl(ref, chapterPages, index, withToken: true) != null;
+  }
+
+  if (!canResolvePage(pageIndex)) {
     ref.read(toastProvider)?.showError(
           context.l10n.errorSomethingWentWrong,
           instantShow: true,
@@ -49,38 +63,50 @@ Future<void> showReaderPageActionsSheet({
     return Future<void>.value();
   }
 
-  final relative = pages[pageIndex];
-  // Downloaded/offline pages are served as `file://` URIs — there's no server
-  // URL to copy or open, but the local file can still be shared/saved.
-  final localPath =
-      relative.startsWith('file:') ? Uri.parse(relative).toFilePath() : null;
-
-  // Token-less URL is copied (avoids leaking the ui_login token into whatever
-  // the user pastes into); token-appended URL is opened/fetched locally so it
-  // works. Both null for offline pages (handled via [localPath]).
-  final shareUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: false);
-  final openUrl = _buildPageUrl(ref, chapterPages, pageIndex, withToken: true);
-
-  // A server page with no derivable URL is an unexpected state — bail loudly.
-  if (localPath == null && (shareUrl == null || openUrl == null)) {
-    ref.read(toastProvider)?.showError(
-          context.l10n.errorSomethingWentWrong,
-          instantShow: true,
-        );
-    return Future<void>.value();
+  List<int> actionPageIndexes() {
+    final spreadIndexes = spreadPageIndexes;
+    if (spreadIndexes != null &&
+        spreadIndexes.length == 2 &&
+        spreadIndexes[0] != spreadIndexes[1] &&
+        spreadIndexes.every(canResolvePage)) {
+      return spreadIndexes;
+    }
+    if (secondaryPageIndex != null &&
+        secondaryPageIndex != pageIndex &&
+        canResolvePage(secondaryPageIndex)) {
+      return [pageIndex, secondaryPageIndex];
+    }
+    return [pageIndex];
   }
 
-  // Resolves the on-disk image file for the current page: straight off disk for
-  // offline pages, otherwise via the shared image cache (same cacheKey + auth
-  // headers ServerImage uses, so it reuses the already-decoded page).
-  Future<File> resolvePageFile() async {
+  final pageActionIndexes = actionPageIndexes();
+  final firstPageIndex = pageActionIndexes.first;
+  final extraPageIndex =
+      pageActionIndexes.length == 2 ? pageActionIndexes.last : null;
+
+  String? localPathFor(int index) {
+    final relative = pages[index];
+    return relative.startsWith('file:')
+        ? Uri.parse(relative).toFilePath()
+        : null;
+  }
+
+  Future<File> resolvePageFile(int index) async {
+    final localPath = localPathFor(index);
     if (localPath != null) return File(localPath);
+    final shareUrl = _buildPageUrl(ref, chapterPages, index, withToken: false)!;
+    final openUrl = _buildPageUrl(ref, chapterPages, index, withToken: true)!;
     return DefaultCacheManager().getSingleFile(
-      openUrl!,
-      key: shareUrl!,
+      openUrl,
+      key: shareUrl,
       headers: _buildHttpHeaders(ref) ?? const {},
     );
   }
+
+  Future<File> resolveSpreadFile() async => _combineSpreadImages(
+        await resolvePageFile(firstPageIndex),
+        await resolvePageFile(extraPageIndex!),
+      );
 
   // gal is mobile-only, so both extra actions are gated to real Android/iOS.
   // defaultTargetPlatform (not dart:io Platform) so widget tests can drive the
@@ -89,76 +115,205 @@ Future<void> showReaderPageActionsSheet({
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
+  final openUrl =
+      _buildPageUrl(ref, chapterPages, firstPageIndex, withToken: true);
+
   return showModalBottomSheet<void>(
     context: context,
     // Reader overrides bottomSheetTheme to transparent; the Material below
     // supplies its own surface + rounded top.
     backgroundColor: Colors.transparent,
     useSafeArea: true,
-    builder: (sheetContext) => _PageActionsSheet(
-      // "Copy to clipboard" copies the image itself, not a link.
-      // Native ClipData.newUri path is Android-only.
-      onCopyImage: !imageClipboardSupported
-          ? null
-          : () async {
-              final toast = ref.read(toastProvider);
-              final copiedMsg = context.l10n.copiedImage;
-              final errorMsg = context.l10n.errorSomethingWentWrong;
-              Navigator.pop(sheetContext);
-              try {
-                final file = await resolvePageFile();
-                if (await copyImageToClipboard(file.path)) {
-                  toast?.show(copiedMsg, instantShow: true);
-                } else {
-                  toast?.showError(errorMsg, instantShow: true);
-                }
-              } catch (_) {
-                toast?.showError(errorMsg, instantShow: true);
-              }
-            },
-      // Only surfaced on desktop/web, where the
-      // image-copy/share/save actions can't run, so the menu isn't empty.
-      onOpenInWeb: (isMobile || openUrl == null)
-          ? null
-          : () {
+    builder: (sheetContext) {
+      VoidCallback? copyAction(Future<File> Function() resolve) {
+        if (!imageClipboardSupported) return null;
+        return () async {
+          final toast = ref.read(toastProvider);
+          final copiedMsg = context.l10n.copiedImage;
+          final errorMsg = context.l10n.errorSomethingWentWrong;
+          Navigator.pop(sheetContext);
+          try {
+            final file = await resolve();
+            if (await copyImageToClipboard(file.path)) {
+              toast?.show(copiedMsg, instantShow: true);
+            } else {
+              toast?.showError(errorMsg, instantShow: true);
+            }
+          } catch (_) {
+            toast?.showError(errorMsg, instantShow: true);
+          }
+        };
+      }
+
+      VoidCallback? shareAction(Future<File> Function() resolve) {
+        if (!isMobile) return null;
+        return () async {
+          final toast = ref.read(toastProvider);
+          final errorMsg = context.l10n.errorSomethingWentWrong;
+          Navigator.pop(sheetContext);
+          try {
+            final file = await resolve();
+            await SharePlus.instance
+                .share(ShareParams(files: [XFile(file.path)]));
+          } catch (_) {
+            toast?.showError(errorMsg, instantShow: true);
+          }
+        };
+      }
+
+      VoidCallback? saveAction(Future<File> Function() resolve) {
+        if (!isMobile) return null;
+        return () async {
+          final toast = ref.read(toastProvider);
+          final savedMsg = context.l10n.savedToGallery;
+          final errorMsg = context.l10n.errorSomethingWentWrong;
+          Navigator.pop(sheetContext);
+          try {
+            final file = await resolve();
+            if (!await Gal.requestAccess()) {
+              toast?.showError(errorMsg, instantShow: true);
+              return;
+            }
+            await Gal.putImage(file.path);
+            toast?.show(savedMsg, instantShow: true);
+          } catch (_) {
+            toast?.showError(errorMsg, instantShow: true);
+          }
+        };
+      }
+
+      final hasSpread = extraPageIndex != null;
+      final rows = <List<_PageAction>>[];
+
+      void addMobileRow({
+        required String copyLabel,
+        required String shareLabel,
+        required String saveLabel,
+        required Key copyKey,
+        required Key shareKey,
+        required Key saveKey,
+        required Future<File> Function() resolve,
+      }) {
+        final actions = [
+          _PageAction(
+            key: copyKey,
+            icon: Icons.content_copy_rounded,
+            label: copyLabel,
+            onTap: copyAction(resolve),
+          ),
+          _PageAction(
+            key: shareKey,
+            icon: Icons.share_rounded,
+            label: shareLabel,
+            onTap: shareAction(resolve),
+          ),
+          _PageAction(
+            key: saveKey,
+            icon: Icons.save_alt_rounded,
+            label: saveLabel,
+            onTap: saveAction(resolve),
+          ),
+        ].where((action) => action.onTap != null).toList();
+        if (actions.isNotEmpty) rows.add(actions);
+      }
+
+      if (isMobile || imageClipboardSupported) {
+        addMobileRow(
+          copyLabel: hasSpread
+              ? context.l10n.copyFirstPage
+              : context.l10n.copyImageToClipboard,
+          shareLabel:
+              hasSpread ? context.l10n.shareFirstPage : context.l10n.shareImage,
+          saveLabel: hasSpread
+              ? context.l10n.saveFirstPage
+              : context.l10n.saveToGallery,
+          copyKey: const ValueKey('reader-page-action-copy-image'),
+          shareKey: const ValueKey('reader-page-action-share'),
+          saveKey: const ValueKey('reader-page-action-save'),
+          resolve: () => resolvePageFile(firstPageIndex),
+        );
+        if (hasSpread) {
+          addMobileRow(
+            copyLabel: context.l10n.copySecondPage,
+            shareLabel: context.l10n.shareSecondPage,
+            saveLabel: context.l10n.saveSecondPage,
+            copyKey: const ValueKey('reader-page-action-copy-image-second'),
+            shareKey: const ValueKey('reader-page-action-share-second'),
+            saveKey: const ValueKey('reader-page-action-save-second'),
+            resolve: () => resolvePageFile(extraPageIndex),
+          );
+          addMobileRow(
+            copyLabel: context.l10n.copySpread,
+            shareLabel: context.l10n.shareSpread,
+            saveLabel: context.l10n.saveSpread,
+            copyKey: const ValueKey('reader-page-action-copy-spread'),
+            shareKey: const ValueKey('reader-page-action-share-spread'),
+            saveKey: const ValueKey('reader-page-action-save-spread'),
+            resolve: resolveSpreadFile,
+          );
+        }
+      }
+
+      if (!isMobile && openUrl != null) {
+        rows.add([
+          _PageAction(
+            key: const ValueKey('reader-page-action-open-web'),
+            icon: Icons.public_rounded,
+            label: context.l10n.openInWeb,
+            onTap: () {
               Navigator.pop(sheetContext);
               launchUrlInWeb(context, openUrl, ref.read(toastProvider));
             },
-      onShare: !isMobile
-          ? null
-          : () async {
-              final toast = ref.read(toastProvider);
-              final errorMsg = context.l10n.errorSomethingWentWrong;
-              Navigator.pop(sheetContext);
-              try {
-                final file = await resolvePageFile();
-                await SharePlus.instance
-                    .share(ShareParams(files: [XFile(file.path)]));
-              } catch (_) {
-                toast?.showError(errorMsg, instantShow: true);
-              }
-            },
-      onSave: !isMobile
-          ? null
-          : () async {
-              final toast = ref.read(toastProvider);
-              final savedMsg = context.l10n.savedToGallery;
-              final errorMsg = context.l10n.errorSomethingWentWrong;
-              Navigator.pop(sheetContext);
-              try {
-                final file = await resolvePageFile();
-                if (!await Gal.requestAccess()) {
-                  toast?.showError(errorMsg, instantShow: true);
-                  return;
-                }
-                await Gal.putImage(file.path);
-                toast?.show(savedMsg, instantShow: true);
-              } catch (_) {
-                toast?.showError(errorMsg, instantShow: true);
-              }
-            },
-    ),
+          ),
+        ]);
+      }
+
+      return _PageActionsSheet(rows: rows);
+    },
   );
+}
+
+Future<File> _combineSpreadImages(File firstFile, File secondFile) async {
+  final tempDir = await getTemporaryDirectory();
+  final outputPath =
+      '${tempDir.path}/tsumiru-spread-${DateTime.now().microsecondsSinceEpoch}.png';
+  await compute(
+    _combineSpreadImagesSync,
+    [firstFile.path, secondFile.path, outputPath],
+  );
+  return File(outputPath);
+}
+
+void _combineSpreadImagesSync(List<String> paths) {
+  final first = img.decodeImage(File(paths[0]).readAsBytesSync());
+  final second = img.decodeImage(File(paths[1]).readAsBytesSync());
+  if (first == null || second == null) {
+    throw const FormatException('Could not decode spread image');
+  }
+
+  final height = math.max(first.height, second.height);
+  final canvas = img.Image(
+    width: first.width + second.width,
+    height: height,
+    numChannels: 4,
+  );
+  img.fill(canvas, color: img.ColorRgba8(0, 0, 0, 255));
+  img.compositeImage(
+    canvas,
+    first,
+    dstX: 0,
+    dstY: (height - first.height) ~/ 2,
+    blend: img.BlendMode.direct,
+  );
+  img.compositeImage(
+    canvas,
+    second,
+    dstX: first.width,
+    dstY: (height - second.height) ~/ 2,
+    blend: img.BlendMode.direct,
+  );
+
+  File(paths[2]).writeAsBytesSync(img.encodePng(canvas), flush: true);
 }
 
 /// Builds the fully-qualified page image URL the reader would fetch, mirroring
@@ -213,21 +368,13 @@ Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
 
 class _PageActionsSheet extends StatelessWidget {
   const _PageActionsSheet({
-    required this.onCopyImage,
-    required this.onOpenInWeb,
-    required this.onShare,
-    required this.onSave,
+    required this.rows,
   });
 
-  final VoidCallback? onCopyImage;
-  final VoidCallback? onOpenInWeb;
-  final VoidCallback? onShare;
-  final VoidCallback? onSave;
+  final List<List<_PageAction>> rows;
 
   @override
   Widget build(BuildContext context) {
-    // Layout: a compact horizontal row of equal-weight icon buttons
-    // (icon above a centred, ≤2-line label) docked at the bottom.
     return Material(
       color: context.theme.colorScheme.surface,
       clipBehavior: Clip.antiAlias,
@@ -238,38 +385,22 @@ class _PageActionsSheet extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (onCopyImage != null)
-                _ActionButton(
-                  actionKey: const ValueKey('reader-page-action-copy-image'),
-                  icon: Icons.content_copy_rounded,
-                  label: context.l10n.copyImageToClipboard,
-                  onTap: onCopyImage!,
-                ),
-              if (onOpenInWeb != null)
-                _ActionButton(
-                  actionKey: const ValueKey('reader-page-action-open-web'),
-                  icon: Icons.public_rounded,
-                  label: context.l10n.openInWeb,
-                  onTap: onOpenInWeb!,
-                ),
-              if (onShare != null)
-                _ActionButton(
-                  actionKey: const ValueKey('reader-page-action-share'),
-                  icon: Icons.share_rounded,
-                  label: context.l10n.shareImage,
-                  onTap: onShare!,
-                ),
-              if (onSave != null)
-                _ActionButton(
-                  actionKey: const ValueKey('reader-page-action-save'),
-                  icon: Icons.save_alt_rounded,
-                  label: context.l10n.saveToGallery,
-                  onTap: onSave!,
-                ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final action in rows[rowIndex])
+                        _ActionButton(action: action),
+                    ],
+                  ),
+                  if (rowIndex != rows.length - 1) const SizedBox(height: 4),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -277,27 +408,31 @@ class _PageActionsSheet extends StatelessWidget {
   }
 }
 
-/// One page action: a full-height [TextButton] with the icon
-/// stacked above a centred label, taking an equal share of the row.
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.actionKey,
+class _PageAction {
+  const _PageAction({
+    required this.key,
     required this.icon,
     required this.label,
     required this.onTap,
   });
 
-  final Key actionKey;
+  final Key key;
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.action});
+
+  final _PageAction action;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: TextButton(
-        key: actionKey,
-        onPressed: onTap,
+        key: action.key,
+        onPressed: action.onTap,
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           shape: RoundedRectangleBorder(
@@ -307,10 +442,10 @@ class _ActionButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 26),
+            Icon(action.icon, size: 26),
             const SizedBox(height: 8),
             Text(
-              label,
+              action.label,
               textAlign: TextAlign.center,
               maxLines: 2,
               style: context.textTheme.labelMedium,

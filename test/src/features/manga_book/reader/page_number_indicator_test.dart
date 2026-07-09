@@ -13,12 +13,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/brand_page_seekbar.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_chrome.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -68,6 +70,7 @@ Future<void> _pumpChrome(
   Map<String, Object> prefValues = const {},
   int currentIndex = 0,
   bool visible = true,
+  bool reverseSeekBar = false,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
@@ -102,7 +105,10 @@ Future<void> _pumpChrome(
             showSideSeekBar: false,
             scrollDirection: Axis.horizontal,
             nextPrevChapterPair: null,
-            invertTap: false,
+            resolvedReaderMode: reverseSeekBar
+                ? ReaderMode.singleHorizontalRTL
+                : ReaderMode.singleHorizontalLTR,
+            reverseSeekBar: reverseSeekBar,
             onChanged: (_) {},
             onOpenSettings: () {},
             onOpenReaderMode: () {},
@@ -135,6 +141,53 @@ void main() {
       await _pumpChrome(tester, visible: false);
       // Not part of the animated bars — present even when visibility is false.
       expect(find.text('1 / 3'), findsOneWidget);
+    });
+
+    testWidgets('RTL mode reverses the bottom seekbar', (tester) async {
+      await _pumpChrome(tester, reverseSeekBar: true);
+
+      final seekbar =
+          tester.widget<BrandPageSeekBar>(find.byType(BrandPageSeekBar));
+      expect(seekbar.inverted, isTrue);
+    });
+  });
+
+  group('brand page seekbar', () {
+    testWidgets('inverted mapping treats the right edge as page 1',
+        (tester) async {
+      final changes = <int>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                height: 64,
+                child: BrandPageSeekBar(
+                  currentValue: 0,
+                  maxValue: 5,
+                  inverted: true,
+                  onChanged: changes.add,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final barTrack = find.descendant(
+        of: find.byType(BrandPageSeekBar),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is CustomPaint && widget.painter != null,
+        ),
+      );
+      expect(barTrack, findsOneWidget);
+
+      final barRect = tester.getRect(barTrack);
+      await tester.tapAt(Offset(barRect.right - 1, barRect.center.dy));
+      await tester.tapAt(Offset(barRect.left + 1, barRect.center.dy));
+
+      expect(changes, [0, 4]);
     });
   });
 }

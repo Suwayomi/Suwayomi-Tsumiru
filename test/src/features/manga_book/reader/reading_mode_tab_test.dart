@@ -12,13 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
-import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -206,6 +204,15 @@ void main() {
     expect(find.text('Scale type'), findsOneWidget);
     // Zoom start position is hidden (per-page pan on list-level zoom; reader.md).
     expect(find.text('Zoom start position'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Disable zoom out'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    expect(find.text('Double tap to zoom'), findsOneWidget);
+    expect(find.text('Pinch to Zoom'), findsOneWidget);
+    expect(find.text('Disable zoom out'), findsOneWidget);
+    expect(find.text('Disable zoom in'), findsNothing);
     expect(find.text('Smart scale on wide screen'), findsNothing);
     expect(find.text('Smooth Auto Scroll'), findsNothing);
   });
@@ -243,7 +250,8 @@ void main() {
     expect(find.text('Crop borders'), findsNWidgets(2));
   });
 
-  testWidgets('pure Komikku: "For this series" is a heading, not a scope switch',
+  testWidgets(
+      'pure Komikku: "For this series" is a heading, not a scope switch',
       (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
     // The group heading is present...
@@ -258,7 +266,8 @@ void main() {
     );
   });
 
-  testWidgets('reading mode always writes a per-series override', (tester) async {
+  testWidgets('reading mode always writes a per-series override',
+      (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
 
     await tester.tap(find.text('Long strip'));
@@ -270,7 +279,7 @@ void main() {
 
   testWidgets(
       'paged wide-page toggles ordered before Animate page transitions; '
-      'invert sub-toggles hidden while OFF; Pan wide images hidden',
+      'invert sub-toggles hidden while OFF; Pan wide images visible',
       (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
 
@@ -280,8 +289,7 @@ void main() {
       scrollable: tabScrollable(),
     );
 
-    // Pan wide images (navigateToPan) is hidden (per-page pan; see reader.md).
-    expect(find.text('Pan wide images'), findsNothing);
+    expect(find.text('Pan wide images'), findsOneWidget);
     double dy(String text) => tester.getTopLeft(find.text(text)).dy;
     expect(dy('Split wide pages'), lessThan(dy('Rotate wide pages to fit')));
     expect(

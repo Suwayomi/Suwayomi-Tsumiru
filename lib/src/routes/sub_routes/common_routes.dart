@@ -25,12 +25,14 @@ class ReaderRoute extends GoRouteData {
     this.transVertical,
     this.toPrev,
     this.showReaderLayoutAnimation = false,
+    this.openAtEnd = false,
   });
   final int mangaId;
   final int chapterId;
   final bool? transVertical;
   final bool? toPrev;
   final bool showReaderLayoutAnimation;
+  final bool openAtEnd;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -42,6 +44,7 @@ class ReaderRoute extends GoRouteData {
         mangaId: mangaId,
         chapterId: chapterId,
         showReaderLayoutAnimation: showReaderLayoutAnimation,
+        openAtEnd: openAtEnd,
       ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         Offset offset = Offset.zero;
@@ -53,14 +56,32 @@ class ReaderRoute extends GoRouteData {
           offset *= -1;
         }
 
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: offset,
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
+        return _ReaderRouteTransition(
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: offset,
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
         );
       },
+    );
+  }
+}
+
+class _ReaderRouteTransition extends ConsumerWidget {
+  const _ReaderRouteTransition({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final background = ref.watch(readerBackgroundColorKeyProvider) ??
+        DBKeys.readerBackgroundColor.initial as ReaderBackgroundColor;
+    return ColoredBox(
+      color: background.color(context),
+      child: ClipRect(child: child),
     );
   }
 }

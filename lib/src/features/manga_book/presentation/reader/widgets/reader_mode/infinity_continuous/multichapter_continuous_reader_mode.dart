@@ -13,6 +13,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../widgets/server_image.dart';
@@ -32,6 +33,7 @@ import '../../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../../domain/manga/manga_model.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
 import '../../../controller/reader_controller.dart';
+import '../../../utils/reader_initial_page.dart';
 import '../../reader_wrapper.dart';
 import '../reader_zoom_view.dart';
 import 'infinity_continuous_config.dart';
@@ -73,6 +75,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
     this.showReaderLayoutAnimation = false,
+    this.effectiveReaderMode = ReaderMode.webtoon,
+    this.openAtEnd = false,
   });
 
   final MangaDto manga;
@@ -82,6 +86,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
   final Axis scrollDirection;
   final bool reverse;
   final bool showReaderLayoutAnimation;
+  final ReaderMode effectiveReaderMode;
+  final bool openAtEnd;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,11 +136,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final adjustIdleTimer = useRef<Timer?>(null);
 
     final currentVisibleChapter = useState<ChapterDto>(chapter);
-    final currentChapterPageIndex = useState<int>(
-      chapter.isRead.ifNull()
-          ? 0
-          : chapter.lastPageRead.getValueOnNullOrNegative(),
+    final initialChapterPageIndex = readerInitialPageIndex(
+      chapter: chapter,
+      chapterPages: chapterPages,
+      openAtEnd: openAtEnd,
     );
+    final currentChapterPageIndex = useState<int>(initialChapterPageIndex);
 
     final loadingNext = useState(false);
     final loadingPrevious = useState(false);
@@ -772,9 +779,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       itemScrollController: itemScrollController,
       itemPositionsListener: positionsListener,
       scrollOffsetController: scrollOffsetController,
-      initialScrollIndex: chapter.isRead.ifNull()
-          ? 0
-          : chapter.lastPageRead.getValueOnNullOrNegative(),
+      initialScrollIndex: initialChapterPageIndex,
       scrollDirection: scrollDirection,
       reverse: reverse,
       itemCount: total,
@@ -810,6 +815,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       manga: manga,
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       currentIndex: currentChapterPageIndex.value,
+      effectiveReaderMode: effectiveReaderMode,
       onChanged: jumpToChapterRelative,
       onPrevious: () => handlePageNavigation(isNext: false),
       onNext: () => handlePageNavigation(isNext: true),

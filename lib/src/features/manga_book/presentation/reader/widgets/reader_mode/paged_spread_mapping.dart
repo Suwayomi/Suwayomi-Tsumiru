@@ -78,7 +78,7 @@ class SpreadMapping {
   /// Clamped so an out-of-range controller page never throws.
   int displayToRaw(int displayIndex) {
     if (entries.isEmpty) return 0;
-    final i = displayIndex.clamp(0, entries.length - 1);
+    final i = displayIndex.clamp(0, entries.length - 1).toInt();
     return entries[i].primaryRaw;
   }
 

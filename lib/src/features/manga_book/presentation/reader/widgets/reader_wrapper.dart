@@ -26,8 +26,11 @@ import '../../../../settings/presentation/reader/widgets/reader_invert_tap_tile/
 import '../../../../settings/presentation/reader/widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import '../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
+import '../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
+import '../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
+import '../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 import '../../../../settings/presentation/reader/widgets/reader_volume_tap_invert_tile/reader_volume_tap_invert_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
@@ -35,12 +38,91 @@ import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
+import '../controller/reader_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
 import 'chrome/reader_chrome.dart';
 import 'chrome/reader_page_actions_sheet.dart';
 import 'chrome/reader_settings_dialog.dart';
 import 'directional_swipe_gesture_handler.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
+
+class ReaderInputCallbacks {
+  const ReaderInputCallbacks({
+    required this.onTap,
+    required this.onLongPressStart,
+    required this.onLongPressMoveUpdate,
+    required this.onLongPressEnd,
+    required this.onLongPressCancel,
+    required this.onNext,
+    required this.onPrevious,
+    required this.onNextBoundary,
+    required this.onPreviousBoundary,
+    required this.navigationLayout,
+    required this.tapInvert,
+    required this.smallerTapZones,
+  });
+
+  final VoidCallback onTap;
+  final ValueChanged<Offset> onLongPressStart;
+  final ValueChanged<Offset> onLongPressMoveUpdate;
+  final VoidCallback onLongPressEnd;
+  final VoidCallback onLongPressCancel;
+  final VoidCallback onNext;
+  final VoidCallback onPrevious;
+  final bool Function() onNextBoundary;
+  final bool Function() onPreviousBoundary;
+  final ReaderNavigationLayout navigationLayout;
+  final TapInvert tapInvert;
+  final bool smallerTapZones;
+}
+
+class ReaderInputScope extends InheritedWidget {
+  const ReaderInputScope({
+    super.key,
+    required this.callbacks,
+    required super.child,
+  });
+
+  final ReaderInputCallbacks callbacks;
+
+  static ReaderInputCallbacks? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ReaderInputScope>()?.callbacks;
+
+  @override
+  bool updateShouldNotify(ReaderInputScope oldWidget) =>
+      callbacks != oldWidget.callbacks;
+}
+
+bool _noBoundaryNavigation() => false;
+
+final _readerChromeSessionVisibilityProvider =
+    StateProvider.autoDispose<bool?>((ref) {
+  final link = ref.keepAlive();
+  Timer? timer;
+  ref
+    ..onCancel(() {
+      timer = Timer(const Duration(seconds: 2), link.close);
+    })
+    ..onResume(() {
+      timer?.cancel();
+      timer = null;
+    })
+    ..onDispose(() => timer?.cancel());
+  return null;
+});
+
+bool _isPagedReaderMode(ReaderMode mode) => switch (mode) {
+      ReaderMode.singleHorizontalLTR ||
+      ReaderMode.singleHorizontalRTL ||
+      ReaderMode.singleVertical ||
+      ReaderMode.continuousHorizontalLTR ||
+      ReaderMode.continuousHorizontalRTL =>
+        true,
+      ReaderMode.defaultReader ||
+      ReaderMode.continuousVertical ||
+      ReaderMode.webtoon =>
+        false,
+    };
 
 class ReaderWrapper extends HookConsumerWidget {
   const ReaderWrapper({
@@ -56,7 +138,12 @@ class ReaderWrapper extends HookConsumerWidget {
     this.showReaderLayoutAnimation = false,
     required this.chapterPages,
     this.pageController,
-    this.totalPageCount, // For infinity scrolling mode
+    this.totalPageCount,
+    this.childHandlesGestures = false,
+    this.isAtFirstBoundary,
+    this.isAtLastBoundary,
+    this.spreadPageIndexes,
+    this.effectiveReaderMode,
   });
   final Widget child;
   final MangaDto manga;
@@ -69,42 +156,37 @@ class ReaderWrapper extends HookConsumerWidget {
   final bool showReaderLayoutAnimation;
   final ChapterPagesDto chapterPages;
   final PageController? pageController;
-  final int? totalPageCount; // For infinity scrolling mode
+  final int? totalPageCount;
+  final bool childHandlesGestures;
+  final bool Function()? isAtFirstBoundary;
+  final bool Function()? isAtLastBoundary;
+  final List<int>? spreadPageIndexes;
+  final ReaderMode? effectiveReaderMode;
 
-  /// Determine transition direction based on reading mode for proper animations
-  /// Returns true for vertical transitions, false for horizontal transitions
   bool _shouldUseVerticalTransition(ReaderMode readerMode) {
     switch (readerMode) {
-      // Vertical/Webtoon modes should use vertical transitions (slide up from bottom)
       case ReaderMode.singleVertical:
       case ReaderMode.continuousVertical:
       case ReaderMode.webtoon:
         return true;
 
-      // Horizontal LTR/RTL modes should use horizontal transitions
-      // This allows the system to animate from right (LTR) or left (RTL) based on toPrev flag
       case ReaderMode.singleHorizontalLTR:
       case ReaderMode.continuousHorizontalLTR:
       case ReaderMode.singleHorizontalRTL:
       case ReaderMode.continuousHorizontalRTL:
         return false;
 
-      // Default case - use horizontal transition as fallback
       case ReaderMode.defaultReader:
         return false;
     }
   }
 
-  /// Determine if the reading mode is RTL for proper animation direction
-  /// Returns true for RTL modes, false for LTR/Vertical modes
   bool _isRTLReaderMode(ReaderMode readerMode) {
     switch (readerMode) {
-      // RTL modes
       case ReaderMode.singleHorizontalRTL:
       case ReaderMode.continuousHorizontalRTL:
         return true;
 
-      // LTR and Vertical modes
       case ReaderMode.singleHorizontalLTR:
       case ReaderMode.continuousHorizontalLTR:
       case ReaderMode.singleVertical:
@@ -160,8 +242,10 @@ class ReaderWrapper extends HookConsumerWidget {
         ref.watch(readerMagnifierSizeKeyProvider) ??
             DBKeys.readerMagnifierSize.initial;
 
-    final visibility =
-        useState(ref.read(readerInitialOverlayProvider).ifNull());
+    final sessionVisibility = ref.watch(_readerChromeSessionVisibilityProvider);
+    final visibility = useState(
+      sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
+    );
     final mangaReaderPadding =
         useState(manga.metaData.readerPadding ?? localMangaReaderPadding);
     final mangaReaderMagnifierSize = useState(
@@ -178,14 +262,17 @@ class ReaderWrapper extends HookConsumerWidget {
 
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
 
-    // Performance optimization: memoize resolved reader mode to avoid recalculation
-    final resolvedReaderMode = useMemoized(
+    final settingsResolvedReaderMode = useMemoized(
       () => LastPageSwipeUtils.resolveActualReaderMode(
         mangaReaderMode: mangaReaderMode,
         defaultReaderMode: defaultReaderMode,
       ),
       [mangaReaderMode, defaultReaderMode],
     );
+    final resolvedReaderMode =
+        effectiveReaderMode ?? settingsResolvedReaderMode;
+    final providerContainer = ProviderScope.containerOf(context, listen: false);
+    final prefetchClosers = useRef(<int, List<VoidCallback>>{});
 
     final showReaderModePopup = useCallback(
       () => showDialog(
@@ -211,6 +298,97 @@ class ReaderWrapper extends HookConsumerWidget {
       [mangaReaderMode],
     );
 
+    useEffect(() {
+      var disposed = false;
+      void syncVisibility() {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (disposed) return;
+          ref.read(_readerChromeSessionVisibilityProvider.notifier).state =
+              visibility.value;
+        });
+      }
+
+      syncVisibility();
+      visibility.addListener(syncVisibility);
+      return () {
+        disposed = true;
+        visibility.removeListener(syncVisibility);
+      };
+    }, [visibility]);
+
+    useEffect(() {
+      return () {
+        for (final closers in prefetchClosers.value.values) {
+          for (final close in closers) {
+            close();
+          }
+        }
+        prefetchClosers.value.clear();
+      };
+    }, []);
+
+    useEffect(() {
+      final adjacentIds = <int>{};
+
+      final pair = nextPrevChapterPair;
+      final pageCount = chapterPages.pages.length;
+      if (_isPagedReaderMode(resolvedReaderMode) &&
+          pair != null &&
+          pageCount > 0) {
+        if (currentIndex >= pageCount - 2) {
+          final next = pair.first;
+          if (next != null) adjacentIds.add(next.id);
+        }
+        if (currentIndex <= 1) {
+          final previous = pair.second;
+          if (previous != null) adjacentIds.add(previous.id);
+        }
+      }
+
+      void closePrefetch(int chapterId) {
+        final closers = prefetchClosers.value.remove(chapterId);
+        if (closers == null) return;
+        for (final close in closers) {
+          close();
+        }
+      }
+
+      for (final chapterId in [...prefetchClosers.value.keys]) {
+        if (!adjacentIds.contains(chapterId)) closePrefetch(chapterId);
+      }
+
+      void prefetchChapter(int chapterId) {
+        if (prefetchClosers.value.containsKey(chapterId)) return;
+        final chapterSubscription =
+            providerContainer.listen<AsyncValue<ChapterDto?>>(
+          chapterProvider(chapterId: chapterId),
+          (_, __) {},
+          fireImmediately: true,
+        );
+        final pagesSubscription =
+            providerContainer.listen<AsyncValue<ChapterPagesDto?>>(
+          chapterPagesProvider(chapterId: chapterId),
+          (_, __) {},
+          fireImmediately: true,
+        );
+        prefetchClosers.value[chapterId] = [
+          chapterSubscription.close,
+          pagesSubscription.close,
+        ];
+      }
+
+      for (final chapterId in adjacentIds) {
+        prefetchChapter(chapterId);
+      }
+      return null;
+    }, [
+      resolvedReaderMode,
+      nextPrevChapterPair?.first?.id,
+      nextPrevChapterPair?.second?.id,
+      currentIndex,
+      chapterPages.pages.length,
+    ]);
+
     // NOTE: The visibility→SystemUiMode transition is now driven by
     // ReaderChrome's AnimationController status listener (Inc-1), not here.
     // edgeToEdge is requested when the controller starts going forward;
@@ -218,92 +396,86 @@ class ReaderWrapper extends HookConsumerWidget {
     // move *with* the animated Material bars rather than snapping at t=0 (C1).
     // reader_screen.dart's mount/unmount immersive effect is left untouched.
 
-    // Enhanced navigation callbacks with last-page swipe logic
-    final enhancedOnNext = useCallback(() {
-      if (lastPageSwipeEnabled && !readerSwipeChapterToggle) {
-        // Check if we're at the last page
-        final isAtLastPage = currentIndex >= (chapterPages.pages.length - 1);
+    final canSwipeAcrossChapterBoundary =
+        lastPageSwipeEnabled || readerSwipeChapterToggle;
 
-        if (isAtLastPage && nextPrevChapterPair?.first != null) {
-          // Navigate to next chapter
-          ReaderRoute(
-            mangaId: manga.id,
-            chapterId: nextPrevChapterPair!.first!.id,
-            transVertical: scrollDirection != Axis.vertical,
-          ).pushReplacement(context);
-          return;
-        }
+    bool pushNextChapter() {
+      if (nextPrevChapterPair?.first == null) return false;
+      final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
+      final toPrev = _isRTLReaderMode(resolvedReaderMode);
+      ReaderRoute(
+        mangaId: manga.id,
+        chapterId: nextPrevChapterPair!.first!.id,
+        transVertical: transVertical,
+        toPrev: toPrev,
+      ).pushReplacement(context);
+      return true;
+    }
+
+    bool pushPreviousChapter() {
+      if (nextPrevChapterPair?.second == null) return false;
+      final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
+      final toPrev = !_isRTLReaderMode(resolvedReaderMode);
+      ReaderRoute(
+        mangaId: manga.id,
+        chapterId: nextPrevChapterPair!.second!.id,
+        transVertical: transVertical,
+        toPrev: toPrev,
+        openAtEnd: true,
+      ).pushReplacement(context);
+      return true;
+    }
+
+    bool tryNextChapter() {
+      if (!canSwipeAcrossChapterBoundary) return false;
+      return pushNextChapter();
+    }
+
+    bool tryPreviousChapter() {
+      if (!canSwipeAcrossChapterBoundary) return false;
+      return pushPreviousChapter();
+    }
+
+    final onReaderNext = useCallback(() {
+      final isAtLastPage = isAtLastBoundary?.call() ??
+          currentIndex >= chapterPages.pages.length - 1;
+      if (isAtLastPage && tryNextChapter()) {
+        return;
       }
-
-      // Use normal page navigation
       onNext();
     }, [
       lastPageSwipeEnabled,
       readerSwipeChapterToggle,
       currentIndex,
       chapterPages.pages.length,
-      nextPrevChapterPair
+      nextPrevChapterPair,
+      isAtLastBoundary,
+      tryNextChapter,
+      onNext,
     ]);
 
-    final enhancedOnPrevious = useCallback(() {
-      if (lastPageSwipeEnabled && !readerSwipeChapterToggle) {
-        // Check if we're at the first page
-        final isAtFirstPage = currentIndex <= 0;
-
-        if (isAtFirstPage && nextPrevChapterPair?.second != null) {
-          // Navigate to previous chapter
-          ReaderRoute(
-            mangaId: manga.id,
-            chapterId: nextPrevChapterPair!.second!.id,
-            toPrev: true,
-            transVertical: scrollDirection != Axis.vertical,
-          ).pushReplacement(context);
-          return;
-        }
+    final onReaderPrevious = useCallback(() {
+      final isAtFirstPage = isAtFirstBoundary?.call() ?? currentIndex <= 0;
+      if (isAtFirstPage && tryPreviousChapter()) {
+        return;
       }
-
-      // Use normal page navigation
       onPrevious();
     }, [
       lastPageSwipeEnabled,
       readerSwipeChapterToggle,
       currentIndex,
-      nextPrevChapterPair
+      nextPrevChapterPair,
+      isAtFirstBoundary,
+      tryPreviousChapter,
+      onPrevious,
     ]);
 
-    // Chapter navigation callbacks with direction-aware animations
     final onNextChapter = useCallback(() {
-      if (nextPrevChapterPair?.first != null) {
-        // Determine transition direction and RTL handling
-        final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
-        final isRTL = _isRTLReaderMode(resolvedReaderMode);
-        final toPrev =
-            isRTL; // For RTL, next chapter should slide from left (toPrev=true)
-
-        ReaderRoute(
-          mangaId: manga.id,
-          chapterId: nextPrevChapterPair!.first!.id,
-          transVertical: transVertical,
-          toPrev: toPrev,
-        ).pushReplacement(context);
-      }
+      pushNextChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
     final onPreviousChapter = useCallback(() {
-      if (nextPrevChapterPair?.second != null) {
-        // Determine transition direction and RTL handling
-        final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
-        final isRTL = _isRTLReaderMode(resolvedReaderMode);
-        final toPrev =
-            !isRTL; // For RTL, previous chapter should slide from right (toPrev=false)
-
-        ReaderRoute(
-          mangaId: manga.id,
-          chapterId: nextPrevChapterPair!.second!.id,
-          toPrev: toPrev,
-          transVertical: transVertical,
-        ).pushReplacement(context);
-      }
+      pushPreviousChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
     useEffect(() {
@@ -312,14 +484,14 @@ class ReaderWrapper extends HookConsumerWidget {
         subscription = FlutterAndroidVolumeKeydown.stream.listen(
           (event) => (switch (event) {
             HardwareButton.volume_up =>
-              volumeTapInvert ? enhancedOnNext() : enhancedOnPrevious(),
+              volumeTapInvert ? onReaderNext() : onReaderPrevious(),
             HardwareButton.volume_down =>
-              volumeTapInvert ? enhancedOnPrevious() : enhancedOnNext(),
+              volumeTapInvert ? onReaderPrevious() : onReaderNext(),
           }),
         );
       }
       return () => subscription?.cancel();
-    }, [volumeTap, volumeTapInvert, enhancedOnNext, enhancedOnPrevious]);
+    }, [volumeTap, volumeTapInvert, onReaderNext, onReaderPrevious]);
 
     return Theme(
       data: context.theme.copyWith(
@@ -344,34 +516,24 @@ class ReaderWrapper extends HookConsumerWidget {
                   actions: {
                     PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(
                       onInvoke: (intent) =>
-                          invertTap ? enhancedOnNext() : enhancedOnPrevious(),
+                          invertTap ? onReaderNext() : onReaderPrevious(),
                     ),
                     NextScrollIntent: CallbackAction<NextScrollIntent>(
                       onInvoke: (intent) =>
-                          invertTap ? enhancedOnPrevious() : enhancedOnNext(),
+                          invertTap ? onReaderPrevious() : onReaderNext(),
                     ),
                     PreviousChapterIntent:
                         CallbackAction<PreviousChapterIntent>(
                       onInvoke: (intent) {
-                        nextPrevChapterPair?.second != null
-                            ? ReaderRoute(
-                                mangaId: nextPrevChapterPair!.second!.mangaId,
-                                chapterId: nextPrevChapterPair.second!.id,
-                                toPrev: true,
-                                transVertical: scrollDirection != Axis.vertical,
-                              ).pushReplacement(context)
-                            : enhancedOnPrevious();
+                        if (!pushPreviousChapter()) onReaderPrevious();
                         return null;
                       },
                     ),
                     NextChapterIntent: CallbackAction<NextChapterIntent>(
-                      onInvoke: (intent) => nextPrevChapterPair?.first != null
-                          ? ReaderRoute(
-                              mangaId: nextPrevChapterPair!.first!.mangaId,
-                              chapterId: nextPrevChapterPair.first!.id,
-                              transVertical: scrollDirection != Axis.vertical,
-                            ).pushReplacement(context)
-                          : enhancedOnNext(),
+                      onInvoke: (intent) {
+                        if (!pushNextChapter()) onReaderNext();
+                        return null;
+                      },
                     ),
                     HideQuickOpenIntent: CallbackAction<HideQuickOpenIntent>(
                       onInvoke: (HideQuickOpenIntent intent) {
@@ -392,8 +554,10 @@ class ReaderWrapper extends HookConsumerWidget {
                           mangaReaderPadding: mangaReaderPadding.value,
                           mangaReaderMagnifierSize:
                               mangaReaderMagnifierSize.value,
-                          onNext: enhancedOnNext,
-                          onPrevious: enhancedOnPrevious,
+                          onNext: onReaderNext,
+                          onPrevious: onReaderPrevious,
+                          onNextBoundary: tryNextChapter,
+                          onPreviousBoundary: tryPreviousChapter,
                           mangaReaderNavigationLayout:
                               mangaReaderNavigationLayout,
                           mangaTapInvert: mangaTapInvert,
@@ -402,10 +566,12 @@ class ReaderWrapper extends HookConsumerWidget {
                           lastPageSwipeEnabled: lastPageSwipeEnabled,
                           resolvedReaderMode: resolvedReaderMode,
                           currentIndex: currentIndex,
+                          spreadPageIndexes: spreadPageIndexes,
                           chapterPages: chapterPages,
                           showReaderLayoutAnimation: showReaderLayoutAnimation,
                           pageController: pageController,
-                          child: _buildEnhancedChildWithPageDetection(
+                          childHandlesGestures: childHandlesGestures,
+                          child: _wrapWithBoundaryDetection(
                             child,
                             lastPageSwipeEnabled,
                             readerSwipeChapterToggle,
@@ -413,6 +579,7 @@ class ReaderWrapper extends HookConsumerWidget {
                             onPreviousChapter,
                             resolvedReaderMode,
                             scrollDirection,
+                            childHandlesGestures,
                           ),
                         ),
                       ),
@@ -437,7 +604,8 @@ class ReaderWrapper extends HookConsumerWidget {
                 showSideSeekBar: showSideSeekBar,
                 scrollDirection: scrollDirection,
                 nextPrevChapterPair: nextPrevChapterPair,
-                invertTap: invertTap,
+                resolvedReaderMode: resolvedReaderMode,
+                reverseSeekBar: _isRTLReaderMode(resolvedReaderMode),
                 onChanged: onChanged,
                 onOpenSettings: () => showReaderSettingsSheet(
                   context: context,
@@ -456,36 +624,37 @@ class ReaderWrapper extends HookConsumerWidget {
     );
   }
 
-  /// Enhanced child widget that adds last-page swipe detection for PageView
-  Widget _buildEnhancedChildWithPageDetection(
-    Widget originalChild,
+  Widget _wrapWithBoundaryDetection(
+    Widget child,
     bool lastPageSwipeEnabled,
     bool readerSwipeChapterToggle,
     VoidCallback onNextChapter,
     VoidCallback onPreviousChapter,
     ReaderMode resolvedReaderMode,
     Axis scrollDirection,
+    bool childHandlesGestures,
   ) {
-    if (!lastPageSwipeEnabled || readerSwipeChapterToggle) {
-      return originalChild;
+    if (childHandlesGestures ||
+        !lastPageSwipeEnabled ||
+        readerSwipeChapterToggle) {
+      return child;
     }
 
-    return _PageViewEnhancer(
-      originalChild: originalChild,
+    return _BoundarySwipeDetector(
       chapterPages: chapterPages,
       onNextChapter: onNextChapter,
       onPreviousChapter: onPreviousChapter,
       resolvedReaderMode: resolvedReaderMode,
       scrollDirection: scrollDirection,
       lastPageSwipeEnabled: lastPageSwipeEnabled,
+      child: child,
     );
   }
 }
 
-/// Widget that enhances PageView with last-page swipe detection
-class _PageViewEnhancer extends StatefulWidget {
-  const _PageViewEnhancer({
-    required this.originalChild,
+class _BoundarySwipeDetector extends StatefulWidget {
+  const _BoundarySwipeDetector({
+    required this.child,
     required this.chapterPages,
     required this.onNextChapter,
     required this.onPreviousChapter,
@@ -494,7 +663,7 @@ class _PageViewEnhancer extends StatefulWidget {
     required this.lastPageSwipeEnabled,
   });
 
-  final Widget originalChild;
+  final Widget child;
   final ChapterPagesDto chapterPages;
   final VoidCallback onNextChapter;
   final VoidCallback onPreviousChapter;
@@ -503,11 +672,10 @@ class _PageViewEnhancer extends StatefulWidget {
   final bool lastPageSwipeEnabled;
 
   @override
-  State<_PageViewEnhancer> createState() => _PageViewEnhancerState();
+  State<_BoundarySwipeDetector> createState() => _BoundarySwipeDetectorState();
 }
 
-class _PageViewEnhancerState extends State<_PageViewEnhancer> {
-  int? _lastPageIndex;
+class _BoundarySwipeDetectorState extends State<_BoundarySwipeDetector> {
   bool _isAtMaxExtent = false;
   bool _isAtMinExtent = false;
   DateTime? _maxExtentReachedTime;
@@ -518,46 +686,23 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
   Widget build(BuildContext context) {
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
-        // Track page changes and detect swipe attempts at boundaries
-        if (notification is ScrollEndNotification && notification.depth == 0) {
-          final metrics = notification.metrics;
-          if (metrics is PageMetrics) {
-            final currentPage = metrics.page?.round();
-            if (currentPage != null) {
-              final oldPage = _lastPageIndex;
-              _lastPageIndex = currentPage;
-
-              // Check if this was a boundary swipe attempt
-              _checkBoundarySwipe(oldPage, currentPage, metrics);
-            }
-          }
-        }
-
-        // Also check scroll update notifications for swipe attempts
         if (notification is ScrollUpdateNotification &&
             notification.depth == 0) {
           final metrics = notification.metrics;
           _checkScrollAttemptAtBoundary(metrics);
         }
 
-        // For webtoon: detect overscroll attempts using OverscrollNotification
         if (notification is OverscrollNotification && notification.depth == 0) {
           _handleWebtoonOverscroll(notification);
         }
 
         return false;
       },
-      child: widget.originalChild,
+      child: widget.child,
     );
   }
 
-  void _checkBoundarySwipe(int? oldPage, int currentPage, PageMetrics metrics) {
-    // We now rely solely on overscroll detection, so do nothing here.
-    return;
-  }
-
   void _checkScrollAttemptAtBoundary(ScrollMetrics metrics) {
-    // Handle both PageMetrics (for PageView) and general ScrollMetrics (for Webtoon)
     if (metrics is PageMetrics) {
       // PageView-based readers (horizontal modes). Derive the last index from
       // the scroll extent, not the raw page count, so edge-swipe chapter nav is
@@ -570,7 +715,6 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
       final bool atLastPage = currentPage >= lastPageIndex;
       final bool atFirstPage = currentPage <= 0;
 
-      // Trigger immediately when user drags past edge more than 10 logical pixels
       const double kOverscrollThreshold = 10.0;
 
       if (widget.lastPageSwipeEnabled) {
@@ -596,15 +740,12 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
         _edgeNavTriggered = false;
       }
     } else {
-      // Continuous scroll readers (webtoon, vertical modes)
-      // Track when we're at boundaries for overscroll detection
       final wasAtMaxExtent = _isAtMaxExtent;
       final wasAtMinExtent = _isAtMinExtent;
 
       _isAtMaxExtent = metrics.pixels >= metrics.maxScrollExtent;
       _isAtMinExtent = metrics.pixels <= metrics.minScrollExtent;
 
-      // Track timing when we reach boundaries to distinguish momentum from deliberate swipes
       if (_isAtMaxExtent && !wasAtMaxExtent) {
         _maxExtentReachedTime = DateTime.now();
       }
@@ -612,7 +753,6 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
         _minExtentReachedTime = DateTime.now();
       }
 
-      // Reset timing when leaving boundaries
       if (!_isAtMaxExtent && wasAtMaxExtent) {
         _maxExtentReachedTime = null;
       }
@@ -627,19 +767,16 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
   }
 
   void _handleWebtoonOverscroll(OverscrollNotification notification) {
-    // Safety check: only process if last page swipe is enabled
     if (!widget.lastPageSwipeEnabled) {
       return;
     }
 
     final now = DateTime.now();
-    // Use shorter delay for PageView (paged readers) to feel more responsive
     final bool isPagedReader = notification.metrics is PageMetrics;
     final int triggerDelayMs = isPagedReader ? 50 : 300;
 
     const double kImmediateThreshold = 2.0;
 
-    // For PageView (paged reader) fire immediately once overscroll crosses tiny threshold
     if (isPagedReader) {
       if (_isAtMaxExtent && notification.overscroll > kImmediateThreshold) {
         if (!_edgeNavTriggered) {
@@ -657,8 +794,6 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
       }
     }
 
-    // Fallback for continuous readers (webtoon) – keep delay logic
-    // Check for overscroll at the end (positive overscroll when at max extent)
     if (_isAtMaxExtent && notification.overscroll > 0) {
       if (_maxExtentReachedTime != null &&
           now.difference(_maxExtentReachedTime!).inMilliseconds >
@@ -696,14 +831,18 @@ class ReaderView extends HookConsumerWidget {
     required this.prevNextChapterPair,
     required this.mangaReaderNavigationLayout,
     this.mangaTapInvert,
+    this.onNextBoundary = _noBoundaryNavigation,
+    this.onPreviousBoundary = _noBoundaryNavigation,
     required this.readerSwipeChapterToggle,
     required this.lastPageSwipeEnabled,
     required this.resolvedReaderMode,
     required this.currentIndex,
+    this.spreadPageIndexes,
     required this.chapterPages,
     required this.child,
     this.showReaderLayoutAnimation = false,
     this.pageController,
+    this.childHandlesGestures = false,
   });
 
   final VoidCallback toggleVisibility;
@@ -713,6 +852,8 @@ class ReaderView extends HookConsumerWidget {
   final double mangaReaderMagnifierSize;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
+  final bool Function() onNextBoundary;
+  final bool Function() onPreviousBoundary;
   final ({ChapterDto? first, ChapterDto? second})? prevNextChapterPair;
   final ReaderNavigationLayout mangaReaderNavigationLayout;
   final TapInvert? mangaTapInvert;
@@ -720,21 +861,18 @@ class ReaderView extends HookConsumerWidget {
   final bool lastPageSwipeEnabled;
   final ReaderMode resolvedReaderMode;
   final int currentIndex;
+  final List<int>? spreadPageIndexes;
   final ChapterPagesDto chapterPages;
   final bool showReaderLayoutAnimation;
   final Widget child;
   final PageController? pageController;
-
-  /// Gesture handling extracted for better performance and maintainability.
-  /// This widget focuses on:
-  /// - Magnification handling
-  /// - Navigation layout overlay
-  /// - Basic UI state management
+  final bool childHandlesGestures;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showMagnification = useState(false);
     final dragGesturePosition = useState(Offset.zero);
+    final pageActionsOpen = useState(false);
 
     // "Show actions on long tap" (default ON): long-press opens the
     // page-actions sheet instead of the magnifier. OFF keeps the magnifier.
@@ -746,7 +884,6 @@ class ReaderView extends HookConsumerWidget {
       mangaReaderMagnifierSize,
     );
 
-    // Build the core reading content wrapped with padding
     Widget content = Padding(
       padding: EdgeInsets.symmetric(
         vertical: context.height *
@@ -762,53 +899,111 @@ class ReaderView extends HookConsumerWidget {
             ? PrimaryScrollController.of(context) as PageController
             : null);
 
-    content = DirectionalSwipeGestureHandler(
-      onTap: toggleVisibility,
-      onLongPressStart: (details) {
-        if (readWithLongTap) {
-          showReaderPageActionsSheet(
-            context: context,
-            ref: ref,
-            chapterPages: chapterPages,
-            pageIndex: currentIndex,
-          );
+    void handleLongPressStart(Offset position) {
+      if (readWithLongTap) {
+        if (pageActionsOpen.value ||
+            ModalRoute.of(context)?.isCurrent != true) {
           return;
         }
-        dragGesturePosition.value = details.localPosition;
-        showMagnification.value = true;
-      },
-      onLongPressEnd: (details) {
-        if (readWithLongTap) return;
-        showMagnification.value = false;
-      },
-      onLongPressMoveUpdate: (details) {
-        if (readWithLongTap) return;
-        dragGesturePosition.value = details.localPosition;
-      },
-      scrollDirection: scrollDirection,
-      readerSwipeChapterToggle: readerSwipeChapterToggle,
-      lastPageSwipeEnabled: lastPageSwipeEnabled,
-      resolvedReaderMode: resolvedReaderMode,
-      currentIndex: currentIndex,
-      chapterPages: chapterPages,
-      mangaId: mangaId,
-      prevNextChapterPair: prevNextChapterPair,
-      onNextPage: onNext,
-      onPreviousPage: onPrevious,
-      pageController: controller,
-      child: content,
-    );
+        pageActionsOpen.value = true;
+        unawaited(showReaderPageActionsSheet(
+          context: context,
+          ref: ref,
+          chapterPages: chapterPages,
+          pageIndex: currentIndex,
+          spreadPageIndexes: spreadPageIndexes,
+        ).whenComplete(() {
+          if (context.mounted) pageActionsOpen.value = false;
+        }));
+        return;
+      }
+      dragGesturePosition.value = position;
+      showMagnification.value = true;
+    }
+
+    void handleLongPressMove(Offset position) {
+      if (readWithLongTap) return;
+      dragGesturePosition.value = position;
+    }
+
+    void handleLongPressEnd() {
+      if (readWithLongTap) return;
+      showMagnification.value = false;
+    }
+
+    void handleLongPressCancel() {
+      if (readWithLongTap) {
+        if (pageActionsOpen.value &&
+            context.mounted &&
+            ModalRoute.of(context)?.isCurrent == false) {
+          unawaited(Navigator.of(context).maybePop());
+        }
+        return;
+      }
+      showMagnification.value = false;
+    }
+
+    if (childHandlesGestures) {
+      final layout = mangaReaderNavigationLayout ==
+              ReaderNavigationLayout.defaultNavigation
+          ? ref.watch(readerNavigationLayoutKeyProvider) ??
+              ReaderNavigationLayout.defaultNavigation
+          : mangaReaderNavigationLayout;
+      final tapInvert = mangaTapInvert ??
+          ref.watch(readerTapInvertKeyProvider) ??
+          TapInvert.fromLegacyInvert(ref.watch(invertTapProvider));
+      final smallerTapZones = ref.watch(smallerTapZonesProvider) ?? false;
+      content = ReaderInputScope(
+        callbacks: ReaderInputCallbacks(
+          onTap: toggleVisibility,
+          onLongPressStart: handleLongPressStart,
+          onLongPressMoveUpdate: handleLongPressMove,
+          onLongPressEnd: handleLongPressEnd,
+          onLongPressCancel: handleLongPressCancel,
+          onNext: onNext,
+          onPrevious: onPrevious,
+          onNextBoundary: onNextBoundary,
+          onPreviousBoundary: onPreviousBoundary,
+          navigationLayout: layout,
+          tapInvert: tapInvert,
+          smallerTapZones: smallerTapZones,
+        ),
+        child: content,
+      );
+    } else {
+      content = DirectionalSwipeGestureHandler(
+        onTap: toggleVisibility,
+        onLongPressStart: (details) =>
+            handleLongPressStart(details.localPosition),
+        onLongPressEnd: (_) => handleLongPressEnd(),
+        onLongPressMoveUpdate: (details) =>
+            handleLongPressMove(details.localPosition),
+        scrollDirection: scrollDirection,
+        readerSwipeChapterToggle: readerSwipeChapterToggle,
+        lastPageSwipeEnabled: lastPageSwipeEnabled,
+        resolvedReaderMode: resolvedReaderMode,
+        currentIndex: currentIndex,
+        chapterPages: chapterPages,
+        mangaId: mangaId,
+        prevNextChapterPair: prevNextChapterPair,
+        onNextPage: onNext,
+        onPreviousPage: onPrevious,
+        pageController: controller,
+        child: content,
+      );
+    }
 
     return Stack(
       children: [
         content,
-        ReaderNavigationLayoutWidget(
-          onNext: onNext,
-          onPrevious: onPrevious,
-          navigationLayout: mangaReaderNavigationLayout,
-          tapInvert: mangaTapInvert,
-          showReaderLayoutAnimation: showReaderLayoutAnimation,
-        ),
+        if (!childHandlesGestures)
+          ReaderNavigationLayoutWidget(
+            onNext: onNext,
+            onPrevious: onPrevious,
+            navigationLayout: mangaReaderNavigationLayout,
+            tapInvert: mangaTapInvert,
+            showReaderLayoutAnimation: showReaderLayoutAnimation,
+          ),
         if (showMagnification.value)
           Positioned(
             left: positionOffset.dx,
@@ -829,4 +1024,3 @@ class ReaderView extends HookConsumerWidget {
     );
   }
 }
-

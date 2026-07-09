@@ -261,11 +261,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
           ),
           const ReaderPinchToZoom(),
           _BoolTile(
-            title: context.l10n.disableZoomIn,
-            value: ref.watch(disableZoomInProvider).ifNull(false),
-            onChanged: ref.read(disableZoomInProvider.notifier).update,
-          ),
-          _BoolTile(
             title: context.l10n.disableZoomOut,
             value: ref.watch(disableZoomOutProvider).ifNull(false),
             onChanged: ref.read(disableZoomOutProvider.notifier).update,

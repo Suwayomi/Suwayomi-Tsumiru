@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import '../../../../../constants/enum.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 
-/// Direction of swipe gestures for last-page navigation
 enum SwipeDirection {
   left,
   right,
@@ -16,14 +15,12 @@ enum SwipeDirection {
   down,
 }
 
-/// Navigation action types for smart navigation logic
 enum NavigationAction {
   pageNavigation,
   nextChapter,
   previousChapter,
 }
 
-/// Page position types for smart navigation decisions
 enum PagePosition {
   firstPage,
   middlePage,
@@ -31,35 +28,26 @@ enum PagePosition {
   singlePage,
 }
 
-/// Utility class for last-page swipe feature validation and direction mapping
 class LastPageSwipeUtils {
   LastPageSwipeUtils._();
 
-  /// Maps reader modes to their expected swipe directions for next chapter navigation
-  /// Following the safety rules from project.mdc
   static SwipeDirection getExpectedSwipeDirection(ReaderMode mode) {
     switch (mode) {
       case ReaderMode.singleHorizontalLTR:
       case ReaderMode.continuousHorizontalLTR:
-        return SwipeDirection.left; // LTR: swipe left for next
-
+        return SwipeDirection.left;
       case ReaderMode.singleHorizontalRTL:
       case ReaderMode.continuousHorizontalRTL:
-        return SwipeDirection.right; // RTL: swipe right for next
-
+        return SwipeDirection.right;
       case ReaderMode.singleVertical:
       case ReaderMode.continuousVertical:
       case ReaderMode.webtoon:
-        return SwipeDirection.up; // Vertical: swipe up for next
-
+        return SwipeDirection.up;
       case ReaderMode.defaultReader:
-        return SwipeDirection.left; // Safe fallback as specified in project.mdc
+        return SwipeDirection.left;
     }
   }
 
-  /// Resolves the actual reading mode, handling the "default" case
-  /// According to memories, when manga has 'Default' reading mode selected,
-  /// it should use whatever reading mode the user has configured as their default in settings
   static ReaderMode resolveActualReaderMode({
     required ReaderMode? mangaReaderMode,
     required ReaderMode? defaultReaderMode,
@@ -71,30 +59,23 @@ class LastPageSwipeUtils {
     return mangaReaderMode;
   }
 
-  /// Validates if the actual swipe direction matches the expected direction for the reader mode
   static bool isCorrectDirection(SwipeDirection actual, ReaderMode mode) {
     final expected = getExpectedSwipeDirection(mode);
     return actual == expected;
   }
 
-  /// Detects swipe direction from gesture details
   static SwipeDirection? detectSwipeDirection(DragEndDetails details) {
     final velocity = details.velocity.pixelsPerSecond;
     final primaryVelocity = details.primaryVelocity;
 
     if (primaryVelocity == null) return null;
 
-    // Determine primary direction based on velocity magnitude
     if (velocity.dx.abs() > velocity.dy.abs()) {
-      // Horizontal swipe
       return primaryVelocity > 0 ? SwipeDirection.right : SwipeDirection.left;
-    } else {
-      // Vertical swipe
-      return primaryVelocity > 0 ? SwipeDirection.down : SwipeDirection.up;
     }
+    return primaryVelocity > 0 ? SwipeDirection.down : SwipeDirection.up;
   }
 
-  /// Checks if the current page is the last page of the chapter
   static bool isAtLastPage({
     required int currentIndex,
     required ChapterPagesDto chapterPages,
@@ -103,14 +84,12 @@ class LastPageSwipeUtils {
     return currentIndex >= chapterPages.pages.length - 1;
   }
 
-  /// Checks if the current page is the first page of the chapter
   static bool isAtFirstPage({
     required int currentIndex,
   }) {
     return currentIndex <= 0;
   }
 
-  /// Checks if the current page is the last page using metadata
   static bool isAtLastPageByMetadata({
     required int currentIndex,
     required ChapterPagesDto chapterPages,
@@ -120,34 +99,22 @@ class LastPageSwipeUtils {
     return currentIndex >= (pageCount - 1);
   }
 
-  /// Enhanced page position detection for smart navigation
   static bool isAtLastPageReliable({
     required int currentIndex,
     required ChapterPagesDto chapterPages,
   }) {
-    // Primary method: check against actual loaded pages
-    final actualPagesCheck = isAtLastPage(
+    if (chapterPages.pages.isNotEmpty) {
+      return isAtLastPage(
+        currentIndex: currentIndex,
+        chapterPages: chapterPages,
+      );
+    }
+    return isAtLastPageByMetadata(
       currentIndex: currentIndex,
       chapterPages: chapterPages,
     );
-
-    // Fallback method: check against metadata
-    final metadataCheck = isAtLastPageByMetadata(
-      currentIndex: currentIndex,
-      chapterPages: chapterPages,
-    );
-
-    // Use actual pages if available, otherwise fall back to metadata
-    final result =
-        chapterPages.pages.isNotEmpty ? actualPagesCheck : metadataCheck;
-
-    // If there's a discrepancy between methods, prefer the more conservative approach
-    // This ensures we don't accidentally trigger when not truly at the last page
-
-    return result;
   }
 
-  /// Comprehensive page position detection for smart navigation
   static PagePosition detectPagePosition({
     required int currentIndex,
     required ChapterPagesDto chapterPages,

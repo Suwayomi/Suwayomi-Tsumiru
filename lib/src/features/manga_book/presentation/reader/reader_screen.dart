@@ -20,6 +20,7 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../offline/data/offline_download_providers.dart';
+import '../../../offline/data/offline_repository.dart';
 import '../../../settings/presentation/general/widgets/force_portrait_tile.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
@@ -29,6 +30,7 @@ import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
+import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/auto_webtoon.dart';
@@ -44,10 +46,12 @@ class ReaderScreen extends HookConsumerWidget {
     required this.mangaId,
     required this.chapterId,
     this.showReaderLayoutAnimation = false,
+    this.openAtEnd = false,
   });
   final int mangaId;
   final int chapterId;
   final bool showReaderLayoutAnimation;
+  final bool openAtEnd;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
@@ -57,6 +61,12 @@ class ReaderScreen extends HookConsumerWidget {
     final chapter = ref.watch(chapterProviderWithIndex);
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
     final ignoreSafeArea = ref.watch(readerIgnoreSafeAreaProvider).ifNull();
+    final providerContainer = ProviderScope.containerOf(context, listen: false);
+    final incognitoMode = ref.watch(incognitoModeProvider);
+    final offlineEnabled = ref.watch(offlineEnabledProvider);
+    final offlineDatabase =
+        offlineEnabled ? ref.watch(offlineDatabaseProvider) : null;
+    final mangaBookRepository = ref.watch(mangaBookRepositoryProvider);
 
     // Auto Webtoon: long-strip series read webtoon THIS session when
     // their per-series mode is Default; never written to meta.
@@ -89,7 +99,7 @@ class ReaderScreen extends HookConsumerWidget {
       // Incognito: leave no trace. Skip every progress/history write (covers
       // both the debounced call and the PopScope flush). The PopScope's own
       // provider invalidations still run — they're outside this callback.
-      if (ref.read(incognitoModeProvider)) return;
+      if (incognitoMode) return;
       final chapterValue = chapter.valueOrNull;
       final chapterPagesValue = chapterPages.valueOrNull;
       if (chapterValue == null || chapterPagesValue == null) return;
@@ -101,29 +111,31 @@ class ReaderScreen extends HookConsumerWidget {
       final isReadingCompleted =
           (currentPage >= (actualPageCount - 1)) && actualPageCount > 0;
 
+      if (isReadingCompleted && context.mounted) {
+        unawaited(maybeTrackProgressOnReadFetch(
+          ref,
+          mangaId: mangaId,
+          isRead: true,
+          manual: false,
+        ));
+      }
+
       // Persist locally first (survives offline + app restart), then push to
       // the server; if offline it stays pending and up-syncs on reconnect.
-      await recordReadingProgress(
-        ref,
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: offlineEnabled,
+        offlineDatabase: offlineDatabase,
+        repository: mangaBookRepository,
         chapterId: chapterValue.id,
         lastPageRead: isReadingCompleted ? 0 : currentPage,
         isRead: isReadingCompleted,
       );
 
-      // Push progress to external trackers when the toggle is on and the
-      // manga has at least one tracker bound. Fire-and-forget.
-      unawaited(maybeTrackProgressOnReadFetch(
-        ref,
-        mangaId: mangaId,
-        isRead: isReadingCompleted,
-        manual: false,
-      ));
-
       // Delete the on-device copy once read, if the user opted in.
       // On a new read, auto-delete behind the reader — both the on-device copy
       // and (per the server settings) the server copy. Each no-ops if its own
       // setting is off.
-      if (isReadingCompleted) {
+      if (isReadingCompleted && context.mounted) {
         unawaited(maybeDeleteOnReadLocal(
           ref,
           mangaId: mangaId,
@@ -137,8 +149,16 @@ class ReaderScreen extends HookConsumerWidget {
       }
 
       // Invalidate history to refresh the reading progress
-      ref.invalidate(readingHistoryProvider);
-    }, [chapter.valueOrNull, chapterPages.valueOrNull]);
+      providerContainer.invalidate(readingHistoryProvider);
+    }, [
+      chapter.valueOrNull,
+      chapterPages.valueOrNull,
+      incognitoMode,
+      offlineEnabled,
+      offlineDatabase,
+      mangaBookRepository,
+      providerContainer,
+    ]);
 
     final onPageChanged = useCallback<AsyncValueSetter<int>>(
       (int index) async {
@@ -164,17 +184,24 @@ class ReaderScreen extends HookConsumerWidget {
         final actualPageCount = chapterPagesValue.pages.length;
 
         if (index >= (actualPageCount - 1) && actualPageCount > 0) {
-          updateLastRead(index);
+          unawaited(updateLastRead(index));
         } else {
           debounce.value = Timer(
             const Duration(seconds: 2),
-            () => updateLastRead(index),
+            () {
+              if (!context.mounted) return;
+              unawaited(updateLastRead(index));
+            },
           );
         }
         return;
       },
-      [chapter, chapterPages],
+      [chapter, chapterPages, updateLastRead],
     );
+
+    useEffect(() {
+      return () => debounce.value?.cancel();
+    }, []);
 
     useEffect(() {
       // Fullscreen OFF keeps the OS bars for the whole session (read once at
@@ -239,17 +266,21 @@ class ReaderScreen extends HookConsumerWidget {
           // we invalidate the lists below — otherwise they re-fetch the stale
           // (pre-read) state and the unread badge/count comes back wrong.
           debounce.value?.cancel();
-          if (latestPage.value >= 0) {
-            await updateLastRead(latestPage.value);
+          try {
+            if (latestPage.value >= 0) {
+              await updateLastRead(latestPage.value);
+            }
+          } finally {
+            providerContainer.invalidate(chapterProviderWithIndex);
+            providerContainer
+                .invalidate(mangaChapterListProvider(mangaId: mangaId));
+            // Refresh the library's per-category lists so the unread badge updates
+            // even when the reader was opened directly (e.g. the continue-reading
+            // button), bypassing the manga-details screen that would otherwise do
+            // this on its own pop (#282).
+            providerContainer.invalidate(libraryMangaListProvider);
+            providerContainer.invalidate(categoryMangaListProvider);
           }
-          ref.invalidate(chapterProviderWithIndex);
-          ref.invalidate(mangaChapterListProvider(mangaId: mangaId));
-          // Refresh the library's per-category lists so the unread badge updates
-          // even when the reader was opened directly (e.g. the continue-reading
-          // button), bypassing the manga-details screen that would otherwise do
-          // this on its own pop (#282).
-          ref.invalidate(libraryMangaListProvider);
-          ref.invalidate(categoryMangaListProvider);
         }
       },
       child: ScrollConfiguration(
@@ -284,42 +315,28 @@ class ReaderScreen extends HookConsumerWidget {
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.singleHorizontalRTL => SinglePageReaderMode(
-                            chapter: chapterData,
-                            manga: data,
-                            onPageChanged: onPageChanged,
-                            reverse: true,
-                            showReaderLayoutAnimation:
-                                showReaderLayoutAnimation,
-                            chapterPages: chapterPagesData,
-                          ),
-                        ReaderMode.continuousHorizontalLTR =>
-                          ContinuousReaderMode(
-                            chapter: chapterData,
-                            manga: data,
-                            onPageChanged: onPageChanged,
-                            scrollDirection: Axis.horizontal,
-                            showReaderLayoutAnimation:
-                                showReaderLayoutAnimation,
-                            chapterPages: chapterPagesData,
-                          ),
+                        ReaderMode.singleHorizontalRTL ||
                         ReaderMode.continuousHorizontalRTL =>
-                          ContinuousReaderMode(
+                          SinglePageReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
-                            scrollDirection: Axis.horizontal,
                             reverse: true,
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.singleHorizontalLTR => SinglePageReaderMode(
+                        ReaderMode.singleHorizontalLTR ||
+                        ReaderMode.continuousHorizontalLTR =>
+                          SinglePageReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
                             chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
                           ),
                         ReaderMode.continuousVertical => ContinuousReaderMode(
                             chapter: chapterData,
@@ -329,6 +346,7 @@ class ReaderScreen extends HookConsumerWidget {
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
                           ),
                         ReaderMode.webtoon => ContinuousReaderMode(
                             chapter: chapterData,
@@ -337,17 +355,21 @@ class ReaderScreen extends HookConsumerWidget {
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
                           ),
                         ReaderMode.defaultReader || null => switch (
                               defaultReaderMode ?? ReaderMode.webtoon) {
-                            ReaderMode.singleHorizontalLTR =>
+                            ReaderMode.singleHorizontalLTR ||
+                            ReaderMode.continuousHorizontalLTR =>
                               SinglePageReaderMode(
                                 chapter: chapterData,
                                 manga: data,
                                 onPageChanged: onPageChanged,
                                 chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
                               ),
-                            ReaderMode.singleHorizontalRTL =>
+                            ReaderMode.singleHorizontalRTL ||
+                            ReaderMode.continuousHorizontalRTL =>
                               SinglePageReaderMode(
                                 chapter: chapterData,
                                 manga: data,
@@ -356,6 +378,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
                               ),
                             ReaderMode.singleVertical => SinglePageReaderMode(
                                 chapter: chapterData,
@@ -365,27 +388,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                              ),
-                            ReaderMode.continuousHorizontalLTR =>
-                              ContinuousReaderMode(
-                                chapter: chapterData,
-                                manga: data,
-                                onPageChanged: onPageChanged,
-                                scrollDirection: Axis.horizontal,
-                                showReaderLayoutAnimation:
-                                    showReaderLayoutAnimation,
-                                chapterPages: chapterPagesData,
-                              ),
-                            ReaderMode.continuousHorizontalRTL =>
-                              ContinuousReaderMode(
-                                chapter: chapterData,
-                                manga: data,
-                                onPageChanged: onPageChanged,
-                                scrollDirection: Axis.horizontal,
-                                reverse: true,
-                                showReaderLayoutAnimation:
-                                    showReaderLayoutAnimation,
-                                chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
                               ),
                             ReaderMode.continuousVertical =>
                               ContinuousReaderMode(
@@ -396,6 +399,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
                               ),
                             ReaderMode.webtoon || _ => ContinuousReaderMode(
                                 chapter: chapterData,
@@ -404,6 +408,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
                               ),
                           }
                       };
@@ -411,10 +416,8 @@ class ReaderScreen extends HookConsumerWidget {
                   );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),
-                addScaffoldWrapper: true,
               );
             },
-            addScaffoldWrapper: true,
             refresh: () => ref.refresh(mangaProvider.future),
           ),
         ),

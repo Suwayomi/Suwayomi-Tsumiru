@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/db_keys.dart';
+import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
@@ -63,7 +64,8 @@ class ReaderChrome extends HookConsumerWidget {
     required this.showSideSeekBar,
     required this.scrollDirection,
     required this.nextPrevChapterPair,
-    required this.invertTap,
+    required this.resolvedReaderMode,
+    required this.reverseSeekBar,
     required this.onChanged,
     required this.onOpenSettings,
     required this.onOpenReaderMode,
@@ -90,7 +92,8 @@ class ReaderChrome extends HookConsumerWidget {
 
   final Axis scrollDirection;
   final ({ChapterDto? first, ChapterDto? second})? nextPrevChapterPair;
-  final bool invertTap;
+  final ReaderMode resolvedReaderMode;
+  final bool reverseSeekBar;
   final ValueChanged<int> onChanged;
   final VoidCallback onOpenSettings;
   final VoidCallback onOpenReaderMode;
@@ -109,8 +112,7 @@ class ReaderChrome extends HookConsumerWidget {
     // A16 (targetSdk 36) forces edge-to-edge and ignores statusBar/navBar colors,
     // so we don't set them; the bars paint their own surface behind the system
     // bars. Kept: icon brightness + contrastEnforced:false (3-button nav scrim).
-    final darkIcons =
-        context.theme.colorScheme.brightness == Brightness.light;
+    final darkIcons = context.theme.colorScheme.brightness == Brightness.light;
     final readerOverlayStyle = SystemUiOverlayStyle(
       systemStatusBarContrastEnforced: false,
       statusBarIconBrightness: darkIcons ? Brightness.dark : Brightness.light,
@@ -363,7 +365,8 @@ class ReaderChrome extends HookConsumerWidget {
                       useBottomSeekBar: useBottomSeekBar,
                       scrollDirection: scrollDirection,
                       nextPrevChapterPair: nextPrevChapterPair,
-                      invertTap: invertTap,
+                      resolvedReaderMode: resolvedReaderMode,
+                      reverseSeekBar: reverseSeekBar,
                       onChanged: onChanged,
                       onOpenSettings: onOpenSettings,
                       onOpenReaderMode: onOpenReaderMode,

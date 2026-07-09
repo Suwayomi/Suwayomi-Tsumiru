@@ -18,6 +18,9 @@ extension ChapterExtension on Fragment$ChapterDto {
 
   int get index => sourceOrder;
 
+  bool get hasReadingProgress =>
+      isRead || lastPageRead > 0 || lastReadAt != '0';
+
   Map<String, String> get metaData =>
       {for (final metaItem in meta) metaItem.key: metaItem.value};
 }

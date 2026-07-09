@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../widgets/server_image.dart';
@@ -24,6 +25,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../utils/reader_initial_page.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_config.dart';
 import 'infinity_continuous/infinity_continuous_navigation.dart';
@@ -51,6 +53,8 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
     this.showReaderLayoutAnimation = false,
+    this.effectiveReaderMode = ReaderMode.webtoon,
+    this.openAtEnd = false,
   });
 
   final MangaDto manga;
@@ -60,6 +64,8 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
   final Axis scrollDirection;
   final bool reverse;
   final bool showReaderLayoutAnimation;
+  final ReaderMode effectiveReaderMode;
+  final bool openAtEnd;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -78,6 +84,8 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       scrollDirection: scrollDirection,
       reverse: reverse,
       showReaderLayoutAnimation: showReaderLayoutAnimation,
+      effectiveReaderMode: effectiveReaderMode,
+      openAtEnd: openAtEnd,
     );
   }
 
@@ -95,11 +103,12 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       [scrollOffsetController],
     );
 
-    final ValueNotifier<int> currentIndex = useState(
-      chapter.isRead.ifNull()
-          ? 0
-          : (chapter.lastPageRead).getValueOnNullOrNegative(),
+    final initialIndex = readerInitialPageIndex(
+      chapter: chapter,
+      chapterPages: chapterPages,
+      openAtEnd: openAtEnd,
     );
+    final ValueNotifier<int> currentIndex = useState(initialIndex);
 
     useEffect(() {
       void listener() {
@@ -149,6 +158,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       manga: manga,
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       currentIndex: currentIndex.value,
+      effectiveReaderMode: effectiveReaderMode,
       onChanged: (index) {
         currentIndex.value = index;
         scrollController.jumpTo(index: index);
@@ -184,9 +194,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
           itemScrollController: scrollController,
           itemPositionsListener: positionsListener,
           scrollOffsetController: scrollOffsetController,
-          initialScrollIndex: chapter.isRead.ifNull()
-              ? 0
-              : chapter.lastPageRead.getValueOnNullOrNegative(),
+          initialScrollIndex: initialIndex,
           scrollDirection: scrollDirection,
           reverse: reverse,
           itemCount: chapterPages.chapter.pageCount,

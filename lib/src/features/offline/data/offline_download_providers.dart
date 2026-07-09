@@ -182,22 +182,41 @@ Future<void> recordReadingProgress(
   required bool isRead,
 }) async {
   final offline = ref.read(offlineEnabledProvider);
-  if (offline) {
-    await ref.read(offlineDatabaseProvider).setChapterProgress(
-          chapterId,
-          lastPageRead: lastPageRead,
-          isRead: isRead,
-        );
+  await recordReadingProgressWithDependencies(
+    offlineEnabled: offline,
+    offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
+    repository: ref.read(mangaBookRepositoryProvider),
+    chapterId: chapterId,
+    lastPageRead: lastPageRead,
+    isRead: isRead,
+  );
+}
+
+Future<void> recordReadingProgressWithDependencies({
+  required bool offlineEnabled,
+  required OfflineDatabase? offlineDatabase,
+  required MangaBookRepository repository,
+  required int chapterId,
+  required int lastPageRead,
+  required bool isRead,
+}) async {
+  final db = offlineDatabase;
+  if (offlineEnabled && db != null) {
+    await db.setChapterProgress(
+      chapterId,
+      lastPageRead: lastPageRead,
+      isRead: isRead,
+    );
   }
   final result = await AsyncValue.guard(
-    () => ref.read(mangaBookRepositoryProvider).putChapter(
-          chapterId: chapterId,
-          patch: ChapterChange(lastPageRead: lastPageRead, isRead: isRead),
-        ),
+    () => repository.putChapter(
+      chapterId: chapterId,
+      patch: ChapterChange(lastPageRead: lastPageRead, isRead: isRead),
+    ),
   );
-  if (offline && !result.hasError) {
-    await ref.read(offlineDatabaseProvider).clearProgressDirtyIfUnchanged(
-        chapterId, lastPageRead: lastPageRead, isRead: isRead);
+  if (offlineEnabled && db != null && !result.hasError) {
+    await db.clearProgressDirtyIfUnchanged(chapterId,
+        lastPageRead: lastPageRead, isRead: isRead);
   }
 }
 
@@ -226,8 +245,9 @@ Future<void> recordBookmark(
         ),
   );
   if (offline && !result.hasError) {
-    await ref.read(offlineDatabaseProvider).clearBookmarkDirtyIfUnchanged(
-        chapterId, isBookmarked: isBookmarked);
+    await ref
+        .read(offlineDatabaseProvider)
+        .clearBookmarkDirtyIfUnchanged(chapterId, isBookmarked: isBookmarked);
   }
 }
 
@@ -245,8 +265,9 @@ Future<void> recordBookmark(
 /// isn't loaded.
 int? _whileReadingTarget(
     WidgetRef ref, int mangaId, int readChapterId, int slots) {
-  final chapters =
-      ref.read(mangaChapterListWithFilterProvider(mangaId: mangaId)).valueOrNull;
+  final chapters = ref
+      .read(mangaChapterListWithFilterProvider(mangaId: mangaId))
+      .valueOrNull;
   if (chapters == null) return null;
   final isAsc = ref.read(mangaChapterSortDirectionProvider) ??
       (DBKeys.chapterSortDirection.initial as bool);
@@ -483,7 +504,8 @@ Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
   if (_useBgService) {
     await ref.read(backgroundDownloadControllerProvider).onRemoved(chapterId);
   }
-  final chapter = await ref.read(offlineRepositoryProvider).chapterById(chapterId);
+  final chapter =
+      await ref.read(offlineRepositoryProvider).chapterById(chapterId);
   if (chapter != null) await manager.deleteChapter(chapter);
   await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
 }
@@ -564,7 +586,10 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   if (res.statusCode != 200) {
     throw Exception('offline page fetch failed ($pageUrl): ${res.statusCode}');
   }
-  return (bytes: res.bodyBytes, ext: pageImageExt(res.headers['content-type'], res.bodyBytes));
+  return (
+    bytes: res.bodyBytes,
+    ext: pageImageExt(res.headers['content-type'], res.bodyBytes)
+  );
 }
 
 /// Manga ids that have at least one chapter downloaded on this device — used
@@ -600,7 +625,9 @@ Future<({OfflineKeepRule rule, int count})> mangaKeepConfig(
 @riverpod
 Future<int> mangaDownloadedCount(Ref ref, int mangaId) async {
   if (!ref.watch(offlineEnabledProvider)) return 0;
-  return (await ref.watch(offlineDatabaseProvider).downloadedChaptersForManga(mangaId))
+  return (await ref
+          .watch(offlineDatabaseProvider)
+          .downloadedChaptersForManga(mangaId))
       .length;
 }
 
@@ -721,11 +748,9 @@ Future<int> offlineUsageBytes(Ref ref) async {
 /// Device-wide safety nets — read from persisted user settings.
 @riverpod
 SafetyNetConfig safetyNetConfig(Ref ref) => SafetyNetConfig(
-      timeEvictEnabled:
-          ref.watch(offlineTimeEvictEnabledProvider) ?? false,
+      timeEvictEnabled: ref.watch(offlineTimeEvictEnabledProvider) ?? false,
       keepDays: ref.watch(offlineKeepDaysProvider) ?? 30,
-      storageCapEnabled:
-          ref.watch(offlineStorageCapEnabledProvider) ?? false,
+      storageCapEnabled: ref.watch(offlineStorageCapEnabledProvider) ?? false,
       storageCapBytes:
           (ref.watch(offlineStorageCapMbProvider) ?? 2000) * 1024 * 1024,
     );
@@ -831,8 +856,12 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
   final nets = container.read(safetyNetConfigProvider);
   for (final m in await db.libraryManga()) {
     await reconcileMangaCore(
-        db: db, repo: repo, manager: manager, coordinator: coordinator,
-        nets: nets, mangaId: m.id,
+        db: db,
+        repo: repo,
+        manager: manager,
+        coordinator: coordinator,
+        nets: nets,
+        mangaId: m.id,
         enqueueServerDownload: (ids) => container
             .read(downloadsRepositoryProvider)
             .addChaptersBatchToDownloadQueue(ids));

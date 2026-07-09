@@ -9,14 +9,17 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/app_sizes.dart';
+import '../../../../../../constants/enum.dart';
 import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/theme/brand.dart';
+import '../../../../../offline/presentation/offline_save_button.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../domain/chapter/chapter_model.dart';
-import '../../../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
-import '../../../../widgets/chapter_actions/single_chapter_action_icon.dart';
-import '../../controller/reader_controller.dart';
+import '../../../../widgets/download_status_icon.dart';
+import '../../../manga_details/controller/manga_details_controller.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chrome_extents.dart';
@@ -26,12 +29,9 @@ import 'chrome_extents.dart';
 ///
 /// - **Paged / horizontal mode** ([useBottomSeekBar] true): shows the
 ///   horizontal [BrandPageSeekBar] row (with prev/next chapter buttons) plus
-///   the action row (bookmark · reader-mode · settings gear).
+///   the action row.
 /// - **Webtoon / vertical mode** ([useBottomSeekBar] false): shows ONLY the
-///   action row — the horizontal seek row is dropped, exactly as the old
-///   bottomSheet did when `useBottomSeekBar` was false.
-///
-/// Visual output is byte-identical to the old bottomSheet content.
+///   action row.
 class ReaderBottomControls extends ConsumerWidget {
   const ReaderBottomControls({
     super.key,
@@ -42,7 +42,8 @@ class ReaderBottomControls extends ConsumerWidget {
     required this.useBottomSeekBar,
     required this.scrollDirection,
     required this.nextPrevChapterPair,
-    required this.invertTap,
+    required this.resolvedReaderMode,
+    required this.reverseSeekBar,
     required this.onChanged,
     required this.onOpenSettings,
     required this.onOpenReaderMode,
@@ -59,9 +60,8 @@ class ReaderBottomControls extends ConsumerWidget {
   final bool useBottomSeekBar;
   final Axis scrollDirection;
   final ({ChapterDto? first, ChapterDto? second})? nextPrevChapterPair;
-
-  /// RTL inversion flag for [BrandPageSeekBar].
-  final bool invertTap;
+  final ReaderMode resolvedReaderMode;
+  final bool reverseSeekBar;
 
   final ValueChanged<int> onChanged;
 
@@ -73,16 +73,30 @@ class ReaderBottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chapterId = chapter.id;
-    final fallbackIsBookmarked = chapter.isBookmarked;
-
-    // Nav-bar inset (viewPadding — MediaQuery.padding reads 0 under edge-to-edge).
-    // Applied inside the Card below so its surface fills behind the nav bar.
     final view = View.of(context);
     final systemBottomInset = view.viewPadding.bottom / view.devicePixelRatio;
+    final isPagedMode = _isPagedReaderMode(resolvedReaderMode);
+    final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
+    final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
+    final cropBorders = isPagedMode
+        ? ref.watch(cropBordersProvider).ifNull()
+        : ref.watch(cropBordersWebtoonProvider).ifNull();
 
-    // Report the bar's full resting height (nav clearance is baked into the Card)
-    // so the side seekbar anchors to its visual bottom.
+    void toggleCropBorders() {
+      if (isPagedMode) {
+        ref.read(cropBordersProvider.notifier).update(!cropBorders);
+      } else {
+        ref.read(cropBordersWebtoonProvider.notifier).update(!cropBorders);
+      }
+    }
+
+    void togglePageLayout() {
+      final next = pageLayout == PageLayout.doublePages
+          ? PageLayout.singlePage
+          : PageLayout.doublePages;
+      ref.read(pageLayoutKeyProvider.notifier).update(next);
+    }
+
     return MeasureSize(
       onChange: (size) {
         final current = ref.read(chromeExtentsNotifierProvider);
@@ -107,12 +121,11 @@ class ReaderBottomControls extends ConsumerWidget {
                     child: IconButton(
                       onPressed: nextPrevChapterPair?.second != null
                           ? () => ReaderRoute(
-                                mangaId:
-                                    nextPrevChapterPair!.second!.mangaId,
+                                mangaId: nextPrevChapterPair!.second!.mangaId,
                                 chapterId: nextPrevChapterPair!.second!.id,
                                 toPrev: true,
-                                transVertical:
-                                    scrollDirection != Axis.vertical,
+                                transVertical: scrollDirection == Axis.vertical,
+                                openAtEnd: true,
                               ).pushReplacement(context)
                           : null,
                       icon: const Icon(Icons.skip_previous_rounded),
@@ -124,7 +137,7 @@ class ReaderBottomControls extends ConsumerWidget {
                       maxValue:
                           totalPageCount ?? chapterPages.chapter.pageCount,
                       onChanged: onChanged,
-                      inverted: invertTap,
+                      inverted: reverseSeekBar,
                       capsuleColor: readerNavSurface(context.theme.colorScheme),
                     ),
                   ),
@@ -135,11 +148,9 @@ class ReaderBottomControls extends ConsumerWidget {
                     child: IconButton(
                       onPressed: nextPrevChapterPair?.first != null
                           ? () => ReaderRoute(
-                                mangaId:
-                                    nextPrevChapterPair!.first!.mangaId,
+                                mangaId: nextPrevChapterPair!.first!.mangaId,
                                 chapterId: nextPrevChapterPair!.first!.id,
-                                transVertical:
-                                    scrollDirection != Axis.vertical,
+                                transVertical: scrollDirection == Axis.vertical,
                               ).pushReplacement(context)
                           : null,
                       icon: const Icon(Icons.skip_next_rounded),
@@ -151,27 +162,47 @@ class ReaderBottomControls extends ConsumerWidget {
             ],
             // Action row — always shown.
             Card(
-              // Shared chrome surface; fills behind the nav bar via the padding below.
               color: readerNavSurface(context.theme.colorScheme),
               elevation: 0,
               shape: const RoundedRectangleBorder(),
               margin: EdgeInsets.zero,
               child: Padding(
-                // Horizontal + nav-bar inset only — flat and compact.
                 padding: KEdgeInsets.h16.size +
                     EdgeInsets.only(bottom: systemBottomInset),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _ReaderBookmarkButton(
-                      chapterId: chapterId,
-                      fallbackIsBookmarked: fallbackIsBookmarked,
+                    IconButton(
+                      icon: const Icon(Icons.format_list_numbered_rounded),
+                      onPressed: () => _showChapterPicker(
+                        context: context,
+                        mangaId: chapter.mangaId,
+                        currentChapterId: chapter.id,
+                        transVertical: scrollDirection == Axis.vertical,
+                      ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.app_settings_alt_outlined),
+                      tooltip: context.l10n.readerMode,
+                      icon: Icon(_readerModeIcon(resolvedReaderMode)),
                       onPressed: onOpenReaderMode,
                     ),
                     IconButton(
+                      tooltip: context.l10n.cropBorders,
+                      icon: Icon(
+                        cropBorders
+                            ? Icons.crop_rounded
+                            : Icons.crop_free_rounded,
+                      ),
+                      onPressed: toggleCropBorders,
+                    ),
+                    if (isPagedMode && !dualPageSplitPaged)
+                      IconButton(
+                        tooltip: context.l10n.pageLayout,
+                        icon: Icon(_pageLayoutIcon(pageLayout)),
+                        onPressed: togglePageLayout,
+                      ),
+                    IconButton(
+                      tooltip: context.l10n.settings,
                       onPressed: onOpenSettings,
                       icon: const Icon(Icons.settings_rounded),
                     ),
@@ -186,35 +217,226 @@ class ReaderBottomControls extends ConsumerWidget {
   }
 }
 
-/// The reader's bookmark toggle. Mirrors the private [_ReaderBookmarkButton]
-/// that previously lived in [reader_wrapper.dart].
-///
-/// Watches the chapter's bookmark state directly so the icon flips the moment
-/// a toggle lands — the surrounding controls are always mounted (no longer in
-/// a persistent bottomSheet), but the pattern is retained for correctness.
-class _ReaderBookmarkButton extends ConsumerWidget {
-  const _ReaderBookmarkButton({
-    required this.chapterId,
-    required this.fallbackIsBookmarked,
+bool _isPagedReaderMode(ReaderMode mode) => switch (mode) {
+      ReaderMode.singleHorizontalLTR ||
+      ReaderMode.singleHorizontalRTL ||
+      ReaderMode.singleVertical ||
+      ReaderMode.continuousHorizontalLTR ||
+      ReaderMode.continuousHorizontalRTL =>
+        true,
+      ReaderMode.defaultReader ||
+      ReaderMode.continuousVertical ||
+      ReaderMode.webtoon =>
+        false,
+    };
+
+IconData _readerModeIcon(ReaderMode mode) => switch (mode) {
+      ReaderMode.webtoon ||
+      ReaderMode.continuousVertical =>
+        Icons.public_rounded,
+      ReaderMode.singleHorizontalLTR ||
+      ReaderMode.singleHorizontalRTL ||
+      ReaderMode.singleVertical ||
+      ReaderMode.continuousHorizontalLTR ||
+      ReaderMode.continuousHorizontalRTL =>
+        Icons.menu_book_rounded,
+      ReaderMode.defaultReader => Icons.auto_stories_rounded,
+    };
+
+IconData _pageLayoutIcon(PageLayout pageLayout) => switch (pageLayout) {
+      PageLayout.singlePage => Icons.menu_book_rounded,
+      PageLayout.doublePages => Icons.chrome_reader_mode_rounded,
+      PageLayout.automatic => Icons.auto_stories_rounded,
+    };
+
+Future<void> _showChapterPicker({
+  required BuildContext context,
+  required int mangaId,
+  required int currentChapterId,
+  required bool transVertical,
+}) {
+  final readerContext = context;
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (_) {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.42,
+        minChildSize: 0.22,
+        maxChildSize: 0.82,
+        builder: (context, scrollController) {
+          return Material(
+            color: context.theme.colorScheme.surface,
+            clipBehavior: Clip.antiAlias,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Consumer(
+              builder: (context, ref, _) {
+                final chapters = ref.watch(
+                  mangaChapterListWithFilterProvider(mangaId: mangaId),
+                );
+                return chapters.showUiWhenData(
+                  context,
+                  (items) => _ReaderChapterSheet(
+                    chapters: items ?? const [],
+                    currentChapterId: currentChapterId,
+                    mangaId: mangaId,
+                    readerContext: readerContext,
+                    scrollController: scrollController,
+                    transVertical: transVertical,
+                    refreshChapters: () async {
+                      final reload = ref.refresh(
+                        mangaChapterListProvider(mangaId: mangaId).future,
+                      );
+                      await reload;
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _ReaderChapterSheet extends StatelessWidget {
+  const _ReaderChapterSheet({
+    required this.chapters,
+    required this.currentChapterId,
+    required this.mangaId,
+    required this.readerContext,
+    required this.scrollController,
+    required this.transVertical,
+    required this.refreshChapters,
   });
 
-  final int chapterId;
-  final bool fallbackIsBookmarked;
+  final List<ChapterDto> chapters;
+  final int currentChapterId;
+  final int mangaId;
+  final BuildContext readerContext;
+  final ScrollController scrollController;
+  final bool transVertical;
+  final Future<void> Function() refreshChapters;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isBookmarked = ref.watch(
-          chapterProvider(chapterId: chapterId)
-              .select((c) => c.valueOrNull?.isBookmarked),
-        ) ??
-        fallbackIsBookmarked;
-    return SingleChapterActionIcon(
-      icon: isBookmarked
-          ? Icons.bookmark_rounded
-          : Icons.bookmark_outline_rounded,
-      chapterId: chapterId,
-      change: ChapterChange(isBookmarked: !isBookmarked),
-      refresh: () => ref.refresh(chapterProvider(chapterId: chapterId).future),
+  Widget build(BuildContext context) {
+    final colorScheme = context.theme.colorScheme;
+    return Column(
+      children: [
+        Container(
+          width: 32,
+          height: 4,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              context.l10n.noOfChapters(chapters.length),
+              style: context.textTheme.titleMedium,
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView.builder(
+            controller: scrollController,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewPaddingOf(context).bottom + 8,
+            ),
+            itemCount: chapters.length,
+            itemBuilder: (context, index) {
+              final chapter = chapters[index];
+              final isCurrent = chapter.id == currentChapterId;
+              final lastPageRead =
+                  chapter.lastPageRead.getValueOnNullOrNegative();
+              return ListTile(
+                dense: true,
+                visualDensity:
+                    const VisualDensity(horizontal: -1, vertical: -3),
+                minLeadingWidth: 24,
+                minVerticalPadding: 0,
+                contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                selected: isCurrent,
+                selectedTileColor:
+                    colorScheme.primaryContainer.withValues(alpha: 0.55),
+                selectedColor: colorScheme.onPrimaryContainer,
+                leading: Icon(
+                  chapter.isRead.ifNull()
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 20,
+                ),
+                title: Text(
+                  chapter.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: lastPageRead > 0
+                    ? Text(
+                        context.l10n.page(lastPageRead + 1),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.bodySmall,
+                      )
+                    : null,
+                trailing: IconButtonTheme(
+                  data: IconButtonThemeData(
+                    style: ButtonStyle(
+                      minimumSize: const WidgetStatePropertyAll(
+                        Size.square(36),
+                      ),
+                      fixedSize: const WidgetStatePropertyAll(Size.square(36)),
+                      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: 80,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OfflineSaveButton(chapterId: chapter.id),
+                        DownloadStatusIcon(
+                          updateData: refreshChapters,
+                          chapter: chapter,
+                          mangaId: mangaId,
+                          isDownloaded: chapter.isDownloaded.ifNull(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  if (isCurrent) return;
+                  if (!readerContext.mounted) return;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!readerContext.mounted) return;
+                    ReaderRoute(
+                      mangaId: mangaId,
+                      chapterId: chapter.id,
+                      showReaderLayoutAnimation: true,
+                      transVertical: transVertical,
+                    ).pushReplacement(readerContext);
+                  });
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

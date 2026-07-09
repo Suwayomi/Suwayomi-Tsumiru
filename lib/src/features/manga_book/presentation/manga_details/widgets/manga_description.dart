@@ -9,6 +9,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
@@ -92,7 +93,6 @@ class MangaDescription extends HookConsumerWidget {
         ? null
         : prediction?.daysUntil(DateTime.now());
 
-    // Build the Soon line for the header metadata column.
     final soonWidget = soonDays == null
         ? null
         : GestureDetector(
@@ -259,45 +259,12 @@ class MangaDescription extends HookConsumerWidget {
         if (manga.description.isNotBlank)
           Padding(
             padding: KEdgeInsets.a16.size,
-            child: Stack(
-              alignment: AlignmentDirectional.bottomStart,
-              children: [
-                Text(
-                  "${manga.description}\n",
-                  maxLines: isExpanded.value ? null : 3,
-                ),
-                InkWell(
-                  child: Container(
-                    margin: EdgeInsets.zero,
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              context.theme.canvasColor.withValues(alpha: .7),
-                        ),
-                      ],
-                      gradient: LinearGradient(
-                        colors: [
-                          context.theme.canvasColor.withValues(alpha: 0),
-                          context.theme.canvasColor.withValues(alpha: .3),
-                          context.theme.canvasColor.withValues(alpha: .5),
-                          context.theme.canvasColor.withValues(alpha: .6),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        isExpanded.value
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                      ),
-                    ),
-                  ),
-                  onTap: () => isExpanded.value = (!isExpanded.value),
-                ),
-              ],
+            child: MangaDescriptionBody(
+              description: manga.description!,
+              isExpanded: isExpanded.value,
+              onToggleExpanded: () => isExpanded.value = !isExpanded.value,
+              onOpenLink: (url) =>
+                  launchUrlInWeb(context, url, ref.read(toastProvider)),
             ),
           ),
         if (isExpanded.value)
@@ -307,7 +274,9 @@ class MangaDescription extends HookConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...manga.genre.map<Widget>((e) => BrandChip(label: e)),
+                ...manga.genre
+                    .where((e) => e.isNotBlank)
+                    .map<Widget>((e) => BrandChip(label: e)),
               ],
             ),
           )
@@ -318,16 +287,107 @@ class MangaDescription extends HookConsumerWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  ...manga.genre.map<Widget>(
-                    (e) => Padding(
-                      padding: KEdgeInsets.h4.size,
-                      child: BrandChip(label: e),
-                    ),
-                  )
+                  ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
+                        (e) => Padding(
+                          padding: KEdgeInsets.h4.size,
+                          child: BrandChip(label: e),
+                        ),
+                      )
                 ],
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class MangaDescriptionBody extends StatelessWidget {
+  const MangaDescriptionBody({
+    super.key,
+    required this.description,
+    required this.isExpanded,
+    required this.onToggleExpanded,
+    this.onOpenLink,
+  });
+
+  final String description;
+  final bool isExpanded;
+  final VoidCallback onToggleExpanded;
+  final ValueChanged<String>? onOpenLink;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = DefaultTextStyle.of(context).style;
+    final fontSize = textStyle.fontSize ?? 14;
+    final lineHeight = fontSize * (textStyle.height ?? 1.4);
+    final overlayHeight = lineHeight * 2;
+    final markdownBody = Padding(
+      padding: EdgeInsets.only(bottom: overlayHeight),
+      child: MarkdownBody(
+        data: description,
+        onTapLink: (_, href, __) {
+          if (href.isNotBlank) onOpenLink?.call(href!);
+        },
+        styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
+          p: textStyle,
+          a: textStyle.copyWith(
+            color: context.theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+
+    return Stack(
+      alignment: AlignmentDirectional.bottomStart,
+      children: [
+        ClipRect(
+          child: SizedBox(
+            height: isExpanded ? null : lineHeight * 5,
+            child: isExpanded
+                ? markdownBody
+                : SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: markdownBody,
+                  ),
+          ),
+        ),
+        PositionedDirectional(
+          start: 0,
+          end: 0,
+          bottom: 0,
+          height: overlayHeight,
+          child: InkWell(
+            onTap: onToggleExpanded,
+            child: Container(
+              margin: EdgeInsets.zero,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: context.theme.canvasColor.withValues(alpha: .7),
+                  ),
+                ],
+                gradient: LinearGradient(
+                  colors: [
+                    context.theme.canvasColor.withValues(alpha: 0),
+                    context.theme.canvasColor.withValues(alpha: .3),
+                    context.theme.canvasColor.withValues(alpha: .5),
+                    context.theme.canvasColor.withValues(alpha: .6),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

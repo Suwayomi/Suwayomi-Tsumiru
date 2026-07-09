@@ -75,6 +75,7 @@ class ChapterSeparator extends ConsumerWidget {
                   onPressed: () => ReaderRoute(
                     mangaId: nextPrevChapterPair!.second!.mangaId,
                     chapterId: nextPrevChapterPair.second!.id,
+                    openAtEnd: true,
                   ).pushReplacement(context),
                   child: Text(
                     context.l10n.previousChapter(

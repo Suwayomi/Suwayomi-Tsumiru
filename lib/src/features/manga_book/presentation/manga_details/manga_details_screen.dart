@@ -342,7 +342,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               firstUnreadChapter != null && selectedChapters.value.isEmpty
                   ? BrandFab(
                       label: Text(
-                        data?.lastReadChapter?.index != null
+                        data?.lastReadChapter?.hasReadingProgress == true
                             ? context.l10n.resume
                             : context.l10n.start,
                       ),

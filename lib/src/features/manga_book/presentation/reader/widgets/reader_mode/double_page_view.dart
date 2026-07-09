@@ -89,22 +89,25 @@ class DoublePageView extends StatelessWidget {
       return wide;
     }
 
-    // Pair — two pages side by side, each taking half the width.
-    final left = _slot(entry.first);
-    final right = _slot(entry.second!);
-    final ordered = reversePair ? [right, left] : [left, right];
+    final ordered = reversePair
+        ? [entry.second!, entry.first]
+        : [entry.first, entry.second!];
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: ordered[0]),
+        Expanded(
+          child: _slot(ordered[0], alignment: Alignment.centerRight),
+        ),
         if (_marginOnDouble) const SizedBox(width: kCenterMargin),
-        Expanded(child: ordered[1]),
+        Expanded(
+          child: _slot(ordered[1], alignment: Alignment.centerLeft),
+        ),
       ],
     );
   }
 
-  Widget _slot(PageUnit unit) {
+  Widget _slot(PageUnit unit, {Alignment alignment = Alignment.center}) {
     if (unit.raw >= pages.length) {
       return const Center(child: CenterSorayomiShimmerIndicator());
     }
@@ -122,6 +125,7 @@ class DoublePageView extends StatelessWidget {
         rotateWide: rotateWide,
         rotateWideInvert: rotateWideInvert,
         fit: pageFit ?? BoxFit.contain,
+        alignment: alignment,
         onPageWide: onPageWide,
       ),
       progressIndicatorBuilder: (context, url, downloadProgress) =>
@@ -143,6 +147,7 @@ class _SpreadImage extends StatefulWidget {
     required this.rotateWide,
     required this.rotateWideInvert,
     required this.fit,
+    required this.alignment,
     required this.onPageWide,
   });
 
@@ -152,6 +157,7 @@ class _SpreadImage extends StatefulWidget {
   final bool rotateWide;
   final bool rotateWideInvert;
   final BoxFit fit;
+  final Alignment alignment;
   final void Function(int raw, bool isWide) onPageWide;
 
   @override
@@ -223,7 +229,11 @@ class _SpreadImageState extends State<_SpreadImage> {
       );
     }
 
-    final image = Image(image: widget.imageProvider, fit: widget.fit);
+    final image = Image(
+      image: widget.imageProvider,
+      fit: widget.fit,
+      alignment: widget.alignment,
+    );
     if (widget.rotateWide && _isWide) {
       return RotatedBox(
         quarterTurns: widget.rotateWideInvert ? -1 : 1,

@@ -15,6 +15,7 @@ import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chrome_extents.dart';
+import 'reader_bookmark_button.dart';
 
 /// The reader's top chrome bar — mirrors the content that was previously in
 /// [ReaderWrapper]'s [Scaffold.appBar] slot.
@@ -93,6 +94,10 @@ class ReaderTopBar extends ConsumerWidget {
                 ),
               ),
               // Actions (mirrors AppBar.actions).
+              ReaderBookmarkButton(
+                chapterId: chapter.id,
+                fallbackIsBookmarked: chapter.isBookmarked,
+              ),
               chapter.realUrl.isBlank
                   ? const SizedBox.shrink()
                   : IconButton(

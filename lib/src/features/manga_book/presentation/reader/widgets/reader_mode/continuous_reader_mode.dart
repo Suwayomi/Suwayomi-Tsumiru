@@ -28,19 +28,17 @@ import '../../../../../settings/presentation/reader/widgets/reader_zoom_toggles/
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../utils/reader_initial_page.dart';
 import '../chapter_separator.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous_reader_mode.dart';
 import 'reader_zoom_view.dart';
 
-/// Configuration constants for improved scroll behavior
 class _ScrollConfig {
   const _ScrollConfig._();
 
-  /// Normal visibility threshold for position tracking
   static const double minVisibleAreaThreshold = 0.4;
 
-  /// Extended delay only for programmatic navigation to prevent jumps
   static const Duration programmaticNavigationDelay =
       Duration(milliseconds: 800);
 }
@@ -56,6 +54,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
     this.showReaderLayoutAnimation = false,
+    this.effectiveReaderMode,
+    this.openAtEnd = false,
   });
 
   final MangaDto manga;
@@ -65,15 +65,15 @@ class ContinuousReaderMode extends HookConsumerWidget {
   final Axis scrollDirection;
   final bool reverse;
   final bool showReaderLayoutAnimation;
+  final ReaderMode? effectiveReaderMode;
+  final bool openAtEnd;
   final ChapterPagesDto chapterPages;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Check if infinity scrolling mode is enabled
     final infinityScrollingEnabled =
         ref.watch(infinityScrollingModeEnabledProvider).ifNull(true);
 
-    // Use infinity mode for webtoon with infinity scrolling enabled
     if (infinityScrollingEnabled &&
         scrollDirection == Axis.vertical &&
         !showSeparator) {
@@ -85,6 +85,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
         scrollDirection: scrollDirection,
         reverse: reverse,
         showReaderLayoutAnimation: showReaderLayoutAnimation,
+        effectiveReaderMode: effectiveReaderMode ?? ReaderMode.webtoon,
+        openAtEnd: openAtEnd,
       );
     }
 
@@ -101,19 +103,18 @@ class ContinuousReaderMode extends HookConsumerWidget {
       [scrollOffsetController],
     );
 
-    final ValueNotifier<int> currentIndex = useState(
-      chapter.isRead.ifNull()
-          ? 0
-          : (chapter.lastPageRead).getValueOnNullOrNegative(),
+    final initialIndex = readerInitialPageIndex(
+      chapter: chapter,
+      chapterPages: chapterPages,
+      openAtEnd: openAtEnd,
     );
+    final ValueNotifier<int> currentIndex = useState(initialIndex);
 
-    // Passive position tracking that doesn't interfere with scrolling
     final ObjectRef<Timer?> positionUpdateTimer = useRef<Timer?>(null);
     final ValueNotifier<bool> isUserScrolling = useState(false);
     final ValueNotifier<bool> isNavigatingFromSlider = useState(false);
     final ValueNotifier<int> lastReportedIndex = useState(currentIndex.value);
 
-    // Dispose timer properly
     useEffect(() {
       return () {
         positionUpdateTimer.value?.cancel();
@@ -121,7 +122,6 @@ class ContinuousReaderMode extends HookConsumerWidget {
       };
     }, []);
 
-    // Enhanced position tracking that allows UI updates but prevents jumps
     useEffect(() {
       void listener() {
         final List<ItemPosition> positions =
@@ -129,9 +129,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
 
         if (positions.isEmpty) return;
 
-        // Don't update position if we're navigating from slider
         if (!isNavigatingFromSlider.value) {
-          // Always update position for UI display (navigation bar needs this)
           _updatePositionForDisplay(
             positions,
             currentIndex,
@@ -140,17 +138,12 @@ class ContinuousReaderMode extends HookConsumerWidget {
           );
         }
 
-        // Mark as user scrolling to prevent programmatic navigation
         isUserScrolling.value = true;
-
-        // Cancel any pending programmatic navigation
         positionUpdateTimer.value?.cancel();
-
-        // Only allow programmatic navigation after extended delay
         positionUpdateTimer.value =
             Timer(_ScrollConfig.programmaticNavigationDelay, () {
           isUserScrolling.value = false;
-          isNavigatingFromSlider.value = false; // Reset slider navigation flag
+          isNavigatingFromSlider.value = false;
         });
       }
 
@@ -161,17 +154,15 @@ class ContinuousReaderMode extends HookConsumerWidget {
       };
     }, []);
 
-    // Notify page changes for UI updates (navigation bar) but prevent programmatic jumps
     useEffect(() {
       final ValueSetter<int>? pageChanged = onPageChanged;
       if (pageChanged != null &&
           lastReportedIndex.value != currentIndex.value) {
-        // Always notify for UI display updates
         pageChanged(currentIndex.value);
         lastReportedIndex.value = currentIndex.value;
       }
       return null;
-    }, [currentIndex.value]); // Only watch currentIndex changes
+    }, [currentIndex.value]);
 
     // "Animate page transitions": animate next/prev when ON, else jump.
     final bool isAnimationEnabled =
@@ -196,6 +187,12 @@ class ContinuousReaderMode extends HookConsumerWidget {
         : context.width;
     // Auto-crop solid borders in the long-strip.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final wrapperReaderMode = effectiveReaderMode ??
+        _continuousReaderMode(
+          scrollDirection: scrollDirection,
+          reverse: reverse,
+          showSeparator: showSeparator,
+        );
 
     return ReaderWrapper(
       scrollDirection: scrollDirection,
@@ -204,27 +201,15 @@ class ContinuousReaderMode extends HookConsumerWidget {
       manga: manga,
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       currentIndex: currentIndex.value,
+      effectiveReaderMode: wrapperReaderMode,
       onChanged: (index) {
-        // Mark that we're navigating from slider to prevent position interference
         isNavigatingFromSlider.value = true;
-
-        // Update current index for display
         currentIndex.value = index;
-
-        // Force navigation for slider - bypass scroll state checks
-        _jumpToPageSafely(
-          scrollController,
-          isUserScrolling,
-          index,
-          forceNavigation: true,
-        );
-
-        // Reset the flag after the navigation completes
+        scrollController.jumpTo(index: index);
         Timer(const Duration(milliseconds: 300), () {
           isNavigatingFromSlider.value = false;
         });
       },
-      // Disable automatic previous/next navigation for webtoon to prevent jumping
       onPrevious: () => _handleNavigationSafely(
         scrollController,
         positionsListener,
@@ -258,9 +243,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
           itemScrollController: scrollController,
           itemPositionsListener: positionsListener,
           scrollOffsetController: scrollOffsetController,
-          initialScrollIndex: chapter.isRead.ifNull()
-              ? 0
-              : chapter.lastPageRead.getValueOnNullOrNegative(),
+          initialScrollIndex: initialIndex,
           scrollDirection: scrollDirection,
           reverse: reverse,
           itemCount: chapterPages.chapter.pageCount,
@@ -336,7 +319,6 @@ class ContinuousReaderMode extends HookConsumerWidget {
     );
   }
 
-  /// Immediate position tracking for UI display (navigation bar)
   static void _updatePositionForDisplay(
     List<ItemPosition> positions,
     ValueNotifier<int> currentIndex,
@@ -362,7 +344,6 @@ class ContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Find the item that's most visible for display purposes
     ItemPosition? mostVisible;
     double bestVisibleArea = 0.0;
 
@@ -377,54 +358,32 @@ class ContinuousReaderMode extends HookConsumerWidget {
     }
 
     if (mostVisible != null) {
-      // Update current index for display but don't trigger programmatic scrolling
       currentIndex.value = mostVisible.index;
     }
   }
 
-  /// Calculates visible area of an item position more accurately
   static double _calculateVisibleArea(ItemPosition position) {
     final double leadingEdge = position.itemLeadingEdge.clamp(0.0, 1.0);
     final double trailingEdge = position.itemTrailingEdge.clamp(0.0, 1.0);
 
-    // Calculate the portion that's actually visible in the viewport
     final double visibleStart = leadingEdge < 0 ? 0.0 : leadingEdge;
     final double visibleEnd = trailingEdge > 1 ? 1.0 : trailingEdge;
 
     return (visibleEnd - visibleStart).clamp(0.0, 1.0);
   }
 
-  /// Safe page jumping that respects user scroll state unless forced (for slider navigation)
-  static void _jumpToPageSafely(
-    ItemScrollController scrollController,
-    ValueNotifier<bool> isUserScrolling,
-    int index, {
-    bool forceNavigation = false,
-  }) {
-    // Allow forced navigation (from slider) or when user isn't scrolling
-    if (!forceNavigation && isUserScrolling.value) {
-      return; // Only block automatic navigation during user scrolling
-    }
-
-    // Perform the navigation
-    scrollController.jumpTo(index: index);
-  }
-
-  /// Safe navigation that only works when appropriate and doesn't interfere with scrolling
   static void _handleNavigationSafely(
       ItemScrollController scrollController,
       ItemPositionsListener positionsListener,
       ValueNotifier<bool> isUserScrolling,
       bool isAnimationEnabled,
       {required bool isNext}) {
-    // Don't interfere if user is actively scrolling
     if (isUserScrolling.value) return;
 
     final List<ItemPosition> positions =
         positionsListener.itemPositions.value.toList();
     if (positions.isEmpty) return;
 
-    // Find current position
     ItemPosition? currentPosition;
     for (final ItemPosition position in positions) {
       final double visibleArea = _calculateVisibleArea(position);
@@ -440,7 +399,6 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final double alignment;
 
     if (isNext) {
-      // Move to next item with minimal scroll
       if (currentPosition.itemTrailingEdge > 0.8) {
         targetIndex = currentPosition.index + 1;
         alignment = 0.0;
@@ -449,7 +407,6 @@ class ContinuousReaderMode extends HookConsumerWidget {
         alignment = 0.0;
       }
     } else {
-      // Move to previous item with minimal scroll
       if (currentPosition.itemLeadingEdge < 0.2) {
         targetIndex =
             (currentPosition.index - 1).clamp(0, double.infinity).toInt();
@@ -460,13 +417,11 @@ class ContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
-    // Use very gentle navigation
     if (isAnimationEnabled) {
       scrollController.scrollTo(
         index: targetIndex,
-        duration:
-            const Duration(milliseconds: 200), // Faster, gentler animation
-        curve: Curves.easeOut, // Gentler curve
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
         alignment: alignment,
       );
     } else {
@@ -476,4 +431,17 @@ class ContinuousReaderMode extends HookConsumerWidget {
       );
     }
   }
+}
+
+ReaderMode _continuousReaderMode({
+  required Axis scrollDirection,
+  required bool reverse,
+  required bool showSeparator,
+}) {
+  if (scrollDirection == Axis.horizontal) {
+    return reverse
+        ? ReaderMode.continuousHorizontalRTL
+        : ReaderMode.continuousHorizontalLTR;
+  }
+  return showSeparator ? ReaderMode.continuousVertical : ReaderMode.webtoon;
 }

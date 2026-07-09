@@ -326,7 +326,8 @@ void main() {
                 showSideSeekBar: false,
                 scrollDirection: Axis.horizontal,
                 nextPrevChapterPair: null,
-                invertTap: false,
+                resolvedReaderMode: ReaderMode.singleHorizontalLTR,
+                reverseSeekBar: false,
                 onChanged: (_) {},
                 onOpenSettings: () {},
                 onOpenReaderMode: () {},
@@ -338,7 +339,8 @@ void main() {
       await tester.pump();
 
       final stackFinder = find
-          .descendant(of: find.byType(ReaderChrome), matching: find.byType(Stack))
+          .descendant(
+              of: find.byType(ReaderChrome), matching: find.byType(Stack))
           .first;
       final stack = tester.widget<Stack>(stackFinder);
       final stackElement = tester.element(stackFinder);
@@ -367,8 +369,7 @@ void main() {
       expect(filters, isNonNegative);
       expect(filters, lessThan(flash),
           reason: 'flash must stay visible over active filters');
-      expect(flash, lessThan(topBar),
-          reason: 'bars paint above the flash');
+      expect(flash, lessThan(topBar), reason: 'bars paint above the flash');
       expect(flash, lessThan(bottomBar));
       expect(filters, lessThan(topBar),
           reason: 'chrome bars must never get tinted by the filters');

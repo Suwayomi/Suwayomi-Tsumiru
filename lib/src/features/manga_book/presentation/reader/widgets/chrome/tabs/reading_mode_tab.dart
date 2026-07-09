@@ -200,8 +200,8 @@ class _PagedSection extends ConsumerWidget {
               ),
           ],
         ),
-        // zoomStart hidden: per-page pan focus can't be expressed on the
-        // list-level zoom_view; see docs/architecture/reader.md (zoom trio).
+        // Zoom start is tied to landscape auto-zoom, which paged mode does not
+        // apply automatically.
         _SectionLabel(context.l10n.pageLayout),
         _ChipRow(
           children: [
@@ -238,8 +238,8 @@ class _PagedSection extends ConsumerWidget {
           value: settings.cropBorders,
           onChanged: model.setCropBorders,
         ),
-        // landscapeZoom + navigateToPan hidden: both need per-page pan on the
-        // list-level zoom_view; see docs/architecture/reader.md (zoom trio).
+        // Landscape auto-zoom stays out of paged mode; wide manga spreads
+        // should open fitted and let the reader choose when to zoom.
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.splitWidePages),
@@ -284,9 +284,27 @@ class _PagedSection extends ConsumerWidget {
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
-          title: Text(context.l10n.disableZoomIn),
-          value: settings.disableZoomIn,
-          onChanged: model.setDisableZoomIn,
+          title: Text(context.l10n.doubleTapToZoom),
+          value: settings.doubleTapToZoom,
+          onChanged: model.setDoubleTapToZoom,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.pinchToZoom),
+          value: settings.pinchToZoom,
+          onChanged: model.setPinchToZoom,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.disableZoomOut),
+          value: settings.disableZoomOut,
+          onChanged: model.setDisableZoomOut,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.navigateToPan),
+          value: settings.navigateToPan,
+          onChanged: model.setNavigateToPan,
         ),
       ],
     );

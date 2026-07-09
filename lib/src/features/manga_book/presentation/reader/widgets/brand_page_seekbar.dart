@@ -58,7 +58,7 @@ class BrandPageSeekBar extends StatelessWidget {
     final cs = context.theme.colorScheme;
     final lastIndex = max(maxValue - 1, 1);
     final progress = (currentValue / lastIndex).clamp(0.0, 1.0);
-    final fill = inverted ? 1 - progress : progress;
+    final position = inverted ? 1 - progress : progress;
 
     final bar = LayoutBuilder(
       builder: (context, constraints) {
@@ -76,7 +76,8 @@ class BrandPageSeekBar extends StatelessWidget {
             size: Size.infinite,
             painter: _SeekPainter(
               axis: axis,
-              fill: fill,
+              position: position,
+              inverted: inverted,
               scheme: cs,
               count: maxValue,
             ),
@@ -136,13 +137,15 @@ class BrandPageSeekBar extends StatelessWidget {
 class _SeekPainter extends CustomPainter {
   _SeekPainter({
     required this.axis,
-    required this.fill,
+    required this.position,
+    required this.inverted,
     required this.scheme,
     required this.count,
   });
 
   final Axis axis;
-  final double fill;
+  final double position;
+  final bool inverted;
   final ColorScheme scheme;
 
   /// Page count — one tick dot per page.
@@ -159,8 +162,7 @@ class _SeekPainter extends CustomPainter {
     Rect bar(double from, double to) => horizontal
         ? Rect.fromLTRB(from, cross - t / 2, to, cross + t / 2)
         : Rect.fromLTRB(cross - t / 2, from, cross + t / 2, to);
-    Offset along(double d) =>
-        horizontal ? Offset(d, cross) : Offset(cross, d);
+    Offset along(double d) => horizontal ? Offset(d, cross) : Offset(cross, d);
 
     // Track — accent-tinted inactive track, subtle.
     canvas.drawRRect(
@@ -169,9 +171,9 @@ class _SeekPainter extends CustomPainter {
     );
 
     // Gradient fill up to the current position.
-    final fillEnd = (length * fill).clamp(0.0, length);
-    if (fillEnd > 0.5) {
-      final filled = bar(0, fillEnd);
+    final marker = (length * position).clamp(0.0, length);
+    final filled = inverted ? bar(marker, length) : bar(0, marker);
+    if ((horizontal ? filled.width : filled.height) > 0.5) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(filled, radius),
         Paint()..shader = brandGradient(scheme).createShader(filled),
@@ -185,17 +187,24 @@ class _SeekPainter extends CustomPainter {
       final onTrack = Paint()..color = scheme.onSurface.withValues(alpha: 0.4);
       for (var i = 0; i < count; i++) {
         final frac = i / (count - 1);
-        canvas.drawCircle(along(length * frac), 1.0, frac <= fill ? onFill : onTrack);
+        final tickFilled = inverted ? frac >= position : frac <= position;
+        canvas.drawCircle(
+          along(length * frac),
+          1.0,
+          tickFilled ? onFill : onTrack,
+        );
       }
     }
 
     // Marker line at the current position (perpendicular to the bar), painted
     // with the brand gradient + a soft glow.
-    final pos = length * fill;
+    final pos = marker;
     const half = 13.0;
     const mkt = 4.0;
-    final p1 = horizontal ? Offset(pos, cross - half) : Offset(cross - half, pos);
-    final p2 = horizontal ? Offset(pos, cross + half) : Offset(cross + half, pos);
+    final p1 =
+        horizontal ? Offset(pos, cross - half) : Offset(cross - half, pos);
+    final p2 =
+        horizontal ? Offset(pos, cross + half) : Offset(cross + half, pos);
     // Glow.
     canvas.drawLine(
       p1,
@@ -220,7 +229,8 @@ class _SeekPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SeekPainter old) =>
-      old.fill != fill ||
+      old.position != position ||
+      old.inverted != inverted ||
       old.axis != axis ||
       old.scheme != scheme ||
       old.count != count;

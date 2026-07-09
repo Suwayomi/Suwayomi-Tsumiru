@@ -25,6 +25,7 @@ import '../../../manga_book/data/downloads/downloads_repository.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
@@ -45,10 +46,8 @@ class CategoryMangaList extends HookConsumerWidget {
     final gridWidth = ref.watch(gridMinWidthProvider);
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
-    final portraitCols =
-        ref.watch(libraryPortraitColumnsProvider) ?? 0;
-    final landscapeCols =
-        ref.watch(libraryLandscapeColumnsProvider) ?? 0;
+    final portraitCols = ref.watch(libraryPortraitColumnsProvider) ?? 0;
+    final landscapeCols = ref.watch(libraryLandscapeColumnsProvider) ?? 0;
     final fixedCols = isLandscape ? landscapeCols : portraitCols;
     // gridDelegate: fixed count when the user set cols > 0, else Auto (width-based).
     SliverGridDelegate libraryGridDelegate() => fixedCols > 0
@@ -93,8 +92,17 @@ class CategoryMangaList extends HookConsumerWidget {
       if (!showContinueReading || selecting) return null;
       final chapter = manga.firstUnreadChapter;
       if (chapter == null) return null;
-      return () =>
+      return () {
+        unawaited(() async {
+          await AsyncValue.guard(
+            () => ref.read(
+              mangaChapterListProvider(mangaId: manga.id).future,
+            ),
+          );
+          if (!context.mounted) return;
           ReaderRoute(mangaId: manga.id, chapterId: chapter.id).push(context);
+        }());
+      };
     }
 
     // Mark every chapter of the selected series read / unread, via the bulk

@@ -165,21 +165,21 @@ void main() {
     expect(find.text('Disable zoom in'), findsNothing);
   });
 
-  testWidgets('zoom toggles: paged mode shows only Disable zoom in',
+  testWidgets('zoom toggles: paged mode shows the same zoom trio',
       (tester) async {
     await pumpHost(tester, meta: {'flutter_readerMode': 'singleHorizontalRTL'});
     await openSheet(tester);
 
     await tester.scrollUntilVisible(
-      find.text('Disable zoom in'),
+      find.text('Disable zoom out'),
       200,
       scrollable: tabScrollable(),
     );
 
-    expect(find.text('Disable zoom in'), findsOneWidget);
-    expect(find.text('Double tap to zoom'), findsNothing);
-    expect(find.text('Pinch to Zoom'), findsNothing);
-    expect(find.text('Disable zoom out'), findsNothing);
+    expect(find.text('Double tap to zoom'), findsOneWidget);
+    expect(find.text('Pinch to Zoom'), findsOneWidget);
+    expect(find.text('Disable zoom out'), findsOneWidget);
+    expect(find.text('Disable zoom in'), findsNothing);
   });
 
   testWidgets(

@@ -2508,6 +2508,42 @@
     "@saveToGallery": {
         "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
     },
+    "copyFirstPage": "Copy first",
+    "@copyFirstPage": {
+        "description": "Reader page-actions sheet: copy the first page image in a two-page spread"
+    },
+    "shareFirstPage": "Share first",
+    "@shareFirstPage": {
+        "description": "Reader page-actions sheet: share the first page image in a two-page spread"
+    },
+    "saveFirstPage": "Save first",
+    "@saveFirstPage": {
+        "description": "Reader page-actions sheet: save the first page image in a two-page spread"
+    },
+    "copySecondPage": "Copy second",
+    "@copySecondPage": {
+        "description": "Reader page-actions sheet: copy the second page image in a two-page spread"
+    },
+    "shareSecondPage": "Share second",
+    "@shareSecondPage": {
+        "description": "Reader page-actions sheet: share the second page image in a two-page spread"
+    },
+    "saveSecondPage": "Save second",
+    "@saveSecondPage": {
+        "description": "Reader page-actions sheet: save the second page image in a two-page spread"
+    },
+    "copySpread": "Copy spread",
+    "@copySpread": {
+        "description": "Reader page-actions sheet: copy a combined two-page spread image"
+    },
+    "shareSpread": "Share spread",
+    "@shareSpread": {
+        "description": "Reader page-actions sheet: share a combined two-page spread image"
+    },
+    "saveSpread": "Save spread",
+    "@saveSpread": {
+        "description": "Reader page-actions sheet: save a combined two-page spread image"
+    },
     "savedToGallery": "Saved to gallery",
     "@savedToGallery": {
         "description": "Toast shown after the current page image was saved to the device gallery"

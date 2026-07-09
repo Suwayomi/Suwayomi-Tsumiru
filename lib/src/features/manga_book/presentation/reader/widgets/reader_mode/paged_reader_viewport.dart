@@ -1,0 +1,1105 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+
+import '../../../../../../constants/enum.dart';
+import '../../../../../../widgets/custom_circular_progress_indicator.dart';
+import '../reader_wrapper.dart';
+import 'double_page_view.dart';
+import 'paged_spread_mapping.dart';
+
+enum _DragOwner { page, pager }
+
+enum _PanDirection { left, right, up, down }
+
+enum _TapAction { previous, next, menu }
+
+class PagedReaderController {
+  _PagedReaderViewportState? _state;
+
+  void _attach(_PagedReaderViewportState state) => _state = state;
+
+  void _detach(_PagedReaderViewportState state) {
+    if (_state == state) _state = null;
+  }
+
+  void jumpToRaw(int rawIndex) => _state?.jumpToRaw(rawIndex);
+
+  void next() => _state?.moveByCommand(1);
+
+  void previous() => _state?.moveByCommand(-1);
+
+  bool get isAtFirst => _state?.isAtFirstDisplay ?? false;
+
+  bool get isAtLast => _state?.isAtLastDisplay ?? false;
+}
+
+class PagedReaderViewport extends StatefulWidget {
+  const PagedReaderViewport({
+    super.key,
+    required this.controller,
+    required this.mapping,
+    required this.pages,
+    required this.initialDisplayIndex,
+    required this.axis,
+    required this.reverse,
+    required this.animateTransitions,
+    required this.pageFit,
+    required this.pageSize,
+    required this.centerMargin,
+    required this.rotateWide,
+    required this.rotateWideInvert,
+    required this.reversePair,
+    required this.cropBorders,
+    required this.onPageWide,
+    required this.onRawPageChanged,
+    required this.pinchEnabled,
+    required this.doubleTapToZoom,
+    required this.disableZoomIn,
+    required this.disableZoomOut,
+    required this.navigateToPan,
+    this.previousBoundary,
+    this.nextBoundary,
+  });
+
+  final PagedReaderController controller;
+  final SpreadMapping mapping;
+  final List<String> pages;
+  final int initialDisplayIndex;
+  final Axis axis;
+  final bool reverse;
+  final bool animateTransitions;
+  final BoxFit pageFit;
+  final Size? pageSize;
+  final CenterMarginType centerMargin;
+  final bool rotateWide;
+  final bool rotateWideInvert;
+  final bool reversePair;
+  final bool cropBorders;
+  final void Function(int raw, bool isWide) onPageWide;
+  final ValueChanged<int> onRawPageChanged;
+  final bool pinchEnabled;
+  final bool doubleTapToZoom;
+  final bool disableZoomIn;
+  final bool disableZoomOut;
+  final bool navigateToPan;
+  final Widget? previousBoundary;
+  final Widget? nextBoundary;
+
+  @override
+  State<PagedReaderViewport> createState() => _PagedReaderViewportState();
+}
+
+class _PagedReaderViewportState extends State<PagedReaderViewport>
+    with TickerProviderStateMixin {
+  static const double _touchSlop = 12;
+  static const double _tapSlop = 18;
+  static const double _pageTurnThreshold = 0.18;
+  static const double _pageTurnVelocity = 650;
+  static const double _panFlingVelocity = 700;
+  static const double _panFlingDistanceFactor = 0.2;
+  static const double _neutralScale = 1;
+  static const Duration _tapDelay = Duration(milliseconds: 220);
+  static const Duration _doubleTapWindow = Duration(milliseconds: 260);
+  static const Duration _longPressDelay = Duration(milliseconds: 480);
+  static const Duration _maxSettleDuration = Duration(milliseconds: 180);
+  static const Duration _minSettleDuration = Duration(milliseconds: 70);
+  static const Duration _panFlingDuration = Duration(milliseconds: 400);
+  static const Curve _settleCurve = Curves.easeOutCubic;
+
+  late int _displayIndex;
+  late final AnimationController _pageAnimation;
+  late final AnimationController _panAnimation;
+  Animation<double>? _pageTween;
+  Animation<Offset>? _panTween;
+  double _dragOffset = 0;
+  Size _viewportSize = Size.zero;
+  final Map<int, Offset> _pointers = {};
+  final Map<int, _PageZoomController> _zoomControllers = {};
+
+  Offset? _lastSinglePosition;
+  Offset _totalDrag = Offset.zero;
+  _DragOwner? _dragOwner;
+  bool _multiTouchActive = false;
+  bool _gestureHadMultiplePointers = false;
+  bool _longPressActive = false;
+  Timer? _longPressTimer;
+  Timer? _singleTapTimer;
+  DateTime? _lastTapAt;
+  Offset? _lastTapPosition;
+  double? _pinchStartDistance;
+  double _pinchStartScale = 1;
+  Offset _pinchStartOffset = Offset.zero;
+  Offset? _pinchStartFocal;
+  VelocityTracker? _velocityTracker;
+  int? _velocityPointer;
+  _PageZoomController? _panAnimationTarget;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayIndex = _clampDisplay(widget.initialDisplayIndex);
+    _pageAnimation = AnimationController(vsync: this);
+    _pageAnimation.addListener(() {
+      setState(() => _dragOffset = _pageTween?.value ?? _dragOffset);
+    });
+    _pageAnimation.addStatusListener((status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        _pageTween = null;
+      }
+    });
+    _panAnimation = AnimationController(vsync: this);
+    _panAnimation.addListener(() {
+      final target = _panAnimationTarget;
+      final value = _panTween?.value;
+      if (target == null || value == null) return;
+      target.offset = value;
+    });
+    _panAnimation.addStatusListener((status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        _panTween = null;
+        _panAnimationTarget = null;
+      }
+    });
+    widget.controller._attach(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _emitRawPage();
+    });
+  }
+
+  @override
+  void didUpdateWidget(PagedReaderViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller._detach(this);
+      widget.controller._attach(this);
+    }
+    if (oldWidget.mapping != widget.mapping) {
+      final wasBoundary =
+          _displayIndex < 0 || _displayIndex >= oldWidget.mapping.length;
+      if (wasBoundary) {
+        _displayIndex = _clampDisplay(widget.initialDisplayIndex);
+      } else {
+        final raw = oldWidget.mapping.displayToRaw(_displayIndex);
+        _displayIndex = _clampDisplay(widget.mapping.rawToDisplay(raw));
+      }
+      _dragOffset = 0;
+      _emitRawPage();
+    }
+    _syncZoomBounds();
+  }
+
+  @override
+  void dispose() {
+    widget.controller._detach(this);
+    _pageAnimation.dispose();
+    _panAnimation.dispose();
+    _longPressTimer?.cancel();
+    _singleTapTimer?.cancel();
+    for (final controller in _zoomControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void jumpToRaw(int rawIndex) {
+    _stopPanAnimation();
+    final target = _clampDisplay(widget.mapping.rawToDisplay(rawIndex));
+    if (target == _displayIndex) {
+      _emitRawPage();
+      return;
+    }
+    setState(() {
+      _displayIndex = target;
+      _dragOffset = 0;
+    });
+    _emitRawPage();
+  }
+
+  void moveByCommand(int delta) {
+    if (delta == 0 || _pageAnimation.isAnimating) return;
+    _stopPanAnimation();
+    if (_isBoundaryDisplay(_displayIndex)) {
+      _moveFromBoundary(delta);
+      return;
+    }
+    if (widget.navigateToPan && _panCurrentPage(_commandPanDirection(delta))) {
+      return;
+    }
+    _animateToDisplay(_displayIndex + delta);
+  }
+
+  bool get isAtFirstDisplay =>
+      widget.previousBoundary != null ? _displayIndex < 0 : _displayIndex <= 0;
+
+  bool get isAtLastDisplay => !widget.mapping.isEmpty
+      ? widget.nextBoundary != null
+          ? _displayIndex >= widget.mapping.length
+          : _displayIndex >= widget.mapping.length - 1
+      : false;
+
+  int _clampDisplay(int index) {
+    if (widget.mapping.isEmpty) return 0;
+    return index.clamp(0, widget.mapping.length - 1).toInt();
+  }
+
+  void _emitRawPage() {
+    if (widget.mapping.isEmpty || _isBoundaryDisplay(_displayIndex)) return;
+    widget.onRawPageChanged(widget.mapping.displayToRaw(_displayIndex));
+  }
+
+  bool _isPreviousBoundary(int index) => index < 0;
+
+  bool _isNextBoundary(int index) => index >= widget.mapping.length;
+
+  bool _isBoundaryDisplay(int index) =>
+      _isPreviousBoundary(index) || _isNextBoundary(index);
+
+  bool _hasDisplayEntry(int index) {
+    if (index >= 0 && index < widget.mapping.length) return true;
+    if (index == -1) return widget.previousBoundary != null;
+    if (index == widget.mapping.length) return widget.nextBoundary != null;
+    return false;
+  }
+
+  void _syncZoomBounds() {
+    for (final controller in _zoomControllers.values) {
+      controller.configure(
+        minScale: _minScale,
+        maxScale: _maxScale,
+        viewport: _viewportSize,
+      );
+    }
+  }
+
+  double get _minScale => widget.disableZoomOut ? _neutralScale : 0.5;
+
+  double get _maxScale => widget.disableZoomIn ? 1 : 5;
+
+  int get _axisSign =>
+      widget.axis == Axis.horizontal && widget.reverse ? -1 : 1;
+
+  double get _axisExtent => widget.axis == Axis.horizontal
+      ? _viewportSize.width
+      : _viewportSize.height;
+
+  _PageZoomController? get _currentZoomOrNull {
+    if (_isBoundaryDisplay(_displayIndex)) return null;
+    return _zoomControllerFor(_displayIndex)
+      ..configure(
+        minScale: _minScale,
+        maxScale: _maxScale,
+        viewport: _viewportSize,
+      );
+  }
+
+  _PageZoomController _zoomControllerFor(int displayIndex) =>
+      _zoomControllers.putIfAbsent(
+        displayIndex,
+        () => _PageZoomController(
+          minScale: _minScale,
+          maxScale: _maxScale,
+        ),
+      );
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pageAnimation.stop();
+    _stopPanAnimation();
+    _singleTapTimer?.cancel();
+    _pointers[event.pointer] = event.localPosition;
+    if (_pointers.length == 1) {
+      _gestureHadMultiplePointers = false;
+      _lastSinglePosition = event.localPosition;
+      _totalDrag = Offset.zero;
+      _dragOwner = null;
+      _velocityPointer = event.pointer;
+      _velocityTracker = VelocityTracker.withKind(event.kind)
+        ..addPosition(event.timeStamp, event.localPosition);
+      _longPressActive = false;
+      _startLongPressTimer(event.localPosition);
+      return;
+    }
+    _gestureHadMultiplePointers = true;
+    _cancelLongPress(cancelled: true);
+    _multiTouchActive = true;
+    _velocityPointer = null;
+    _velocityTracker = null;
+    if (_pointers.length == 2) {
+      final points = _pointers.values.toList();
+      final zoom = _currentZoomOrNull;
+      if (zoom == null) return;
+      _pinchStartDistance = (points[0] - points[1]).distance;
+      _pinchStartFocal = Offset.lerp(points[0], points[1], 0.5);
+      _pinchStartScale = zoom.scale;
+      _pinchStartOffset = zoom.offset;
+      _dragOwner = _DragOwner.page;
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    final previous = _pointers[event.pointer];
+    if (previous == null) return;
+    _pointers[event.pointer] = event.localPosition;
+    if (_velocityPointer == event.pointer) {
+      _velocityTracker?.addPosition(event.timeStamp, event.localPosition);
+    }
+
+    if (_pointers.length >= 2) {
+      _gestureHadMultiplePointers = true;
+      _cancelLongPress(cancelled: true);
+      _handlePinch();
+      return;
+    }
+
+    final last = _lastSinglePosition;
+    if (last == null) return;
+    final delta = event.localPosition - last;
+    _lastSinglePosition = event.localPosition;
+    _totalDrag += delta;
+    final previousOwner = _dragOwner;
+
+    if (_longPressActive) {
+      ReaderInputScope.maybeOf(context)?.onLongPressMoveUpdate(
+        event.localPosition,
+      );
+      return;
+    }
+
+    if (_totalDrag.distance > _tapSlop) {
+      _longPressTimer?.cancel();
+    }
+
+    if (_dragOwner == null && _totalDrag.distance > _touchSlop) {
+      if (_currentZoomOrNull?.isActive ?? false) {
+        _dragOwner = _DragOwner.page;
+      } else {
+        if (!_isMainAxisDrag(_totalDrag)) return;
+        _dragOwner = _DragOwner.pager;
+      }
+    }
+
+    switch (_dragOwner) {
+      case _DragOwner.page:
+        final pageDelta = previousOwner == null ? _totalDrag : delta;
+        final zoom = _currentZoomOrNull;
+        if (zoom == null) {
+          final dragDelta = previousOwner == null
+              ? _mainAxisDelta(_totalDrag)
+              : _mainAxisDelta(delta);
+          _dragOwner = _DragOwner.pager;
+          _applyPagerDragDelta(dragDelta);
+        } else if (!zoom.panBy(pageDelta) && _isMainAxisDrag(_totalDrag)) {
+          final dragDelta = previousOwner == null
+              ? _mainAxisDelta(_totalDrag)
+              : _mainAxisDelta(delta);
+          _dragOwner = _DragOwner.pager;
+          _applyPagerDragDelta(dragDelta);
+        }
+        break;
+      case _DragOwner.pager:
+        final dragDelta = previousOwner == null
+            ? _mainAxisDelta(_totalDrag)
+            : _mainAxisDelta(delta);
+        _applyPagerDragDelta(dragDelta);
+        break;
+      case null:
+        break;
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    final releaseVelocity = _releaseVelocity(event);
+    _pointers.remove(event.pointer);
+    if (_longPressActive) {
+      _finishLongPress();
+      return;
+    }
+    _longPressTimer?.cancel();
+
+    if (_multiTouchActive) {
+      if (_pointers.isEmpty) {
+        _resetGesture();
+      } else {
+        _lastSinglePosition = _pointers.values.single;
+      }
+      return;
+    }
+
+    if (_pointers.length == 1) {
+      _lastSinglePosition = _pointers.values.single;
+      return;
+    }
+
+    if (_dragOwner == _DragOwner.pager) {
+      _settleDrag(releaseVelocity: _mainAxisDelta(releaseVelocity));
+    } else if (_dragOwner == _DragOwner.page) {
+      _settlePagePan(releaseVelocity);
+    } else if (_totalDrag.distance <= _tapSlop) {
+      _handleTap(event.localPosition);
+    }
+
+    _resetGesture();
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _pointers.remove(event.pointer);
+    _finishLongPress(cancelled: true);
+    if (!_multiTouchActive && _dragOwner == _DragOwner.pager) _settleDrag();
+    _resetGesture();
+  }
+
+  void _resetGesture() {
+    _pointers.clear();
+    _lastSinglePosition = null;
+    _totalDrag = Offset.zero;
+    _dragOwner = null;
+    _multiTouchActive = false;
+    _gestureHadMultiplePointers = false;
+    _pinchStartDistance = null;
+    _pinchStartFocal = null;
+    _velocityPointer = null;
+    _velocityTracker = null;
+  }
+
+  void _startLongPressTimer(Offset position) {
+    if (_isBoundaryDisplay(_displayIndex)) return;
+    _longPressTimer?.cancel();
+    _longPressTimer = Timer(_longPressDelay, () {
+      if (!mounted ||
+          _gestureHadMultiplePointers ||
+          _pointers.length != 1 ||
+          _totalDrag.distance > _tapSlop) {
+        return;
+      }
+      _longPressActive = true;
+      ReaderInputScope.maybeOf(context)?.onLongPressStart(position);
+    });
+  }
+
+  void _cancelLongPress({bool cancelled = false}) {
+    _longPressTimer?.cancel();
+    _longPressTimer = null;
+    _finishLongPress(cancelled: cancelled);
+  }
+
+  void _finishLongPress({bool cancelled = false}) {
+    if (!_longPressActive) return;
+    _longPressActive = false;
+    final callbacks = ReaderInputScope.maybeOf(context);
+    if (cancelled) {
+      callbacks?.onLongPressCancel();
+    } else {
+      callbacks?.onLongPressEnd();
+    }
+  }
+
+  void _claimLongPressArena() {}
+
+  void _handlePinch() {
+    if (!widget.pinchEnabled || widget.disableZoomIn) return;
+    final zoom = _currentZoomOrNull;
+    if (zoom == null) return;
+    final startDistance = _pinchStartDistance;
+    final startFocal = _pinchStartFocal;
+    if (startDistance == null || startDistance == 0 || startFocal == null) {
+      return;
+    }
+    final points = _pointers.values.toList();
+    final distance = (points[0] - points[1]).distance;
+    final focal = Offset.lerp(points[0], points[1], 0.5)!;
+    final scale = (_pinchStartScale * distance / startDistance)
+        .clamp(_minScale, _maxScale)
+        .toDouble();
+    zoom
+      ..offset = _pinchStartOffset + (focal - startFocal)
+      ..setScaleAround(scale, focal);
+  }
+
+  void _handleTap(Offset position) {
+    final now = DateTime.now();
+    final previousTapAt = _lastTapAt;
+    final previousTapPosition = _lastTapPosition;
+    _lastTapAt = now;
+    _lastTapPosition = position;
+
+    if (previousTapAt != null &&
+        now.difference(previousTapAt) <= _doubleTapWindow &&
+        previousTapPosition != null &&
+        (previousTapPosition - position).distance <= _tapSlop * 2) {
+      _singleTapTimer?.cancel();
+      _lastTapAt = null;
+      _lastTapPosition = null;
+      _handleDoubleTap(position);
+      return;
+    }
+
+    _singleTapTimer = Timer(_tapDelay, () {
+      if (!mounted) return;
+      _handleSingleTap(position);
+    });
+  }
+
+  void _handleDoubleTap(Offset position) {
+    if (!widget.doubleTapToZoom || widget.disableZoomIn) {
+      _handleSingleTap(position);
+      return;
+    }
+    final zoom = _currentZoomOrNull;
+    if (zoom == null) {
+      _handleSingleTap(position);
+      return;
+    }
+    final target = zoom.scale > _neutralScale + 0.05
+        ? _neutralScale
+        : math.min(2.0, _maxScale);
+    zoom.setScaleAround(target, position);
+  }
+
+  void _handleSingleTap(Offset position) {
+    final callbacks = ReaderInputScope.maybeOf(context);
+    if (callbacks == null) return;
+    switch (_tapActionFor(position, _viewportSize, callbacks)) {
+      case _TapAction.previous:
+        callbacks.onPrevious();
+        break;
+      case _TapAction.next:
+        callbacks.onNext();
+        break;
+      case _TapAction.menu:
+        callbacks.onTap();
+        break;
+    }
+  }
+
+  _TapAction _tapActionFor(
+    Offset position,
+    Size size,
+    ReaderInputCallbacks callbacks,
+  ) {
+    final layout = callbacks.navigationLayout;
+    if (layout == ReaderNavigationLayout.disabled ||
+        layout == ReaderNavigationLayout.defaultNavigation) {
+      return _TapAction.menu;
+    }
+
+    final leftAction = callbacks.tapInvert.invertsHorizontal
+        ? _TapAction.next
+        : _TapAction.previous;
+    final rightAction = callbacks.tapInvert.invertsHorizontal
+        ? _TapAction.previous
+        : _TapAction.next;
+    final topAction = callbacks.tapInvert.invertsVertical
+        ? _TapAction.next
+        : _TapAction.previous;
+    final bottomAction = callbacks.tapInvert.invertsVertical
+        ? _TapAction.previous
+        : _TapAction.next;
+    final edgeWidth = size.width * (callbacks.smallerTapZones ? 0.25 : 1 / 3);
+    final edgeHeight = size.height * (callbacks.smallerTapZones ? 0.25 : 1 / 3);
+
+    return switch (layout) {
+      ReaderNavigationLayout.rightAndLeft => position.dx < edgeWidth
+          ? leftAction
+          : position.dx > size.width - edgeWidth
+              ? rightAction
+              : _TapAction.menu,
+      ReaderNavigationLayout.edge =>
+        position.dx < edgeWidth || position.dx > size.width - edgeWidth
+            ? rightAction
+            : position.dy > size.height - edgeHeight
+                ? leftAction
+                : _TapAction.menu,
+      ReaderNavigationLayout.kindlish => position.dy < size.height - edgeHeight
+          ? _TapAction.menu
+          : position.dx < edgeWidth
+              ? leftAction
+              : rightAction,
+      ReaderNavigationLayout.lShaped => position.dy < edgeHeight
+          ? topAction
+          : position.dy > size.height - edgeHeight
+              ? bottomAction
+              : position.dx < edgeWidth
+                  ? leftAction
+                  : position.dx > size.width - edgeWidth
+                      ? rightAction
+                      : _TapAction.menu,
+      ReaderNavigationLayout.defaultNavigation ||
+      ReaderNavigationLayout.disabled =>
+        _TapAction.menu,
+    };
+  }
+
+  Offset _releaseVelocity(PointerUpEvent event) {
+    if (_velocityPointer != event.pointer) return Offset.zero;
+    _velocityTracker?.addPosition(event.timeStamp, event.localPosition);
+    final velocity = _velocityTracker?.getVelocity().pixelsPerSecond;
+    return velocity ?? Offset.zero;
+  }
+
+  void _settleDrag({double releaseVelocity = 0}) {
+    if (_axisExtent <= 0) return;
+    final boundaryDirection =
+        _boundaryMoveDirection(releaseVelocity: releaseVelocity);
+    if (boundaryDirection != null) {
+      final movedChapter = _requestBoundaryMove(boundaryDirection);
+      if (!movedChapter) _animateOffsetTo(0);
+      return;
+    }
+
+    final signedDistance = -_dragOffset * _axisSign;
+    final signedVelocity = -releaseVelocity * _axisSign;
+    if (signedDistance.abs() > _touchSlop &&
+        signedVelocity.abs() > _pageTurnVelocity) {
+      _animateToDisplay(
+        _displayIndex + (signedVelocity > 0 ? 1 : -1),
+      );
+      return;
+    }
+
+    final progress = signedDistance / _pageTurnExtent;
+    if (progress > _pageTurnThreshold) {
+      _animateToDisplay(_displayIndex + 1);
+      return;
+    }
+    if (progress < -_pageTurnThreshold) {
+      _animateToDisplay(_displayIndex - 1);
+      return;
+    }
+    _animateOffsetTo(0);
+  }
+
+  double get _pageTurnExtent {
+    if (widget.mapping.isEmpty || _isBoundaryDisplay(_displayIndex)) {
+      return _axisExtent;
+    }
+    return widget.mapping.entries[_displayIndex].isPair
+        ? _axisExtent / 2
+        : _axisExtent;
+  }
+
+  double _mainAxisDelta(Offset offset) =>
+      widget.axis == Axis.horizontal ? offset.dx : offset.dy;
+
+  double _crossAxisDelta(Offset offset) =>
+      widget.axis == Axis.horizontal ? offset.dy : offset.dx;
+
+  bool _isMainAxisDrag(Offset offset) =>
+      _mainAxisDelta(offset).abs() >= _crossAxisDelta(offset).abs();
+
+  void _settlePagePan(Offset releaseVelocity) {
+    final zoom = _currentZoomOrNull;
+    if (zoom == null) return;
+    final speed = releaseVelocity.distance;
+    if (!zoom.isActive || speed < _panFlingVelocity) return;
+
+    final maxDistance = _viewportSize.longestSide * 0.9;
+    final distance = math.min(speed * _panFlingDistanceFactor, maxDistance);
+    final factor = distance / speed;
+    final target = zoom.clampOffset(
+      zoom.offset + releaseVelocity.scale(factor, factor),
+    );
+    final travel = (target - zoom.offset).distance;
+    if (travel < 1) return;
+
+    _panAnimation
+      ..stop()
+      ..duration = _panFlingDuration
+      ..reset();
+    _panAnimationTarget = zoom;
+    _panTween = Tween<Offset>(
+      begin: zoom.offset,
+      end: target,
+    ).animate(CurvedAnimation(parent: _panAnimation, curve: Curves.decelerate));
+    _panAnimation.forward();
+  }
+
+  void _stopPanAnimation() {
+    if (!_panAnimation.isAnimating) return;
+    _panAnimation.stop();
+    _panTween = null;
+    _panAnimationTarget = null;
+  }
+
+  void _animateToDisplay(int targetDisplay) {
+    if (!_hasDisplayEntry(targetDisplay)) {
+      _animateThroughBoundary(targetDisplay < 0 ? -1 : 1);
+      return;
+    }
+    final delta = targetDisplay - _displayIndex;
+    if (delta == 0) {
+      _animateOffsetTo(0);
+      return;
+    }
+    final targetOffset = -delta * _axisSign * _axisExtent;
+    _animateOffsetTo(targetOffset, onComplete: () {
+      if (!mounted) return;
+      setState(() {
+        _displayIndex = targetDisplay;
+        _dragOffset = 0;
+      });
+      _emitRawPage();
+    });
+  }
+
+  void _animateThroughBoundary(int direction) {
+    final targetOffset = -direction * _axisSign * _axisExtent;
+    _animateOffsetTo(targetOffset, onComplete: () {
+      if (!mounted) return;
+      final movedChapter = _requestBoundaryMove(direction);
+      if (!movedChapter) _animateOffsetTo(0);
+    });
+  }
+
+  void _moveFromBoundary(int delta) {
+    if (_displayIndex < 0) {
+      if (delta < 0) {
+        _requestBoundaryMove(-1);
+      } else {
+        _animateToDisplay(0);
+      }
+      return;
+    }
+    if (delta > 0) {
+      _requestBoundaryMove(1);
+    } else {
+      _animateToDisplay(widget.mapping.length - 1);
+    }
+  }
+
+  bool _requestBoundaryMove(int direction) {
+    final callbacks = ReaderInputScope.maybeOf(context);
+    return direction < 0
+        ? callbacks?.onPreviousBoundary() ?? false
+        : callbacks?.onNextBoundary() ?? false;
+  }
+
+  void _animateOffsetTo(double target, {VoidCallback? onComplete}) {
+    final duration = _settleDuration(target);
+    if (duration == Duration.zero || _axisExtent <= 0) {
+      setState(() => _dragOffset = target == 0 ? 0 : target);
+      onComplete?.call();
+      if (target != 0) setState(() => _dragOffset = 0);
+      return;
+    }
+    _pageAnimation
+      ..stop()
+      ..duration = duration
+      ..reset();
+    _pageTween = Tween<double>(
+      begin: _dragOffset,
+      end: target,
+    ).animate(CurvedAnimation(parent: _pageAnimation, curve: _settleCurve));
+    _pageAnimation.forward().whenCompleteOrCancel(() {
+      if (!mounted) return;
+      onComplete?.call();
+      if (target == 0) setState(() => _dragOffset = 0);
+    });
+  }
+
+  int? _boundaryMoveDirection({double releaseVelocity = 0}) {
+    if (!_isBoundaryDisplay(_displayIndex)) return null;
+
+    final signedDistance = -_mainAxisDelta(_totalDrag) * _axisSign;
+    final signedVelocity = -releaseVelocity * _axisSign;
+    final signedProgress = signedDistance / _axisExtent;
+
+    if (_isNextBoundary(_displayIndex) &&
+        (signedProgress > _pageTurnThreshold ||
+            signedVelocity > _pageTurnVelocity)) {
+      return 1;
+    }
+    if (_isPreviousBoundary(_displayIndex) &&
+        (signedProgress < -_pageTurnThreshold ||
+            signedVelocity < -_pageTurnVelocity)) {
+      return -1;
+    }
+    return null;
+  }
+
+  double _clampBoundaryOverrun(double offset) {
+    if (!_isBoundaryDisplay(_displayIndex)) return offset;
+    final signedDistance = -offset * _axisSign;
+    if (_isNextBoundary(_displayIndex) && signedDistance > 0) return 0;
+    if (_isPreviousBoundary(_displayIndex) && signedDistance < 0) return 0;
+    return offset;
+  }
+
+  void _applyPagerDragDelta(double dragDelta) {
+    setState(() {
+      _dragOffset = _clampBoundaryOverrun(_dragOffset + dragDelta);
+    });
+  }
+
+  Duration _settleDuration(double target) {
+    if (!widget.animateTransitions || _axisExtent <= 0) return Duration.zero;
+    final remaining =
+        ((target - _dragOffset).abs() / _axisExtent).clamp(0.0, 1.0);
+    final minMs = _minSettleDuration.inMilliseconds;
+    final maxMs = _maxSettleDuration.inMilliseconds;
+    return Duration(
+        milliseconds: minMs + ((maxMs - minMs) * remaining).round());
+  }
+
+  _PanDirection _commandPanDirection(int delta) {
+    if (widget.axis == Axis.vertical) {
+      return delta > 0 ? _PanDirection.down : _PanDirection.up;
+    }
+    if (delta > 0) {
+      return widget.reverse ? _PanDirection.left : _PanDirection.right;
+    }
+    return widget.reverse ? _PanDirection.right : _PanDirection.left;
+  }
+
+  bool _panCurrentPage(_PanDirection direction) {
+    final zoom = _currentZoomOrNull;
+    if (zoom == null) return false;
+    if (!zoom.canPan(direction)) return false;
+    return zoom.panByDirection(direction);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.mapping.isEmpty || widget.pages.isEmpty) {
+      return const Center(child: CenterSorayomiShimmerIndicator());
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _viewportSize = Size(
+          constraints.maxWidth,
+          constraints.maxHeight,
+        );
+        _syncZoomBounds();
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: _claimLongPressArena,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: _onPointerDown,
+            onPointerMove: _onPointerMove,
+            onPointerUp: _onPointerUp,
+            onPointerCancel: _onPointerCancel,
+            child: ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  for (final index in _visibleDisplayIndexes())
+                    _PositionedDisplayEntry(
+                      axis: widget.axis,
+                      offset: _entryOffset(index),
+                      child: _buildDisplayEntry(index),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Iterable<int> _visibleDisplayIndexes() sync* {
+    for (var index = _displayIndex - 1; index <= _displayIndex + 1; index++) {
+      if (_hasDisplayEntry(index)) yield index;
+    }
+  }
+
+  double _entryOffset(int index) =>
+      (index - _displayIndex) * _axisExtent * _axisSign + _dragOffset;
+
+  Widget _buildDisplayEntry(int index) {
+    if (index == -1) {
+      return widget.previousBoundary ?? const SizedBox.shrink();
+    }
+    if (index == widget.mapping.length) {
+      return widget.nextBoundary ?? const SizedBox.shrink();
+    }
+    return _ZoomedDisplayEntry(
+      controller: _zoomControllerFor(index),
+      child: DoublePageView(
+        entry: widget.mapping.entries[index],
+        pages: widget.pages,
+        pageFit: widget.pageFit,
+        pageSize: widget.pageSize,
+        centerMargin: widget.centerMargin,
+        rotateWide: widget.rotateWide,
+        rotateWideInvert: widget.rotateWideInvert,
+        reversePair: widget.reversePair,
+        onPageWide: widget.onPageWide,
+        cropBorders: widget.cropBorders,
+      ),
+    );
+  }
+}
+
+class _PositionedDisplayEntry extends StatelessWidget {
+  const _PositionedDisplayEntry({
+    required this.axis,
+    required this.offset,
+    required this.child,
+  });
+
+  final Axis axis;
+  final double offset;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final translation =
+        axis == Axis.horizontal ? Offset(offset, 0) : Offset(0, offset);
+    return Transform.translate(offset: translation, child: child);
+  }
+}
+
+class _ZoomedDisplayEntry extends StatelessWidget {
+  const _ZoomedDisplayEntry({
+    required this.controller,
+    required this.child,
+  });
+
+  final _PageZoomController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: controller.offset,
+          child: Transform.scale(
+            scale: controller.scale,
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+class _PageZoomController extends ChangeNotifier {
+  _PageZoomController({
+    required this.minScale,
+    required this.maxScale,
+  }) : _scale = 1.0.clamp(minScale, maxScale).toDouble();
+
+  double minScale;
+  double maxScale;
+  Size _viewport = Size.zero;
+  double _scale;
+  Offset _offset = Offset.zero;
+
+  double get scale => _scale;
+
+  Offset get offset => _offset;
+
+  bool get isActive => _scale > 1.01;
+
+  set offset(Offset value) {
+    _offset = _clampOffset(value);
+    notifyListeners();
+  }
+
+  void configure({
+    required double minScale,
+    required double maxScale,
+    required Size viewport,
+  }) {
+    final oldScale = _scale;
+    final oldOffset = _offset;
+    final oldMinScale = this.minScale;
+    final oldMaxScale = this.maxScale;
+    final oldViewport = _viewport;
+
+    this.minScale = minScale;
+    this.maxScale = maxScale;
+    _viewport = viewport;
+    _scale = _scale.clamp(minScale, maxScale).toDouble();
+    _offset = _scale <= 1.001 ? Offset.zero : _clampOffset(_offset);
+    if (oldScale == _scale &&
+        oldOffset == _offset &&
+        oldMinScale == minScale &&
+        oldMaxScale == maxScale &&
+        oldViewport == viewport) {
+      return;
+    }
+    notifyListeners();
+  }
+
+  void setScaleAround(double targetScale, Offset focal) {
+    final nextScale = targetScale.clamp(minScale, maxScale).toDouble();
+    if (nextScale <= 1.001) {
+      _scale = nextScale;
+      _offset = Offset.zero;
+      notifyListeners();
+      return;
+    }
+    final scaleRatio = nextScale / _scale;
+    final viewportCenter = Offset(_viewport.width / 2, _viewport.height / 2);
+    final focalFromCenter = focal - viewportCenter - _offset;
+    _scale = nextScale;
+    _offset = _clampOffset(_offset - focalFromCenter * (scaleRatio - 1));
+    notifyListeners();
+  }
+
+  bool panBy(Offset delta) {
+    if (!canPanBy(delta)) return false;
+    _offset = _clampOffset(_offset + delta);
+    notifyListeners();
+    return true;
+  }
+
+  Offset clampOffset(Offset value) => _clampOffset(value);
+
+  bool canPanBy(Offset delta) {
+    if (_scale <= 1.01) return false;
+    final next = _offset + delta;
+    return _clampOffset(next) != _offset;
+  }
+
+  bool canPan(_PanDirection direction) {
+    if (_scale <= 1.01) return false;
+    return switch (direction) {
+      _PanDirection.left => _offset.dx < _maxPan.dx - 1,
+      _PanDirection.right => _offset.dx > -_maxPan.dx + 1,
+      _PanDirection.up => _offset.dy < _maxPan.dy - 1,
+      _PanDirection.down => _offset.dy > -_maxPan.dy + 1,
+    };
+  }
+
+  bool panByDirection(_PanDirection direction) {
+    final amount = switch (direction) {
+      _PanDirection.left => Offset(_viewport.width * 0.8, 0),
+      _PanDirection.right => Offset(-_viewport.width * 0.8, 0),
+      _PanDirection.up => Offset(0, _viewport.height * 0.8),
+      _PanDirection.down => Offset(0, -_viewport.height * 0.8),
+    };
+    return panBy(amount);
+  }
+
+  Offset get _maxPan {
+    if (_scale <= 1) return Offset.zero;
+    return Offset(
+      _viewport.width * (_scale - 1) / 2,
+      _viewport.height * (_scale - 1) / 2,
+    );
+  }
+
+  Offset _clampOffset(Offset value) {
+    final maxPan = _maxPan;
+    return Offset(
+      value.dx.clamp(-maxPan.dx, maxPan.dx).toDouble(),
+      value.dy.clamp(-maxPan.dy, maxPan.dy).toDouble(),
+    );
+  }
+}

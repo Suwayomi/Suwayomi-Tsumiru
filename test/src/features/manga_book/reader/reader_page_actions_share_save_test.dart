@@ -35,8 +35,17 @@ const _copyKey = ValueKey('reader-page-action-copy-image');
 const _openKey = ValueKey('reader-page-action-open-web');
 const _shareKey = ValueKey('reader-page-action-share');
 const _saveKey = ValueKey('reader-page-action-save');
+const _secondCopyKey = ValueKey('reader-page-action-copy-image-second');
+const _secondShareKey = ValueKey('reader-page-action-share-second');
+const _secondSaveKey = ValueKey('reader-page-action-save-second');
+const _spreadCopyKey = ValueKey('reader-page-action-copy-spread');
+const _spreadShareKey = ValueKey('reader-page-action-share-spread');
+const _spreadSaveKey = ValueKey('reader-page-action-save-spread');
 
-Future<void> _openSheet(WidgetTester tester) async {
+Future<void> _openSheet(
+  WidgetTester tester, {
+  int? secondaryPageIndex,
+}) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -65,6 +74,7 @@ Future<void> _openSheet(WidgetTester tester) async {
                   ref: ref,
                   chapterPages: _pages(),
                   pageIndex: 0,
+                  secondaryPageIndex: secondaryPageIndex,
                 ),
                 child: const Text('open'),
               ),
@@ -94,6 +104,23 @@ void main() {
     expect(find.byKey(_shareKey), findsOneWidget);
     expect(find.byKey(_saveKey), findsOneWidget);
     expect(find.byKey(_openKey), findsNothing);
+    expect(find.byKey(_secondCopyKey), findsNothing);
+    expect(find.byKey(_spreadCopyKey), findsNothing);
+  });
+
+  testWidgets('mobile: manga spread shows second-page and spread actions',
+      (tester) async {
+    await _openSheet(tester, secondaryPageIndex: 1);
+
+    expect(find.byKey(_copyKey), findsOneWidget);
+    expect(find.byKey(_shareKey), findsOneWidget);
+    expect(find.byKey(_saveKey), findsOneWidget);
+    expect(find.byKey(_secondCopyKey), findsOneWidget);
+    expect(find.byKey(_secondShareKey), findsOneWidget);
+    expect(find.byKey(_secondSaveKey), findsOneWidget);
+    expect(find.byKey(_spreadCopyKey), findsOneWidget);
+    expect(find.byKey(_spreadShareKey), findsOneWidget);
+    expect(find.byKey(_spreadSaveKey), findsOneWidget);
   });
 
   testWidgets('mobile: Share and Save are tappable action buttons',

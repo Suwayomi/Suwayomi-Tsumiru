@@ -14,8 +14,7 @@ import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../utils/last_page_swipe_utils.dart';
 
-/// A specialized widget for handling directional swipe gestures in the reader
-/// Extracted from ReaderView to improve performance and maintainability
+/// Handles chapter-boundary swipes for reader modes that do not own gestures.
 class DirectionalSwipeGestureHandler extends HookWidget {
   const DirectionalSwipeGestureHandler({
     super.key,
@@ -75,8 +74,8 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     final bool useAdvancedGestures =
         lastPageSwipeEnabled && !readerSwipeChapterToggle;
     return useAdvancedGestures
-        ? _buildAdvancedGestureHandler(context)
-        : _buildSimpleGestureHandler(context);
+        ? _buildBoundarySwipeHandler(context)
+        : _buildChapterSwipeHandler(context);
   }
 
   /// Tap + long-press wrapper shared by every mode. These don't fight
@@ -92,25 +91,21 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     );
   }
 
-  /// Advanced gesture handler — single-touch pan recognizer for swipe-at-
-  /// last-page; tap + long-press in a nested GestureDetector (those don't
-  /// fight multi-touch).
-  Widget _buildAdvancedGestureHandler(BuildContext context) {
+  Widget _buildBoundarySwipeHandler(BuildContext context) {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
-        SingleTouchPanGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<SingleTouchPanGestureRecognizer>(
+        SingleTouchPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<
+            SingleTouchPanGestureRecognizer>(
           () => SingleTouchPanGestureRecognizer(debugOwner: this),
           (recognizer) {
             recognizer.onEnd = (details) {
               final swipeDirection =
                   LastPageSwipeUtils.detectSwipeDirection(details);
               if (swipeDirection != null) {
-                _handleAdvancedSwipeGesture(
+                _handleBoundarySwipe(
                   context: context,
                   direction: swipeDirection,
-                  details: details,
                 );
               }
             };
@@ -121,9 +116,7 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     );
   }
 
-  /// Simple gesture handler — single-touch horizontal + vertical drag
-  /// recognizers for swipe-at-chapter-boundary; tap + long-press nested.
-  Widget _buildSimpleGestureHandler(BuildContext context) {
+  Widget _buildChapterSwipeHandler(BuildContext context) {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
@@ -160,29 +153,16 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     );
   }
 
-  /// Enhanced swipe gesture handler with improved direction detection
-  void _handleAdvancedSwipeGesture({
+  void _handleBoundarySwipe({
     required BuildContext context,
     required SwipeDirection direction,
-    required DragEndDetails details,
   }) {
-    // Swipe-to-change-chapter is a manga (horizontal-paging) gesture only.
     // In webtoon / vertical-scroll modes a horizontal swipe changing chapter
     // is a terrible experience, so ignore it — the vertical scroll (and
     // infinite scroll) handle moving between chapters there.
     if (scrollDirection == Axis.vertical) return;
 
-    // In continuous vertical readers, treat drag end as a swipe only at
-    // chapter edges to avoid interfering with normal scrolling.
-
-    final bool isContinuousVerticalMode =
-        resolvedReaderMode == ReaderMode.webtoon ||
-            resolvedReaderMode == ReaderMode.continuousVertical;
-
-    // Resolve current page index for edge checks.
-    if (!lastPageSwipeEnabled) {
-      return;
-    }
+    if (!lastPageSwipeEnabled) return;
     final realTimePageIndex = pageController?.page?.round() ?? currentIndex;
 
     final pagePosition = LastPageSwipeUtils.detectPagePosition(
@@ -195,37 +175,26 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     final isAtFirstPage = pagePosition == PagePosition.firstPage ||
         pagePosition == PagePosition.singlePage;
 
-    // Skip swipe handling during mid-chapter scrolling in continuous
-    // vertical readers.
-    if (isContinuousVerticalMode && !(isAtLastPage || isAtFirstPage)) {
-      return;
-    }
-
     final navigationAction = _determineNavigationAction(
       direction: direction,
       isAtLastPage: isAtLastPage,
       isAtFirstPage: isAtFirstPage,
     );
 
-    _executeSmartNavigation(
+    _executeNavigationAction(
       context: context,
       action: navigationAction,
       direction: direction,
     );
   }
 
-  /// Determines the appropriate navigation action based on current context
   NavigationAction _determineNavigationAction({
     required SwipeDirection direction,
     required bool isAtLastPage,
     required bool isAtFirstPage,
   }) {
-    // If last-page swipe is disabled, always use page navigation
-    if (!lastPageSwipeEnabled) {
-      return NavigationAction.pageNavigation;
-    }
+    if (!lastPageSwipeEnabled) return NavigationAction.pageNavigation;
 
-    // Direction-aware navigation logic
     final expectedDirection =
         LastPageSwipeUtils.getExpectedSwipeDirection(resolvedReaderMode);
 
@@ -246,7 +215,6 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     return NavigationAction.pageNavigation;
   }
 
-  /// Check if swipe direction is opposite to expected direction
   bool _isOppositeDirection(SwipeDirection actual, SwipeDirection expected) {
     switch (expected) {
       case SwipeDirection.left:
@@ -260,8 +228,7 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Enhanced navigation logic with error handling and fallback
-  void _executeSmartNavigation({
+  void _executeNavigationAction({
     required BuildContext context,
     required NavigationAction action,
     required SwipeDirection direction,
@@ -283,14 +250,13 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Navigate to next chapter with graceful fallback
   void _navigateToNextChapterWithFallback(BuildContext context) {
     if (prevNextChapterPair?.first != null) {
       try {
         ReaderRoute(
           mangaId: mangaId,
           chapterId: prevNextChapterPair!.first!.id,
-          transVertical: scrollDirection != Axis.vertical,
+          transVertical: scrollDirection == Axis.vertical,
         ).pushReplacement(context);
       } catch (e) {
         onNextPage();
@@ -300,7 +266,6 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Navigate to previous chapter with graceful fallback
   void _navigateToPreviousChapterWithFallback(BuildContext context) {
     if (prevNextChapterPair?.second != null) {
       try {
@@ -308,7 +273,8 @@ class DirectionalSwipeGestureHandler extends HookWidget {
           mangaId: mangaId,
           chapterId: prevNextChapterPair!.second!.id,
           toPrev: true,
-          transVertical: scrollDirection != Axis.vertical,
+          transVertical: scrollDirection == Axis.vertical,
+          openAtEnd: true,
         ).pushReplacement(context);
       } catch (e) {
         onPreviousPage();
@@ -318,7 +284,6 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Perform appropriate page navigation based on direction
   void _performPageNavigation(SwipeDirection direction) {
     switch (direction) {
       case SwipeDirection.left:
@@ -332,7 +297,6 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Enhanced swipe gesture handler following project.mdc safety rules
   void _handleSwipeGesture({
     required BuildContext context,
     required DragEndDetails details,
@@ -343,7 +307,7 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     if (scrollDirection == Axis.vertical) return;
 
     if (readerSwipeChapterToggle) {
-      _handleOriginalSwipeBehavior(context, details, allowedAxis);
+      _handleChapterSwipe(context, details, allowedAxis);
       return;
     }
 
@@ -376,15 +340,14 @@ class DirectionalSwipeGestureHandler extends HookWidget {
       isAtFirstPage: isAtFirstPage,
     );
 
-    _executeSmartNavigation(
+    _executeNavigationAction(
       context: context,
       action: navigationAction,
       direction: swipeDirection,
     );
   }
 
-  /// Original swipe behavior for when main swipe toggle is enabled
-  void _handleOriginalSwipeBehavior(
+  void _handleChapterSwipe(
     BuildContext context,
     DragEndDetails details,
     Axis allowedAxis,
