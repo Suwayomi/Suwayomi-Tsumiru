@@ -110,8 +110,18 @@ class NavigationShellScreen extends HookConsumerWidget {
       }
     }
 
+    // Branch 0 (Library) is home. Android Back from any other tab returns here
+    // instead of exiting; only Library-at-root exits (#102). goBranch itself
+    // builds no back-stack.
+    const homeBranch = 0;
+    void switchTo(int navBarIndex) {
+      final target = getAdjustedIndex(navBarIndex);
+      child.goBranch(target, initialLocation: target == child.currentIndex);
+    }
+
+    final Widget scaffold;
     if (context.isTablet) {
-      return Scaffold(
+      scaffold = Scaffold(
         // No bottom bar here, so the rail + content would draw under the system
         // navigation controls (and any landscape cutout). SafeArea keeps both
         // out of that unusable strip so the controls never overlap a cover.
@@ -120,10 +130,7 @@ class NavigationShellScreen extends HookConsumerWidget {
             children: [
               BigScreenNavigationBar(
                 selectedIndex: child.currentIndex,
-                onDestinationSelected: (index) => child.goBranch(
-                  getAdjustedIndex(index),
-                  initialLocation: index == child.currentIndex,
-                ),
+                onDestinationSelected: switchTo,
               ),
               Expanded(
                 child: Column(
@@ -138,7 +145,7 @@ class NavigationShellScreen extends HookConsumerWidget {
         ),
       );
     } else {
-      return Scaffold(
+      scaffold = Scaffold(
         body: Column(
           children: [
             Expanded(child: child),
@@ -148,12 +155,27 @@ class NavigationShellScreen extends HookConsumerWidget {
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         bottomNavigationBar: SmallScreenNavigationBar(
           selectedIndex: getReverseAdjustedIndex(child.currentIndex),
-          onDestinationSelected: (index) => child.goBranch(
-            getAdjustedIndex(index),
-            initialLocation: index == child.currentIndex,
-          ),
+          onDestinationSelected: switchTo,
         ),
       );
     }
+
+    // Intercept the hardware Back BEFORE go_router's own handler: go_router
+    // 14.x doesn't route Back to a shell PopScope when a branch is at its root,
+    // so it exits the app instead of returning to the home tab (flutter
+    // #145290/#188018). BackButtonListener fires on the legacy back path (which
+    // the manifest forces on via enableOnBackInvokedCallback=false).
+    return BackButtonListener(
+      onBackButtonPressed: () async {
+        // Within a branch (a pushed route) or on home → let the default handler
+        // pop the route or exit. On any other tab at its root, go home instead.
+        if (child.currentIndex != homeBranch && !GoRouter.of(context).canPop()) {
+          child.goBranch(homeBranch);
+          return true; // handled — do not exit
+        }
+        return false;
+      },
+      child: scaffold,
+    );
   }
 }
