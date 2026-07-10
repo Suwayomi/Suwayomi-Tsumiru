@@ -143,6 +143,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const Duration _maxSettleDuration = Duration(milliseconds: 180);
   static const Duration _minSettleDuration = Duration(milliseconds: 70);
   static const Duration _panFlingDuration = Duration(milliseconds: 400);
+  static const Duration _doubleTapZoomDuration = Duration(milliseconds: 200);
   static const Curve _settleCurve = Curves.easeOutCubic;
 
   late int _displayIndex;
@@ -177,6 +178,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   VelocityTracker? _velocityTracker;
   int? _velocityPointer;
   _PageZoomController? _panAnimationTarget;
+  late final AnimationController _zoomAnimation;
+  Animation<double>? _zoomScaleTween;
+  Animation<Offset>? _zoomOffsetTween;
+  _PageZoomController? _zoomAnimationTarget;
 
   @override
   void initState() {
@@ -204,6 +209,22 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
           status == AnimationStatus.dismissed) {
         _panTween = null;
         _panAnimationTarget = null;
+      }
+    });
+    _zoomAnimation = AnimationController(vsync: this);
+    _zoomAnimation.addListener(() {
+      final target = _zoomAnimationTarget;
+      final scale = _zoomScaleTween?.value;
+      final offset = _zoomOffsetTween?.value;
+      if (target == null || scale == null || offset == null) return;
+      target.setScaleOffset(scale, offset);
+    });
+    _zoomAnimation.addStatusListener((status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        _zoomScaleTween = null;
+        _zoomOffsetTween = null;
+        _zoomAnimationTarget = null;
       }
     });
     widget.controller._attach(this);
@@ -234,6 +255,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     widget.controller._detach(this);
     _pageAnimation.dispose();
     _panAnimation.dispose();
+    _zoomAnimation.dispose();
     _longPressTimer?.cancel();
     _singleTapTimer?.cancel();
     for (final controller in _zoomControllers.values) {
@@ -394,6 +416,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     _pageAnimation.stop();
     _stopPanAnimation();
+    _stopZoomAnimation();
     _singleTapTimer?.cancel();
     _pointers[event.pointer] = event.localPosition;
     if (_pointers.length == 1) {
@@ -653,7 +676,24 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final target = zoom.scale > _neutralScale + 0.05
         ? _neutralScale
         : math.min(2.0, _maxScale);
-    zoom.setScaleAround(target, position);
+    _animateZoomTo(zoom, zoom.scaleAroundTarget(target, position));
+  }
+
+  /// Animate a page's zoom to a target scale/offset (double-tap), so it eases
+  /// in instead of snapping — matching the webtoon reader's zoom feel.
+  void _animateZoomTo(
+      _PageZoomController zoom, ({double scale, Offset offset}) end) {
+    _zoomAnimation.stop();
+    _zoomAnimationTarget = zoom;
+    _zoomScaleTween = Tween<double>(begin: zoom.scale, end: end.scale).animate(
+        CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
+    _zoomOffsetTween = Tween<Offset>(begin: zoom.offset, end: end.offset)
+        .animate(
+            CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
+    _zoomAnimation
+      ..duration = _doubleTapZoomDuration
+      ..reset()
+      ..forward();
   }
 
   void _handleSingleTap(Offset position) {
@@ -807,6 +847,14 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _panAnimation.stop();
     _panTween = null;
     _panAnimationTarget = null;
+  }
+
+  void _stopZoomAnimation() {
+    if (!_zoomAnimation.isAnimating) return;
+    _zoomAnimation.stop();
+    _zoomScaleTween = null;
+    _zoomOffsetTween = null;
+    _zoomAnimationTarget = null;
   }
 
   void _animateToDisplay(int targetDisplay) {
@@ -1069,18 +1117,28 @@ class _PageZoomController extends ChangeNotifier {
   }
 
   void setScaleAround(double targetScale, Offset focal) {
+    final t = scaleAroundTarget(targetScale, focal);
+    setScaleOffset(t.scale, t.offset);
+  }
+
+  /// The (scale, offset) that [setScaleAround] would land on — without applying
+  /// it, so the viewport can animate toward it.
+  ({double scale, Offset offset}) scaleAroundTarget(
+      double targetScale, Offset focal) {
     final nextScale = targetScale.clamp(minScale, maxScale).toDouble();
-    if (nextScale <= 1.001) {
-      _scale = nextScale;
-      _offset = Offset.zero;
-      notifyListeners();
-      return;
-    }
+    if (nextScale <= 1.001) return (scale: nextScale, offset: Offset.zero);
     final scaleRatio = nextScale / _scale;
     final viewportCenter = Offset(_viewport.width / 2, _viewport.height / 2);
     final focalFromCenter = focal - viewportCenter - _offset;
-    _scale = nextScale;
-    _offset = _clampOffset(_offset - focalFromCenter * (scaleRatio - 1));
+    return (
+      scale: nextScale,
+      offset: _clampOffset(_offset - focalFromCenter * (scaleRatio - 1)),
+    );
+  }
+
+  void setScaleOffset(double scale, Offset offset) {
+    _scale = scale.clamp(minScale, maxScale).toDouble();
+    _offset = _scale <= 1.001 ? Offset.zero : _clampOffset(offset);
     notifyListeners();
   }
 

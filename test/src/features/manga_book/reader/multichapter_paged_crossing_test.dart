@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,7 +59,74 @@ ReaderInputCallbacks _callbacks() => ReaderInputCallbacks(
       smallerTapZones: false,
     );
 
+double _largestScale(WidgetTester tester) {
+  var best = 1.0;
+  for (final t in tester.widgetList<Transform>(find.byType(Transform))) {
+    final s = t.transform.storage;
+    final sx = math.sqrt(s[0] * s[0] + s[1] * s[1]);
+    if (sx > best) best = sx;
+  }
+  return best;
+}
+
 void main() {
+  testWidgets('double-tap zoom animates instead of snapping', (tester) async {
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 1)],
+      forceTransition: false,
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ReaderInputScope(
+          callbacks: _callbacks(),
+          child: SizedBox(
+            width: 300,
+            height: 500,
+            child: PagedReaderViewport(
+              controller: PagedReaderController(),
+              window: window,
+              initialDisplayIndex: 0,
+              axis: Axis.horizontal,
+              reverse: false,
+              animateTransitions: true,
+              pageFit: BoxFit.contain,
+              pageSize: null,
+              centerMargin: CenterMarginType.none,
+              rotateWide: false,
+              rotateWideInvert: false,
+              reversePair: false,
+              cropBorders: false,
+              onPageWide: (_, __, ___) {},
+              onChapterPageChanged: (_, __) {},
+              transitionBuilder: (_) => const SizedBox.shrink(),
+              pinchEnabled: true,
+              doubleTapToZoom: true,
+              disableZoomIn: false,
+              disableZoomOut: false,
+              navigateToPan: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final center = tester.getCenter(find.byType(PagedReaderViewport));
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tapAt(center); // second tap → double-tap-to-zoom
+    // Part-way through the 200ms zoom: scaled up, but not yet at the 2x target.
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 90));
+    final mid = _largestScale(tester);
+    expect(mid, greaterThan(1.02), reason: 'zoom did not start ($mid)');
+    expect(mid, lessThan(1.98), reason: 'zoom snapped instantly ($mid)');
+
+    await tester.pumpAndSettle();
+    expect(_largestScale(tester), closeTo(2.0, 0.05));
+  });
+
   testWidgets('paging crosses from chapter 1 into chapter 2 in one window',
       (tester) async {
     // Both chapters already loaded, seamless (no transition between them).
