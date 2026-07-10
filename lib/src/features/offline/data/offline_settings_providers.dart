@@ -11,6 +11,15 @@ import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'offline_settings_providers.g.dart';
 
+/// Server the offline catalog reflects; gates the offline fallback so a server
+/// switch can't leak the previous server's downloads (#145).
+@riverpod
+class OfflineCatalogServerUrl extends _$OfflineCatalogServerUrl
+    with SharedPreferenceClientMixin<String> {
+  @override
+  String? build() => initialize(DBKeys.offlineCatalogServerUrl);
+}
+
 @riverpod
 class OfflineTimeEvictEnabled extends _$OfflineTimeEvictEnabled
     with SharedPreferenceClientMixin<bool> {

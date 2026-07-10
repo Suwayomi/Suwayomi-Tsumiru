@@ -98,6 +98,9 @@ enum DBKeys {
   autoRefreshOnTimeout(true),
   autoRefreshRetryDelay(1000), // milliseconds
   // Offline safety-net settings
+  // Server the offline catalog was populated from; the fallback is only served
+  // when it matches the active server, so a switch can't show old downloads (#145).
+  offlineCatalogServerUrl(null),
   offlineTimeEvictEnabled(false),
   offlineKeepDays(30),
   offlineStorageCapEnabled(false),
