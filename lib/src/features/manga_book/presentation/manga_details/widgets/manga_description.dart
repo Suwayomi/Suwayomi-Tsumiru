@@ -28,6 +28,7 @@ import '../../../domain/manga/manga_model.dart';
 import '../controller/next_update_controller.dart';
 import '../server_web_url.dart';
 import 'manga_action_button.dart';
+import 'manga_rating_bar.dart';
 
 class MangaDescription extends HookConsumerWidget {
   const MangaDescription({
@@ -256,6 +257,7 @@ class MangaDescription extends HookConsumerWidget {
             ),
           );
         }),
+        MangaRatingBar(mangaId: manga.id),
         if (manga.description.isNotBlank)
           Padding(
             padding: KEdgeInsets.a16.size,

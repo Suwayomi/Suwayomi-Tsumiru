@@ -207,6 +207,32 @@ class MangaChapterFilterScanlator extends _$MangaChapterFilterScanlator {
   }
 }
 
+/// Personal 0-5 star rating for a manga, stored in the per-manga meta store
+/// (no server rating field exists). 0 means unrated.
+@riverpod
+class MangaRating extends _$MangaRating {
+  @override
+  int build({required int mangaId}) {
+    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
+    return (manga.valueOrNull?.metaData.rating ?? 0).clamp(0, 5);
+  }
+
+  Future<void> update(int rating) async {
+    final next = rating.clamp(0, 5);
+    await AsyncValue.guard(
+      () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
+            mangaId: mangaId,
+            key: MangaMetaKeys.rating.key,
+            // Meta values are String-typed server-side (MangaMetaTypeInput.value
+            // is String!); an int silently fails the mutation.
+            value: '$next',
+          ),
+    );
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    state = next;
+  }
+}
+
 @riverpod
 AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   Ref ref, {

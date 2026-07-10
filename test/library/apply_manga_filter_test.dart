@@ -83,6 +83,7 @@ List<int> _filter(
       mangaFilterOffline: null,
       offlineMangaIds: const {},
       mangaFilterLewd: lewd,
+      mangaFilterMinRating: 0,
       filterCategories: filterCategories,
       filterCategoriesInclude: include,
       filterCategoriesExclude: exclude,

@@ -61,6 +61,8 @@ class MangaMeta with _$MangaMeta {
     ReaderOrientation? readerOrientation,
     @JsonKey(name: "flutter_readerTapInvert") TapInvert? readerTapInvert,
     @JsonKey(name: "flutter_scanlator") String? scanlator,
+    @JsonKey(name: "flutter_rating", fromJson: MangaMeta.fromJsonToInt)
+    int? rating,
   }) = _MangaMeta;
 
   static bool? fromJsonToBool(dynamic val) => val != null && val is String
@@ -69,6 +71,9 @@ class MangaMeta with _$MangaMeta {
 
   static double? fromJsonToDouble(dynamic val) =>
       val != null && val is String ? double.parse(val) : null;
+
+  static int? fromJsonToInt(dynamic val) =>
+      val is String ? int.tryParse(val) : null;
   factory MangaMeta.fromJson(Map<String, dynamic> json) =>
       _$MangaMetaFromJson(json);
 }
@@ -82,6 +87,7 @@ enum MangaMetaKeys {
   readerOrientation("flutter_readerOrientation"),
   readerTapInvert("flutter_readerTapInvert"),
   scanlator("flutter_scanlator"),
+  rating("flutter_rating"),
   ;
 
   const MangaMetaKeys(this.key);

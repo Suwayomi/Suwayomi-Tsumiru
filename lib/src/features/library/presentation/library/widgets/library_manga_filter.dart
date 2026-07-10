@@ -65,9 +65,49 @@ class LibraryMangaFilter extends ConsumerWidget {
           onChanged:
               ref.read(libraryMangaFilterLewdProvider.notifier).update,
         ),
+        _RatingFilterRow(),
         _CategoryFilterRow(),
         _TrackerFilterSection(),
       ],
+    );
+  }
+}
+
+/// Minimum personal star rating to show. Tapping star N sets the threshold to N;
+/// tapping the current threshold clears it (show all).
+class _RatingFilterRow extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final min = ref.watch(libraryMangaFilterMinRatingProvider) ?? 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              context.l10n.minimumRating,
+              style: context.theme.textTheme.bodyMedium,
+            ),
+          ),
+          for (int star = 1; star <= 5; star++)
+            InkResponse(
+              radius: 18,
+              onTap: () => ref
+                  .read(libraryMangaFilterMinRatingProvider.notifier)
+                  .update(min == star ? 0 : star),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(
+                  star <= min ? Icons.star_rounded : Icons.star_border_rounded,
+                  size: 22,
+                  color: star <= min
+                      ? Colors.amber
+                      : context.theme.unselectedWidgetColor,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

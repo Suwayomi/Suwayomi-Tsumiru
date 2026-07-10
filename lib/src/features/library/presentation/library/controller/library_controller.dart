@@ -53,6 +53,7 @@ List<MangaDto> applyLibraryFilterSort(
   required bool? mangaFilterOffline,
   required Set<int> offlineMangaIds,
   required bool? mangaFilterLewd,
+  required int mangaFilterMinRating,
   required bool filterCategories,
   required Set<String> filterCategoriesInclude,
   required Set<String> filterCategoriesExclude,
@@ -90,6 +91,10 @@ List<MangaDto> applyLibraryFilterSort(
     }
     if (mangaFilterLewd != null &&
         (mangaFilterLewd ^ (manga.source?.isNsfw ?? false))) {
+      return false;
+    }
+    if (mangaFilterMinRating > 0 &&
+        (manga.metaData.rating ?? 0) < mangaFilterMinRating) {
       return false;
     }
     if (filterCategories) {
@@ -162,6 +167,9 @@ List<MangaDto> applyLibraryFilterSort(
           MangaSort.lastUpdate =>
             (int.tryParse(m1.chaptersLastFetchedAt ?? '0') ?? 0)
                 .compareTo(int.tryParse(m2.chaptersLastFetchedAt ?? '0') ?? 0),
+          // Personal star rating (0 = unrated, sorts lowest).
+          MangaSort.rating => (m1.metaData.rating ?? 0)
+              .compareTo(m2.metaData.rating ?? 0),
           // Normal order (m1 vs m2): ascending = oldest-read first,
           // descending = newest-read first. (Previously the operands were
           // swapped, which inverted our arrows — our "ascending" showed
@@ -247,6 +255,8 @@ class CategoryMangaListWithQueryAndFilter
               mangaFilterOffline: mangaFilterOffline,
               offlineMangaIds: offlineMangaIds,
               mangaFilterLewd: mangaFilterLewd,
+              mangaFilterMinRating:
+                  ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
               filterCategories: filterCategories,
               filterCategoriesInclude: filterCategoriesInclude,
               filterCategoriesExclude: filterCategoriesExclude,
@@ -320,6 +330,13 @@ class LibraryMangaFilterLewd extends _$LibraryMangaFilterLewd
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.mangaFilterLewd);
+}
+
+@riverpod
+class LibraryMangaFilterMinRating extends _$LibraryMangaFilterMinRating
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.mangaFilterMinRating);
 }
 
 @riverpod
@@ -546,6 +563,8 @@ class GroupedMangaListWithQueryAndFilter
               mangaFilterOffline: mangaFilterOffline,
               offlineMangaIds: offlineMangaIds,
               mangaFilterLewd: mangaFilterLewd,
+              mangaFilterMinRating:
+                  ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
               filterCategories: filterCategories,
               filterCategoriesInclude: filterCategoriesInclude,
               filterCategoriesExclude: filterCategoriesExclude,

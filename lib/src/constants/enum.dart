@@ -316,7 +316,8 @@ enum MangaSort {
   // Appended (NOT reordered) — MangaSort prefs are stored by enum index, so
   // reordering would corrupt saved sorts. Sort-tab display order is controlled
   // separately (see library_manga_organizer.dart).
-  lastUpdate;
+  lastUpdate,
+  rating;
 
   String toLocale(BuildContext context) => switch (this) {
         MangaSort.alphabetical => context.l10n.mangaSortAlphabetical,
@@ -329,6 +330,7 @@ enum MangaSort {
         MangaSort.random => context.l10n.mangaSortRandom,
         MangaSort.trackerScore => context.l10n.mangaSortTrackerScore,
         MangaSort.lastUpdate => context.l10n.mangaSortLastUpdate,
+        MangaSort.rating => context.l10n.mangaSortRating,
       };
 }
 

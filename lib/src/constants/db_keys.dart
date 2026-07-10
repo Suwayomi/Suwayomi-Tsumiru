@@ -141,6 +141,8 @@ enum DBKeys {
   // 2=by status, 3=by track status (reserved; filled in Task 8), 4=ungrouped.
   libraryGroupType(0),
   mangaFilterLewd(null),
+  // Minimum personal star rating to show in the library. 0 = off (show all).
+  mangaFilterMinRating(0),
   filterCategories(false),
   filterCategoriesInclude(<String>[]),
   filterCategoriesExclude(<String>[]),

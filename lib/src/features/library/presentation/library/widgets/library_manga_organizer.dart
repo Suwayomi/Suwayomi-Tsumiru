@@ -19,6 +19,7 @@ import '../../../../tracking/data/tracker_repository.dart';
 /// `MangaSort` enum declaration because that is persisted by index.
 const List<MangaSort> _sortDisplayOrder = [
   MangaSort.alphabetical,
+  MangaSort.rating,
   MangaSort.totalChapters,
   MangaSort.lastRead,
   MangaSort.lastUpdate,

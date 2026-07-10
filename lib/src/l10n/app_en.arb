@@ -1792,6 +1792,8 @@
     "mangaSortLastRead": "Last Read",
     "mangaSortLastUpdated": "Chapter Fetch Date",
     "mangaSortLastUpdate": "Last Update",
+    "mangaSortRating": "Rating",
+    "minimumRating": "Minimum rating",
     "mangaSortRandom": "Random",
     "mangaSortTrackerScore": "Tracker score",
     "mangaSortTotalChapters": "Total Chapters",
@@ -2349,6 +2351,7 @@
         "description": "Empty state for the on-device downloads tab"
     },
     "tracking": "Tracking",
+    "yourRating": "Your rating",
     "@tracking": {
         "description": "Settings entry and screen title for the Tracking screen"
     },
