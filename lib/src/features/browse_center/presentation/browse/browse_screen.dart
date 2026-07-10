@@ -9,12 +9,13 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/search_field.dart';
 import '../extension/controller/extension_controller.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
+import '../source/controller/source_controller.dart'
+    show sourceSearchQueryProvider;
 import '../source/widgets/source_language_filter.dart';
 
 class BrowseScreen extends HookConsumerWidget {
@@ -55,11 +56,7 @@ class BrowseScreen extends HookConsumerWidget {
         actions: [
           IconButton(
             onPressed: () => showSearch.value = (true),
-            icon: Icon(
-              tabController.index == 0
-                  ? Icons.travel_explore_rounded
-                  : Icons.search_rounded,
-            ),
+            icon: const Icon(Icons.search_rounded),
           ),
           if (tabController.index == 1) ...[
             const InstallExtensionFile(),
@@ -93,12 +90,16 @@ class BrowseScreen extends HookConsumerWidget {
                   child: tabController.index == 0
                       ? SearchField(
                           key: const ValueKey(0),
-                          onSubmitted: (value) {
-                            if (value.isNotBlank) {
-                              GlobalSearchRoute(query: value).push(context);
-                            }
+                          initialText: ref.read(sourceSearchQueryProvider),
+                          onChanged: (val) => ref
+                              .read(sourceSearchQueryProvider.notifier)
+                              .update(val),
+                          onClose: () {
+                            ref
+                                .read(sourceSearchQueryProvider.notifier)
+                                .update(null);
+                            showSearch.value = (false);
                           },
-                          onClose: () => showSearch.value = (false),
                         )
                       : SearchField(
                           key: const ValueKey(1),

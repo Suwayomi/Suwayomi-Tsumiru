@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/source/source_model.dart';
@@ -149,6 +150,32 @@ List<SourceDto>? sourceQuery(Ref ref, {String? query}) {
         .toList();
   }
   return sourceMap.values.expand((list) => list).toList();
+}
+
+/// The Sources-tab name filter. Mirrors [ExtensionQuery]: filters the grouped
+/// source map by name while preserving the language grouping, so typing in the
+/// Sources tab narrows the list instead of launching a global search.
+@riverpod
+AsyncValue<Map<String, List<SourceDto>>?> sourceMapFilteredAndQueried(Ref ref) {
+  final sourceMapData = ref.watch(sourceMapFilteredProvider);
+  final sourceMap = {...?sourceMapData.valueOrNull};
+  final query = ref.watch(sourceSearchQueryProvider);
+  if (query.isBlank) return sourceMapData;
+  return sourceMapData.copyWithData(
+    (e) => sourceMap.map<String, List<SourceDto>>(
+      (key, value) => MapEntry(
+        key,
+        value.where((element) => element.name.query(query)).toList(),
+      ),
+    ),
+  );
+}
+
+@riverpod
+class SourceSearchQuery extends _$SourceSearchQuery
+    with StateProviderMixin<String?> {
+  @override
+  String? build() => null;
 }
 
 @riverpod

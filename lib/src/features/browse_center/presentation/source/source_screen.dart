@@ -20,8 +20,12 @@ class SourceScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sourceMapData = ref.watch(sourceMapFilteredProvider);
-    final pinned = ref.watch(pinnedSourcesProvider);
+    final sourceMapData = ref.watch(sourceMapFilteredAndQueriedProvider);
+    final query = ref.watch(sourceSearchQueryProvider);
+    final allPinned = ref.watch(pinnedSourcesProvider);
+    final pinned = query.isBlank
+        ? allPinned
+        : allPinned.where((s) => s.name.query(query)).toList();
 
     final sourceMap = {...?sourceMapData.valueOrNull};
     final localSource = sourceMap.remove("localsourcelang");

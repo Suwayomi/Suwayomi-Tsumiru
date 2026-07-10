@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source/controller/source_controller.dart';
 
@@ -81,6 +82,37 @@ void main() {
     test('the last-used source is lifted into a "lastUsed" bucket', () {
       final map = groupSourcesByLanguage(sources, '1'); // MangaDex
       expect(map['lastUsed']!.single.name, 'MangaDex');
+    });
+  });
+
+  group('sourceMapFilteredAndQueried (Sources tab name filter)', () {
+    ProviderContainer containerWith(Map<String, List<SourceDto>> map) {
+      final c = ProviderContainer(overrides: [
+        sourceMapFilteredProvider.overrideWith((ref) => AsyncData(map)),
+      ]);
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('a blank query passes the grouped map through unchanged', () {
+      final c = containerWith({
+        'en': [mangaDex, allManga],
+        'ko': [bato],
+      });
+      final out = c.read(sourceMapFilteredAndQueriedProvider).valueOrNull!;
+      expect(out['en']!.map((e) => e.name), ['MangaDex', 'allmanga']);
+      expect(out['ko']!.map((e) => e.name), ['Bato']);
+    });
+
+    test('a query filters each group by source name, keeping grouping', () {
+      final c = containerWith({
+        'en': [mangaDex, allManga],
+        'ko': [bato],
+      });
+      c.read(sourceSearchQueryProvider.notifier).update('dex');
+      final out = c.read(sourceMapFilteredAndQueriedProvider).valueOrNull!;
+      expect(out['en']!.map((e) => e.name), ['MangaDex']);
+      expect(out['ko'], isEmpty);
     });
   });
 }
