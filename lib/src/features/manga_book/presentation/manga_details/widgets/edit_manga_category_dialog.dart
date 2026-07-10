@@ -65,9 +65,9 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                             if (category.id != 0)
                               AsyncCheckboxListTile(
                                 onChanged: (value) async {
-                                  // Capture before the await so a dialog
-                                  // dismissed mid-request never touches a
-                                  // deactivated ref.
+                                  // Capture the toast before the await so the
+                                  // error path can report even if the dialog is
+                                  // gone by the time the request returns.
                                   final toast = ref.read(toastProvider);
                                   final repo =
                                       ref.read(mangaBookRepositoryProvider);
@@ -89,6 +89,10 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                   // the library's category tabs (all filter one
                                   // libraryMangaListProvider). Skipped on failure
                                   // so a no-op toggle doesn't refetch the library.
+                                  // If the dialog was dismissed mid-request the
+                                  // caller refreshes on close, so bail rather than
+                                  // touch a deactivated ref.
+                                  if (!context.mounted) return;
                                   ref.read(provider.notifier).refresh();
                                   ref.invalidate(categoryControllerProvider);
                                   ref.invalidate(libraryMangaListProvider);
