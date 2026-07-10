@@ -18,6 +18,7 @@ import '../../../../../offline/data/offline_repository.dart';
 import '../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../tracking/domain/track_progress_gate.dart';
+import '../../../../data/manga_book/manga_book_repository.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
@@ -232,6 +233,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final offlineEnabledForFlush = ref.read(offlineEnabledProvider);
     final offlineDbForFlush =
         offlineEnabledForFlush ? ref.read(offlineDatabaseProvider) : null;
+    final repoForFlush = ref.read(mangaBookRepositoryProvider);
     final incognitoForFlush = ref.read(incognitoModeProvider);
     useEffect(() {
       return () {
@@ -239,14 +241,22 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         final p = latestProgress.value;
         if (p == null) return;
         if (completedChapterIds.value.contains(p.chapterId)) return;
-        if (incognitoForFlush || offlineDbForFlush == null) return;
+        if (incognitoForFlush) return;
         final lc = loadedById(p.chapterId);
         final pageCount = lc?.pages.pages.length ?? 0;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
-        unawaited(offlineDbForFlush
-            .setChapterProgress(p.chapterId,
-                lastPageRead: isCompletion ? 0 : p.rel, isRead: isCompletion)
-            .catchError((_) {}));
+        // Flush through the offline-safe path — the on-device catalog when
+        // downloaded, otherwise the server repository — so leaving mid-chapter
+        // saves the spot even with offline disabled (the single-chapter reader
+        // did this via its PopScope flush; the offline-DB-only flush dropped it).
+        unawaited(recordReadingProgressWithDependencies(
+          offlineEnabled: offlineEnabledForFlush,
+          offlineDatabase: offlineDbForFlush,
+          repository: repoForFlush,
+          chapterId: p.chapterId,
+          lastPageRead: isCompletion ? 0 : p.rel,
+          isRead: isCompletion,
+        ).catchError((_) {}));
       };
     }, const []);
 

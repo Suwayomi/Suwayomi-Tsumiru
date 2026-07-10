@@ -211,4 +211,81 @@ void main() {
       reason: 'chapter 1 was not marked read on the forward crossing',
     );
   });
+
+  Future<_RecordingRepo> _pumpSingleChapter(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = _RecordingRepo();
+    final ch1 = _chapter(id: 1, sourceOrder: 1, pageCount: 3);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
+          chapterPagesProvider(chapterId: 1)
+              .overrideWith((ref) => _pages(1, 3)),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
+          trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
+          updateProgressAfterReadingProvider
+              .overrideWith(() => _FixedToggle(false)),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const ReaderScreen(mangaId: 1, chapterId: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return repo;
+  }
+
+  testWidgets('saves the visible page after the debounce', (tester) async {
+    final repo = await _pumpSingleChapter(tester);
+
+    // Turn to page 2 (index 1).
+    await tester.timedDrag(find.byType(PagedReaderViewport),
+        const Offset(-400, 0), const Duration(milliseconds: 80));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3'), findsOneWidget);
+
+    // Let the 2s progress debounce fire.
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(
+      repo.putChapterCalls.any((c) =>
+          c.chapterId == 1 && c.patch.lastPageRead == 1 && c.patch.isRead == false),
+      isTrue,
+      reason: 'debounced progress for page 2 was not saved; ${repo.putChapterCalls}',
+    );
+  });
+
+  testWidgets('flushes the visible page on exit before the debounce fires',
+      (tester) async {
+    final repo = await _pumpSingleChapter(tester);
+
+    await tester.timedDrag(find.byType(PagedReaderViewport),
+        const Offset(-400, 0), const Duration(milliseconds: 80));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3'), findsOneWidget);
+
+    // Leave the reader well within the 2s debounce window.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      repo.putChapterCalls.any((c) => c.chapterId == 1 && c.patch.lastPageRead == 1),
+      isTrue,
+      reason: 'progress was not flushed on exit; ${repo.putChapterCalls}',
+    );
+  });
 }
