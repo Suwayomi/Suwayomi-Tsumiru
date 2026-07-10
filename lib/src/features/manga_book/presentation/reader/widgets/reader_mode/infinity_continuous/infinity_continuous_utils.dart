@@ -59,9 +59,13 @@ class InfinityContinuousUtils {
     // Content is "scrolled" once page 0's top has left the viewport top (or page
     // 0 is gone entirely). If it's still parked at rest, the reader is at the
     // start, not the end, no matter how much of the chapter happens to fit.
+    // Tolerate float-noise around 0 (a settled page 0 can report a tiny
+    // negative) so it isn't misread as "scrolled" — which would re-open the
+    // mark-read-on-open bug.
+    const restEps = 0.0015;
     final firstPage = positions.where((p) => p.index == 0);
     final restingAtTop =
-        firstPage.isNotEmpty && firstPage.first.itemLeadingEdge >= 0;
+        firstPage.isNotEmpty && firstPage.first.itemLeadingEdge >= -restEps;
 
     // total - 1 is the last loaded page; itemTrailingEdge <= 1.0 means its
     // bottom sits at or above the viewport bottom, i.e. the end is reached.
