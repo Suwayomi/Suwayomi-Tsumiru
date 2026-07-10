@@ -109,6 +109,12 @@ class LibraryMangaDisplay extends ConsumerWidget {
           tristate: false,
         ),
         CustomCheckboxListTile(
+          title: context.l10n.readProgressBar,
+          provider: readProgressBarProvider,
+          onChanged: ref.read(readProgressBarProvider.notifier).update,
+          tristate: false,
+        ),
+        CustomCheckboxListTile(
           title: context.l10n.continueReadingButton,
           provider: showContinueReadingButtonProvider,
           onChanged:

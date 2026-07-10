@@ -25,6 +25,13 @@ class UnreadBadge extends _$UnreadBadge with SharedPreferenceClientMixin<bool> {
 }
 
 @riverpod
+class ReadProgressBar extends _$ReadProgressBar
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.readProgressBar);
+}
+
+@riverpod
 class ShowContinueReadingButton extends _$ShowContinueReadingButton
     with SharedPreferenceClientMixin<bool> {
   @override

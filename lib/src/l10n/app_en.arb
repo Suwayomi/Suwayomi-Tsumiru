@@ -2096,6 +2096,7 @@
     "unknownManga": "Unknown Manga",
     "unknownSource": "Unknown Source",
     "unread": "Unread",
+    "readProgressBar": "Read progress bar",
     "update": "Update",
     "updateCompleted": "Update Completed",
     "updateFailed": "Failed to update {property}",

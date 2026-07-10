@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../constants/gen/assets.gen.dart';
@@ -12,6 +13,7 @@ import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../server_image.dart';
+import '../providers/manga_cover_providers.dart';
 import '../widgets/continue_reading_button.dart';
 import '../widgets/manga_badges.dart';
 
@@ -107,6 +109,12 @@ class MangaCoverGridTile extends StatelessWidget {
                 bottom: 6,
                 child: ContinueReadingButton(onPressed: onContinueReading!),
               ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _CoverReadProgressBar(manga: manga),
+            ),
           ],
         ),
       ),
@@ -186,5 +194,41 @@ class MangaCoverGridTile extends StatelessWidget {
                   ),
                 ),
         );
+  }
+}
+
+/// Fraction (0..1] of a series that's been read, or null when there's nothing
+/// to show (no chapters, or none read yet). Clamps defensively so odd counts
+/// (unread > total) never produce an out-of-range or negative bar.
+double? coverReadFraction({required int totalChapters, required int unreadCount}) {
+  if (totalChapters <= 0) return null;
+  final read = (totalChapters - unreadCount).clamp(0, totalChapters);
+  return read <= 0 ? null : read / totalChapters;
+}
+
+/// Thin read-progress bar along the bottom edge of a library cover, gated on the
+/// per-user toggle. Percent read is derived client-side from the manga's own
+/// counts, so it needs no server call.
+class _CoverReadProgressBar extends ConsumerWidget {
+  const _CoverReadProgressBar({required this.manga});
+
+  final MangaDto manga;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(readProgressBarProvider).ifNull()) {
+      return const SizedBox.shrink();
+    }
+    final fraction = coverReadFraction(
+      totalChapters: manga.chapters.totalCount,
+      unreadCount: manga.unreadCount.getValueOnNullOrNegative(),
+    );
+    if (fraction == null) return const SizedBox.shrink();
+    return LinearProgressIndicator(
+      value: fraction,
+      minHeight: 3,
+      backgroundColor: Colors.black.withValues(alpha: 0.35),
+      valueColor: AlwaysStoppedAnimation(context.theme.colorScheme.primary),
+    );
   }
 }

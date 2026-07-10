@@ -37,6 +37,7 @@ enum DBKeys {
   showNSFW(true),
   downloadedBadge(false),
   unreadBadge(true),
+  readProgressBar(false),
   languageBadge(false),
   localBadge(false),
   sourceBadge(false),
