@@ -9,10 +9,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/async_buttons/async_checkbox_list_tile.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../../library/presentation/category/controller/edit_category_controller.dart';
+import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../controller/manga_details_controller.dart';
 
@@ -63,7 +65,7 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                             if (category.id != 0)
                               AsyncCheckboxListTile(
                                 onChanged: (value) async {
-                                  await AsyncValue.guard(
+                                  final result = await AsyncValue.guard(
                                     () => value.ifNull()
                                         ? ref
                                             .read(mangaBookRepositoryProvider)
@@ -74,8 +76,22 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                             .removeMangaFromCategory(
                                                 mangaId, category.id),
                                   );
+                                  // A swallowed failure here is what made the
+                                  // change look saved (optimistic checkbox) while
+                                  // nothing persisted — surface it so the user
+                                  // knows to retry.
+                                  if (result.hasError) {
+                                    ref
+                                        .read(toastProvider)
+                                        ?.showError(result.error.toString());
+                                  }
                                   ref.read(provider.notifier).refresh();
                                   ref.invalidate(categoryControllerProvider);
+                                  // The library's category tabs all filter one
+                                  // libraryMangaListProvider; without this the
+                                  // manga keeps its stale categories and never
+                                  // shows under the new tab.
+                                  ref.invalidate(libraryMangaListProvider);
                                 },
                                 value: selectedCategoryList?.containsKey(
                                       "${category.id}",
