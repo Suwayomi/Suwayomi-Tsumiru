@@ -15,7 +15,12 @@ ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
     brightness: brightness,
     // Brand accents (verbatim)
     primary: t.accent,
-    onPrimary: Colors.white,
+    // Contrast against the accent, not always white: a light accent (e.g. the
+    // Monochrome theme's near-white grey) needs dark text so the unread-count
+    // badge and other primary-filled elements stay legible.
+    onPrimary: ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
+        ? Colors.black
+        : Colors.white,
     primaryContainer: mix(t.accent, t.bg, 0.72),
     onPrimaryContainer: t.accent,
     secondary: t.accent2,
