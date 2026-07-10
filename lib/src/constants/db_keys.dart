@@ -45,6 +45,10 @@ enum DBKeys {
   // Library display: overlay a play button on covers that jumps straight into
   // the next unread chapter. Off by default, matching Suwayomi-WebUI.
   showContinueReadingButton(false),
+  // Which category new manga land in when added to the library. -1 = always ask
+  // (show the category picker), 0 = Default/uncategorized, >0 = a specific
+  // category id. Mirrors Komikku's Default category preference.
+  libraryDefaultCategory(-1),
   l10n(Locale('en')),
   mangaFilterDownloaded(null),
   mangaFilterOffline(null),

@@ -367,6 +367,15 @@ class LibrarySortRandomSeed extends _$LibrarySortRandomSeed
   int? build() => initialize(DBKeys.librarySortRandomSeed);
 }
 
+/// Category new manga are added to when favorited. -1 = always ask,
+/// 0 = Default/uncategorized, >0 = a specific category id.
+@riverpod
+class LibraryDefaultCategory extends _$LibraryDefaultCategory
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.libraryDefaultCategory);
+}
+
 /// Tri-state filter preference for a single tracker.
 ///
 /// Key pattern: `mangaFilterTracker_<trackerId>`.

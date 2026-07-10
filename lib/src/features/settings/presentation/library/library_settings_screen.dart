@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
@@ -14,9 +15,11 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
+import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import 'data/library_settings_repository.dart';
@@ -61,6 +64,15 @@ class LibrarySettingsScreen extends ConsumerWidget {
                 if (librarySettingsDto.excludeUnreadChapters)
                   context.l10n.withUnreadChapter,
               ];
+              final defaultCategory =
+                  ref.watch(libraryDefaultCategoryProvider) ??
+                      DBKeys.libraryDefaultCategory.initial as int;
+              final defaultCategoryMatch =
+                  categories.where((c) => c.id == defaultCategory);
+              final defaultCategoryLabel = defaultCategory == -1 ||
+                      defaultCategoryMatch.isEmpty
+                  ? context.l10n.alwaysAsk
+                  : defaultCategoryMatch.first.name;
               void onAutomaticUpdateIntervalUpdate(int value) async {
                 final result = await AppUtils.guard(
                     () =>
@@ -78,6 +90,30 @@ class LibrarySettingsScreen extends ConsumerWidget {
                     title: Text(context.l10n.categories),
                     leading: const Icon(Icons.label_rounded),
                     onTap: () => const EditCategoriesRoute().go(context),
+                  ),
+                  ListTile(
+                    title: Text(context.l10n.defaultCategoryOnAdd),
+                    leading: const Icon(Icons.folder_special_outlined),
+                    subtitle: Text(defaultCategoryLabel),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => RadioListPopup<int>(
+                        title: context.l10n.defaultCategoryOnAdd,
+                        optionList: [-1, ...categories.map((c) => c.id)],
+                        value: defaultCategory,
+                        getOptionTitle: (v) => v == -1
+                            ? context.l10n.alwaysAsk
+                            : categories
+                                .firstWhere((c) => c.id == v)
+                                .name,
+                        onChange: (v) {
+                          ref
+                              .read(libraryDefaultCategoryProvider.notifier)
+                              .update(v);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
                   ),
                   // HideEmptyCategoryTile(),
                   const RefreshChaptersFromSourceTile(),
