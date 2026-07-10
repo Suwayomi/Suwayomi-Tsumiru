@@ -1,12 +1,12 @@
 # Tsumiru Architecture
 
-Tsumiru is a Flutter client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) (the Tachidesk backend) — a manga/manhwa reader that runs on Android, Linux, Windows, macOS, and Web. It is its own application (published at `tsumiru-app/tsumiru`), originally based on [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi), focused on being a great daily-driver, especially for webtoon/manhwa reading.
+Tsumiru is a Flutter client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) (the Tachidesk backend) — a manga/manhwa reader that runs on Android, Linux, Windows, macOS, and Web. It is its own application inside the Suwayomi org (published at `Suwayomi/Suwayomi-Tsumiru`), originally based on [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi), and focused on daily reading, especially for webtoon/manhwa.
 
-This directory documents how the app is built and how each subsystem works, so contributors (human or AI) can orient quickly and change code safely.
+This directory documents how the app is built and how each subsystem works, so contributors can orient quickly and change code safely.
 
 ## Read this first
 
-- **[repo-build-release.md](repo-build-release.md)** — remotes, the branch model, the release flow, and the version scheme. **`tsumiru-app/tsumiru` `main` (remote `tsumiru`) is canonical.** Always `git fetch tsumiru` and verify your base against it and the latest release before building or branching.
+- **[repo-build-release.md](repo-build-release.md)** — remotes, the branch model, the release flow, and the version scheme. **`Suwayomi/Suwayomi-Tsumiru` `main` (remote `origin`) is canonical.** Always `git fetch origin` and verify your base against it and the latest release before building or branching.
 
 ## Subsystem maps
 

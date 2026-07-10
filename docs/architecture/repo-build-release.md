@@ -1,16 +1,16 @@
 # Repo, Build & Release Model
 
-> **The #1 rule:** `tsumiru-app/tsumiru` `main` (git remote `tsumiru`) is the canonical source of truth. **Before building, branching, or releasing, run `git fetch tsumiru` and verify your local base against `tsumiru/main` AND the latest GitHub release.** Building on a stale base produces an app missing the in-app branding, version, and fixes that shipped in the latest release.
+> **The #1 rule:** `Suwayomi/Suwayomi-Tsumiru` `main` is the canonical source of truth. **Before building, branching, or releasing, run `git fetch origin` and verify your local base against `origin/main` and the latest GitHub release.** Building on a stale base produces an app missing the in-app branding, version, and fixes that shipped in the latest release.
 
 ## Remotes & branch model
 
-Tsumiru is its **own application** published at `tsumiru-app/tsumiru` — not a personal fork. It descends from Tachidesk-Sorayomi (kept for attribution and the occasional upstream sync), but the project lives and ships on its own now.
+Tsumiru is its **own application** published at `Suwayomi/Suwayomi-Tsumiru` inside the Suwayomi org. It descends from Tachidesk-Sorayomi (kept for attribution and the occasional upstream sync), but the project lives and ships on its own now.
 
 | Remote | URL | Role |
 |---|---|---|
-| `origin` | `github.com/tsumiru-app/tsumiru` | **The app — canonical.** A fresh `git clone` / `gh repo clone` lands here; `main` and releases are ground truth |
-| `upstream` | `github.com/Suwayomi/Tachidesk-Sorayomi` | The project Tsumiru descends from (attribution / occasional sync) |
-| `ariqpradipa` | `github.com/ariqpradipa/Tachidesk-Sorayomi` | Author of adopted reader PR #362 |
+| `origin` | `github.com/Suwayomi/Suwayomi-Tsumiru` | **The app — canonical.** A fresh `git clone` / `gh repo clone` lands here; `main` and releases are ground truth |
+| `upstream` | `github.com/Suwayomi/Tachidesk-Sorayomi` | Optional remote for the project Tsumiru descends from (attribution / occasional sync) |
+| `ariqpradipa` | `github.com/ariqpradipa/Tachidesk-Sorayomi` | Optional remote for the author of adopted reader PR #362 |
 
 **Workflow:** Tsumiru uses **pull requests** (public project). Branch off `main`, open a PR, let CI gate it, then merge. Branch and commit names are plain/human — no `feat/`-style prefixes. Push/PR-create/merge happen on `origin`.
 

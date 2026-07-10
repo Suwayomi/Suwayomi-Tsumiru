@@ -14,7 +14,7 @@
 ## Constants
 
 - **`enum.dart`:** `AuthType` (none/basic/simpleLogin/uiLogin), `ReaderMode` (8; default webtoon), `ReaderNavigationLayout` (default disabled), `MangaSort` (7; default lastRead), `ChapterSort` (source/uploadDate/fetchedDate), `DisplayMode` (grid/list/descriptiveList), `MangaStatus`, `IncludeOrExclude` (tri-state). Most carry `toLocale(BuildContext)`.
-- **`urls.dart`:** external URLs, rebranded to `tsumiru-app` (`sorayomiGithubUrl`, `...LatestReleaseUrl`, `...ApiUrl`, `tachideskHelp`, `sorayomiWhatsNew`, `flareSolverr`).
+- **`urls.dart`:** external URLs for the Suwayomi-hosted Tsumiru repo, docs site, and related services (`sorayomiGithubUrl`, `...LatestReleaseUrl`, `...ApiUrl`, `tachideskHelp`, `sorayomiWhatsNew`, `flareSolverr`).
 - **`endpoints.dart`:** `Endpoints.baseApi(...)` — the central URL builder (`baseUrl`, `port`, `addPort`, `isGraphQl`, `isWebsocket`); plus per-area URL classes.
 - **`app_constants.dart`:** `kDuration` (500ms), `kInstantDuration`, `kLongDuration`, `kCurve`, magnifier constants, `kDebounceDuration` (500ms), `kPositionPlaceholder` (-1).
 - **`app_sizes.dart`:** `KEdgeInsets` / `KBorderRadius` / `KRadius` tokens; `mangaCoverGridDelegate(double?)`.
