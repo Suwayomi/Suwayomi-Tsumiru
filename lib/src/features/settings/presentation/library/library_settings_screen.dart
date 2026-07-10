@@ -15,11 +15,14 @@ import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../library/domain/category/category_model.dart';
+import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import 'data/library_settings_repository.dart';
 import 'widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
 import 'widgets/skip_updating_entries_popup.dart';
+import 'widgets/update_categories_dialog.dart';
 
 class LibrarySettingsScreen extends ConsumerWidget {
   const LibrarySettingsScreen({super.key});
@@ -28,6 +31,8 @@ class LibrarySettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(librarySettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
+    final categories = ref.watch(categoryControllerProvider).valueOrNull ??
+        const <CategoryDto>[];
 
     return ListTileTheme(
       data: const ListTileThemeData(
@@ -129,6 +134,15 @@ class LibrarySettingsScreen extends ConsumerWidget {
                     onTap: () => showDialog(
                       context: context,
                       builder: (context) => const SkipUpdatingEntriesPopup(),
+                    ),
+                  ),
+                  ListTile(
+                    title: Text(context.l10n.updateCategories),
+                    subtitle: Text(
+                        libraryUpdateCategoriesSummary(context, categories)),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (_) => const UpdateCategoriesDialog(),
                     ),
                   ),
                   // SectionTitle(title: context.l10n.advanced),
