@@ -101,7 +101,7 @@ void main() {
     expect(libraryBuilds, 2);
   });
 
-  testWidgets('a failed toggle still refreshes the library without crashing',
+  testWidgets('a failed toggle reverts the checkbox and does not refetch',
       (tester) async {
     final repo = _RecordingMangaBookRepo(failAdd: true);
     var libraryBuilds = 0;
@@ -122,9 +122,18 @@ void main() {
     await tester.tap(find.text('Pornhwa'));
     await tester.pumpAndSettle();
 
-    // The failure was surfaced (not swallowed), and the flow completed: the
-    // library still re-fetched, so the checkbox reverts to the true state.
     expect(repo.added, isEmpty);
-    expect(libraryBuilds, 2);
+    // The optimistic tick flipped the box; the failure reverts it, so it does
+    // not show a save that never landed.
+    final tile = tester.widget<CheckboxListTile>(
+      find.ancestor(
+        of: find.text('Pornhwa'),
+        matching: find.byType(CheckboxListTile),
+      ),
+    );
+    expect(tile.value, isFalse);
+    // Nothing changed on the server, so the library is not re-fetched (only the
+    // initial fireImmediately build ran).
+    expect(libraryBuilds, 1);
   });
 }

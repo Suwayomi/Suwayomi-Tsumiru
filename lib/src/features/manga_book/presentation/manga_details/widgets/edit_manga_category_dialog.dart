@@ -65,32 +65,36 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                             if (category.id != 0)
                               AsyncCheckboxListTile(
                                 onChanged: (value) async {
-                                  final result = await AsyncValue.guard(
-                                    () => value.ifNull()
-                                        ? ref
-                                            .read(mangaBookRepositoryProvider)
-                                            .addMangaToCategory(
-                                                mangaId, category.id)
-                                        : ref
-                                            .read(mangaBookRepositoryProvider)
-                                            .removeMangaFromCategory(
-                                                mangaId, category.id),
-                                  );
-                                  // A swallowed failure here is what made the
-                                  // change look saved (optimistic checkbox) while
-                                  // nothing persisted — surface it so the user
-                                  // knows to retry.
-                                  if (result.hasError) {
-                                    ref
-                                        .read(toastProvider)
-                                        ?.showError(result.error.toString());
+                                  // Capture the toast before the await so the
+                                  // error path can report even if the dialog is
+                                  // gone by the time the request returns.
+                                  final toast = ref.read(toastProvider);
+                                  final repo =
+                                      ref.read(mangaBookRepositoryProvider);
+                                  try {
+                                    value
+                                        ? await repo.addMangaToCategory(
+                                            mangaId, category.id)
+                                        : await repo.removeMangaFromCategory(
+                                            mangaId, category.id);
+                                  } catch (e) {
+                                    // Surface the failure and rethrow so the
+                                    // checkbox reverts to its true (unchanged)
+                                    // state instead of showing a save that never
+                                    // landed.
+                                    toast?.showError(e.toString());
+                                    rethrow;
                                   }
+                                  // Success: reflect it in this dialog and across
+                                  // the library's category tabs (all filter one
+                                  // libraryMangaListProvider). Skipped on failure
+                                  // so a no-op toggle doesn't refetch the library.
+                                  // If the dialog was dismissed mid-request the
+                                  // caller refreshes on close, so bail rather than
+                                  // touch a deactivated ref.
+                                  if (!context.mounted) return;
                                   ref.read(provider.notifier).refresh();
                                   ref.invalidate(categoryControllerProvider);
-                                  // The library's category tabs all filter one
-                                  // libraryMangaListProvider; without this the
-                                  // manga keeps its stale categories and never
-                                  // shows under the new tab.
                                   ref.invalidate(libraryMangaListProvider);
                                 },
                                 value: selectedCategoryList?.containsKey(
