@@ -221,7 +221,15 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       }
     }
 
+    // The first run is the on-mount restore, not a page turn — skip it so
+    // opening a chapter already sitting on its last page (e.g. paging back into
+    // it, or openAtEnd) doesn't mark it read and wipe the resume point.
+    final initialProgressConsumed = useRef<bool>(false);
     useEffect(() {
+      if (!initialProgressConsumed.value) {
+        initialProgressConsumed.value = true;
+        return null;
+      }
       scheduleVisibleProgress(
           currentVisibleChapter.value.id, currentChapterPageIndex.value);
       return null;
