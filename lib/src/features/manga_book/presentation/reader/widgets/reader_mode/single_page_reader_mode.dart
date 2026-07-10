@@ -20,6 +20,7 @@ import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_feedback.dart';
+import 'paged_display_window.dart';
 import 'paged_reader_viewport.dart';
 import 'paged_spread_mapping.dart';
 
@@ -28,6 +29,10 @@ import 'paged_spread_mapping.dart';
 Duration pagedNavDuration({required bool animate}) =>
     animate ? kDuration : kInstantDuration;
 
+/// Single-chapter paged host (fallback). The primary paged path is
+/// [MultiChapterPagedReaderMode], which crosses chapter boundaries seamlessly;
+/// this variant wraps a one-chapter [PagedDisplayWindow] and relies on the
+/// wrapper's `pushReplacement` boundary crossing.
 class SinglePageReaderMode extends HookConsumerWidget {
   const SinglePageReaderMode({
     super.key,
@@ -90,18 +95,37 @@ class SinglePageReaderMode extends HookConsumerWidget {
       ],
     );
 
+    final showChapterTransition = settings.alwaysShowChapterTransition;
+    final window = useMemoized(
+      () => buildPagedDisplayWindow(
+        chapters: [
+          WindowChapter(
+            chapterId: chapter.id,
+            chapterName: chapter.name,
+            mapping: mapping,
+            pages: chapterPages.pages,
+          ),
+        ],
+        forceTransition: false,
+        leadingTransition: showChapterTransition,
+        trailingTransition: showChapterTransition,
+      ),
+      [mapping, chapterPages.pages, showChapterTransition, chapter.id],
+    );
+
     final initialRaw = readerInitialPageIndex(
       chapter: chapter,
       chapterPages: chapterPages,
       openAtEnd: openAtEnd,
     );
-    final initialDisplay = mapping.rawToDisplay(initialRaw);
+    final rawToDisplay = window.chapterRawToDisplay(chapter.id, initialRaw);
+    final initialDisplay =
+        rawToDisplay >= 0 ? rawToDisplay : window.firstDisplayOf(chapter.id);
     // Seed the tracked page from the initial spread's furthest page so the
     // viewport's mount emit (which reports that page) doesn't rewind the
     // seekbar or double-fire onPageChanged.
-    final initialProgressRaw = mapping.isEmpty
-        ? initialRaw
-        : mapping.displayToProgressRaw(initialDisplay);
+    final initialProgressRaw =
+        window.displayToChapterProgressRaw(initialDisplay)?.raw ?? initialRaw;
     final currentIndex = useState(initialProgressRaw);
 
     useEffect(() {
@@ -121,7 +145,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
       return null;
     }, [currentIndex.value, chapterPages.pages.length]);
 
-    void onPageWide(int raw, bool wide) {
+    void onPageWide(int chapterId, int raw, bool wide) {
       if (!wide || widePages.value.contains(raw)) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted || widePages.value.contains(raw)) return;
@@ -137,7 +161,6 @@ class SinglePageReaderMode extends HookConsumerWidget {
       currentIndex.value,
       reversePair: reversePair,
     );
-    final showChapterTransition = settings.alwaysShowChapterTransition;
     final wrapperReaderMode =
         effectiveReaderMode ?? _singlePageReaderMode(scrollDirection, reverse);
 
@@ -158,8 +181,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
       effectiveReaderMode: wrapperReaderMode,
       child: PagedReaderViewport(
         controller: controller,
-        mapping: mapping,
-        pages: chapterPages.pages,
+        window: window,
         initialDisplayIndex: initialDisplay,
         axis: scrollDirection,
         reverse: reverse,
@@ -172,27 +194,19 @@ class SinglePageReaderMode extends HookConsumerWidget {
         reversePair: reversePair,
         cropBorders: settings.cropBorders,
         onPageWide: onPageWide,
-        onRawPageChanged: (raw) {
+        onChapterPageChanged: (chapterId, raw) {
           if (raw == currentIndex.value) return;
           currentIndex.value = raw;
         },
+        transitionBuilder: (t) => _PagedChapterTransition(
+          chapterName: chapter.name,
+          isChapterStart: !t.isEnd,
+        ),
         pinchEnabled: settings.pinchToZoom,
         doubleTapToZoom: settings.doubleTapToZoom,
         disableZoomIn: false,
         disableZoomOut: settings.disableZoomOut,
         navigateToPan: settings.navigateToPan,
-        previousBoundary: showChapterTransition
-            ? _PagedChapterTransition(
-                chapterName: chapter.name,
-                isChapterStart: true,
-              )
-            : null,
-        nextBoundary: showChapterTransition
-            ? _PagedChapterTransition(
-                chapterName: chapter.name,
-                isChapterStart: false,
-              )
-            : null,
       ),
     );
   }

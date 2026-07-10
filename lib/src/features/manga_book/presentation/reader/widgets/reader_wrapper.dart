@@ -140,6 +140,7 @@ class ReaderWrapper extends HookConsumerWidget {
     this.isAtLastBoundary,
     this.spreadPageIndexes,
     this.effectiveReaderMode,
+    this.handlesOwnChapterNavigation = false,
   });
   final Widget child;
   final MangaDto manga;
@@ -158,6 +159,12 @@ class ReaderWrapper extends HookConsumerWidget {
   final bool Function()? isAtLastBoundary;
   final List<int>? spreadPageIndexes;
   final ReaderMode? effectiveReaderMode;
+
+  /// When true the child (a multi-chapter host) crosses chapter boundaries
+  /// itself inside one continuous pager, so the reading-flow boundary must NOT
+  /// `pushReplacement` a fresh chapter — it falls through to the child's
+  /// onNext/onPrevious instead.
+  final bool handlesOwnChapterNavigation;
 
   bool _shouldUseVerticalTransition(ReaderMode readerMode) {
     switch (readerMode) {
@@ -423,11 +430,15 @@ class ReaderWrapper extends HookConsumerWidget {
     }
 
     bool tryNextChapter() {
+      // Host owns in-window chapter crossing: don't push a fresh route; let the
+      // reading-flow boundary fall through to the child's controller.
+      if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
       return pushNextChapter();
     }
 
     bool tryPreviousChapter() {
+      if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
       return pushPreviousChapter();
     }
