@@ -683,7 +683,14 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// in instead of snapping — matching the webtoon reader's zoom feel.
   void _animateZoomTo(
       _PageZoomController zoom, ({double scale, Offset offset}) end) {
-    _zoomAnimation.stop();
+    // reset() drives the controller to `dismissed`, which fires the status
+    // listener that clears these tweens — so it has to run BEFORE we build them.
+    // A second double-tap arrives with the controller sitting at `completed`, so
+    // resetting after assignment would null the tweens it just created and the
+    // zoom would never animate (page stuck zoomed).
+    _zoomAnimation
+      ..stop()
+      ..reset();
     _zoomAnimationTarget = zoom;
     _zoomScaleTween = Tween<double>(begin: zoom.scale, end: end.scale).animate(
         CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
@@ -692,7 +699,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
             CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
     _zoomAnimation
       ..duration = _doubleTapZoomDuration
-      ..reset()
       ..forward();
   }
 

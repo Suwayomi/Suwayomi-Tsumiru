@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_display_window.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_spread_mapping.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
@@ -74,7 +75,27 @@ Future<void> _pumpViewport(
   bool animateTransitions = false,
   Widget? previousBoundary,
   Widget? nextBoundary,
+  VoidCallback? onReachedStartEdge,
+  VoidCallback? onReachedEndEdge,
+  void Function(int chapterId, int raw, bool isWide)? onPageWide,
 }) async {
+  // The viewport now renders a PagedDisplayWindow instead of a bare
+  // mapping+pages pair. These single-chapter tests wrap the mapping in a
+  // one-chapter window; a leading/trailing transition card stands in for the
+  // old previousBoundary/nextBoundary widgets (rendered via transitionBuilder).
+  final window = buildPagedDisplayWindow(
+    chapters: [
+      WindowChapter(
+        chapterId: 1,
+        chapterName: 'c1',
+        mapping: mapping,
+        pages: pages,
+      ),
+    ],
+    forceTransition: false,
+    leadingTransition: previousBoundary != null,
+    trailingTransition: nextBoundary != null,
+  );
   final viewport = ReaderInputScope(
     callbacks: callbacks,
     child: SizedBox(
@@ -82,8 +103,7 @@ Future<void> _pumpViewport(
       height: 500,
       child: PagedReaderViewport(
         controller: controller,
-        mapping: mapping,
-        pages: pages,
+        window: window,
         initialDisplayIndex: initialDisplayIndex,
         axis: Axis.horizontal,
         reverse: reverse,
@@ -95,15 +115,18 @@ Future<void> _pumpViewport(
         rotateWideInvert: false,
         reversePair: false,
         cropBorders: false,
-        onPageWide: (_, __) {},
-        onRawPageChanged: onRawPageChanged,
+        onPageWide: onPageWide ?? (_, __, ___) {},
+        onChapterPageChanged: (_, raw) => onRawPageChanged(raw),
+        transitionBuilder: (transition) => transition.isStart
+            ? (previousBoundary ?? const SizedBox.shrink())
+            : (nextBoundary ?? const SizedBox.shrink()),
         pinchEnabled: true,
         doubleTapToZoom: true,
         disableZoomIn: false,
         disableZoomOut: disableZoomOut,
         navigateToPan: true,
-        previousBoundary: previousBoundary,
-        nextBoundary: nextBoundary,
+        onReachedStartEdge: onReachedStartEdge,
+        onReachedEndEdge: onReachedEndEdge,
       ),
     ),
   );
@@ -153,7 +176,11 @@ Future<void> _doubleTapViewport(WidgetTester tester) async {
   await tester.tap(target);
   await tester.pump(const Duration(milliseconds: 80));
   await tester.tap(target);
-  await tester.pump(const Duration(milliseconds: 280));
+  // Double-tap zoom now animates. A single pump only seeds the animation
+  // controller's tick epoch (elapsed 0), so pump once to start it then settle
+  // it to its target scale.
+  await tester.pump();
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pinchViewportIn(WidgetTester tester) async {
@@ -207,8 +234,11 @@ void main() {
     expect(reported, [1]);
   });
 
-  testWidgets('next command at the last display uses boundary navigation',
+  testWidgets('next command at the last display hits the end edge',
       (tester) async {
+    // migrated: the viewport no longer performs the chapter move itself (that's
+    // the host's job now). At the window's outer end it fires onReachedEndEdge —
+    // the new edge signal that replaces the old onNextBoundary handoff.
     final pages = _localPages(3);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -218,7 +248,7 @@ void main() {
       isWide: (_) => false,
     );
     final controller = PagedReaderController();
-    var boundaryHits = 0;
+    var endEdgeHits = 0;
 
     await _pumpViewport(
       tester,
@@ -227,22 +257,21 @@ void main() {
       pages: pages,
       initialDisplayIndex: 2,
       onRawPageChanged: (_) {},
-      callbacks: _callbacks(
-        onNextBoundary: () {
-          boundaryHits += 1;
-          return true;
-        },
-      ),
+      callbacks: _callbacks(),
+      onReachedEndEdge: () => endEdgeHits += 1,
     );
 
     controller.next();
     await tester.pump();
 
-    expect(boundaryHits, 1);
+    expect(endEdgeHits, 1);
   });
 
   testWidgets('next command lands on the chapter transition first',
       (tester) async {
+    // migrated: the trailing transition card is now an ordinary in-window slot
+    // (via transitionBuilder), so the first next() pages onto it and only the
+    // next() past it reaches the window's end edge (onReachedEndEdge).
     final pages = _localPages(3);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -252,7 +281,7 @@ void main() {
       isWide: (_) => false,
     );
     final controller = PagedReaderController();
-    var boundaryHits = 0;
+    var endEdgeHits = 0;
 
     await _pumpViewport(
       tester,
@@ -261,12 +290,8 @@ void main() {
       pages: pages,
       initialDisplayIndex: 2,
       onRawPageChanged: (_) {},
-      callbacks: _callbacks(
-        onNextBoundary: () {
-          boundaryHits += 1;
-          return true;
-        },
-      ),
+      callbacks: _callbacks(),
+      onReachedEndEdge: () => endEdgeHits += 1,
       nextBoundary: const Text('Finished'),
     );
 
@@ -277,16 +302,18 @@ void main() {
 
     expect(find.text('Finished'), findsOneWidget);
     expect(controller.isAtLast, isTrue);
-    expect(boundaryHits, 0);
+    expect(endEdgeHits, 0);
 
     controller.next();
     await tester.pumpAndSettle();
 
-    expect(boundaryHits, 1);
+    expect(endEdgeHits, 1);
   });
 
-  testWidgets('last display swipe settles through the chapter boundary',
-      (tester) async {
+  testWidgets('last display swipe hits the end edge', (tester) async {
+    // migrated: a fling past the last page reaches the window's outer end, which
+    // the viewport signals synchronously via onReachedEndEdge (then bounces).
+    // The chapter move itself is now driven by the host off that signal.
     final pages = _localPages(3);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -296,7 +323,7 @@ void main() {
       isWide: (_) => false,
     );
     final controller = PagedReaderController();
-    var boundaryHits = 0;
+    var endEdgeHits = 0;
 
     await _pumpViewport(
       tester,
@@ -305,12 +332,8 @@ void main() {
       pages: pages,
       initialDisplayIndex: 2,
       onRawPageChanged: (_) {},
-      callbacks: _callbacks(
-        onNextBoundary: () {
-          boundaryHits += 1;
-          return true;
-        },
-      ),
+      callbacks: _callbacks(),
+      onReachedEndEdge: () => endEdgeHits += 1,
       animateTransitions: true,
     );
 
@@ -320,13 +343,19 @@ void main() {
       const Duration(milliseconds: 80),
     );
 
-    expect(boundaryHits, 0);
+    expect(endEdgeHits, 1);
     await tester.pumpAndSettle();
-    expect(boundaryHits, 1);
+    expect(endEdgeHits, 1);
   });
 
-  testWidgets('no adjacent chapter settles back without a boundary slide',
+  testWidgets('window end edge bounces back onto the last page',
       (tester) async {
+    // migrated: the old model gated the boundary move on hasNextBoundary and had
+    // to avoid sliding onto an empty slot. In the new model the window's outer
+    // edge ALWAYS bounces (never slides off) and just reports onReachedEndEdge;
+    // whether a chapter actually follows is the host's decision, not the
+    // viewport's. So the equivalent guarantee is: the edge fires exactly once,
+    // and the reader stays parked on the last page (raw 2).
     final pages = _localPages(3);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -336,7 +365,8 @@ void main() {
       isWide: (_) => false,
     );
     final controller = PagedReaderController();
-    var boundaryAttempts = 0;
+    final reported = <int>[];
+    var endEdgeHits = 0;
 
     await _pumpViewport(
       tester,
@@ -344,14 +374,9 @@ void main() {
       mapping: mapping,
       pages: pages,
       initialDisplayIndex: 2,
-      onRawPageChanged: (_) {},
-      callbacks: _callbacks(
-        onNextBoundary: () {
-          boundaryAttempts += 1;
-          return false;
-        },
-        hasNextBoundary: () => false,
-      ),
+      onRawPageChanged: reported.add,
+      callbacks: _callbacks(),
+      onReachedEndEdge: () => endEdgeHits += 1,
       animateTransitions: true,
     );
 
@@ -362,14 +387,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // No chapter to move to: the viewport must not attempt the move at all —
-    // attempting it is what slid the page fully off-screen and flashed an empty
-    // slot before bouncing back.
-    expect(boundaryAttempts, 0);
+    expect(endEdgeHits, 1);
+    // Bounced back to the last page — never advanced to a non-existent slot.
+    expect(reported.last, 2);
+    expect(controller.isAtLast, isTrue);
   });
 
   testWidgets('last display swipe settles on the chapter transition first',
       (tester) async {
+    // migrated: the trailing transition card is an ordinary in-window slot now,
+    // so the first fling pages onto it ('Finished') and only the second fling —
+    // off the window's outer end — trips onReachedEndEdge.
     final pages = _localPages(3);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -379,7 +407,7 @@ void main() {
       isWide: (_) => false,
     );
     final controller = PagedReaderController();
-    var boundaryHits = 0;
+    var endEdgeHits = 0;
 
     await _pumpViewport(
       tester,
@@ -388,12 +416,8 @@ void main() {
       pages: pages,
       initialDisplayIndex: 2,
       onRawPageChanged: (_) {},
-      callbacks: _callbacks(
-        onNextBoundary: () {
-          boundaryHits += 1;
-          return true;
-        },
-      ),
+      callbacks: _callbacks(),
+      onReachedEndEdge: () => endEdgeHits += 1,
       animateTransitions: true,
       nextBoundary: const Text('Finished'),
     );
@@ -406,17 +430,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Finished'), findsOneWidget);
-    expect(boundaryHits, 0);
+    expect(endEdgeHits, 0);
 
     await tester.timedDrag(
       find.byType(PagedReaderViewport),
       const Offset(-80, 0),
       const Duration(milliseconds: 80),
     );
-    expect(boundaryHits, 1);
+    expect(endEdgeHits, 1);
     await tester.pumpAndSettle();
 
-    expect(boundaryHits, 1);
+    expect(endEdgeHits, 1);
   });
 
   testWidgets('sub-threshold drag does not turn a double-page spread',
@@ -443,11 +467,13 @@ void main() {
     );
     reported.clear();
 
-    // A slow 80px drag (~0.1 of the viewport) is below the turn threshold — a
+    // migrated: the turn threshold is now the FULL viewport extent for every
+    // slot (spreads no longer turn at half distance), so a sub-threshold drag is
+    // one below ~0.18 of the 300px viewport. A slow 40px drag stays under it — a
     // spread must not commit a turn any easier than a single page does.
     await tester.timedDrag(
       find.byType(PagedReaderViewport),
-      const Offset(-80, 0),
+      const Offset(-40, 0),
       const Duration(milliseconds: 700),
     );
     await tester.pumpAndSettle();
