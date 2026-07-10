@@ -150,6 +150,22 @@ void main() {
     expect(repo.addedToCategory, isNot(contains((76, 1))));
   });
 
+  testWidgets('a pref pointing at a deleted category prompts, not silent add',
+      (tester) async {
+    // 9 is not among the fixed categories (0/1/2) — a category the user chose
+    // as default and later deleted. Must fall through to the picker (matching
+    // the settings label) rather than silently adding uncategorized.
+    final repo = _RecordingRepo();
+    final c = _container(repo, 9);
+    addTearDown(c.dispose);
+    await tester.pumpWidget(_harness(c, 76));
+    await tester.tap(find.text('add'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set categories'), findsOneWidget);
+    expect(repo.addedToLibrary, isEmpty); // nothing added until the user picks
+  });
+
   testWidgets('Always ask + Cancel adds nothing', (tester) async {
     final repo = _RecordingRepo();
     final c = _container(repo, -1);
