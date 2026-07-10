@@ -36,13 +36,19 @@ class InfinityContinuousUtils {
   /// The global page index the reader is "on" for progress, given the visible
   /// [positions] (already filtered to those on screen) and [total] loaded pages.
   ///
-  /// Normally the page showing the greatest visible area. But when the last
-  /// page's bottom has reached the viewport bottom ([ItemPosition.itemTrailingEdge]
-  /// <= 1.0), the reader is scrolled as far as it goes, so that last page is
-  /// current even if a taller earlier page still shows more area. Without this,
-  /// short trailing pages (e.g. a small credits page that lets three pages share
-  /// the screen) leave progress stuck one short and the last chapter never marks
-  /// read (#100). Returns null when nothing is visible.
+  /// Normally the page showing the greatest visible area. But when the reader is
+  /// scrolled to the very end — the last page's bottom has reached the viewport
+  /// bottom ([ItemPosition.itemTrailingEdge] <= 1.0) — that last page is current
+  /// even if a taller earlier page still shows more area. Without this, short
+  /// trailing pages (e.g. a small credits page that lets three pages share the
+  /// screen) leave progress stuck one short and the last chapter never marks
+  /// read (#100).
+  ///
+  /// The override is gated on the content actually being scrolled: if page 0 is
+  /// still resting at or below the viewport top (a short chapter that simply
+  /// fits on screen at rest), it does NOT fire — otherwise opening such a
+  /// chapter would mark it read immediately, firing delete-on-read and a false
+  /// tracker bump before anything is read. Returns null when nothing is visible.
   static int? selectCurrentIndex(
     List<ItemPosition> positions,
     int total, {
@@ -50,10 +56,18 @@ class InfinityContinuousUtils {
   }) {
     if (positions.isEmpty) return null;
 
+    // Content is "scrolled" once page 0's top has left the viewport top (or page
+    // 0 is gone entirely). If it's still parked at rest, the reader is at the
+    // start, not the end, no matter how much of the chapter happens to fit.
+    final firstPage = positions.where((p) => p.index == 0);
+    final restingAtTop =
+        firstPage.isNotEmpty && firstPage.first.itemLeadingEdge >= 0;
+
     // total - 1 is the last loaded page; itemTrailingEdge <= 1.0 means its
     // bottom sits at or above the viewport bottom, i.e. the end is reached.
     final lastPage = positions.where((p) => p.index == total - 1);
     if (total > 1 &&
+        !restingAtTop &&
         lastPage.isNotEmpty &&
         lastPage.first.itemTrailingEdge <= 1.0) {
       return total - 1;
