@@ -251,8 +251,16 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       target =
           widget.window.chapterRawToDisplay(item.chapterId, item.entry.first.raw);
     } else if (item is TransitionDisplay) {
-      final anchor = item.toChapterId ?? item.fromChapterId;
-      if (anchor != null) target = widget.window.firstDisplayOf(anchor);
+      // Anchor to the chapter being ENTERED (its first page). For an
+      // end-of-window "next chapter" card that doesn't know its target yet, fall
+      // back to the LAST page of the chapter just finished — never its first,
+      // which would throw the reader back to that chapter's start.
+      if (item.toChapterId != null) {
+        target = widget.window.firstDisplayOf(item.toChapterId!);
+      }
+      if (target < 0 && item.fromChapterId != null) {
+        target = widget.window.lastDisplayOf(item.fromChapterId!);
+      }
     }
     _displayIndex =
         target >= 0 ? target : _clampDisplay(widget.initialDisplayIndex);

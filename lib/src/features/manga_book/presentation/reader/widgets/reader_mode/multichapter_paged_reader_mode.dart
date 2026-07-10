@@ -79,6 +79,20 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     bool readerToastsEnabled() =>
         ref.read(readerFeedbackToastsProvider).ifNull(true);
 
+    // Chapter loads are kicked off from a hook effect, where reading an
+    // inherited widget (context.l10n, which the feedback toasts use) throws
+    // `_debugIsInitHook`. Defer the toast to a post-frame so it runs in a safe
+    // phase, and never let a feedback failure abort the load itself.
+    void deferFeedback(VoidCallback show) {
+      if (!readerToastsEnabled()) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        try {
+          show();
+        } catch (_) {}
+      });
+    }
+
     final controller = useMemoized(() => PagedReaderController());
     final settings = ref.watch(readerEffectiveSettingsProvider(manga.id));
 
@@ -245,10 +259,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (staged != null && staged.any((e) => e.chapterId == next.id)) return;
       loadingNext.value = true;
       try {
-        if (context.mounted && readerToastsEnabled()) {
-          InfinityContinuousFeedback.showLoadingNextChapterFeedback(
-              context, next.name);
-        }
+        deferFeedback(() => InfinityContinuousFeedback
+            .showLoadingNextChapterFeedback(context, next.name));
         final pages =
             await ref.read(chapterPagesProvider(chapterId: next.id).future);
         if (pages == null) {
@@ -261,10 +273,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           ...base,
           (pages: pages, chapter: next, chapterId: next.id),
         ];
-        if (context.mounted && readerToastsEnabled()) {
-          InfinityContinuousFeedback.showNextChapterLoadedFeedback(
-              context, next.name);
-        }
+        deferFeedback(() => InfinityContinuousFeedback
+            .showNextChapterLoadedFeedback(context, next.name));
       } catch (_) {
         hasReachedEnd.value = true;
       } finally {
@@ -279,10 +289,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       if (staged != null && staged.any((e) => e.chapterId == prev.id)) return;
       loadingPrevious.value = true;
       try {
-        if (context.mounted && readerToastsEnabled()) {
-          InfinityContinuousFeedback.showLoadingPreviousChapterFeedback(
-              context, prev.name);
-        }
+        deferFeedback(() => InfinityContinuousFeedback
+            .showLoadingPreviousChapterFeedback(context, prev.name));
         final pages =
             await ref.read(chapterPagesProvider(chapterId: prev.id).future);
         if (pages == null) {
@@ -295,10 +303,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           (pages: pages, chapter: prev, chapterId: prev.id),
           ...base,
         ];
-        if (context.mounted && readerToastsEnabled()) {
-          InfinityContinuousFeedback.showPreviousChapterLoadedFeedback(
-              context, prev.name);
-        }
+        deferFeedback(() => InfinityContinuousFeedback
+            .showPreviousChapterLoadedFeedback(context, prev.name));
       } catch (_) {
         hasReachedStart.value = true;
       } finally {

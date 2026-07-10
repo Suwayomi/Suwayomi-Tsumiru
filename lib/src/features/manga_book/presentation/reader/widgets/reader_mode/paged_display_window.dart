@@ -162,6 +162,15 @@ class PagedDisplayWindow {
     }
     return -1;
   }
+
+  /// The last display position belonging to [chapterId], or -1 if absent.
+  int lastDisplayOf(int chapterId) {
+    for (var i = items.length - 1; i >= 0; i--) {
+      final item = items[i];
+      if (item is SpreadDisplay && item.chapterId == chapterId) return i;
+    }
+    return -1;
+  }
 }
 
 /// Builds the multi-chapter display list from an ordered (reading order) list of
