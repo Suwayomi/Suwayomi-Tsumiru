@@ -1332,7 +1332,7 @@
             }
         }
     },
-    "updateCategories": "Categories",
+    "updateCategories": "Categories to update",
     "updateCategoriesAll": "All categories",
     "updateCategoriesHint": "Only included categories are checked during a global library update (exclude always wins). Tap to cycle: ✓ include · – exclude · empty default.",
     "updateCategoriesIncluded": "Included: {names}",
