@@ -2352,6 +2352,13 @@
     },
     "tracking": "Tracking",
     "yourRating": "Your rating",
+    "addTag": "Add tag",
+    "tags": "Tags",
+    "noTagsYet": "No tags in your library yet",
+    "copyToClipboard": "Copy to clipboard",
+    "copiedToClipboard": "Copied to clipboard",
+    "searchTips": "Search tips",
+    "searchTipsBody": "Filter by field with key:value.\n\ntag:seinen (source tags or your own)\ngenre:action (source genres)\nauthor:oda\nrating:>=4 (your rating)\nunread:true, downloaded:true\n\nQuote multi-word values: tag:\"slice of life\"\nExclude with a minus sign: -tag:dropped",
     "@tracking": {
         "description": "Settings entry and screen title for the Tracking screen"
     },

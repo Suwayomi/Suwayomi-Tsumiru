@@ -300,9 +300,10 @@ class BrandFilledCircleButton extends StatelessWidget {
 /// Genre / tag chip — glass fill tinted with a UNIQUE per-label color
 /// (hue derived from the label, so every genre is visually distinct).
 class BrandChip extends StatelessWidget {
-  const BrandChip({super.key, required this.label});
+  const BrandChip({super.key, required this.label, this.onTap});
 
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +311,7 @@ class BrandChip extends StatelessWidget {
     final bg = HSLColor.fromAHSL(0.16, hue, 0.70, 0.55).toColor();
     final border = HSLColor.fromAHSL(0.45, hue, 0.70, 0.60).toColor();
     final fg = HSLColor.fromAHSL(1, hue, 0.85, 0.78).toColor();
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
         color: bg,
@@ -322,6 +323,8 @@ class BrandChip extends StatelessWidget {
         style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
+    if (onTap == null) return chip;
+    return GestureDetector(onTap: onTap, child: chip);
   }
 }
 

@@ -55,6 +55,9 @@ List<MangaDto> _run(
       filterCategories: false,
       filterCategoriesInclude: const {},
       filterCategoriesExclude: const {},
+      filterTags: false,
+      filterTagsInclude: const {},
+      filterTagsExclude: const {},
       sortedBy: sort,
       sortedDirection: asc,
     );

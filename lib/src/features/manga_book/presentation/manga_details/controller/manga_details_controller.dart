@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,6 +19,7 @@ import '../../../../../features/settings/presentation/library/widgets/refresh_ch
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../library/domain/category/category_model.dart';
+import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -229,8 +231,46 @@ class MangaRating extends _$MangaRating {
           ),
     );
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    // Refresh the library list so rating sort/filter reflect the change without
+    // waiting for the next full library fetch.
+    ref.invalidate(libraryMangaListProvider);
     state = next;
   }
+}
+
+/// User-defined tags for a manga, stored as a JSON string array in the per-manga
+/// meta store (synced across devices/clients, distinct from source genres).
+@riverpod
+class MangaUserTags extends _$MangaUserTags {
+  @override
+  List<String> build({required int mangaId}) {
+    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
+    return manga.valueOrNull?.metaData.userTags ?? const [];
+  }
+
+  Future<void> _persist(List<String> tags) async {
+    await AsyncValue.guard(
+      () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
+            mangaId: mangaId,
+            key: MangaMetaKeys.tags.key,
+            value: jsonEncode(tags),
+          ),
+    );
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    // Refresh the library list so the tag filter list picks up new/removed tags
+    // without waiting for the next full library fetch.
+    ref.invalidate(libraryMangaListProvider);
+    state = tags;
+  }
+
+  Future<void> add(String tag) {
+    final t = tag.trim();
+    if (t.isEmpty || state.contains(t)) return Future.value();
+    return _persist([...state, t]);
+  }
+
+  Future<void> remove(String tag) =>
+      _persist(state.where((t) => t != tag).toList());
 }
 
 @riverpod

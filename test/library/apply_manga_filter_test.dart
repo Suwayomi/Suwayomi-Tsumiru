@@ -42,6 +42,7 @@ Fragment$MangaDto _manga({
   int bookmarkCount = 0,
   bool started = false,
   String status = 'ONGOING',
+  List<String> genre = const [],
 }) =>
     Fragment$MangaDto(
       id: id,
@@ -49,7 +50,7 @@ Fragment$MangaDto _manga({
       bookmarkCount: bookmarkCount,
       chapters: Fragment$MangaDto$chapters(totalCount: 0),
       downloadCount: downloadCount,
-      genre: const [],
+      genre: genre,
       inLibrary: true,
       inLibraryAt: '0',
       initialized: true,
@@ -71,6 +72,9 @@ List<int> _filter(
   bool filterCategories = false,
   Set<String> include = const {},
   Set<String> exclude = const {},
+  bool filterTags = false,
+  Set<String> tagsInclude = const {},
+  Set<String> tagsExclude = const {},
 }) =>
     applyLibraryFilterSort(
       input,
@@ -87,6 +91,9 @@ List<int> _filter(
       filterCategories: filterCategories,
       filterCategoriesInclude: include,
       filterCategoriesExclude: exclude,
+      filterTags: filterTags,
+      filterTagsInclude: tagsInclude,
+      filterTagsExclude: tagsExclude,
       sortedBy: MangaSort.alphabetical,
       sortedDirection: true,
     ).map((m) => m.id).toList();
@@ -175,6 +182,35 @@ void main() {
         exclude: {},
       );
       expect(ids, containsAll([10, 11, 13]));
+    });
+  });
+
+  group('Tag filter (source genres + custom tags, case-insensitive)', () {
+    final action = _manga(id: 20, genre: ['Action', 'Seinen']);
+    final romance = _manga(id: 21, genre: ['Romance']);
+    final actionLower = _manga(id: 22, genre: ['action']); // different casing
+
+    test('filterTags false → no filtering even with a selection', () {
+      final ids = _filter([action, romance], tagsInclude: {'Action'});
+      expect(ids, containsAll([20, 21]));
+    });
+
+    test('include matches regardless of case', () {
+      final ids = _filter([action, romance, actionLower],
+          filterTags: true, tagsInclude: {'action'});
+      expect(ids, [20, 22]);
+    });
+
+    test('include is OR across selected tags', () {
+      final ids = _filter([action, romance],
+          filterTags: true, tagsInclude: {'seinen', 'romance'});
+      expect(ids, containsAll([20, 21]));
+    });
+
+    test('exclude drops matching manga, case-insensitively', () {
+      final ids = _filter([action, romance, actionLower],
+          filterTags: true, tagsExclude: {'Action'});
+      expect(ids, [21]);
     });
   });
 }

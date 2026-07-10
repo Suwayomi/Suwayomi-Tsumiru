@@ -58,7 +58,11 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
     final categoryList = ref.watch(visibleCategoryListProvider);
-    final showSearch = useState(false);
+    final searchToggled = useState(false);
+    // Show the search bar when the user opens it OR when a query was set
+    // programmatically (tapping a tag → Search opens the library on that tag).
+    final showSearch =
+        searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
       return;
@@ -85,14 +89,23 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
             initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
             child: Scaffold(
               appBar: AppBar(
-                title: !showSearch.value
+                title: !showSearch
                     ? Text(context.l10n.library)
                     : SearchField(
                         initialText: ref.read(libraryQueryProvider),
+                        highlightDsl: true,
+                        // Only grab focus when the user opened search; a tag-set
+                        // query shows results without popping the keyboard.
+                        autofocus: searchToggled.value,
                         onChanged: (val) =>
                             ref.read(libraryQueryProvider.notifier).update(val),
-                        onClose: () => showSearch.value = (false),
+                        onClose: () => searchToggled.value = false,
                         actions: [
+                          IconButton(
+                            icon: const Icon(Icons.help_outline_rounded),
+                            tooltip: context.l10n.searchTips,
+                            onPressed: () => showSearchTips(context),
+                          ),
                           Consumer(
                             builder: (context, ref, child) => IconButton(
                               icon: Icon(Icons.travel_explore_rounded),
@@ -118,11 +131,11 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
                         dividerColor: Colors.transparent,
                       )
                     : null,
-                actions: showSearch.value
+                actions: showSearch
                     ? [SizedBox.shrink()]
                     : [
                         IconButton(
-                          onPressed: () => showSearch.value = (true),
+                          onPressed: () => searchToggled.value = true,
                           icon: const Icon(Icons.search_rounded),
                         ),
                         Builder(
@@ -209,7 +222,11 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
     final groupedTabsAsync = ref.watch(libraryGroupedTabsProvider);
-    final showSearch = useState(false);
+    final searchToggled = useState(false);
+    // Show the search bar when the user opens it OR when a query was set
+    // programmatically (tapping a tag → Search opens the library on that tag).
+    final showSearch =
+        searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
       return;
@@ -241,13 +258,22 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
           length: tabs.length,
           child: Scaffold(
             appBar: AppBar(
-              title: !showSearch.value
+              title: !showSearch
                   ? Text(context.l10n.library)
                   : SearchField(
                       initialText: ref.read(libraryQueryProvider),
+                      highlightDsl: true,
+                      autofocus: searchToggled.value,
                       onChanged: (val) =>
                           ref.read(libraryQueryProvider.notifier).update(val),
-                      onClose: () => showSearch.value = (false),
+                      onClose: () => searchToggled.value = false,
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.help_outline_rounded),
+                          tooltip: context.l10n.searchTips,
+                          onPressed: () => showSearchTips(context),
+                        ),
+                      ],
                     ),
               bottom: tabs.length > 1
                   ? TabBar(
@@ -256,11 +282,11 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
                       dividerColor: Colors.transparent,
                     )
                   : null,
-              actions: showSearch.value
+              actions: showSearch
                   ? [SizedBox.shrink()]
                   : [
                       IconButton(
-                        onPressed: () => showSearch.value = (true),
+                        onPressed: () => searchToggled.value = true,
                         icon: const Icon(Icons.search_rounded),
                       ),
                       Builder(
@@ -437,4 +463,22 @@ class _GroupedMangaList extends ConsumerWidget {
       refresh: () => ref.refresh(libraryMangaListProvider),
     );
   }
+}
+
+/// Shows the library search DSL cheat-sheet (opened from the search bar's help
+/// icon), so the query syntax is discoverable rather than hidden.
+void showSearchTips(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(context.l10n.searchTips),
+      content: Text(context.l10n.searchTipsBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.close),
+        ),
+      ],
+    ),
+  );
 }

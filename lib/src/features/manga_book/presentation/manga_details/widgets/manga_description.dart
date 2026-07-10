@@ -29,6 +29,8 @@ import '../controller/next_update_controller.dart';
 import '../server_web_url.dart';
 import 'manga_action_button.dart';
 import 'manga_rating_bar.dart';
+import 'manga_user_tags_row.dart';
+import 'tag_actions_menu.dart';
 
 class MangaDescription extends HookConsumerWidget {
   const MangaDescription({
@@ -276,9 +278,15 @@ class MangaDescription extends HookConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...manga.genre
-                    .where((e) => e.isNotBlank)
-                    .map<Widget>((e) => BrandChip(label: e)),
+                ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
+                      (e) => Builder(
+                        builder: (chipContext) => BrandChip(
+                          label: e,
+                          onTap: () =>
+                              showTagActionsMenu(chipContext, ref, tag: e),
+                        ),
+                      ),
+                    ),
               ],
             ),
           )
@@ -292,13 +300,20 @@ class MangaDescription extends HookConsumerWidget {
                   ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
                         (e) => Padding(
                           padding: KEdgeInsets.h4.size,
-                          child: BrandChip(label: e),
+                          child: Builder(
+                            builder: (chipContext) => BrandChip(
+                              label: e,
+                              onTap: () => showTagActionsMenu(chipContext, ref,
+                                  tag: e),
+                            ),
+                          ),
                         ),
                       )
                 ],
               ),
             ),
           ),
+        MangaUserTagsRow(mangaId: manga.id),
       ],
     );
   }

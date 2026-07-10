@@ -18,7 +18,8 @@ grouping entirely on the client. View state persists to SharedPreferences.
 | `.../library/library_screen.dart` | Tab bar, AppBar search + filter, tablet end-drawer; routes BY_DEFAULT vs grouped modes |
 | `.../library/category_manga_list.dart` | Per-tab grid/list/descriptive-list/cover-only; multi-select action bar |
 | `.../library/widgets/library_manga_organizer.dart` | 4-tab organizer sheet (Filter / Sort / Display / Group) |
-| `.../library/widgets/library_manga_filter.dart` | Filter tab: tri-state filters, category include/exclude dialog, per-tracker filter |
+| `.../library/widgets/library_manga_filter.dart` | Filter tab: tri-state filters, category and tag include/exclude dialogs, per-tracker filter |
+| `.../library/domain/library_search_query.dart` | Search DSL parser/evaluator (`tag:`/`genre:`/`rating:` metatags, quotes, `-` negation) |
 | `.../library/widgets/library_manga_sort_tile.dart` | Sort tab: sort key + direction |
 | `.../library/widgets/library_manga_display.dart` | Display tab: display mode, portrait/landscape column sliders, badge toggles, tab toggles |
 | `.../library/widgets/library_manga_group.dart` | Group tab: grouping mode radio list |
@@ -44,7 +45,19 @@ grouping entirely on the client. View state persists to SharedPreferences.
 **`applyMangaFilter`** — eight tri-state `bool?` filters ANDed (`null`=off,
 `true`/`false` via XOR-style tri-state): unread, downloaded, completed, started,
 bookmarked, onDevice (offline), lewd, per-tracker (one filter per logged-in tracker).
-Category include/exclude is a separate bool-guarded set-membership filter.
+Category include/exclude is a separate bool-guarded set-membership filter; user-tag
+include/exclude works the same way, but include is OR (has any selected tag) since a
+manga carries many tags. Minimum personal star rating is a separate `int` threshold.
+
+**Search DSL** (`LibrarySearchQuery`) — the AppBar query is parsed once per pipeline
+run into AND-ed terms. Plain words match title/author/genre (substring); `key:value`
+tokens match a field: `tag:` (exact, case-insensitive), `genre:`/`author:`/`artist:`/
+`title:` (substring), `unread:`/`downloaded:` (bool), `rating:` (int with optional
+`>=`/`<=`/`>`/`<`). Multi-word values quote (`tag:"slice of life"`), a leading `-`
+negates, and an unrecognized key falls back to plain text (so `Re:Zero` still works).
+Follows Mihon/Komikku library-search conventions. Pure + unit-tested
+(`test/src/features/library/library_search_query_test.dart`); `MangaDto.query()` and
+`MangaDto.filterFields` bridge it to the GraphQL type.
 
 **`applyMangaSort`** — `MangaSort` x direction: `alphabetical`, `unread`, `dateAdded`,
 `lastUpdated`, `lastChapterDate`, `totalChapters`, `lastRead`, `random` (stable
@@ -94,8 +107,9 @@ casts at all three call sites.
 The organizer sheet (`LibraryMangaOrganizer`) has four tabs:
 
 - **Filter** — tri-state filters (unread, downloaded, completed, started, bookmarked,
-  on-device, lewd); category include/exclude dialog; per-tracker tri-state rows.
-  Single logged-in tracker collapses heading + row into one "Tracked" toggle tile
+  on-device, lewd); minimum-rating row; category include/exclude dialog; tag
+  include/exclude dialog (options from `libraryTagListProvider`); per-tracker tri-state
+  rows. Single logged-in tracker collapses heading + row into one "Tracked" toggle tile
   (Komikku LibrarySettingsDialog.kt:190-215 parity).
 - **Sort** — `MangaSort` radio + direction toggle.
 - **Display** — display mode radio; portrait/landscape column count sliders;
@@ -107,7 +121,8 @@ The organizer sheet (`LibraryMangaOrganizer`) has four tabs:
 
 `mangaSort` (**`MangaSort.lastRead`**), `mangaSortDirection` (`true`/asc),
 `mangaFilter{Downloaded,Unread,Completed,Started,Bookmarked,Offline,Lewd}` (`null`),
-per-tracker filter map, category include/exclude lists,
+per-tracker filter map, category include/exclude lists, tag include/exclude lists
+(`filterTags`/`filterTagsInclude`/`filterTagsExclude`), `mangaFilterMinRating` (0),
 `libraryDisplayMode` (`grid`), `libraryPortraitColumns` (0 = auto),
 `libraryLandscapeColumns` (0 = auto), `downloadedBadge` (`false`),
 `unreadBadge` (`true`), `languageBadge` (`false`), `useLangIcon` (`false`),

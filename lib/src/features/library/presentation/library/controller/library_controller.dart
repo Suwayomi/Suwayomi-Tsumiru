@@ -18,6 +18,7 @@ import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../../domain/category/category_model.dart';
+import '../../../domain/library_search_query.dart';
 import 'library_grouping.dart';
 import 'library_manga_list.dart';
 
@@ -57,12 +58,23 @@ List<MangaDto> applyLibraryFilterSort(
   required bool filterCategories,
   required Set<String> filterCategoriesInclude,
   required Set<String> filterCategoriesExclude,
+  required bool filterTags,
+  required Set<String> filterTagsInclude,
+  required Set<String> filterTagsExclude,
   required MangaSort sortedBy,
   required bool sortedDirection,
   int seed = 0,
   Map<int, double> trackerScales = const {},
   Map<int, bool?> trackerFilters = const {},
 }) {
+  final searchQuery = LibrarySearchQuery.parse(query);
+  // Tags match case-insensitively (aligning with the `tag:` search operator),
+  // so lower-case the selections once up front.
+  final filterTagsIncludeLower =
+      filterTagsInclude.map((e) => e.toLowerCase()).toSet();
+  final filterTagsExcludeLower =
+      filterTagsExclude.map((e) => e.toLowerCase()).toSet();
+
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
     if (mangaFilterUnread != null &&
@@ -93,8 +105,11 @@ List<MangaDto> applyLibraryFilterSort(
         (mangaFilterLewd ^ (manga.source?.isNsfw ?? false))) {
       return false;
     }
+    // Meta-derived fields (rating, tags) plus the DSL-searchable fields, built
+    // once and reused by the rating filter, tags filter, and search below.
+    final fields = manga.filterFields;
     if (mangaFilterMinRating > 0 &&
-        (manga.metaData.rating ?? 0) < mangaFilterMinRating) {
+        (fields.rating ?? 0) < mangaFilterMinRating) {
       return false;
     }
     if (filterCategories) {
@@ -109,6 +124,22 @@ List<MangaDto> applyLibraryFilterSort(
         return false;
       }
     }
+    if (filterTags) {
+      // A manga's tags = source genres + the user's custom tags (lower-cased).
+      final tags = {
+        for (final t in fields.genres) t.toLowerCase(),
+        for (final t in fields.userTags) t.toLowerCase(),
+      };
+      // Include is OR (has any selected tag); exclude wins over include.
+      if (filterTagsIncludeLower.isNotEmpty &&
+          tags.intersection(filterTagsIncludeLower).isEmpty) {
+        return false;
+      }
+      if (filterTagsExcludeLower.isNotEmpty &&
+          tags.intersection(filterTagsExcludeLower).isNotEmpty) {
+        return false;
+      }
+    }
     // Per-tracker filters: for each tracker id with a non-null preference,
     // true = manga must have a record for that tracker,
     // false = manga must NOT have a record for that tracker.
@@ -119,7 +150,7 @@ List<MangaDto> applyLibraryFilterSort(
           .any((n) => n.trackerId == entry.key);
       if (pref ^ hasTracker) return false;
     }
-    if (!manga.query(query)) return false;
+    if (!searchQuery.matches(fields)) return false;
     return true;
   }
 
@@ -234,6 +265,13 @@ class CategoryMangaListWithQueryAndFilter
     final filterCategoriesExclude =
         (ref.watch(libraryFilterCategoriesExcludeProvider) ?? const <String>[])
             .toSet();
+    final filterTags = ref.watch(libraryFilterTagsProvider).ifNull(false);
+    final filterTagsInclude =
+        (ref.watch(libraryFilterTagsIncludeProvider) ?? const <String>[])
+            .toSet();
+    final filterTagsExclude =
+        (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[])
+            .toSet();
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
     final sortedDirection =
@@ -260,6 +298,9 @@ class CategoryMangaListWithQueryAndFilter
               filterCategories: filterCategories,
               filterCategoriesInclude: filterCategoriesInclude,
               filterCategoriesExclude: filterCategoriesExclude,
+              filterTags: filterTags,
+              filterTagsInclude: filterTagsInclude,
+              filterTagsExclude: filterTagsExclude,
               sortedBy: sortedBy,
               sortedDirection: sortedDirection,
               seed: seed,
@@ -358,6 +399,50 @@ class LibraryFilterCategoriesExclude extends _$LibraryFilterCategoriesExclude
     with SharedPreferenceClientMixin<List<String>> {
   @override
   List<String>? build() => initialize(DBKeys.filterCategoriesExclude);
+}
+
+@riverpod
+class LibraryFilterTags extends _$LibraryFilterTags
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.filterTags);
+}
+
+@riverpod
+class LibraryFilterTagsInclude extends _$LibraryFilterTagsInclude
+    with SharedPreferenceClientMixin<List<String>> {
+  @override
+  List<String>? build() => initialize(DBKeys.filterTagsInclude);
+}
+
+@riverpod
+class LibraryFilterTagsExclude extends _$LibraryFilterTagsExclude
+    with SharedPreferenceClientMixin<List<String>> {
+  @override
+  List<String>? build() => initialize(DBKeys.filterTagsExclude);
+}
+
+/// Distinct tags across the whole library, sorted case-insensitively. A manga's
+/// tags are its source genres plus the user's own custom tags — both are just
+/// labels on the manga, so both are filterable. Populates the tags filter dialog.
+@riverpod
+Future<List<String>> libraryTagList(Ref ref) async {
+  final all = await ref.watch(libraryMangaListProvider.future);
+  if (all == null) return const [];
+  // Dedupe case-insensitively (keeping the first-seen casing for display) so a
+  // library with both "Action" and "action" shows one row, matching the
+  // case-insensitive tag filter.
+  final byLower = <String, String>{};
+  for (final m in all) {
+    for (final g in m.genre) {
+      if (g.isNotBlank) byLower.putIfAbsent(g.toLowerCase(), () => g);
+    }
+    for (final t in (m.metaData.userTags ?? const <String>[])) {
+      byLower.putIfAbsent(t.toLowerCase(), () => t);
+    }
+  }
+  return byLower.values.toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 }
 
 @riverpod
@@ -541,6 +626,13 @@ class GroupedMangaListWithQueryAndFilter
     final filterCategoriesExclude =
         (ref.watch(libraryFilterCategoriesExcludeProvider) ?? const <String>[])
             .toSet();
+    final filterTags = ref.watch(libraryFilterTagsProvider).ifNull(false);
+    final filterTagsInclude =
+        (ref.watch(libraryFilterTagsIncludeProvider) ?? const <String>[])
+            .toSet();
+    final filterTagsExclude =
+        (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[])
+            .toSet();
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
     final sortedDirection =
@@ -568,6 +660,9 @@ class GroupedMangaListWithQueryAndFilter
               filterCategories: filterCategories,
               filterCategoriesInclude: filterCategoriesInclude,
               filterCategoriesExclude: filterCategoriesExclude,
+              filterTags: filterTags,
+              filterTagsInclude: filterTagsInclude,
+              filterTagsExclude: filterTagsExclude,
               sortedBy: sortedBy,
               sortedDirection: sortedDirection,
               seed: seed,

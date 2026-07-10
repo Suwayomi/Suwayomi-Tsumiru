@@ -146,6 +146,9 @@ enum DBKeys {
   filterCategories(false),
   filterCategoriesInclude(<String>[]),
   filterCategoriesExclude(<String>[]),
+  filterTags(false),
+  filterTagsInclude(<String>[]),
+  filterTagsExclude(<String>[]),
   // Seed for the Random library sort. Incrementing this re-rolls the order.
   librarySortRandomSeed(0),
   // Reader seekbar layout. When false (default), webtoon uses

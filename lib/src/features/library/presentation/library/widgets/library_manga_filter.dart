@@ -67,6 +67,7 @@ class LibraryMangaFilter extends ConsumerWidget {
         ),
         _RatingFilterRow(),
         _CategoryFilterRow(),
+        _TagFilterRow(),
         _TrackerFilterSection(),
       ],
     );
@@ -247,6 +248,142 @@ class _CategoryFilterRow extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Enables/disables user-tag filtering with an "Edit" button that opens the
+/// tag include/exclude dialog. Mirrors [_CategoryFilterRow].
+class _TagFilterRow extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(libraryFilterTagsProvider).ifNull(false);
+    return InkWell(
+      onTap: () =>
+          ref.read(libraryFilterTagsProvider.notifier).update(!enabled),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              enabled
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              color: enabled
+                  ? context.theme.colorScheme.primary
+                  : context.theme.unselectedWidgetColor,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                context.l10n.tags,
+                style: context.theme.textTheme.bodyMedium,
+              ),
+            ),
+            if (enabled)
+              TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const _TagFilterDialog(),
+                ),
+                child: Text(context.l10n.edit),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tri-state each user tag: null = ignore, true = include (has this tag),
+/// false = exclude (must not have this tag). Include is OR across selected tags.
+class _TagFilterDialog extends ConsumerWidget {
+  const _TagFilterDialog();
+
+  static bool? _nextValue(bool? current) {
+    if (current == null) return true;
+    if (current == true) return false;
+    return null;
+  }
+
+  Widget _leadingIcon(BuildContext context, bool? value) {
+    if (value == null) {
+      return Icon(Icons.check_box_outline_blank_rounded,
+          color: context.theme.unselectedWidgetColor);
+    } else if (value == true) {
+      return Icon(Icons.check_box_rounded,
+          color: context.theme.colorScheme.primary);
+    } else {
+      return Icon(Icons.disabled_by_default_rounded,
+          color: context.theme.colorScheme.error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagsAsync = ref.watch(libraryTagListProvider);
+    final includeSet =
+        (ref.watch(libraryFilterTagsIncludeProvider) ?? const <String>[])
+            .toSet();
+    final excludeSet =
+        (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[])
+            .toSet();
+
+    bool? stateFor(String tag) {
+      if (excludeSet.contains(tag)) return false;
+      if (includeSet.contains(tag)) return true;
+      return null;
+    }
+
+    void toggle(String tag) {
+      final next = _nextValue(stateFor(tag));
+      final newInclude = Set<String>.from(includeSet)..remove(tag);
+      final newExclude = Set<String>.from(excludeSet)..remove(tag);
+      if (next == true) newInclude.add(tag);
+      if (next == false) newExclude.add(tag);
+      ref
+          .read(libraryFilterTagsIncludeProvider.notifier)
+          .update(newInclude.toList());
+      ref
+          .read(libraryFilterTagsExcludeProvider.notifier)
+          .update(newExclude.toList());
+    }
+
+    final tags = tagsAsync.valueOrNull ?? const <String>[];
+
+    return AlertDialog(
+      title: Text(context.l10n.tags),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: tagsAsync.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : tags.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      context.l10n.noTagsYet,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: tags.length,
+                    itemBuilder: (context, index) {
+                      final tag = tags[index];
+                      return ListTile(
+                        leading: _leadingIcon(context, stateFor(tag)),
+                        title: Text(tag),
+                        onTap: () => toggle(tag),
+                      );
+                    },
+                  ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.close),
+        ),
+      ],
     );
   }
 }
