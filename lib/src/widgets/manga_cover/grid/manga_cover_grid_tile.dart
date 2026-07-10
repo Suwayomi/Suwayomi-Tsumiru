@@ -109,12 +109,13 @@ class MangaCoverGridTile extends StatelessWidget {
                 bottom: 6,
                 child: ContinueReadingButton(onPressed: onContinueReading!),
               ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _CoverReadProgressBar(manga: manga),
-            ),
+            if (showBadges)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _CoverReadProgressBar(manga: manga),
+              ),
           ],
         ),
       ),
