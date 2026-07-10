@@ -509,23 +509,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             .toList();
         if (positions.isEmpty) return;
 
-        // Most-visible page → current global index.
-        ItemPosition? mostVisible;
-        double bestArea = 0.0;
-        for (final p in positions) {
-          final area = InfinityContinuousUtils.calculateVisibleArea(p);
-          if (area > bestArea &&
-              area > InfinityContinuousConfig.minVisibleAreaThreshold) {
-            bestArea = area;
-            mostVisible = p;
-          }
-        }
-        mostVisible ??= positions.reduce(
-          (a, b) => a.itemLeadingEdge.abs() <= b.itemLeadingEdge.abs() ? a : b,
+        // Most-visible page → current global index (last page wins once its
+        // bottom reaches the viewport, so short trailing pages still complete).
+        final globalIdx = InfinityContinuousUtils.selectCurrentIndex(
+          positions,
+          total,
+          minVisibleAreaThreshold:
+              InfinityContinuousConfig.minVisibleAreaThreshold,
         );
+        if (globalIdx == null) return;
 
         // Map the global index to (chapter, page-within-chapter).
-        final globalIdx = mostVisible.index;
         int cumulative = 0;
         for (final ch in loaded) {
           final count = ch.pages.pages.length;

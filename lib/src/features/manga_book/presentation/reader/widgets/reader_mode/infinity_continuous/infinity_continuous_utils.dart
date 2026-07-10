@@ -33,6 +33,47 @@ class InfinityContinuousUtils {
     return (visibleEnd - visibleStart).clamp(0.0, 1.0);
   }
 
+  /// The global page index the reader is "on" for progress, given the visible
+  /// [positions] (already filtered to those on screen) and [total] loaded pages.
+  ///
+  /// Normally the page showing the greatest visible area. But when the last
+  /// page's bottom has reached the viewport bottom ([ItemPosition.itemTrailingEdge]
+  /// <= 1.0), the reader is scrolled as far as it goes, so that last page is
+  /// current even if a taller earlier page still shows more area. Without this,
+  /// short trailing pages (e.g. a small credits page that lets three pages share
+  /// the screen) leave progress stuck one short and the last chapter never marks
+  /// read (#100). Returns null when nothing is visible.
+  static int? selectCurrentIndex(
+    List<ItemPosition> positions,
+    int total, {
+    required double minVisibleAreaThreshold,
+  }) {
+    if (positions.isEmpty) return null;
+
+    // total - 1 is the last loaded page; itemTrailingEdge <= 1.0 means its
+    // bottom sits at or above the viewport bottom, i.e. the end is reached.
+    final lastPage = positions.where((p) => p.index == total - 1);
+    if (total > 1 &&
+        lastPage.isNotEmpty &&
+        lastPage.first.itemTrailingEdge <= 1.0) {
+      return total - 1;
+    }
+
+    ItemPosition? mostVisible;
+    double bestArea = 0.0;
+    for (final p in positions) {
+      final area = calculateVisibleArea(p);
+      if (area > bestArea && area > minVisibleAreaThreshold) {
+        bestArea = area;
+        mostVisible = p;
+      }
+    }
+    mostVisible ??= positions.reduce(
+      (a, b) => a.itemLeadingEdge.abs() <= b.itemLeadingEdge.abs() ? a : b,
+    );
+    return mostVisible.index;
+  }
+
   /// Sum of pages across all loaded chapters.
   static int getTotalPages(
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
