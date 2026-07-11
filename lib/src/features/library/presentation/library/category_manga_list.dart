@@ -50,14 +50,15 @@ class CategoryMangaList extends HookConsumerWidget {
     final landscapeCols = ref.watch(libraryLandscapeColumnsProvider) ?? 0;
     final fixedCols = isLandscape ? landscapeCols : portraitCols;
     // gridDelegate: fixed count when the user set cols > 0, else Auto (width-based).
-    SliverGridDelegate libraryGridDelegate() => fixedCols > 0
-        ? SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: fixedCols,
-            crossAxisSpacing: 2.0,
-            mainAxisSpacing: 2.0,
-            childAspectRatio: 0.75,
-          )
-        : mangaCoverGridDelegate(gridWidth);
+    SliverGridDelegate libraryGridDelegate({bool titleBelow = false}) =>
+        fixedCols > 0
+            ? SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: fixedCols,
+                crossAxisSpacing: 2.0,
+                mainAxisSpacing: 2.0,
+                childAspectRatio: titleBelow ? 0.62 : 0.75,
+              )
+            : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
     useEffect(() {
       if (mangaList.isNotLoading) refresh();
@@ -175,6 +176,20 @@ class CategoryMangaList extends HookConsumerWidget {
                 onPressed: () => open(items[index]),
                 onContinueReading: continueReadingFor(items[index]),
                 showCountBadges: true,
+                showDarkOverlay: false,
+              ),
+            ),
+          DisplayMode.comfortableGrid => GridView.builder(
+              gridDelegate: libraryGridDelegate(titleBelow: true),
+              itemCount: items.length,
+              itemBuilder: (context, index) => MangaCoverGridTile(
+                manga: items[index],
+                selected: selection.value.contains(items[index].id),
+                onLongPress: () => toggle(items[index].id),
+                onPressed: () => open(items[index]),
+                onContinueReading: continueReadingFor(items[index]),
+                showCountBadges: true,
+                titleBelow: true,
                 showDarkOverlay: false,
               ),
             ),

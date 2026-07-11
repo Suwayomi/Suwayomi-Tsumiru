@@ -46,7 +46,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
             spacing: 8,
             runSpacing: 4,
             children: [
-              for (final mode in DisplayMode.values)
+              for (final mode in DisplayMode.libraryDisplayList)
                 FilterChip(
                   selected: selectedMode == mode,
                   showCheckmark: false,

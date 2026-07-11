@@ -85,7 +85,11 @@ class SourceMangaDisplayView extends ConsumerWidget {
           source: source,
           toggleFavorite: toggleFavorite,
         ),
-      DisplayMode.coverOnly => SourceMangaGridView(
+      // comfortableGrid isn't offered in the source display picker; map it to
+      // the grid so the exhaustive switch stays safe.
+      DisplayMode.coverOnly ||
+      DisplayMode.comfortableGrid =>
+        SourceMangaGridView(
           sourceId: sourceId,
           sourceType: sourceType,
           controller: controller,

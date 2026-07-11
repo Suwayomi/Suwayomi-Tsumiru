@@ -351,11 +351,23 @@ enum DisplayMode {
   list(Icons.view_list_rounded),
   descriptiveList(Icons.view_list_rounded),
   coverOnly(Icons.view_comfy_rounded),
+  // Appended last: saved prefs store the index into [values].
+  comfortableGrid(Icons.view_module_rounded),
   ;
 
   static const List<DisplayMode> sourceDisplayList = [
     DisplayMode.grid,
     DisplayMode.list
+  ];
+
+  /// Menu order for the library display tab (differs from declaration order,
+  /// which is frozen by persisted indexes).
+  static const List<DisplayMode> libraryDisplayList = [
+    DisplayMode.grid,
+    DisplayMode.comfortableGrid,
+    DisplayMode.list,
+    DisplayMode.descriptiveList,
+    DisplayMode.coverOnly,
   ];
 
   final IconData icon;
@@ -366,6 +378,7 @@ enum DisplayMode {
         DisplayMode.list => context.l10n.displayModeList,
         DisplayMode.descriptiveList => context.l10n.displayModeDescriptiveList,
         DisplayMode.coverOnly => context.l10n.displayModeCoverOnly,
+        DisplayMode.comfortableGrid => context.l10n.displayModeComfortableGrid,
       };
 }
 

@@ -395,14 +395,14 @@ class _GroupedMangaList extends ConsumerWidget {
     final landscapeCols = ref.watch(libraryLandscapeColumnsProvider) ?? 0;
     final fixedCols = isLandscape ? landscapeCols : portraitCols;
 
-    SliverGridDelegate gridDelegate() => fixedCols > 0
+    SliverGridDelegate gridDelegate({bool titleBelow = false}) => fixedCols > 0
         ? SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: fixedCols,
             crossAxisSpacing: 2.0,
             mainAxisSpacing: 2.0,
-            childAspectRatio: 0.75,
+            childAspectRatio: titleBelow ? 0.62 : 0.75,
           )
-        : mangaCoverGridDelegate(gridWidth);
+        : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 
     return mangaListAsync.showUiWhenData(
       context,
@@ -436,6 +436,20 @@ class _GroupedMangaList extends ConsumerWidget {
                   onPressed: () =>
                       MangaRoute(mangaId: items[index].id).push(context),
                   showCountBadges: true,
+                  showDarkOverlay: false,
+                ),
+              ),
+            DisplayMode.comfortableGrid => GridView.builder(
+                gridDelegate: gridDelegate(titleBelow: true),
+                itemCount: items.length,
+                itemBuilder: (context, index) => MangaCoverGridTile(
+                  manga: items[index],
+                  selected: false,
+                  onLongPress: () {},
+                  onPressed: () =>
+                      MangaRoute(mangaId: items[index].id).push(context),
+                  showCountBadges: true,
+                  titleBelow: true,
                   showDarkOverlay: false,
                 ),
               ),
