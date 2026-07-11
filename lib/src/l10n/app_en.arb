@@ -2354,6 +2354,8 @@
     "yourRating": "Your rating",
     "addTag": "Add tag",
     "tags": "Tags",
+    "searchForSources": "Search for sources",
+    "searchForExtensions": "Search for extensions",
     "noTagsYet": "No tags in your library yet",
     "copyToClipboard": "Copy to clipboard",
     "copiedToClipboard": "Copied to clipboard",

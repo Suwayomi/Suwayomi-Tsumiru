@@ -415,3 +415,6 @@ enum IncludeOrExclude implements ValueEnum {
   @override
   final String value;
 }
+
+/// Global-search source scope: search only pinned sources, or all of them.
+enum GlobalSearchSourceFilter { pinned, all }

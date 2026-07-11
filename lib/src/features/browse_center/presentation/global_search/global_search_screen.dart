@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
@@ -24,7 +25,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final query = useState(initialQuery);
     final quickSearchResult =
         ref.watch(quickSearchResultsProvider(query: query.value));
-    final scope = ref.watch(globalSearchSourceFilterProvider);
+    final scope = ref.watch(globalSearchScopeProvider);
     final onlyHasResults = ref.watch(globalSearchOnlyHasResultsProvider);
     final hasPinned = ref.watch(pinnedSourcesProvider).isNotEmpty;
     return Scaffold(
@@ -59,9 +60,9 @@ class GlobalSearchScreen extends HookConsumerWidget {
                     avatar: const Icon(Icons.push_pin_outlined, size: 18),
                     label: Text(context.l10n.pinnedSources),
                     selected: scope == GlobalSearchSourceFilter.pinned,
-                    onSelected: (_) =>
-                        ref.read(globalSearchSourceFilterProvider.notifier).state =
-                            GlobalSearchSourceFilter.pinned,
+                    onSelected: (_) => ref
+                        .read(globalSearchScopeProvider.notifier)
+                        .update(GlobalSearchSourceFilter.pinned),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -70,9 +71,9 @@ class GlobalSearchScreen extends HookConsumerWidget {
                   avatar: const Icon(Icons.done_all_rounded, size: 18),
                   label: Text(context.l10n.all),
                   selected: !hasPinned || scope == GlobalSearchSourceFilter.all,
-                  onSelected: (_) =>
-                      ref.read(globalSearchSourceFilterProvider.notifier).state =
-                          GlobalSearchSourceFilter.all,
+                  onSelected: (_) => ref
+                      .read(globalSearchScopeProvider.notifier)
+                      .update(GlobalSearchSourceFilter.all),
                 ),
                 const SizedBox(width: 12),
                 FilterChip(

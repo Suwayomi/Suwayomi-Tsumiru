@@ -12,6 +12,7 @@ import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/search_field.dart';
 import 'controller/source_controller.dart';
 import 'widgets/source_list_tile.dart';
 
@@ -46,7 +47,7 @@ class SourceScreen extends HookConsumerWidget {
       return;
     }, [sourceMapData.valueOrNull]);
 
-    return sourceMapData.showUiWhenData(
+    final body = sourceMapData.showUiWhenData(
       context,
       (data) {
         if ((sourceMap.isEmpty &&
@@ -134,6 +135,19 @@ class SourceScreen extends HookConsumerWidget {
         );
       },
       refresh: refresh,
+    );
+
+    return Column(
+      children: [
+        SearchField(
+          autofocus: false,
+          hintText: context.l10n.searchForSources,
+          initialText: query,
+          onChanged: (val) =>
+              ref.read(sourceSearchQueryProvider.notifier).update(val),
+        ),
+        Expanded(child: body),
+      ],
     );
   }
 }

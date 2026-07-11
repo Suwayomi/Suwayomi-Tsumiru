@@ -8,14 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/app_sizes.dart';
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../widgets/search_field.dart';
-import '../extension/controller/extension_controller.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
-import '../source/controller/source_controller.dart'
-    show sourceSearchQueryProvider;
 import '../source/widgets/source_language_filter.dart';
 
 class BrowseScreen extends HookConsumerWidget {
@@ -49,15 +45,16 @@ class BrowseScreen extends HookConsumerWidget {
     }, [tabController.index]);
     useListenable(tabController);
 
-    final showSearch = useState(false);
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.browse),
         actions: [
-          IconButton(
-            onPressed: () => showSearch.value = (true),
-            icon: const Icon(Icons.search_rounded),
-          ),
+          if (tabController.index == 0)
+            IconButton(
+              tooltip: context.l10n.globalSearch,
+              onPressed: () => const GlobalSearchRoute().push(context),
+              icon: const Icon(Icons.travel_explore_rounded),
+            ),
           if (tabController.index == 1) ...[
             const InstallExtensionFile(),
           ],
@@ -71,47 +68,14 @@ class BrowseScreen extends HookConsumerWidget {
             icon: const Icon(Icons.translate_rounded),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: kCalculateAppBarBottomSize([true, showSearch.value]),
-          child: Column(
-            children: [
-              TabBar(
-                dividerColor: Colors.transparent,
-                isScrollable: context.isTablet,
-                controller: tabController,
-                tabs: [
-                  Tab(text: context.l10n.sources),
-                  Tab(text: context.l10n.extensions),
-                ],
-              ),
-              if (showSearch.value)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: tabController.index == 0
-                      ? SearchField(
-                          key: const ValueKey(0),
-                          initialText: ref.read(sourceSearchQueryProvider),
-                          onChanged: (val) => ref
-                              .read(sourceSearchQueryProvider.notifier)
-                              .update(val),
-                          onClose: () {
-                            ref
-                                .read(sourceSearchQueryProvider.notifier)
-                                .update(null);
-                            showSearch.value = (false);
-                          },
-                        )
-                      : SearchField(
-                          key: const ValueKey(1),
-                          initialText: ref.read(extensionQueryProvider),
-                          onChanged: (val) => ref
-                              .read(extensionQueryProvider.notifier)
-                              .update(val),
-                          onClose: () => showSearch.value = (false),
-                        ),
-                ),
-            ],
-          ),
+        bottom: TabBar(
+          dividerColor: Colors.transparent,
+          isScrollable: context.isTablet,
+          controller: tabController,
+          tabs: [
+            Tab(text: context.l10n.sources),
+            Tab(text: context.l10n.extensions),
+          ],
         ),
       ),
       body: TabBarView(controller: tabController, children: children),
