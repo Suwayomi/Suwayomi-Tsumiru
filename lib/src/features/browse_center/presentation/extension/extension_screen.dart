@@ -13,6 +13,7 @@ import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/search_field.dart';
 import '../../domain/extension/extension_model.dart';
 import 'controller/extension_controller.dart';
 import 'widgets/extension_list_tile.dart';
@@ -74,7 +75,7 @@ class ExtensionScreen extends HookConsumerWidget {
       return;
     }, [extensionMapData.valueOrNull]);
 
-    return extensionMapData.showUiWhenData(
+    final body = extensionMapData.showUiWhenData(
       context,
       (data) => (extensionMap.isEmpty &&
               installed.isBlank &&
@@ -123,6 +124,19 @@ class ExtensionScreen extends HookConsumerWidget {
               ),
             ),
       refresh: refresh,
+    );
+
+    return Column(
+      children: [
+        SearchField(
+          autofocus: false,
+          hintText: context.l10n.searchForExtensions,
+          initialText: ref.watch(extensionQueryProvider),
+          onChanged: (val) =>
+              ref.read(extensionQueryProvider.notifier).update(val),
+        ),
+        Expanded(child: body),
+      ],
     );
   }
 }
