@@ -95,10 +95,15 @@ enum KRadius {
   final Radius radius;
 }
 
-SliverGridDelegateWithMaxCrossAxisExtent mangaCoverGridDelegate(double? size) =>
+/// [titleBelow] (comfortable grid) stretches the cell to leave room for the
+/// two-line title block under the cover.
+SliverGridDelegateWithMaxCrossAxisExtent mangaCoverGridDelegate(
+  double? size, {
+  bool titleBelow = false,
+}) =>
     SliverGridDelegateWithMaxCrossAxisExtent(
       maxCrossAxisExtent: size ?? DBKeys.gridMangaCoverWidth.initial,
       crossAxisSpacing: 2.0,
       mainAxisSpacing: 2.0,
-      childAspectRatio: 0.75,
+      childAspectRatio: titleBelow ? 0.62 : 0.75,
     );

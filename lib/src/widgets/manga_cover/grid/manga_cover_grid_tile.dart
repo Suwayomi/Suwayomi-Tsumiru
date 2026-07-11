@@ -25,6 +25,7 @@ class MangaCoverGridTile extends StatelessWidget {
     this.onLongPress,
     this.onContinueReading,
     this.showTitle = true,
+    this.titleBelow = false,
     this.showBadges = true,
     this.showCountBadges = false,
     this.showDarkOverlay = true,
@@ -40,12 +41,19 @@ class MangaCoverGridTile extends StatelessWidget {
   final VoidCallback? onContinueReading;
   final bool showCountBadges;
   final bool showTitle;
+
+  /// Comfortable grid: the title renders under the cover on the theme surface
+  /// instead of overlaid on the art ([showTitle] is ignored for the overlay).
+  final bool titleBelow;
   final bool showBadges;
   final bool showDarkOverlay;
 
   /// Multi-select highlight: a primary-tinted border + check on the
   /// library selection.
   final bool selected;
+
+  bool get _overlayTitle => showTitle && !titleBelow;
+
   @override
   Widget build(BuildContext context) {
     return InkResponse(
@@ -78,46 +86,69 @@ class MangaCoverGridTile extends StatelessWidget {
                 ),
               ),
       onLongPress: onLongPress,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: KBorderRadius.r12.radius,
-          side: selected
-              ? BorderSide(color: context.theme.colorScheme.primary, width: 3)
-              : BorderSide.none,
-        ),
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            _selectableChild(context),
-            if (selected)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Icon(
-                  Icons.check_circle_rounded,
-                  color: context.theme.colorScheme.primary,
-                  shadows: const [Shadow(blurRadius: 4)],
+      child: titleBelow
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _card(context)),
+                // Komikku's comfortable-grid title: 4dp padding, 12sp over an
+                // 18px line, two lines ellipsized, on the theme surface.
+                Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Text(
+                    manga.title,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    style: const TextStyle(fontSize: 12, height: 1.5),
+                  ),
                 ),
+              ],
+            )
+          : _card(context),
+    );
+  }
+
+  Widget _card(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: KBorderRadius.r12.radius,
+        side: selected
+            ? BorderSide(color: context.theme.colorScheme.primary, width: 3)
+            : BorderSide.none,
+      ),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          _selectableChild(context),
+          if (selected)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Icon(
+                Icons.check_circle_rounded,
+                color: context.theme.colorScheme.primary,
+                shadows: const [Shadow(blurRadius: 4)],
               ),
-            // No title to flow beside (cover-only / descriptive-list cover):
-            // overlay the button on the cover corner. With a title, the button
-            // lives in the footer row instead so it can't cover the text.
-            if (onContinueReading != null && !selected && !showTitle)
-              Positioned(
-                right: 6,
-                bottom: 6,
-                child: ContinueReadingButton(onPressed: onContinueReading!),
-              ),
-            if (showBadges)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _CoverReadProgressBar(manga: manga),
-              ),
-          ],
-        ),
+            ),
+          // No title to flow beside (cover-only, title-below, or the
+          // descriptive-list cover): overlay the button on the cover corner.
+          // With an overlaid title, the button lives in the footer row
+          // instead so it can't cover the text.
+          if (onContinueReading != null && !selected && !_overlayTitle)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: ContinueReadingButton(onPressed: onContinueReading!),
+            ),
+          if (showBadges)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _CoverReadProgressBar(manga: manga),
+            ),
+        ],
       ),
     );
   }
@@ -127,7 +158,7 @@ class MangaCoverGridTile extends StatelessWidget {
           header: showBadges
               ? MangaBadgesRow(manga: manga, showCountBadges: showCountBadges)
               : null,
-          footer: showTitle
+          footer: _overlayTitle
               ? ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   dense: true,
@@ -174,7 +205,7 @@ class MangaCoverGridTile extends StatelessWidget {
                     // Theme-independent scrim (Komikku: transparent → 67%
                     // black over the bottom third) — the title always reads
                     // white-on-dark in both light and dark mode.
-                    gradient: showTitle
+                    gradient: _overlayTitle
                         ? const LinearGradient(
                             begin: Alignment(0, 1 / 3),
                             end: Alignment.bottomCenter,

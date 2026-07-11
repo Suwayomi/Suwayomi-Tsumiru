@@ -1619,6 +1619,7 @@
     "discord": "Discord",
     "display": "Display",
     "displayMode": "Display Mode",
+    "displayModeComfortableGrid": "Comfortable grid",
     "displayModeCoverOnly": "Cover-only grid",
     "displayModeDescriptiveList": "Descriptive List",
     "displayModeGrid": "Grid",
