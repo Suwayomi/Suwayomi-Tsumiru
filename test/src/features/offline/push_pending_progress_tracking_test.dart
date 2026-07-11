@@ -132,11 +132,12 @@ Fragment$TrackRecordDto _fakeRecord() => Fragment$TrackRecordDto(
       private: false,
     );
 
-Future<({
-  ProviderContainer container,
-  OfflineDatabase db,
-  _FakeTrackerRepository tracker,
-})> _build({
+Future<
+    ({
+      ProviderContainer container,
+      OfflineDatabase db,
+      _FakeTrackerRepository tracker,
+    })> _build({
   required List<int> mangaIds,
   int trackRecordCount = 1,
   bool toggleOn = true,
@@ -152,6 +153,7 @@ Future<({
   final overrides = <Override>[
     sharedPreferencesProvider.overrideWithValue(prefs),
     offlineEnabledProvider.overrideWithValue(true),
+    offlineActiveProvider.overrideWithValue(true),
     offlineDatabaseProvider.overrideWithValue(db),
     mangaBookRepositoryProvider.overrideWithValue(fakeMangaBook),
     trackerRepositoryProvider.overrideWithValue(fakeTracker),
@@ -173,8 +175,7 @@ Future<({
 
 void main() {
   group('pushPendingProgress → tracker push', () {
-    test(
-        'toggle ON + manga has track records → trackProgress called once',
+    test('toggle ON + manga has track records → trackProgress called once',
         () async {
       final (:container, :db, :tracker) = await _build(
         mangaIds: [1],
@@ -213,7 +214,8 @@ void main() {
           reason: 'toggle is off — no tracker push');
     });
 
-    test('failed push KEEPS the dirty flag (stays pending, server never got it)',
+    test(
+        'failed push KEEPS the dirty flag (stays pending, server never got it)',
         () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -222,6 +224,7 @@ void main() {
       final container = ProviderContainer(overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         offlineEnabledProvider.overrideWithValue(true),
+        offlineActiveProvider.overrideWithValue(true),
         offlineDatabaseProvider.overrideWithValue(db),
         mangaBookRepositoryProvider
             .overrideWithValue(_FailingMangaBookRepository()),

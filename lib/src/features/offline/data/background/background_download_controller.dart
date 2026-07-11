@@ -58,6 +58,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Guards [ensureServiceRunning] against overlapping invocations (it does
   /// several awaited steps; concurrent enqueue + resume could double-start).
   bool _ensuring = false;
+  bool _suppressRestarts = false;
 
   OfflineDatabase get _db => _ref.read(offlineDatabaseProvider);
   OfflinePaths get _paths => _ref.read(offlinePathsProvider);
@@ -101,6 +102,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// active connection is metered, the service is not started.
   Future<void> ensureServiceRunning() async {
     if (!Platform.isAndroid) return;
+    if (_suppressRestarts) return;
     // PAUSE GATE — first line so EVERY restart path inherits it: the public
     // start, onEnqueued, replayOnResume, replayAtLaunchAndMaybeStart, _onDrained,
     // _onServiceStopped, and the connectivity-resume branch all funnel here.
@@ -191,6 +193,27 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Resume on-device downloads (caller has cleared the persisted flag first).
   Future<void> resume() => ensureServiceRunning();
 
+  Future<void> stopAndClearWorkOrder() async {
+    if (!Platform.isAndroid) return;
+    _suppressRestarts = true;
+    await pause();
+    if (await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.stopService();
+    }
+    for (var i = 0; i < 20; i++) {
+      if (!await FlutterForegroundTask.isRunningService) break;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    await FlutterForegroundTask.removeData(key: kWorkOrderKey);
+    await FlutterForegroundTask.removeData(key: kTokenRecordKey);
+    final log = _log;
+    if (await log.file.exists()) await log.file.delete();
+  }
+
+  void finishCatalogClear() {
+    _suppressRestarts = false;
+  }
+
   /// Tell the worker to drop a chapter (delete/cancel). The caller still does
   /// the actual drift/file delete; this only stops the in-flight download.
   Future<void> onRemoved(int chapterId) async {
@@ -264,6 +287,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   void _onWorkerEvent(Object data) {
     if (data is! Map) return;
+    // During a catalog clear the worker is being torn down; a page/chapter event
+    // still in the SendPort queue would otherwise re-insert a row into the
+    // just-wiped catalog. Drop everything until the clear releases the flag.
+    if (_suppressRestarts) return;
     switch (data['kind']) {
       // Live foreground UI: mark the chapter downloading + accumulate page rows
       // as the worker reports them, so the per-chapter progress arc animates.

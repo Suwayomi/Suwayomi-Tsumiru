@@ -6,7 +6,6 @@
 
 import 'dart:async';
 
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -23,11 +22,11 @@ part 'edit_category_controller.g.dart';
 class CategoryController extends _$CategoryController {
   @override
   Future<List<CategoryDto>?> build() async {
-    final offlineEnabled = ref.watch(offlineEnabledProvider);
+    final offlineDb = ref.watch(offlineReadDatabaseProvider);
     final result = await categoriesWithOfflineFallback(
       fetch: () => ref.watch(categoryRepositoryProvider).getCategoryList(),
-      db: offlineEnabled ? ref.watch(offlineDatabaseProvider) : null,
-      offlineEnabled: offlineEnabled,
+      db: offlineDb,
+      offlineEnabled: offlineDb != null,
     );
     final sync = ref.read(offlineSyncProvider);
     if (sync != null && result != null) {
@@ -116,8 +115,7 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
 @riverpod
 AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
   final categoryList = ref.watch(nonZeroCategoryListProvider);
-  final showHidden =
-      ref.watch(showHiddenCategoriesProvider).ifNull(false);
+  final showHidden = ref.watch(showHiddenCategoriesProvider).ifNull(false);
   return categoryList.copyWithData((_) => categoryList.valueOrNull
       ?.where((element) => showHidden || !element.isHidden)
       .toList());

@@ -20,6 +20,8 @@ class _FakeStore implements OfflinePageStore {
   Future<void> deleteChapter(int m, int c) async {}
   @override
   Future<int> chapterBytes(int m, int c) async => 0;
+  @override
+  Future<void> clearAll() async {}
 }
 
 void main() {
@@ -53,12 +55,14 @@ void main() {
         fetchBytes: (u) async => (bytes: [1, 2, 3], ext: 'jpg'),
       );
 
-  test('downloadChapter still refuses a not-server-downloaded chapter by default',
+  test(
+      'downloadChapter still refuses a not-server-downloaded chapter by default',
       () async {
     await expectLater(manager().downloadChapter(chap(false)), throwsStateError);
   });
 
-  test('downloadChapter(force: true) downloads despite serverIsDownloaded=false',
+  test(
+      'downloadChapter(force: true) downloads despite serverIsDownloaded=false',
       () async {
     await db.upsertChapterMetadata(
         id: 1,

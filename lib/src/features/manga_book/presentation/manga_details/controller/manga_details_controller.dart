@@ -33,10 +33,8 @@ class MangaWithId extends _$MangaWithId {
     final manga = await mangaWithOfflineFallback(
       fetch: () =>
           ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
-      db: ref.watch(offlineEnabledProvider)
-          ? ref.watch(offlineDatabaseProvider)
-          : null,
-      offlineEnabled: ref.watch(offlineEnabledProvider),
+      db: ref.watch(offlineReadDatabaseProvider),
+      offlineEnabled: ref.watch(offlineActiveProvider),
       mangaId: mangaId,
     );
     // Don't mirror browsed (non-library) manga into the offline catalog.
@@ -84,18 +82,15 @@ class MangaChapterList extends _$MangaChapterList {
         }
         return stored;
       },
-      db: ref.watch(offlineEnabledProvider)
-          ? ref.watch(offlineDatabaseProvider)
-          : null,
-      offlineEnabled: ref.watch(offlineEnabledProvider),
+      db: ref.watch(offlineReadDatabaseProvider),
+      offlineEnabled: ref.watch(offlineActiveProvider),
       mangaId: mangaId,
     );
     ref.keepAlive();
     if (result != null) {
-      unawaited(
-          (ref.read(offlineSyncProvider)?.syncChapters(result) ??
-                  Future.value())
-              .then((_) => reconcileManga(ref, mangaId)));
+      unawaited((ref.read(offlineSyncProvider)?.syncChapters(result) ??
+              Future.value())
+          .then((_) => reconcileManga(ref, mangaId)));
     }
     if (didSourceFetch) {
       // The source scrape above also populated this manga's description and
@@ -121,7 +116,7 @@ class MangaChapterList extends _$MangaChapterList {
     final refreshFromSource =
         onlineFetch || ref.read(refreshChaptersFromSourceProvider).ifNull();
     // offlineDatabaseProvider throws on web; only touch it when offline is on.
-    final offlineEnabled = ref.read(offlineEnabledProvider);
+    final offlineDb = ref.read(offlineReadDatabaseProvider);
     // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
     // refresh while the device is offline serves the on-device catalog instead
     // of erroring/clearing the list.
@@ -139,8 +134,8 @@ class MangaChapterList extends _$MangaChapterList {
             }
             return stored;
           },
-          db: offlineEnabled ? ref.read(offlineDatabaseProvider) : null,
-          offlineEnabled: offlineEnabled,
+          db: offlineDb,
+          offlineEnabled: offlineDb != null,
           mangaId: mangaId,
         ));
     ref.keepAlive();
@@ -154,10 +149,9 @@ class MangaChapterList extends _$MangaChapterList {
         // server no longer lists) then reconcile to evict them — so a
         // server-side delete discovered via pull-to-refresh is cleaned up too,
         // not only on a cold provider rebuild.
-        unawaited(
-            (ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
-                    Future.value())
-                .then((_) => reconcileManga(ref, mangaId)));
+        unawaited((ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
+                Future.value())
+            .then((_) => reconcileManga(ref, mangaId)));
       }
     }
   }

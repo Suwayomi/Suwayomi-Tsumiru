@@ -34,7 +34,7 @@ part 'offline_background_downloads.g.dart';
 /// Linux desktop build. Null on web / when offline storage is unavailable.
 @riverpod
 ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
-  if (!ref.watch(offlineEnabledProvider)) return null;
+  if (!ref.watch(offlineActiveProvider)) return null;
   // Page-level parallelism. One chapter downloads
   // at a time; this is how many of its pages are in flight at once.
   final parallel = (ref.watch(offlineDownloadConcurrencyProvider) ??
@@ -74,7 +74,7 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
 /// storage is unavailable.
 @riverpod
 OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
-  if (!ref.watch(offlineEnabledProvider)) return null;
+  if (!ref.watch(offlineActiveProvider)) return null;
   final engine = ref.watch(chapterDownloadEngineProvider);
   if (engine == null) return null;
   final repo = ref.watch(mangaBookRepositoryProvider);
@@ -87,8 +87,9 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
         const <String>[],
     measureChapterBytes: store.chapterBytes,
     persistedPaused: () =>
-        ref.read(sharedPreferencesProvider).getBool(
-            DBKeys.offlineDownloadsPaused.name) ??
+        ref
+            .read(sharedPreferencesProvider)
+            .getBool(DBKeys.offlineDownloadsPaused.name) ??
         false,
   );
 }
@@ -99,7 +100,7 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
 /// Chapters previously marked `error` get one fresh attempt — most past errors
 /// were the stale-token 401s the run-time-auth engine now avoids.
 Future<void> initOfflineDownloads(ProviderContainer container) async {
-  if (!container.read(offlineEnabledProvider)) return;
+  if (!container.read(offlineActiveProvider)) return;
   // On Android the foreground-service worker owns downloads (see the corruption
   // gate in pumpDownloads + BackgroundDownloadController); the launch path calls
   // the controller instead.

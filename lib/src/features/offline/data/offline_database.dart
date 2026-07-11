@@ -9,7 +9,14 @@ import 'package:drift/drift.dart';
 part 'offline_database.g.dart';
 
 /// On-device state of a chapter's bytes.
-enum OfflineDeviceState { none, queued, downloading, downloaded, error, orphaned }
+enum OfflineDeviceState {
+  none,
+  queued,
+  downloading,
+  downloaded,
+  error,
+  orphaned
+}
 
 /// How many of a series' chapters to keep on this device automatically.
 enum OfflineKeepRule { off, nUnread, allUnread, all }
@@ -22,8 +29,8 @@ class OfflineMangas extends Table {
   TextColumn get thumbnailUrl => text().nullable()();
   TextColumn get thumbnailRelPath => text().nullable()();
   DateTimeColumn get updatedAt => dateTime()();
-  TextColumn get keepRule =>
-      textEnum<OfflineKeepRule>().withDefault(Constant(OfflineKeepRule.off.name))();
+  TextColumn get keepRule => textEnum<OfflineKeepRule>()
+      .withDefault(Constant(OfflineKeepRule.off.name))();
   IntColumn get keepUnreadCount => integer().withDefault(const Constant(3))();
 
   // Server-sourced metadata for offline filters / sort / badges / grouping.
@@ -168,17 +175,27 @@ class OfflineDatabase extends _$OfflineDatabase {
           }
           if (from < 6) {
             await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceId);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceName);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceLang);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceIsNsfw);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.sourceName);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.sourceLang);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.sourceIsNsfw);
             await _addColumnIfMissing(m, offlineMangas, offlineMangas.status);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.unreadCount);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.downloadCount);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.bookmarkCount);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.inLibraryAt);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.latestFetchedAt);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.latestUploadedAt);
-            await _addColumnIfMissing(m, offlineMangas, offlineMangas.totalChapters);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.unreadCount);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.downloadCount);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.bookmarkCount);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.inLibraryAt);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.latestFetchedAt);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.latestUploadedAt);
+            await _addColumnIfMissing(
+                m, offlineMangas, offlineMangas.totalChapters);
           }
         },
       );
@@ -223,9 +240,8 @@ class OfflineDatabase extends _$OfflineDatabase {
           id: Value(id),
           title: Value(title),
           updatedAt: Value(updatedAt),
-          thumbnailUrl: thumbnailUrl == null
-              ? const Value.absent()
-              : Value(thumbnailUrl),
+          thumbnailUrl:
+              thumbnailUrl == null ? const Value.absent() : Value(thumbnailUrl),
           // device-managed: thumbnailRelPath, keepRule, keepUnreadCount stay absent
           sourceId: Value(sourceId),
           sourceName: Value(sourceName),
@@ -428,8 +444,8 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// Chapters with any unpushed local change — read progress OR bookmark — for
   /// the up-sync to flush and the down-sync to preserve.
   Future<List<OfflineChapter>> dirtyChapters() => (select(offlineChapters)
-        ..where((t) =>
-            t.progressDirty.equals(true) | t.bookmarkDirty.equals(true)))
+        ..where(
+            (t) => t.progressDirty.equals(true) | t.bookmarkDirty.equals(true)))
       .get();
 
   // --- offline queries -------------------------------------------------------
@@ -442,9 +458,20 @@ class OfflineDatabase extends _$OfflineDatabase {
       (select(offlineChapters)..where((t) => t.id.equals(chapterId)))
           .getSingleOrNull();
 
-  Future<List<OfflineManga>> libraryManga() =>
-      (select(offlineMangas)..orderBy([(t) => OrderingTerm(expression: t.title)]))
-          .get();
+  Future<List<OfflineManga>> libraryManga() => (select(offlineMangas)
+        ..orderBy([(t) => OrderingTerm(expression: t.title)]))
+      .get();
+
+  Future<bool> hasCatalogData() async =>
+      (await (select(offlineMangas)..limit(1)).get()).isNotEmpty;
+
+  Future<void> clearAll() => transaction(() async {
+        await delete(offlinePages).go();
+        await delete(offlineMangaCategories).go();
+        await delete(offlineCategories).go();
+        await delete(offlineChapters).go();
+        await delete(offlineMangas).go();
+      });
 
   /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
   /// (null/'0') and nothing downloaded. Never touches downloads; a stray library
@@ -525,18 +552,20 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// Live stream of a manga's chapter rows — drives the series download
   /// progress UI (emits as device states change during a background download).
   Stream<List<OfflineChapter>> watchChaptersForManga(int mangaId) =>
-      (select(offlineChapters)..where((t) => t.mangaId.equals(mangaId))).watch();
+      (select(offlineChapters)..where((t) => t.mangaId.equals(mangaId)))
+          .watch();
 
   /// Live stream of every chapter that's downloaded OR actively
   /// downloading/queued on this device — drives the Downloads → Offline files
   /// tab (so it shows in-progress downloads, not just finished ones).
-  Stream<List<OfflineChapter>> watchOfflineChapters() => (select(offlineChapters)
-        ..where((t) => t.deviceState.isIn([
-              OfflineDeviceState.downloaded.name,
-              OfflineDeviceState.downloading.name,
-              OfflineDeviceState.queued.name,
-            ])))
-      .watch();
+  Stream<List<OfflineChapter>> watchOfflineChapters() =>
+      (select(offlineChapters)
+            ..where((t) => t.deviceState.isIn([
+                  OfflineDeviceState.downloaded.name,
+                  OfflineDeviceState.downloading.name,
+                  OfflineDeviceState.queued.name,
+                ])))
+          .watch();
 
   /// Live list of every series with an offline footprint on this device —
   /// either chapters present (downloaded / in-flight) OR an active keep-rule
@@ -548,18 +577,18 @@ class OfflineDatabase extends _$OfflineDatabase {
   Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
       watchOfflineSeries() {
     final downloaded = offlineChapters.id.count(
-        filter:
-            offlineChapters.deviceState.equalsValue(OfflineDeviceState.downloaded));
+        filter: offlineChapters.deviceState
+            .equalsValue(OfflineDeviceState.downloaded));
     final inFlight = offlineChapters.id.count(
         filter: offlineChapters.deviceState
                 .equalsValue(OfflineDeviceState.downloading) |
             offlineChapters.deviceState.equalsValue(OfflineDeviceState.queued));
     final byteSum = offlineChapters.bytes.sum(
-        filter:
-            offlineChapters.deviceState.equalsValue(OfflineDeviceState.downloaded));
+        filter: offlineChapters.deviceState
+            .equalsValue(OfflineDeviceState.downloaded));
     final query = select(offlineMangas).join([
-      leftOuterJoin(offlineChapters,
-          offlineChapters.mangaId.equalsExp(offlineMangas.id)),
+      leftOuterJoin(
+          offlineChapters, offlineChapters.mangaId.equalsExp(offlineMangas.id)),
     ])
       ..addColumns([downloaded, inFlight, byteSum])
       ..groupBy(

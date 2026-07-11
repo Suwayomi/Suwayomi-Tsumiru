@@ -16,31 +16,36 @@ import 'offline_database.dart';
 /// a re-sync never clobbers what the user has downloaded. Called online only;
 /// a no-op offline (the caller guards via [offlineSyncProvider] being null).
 class OfflineSync {
-  const OfflineSync(this._db);
+  const OfflineSync(this._db, {this.onSynced});
 
   final OfflineDatabase _db;
+  final Future<void> Function()? onSynced;
 
-  Future<void> syncManga(MangaDto manga) => _db.upsertMangaMetadata(
-        id: manga.id,
-        title: manga.title,
-        thumbnailUrl: manga.thumbnailUrl,
-        updatedAt: DateTime.now(),
-        sourceId: manga.source?.id,
-        sourceName: manga.source?.name,
-        sourceLang: manga.source?.lang,
-        sourceIsNsfw: manga.source?.isNsfw ?? false,
-        status: manga.status.name,
-        unreadCount: manga.unreadCount,
-        downloadCount: manga.downloadCount,
-        bookmarkCount: manga.bookmarkCount,
-        inLibraryAt: manga.inLibraryAt,
-        latestFetchedAt: manga.latestFetchedChapter?.fetchedAt,
-        latestUploadedAt: manga.latestUploadedChapter?.uploadDate,
-        totalChapters: manga.chapters.totalCount,
-      ).then((_) => _db.replaceMangaCategories(
-            manga.id,
-            manga.categories.nodes.map((c) => c.id).toList(),
-          ));
+  Future<void> syncManga(MangaDto manga) async {
+    await _db.upsertMangaMetadata(
+      id: manga.id,
+      title: manga.title,
+      thumbnailUrl: manga.thumbnailUrl,
+      updatedAt: DateTime.now(),
+      sourceId: manga.source?.id,
+      sourceName: manga.source?.name,
+      sourceLang: manga.source?.lang,
+      sourceIsNsfw: manga.source?.isNsfw ?? false,
+      status: manga.status.name,
+      unreadCount: manga.unreadCount,
+      downloadCount: manga.downloadCount,
+      bookmarkCount: manga.bookmarkCount,
+      inLibraryAt: manga.inLibraryAt,
+      latestFetchedAt: manga.latestFetchedChapter?.fetchedAt,
+      latestUploadedAt: manga.latestUploadedChapter?.uploadDate,
+      totalChapters: manga.chapters.totalCount,
+    );
+    await _db.replaceMangaCategories(
+      manga.id,
+      manga.categories.nodes.map((c) => c.id).toList(),
+    );
+    await onSynced?.call();
+  }
 
   Future<void> syncChapters(List<ChapterDto> chapters) async {
     final now = DateTime.now();
@@ -103,11 +108,13 @@ class OfflineSync {
       ];
       if (goneIds.isNotEmpty) await _db.markChaptersOrphaned(goneIds);
     }
+    await onSynced?.call();
   }
 
   Future<void> syncCategories(List<CategoryDto> categories) async {
     for (final cat in categories) {
       await _db.upsertCategory(cat.id, cat.name, cat.order);
     }
+    await onSynced?.call();
   }
 }

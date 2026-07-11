@@ -23,13 +23,12 @@ FutureOr<ChapterDto?> chapter(
     // Offline: a downloaded chapter must still open when the server is
     // unreachable, so fall back to the on-device catalog row.
     chapterMetaWithOfflineFallback(
-      fetch: () =>
-          ref.watch(mangaBookRepositoryProvider).getChapter(chapterId: chapterId),
+      fetch: () => ref
+          .watch(mangaBookRepositoryProvider)
+          .getChapter(chapterId: chapterId),
       // Only read the native-only DB when offline is available (never on web).
-      db: ref.watch(offlineEnabledProvider)
-          ? ref.watch(offlineDatabaseProvider)
-          : null,
-      offlineEnabled: ref.watch(offlineEnabledProvider),
+      db: ref.watch(offlineReadDatabaseProvider),
+      offlineEnabled: ref.watch(offlineActiveProvider),
       chapterId: chapterId,
     );
 
@@ -38,7 +37,7 @@ Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
   // Offline: if this chapter is downloaded on-device, serve its pages from disk
   // (as file:// URIs that ServerImage renders locally) instead of the server.
   // Falls through to the network when not downloaded / offline is unavailable.
-  if (ref.watch(offlineEnabledProvider)) {
+  if (ref.watch(offlineReadDatabaseProvider) != null) {
     final local =
         await ref.watch(offlineRepositoryProvider).localChapterPages(chapterId);
     if (local != null && local.isNotEmpty) {

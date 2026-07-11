@@ -1,0 +1,17 @@
+query OfflineServerIdentity($key: String!) {
+  metas(condition: {key: $key}, first: 1) {
+    nodes {
+      key
+      value
+    }
+  }
+}
+
+mutation SetOfflineServerIdentity($key: String!, $value: String!) {
+  setGlobalMeta(input: {meta: {key: $key, value: $value}}) {
+    meta {
+      key
+      value
+    }
+  }
+}

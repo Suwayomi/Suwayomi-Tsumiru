@@ -12,16 +12,21 @@ import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 class _FakeStore implements OfflinePageStore {
   final written = <int, int>{}; // pageIndex -> bytes
   @override
-  Future<({String relPath, int bytes})> writePage(
-      int mangaId, int chapterId, int pageIndex, List<int> bytes, String ext) async {
+  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
+      int pageIndex, List<int> bytes, String ext) async {
     written[pageIndex] = bytes.length;
-    return (relPath: '$mangaId/$chapterId/$pageIndex.$ext', bytes: bytes.length);
+    return (
+      relPath: '$mangaId/$chapterId/$pageIndex.$ext',
+      bytes: bytes.length
+    );
   }
 
   @override
   Future<void> deleteChapter(int mangaId, int chapterId) async {}
   @override
   Future<int> chapterBytes(int mangaId, int chapterId) async => 0;
+  @override
+  Future<void> clearAll() async {}
 }
 
 List<PageRef> _pages(int n) =>
@@ -72,7 +77,7 @@ void main() {
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-      mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
+        mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
     expect(out.succeeded, true);
     expect(refreshes, 1);
   });
@@ -85,7 +90,7 @@ void main() {
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-      mangaId: 1, chapterId: 1, pages: _pages(3), isCancelled: () => false);
+        mangaId: 1, chapterId: 1, pages: _pages(3), isCancelled: () => false);
     expect(out.authFailed, true);
     expect(out.succeeded, false);
   });
@@ -103,7 +108,7 @@ void main() {
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-      mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
+        mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
     expect(out.succeeded, false);
     expect(out.error, isNotNull);
     expect(calls, 3); // 3 attempts for the single page
@@ -126,7 +131,7 @@ void main() {
       backoff: (_) => noBackoff,
     );
     await engine.download(
-      mangaId: 1, chapterId: 1, pages: _pages(30), isCancelled: () => false);
+        mangaId: 1, chapterId: 1, pages: _pages(30), isCancelled: () => false);
     expect(peak, lessThanOrEqualTo(5));
     expect(peak, greaterThan(1)); // actually parallel
   });
@@ -146,7 +151,10 @@ void main() {
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-      mangaId: 1, chapterId: 1, pages: _pages(100), isCancelled: () => cancel);
+        mangaId: 1,
+        chapterId: 1,
+        pages: _pages(100),
+        isCancelled: () => cancel);
     expect(out.cancelled, true);
     expect(fetched, lessThan(100));
   });

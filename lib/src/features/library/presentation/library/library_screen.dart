@@ -21,6 +21,7 @@ import '../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.d
 import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
+import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../domain/category/category_model.dart';
 import '../../domain/library_group.dart';
@@ -31,6 +32,15 @@ import 'controller/library_grouping.dart';
 import 'controller/library_manga_list.dart';
 import 'widgets/library_manga_organizer.dart';
 
+/// Wraps a library Scaffold body so the offline server-mismatch banner sits
+/// below the app bar (inside the Scaffold), not floating over the status bar.
+Widget _libraryBody(Widget body) => Column(
+      children: [
+        const OfflineServerMismatchBanner(),
+        Expanded(child: body),
+      ],
+    );
+
 class LibraryScreen extends HookConsumerWidget {
   const LibraryScreen({super.key, required this.categoryId});
   final int categoryId;
@@ -40,11 +50,9 @@ class LibraryScreen extends HookConsumerWidget {
     final groupType =
         ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
 
-    if (groupType == LibraryGroup.byDefault) {
-      return _DefaultLibraryScreen(categoryId: categoryId);
-    }
-
-    return _GroupedLibraryScreen(groupType: groupType);
+    return groupType == LibraryGroup.byDefault
+        ? _DefaultLibraryScreen(categoryId: categoryId)
+        : _GroupedLibraryScreen(groupType: groupType);
   }
 }
 
@@ -125,9 +133,8 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
                         ref.watch(categoryTabsProvider).ifNull(true)
                     ? TabBar(
                         isScrollable: true,
-                        tabs: data
-                            .map((e) => _CategoryTab(category: e))
-                            .toList(),
+                        tabs:
+                            data.map((e) => _CategoryTab(category: e)).toList(),
                         dividerColor: Colors.transparent,
                       )
                     : null,
@@ -178,25 +185,28 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
                 shape: RoundedRectangleBorder(),
                 child: LibraryMangaOrganizer(),
               ),
-              body: data.isBlank
-                  ? Emoticons(
-                      title: context.l10n.noCategoriesFound,
-                      button: TextButton(
-                        onPressed: () =>
-                            ref.refresh(categoryControllerProvider.future),
-                        child: Text(context.l10n.refresh),
+              body: _libraryBody(
+                data.isBlank
+                    ? Emoticons(
+                        title: context.l10n.noCategoriesFound,
+                        button: TextButton(
+                          onPressed: () =>
+                              ref.refresh(categoryControllerProvider.future),
+                          child: Text(context.l10n.refresh),
+                        ),
+                      )
+                    : Padding(
+                        padding: KEdgeInsets.h8.size,
+                        child: TabBarView(
+                          children: data
+                              .map((e) => CategoryMangaList(
+                                    categoryId:
+                                        e.id.getValueOnNullOrNegative(),
+                                  ))
+                              .toList(),
+                        ),
                       ),
-                    )
-                  : Padding(
-                      padding: KEdgeInsets.h8.size,
-                      child: TabBarView(
-                        children: data
-                            .map((e) => CategoryMangaList(
-                                  categoryId: e.id.getValueOnNullOrNegative(),
-                                ))
-                            .toList(),
-                      ),
-                    ),
+              ),
             ),
           );
         }
@@ -206,7 +216,7 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
         appBar: AppBar(
           title: Text(context.l10n.library),
         ),
-        body: body,
+        body: _libraryBody(body),
       ),
     );
   }
@@ -241,8 +251,7 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
             body: Emoticons(
               title: context.l10n.noCategoriesFound,
               button: TextButton(
-                onPressed: () =>
-                    ref.refresh(libraryGroupedTabsProvider.future),
+                onPressed: () => ref.refresh(libraryGroupedTabsProvider.future),
                 child: Text(context.l10n.refresh),
               ),
             ),
@@ -317,12 +326,13 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
               shape: RoundedRectangleBorder(),
               child: LibraryMangaOrganizer(),
             ),
-            body: Padding(
-              padding: KEdgeInsets.h8.size,
-              child: TabBarView(
-                children: tabs
-                    .map((t) => _GroupedMangaList(tabId: t.id))
-                    .toList(),
+            body: _libraryBody(
+              Padding(
+                padding: KEdgeInsets.h8.size,
+                child: TabBarView(
+                  children:
+                      tabs.map((t) => _GroupedMangaList(tabId: t.id)).toList(),
+                ),
               ),
             ),
           ),
@@ -331,7 +341,7 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
       refresh: () => ref.refresh(libraryGroupedTabsProvider.future),
       wrapper: (body) => Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),
-        body: body,
+        body: _libraryBody(body),
       ),
     );
   }
@@ -351,8 +361,7 @@ class _CategoryTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showCount =
-        ref.watch(categoryNumberOfItemsProvider).ifNull(false);
+    final showCount = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
     if (!showCount) {
       return Tab(text: category.name);
     }
@@ -362,8 +371,7 @@ class _CategoryTab extends ConsumerWidget {
       ),
     );
     final count = mangaListAsync.valueOrNull?.length;
-    final label =
-        count != null ? '${category.name} ($count)' : category.name;
+    final label = count != null ? '${category.name} ($count)' : category.name;
     return Tab(text: label);
   }
 }

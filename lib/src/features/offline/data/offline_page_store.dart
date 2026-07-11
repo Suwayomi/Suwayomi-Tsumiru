@@ -27,6 +27,8 @@ abstract class OfflinePageStore {
   /// Total bytes of a chapter's stored page files (for the catalog's byte
   /// count after a background download completes). 0 if nothing is stored.
   Future<int> chapterBytes(int mangaId, int chapterId);
+
+  Future<void> clearAll() => throw UnimplementedError();
 }
 
 /// Image bytes + file extension fetched for a single page.

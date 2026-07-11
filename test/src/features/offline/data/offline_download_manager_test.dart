@@ -17,9 +17,10 @@ class _FakeStore implements OfflinePageStore {
   final List<int> deletedChapters = [];
 
   @override
-  Future<({String relPath, int bytes})> writePage(
-      int mangaId, int chapterId, int pageIndex, List<int> bytes, String ext) async {
-    final rel = '$mangaId/$chapterId/${pageIndex.toString().padLeft(3, '0')}.$ext';
+  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
+      int pageIndex, List<int> bytes, String ext) async {
+    final rel =
+        '$mangaId/$chapterId/${pageIndex.toString().padLeft(3, '0')}.$ext';
     written[rel] = bytes.length;
     return (relPath: rel, bytes: bytes.length);
   }
@@ -34,6 +35,8 @@ class _FakeStore implements OfflinePageStore {
   Future<int> chapterBytes(int mangaId, int chapterId) async => written.entries
       .where((e) => e.key.startsWith('$mangaId/$chapterId/'))
       .fold<int>(0, (s, e) => s + e.value);
+  @override
+  Future<void> clearAll() async {}
 }
 
 void main() {
@@ -91,7 +94,8 @@ void main() {
     expect(c.bytes, 9); // 3 pages * 3 bytes
   });
 
-  test('downloadChapter refuses a chapter not downloaded server-side', () async {
+  test('downloadChapter refuses a chapter not downloaded server-side',
+      () async {
     final chapter = await seedChapter(serverDownloaded: false);
     expect(() => managerWith().downloadChapter(chapter), throwsStateError);
     final c = (await db.chaptersForManga(552)).single;
@@ -114,7 +118,8 @@ void main() {
           ..where((t) => t.chapterId.equals(2000)))
         .get();
     expect(pages, isEmpty, reason: 'partial page rows purged');
-    expect(store.deletedChapters, contains(2000), reason: 'partial files purged');
+    expect(store.deletedChapters, contains(2000),
+        reason: 'partial files purged');
   });
 
   test('deleteChapter removes files, page rows, and resets state', () async {

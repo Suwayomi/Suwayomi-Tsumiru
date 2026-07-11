@@ -17,6 +17,8 @@ class _NoopStore implements OfflinePageStore {
   Future<void> deleteChapter(int m, int c) async {}
   @override
   Future<int> chapterBytes(int m, int c) async => 0;
+  @override
+  Future<void> clearAll() async {}
 }
 
 void main() {

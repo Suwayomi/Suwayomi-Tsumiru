@@ -26,6 +26,9 @@ class BackgroundDownloadController {
   Future<void> onWifiOnlyChanged(bool value) async {}
   Future<void> pause() async {}
   Future<void> resume() async {}
+
+  Future<void> stopAndClearWorkOrder() async {}
+  void finishCatalogClear() {}
   Future<void> replayAtLaunchAndMaybeStart() async {}
 }
 

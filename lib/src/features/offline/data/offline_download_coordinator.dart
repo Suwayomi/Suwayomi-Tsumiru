@@ -83,6 +83,20 @@ class OfflineDownloadCoordinator {
     _cancelled.addAll(_active);
   }
 
+  /// Wait until nothing is actively downloading and the pump loop has exited, so
+  /// a catalog clear can be sure no `onPageStored` write lands after it wipes the
+  /// DB/files. Call after [pause]. Bounded so it can never hang the clear — the
+  /// clear proceeds even if a stubborn page fetch hasn't observed the cancel yet
+  /// (rare, and the worst case is one orphan row, which a later clear removes).
+  Future<void> awaitIdle(
+      {Duration timeout = const Duration(seconds: 3)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while ((_active.isNotEmpty || _pumping) &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
+
   /// Resume on-device downloading and drain the backlog. Returns the drain
   /// future so callers can await it (the UI fires it and forgets).
   Future<void> resume() {

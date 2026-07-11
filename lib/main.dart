@@ -28,6 +28,7 @@ import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
 import 'src/features/offline/data/offline_repository.dart';
+import 'src/features/offline/data/offline_server_identity_repository.dart';
 import 'src/features/onboarding/data/onboarding_complete.dart';
 import 'src/features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -152,8 +153,7 @@ Future<void> _startApp() async {
     if (sharedPreferences.getBool(migratedKey) != true) {
       final sortIdx = sharedPreferences.getInt('mangaSort');
       // mangaSort default is Last-Read, so an unset value means Last-Read too.
-      final onLastRead =
-          sortIdx == null || sortIdx == MangaSort.lastRead.index;
+      final onLastRead = sortIdx == null || sortIdx == MangaSort.lastRead.index;
       final savedDir = sharedPreferences.getBool('mangaSortDirection');
       if (onLastRead && savedDir != null) {
         await sharedPreferences.setBool('mangaSortDirection', !savedDir);
@@ -228,6 +228,12 @@ Future<void> _startApp() async {
     // by the last exit and previously-errored ones are retried, one at a time,
     // re-fetching only pages not already on disk. Fire-and-forget; native only.
     unawaited(Future(() async {
+      try {
+        await container.read(serverInstanceIdProvider.future);
+      } catch (_) {
+        return;
+      }
+      if (!container.read(offlineActiveProvider)) return;
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
       // One-time sweep of phantom (browsed-not-added) catalog entries.

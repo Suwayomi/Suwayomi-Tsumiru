@@ -2586,5 +2586,12 @@
     "zoomStartAutomatic": "Automatic",
     "zoomStartCenter": "Center",
     "zoomStartLeft": "Left",
-    "zoomStartRight": "Right"
+    "zoomStartRight": "Right",
+    "offlineServerMismatch": "Your offline downloads are from a different server.",
+    "offlineServerMismatchDisabled": "Offline is off here. Clear the other server's downloads to use it.",
+    "offlineServerMismatchClear": "Clear old downloads",
+    "offlineServerMismatchDismiss": "Dismiss",
+    "offlineServerMismatchConfirmTitle": "Clear offline data?",
+    "offlineServerMismatchConfirmBody": "This removes all on-device manga and queued downloads from the previous server.",
+    "offlineServerMismatchClearAction": "Clear offline data"
 }

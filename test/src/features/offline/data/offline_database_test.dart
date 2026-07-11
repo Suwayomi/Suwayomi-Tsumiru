@@ -32,7 +32,8 @@ void main() {
     expect(rows.single.title, 'Solo Leveling');
   });
 
-  test('chapter deviceState defaults to none and round-trips an enum', () async {
+  test('chapter deviceState defaults to none and round-trips an enum',
+      () async {
     await db.into(db.offlineChapters).insert(
           OfflineChaptersCompanion.insert(
             id: const Value(2000),
@@ -68,5 +69,53 @@ void main() {
           ..where((t) => t.chapterId.equals(2000)))
         .get();
     expect(rows.single.relativePath, '552/2000/000.jpg');
+  });
+
+  test('clearAll removes the complete offline catalog', () async {
+    await db.into(db.offlineMangas).insert(
+          OfflineMangasCompanion.insert(
+            id: const Value(117),
+            title: 'Solo Leveling',
+            updatedAt: DateTime.utc(2026),
+          ),
+        );
+    await db.into(db.offlineChapters).insert(
+          OfflineChaptersCompanion.insert(
+            id: const Value(2000),
+            mangaId: 117,
+            name: 'Chapter 79',
+            chapterIndex: 79,
+            updatedAt: DateTime.utc(2026),
+          ),
+        );
+    await db.into(db.offlineCategories).insert(
+          const OfflineCategoriesCompanion(
+            id: Value(1),
+            name: Value('Reading'),
+            sortOrder: Value(0),
+          ),
+        );
+    await db.into(db.offlineMangaCategories).insert(
+          const OfflineMangaCategoriesCompanion(
+            mangaId: Value(117),
+            categoryId: Value(1),
+          ),
+        );
+    await db.into(db.offlinePages).insert(
+          OfflinePagesCompanion.insert(
+            chapterId: 2000,
+            pageIndex: 0,
+            relativePath: '117/2000/000.jpg',
+          ),
+        );
+
+    expect(await db.hasCatalogData(), isTrue);
+    await db.clearAll();
+
+    expect(await db.hasCatalogData(), isFalse);
+    expect(await db.select(db.offlineChapters).get(), isEmpty);
+    expect(await db.select(db.offlineCategories).get(), isEmpty);
+    expect(await db.select(db.offlineMangaCategories).get(), isEmpty);
+    expect(await db.select(db.offlinePages).get(), isEmpty);
   });
 }

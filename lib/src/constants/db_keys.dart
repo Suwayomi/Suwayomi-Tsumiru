@@ -112,6 +112,10 @@ enum DBKeys {
   // pause shouldn't silently resume on restart); read synchronously by the
   // download starters to gate every restart path.
   offlineDownloadsPaused(false),
+  offlineCatalogServerId(null),
+  offlineLastServerId(null),
+  offlineLastServerAddress(null),
+  offlineServerMismatchDismissedList(null),
   // ON-DEVICE delete-on-read settings (frees device space; the server copy is
   // untouched). Independent of the server's "Delete chapters" settings.
   // whileReading: 0 = off, 1 = the just-read chapter, 2..5 = the Nth behind it.

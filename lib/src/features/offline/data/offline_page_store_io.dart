@@ -6,6 +6,8 @@
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
 
@@ -39,7 +41,8 @@ class IoOfflinePageStore implements OfflinePageStore {
 
   @override
   Future<void> deleteChapter(int mangaId, int chapterId) async {
-    final dir = Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
+    final dir =
+        Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
     if (await dir.exists()) {
       await dir.delete(recursive: true);
     }
@@ -47,12 +50,26 @@ class IoOfflinePageStore implements OfflinePageStore {
 
   @override
   Future<int> chapterBytes(int mangaId, int chapterId) async {
-    final dir = Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
+    final dir =
+        Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
     if (!await dir.exists()) return 0;
     var total = 0;
     await for (final e in dir.list()) {
       if (e is File) total += await e.length();
     }
     return total;
+  }
+
+  @override
+  Future<void> clearAll() async {
+    final dir = Directory(paths.baseDir);
+    if (!await dir.exists()) return;
+    await for (final entity in dir.list()) {
+      final name = p.basename(entity.path);
+      if (entity is Directory &&
+          (name == 'covers' || int.tryParse(name) != null)) {
+        await entity.delete(recursive: true);
+      }
+    }
   }
 }

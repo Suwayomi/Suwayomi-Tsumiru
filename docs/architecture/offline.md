@@ -47,6 +47,14 @@ Four layers, all driven through one entry point — **`downloadStarterProvider`*
 
 `offline_sync.dart` — `OfflineSync` mirrors GraphQL DTOs into the catalog during normal online use, preserving locally-dirty read progress over incoming server values (an offline read is never overwritten by a stale down-sync). `offline_read_fallback.dart` — five wrappers (`libraryWithOfflineFallback`, `mangaWithOfflineFallback`, `chaptersWithOfflineFallback`, `chapterMetaWithOfflineFallback`, `categoriesWithOfflineFallback`): on a network error, if offline is enabled and the catalog has data, they return mapped local rows (categories synthesise a single "Default" so the Library tab still renders). The reader serves pages via `OfflineRepository.localChapterPages(chapterId)` when `deviceState == downloaded`.
 
+## Server-switch guard
+
+The catalog belongs to one server identity at a time. On first connection, Tsumiru creates a UUID in Suwayomi's server-wide global metadata under `tsumiru_server_instance_id`; later connections read that value through `serverInstanceIdProvider`. `offlineCatalogServerId` stores the UUID after a successful metadata sync. The configured scheme, host, and port are only a route: changing them does not change server identity.
+
+The last verified address-to-UUID pair is cached locally so a cold start without network access can still open an already-verified catalog. A new address must connect and return the server UUID before offline writes or download workers start. `offlineActiveProvider` disables metadata sync, progress writes, reconciliation, and both download workers until identity is verified and matches. A legacy unstamped catalog remains readable offline but is not modified until verification succeeds.
+
+A mismatch with catalog data shows a persistent warning in Library and Offline settings. Dismiss parks the old catalog without exposing or modifying it. Clear stops the foreground worker and main-isolate pump, removes their queued work, wipes every catalog table plus page/cover files, and resets the identity. An empty catalog adopts the active identity without prompting.
+
 ## UI entry points
 
 - **Chapter list** — `presentation/offline_save_button.dart` (`OfflineSaveButton`): per-chapter save / delete with a state-machine icon (queued / downloading / downloaded / error / save).

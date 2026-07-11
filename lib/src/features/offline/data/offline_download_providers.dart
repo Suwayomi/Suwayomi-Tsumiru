@@ -54,6 +54,7 @@ bool get _useBgService => isAndroidNative;
 /// ever again silently rely on the Android-disabled pump.
 final downloadStarterProvider = Provider<Future<void> Function()>((ref) {
   return () async {
+    if (!ref.read(offlineActiveProvider)) return;
     if (isAndroidNative) {
       await ref
           .read(backgroundDownloadControllerProvider)
@@ -88,12 +89,69 @@ Future<void> setOfflineDownloadsPaused(WidgetRef ref, bool paused) async {
   }
 }
 
+Future<void> clearOfflineCatalog(WidgetRef ref) async {
+  if (!ref.read(offlineEnabledProvider)) return;
+
+  final background = ref.read(backgroundDownloadControllerProvider);
+  await clearOfflineCatalogWithDependencies(
+    stopBackground: background.stopAndClearWorkOrder,
+    stopMainPump: () async {
+      final coordinator = ref.read(offlineDownloadCoordinatorProvider);
+      coordinator?.pause();
+      // Wait for the in-flight chapter to observe the cancel and unwind, so no
+      // page write lands after the wipe below.
+      await coordinator?.awaitIdle();
+    },
+    clearDatabase: ref.read(offlineDatabaseProvider).clearAll,
+    // Best-effort: a file-delete failure (a locked file, permissions) must not
+    // abort the clear before the identity stamp is reset — the DB is already
+    // wiped, and leftover bytes are only dead weight, not stale content.
+    clearFiles: () async {
+      try {
+        await ref.read(offlinePageStoreProvider).clearAll();
+      } catch (e) {
+        logger.e('Offline: clearing downloaded files failed: $e');
+      }
+    },
+    clearIdentity: () async {
+      final preferences = ref.read(sharedPreferencesProvider);
+      await preferences.remove(DBKeys.offlineCatalogServerId.name);
+      await preferences.remove(DBKeys.offlineServerMismatchDismissedList.name);
+    },
+    finish: background.finishCatalogClear,
+  );
+  ref.invalidate(offlineActiveProvider);
+  ref.invalidate(offlineReadDatabaseProvider);
+}
+
+Future<void> clearOfflineCatalogWithDependencies({
+  required Future<void> Function() stopBackground,
+  required Future<void> Function() stopMainPump,
+  required Future<void> Function() clearDatabase,
+  required Future<void> Function() clearFiles,
+  required Future<void> Function() clearIdentity,
+  required void Function() finish,
+}) async {
+  // stopBackground sets the restart-suppression flag; keep it INSIDE the try so
+  // finish() always clears it even if teardown throws — otherwise a leaked flag
+  // would silently drop every background-worker event for the rest of the session.
+  try {
+    await stopBackground();
+    await stopMainPump();
+    await clearDatabase();
+    await clearFiles();
+    await clearIdentity();
+  } finally {
+    finish();
+  }
+}
+
 /// True while any chapter is queued or downloading on this device — drives the
 /// On-device Pause/Resume control and the global paused badge. False when
 /// offline is unavailable.
 @riverpod
 Stream<bool> offlineHasPending(Ref ref) {
-  if (!ref.watch(offlineEnabledProvider)) return Stream.value(false);
+  if (!ref.watch(offlineActiveProvider)) return Stream.value(false);
   return ref.watch(offlineDatabaseProvider).watchOfflineChapters().map(
         (chapters) => chapters.any((c) =>
             c.deviceState == OfflineDeviceState.queued ||
@@ -105,7 +163,7 @@ Stream<bool> offlineHasPending(Ref ref) {
 /// downloaded / error). Always `none` when offline is unavailable.
 @riverpod
 Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
-  if (!ref.watch(offlineEnabledProvider)) {
+  if (!ref.watch(offlineActiveProvider)) {
     return Stream.value(OfflineDeviceState.none);
   }
   return ref.watch(offlineRepositoryProvider).watchChapterState(chapterId);
@@ -116,7 +174,7 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
 /// determinate progress arc on a downloading chapter.
 @riverpod
 Stream<double?> offlineChapterProgress(Ref ref, int chapterId) {
-  if (!ref.watch(offlineEnabledProvider)) {
+  if (!ref.watch(offlineActiveProvider)) {
     return Stream.value(null);
   }
   final repo = ref.watch(offlineRepositoryProvider);
@@ -181,7 +239,7 @@ Future<void> recordReadingProgress(
   required int lastPageRead,
   required bool isRead,
 }) async {
-  final offline = ref.read(offlineEnabledProvider);
+  final offline = ref.read(offlineActiveProvider);
   await recordReadingProgressWithDependencies(
     offlineEnabled: offline,
     offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
@@ -229,7 +287,7 @@ Future<void> recordBookmark(
   required int chapterId,
   required bool isBookmarked,
 }) async {
-  final offline = ref.read(offlineEnabledProvider);
+  final offline = ref.read(offlineActiveProvider);
   if (offline) {
     await ref
         .read(offlineDatabaseProvider)
@@ -292,7 +350,7 @@ Future<void> maybeDeleteOnReadLocal(
   required int mangaId,
   required int readChapterId,
 }) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final s = ref.read(localDeleteSettingsProvider);
   if (s.deleteWhileReading <= 0) return;
   final targetId =
@@ -306,7 +364,7 @@ Future<void> maybeDeleteOnManualLocal(
   WidgetRef ref, {
   required int chapterId,
 }) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final s = ref.read(localDeleteSettingsProvider);
   if (!s.deleteManuallyMarkedRead) return;
   await _deleteDeviceCopyIfDeletable(ref, chapterId, s.deleteWithBookmark);
@@ -386,7 +444,7 @@ Future<void> _deleteServerCopyIfDeletable(
     final c = chapters[idx];
     if (!c.isDownloaded) return;
     var isBookmarked = c.isBookmarked;
-    if (ref.read(offlineEnabledProvider)) {
+    if (ref.read(offlineActiveProvider)) {
       final row =
           await ref.read(offlineRepositoryProvider).chapterById(chapterId);
       if (row?.isBookmarked ?? false) isBookmarked = true;
@@ -408,7 +466,7 @@ Future<void> _deleteServerCopyIfDeletable(
 /// for any chapter that was marked read — so trackers stay in sync even when
 /// progress was recorded while the device was offline.
 Future<void> pushPendingProgress(ProviderContainer container) async {
-  if (!container.read(offlineEnabledProvider)) return;
+  if (!container.read(offlineActiveProvider)) return;
   final db = container.read(offlineDatabaseProvider);
   final repo = container.read(mangaBookRepositoryProvider);
 
@@ -516,7 +574,7 @@ Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
 /// left alone — it isn't tied to library membership (see #34, #36).
 Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
   await ref.read(mangaBookRepositoryProvider).removeMangaFromLibrary(mangaId);
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
   // Purge every chapter that has any on-device footprint — not just the fully
@@ -536,7 +594,7 @@ Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
 /// can `ref.read(offlineDownloadManagerProvider)?.downloadChapter(c)`.
 @riverpod
 OfflineDownloadManager? offlineDownloadManager(Ref ref) {
-  if (!ref.watch(offlineEnabledProvider)) return null;
+  if (!ref.watch(offlineActiveProvider)) return null;
   final repo = ref.watch(mangaBookRepositoryProvider);
   return OfflineDownloadManager(
     db: ref.watch(offlineDatabaseProvider),
@@ -597,7 +655,7 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
 /// unavailable so the filter is a no-op.
 @riverpod
 Future<Set<int>> offlineDeviceMangaIds(Ref ref) async {
-  if (!ref.watch(offlineEnabledProvider)) return const {};
+  if (!ref.watch(offlineActiveProvider)) return const {};
   return ref.watch(offlineRepositoryProvider).deviceDownloadedMangaIds();
 }
 
@@ -605,7 +663,7 @@ Future<Set<int>> offlineDeviceMangaIds(Ref ref) async {
 /// to show a checkmark on the active rule.
 @riverpod
 Future<OfflineKeepRule> mangaKeepRule(Ref ref, int mangaId) async {
-  if (!ref.watch(offlineEnabledProvider)) return OfflineKeepRule.off;
+  if (!ref.watch(offlineActiveProvider)) return OfflineKeepRule.off;
   return ref.watch(offlineRepositoryProvider).keepRuleFor(mangaId);
 }
 
@@ -614,7 +672,7 @@ Future<OfflineKeepRule> mangaKeepRule(Ref ref, int mangaId) async {
 @riverpod
 Future<({OfflineKeepRule rule, int count})> mangaKeepConfig(
     Ref ref, int mangaId) async {
-  if (!ref.watch(offlineEnabledProvider)) {
+  if (!ref.watch(offlineActiveProvider)) {
     return (rule: OfflineKeepRule.off, count: 5);
   }
   return ref.watch(offlineRepositoryProvider).keepConfigFor(mangaId);
@@ -624,7 +682,7 @@ Future<({OfflineKeepRule rule, int count})> mangaKeepConfig(
 /// series Download/On-device button label.
 @riverpod
 Future<int> mangaDownloadedCount(Ref ref, int mangaId) async {
-  if (!ref.watch(offlineEnabledProvider)) return 0;
+  if (!ref.watch(offlineActiveProvider)) return 0;
   return (await ref
           .watch(offlineDatabaseProvider)
           .downloadedChaptersForManga(mangaId))
@@ -636,7 +694,7 @@ Future<int> mangaDownloadedCount(Ref ref, int mangaId) async {
 @riverpod
 Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
     Ref ref, int mangaId) {
-  if (!ref.watch(offlineEnabledProvider)) {
+  if (!ref.watch(offlineActiveProvider)) {
     return Stream.value((downloaded: 0, inFlight: 0));
   }
   return ref
@@ -665,7 +723,7 @@ Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
 @riverpod
 Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
     offlineSeries(Ref ref) {
-  if (!ref.watch(offlineEnabledProvider)) return Stream.value(const []);
+  if (!ref.watch(offlineActiveProvider)) return Stream.value(const []);
   return ref.watch(offlineDatabaseProvider).watchOfflineSeries().map((rows) {
     final sorted = [...rows];
     sorted.sort((a, b) {
@@ -690,7 +748,7 @@ Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
 /// 3. Clear the rule (count is dormant while off; preserve it).
 /// 4. Reconcile — now eviction-safe: desired set = pinned = all downloaded.
 Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   for (final c in await db.chaptersForManga(mangaId)) {
     if (c.deviceState == OfflineDeviceState.queued ||
@@ -719,7 +777,7 @@ Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
 /// Stop keeping [mangaId] offline AND delete every on-device chapter (the
 /// server copy is untouched). Mirrors the per-series "remove" action.
 Future<void> removeKeepRuleAndDelete(WidgetRef ref, int mangaId) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   final cfg = await ref.read(offlineRepositoryProvider).keepConfigFor(mangaId);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, cfg.count);
@@ -733,7 +791,7 @@ Future<void> removeKeepRuleAndDelete(WidgetRef ref, int mangaId) async {
 /// Change the keep-rule for [mangaId] and reconcile (download/evict to match).
 Future<void> changeKeepRule(
     WidgetRef ref, int mangaId, OfflineKeepRule rule, int count) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   await ref.read(offlineDatabaseProvider).setKeepRule(mangaId, rule, count);
   await reconcileMangaWidget(ref, mangaId);
 }
@@ -741,7 +799,7 @@ Future<void> changeKeepRule(
 /// Total bytes of on-device offline content — for the storage settings UI.
 @riverpod
 Future<int> offlineUsageBytes(Ref ref) async {
-  if (!ref.watch(offlineEnabledProvider)) return 0;
+  if (!ref.watch(offlineActiveProvider)) return 0;
   return ref.read(offlineRepositoryProvider).totalDownloadedBytes();
 }
 
@@ -804,7 +862,7 @@ Future<void> reconcileMangaCore({
 
 /// Controller / in-app entry point (generated Ref).
 Future<void> reconcileManga(Ref ref, int mangaId) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final manager = ref.read(offlineDownloadManagerProvider);
   final coordinator = ref.read(offlineDownloadCoordinatorProvider);
   if (manager == null || coordinator == null) return;
@@ -825,7 +883,7 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
 
 /// Widget entry point — same as [reconcileManga] but accepts a [WidgetRef].
 Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
-  if (!ref.read(offlineEnabledProvider)) return;
+  if (!ref.read(offlineActiveProvider)) return;
   final manager = ref.read(offlineDownloadManagerProvider);
   final coordinator = ref.read(offlineDownloadCoordinatorProvider);
   if (manager == null || coordinator == null) return;
@@ -847,7 +905,7 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
 
 /// Launch entry point (main.dart holds a ProviderContainer, not a Ref).
 Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
-  if (!container.read(offlineEnabledProvider)) return;
+  if (!container.read(offlineActiveProvider)) return;
   final manager = container.read(offlineDownloadManagerProvider);
   final coordinator = container.read(offlineDownloadCoordinatorProvider);
   if (manager == null || coordinator == null) return;

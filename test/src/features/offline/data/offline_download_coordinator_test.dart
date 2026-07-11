@@ -16,10 +16,13 @@ import '../../../../helpers/offline_test_db.dart';
 class _FakeStore implements OfflinePageStore {
   final pages = <String, int>{}; // '$chapter/$page' -> bytes
   @override
-  Future<({String relPath, int bytes})> writePage(
-      int mangaId, int chapterId, int pageIndex, List<int> bytes, String ext) async {
+  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
+      int pageIndex, List<int> bytes, String ext) async {
     pages['$chapterId/$pageIndex'] = bytes.length;
-    return (relPath: '$mangaId/$chapterId/$pageIndex.$ext', bytes: bytes.length);
+    return (
+      relPath: '$mangaId/$chapterId/$pageIndex.$ext',
+      bytes: bytes.length
+    );
   }
 
   @override
@@ -32,6 +35,9 @@ class _FakeStore implements OfflinePageStore {
     }
     return total;
   }
+
+  @override
+  Future<void> clearAll() async {}
 }
 
 void main() {
@@ -45,9 +51,15 @@ void main() {
 
   Future<void> seedChapter(int id, int mangaId, int pageCount) =>
       db.upsertChapterMetadata(
-          id: id, mangaId: mangaId, name: 'c$id', chapterIndex: 1,
-          isRead: false, lastPageRead: 0, isBookmarked: false,
-          serverIsDownloaded: true, pageCount: pageCount,
+          id: id,
+          mangaId: mangaId,
+          name: 'c$id',
+          chapterIndex: 1,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: pageCount,
           updatedAt: DateTime(2026));
 
   /// Build a coordinator whose engine fetches with the given behaviour.
@@ -78,7 +90,8 @@ void main() {
     );
   }
 
-  test('downloads every page, stores rows, marks downloaded with bytes', () async {
+  test('downloads every page, stores rows, marks downloaded with bytes',
+      () async {
     await seedChapter(1, 7, 3);
     await coord().enqueueChapter((await db.chapterById(1))!);
     final c = await db.chapterById(1);
@@ -98,7 +111,8 @@ void main() {
     await db.into(db.offlinePages).insert(OfflinePagesCompanion.insert(
         chapterId: 1, pageIndex: 0, relativePath: '7/1/0.jpg'));
     await coord().enqueueChapter((await db.chapterById(1))!);
-    expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
+    expect(
+        (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
     expect(store.pages.keys.toSet(), {'1/1', '1/2'}); // only the 2 missing
   });
 
@@ -129,15 +143,18 @@ void main() {
     await c.queueChapter(1);
     await c.queueChapter(2);
     await c.pumpDownloads();
-    expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
-    expect((await db.chapterById(2))!.deviceState, OfflineDeviceState.downloaded);
+    expect(
+        (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
+    expect(
+        (await db.chapterById(2))!.deviceState, OfflineDeviceState.downloaded);
   });
 
   test('pump resumes a chapter stranded as downloading', () async {
     await seedChapter(1, 7, 2);
     await db.setChapterDeviceState(1, OfflineDeviceState.downloading);
     await coord(pages: const ['/p/0', '/p/1']).pumpDownloads();
-    expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
+    expect(
+        (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
   });
 
   test('paused pump does not download queued chapters', () async {
@@ -158,8 +175,8 @@ void main() {
     c.pause();
     await c.enqueueChapter((await db.chapterById(1))!);
     // Left as-is (resumable), nothing written.
-    expect((await db.chapterById(1))!.deviceState,
-        OfflineDeviceState.downloading);
+    expect(
+        (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloading);
     expect(store.pages, isEmpty);
   });
 
@@ -179,7 +196,8 @@ void main() {
       () async {
     await seedChapter(1, 7, 2);
     var paused = true; // simulates the saved flag after a restart
-    final c = coord(pages: const ['/p/0', '/p/1'], persistedPaused: () => paused);
+    final c =
+        coord(pages: const ['/p/0', '/p/1'], persistedPaused: () => paused);
     await c.queueChapter(1);
     await c.pumpDownloads();
     expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.queued);

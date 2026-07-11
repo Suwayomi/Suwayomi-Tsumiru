@@ -35,6 +35,8 @@ class _FakeStore implements OfflinePageStore {
   Future<void> deleteChapter(int m, int c) async {}
   @override
   Future<int> chapterBytes(int m, int c) async => 0;
+  @override
+  Future<void> clearAll() async {}
 }
 
 void main() {
@@ -77,6 +79,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           offlineEnabledProvider.overrideWithValue(true),
+          offlineActiveProvider.overrideWithValue(true),
           offlineDatabaseProvider.overrideWithValue(db),
           offlinePathsProvider.overrideWithValue(const OfflinePaths('/tmp/x')),
           offlinePageStoreProvider.overrideWithValue(store),
@@ -105,12 +108,18 @@ void main() {
 
   testWidgets('saveChapterToDevice (single chapter) starts downloads',
       (tester) async {
-    await db.upsertMangaMetadata(
-        id: 7, title: 'M', updatedAt: DateTime(2026));
+    await db.upsertMangaMetadata(id: 7, title: 'M', updatedAt: DateTime(2026));
     await db.upsertChapterMetadata(
-        id: 1, mangaId: 7, name: 'c1', chapterIndex: 1, isRead: false,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026));
+        id: 1,
+        mangaId: 7,
+        name: 'c1',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026));
     final h = await harness(tester);
     await saveChapterToDevice(h.ref, 1);
     expect(h.starts(), 1,

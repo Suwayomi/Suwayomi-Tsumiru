@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import 'inline_auth_section.dart';
@@ -60,6 +61,10 @@ class ConnectionScreen extends HookConsumerWidget {
         ),
         child: ListView(
           children: [
+            // Surfaced here (where the server is changed) and kept visible even
+            // after dismissal, so it doubles as the "clear to re-enable offline"
+            // recovery affordance for this server.
+            const OfflineServerMismatchBanner(showAfterDismissal: true),
             SectionTitle(title: context.l10n.serverAddress),
             const ServerUrlTile(),
             const InlineAuthSection(),

@@ -40,6 +40,7 @@ Future<ProviderContainer> _container(
     sharedPreferencesProvider.overrideWithValue(prefs),
     offlineDatabaseProvider.overrideWithValue(db),
     offlineEnabledProvider.overrideWithValue(true),
+    offlineActiveProvider.overrideWithValue(true),
     ...extra,
   ]);
   addTearDown(c.dispose);
@@ -63,9 +64,12 @@ void main() {
   group('categoriesWithOfflineFallback', () {
     Future<Never> boom() async => throw const SocketException('offline');
 
-    test('returns a single default category (count) when fetch throws', () async {
-      await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
-      await db.upsertMangaMetadata(id: 2, title: 'B', updatedAt: DateTime(2026));
+    test('returns a single default category (count) when fetch throws',
+        () async {
+      await db.upsertMangaMetadata(
+          id: 1, title: 'A', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+          id: 2, title: 'B', updatedAt: DateTime(2026));
       final cats = await categoriesWithOfflineFallback(
           fetch: boom, db: db, offlineEnabled: true);
       expect(cats!.length, 1);
@@ -73,13 +77,18 @@ void main() {
     });
 
     test('rethrows when the catalog is empty', () async {
-      expect(categoriesWithOfflineFallback(fetch: boom, db: db, offlineEnabled: true),
+      expect(
+          categoriesWithOfflineFallback(
+              fetch: boom, db: db, offlineEnabled: true),
           throwsException);
     });
 
     test('rethrows when offline disabled', () async {
-      await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
-      expect(categoriesWithOfflineFallback(fetch: boom, db: db, offlineEnabled: false),
+      await db.upsertMangaMetadata(
+          id: 1, title: 'A', updatedAt: DateTime(2026));
+      expect(
+          categoriesWithOfflineFallback(
+              fetch: boom, db: db, offlineEnabled: false),
           throwsException);
     });
   });
@@ -89,9 +98,16 @@ void main() {
 
     test('falls back to the catalog chapter row on throw', () async {
       await db.upsertChapterMetadata(
-          id: 99, mangaId: 1, name: 'Ch99', chapterIndex: 5, isRead: false,
-          lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-          pageCount: 10, updatedAt: DateTime(2026));
+          id: 99,
+          mangaId: 1,
+          name: 'Ch99',
+          chapterIndex: 5,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 10,
+          updatedAt: DateTime(2026));
       final ch = await chapterMetaWithOfflineFallback(
           fetch: boom, db: db, offlineEnabled: true, chapterId: 99);
       expect(ch!.id, 99);
@@ -111,8 +127,10 @@ void main() {
   group('real gating providers offline', () {
     test('CategoryController returns a default category when the server fails',
         () async {
-      await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
-      await db.upsertMangaMetadata(id: 2, title: 'B', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+          id: 1, title: 'A', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+          id: 2, title: 'B', updatedAt: DateTime(2026));
       final c = await _container(db, [
         categoryRepositoryProvider.overrideWithValue(_ThrowingCategoryRepo()),
       ]);
@@ -121,11 +139,19 @@ void main() {
       expect(cats.single.mangas.totalCount, 2);
     });
 
-    test('reader chapter provider serves a downloaded chapter offline', () async {
+    test('reader chapter provider serves a downloaded chapter offline',
+        () async {
       await db.upsertChapterMetadata(
-          id: 99, mangaId: 1, name: 'Ch99', chapterIndex: 5, isRead: false,
-          lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-          pageCount: 10, updatedAt: DateTime(2026));
+          id: 99,
+          mangaId: 1,
+          name: 'Ch99',
+          chapterIndex: 5,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 10,
+          updatedAt: DateTime(2026));
       final c = await _container(db, [
         mangaBookRepositoryProvider.overrideWithValue(_ThrowingMangaBookRepo()),
       ]);
@@ -134,16 +160,32 @@ void main() {
       expect(ch.name, 'Ch99');
     });
 
-    test('mangaDownloadedCount counts only device-downloaded chapters', () async {
+    test('mangaDownloadedCount counts only device-downloaded chapters',
+        () async {
       await db.upsertChapterMetadata(
-          id: 1, mangaId: 7, name: 'a', chapterIndex: 1, isRead: false,
-          lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-          pageCount: 1, updatedAt: DateTime(2026));
+          id: 1,
+          mangaId: 7,
+          name: 'a',
+          chapterIndex: 1,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 1,
+          updatedAt: DateTime(2026));
       await db.upsertChapterMetadata(
-          id: 2, mangaId: 7, name: 'b', chapterIndex: 2, isRead: false,
-          lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-          pageCount: 1, updatedAt: DateTime(2026));
-      await db.setChapterDeviceState(1, OfflineDeviceState.downloaded, bytes: 5);
+          id: 2,
+          mangaId: 7,
+          name: 'b',
+          chapterIndex: 2,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 1,
+          updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(1, OfflineDeviceState.downloaded,
+          bytes: 5);
       final c = await _container(db, const []);
       expect(await c.read(mangaDownloadedCountProvider(7).future), 1);
     });

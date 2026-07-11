@@ -14,6 +14,7 @@ import '../../../widgets/section_title.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 import '../data/offline_settings_providers.dart';
+import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
 
 /// The on-device (offline) download + storage settings, as a flat list of tiles
@@ -29,6 +30,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ];
   }
   return [
+    const OfflineServerMismatchBanner(showAfterDismissal: true),
     SectionTitle(title: context.l10n.offlineStorageSection),
     ListTile(
       title: Text(context.l10n.offlineStorageUsage),
