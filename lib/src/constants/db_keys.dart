@@ -67,6 +67,7 @@ enum DBKeys {
   chapterSortDirection(false), // asc=true, dsc=false
   libraryDisplayMode(DisplayMode.grid),
   sourceDisplayMode(DisplayMode.grid),
+  globalSearchSourceFilter(GlobalSearchSourceFilter.pinned),
   gridMangaCoverWidth(192.0),
   readerOverlay(true),
   // Show the continuous-reader feedback snackbars ("loading next chapter",
