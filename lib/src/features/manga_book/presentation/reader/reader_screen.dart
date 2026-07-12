@@ -68,27 +68,31 @@ class ReaderScreen extends HookConsumerWidget {
         offlineEnabled ? ref.watch(offlineDatabaseProvider) : null;
     final mangaBookRepository = ref.watch(mangaBookRepositoryProvider);
 
-    // Auto Webtoon: long-strip series read webtoon THIS session when
-    // their per-series mode is Default; never written to meta.
+    // Auto reading mode: a Default-mode series opens in the reader its type
+    // implies (webtoon scroll for manhwa/webtoon, right-to-left paged for
+    // manga) THIS session; never written to meta. Null when auto-detect is off,
+    // the series has an explicit per-series mode, or the type carries no
+    // opinion — in which case the per-series/global default takes over below.
     final mangaData = manga.valueOrNull;
-    final autoWebtoon = ref.watch(autoWebtoonModeProvider).ifNull(true) &&
-        mangaData != null &&
-        (mangaData.metaData.readerMode ?? ReaderMode.defaultReader) ==
-            ReaderMode.defaultReader &&
-        detectsWebtoon(
-          genres: mangaData.genre,
-          sourceName: mangaData.source?.name,
-        );
+    final autoReaderMode = (ref.watch(autoWebtoonModeProvider).ifNull(true) &&
+            mangaData != null &&
+            (mangaData.metaData.readerMode ?? ReaderMode.defaultReader) ==
+                ReaderMode.defaultReader)
+        ? autoReaderModeFor(
+            genres: mangaData.genre,
+            sourceName: mangaData.source?.name,
+          )
+        : null;
     final toast = ref.watch(toastProvider);
     // Resolve the l10n string in build (safe); the effect runs during hook-init
     // where an inherited-widget lookup (context.l10n) throws _debugIsInitHook.
     final autoWebtoonSnack = context.l10n.autoWebtoonSnack;
     useEffect(() {
-      if (autoWebtoon) {
+      if (autoReaderMode == ReaderMode.webtoon) {
         toast?.show(autoWebtoonSnack, withMicrotask: true);
       }
       return null;
-    }, [autoWebtoon]);
+    }, [autoReaderMode]);
 
     final debounce = useRef<Timer?>(null);
     // Latest page reached, so we can flush it on exit (the debounce below would
@@ -335,9 +339,9 @@ class ReaderScreen extends HookConsumerWidget {
                       if (chapterPagesData == null) {
                         return const SizedBox.shrink();
                       }
-                      return switch (autoWebtoon
-                          ? ReaderMode.webtoon
-                          : data.metaData.readerMode ?? defaultReaderMode) {
+                      return switch (autoReaderMode ??
+                          data.metaData.readerMode ??
+                          defaultReaderMode) {
                         ReaderMode.singleVertical => MultiChapterPagedReaderMode(
                             chapter: chapterData,
                             manga: data,

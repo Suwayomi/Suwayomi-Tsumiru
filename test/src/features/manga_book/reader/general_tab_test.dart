@@ -99,7 +99,7 @@ void main() {
     await pumpTab(tester);
 
     await tester.scrollUntilVisible(
-      find.text('Auto Webtoon Mode'),
+      find.text('Auto reading mode'),
       200,
       scrollable: tabScrollable(),
     );
@@ -118,7 +118,7 @@ void main() {
       dy('Always show chapter transition'),
       lessThan(dy('Flash on page change')),
     );
-    expect(dy('Flash on page change'), lessThan(dy('Auto Webtoon Mode')));
+    expect(dy('Flash on page change'), lessThan(dy('Auto reading mode')));
   });
 
   testWidgets('background chips render Black/Gray/White/Auto and write the '
