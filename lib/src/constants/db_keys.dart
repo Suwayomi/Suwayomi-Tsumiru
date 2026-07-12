@@ -80,6 +80,8 @@ enum DBKeys {
   // Ambient "Updating library (NN%)" strip shown app-root while a global/
   // category update is running. On by default, matching Komikku's pref.
   showUpdateProgressBanner(true),
+  // Desktop sidebar expanded (labels beside icons) vs collapsed to an icon rail.
+  sidebarExpanded(true),
   // When false (default), opening an entry shows the chapters the
   // server already has, without re-scraping the source. When true, also refresh
   // from the source on open.

@@ -12,6 +12,7 @@ import '../../constants/navigation_bar_data.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import 'sidebar_expanded.dart';
 
 class BigScreenNavigationBar extends ConsumerWidget {
   const BigScreenNavigationBar(
@@ -47,36 +48,63 @@ class BigScreenNavigationBar extends ConsumerWidget {
     // the bottom). Real tablets keep the header.
     final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
 
+    final expanded = ref.watch(sidebarExpandedProvider).ifNull(true);
+    // Collapse only applies to the desktop (extended) rail; the tablet rail is
+    // already an icon rail.
+    final showExtended = context.isDesktop && expanded;
+    void toggleSidebar() =>
+        ref.read(sidebarExpandedProvider.notifier).update(!expanded);
+
+    final logoIcon = ImageIcon(AssetImage(Assets.icons.darkIcon.path), size: 48);
+
     final Widget leadingIcon;
-    if (context.isDesktop) {
+    if (showExtended) {
       leadingIcon = SizedBox(
         width: _extendedWidth,
         child: Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => const AboutRoute().go(context),
-              icon: ImageIcon(
-                AssetImage(Assets.icons.darkIcon.path),
-                size: 48,
+          padding: const EdgeInsets.only(left: 8, right: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => const AboutRoute().go(context),
+                    icon: logoIcon,
+                    label: Text(
+                      context.l10n.appTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.textTheme.bodyLarge?.color,
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
+                ),
               ),
-              label: Text(context.l10n.appTitle),
-              style: TextButton.styleFrom(
-                foregroundColor: context.textTheme.bodyLarge?.color,
-                alignment: Alignment.centerLeft,
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                tooltip: context.l10n.collapseSidebar,
+                onPressed: toggleSidebar,
               ),
-            ),
+            ],
           ),
         ),
       );
+    } else if (context.isDesktop) {
+      // Collapsed: the header is just the expand chevron (logo hidden to keep the
+      // rail narrow). Toggle stays at the top, so it never jumps between states.
+      leadingIcon = IconButton(
+        icon: const Icon(Icons.chevron_right),
+        tooltip: context.l10n.expandSidebar,
+        onPressed: toggleSidebar,
+      );
     } else {
+      // Tablet / landscape phone: compact logo (no collapse — already an icon rail).
       leadingIcon = IconButton(
         onPressed: () => const AboutRoute().go(context),
-        icon: ImageIcon(
-          AssetImage(Assets.icons.darkIcon.path),
-          size: 48,
-        ),
+        icon: logoIcon,
       );
     }
 
@@ -92,9 +120,11 @@ class BigScreenNavigationBar extends ConsumerWidget {
             child: NavigationRail(
               useIndicator: true,
               elevation: 5,
-      extended: context.isDesktop,
+      extended: showExtended,
       minExtendedWidth: _extendedWidth,
-      labelType: context.isDesktop
+      // Extended shows labels beside icons; otherwise keep them UNDER the icons
+      // (collapsed desktop + tablet) rather than dropping them.
+      labelType: showExtended
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
       leading: isPhone ? null : leadingIcon,
