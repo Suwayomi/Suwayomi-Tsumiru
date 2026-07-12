@@ -950,9 +950,13 @@ class ReaderView extends HookConsumerWidget {
 
     void handleLongPressCancel() {
       if (readWithLongTap) {
+        // Flag-first + canPop so this and the sheet's own dismissal can't
+        // double-pop (which trips the scope assertion) or pop the reader itself.
         if (pageActionsOpen.value &&
             context.mounted &&
-            ModalRoute.of(context)?.isCurrent == false) {
+            ModalRoute.of(context)?.isCurrent == false &&
+            Navigator.of(context).canPop()) {
+          pageActionsOpen.value = false;
           unawaited(Navigator.of(context).maybePop());
         }
         return;
