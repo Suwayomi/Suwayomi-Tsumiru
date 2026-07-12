@@ -180,7 +180,9 @@ void main() {
     expect(repo.putChapterCalls, hasLength(1));
     expect(repo.putChapterCalls.single.chapterId, 1);
     expect(repo.putChapterCalls.single.patch.lastPageRead, 1);
-    expect(repo.putChapterCalls.single.patch.isRead, isFalse);
+    // A partial read records position but sends NO read-state — reading forward
+    // must never be able to un-read a chapter another client finished.
+    expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
   testWidgets('flushes debounced progress when the reader route pops',
@@ -245,7 +247,9 @@ void main() {
     expect(repo.putChapterCalls, hasLength(1));
     expect(repo.putChapterCalls.single.chapterId, 1);
     expect(repo.putChapterCalls.single.patch.lastPageRead, 1);
-    expect(repo.putChapterCalls.single.patch.isRead, isFalse);
+    // A partial read records position but sends NO read-state — reading forward
+    // must never be able to un-read a chapter another client finished.
+    expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
   testWidgets('opening at the end does not mark an unread chapter read',

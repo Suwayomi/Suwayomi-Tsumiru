@@ -383,12 +383,13 @@ class OfflineDatabase extends _$OfflineDatabase {
   Future<void> setChapterProgress(
     int chapterId, {
     required int lastPageRead,
-    required bool isRead,
+    bool? isRead,
   }) =>
       (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
         OfflineChaptersCompanion(
           lastPageRead: Value(lastPageRead),
-          isRead: Value(isRead),
+          // null → leave read-state untouched (a partial write must not un-read).
+          isRead: isRead == null ? const Value.absent() : Value(isRead),
           progressDirty: const Value(true),
         ),
       );
@@ -408,12 +409,14 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// clean and lost (the snapshot-then-clear race). A non-matching row keeps its
   /// flag and re-syncs on the next pass.
   Future<void> clearProgressDirtyIfUnchanged(int chapterId,
-          {required int lastPageRead, required bool isRead}) =>
+          {required int lastPageRead, bool? isRead}) =>
       (update(offlineChapters)
-            ..where((t) =>
-                t.id.equals(chapterId) &
-                t.lastPageRead.equals(lastPageRead) &
-                t.isRead.equals(isRead)))
+            ..where((t) {
+              final matches =
+                  t.id.equals(chapterId) & t.lastPageRead.equals(lastPageRead);
+              // isRead null → match on position alone (we never set it).
+              return isRead == null ? matches : matches & t.isRead.equals(isRead);
+            }))
           .write(const OfflineChaptersCompanion(progressDirty: Value(false)));
 
   /// Clear bookmarkDirty only if the bookmark still matches what was pushed —
