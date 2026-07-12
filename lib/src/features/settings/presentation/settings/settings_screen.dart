@@ -92,6 +92,16 @@ class _CopyCrashLogTile extends ConsumerWidget {
       title: Text(context.l10n.copyCrashLog),
       subtitle: Text(context.l10n.copyCrashLogSubtitle),
       leading: const Icon(Icons.bug_report_rounded),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline_rounded),
+        tooltip: context.l10n.clearCrashLog,
+        onPressed: () async {
+          clearCrashLog(await initCrashLog());
+          if (context.mounted) {
+            ref.read(toastProvider)?.show(context.l10n.crashLogCleared);
+          }
+        },
+      ),
       onTap: () async {
         final log = readCrashLog(await initCrashLog());
         if (!context.mounted) return;
