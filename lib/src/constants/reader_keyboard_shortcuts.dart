@@ -21,17 +21,22 @@ class ViewportScrollForwardIntent extends Intent {}
 
 class ViewportScrollBackwardIntent extends Intent {}
 
-ShortcutManager readerShortcutManager(Axis scrollDirection) => ShortcutManager(
+ShortcutManager readerShortcutManager(Axis scrollDirection,
+        {bool isRtl = false}) =>
+    ShortcutManager(
       shortcuts: {
         const SingleActivator(LogicalKeyboardKey.space): NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.space, shift: true):
             PreviousScrollIntent(),
+        // RTL manga reads right→left, so the physical left key advances.
         const SingleActivator(LogicalKeyboardKey.arrowLeft):
-            PreviousScrollIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyA): PreviousScrollIntent(),
+            isRtl ? NextScrollIntent() : PreviousScrollIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyA):
+            isRtl ? NextScrollIntent() : PreviousScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowRight):
-            NextScrollIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyD): NextScrollIntent(),
+            isRtl ? PreviousScrollIntent() : NextScrollIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyD):
+            isRtl ? PreviousScrollIntent() : NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.comma):
             PreviousChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.period): NextChapterIntent(),

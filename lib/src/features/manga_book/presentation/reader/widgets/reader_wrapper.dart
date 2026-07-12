@@ -535,7 +535,8 @@ class ReaderWrapper extends HookConsumerWidget {
           children: [
             Positioned.fill(
               child: Shortcuts.manager(
-                manager: readerShortcutManager(scrollDirection),
+                manager: readerShortcutManager(scrollDirection,
+                    isRtl: _isRTLReaderMode(resolvedReaderMode)),
                 child: Actions(
                   actions: {
                     PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(

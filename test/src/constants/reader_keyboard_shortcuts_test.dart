@@ -34,4 +34,16 @@ void main() {
     expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
         isA<NextChapterIntent>());
   });
+
+  test('RTL flips left/right: left advances, right goes back', () {
+    final m = readerShortcutManager(Axis.horizontal, isRtl: true);
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+        isA<NextScrollIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+        isA<PreviousScrollIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.keyA)],
+        isA<NextScrollIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.keyD)],
+        isA<PreviousScrollIntent>());
+  });
 }
