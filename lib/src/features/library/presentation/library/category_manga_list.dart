@@ -21,8 +21,10 @@ import '../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.d
 import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../widgets/selection_action_bar.dart';
+import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/downloads/downloads_repository.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
+import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -33,6 +35,7 @@ import '../../../offline/presentation/keep_rule_picker.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
+import 'controller/library_manga_list.dart';
 
 class CategoryMangaList extends HookConsumerWidget {
   const CategoryMangaList({super.key, required this.categoryId});
@@ -222,7 +225,20 @@ class CategoryMangaList extends HookConsumerWidget {
         };
 
         final list = RefreshIndicator(
-          onRefresh: () async => refresh(),
+          // Pull = "check this category for new chapters, and pull down the
+          // latest" (Mihon/Komikku parity). The source-check runs server-side
+          // and the progress banner reflects it, so the spinner only waits on
+          // the immediate re-read, not the whole update. The standing rule in
+          // LibraryScreen re-reads again when the update finishes.
+          onRefresh: () async {
+            ref.read(updateOptimisticProvider.notifier).arm();
+            unawaited(ref
+                .read(updatesRepositoryProvider)
+                .fetchUpdates(categoryId: categoryId)
+                .catchError((Object _) {}));
+            ref.invalidate(libraryMangaListProvider);
+            await ref.read(libraryMangaListProvider.future);
+          },
           child: grid,
         );
 

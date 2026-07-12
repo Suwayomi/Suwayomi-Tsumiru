@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -20,6 +21,8 @@ import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
 import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../../../../widgets/search_field.dart';
+import '../../../../widgets/shell/update_banner_state.dart';
+import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
@@ -49,6 +52,21 @@ class LibraryScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groupType =
         ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
+
+    // Standing rule: whenever ANY library update finishes (pull-triggered,
+    // menu-triggered, or server-scheduled), re-read the library so the new
+    // chapters it found appear without a manual refresh. Tracks the last
+    // known running state and fires on the running→idle edge, ignoring the
+    // transient null frames a socket reconnect emits.
+    final lastRunning = useRef<bool>(false);
+    ref.listen(updateRunningSocketProvider, (_, next) {
+      final running = next.valueOrNull;
+      if (running == null) return;
+      if (lastRunning.value && !running) {
+        ref.invalidate(libraryMangaListProvider);
+      }
+      lastRunning.value = running;
+    });
 
     return groupType == LibraryGroup.byDefault
         ? _DefaultLibraryScreen(categoryId: categoryId)
@@ -412,7 +430,19 @@ class _GroupedMangaList extends ConsumerWidget {
         }
         final items = data;
         return RefreshIndicator(
-          onRefresh: () async => ref.refresh(libraryMangaListProvider),
+          // Grouped views (by source/status/ungrouped) have no single category
+          // to update, so pull triggers a whole-library source-check (matches
+          // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
+          // spinner only waits on the immediate server re-read.
+          onRefresh: () async {
+            ref.read(updateOptimisticProvider.notifier).arm();
+            unawaited(ref
+                .read(updatesRepositoryProvider)
+                .fetchUpdates()
+                .catchError((Object _) {}));
+            ref.invalidate(libraryMangaListProvider);
+            await ref.read(libraryMangaListProvider.future);
+          },
           child: switch (displayMode) {
             DisplayMode.list || null => ListView.builder(
                 itemExtent: 96,
