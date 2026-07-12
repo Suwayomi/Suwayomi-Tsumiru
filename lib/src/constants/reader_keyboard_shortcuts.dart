@@ -27,21 +27,14 @@ ShortcutManager readerShortcutManager(Axis scrollDirection) => ShortcutManager(
         const SingleActivator(LogicalKeyboardKey.space, shift: true):
             PreviousScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowLeft):
-            scrollDirection == Axis.horizontal
-                ? PreviousScrollIntent()
-                : PreviousChapterIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyA):
-            scrollDirection == Axis.horizontal
-                ? PreviousScrollIntent()
-                : PreviousChapterIntent(),
+            PreviousScrollIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyA): PreviousScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowRight):
-            scrollDirection == Axis.horizontal
-                ? NextScrollIntent()
-                : NextChapterIntent(),
-        const SingleActivator(LogicalKeyboardKey.keyD):
-            scrollDirection == Axis.horizontal
-                ? NextScrollIntent()
-                : NextChapterIntent(),
+            NextScrollIntent(),
+        const SingleActivator(LogicalKeyboardKey.keyD): NextScrollIntent(),
+        const SingleActivator(LogicalKeyboardKey.comma):
+            PreviousChapterIntent(),
+        const SingleActivator(LogicalKeyboardKey.period): NextChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowUp):
             scrollDirection == Axis.vertical
                 ? ViewportScrollBackwardIntent()

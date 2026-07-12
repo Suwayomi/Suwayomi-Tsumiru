@@ -21,4 +21,17 @@ void main() {
     expect(manager.shortcuts[const SingleActivator(LogicalKeyboardKey.pageUp)],
         isA<ViewportScrollBackwardIntent>());
   });
+
+  test('vertical mode: left/right skim pages, comma/period change chapter',
+      () {
+    final m = readerShortcutManager(Axis.vertical);
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+        isA<PreviousScrollIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+        isA<NextScrollIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.comma)],
+        isA<PreviousChapterIntent>());
+    expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.period)],
+        isA<NextChapterIntent>());
+  });
 }
