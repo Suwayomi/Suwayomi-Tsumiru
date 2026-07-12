@@ -15,26 +15,28 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 ///
 /// The reader otherwise only flushes on a Flutter route-pop or widget dispose.
 /// Neither fires when a desktop window is closed straight from the reader, so
-/// the last buffered page was silently lost. `onPause` covers mobile
-/// backgrounding; `onExitRequested` covers a desktop window-close and fires
-/// while the tree is still mounted, so [flush] can safely use `ref`. On exit we
-/// await the write (bounded, so a slow server can't wedge the close) so the
-/// position reaches the server before the window goes away.
+/// the last buffered page was silently lost. `onHide` covers web tab-hide/close,
+/// desktop minimize, and mobile background (the `hidden` state precedes
+/// `paused`, so onPause would only double-fire). `onExitRequested` covers a
+/// desktop window-close; it fires while the tree is still mounted, so [flush]
+/// can safely use `ref`. Both go through [flush], which is bounded and swallows
+/// errors so a slow or failing write can neither wedge nor abort the close.
 void useFlushProgressOnAppLifecycle(Future<void> Function() flush) {
   final flushRef = useRef(flush);
   flushRef.value = flush;
   useEffect(() {
+    // A failed/slow write must not surface as an unhandled async error on
+    // background, nor abort the window close by erroring out of onExitRequested.
+    Future<void> safeFlush() async {
+      try {
+        await flushRef.value().timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
+
     final listener = AppLifecycleListener(
-      // onPause: mobile background. onHide: web tab-hide/close and desktop
-      // minimize (web never reaches `paused` on a tab-hide, so onPause alone
-      // would miss it).
-      onPause: () => unawaited(flushRef.value()),
-      onHide: () => unawaited(flushRef.value()),
+      onHide: () => unawaited(safeFlush()),
       onExitRequested: () async {
-        await flushRef.value().timeout(
-              const Duration(seconds: 3),
-              onTimeout: () {},
-            );
+        await safeFlush();
         return AppExitResponse.exit;
       },
     );

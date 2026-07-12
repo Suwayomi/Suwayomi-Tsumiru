@@ -24,11 +24,14 @@ void main() {
       ),
     );
 
-    // A web tab-hide/close (and desktop minimize) transitions to `hidden`;
-    // the fix must flush there — web never reaches `paused` on a tab-hide.
+    // Full mobile-background sequence: resumed → inactive → hidden → paused.
+    // The flush fires once (on `hidden`); driving on through `paused` must NOT
+    // fire a second time (we intentionally don't listen to onPause, so a
+    // background isn't double-flushed).
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
 
     expect(flushes, 1);
