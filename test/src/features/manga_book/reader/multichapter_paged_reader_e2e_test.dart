@@ -262,8 +262,9 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
 
     expect(
+      // Partial read: position is saved, read-state is omitted (never un-reads).
       repo.putChapterCalls.any((c) =>
-          c.chapterId == 1 && c.patch.lastPageRead == 1 && c.patch.isRead == false),
+          c.chapterId == 1 && c.patch.lastPageRead == 1 && c.patch.isRead == null),
       isTrue,
       reason: 'debounced progress for page 2 was not saved; ${repo.putChapterCalls}',
     );

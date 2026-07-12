@@ -281,7 +281,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
         unawaited(offlineDbForFlush
             .setChapterProgress(p.chapterId,
-                lastPageRead: isCompletion ? 0 : p.rel, isRead: isCompletion)
+                lastPageRead: isCompletion ? 0 : p.rel,
+                // Never un-read on a teardown flush: only a completion marks read.
+                isRead: isCompletion ? true : null)
             .catchError((_) {}));
       };
     }, const []);

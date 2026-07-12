@@ -258,23 +258,29 @@ Future<void> recordReadingProgressWithDependencies({
   required int lastPageRead,
   required bool isRead,
 }) async {
+  // Reading forward never un-reads: partial writes record position only (isRead
+  // omitted); only completion marks read. Mark-unread is a separate path.
+  final bool? markRead = isRead ? true : null;
   final db = offlineDatabase;
   if (offlineEnabled && db != null) {
     await db.setChapterProgress(
       chapterId,
       lastPageRead: lastPageRead,
-      isRead: isRead,
+      isRead: markRead,
     );
   }
   final result = await AsyncValue.guard(
     () => repository.putChapter(
       chapterId: chapterId,
-      patch: ChapterChange(lastPageRead: lastPageRead, isRead: isRead),
+      // Omit isRead (not null) when partial so the server keeps its read-state.
+      patch: markRead == null
+          ? ChapterChange(lastPageRead: lastPageRead)
+          : ChapterChange(lastPageRead: lastPageRead, isRead: markRead),
     ),
   );
   if (offlineEnabled && db != null && !result.hasError) {
     await db.clearProgressDirtyIfUnchanged(chapterId,
-        lastPageRead: lastPageRead, isRead: isRead);
+        lastPageRead: lastPageRead, isRead: markRead);
   }
 }
 
