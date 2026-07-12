@@ -33,6 +33,7 @@ import '../../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../../domain/manga/manga_model.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
 import '../../../controller/reader_controller.dart';
+import '../../../utils/flush_progress_on_lifecycle.dart';
 import '../../../utils/reader_initial_page.dart';
 import '../../reader_wrapper.dart';
 import '../reader_zoom_view.dart';
@@ -293,6 +294,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             .catchError((_) {}));
       };
     }, const []);
+
+    // Desktop window-close fires neither a route-pop nor a reliable dispose,
+    // and the teardown flush above is offline-only; flush the visible position
+    // to the server on background/exit too.
+    useFlushProgressOnAppLifecycle(() async {
+      progressDebounce.value?.cancel();
+      final p = latestProgress.value;
+      if (p == null) return;
+      if (completedChapterIds.value.contains(p.chapterId)) return;
+      await writeVisibleProgress(p.chapterId, p.rel);
+    });
 
     final bool isAnimationEnabled =
         ref.watch(readerScrollAnimationProvider).ifNull(true);
