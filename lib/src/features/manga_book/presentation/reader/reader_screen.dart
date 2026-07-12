@@ -36,6 +36,7 @@ import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/auto_webtoon.dart';
 import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
+import 'utils/flush_progress_on_lifecycle.dart';
 import 'widgets/chrome/reader_chrome.dart';
 import 'widgets/reader_mode/continuous_reader_mode.dart';
 import 'widgets/reader_mode/multichapter_paged_reader_mode.dart';
@@ -229,6 +230,15 @@ class ReaderScreen extends HookConsumerWidget {
         }
       };
     }, []);
+
+    // Desktop window-close fires neither the PopScope pop nor a reliable
+    // dispose, so also flush the buffered page on background/exit.
+    useFlushProgressOnAppLifecycle(() async {
+      debounce.value?.cancel();
+      if (latestPage.value >= 0) {
+        await updateRef.value(latestPage.value);
+      }
+    });
 
     useEffect(() {
       // Fullscreen OFF keeps the OS bars for the whole session (read once at
