@@ -42,6 +42,16 @@ query UpdateStatusDto {
   }
 }
 
+# Lightweight running-only status. The full UpdateStatusDto drags every
+# manga in every job list, which the server can't resolve promptly during a
+# large library update — so the banner's "is it running" signal must come
+# from this cheap shape, not the heavy one.
+query UpdateRunningStatus {
+  updateStatus {
+    ...UpdateStatusBaseDto
+  }
+}
+
 query LastUpdateTimestamp {
   lastUpdateTimestamp {
     timestamp
@@ -51,6 +61,12 @@ query LastUpdateTimestamp {
 subscription UpdateStatusChange {
   updateStatusChanged {
     ...UpdateStatusDto
+  }
+}
+
+subscription UpdateRunningChange {
+  updateStatusChanged {
+    ...UpdateStatusBaseDto
   }
 }
 

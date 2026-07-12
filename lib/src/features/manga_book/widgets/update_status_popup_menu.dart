@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../widgets/shell/update_banner_state.dart';
 import '../../library/domain/category/category_model.dart';
 import '../data/updates/updates_repository.dart';
 
@@ -32,12 +33,18 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
           if (category != null && category.id != 0)
             PopupMenuItem(
               child: Text(context.l10n.categoryUpdate),
-              onTap: () => ref
-                  .read(updatesRepositoryProvider)
-                  .fetchUpdates(categoryId: category.id),
+              onTap: () {
+                ref.read(updateOptimisticProvider.notifier).arm();
+                ref
+                    .read(updatesRepositoryProvider)
+                    .fetchUpdates(categoryId: category.id);
+              },
             ),
           PopupMenuItem(
-            onTap: () => ref.read(updatesRepositoryProvider).fetchUpdates(),
+            onTap: () {
+              ref.read(updateOptimisticProvider.notifier).arm();
+              ref.read(updatesRepositoryProvider).fetchUpdates();
+            },
             child: Text(context.l10n.globalUpdate),
           ),
           if (showSummaryButton)

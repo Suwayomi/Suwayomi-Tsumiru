@@ -18,6 +18,8 @@ import '../../utils/misc/toast/toast.dart';
 import 'big_screen_navigation_bar.dart';
 import 'incognito_banner.dart';
 import 'small_screen_navigation_bar.dart';
+import 'update_banner_state.dart';
+import 'update_progress_banner.dart';
 
 class NavigationShellScreen extends HookConsumerWidget {
   const NavigationShellScreen({
@@ -119,6 +121,18 @@ class NavigationShellScreen extends HookConsumerWidget {
       child.goBranch(target, initialLocation: target == child.currentIndex);
     }
 
+    // While the update banner occupies the top (incl. the status-bar strip),
+    // drop the redundant status-bar inset on the content below so the pushed-
+    // down screen's own app bar doesn't reserve it a second time (dead gap).
+    final bannerVisible = ref.watch(updateBannerVisibleProvider);
+    final content = bannerVisible
+        ? MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: child,
+          )
+        : child;
+
     final Widget scaffold;
     if (context.isTablet) {
       scaffold = Scaffold(
@@ -135,7 +149,8 @@ class NavigationShellScreen extends HookConsumerWidget {
               Expanded(
                 child: Column(
                   children: [
-                    Expanded(child: child),
+                    const UpdateProgressBanner(),
+                    Expanded(child: content),
                     const IncognitoBanner(),
                   ],
                 ),
@@ -148,7 +163,8 @@ class NavigationShellScreen extends HookConsumerWidget {
       scaffold = Scaffold(
         body: Column(
           children: [
-            Expanded(child: child),
+            const UpdateProgressBanner(),
+            Expanded(child: content),
             const IncognitoBanner(),
           ],
         ),

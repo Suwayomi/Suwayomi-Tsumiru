@@ -24,6 +24,7 @@ import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import 'data/library_settings_repository.dart';
 import 'widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
+import 'widgets/show_update_progress_banner/show_update_progress_banner.dart';
 import 'widgets/skip_updating_entries_popup.dart';
 import 'widgets/update_categories_dialog.dart';
 
@@ -118,6 +119,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   // HideEmptyCategoryTile(),
                   const RefreshChaptersFromSourceTile(),
                   SectionTitle(title: context.l10n.globalUpdate),
+                  const ShowUpdateProgressBannerTile(),
                   SettingsPropTile(
                     leading: const Icon(Icons.autorenew_rounded),
                     title: context.l10n.automaticUpdate,

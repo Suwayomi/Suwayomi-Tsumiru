@@ -77,6 +77,9 @@ enum DBKeys {
   volumeTapInvert(false),
   keepScreenOn(true),
   hideEmptyCategory(false),
+  // Ambient "Updating library (NN%)" strip shown app-root while a global/
+  // category update is running. On by default, matching Komikku's pref.
+  showUpdateProgressBanner(true),
   // When false (default), opening an entry shows the chapters the
   // server already has, without re-scraping the source. When true, also refresh
   // from the source on open.

@@ -1656,6 +1656,7 @@
     "editCategory": "Edit Category",
     "hideCategory": "Hide category",
     "showCategory": "Show category",
+    "showUpdateProgressBanner": "Show update progress banner",
     "incognitoMode": "Incognito mode",
     "incognitoModeDescription": "Pauses reading history",
     "emptyCategory": "Category name can't be Empty",
@@ -2129,6 +2130,25 @@
     "updates": "Updates",
     "updatesSummary": "Updates Summary",
     "updating": "Updating",
+    "updatingLibrary": "Updating library…",
+    "updatingLibraryProgress": "Updating library ({percent}% · {checked}/{total})",
+    "@updatingLibraryProgress": {
+        "description": "App-root banner text while a library update is running, once the job total is known. Percent alongside the raw checked/total counts (locked in the design spec: Komikku's banner is percent-only, ours adds counts since the data is already available).",
+        "placeholders": {
+            "percent": {
+                "example": "37",
+                "type": "int"
+            },
+            "checked": {
+                "example": "44",
+                "type": "int"
+            },
+            "total": {
+                "example": "120",
+                "type": "int"
+            }
+        }
+    },
     "userName": "User Name",
     "validating": "Validating",
     "versionAvailable": "Version {version} available for {app}!!",

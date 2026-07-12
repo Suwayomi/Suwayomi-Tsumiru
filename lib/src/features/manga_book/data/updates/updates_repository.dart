@@ -86,6 +86,12 @@ class UpdatesRepository {
       .query$UpdateStatusDto(Options$Query$UpdateStatusDto())
       .getData((data) => data.updateStatus);
 
+  /// Cheap "is a run in progress" read, decoupled from the heavy job lists
+  /// (see [updateRunningSubscription]).
+  Future<bool?> runningSummary() async => client
+      .query$UpdateRunningStatus(Options$Query$UpdateRunningStatus())
+      .getData((data) => data.updateStatus.isRunning);
+
   /// Epoch-millis (as a string) of the last global library update, or null.
   Future<String?> lastUpdateTimestamp() async => client
       .query$LastUpdateTimestamp(Options$Query$LastUpdateTimestamp())
@@ -94,6 +100,14 @@ class UpdatesRepository {
   Stream<UpdateStatusDto?> updateStatusSubscription() => subscriptionClient
       .subscribe$UpdateStatusChange(Options$Subscription$UpdateStatusChange())
       .getData((data) => data.updateStatusChanged);
+
+  /// Running-only live signal. Requesting just `isRunning` keeps each pushed
+  /// frame tiny, so it arrives promptly even mid-update when the full-status
+  /// feed ([updateStatusSubscription]) stalls on the server's job-list
+  /// resolvers. The banner's visibility rides on this, not the heavy feed.
+  Stream<bool?> updateRunningSubscription() => subscriptionClient
+      .subscribe$UpdateRunningChange(Options$Subscription$UpdateRunningChange())
+      .getData((data) => data.updateStatusChanged.isRunning);
 }
 
 @riverpod
@@ -112,3 +126,11 @@ Future<String?> libraryLastUpdated(Ref ref) =>
 @riverpod
 Stream<UpdateStatusDto?> updatesSocket(Ref ref) =>
     ref.watch(updatesRepositoryProvider).updateStatusSubscription();
+
+@riverpod
+Future<bool?> updateRunningSummary(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).runningSummary();
+
+@riverpod
+Stream<bool?> updateRunningSocket(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).updateRunningSubscription();
