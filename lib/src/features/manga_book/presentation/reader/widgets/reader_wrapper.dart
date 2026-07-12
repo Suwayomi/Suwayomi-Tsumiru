@@ -485,6 +485,19 @@ class ReaderWrapper extends HookConsumerWidget {
       pushPreviousChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
+    // Managed (not autofocus) so re-requesting focus after the settings
+    // sheet closes (below) has a node to hand it back to.
+    final readerFocusNode = useFocusNode(debugLabel: 'reader-scroll');
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (readerFocusNode.context != null &&
+            !readerFocusNode.hasPrimaryFocus) {
+          readerFocusNode.requestFocus();
+        }
+      });
+      return null;
+    }, const []);
+
     useEffect(() {
       StreamSubscription<HardwareButton>? subscription;
       if (volumeTap) {
@@ -550,7 +563,7 @@ class ReaderWrapper extends HookConsumerWidget {
                     ),
                   },
                   child: Focus(
-                    autofocus: true,
+                    focusNode: readerFocusNode,
                     child: Listener(
                       child: RepaintBoundary(
                         child: ReaderView(
@@ -620,14 +633,20 @@ class ReaderWrapper extends HookConsumerWidget {
                 resolvedReaderMode: resolvedReaderMode,
                 reverseSeekBar: _isRTLReaderMode(resolvedReaderMode),
                 onChanged: onChanged,
-                onOpenSettings: () => showReaderSettingsSheet(
-                  context: context,
-                  ref: ref,
-                  mangaId: manga.id,
-                  visibility: visibility,
-                  readerPadding: mangaReaderPadding,
-                  magnifierSize: mangaReaderMagnifierSize,
-                ),
+                onOpenSettings: () async {
+                  await showReaderSettingsSheet(
+                    context: context,
+                    ref: ref,
+                    mangaId: manga.id,
+                    visibility: visibility,
+                    readerPadding: mangaReaderPadding,
+                    magnifierSize: mangaReaderMagnifierSize,
+                  );
+                  // Don't steal focus from e.g. the quick-open search field.
+                  final focus = FocusManager.instance.primaryFocus;
+                  final editing = focus?.context?.widget is EditableText;
+                  if (!editing) readerFocusNode.requestFocus();
+                },
                 onOpenReaderMode: showReaderModePopup,
               ),
             ),
