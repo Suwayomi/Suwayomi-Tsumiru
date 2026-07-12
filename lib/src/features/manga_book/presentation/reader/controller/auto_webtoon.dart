@@ -7,15 +7,38 @@
 // Derives the reader type from the series type (mangaType + defaultReaderType).
 // Keep the lists and precedence verbatim — parity source, don't "improve".
 
+import '../../../../../constants/enum.dart';
+
 enum _MangaType { manga, manhwa, manhua, comic, webtoon }
 
-/// True iff the series resolves to WEBTOON/MANHWA/MANHUA — i.e. the default
-/// reader type would pick the webtoon viewer.
-bool detectsWebtoon({required List<String>? genres, String? sourceName}) {
-  final type = _mangaType(genres ?? const [], sourceName);
-  return type == _MangaType.webtoon ||
-      type == _MangaType.manhwa ||
-      type == _MangaType.manhua;
+/// The reader mode a Default-mode series should open in, from its type — or
+/// null when the type carries no reliable signal (fall through to the user's
+/// global default).
+///
+/// - webtoon / manhwa / manhua → continuous webtoon (Komikku parity).
+/// - manga → single-page right-to-left, but **only on a positive `manga` tag**.
+///   `_MangaType.manga` is also the classifier's fallback for untagged /
+///   unrecognised series, and most modern manhwa land there — e.g. Asura Scans,
+///   whose source isn't in Komikku's lists and whose entries carry only content
+///   genres (Action/Fantasy/…). Mapping the whole bucket to RTL flipped every
+///   such webtoon to right-to-left (and fit-to-screen zoomed the tall pages
+///   out). So we trust only an explicit manga tag; the untagged fallback stays
+///   null → the user's default (Komikku likewise leaves this bucket at default).
+/// - comic → null (western comics vary; fall through to the default).
+ReaderMode? autoReaderModeFor({
+  required List<String>? genres,
+  String? sourceName,
+}) {
+  final tags = genres ?? const [];
+  return switch (_mangaType(tags, sourceName)) {
+    _MangaType.webtoon ||
+    _MangaType.manhwa ||
+    _MangaType.manhua =>
+      ReaderMode.webtoon,
+    _MangaType.manga =>
+      tags.any(_isMangaTag) ? ReaderMode.singleHorizontalRTL : null,
+    _MangaType.comic => null,
+  };
 }
 
 // Precedence: manga tag wins outright; then webtoon, comic, manhua, manhwa
@@ -84,6 +107,9 @@ bool _isWebtoonSource(String sourceName) => _containsAny(sourceName, const [
       'webcomics',
       'webtoons',
       'webtoon',
+      // Beyond Komikku's list: modern scanlators that are always long-strip
+      // and don't tag their entries by type.
+      'asura',
     ]);
 
 bool _isComicSource(String sourceName) => _containsAny(sourceName, const [
