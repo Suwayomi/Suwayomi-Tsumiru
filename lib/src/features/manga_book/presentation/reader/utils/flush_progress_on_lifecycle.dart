@@ -25,7 +25,11 @@ void useFlushProgressOnAppLifecycle(Future<void> Function() flush) {
   flushRef.value = flush;
   useEffect(() {
     final listener = AppLifecycleListener(
+      // onPause: mobile background. onHide: web tab-hide/close and desktop
+      // minimize (web never reaches `paused` on a tab-hide, so onPause alone
+      // would miss it).
       onPause: () => unawaited(flushRef.value()),
+      onHide: () => unawaited(flushRef.value()),
       onExitRequested: () async {
         await flushRef.value().timeout(
               const Duration(seconds: 3),
