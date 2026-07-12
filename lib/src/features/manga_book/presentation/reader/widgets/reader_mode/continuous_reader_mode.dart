@@ -198,14 +198,18 @@ class ContinuousReaderMode extends HookConsumerWidget {
 
     void handleViewportScroll({required bool forward}) {
       if (!scrollController.isAttached) return;
-      final ScrollPosition pos = scrollOffsetController.position;
-      final double viewport = pos.viewportDimension;
-      final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
-      scrollOffsetController.animateScroll(
-        offset: viewport * _kViewportScrollFraction * sign,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
+      try {
+        final ScrollPosition pos = scrollOffsetController.position;
+        final double viewport = pos.viewportDimension;
+        final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
+        scrollOffsetController.animateScroll(
+          offset: viewport * _kViewportScrollFraction * sign,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      } catch (_) {
+        // Attached but not laid out yet (no ScrollPosition) — skip this press.
+      }
     }
 
     return ReaderWrapper(

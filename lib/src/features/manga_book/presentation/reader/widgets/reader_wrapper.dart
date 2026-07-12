@@ -664,6 +664,9 @@ class ReaderWrapper extends HookConsumerWidget {
                     readerPadding: mangaReaderPadding,
                     magnifierSize: mangaReaderMagnifierSize,
                   );
+                  // The reader may have been closed while the sheet was open —
+                  // the focus node is disposed by then, so guard before using it.
+                  if (!context.mounted) return;
                   // Don't steal focus from e.g. the quick-open search field.
                   final focus = FocusManager.instance.primaryFocus;
                   final editing = focus?.context?.widget is EditableText;

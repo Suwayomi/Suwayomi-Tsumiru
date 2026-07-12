@@ -46,4 +46,19 @@ void main() {
     expect(m.shortcuts[const SingleActivator(LogicalKeyboardKey.keyD)],
         isA<PreviousScrollIntent>());
   });
+
+  test('LTR keeps left=previous/right=next; RTL leaves up/down alone', () {
+    final ltr = readerShortcutManager(Axis.horizontal, isRtl: false);
+    expect(ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowLeft)],
+        isA<PreviousScrollIntent>());
+    expect(ltr.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowRight)],
+        isA<NextScrollIntent>());
+
+    // The RTL flip must only touch left/right, never vertical scroll.
+    final rtl = readerShortcutManager(Axis.vertical, isRtl: true);
+    expect(rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowUp)],
+        isA<ViewportScrollBackwardIntent>());
+    expect(rtl.shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)],
+        isA<ViewportScrollForwardIntent>());
+  });
 }
