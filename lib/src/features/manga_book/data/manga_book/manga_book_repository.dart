@@ -121,6 +121,29 @@ class MangaBookRepository {
       )
       .getData((data) => null);
 
+  /// Bulk category edit across many series in one request: add [addTo] and
+  /// remove [removeFrom] on every id in [mangaIds]. Empty lists are no-ops.
+  Future<void> updateMangasCategories(
+    List<int> mangaIds, {
+    List<int> addTo = const [],
+    List<int> removeFrom = const [],
+  }) =>
+      client
+          .mutate$UpdateMangasCategories(
+            Options$Mutation$UpdateMangasCategories(
+              variables: Variables$Mutation$UpdateMangasCategories(
+                input: Input$UpdateMangasCategoriesInput(
+                  ids: mangaIds,
+                  patch: Input$UpdateMangaCategoriesPatchInput(
+                    addToCategories: addTo,
+                    removeFromCategories: removeFrom,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .getData((data) => null);
+
   // Chapters
 
   Future<ChapterDto?> getChapter({

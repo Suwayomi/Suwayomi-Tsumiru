@@ -36,6 +36,7 @@ import '../../../settings/presentation/appearance/widgets/grid_cover_width_slide
 import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_manga_list.dart';
+import 'widgets/edit_mangas_category_dialog.dart';
 
 class CategoryMangaList extends HookConsumerWidget {
   const CategoryMangaList({super.key, required this.categoryId});
@@ -318,21 +319,23 @@ class CategoryMangaList extends HookConsumerWidget {
                       }
                     },
                     onEditCategories: () async {
-                      // Single-manga category dialog when exactly one is picked;
-                      // multi-manga category editing is a follow-up.
-                      if (selection.value.length == 1) {
-                        final id = selection.value.first;
-                        final manga = items.firstWhere((m) => m.id == id);
-                        selection.value = const {};
-                        await showDialog(
-                          context: context,
-                          builder: (context) => EditMangaCategoryDialog(
-                            mangaId: id,
-                            title: manga.title,
-                          ),
-                        );
-                        refresh();
-                      }
+                      final selected = items
+                          .where((m) => selection.value.contains(m.id))
+                          .toList();
+                      if (selected.isEmpty) return;
+                      selection.value = const {};
+                      // One series → the per-series toggle dialog; many → the
+                      // bulk tri-state dialog.
+                      await showDialog<void>(
+                        context: context,
+                        builder: (context) => selected.length == 1
+                            ? EditMangaCategoryDialog(
+                                mangaId: selected.first.id,
+                                title: selected.first.title,
+                              )
+                            : EditMangasCategoryDialog(mangas: selected),
+                      );
+                      refresh();
                     },
                   ),
                 ),
@@ -345,9 +348,8 @@ class CategoryMangaList extends HookConsumerWidget {
   }
 }
 
-/// Bottom action bar shown while library manga are multi-selected. Scoped to
-/// the actions we can wire to existing APIs (sync offline / download to
-/// server). Mark-read and multi-manga category edits are a follow-up.
+/// Bottom action bar shown while library manga are multi-selected: mark
+/// read/unread, edit categories (bulk), keep offline, and download to server.
 class _SelectionBar extends StatelessWidget {
   const _SelectionBar({
     required this.count,
@@ -386,12 +388,11 @@ class _SelectionBar extends StatelessWidget {
           icon: const Icon(Icons.select_all_rounded),
           onPressed: onSelectAll,
         ),
-        if (count == 1)
-          IconButton(
-            tooltip: 'Edit categories',
-            icon: const Icon(Icons.label_outline_rounded),
-            onPressed: onEditCategories,
-          ),
+        IconButton(
+          tooltip: 'Edit categories',
+          icon: const Icon(Icons.label_outline_rounded),
+          onPressed: onEditCategories,
+        ),
         IconButton(
           tooltip: 'Mark read',
           icon: const Icon(Icons.done_all_rounded),
