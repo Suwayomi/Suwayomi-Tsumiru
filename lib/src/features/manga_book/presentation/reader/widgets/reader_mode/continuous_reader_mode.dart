@@ -34,6 +34,8 @@ import '../reader_wrapper.dart';
 import 'infinity_continuous_reader_mode.dart';
 import 'reader_zoom_view.dart';
 
+const double _kViewportScrollFraction = 0.9; // ~one screen, small overlap
+
 class _ScrollConfig {
   const _ScrollConfig._();
 
@@ -194,6 +196,18 @@ class ContinuousReaderMode extends HookConsumerWidget {
           showSeparator: showSeparator,
         );
 
+    void handleViewportScroll({required bool forward}) {
+      if (!scrollController.isAttached) return;
+      final ScrollPosition pos = scrollOffsetController.position;
+      final double viewport = pos.viewportDimension;
+      final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
+      scrollOffsetController.animateScroll(
+        offset: viewport * _kViewportScrollFraction * sign,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapterPages: chapterPages,
@@ -224,6 +238,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
         isAnimationEnabled,
         isNext: true,
       ),
+      onViewportScrollForward: () => handleViewportScroll(forward: true),
+      onViewportScrollBackward: () => handleViewportScroll(forward: false),
       child: AppUtils.wrapOn(
         !kIsWeb &&
                 (Platform.isAndroid || Platform.isIOS) &&
