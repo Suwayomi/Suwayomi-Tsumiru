@@ -287,7 +287,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _displayIndex =
         target >= 0 ? target : _clampDisplay(widget.initialDisplayIndex);
     _dragOffset = 0;
-    _emitRawPage();
+    // Runs inside didUpdateWidget; a sync emit would setState an ancestor
+    // mid-build. Defer (like commitPendingIfAny).
+    Future.microtask(() {
+      if (mounted) _emitRawPage();
+    });
   }
 
   void jumpToRaw(int rawIndex) {

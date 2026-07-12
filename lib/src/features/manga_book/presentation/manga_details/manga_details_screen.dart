@@ -64,6 +64,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
     // Refresh manga
     final mangaRefresh = useCallback(([bool onlineFetch = false]) async {
       await ref.read(mangaProvider.notifier).refresh();
+      // Screen may be disposed during the refresh → don't invalidate a dead ref.
+      if (!context.mounted) return;
       ref.invalidate(categoryControllerProvider);
     }, [mangaProvider]);
 

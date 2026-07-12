@@ -192,6 +192,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     Future<void> writeVisibleProgress(int chapterId, int rel) async {
+      // Debounce can fire after the reader's gone.
+      if (!context.mounted) return;
       if (ref.read(incognitoModeProvider)) return;
       // We've already moved past this chapter — a late debounced partial must
       // not revert what the boundary mark-read recorded for it. Let that path
@@ -219,6 +221,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         lastPageRead: completed ? 0 : rel,
         isRead: completed,
       );
+      // Disposed during the await → the ref calls below would throw.
+      if (!context.mounted) return;
       if (completed && !completedChapterIds.value.contains(chapterId)) {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
         unawaited(maybeTrackProgressOnReadFetch(ref,

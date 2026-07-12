@@ -96,14 +96,18 @@ Future<void> showReaderSettingsSheet({
     if (dismissed) return;
     dismissed = true;
     subscription.close();
-    // Flush any live slider draft the dismissal interrupted mid-drag (§2.4).
-    final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
+    // Clear the app-global preview drafts first, even if disposed, so they
+    // don't bleed into the next reader's sliders.
     final brightnessDraft = readerBrightnessPreview.value;
-    if (brightnessDraft != null) model.setCustomBrightnessValue(brightnessDraft);
     final colorDraft = readerColorFilterPreview.value;
-    if (colorDraft != null) model.setColorFilterValue(colorDraft);
     readerBrightnessPreview.value = null;
     readerColorFilterPreview.value = null;
+    // Reader gone (e.g. volume-key chapter change) → ref is dead.
+    if (!context.mounted) return;
+    // Flush any live slider draft the dismissal interrupted mid-drag (§2.4).
+    final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
+    if (brightnessDraft != null) model.setCustomBrightnessValue(brightnessDraft);
+    if (colorDraft != null) model.setColorFilterValue(colorDraft);
     visibility.value = wasVisible;
     ref.invalidate(readerSettingsPreviewProvider);
   }
