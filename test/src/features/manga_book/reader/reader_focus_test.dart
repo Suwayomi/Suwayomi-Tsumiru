@@ -28,7 +28,8 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
 
-    var count = 0;
+    var forward = 0;
+    var backward = 0;
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
@@ -64,8 +65,10 @@ void main() {
           ),
           currentIndex: 0,
           onChanged: (_) {},
-          onNext: () => count++,
+          onNext: () {},
           onPrevious: () {},
+          onViewportScrollForward: () => forward++,
+          onViewportScrollBackward: () => backward++,
           scrollDirection: Axis.vertical,
           effectiveReaderMode: ReaderMode.webtoon,
           child: const SizedBox.shrink(),
@@ -87,6 +90,11 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
 
-    expect(count, 1);
+    expect(forward, 1);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+
+    expect(backward, 1);
   });
 }

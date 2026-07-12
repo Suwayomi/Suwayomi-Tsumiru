@@ -130,6 +130,8 @@ class ReaderWrapper extends HookConsumerWidget {
     required this.currentIndex,
     required this.onNext,
     required this.onPrevious,
+    this.onViewportScrollForward,
+    this.onViewportScrollBackward,
     required this.scrollDirection,
     this.showReaderLayoutAnimation = false,
     required this.chapterPages,
@@ -148,6 +150,8 @@ class ReaderWrapper extends HookConsumerWidget {
   final ValueChanged<int> onChanged;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final VoidCallback? onViewportScrollForward;
+  final VoidCallback? onViewportScrollBackward;
   final int currentIndex;
   final Axis scrollDirection;
   final bool showReaderLayoutAnimation;
@@ -558,6 +562,23 @@ class ReaderWrapper extends HookConsumerWidget {
                     HideQuickOpenIntent: CallbackAction<HideQuickOpenIntent>(
                       onInvoke: (HideQuickOpenIntent intent) {
                         visibility.value = !visibility.value;
+                        return null;
+                      },
+                    ),
+                    // Null falls back to page nav so paged/other modes that
+                    // don't supply viewport scroll keep working. Intentionally
+                    // ignores invertTap — arrow-down always scrolls down.
+                    ViewportScrollForwardIntent:
+                        CallbackAction<ViewportScrollForwardIntent>(
+                      onInvoke: (intent) {
+                        (onViewportScrollForward ?? onReaderNext)();
+                        return null;
+                      },
+                    ),
+                    ViewportScrollBackwardIntent:
+                        CallbackAction<ViewportScrollBackwardIntent>(
+                      onInvoke: (intent) {
+                        (onViewportScrollBackward ?? onReaderPrevious)();
                         return null;
                       },
                     ),

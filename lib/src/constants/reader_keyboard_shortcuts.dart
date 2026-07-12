@@ -17,6 +17,10 @@ class PreviousChapterIntent extends Intent {}
 
 class HideQuickOpenIntent extends Intent {}
 
+class ViewportScrollForwardIntent extends Intent {}
+
+class ViewportScrollBackwardIntent extends Intent {}
+
 ShortcutManager readerShortcutManager(Axis scrollDirection) => ShortcutManager(
       shortcuts: {
         const SingleActivator(LogicalKeyboardKey.space): NextScrollIntent(),
@@ -40,20 +44,24 @@ ShortcutManager readerShortcutManager(Axis scrollDirection) => ShortcutManager(
                 : NextChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowUp):
             scrollDirection == Axis.vertical
-                ? PreviousScrollIntent()
+                ? ViewportScrollBackwardIntent()
                 : NextChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.keyW):
             scrollDirection == Axis.vertical
-                ? PreviousScrollIntent()
+                ? ViewportScrollBackwardIntent()
                 : NextChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowDown):
             scrollDirection == Axis.vertical
-                ? NextScrollIntent()
+                ? ViewportScrollForwardIntent()
                 : PreviousChapterIntent(),
         const SingleActivator(LogicalKeyboardKey.keyS):
             scrollDirection == Axis.vertical
-                ? NextScrollIntent()
+                ? ViewportScrollForwardIntent()
                 : PreviousChapterIntent(),
+        const SingleActivator(LogicalKeyboardKey.pageUp):
+            ViewportScrollBackwardIntent(),
+        const SingleActivator(LogicalKeyboardKey.pageDown):
+            ViewportScrollForwardIntent(),
         const SingleActivator(LogicalKeyboardKey.escape): HideQuickOpenIntent(),
       },
     );

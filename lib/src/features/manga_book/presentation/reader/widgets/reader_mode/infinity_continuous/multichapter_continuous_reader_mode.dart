@@ -47,6 +47,8 @@ typedef _LoadedChapter = ({
   int chapterId,
 });
 
+const double _kViewportScrollFraction = 0.9; // ~one screen, small overlap
+
 /// Multi-chapter webtoon reader built on ``ScrollablePositionedList``.
 ///
 /// Replaces the homegrown plain-``ListView`` reader. SPL gives us reliable
@@ -677,6 +679,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
+    void handleViewportScroll({required bool forward}) {
+      if (!itemScrollController.isAttached) return;
+      final ScrollPosition pos = scrollOffsetController.position;
+      final double viewport = pos.viewportDimension;
+      // reverse:true flips the visual direction of the list.
+      final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
+      scrollOffsetController.animateScroll(
+        offset: viewport * _kViewportScrollFraction * sign,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+
     // --- build -----------------------------------------------------------
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
@@ -819,6 +834,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       onChanged: jumpToChapterRelative,
       onPrevious: () => handlePageNavigation(isNext: false),
       onNext: () => handlePageNavigation(isNext: true),
+      onViewportScrollForward: () => handleViewportScroll(forward: true),
+      onViewportScrollBackward: () => handleViewportScroll(forward: false),
       child: child,
     );
   }
