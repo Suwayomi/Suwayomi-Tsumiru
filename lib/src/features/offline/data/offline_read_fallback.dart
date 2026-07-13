@@ -26,11 +26,18 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
   required Future<List<MangaDto>?> Function() fetch,
   required OfflineDatabase? db,
   required bool offlineEnabled,
+  void Function(bool reachable)? onReachability,
 }) async {
   try {
-    return await fetch();
+    final result = await fetch();
+    onReachability?.call(true);
+    return result;
   } catch (e) {
-    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
+    // Report unreachability even when we go on to serve cache below, so the
+    // outage isn't hidden from an app-wide "offline" indicator.
+    final connectionLost = _shouldFallBack(e);
+    onReachability?.call(!connectionLost);
+    if (!offlineEnabled || !connectionLost) rethrow;
     final rows = await db!.libraryManga();
     if (rows.isEmpty) rethrow;
     final lastReadByManga = await db.lastReadAtByManga();

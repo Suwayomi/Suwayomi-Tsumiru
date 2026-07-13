@@ -101,4 +101,50 @@ void main() {
             fetch: serverError, db: db, offlineEnabled: true),
         throwsA(predicate((e) => e.toString().contains('HTTP 500'))));
   });
+
+  test('reachability: reports reachable on a successful fetch', () async {
+    final calls = <bool>[];
+    await libraryWithOfflineFallback(
+        fetch: () async => null,
+        db: db,
+        offlineEnabled: true,
+        onReachability: calls.add);
+    expect(calls, [true]);
+  });
+
+  test('reachability: reports unreachable on a connection error, even while '
+      'serving cache', () async {
+    await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+    final calls = <bool>[];
+    await libraryWithOfflineFallback(
+        fetch: boom, db: db, offlineEnabled: true, onReachability: calls.add);
+    expect(calls, [false]);
+  });
+
+  test('reachability: reports unreachable on a connection error with no cache',
+      () async {
+    final calls = <bool>[];
+    await expectLater(
+        libraryWithOfflineFallback(
+            fetch: boom,
+            db: db,
+            offlineEnabled: true,
+            onReachability: calls.add),
+        throwsException);
+    expect(calls, [false]);
+  });
+
+  test('reachability: reports reachable on a server error (server answered)',
+      () async {
+    await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+    final calls = <bool>[];
+    await expectLater(
+        libraryWithOfflineFallback(
+            fetch: serverError,
+            db: db,
+            offlineEnabled: true,
+            onReachability: calls.add),
+        throwsA(predicate((e) => e.toString().contains('HTTP 500'))));
+    expect(calls, [true]);
+  });
 }
