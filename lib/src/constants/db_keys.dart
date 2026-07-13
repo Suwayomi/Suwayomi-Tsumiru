@@ -210,6 +210,9 @@ enum DBKeys {
   cropBordersWebtoon(false),
   cropBordersGaps(false),
   smoothAutoScroll(true),
+  readerScrollAmount(ReaderScrollAmount.large),
+  autoScrollIntervalSeconds(3),
+  autoAdvanceIntervalSeconds(5),
   dualPageSplitWebtoon(false),
   dualPageInvertWebtoon(false),
   // Reader General tab (all global).

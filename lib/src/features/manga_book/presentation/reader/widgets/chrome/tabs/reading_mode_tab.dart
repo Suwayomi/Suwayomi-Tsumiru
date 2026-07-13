@@ -15,6 +15,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_navigation
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../controller/reader_mode_adapter.dart';
 import '../../../controller/reader_settings_model.dart';
+import 'int_slider_tile.dart';
 
 /// Reading-mode tab: chip rows for the common settings,
 /// then a paged / long-strip section swapped on the resolved mode.
@@ -226,6 +227,15 @@ class _PagedSection extends ConsumerWidget {
               ),
           ],
         ),
+        IntSliderTile(
+          title: context.l10n.autoAdvanceInterval,
+          valueLabel: context.l10n
+              .autoScrollSeconds(settings.autoAdvanceIntervalSeconds),
+          value: settings.autoAdvanceIntervalSeconds,
+          min: 1,
+          max: 30,
+          onChanged: model.setAutoAdvanceIntervalSeconds,
+        ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.smallerTapZones),
@@ -354,8 +364,33 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.cropBordersWebtoon,
           onChanged: model.setCropBordersWebtoon,
         ),
-        // smoothAutoScroll hidden: no auto-scroll driver exists yet (a webtoon
-        // auto-advance feature); see docs/architecture/reader.md.
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.smoothAutoScroll),
+          value: settings.smoothAutoScroll,
+          onChanged: model.setSmoothAutoScroll,
+        ),
+        IntSliderTile(
+          title: context.l10n.autoScrollInterval,
+          valueLabel: context.l10n
+              .autoScrollSeconds(settings.autoScrollIntervalSeconds),
+          value: settings.autoScrollIntervalSeconds,
+          min: 1,
+          max: 30,
+          onChanged: model.setAutoScrollIntervalSeconds,
+        ),
+        _SectionLabel(context.l10n.scrollAmount),
+        _ChipRow(
+          children: [
+            for (final amount in ReaderScrollAmount.values)
+              FilterChip(
+                selected: settings.readerScrollAmount == amount,
+                showCheckmark: false,
+                label: Text(amount.toLocale(context)),
+                onSelected: (_) => model.setReaderScrollAmount(amount),
+              ),
+          ],
+        ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.animatePageTransitions),

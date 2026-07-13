@@ -20,12 +20,14 @@ import '../../../../../settings/presentation/reader/widgets/reader_left_handed_s
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chrome_extents.dart';
 import 'reader_bottom_controls.dart';
 import 'reader_color_overlays.dart';
 import 'reader_flash_overlay.dart';
 import 'reader_side_seekbar.dart';
 import 'reader_top_bar.dart';
+import 'reader_utils_bar.dart';
 
 /// UI mode while the chrome is hidden: fullscreen hides the OS bars; with
 /// fullscreen OFF they stay visible (edgeToEdge) even when the chrome goes.
@@ -60,11 +62,13 @@ class ReaderChrome extends HookConsumerWidget {
     required this.currentIndex,
     required this.totalPageCount,
     required this.visibility,
+    required this.utilsBarExpanded,
     required this.useBottomSeekBar,
     required this.showSideSeekBar,
     required this.scrollDirection,
     required this.nextPrevChapterPair,
     required this.resolvedReaderMode,
+    required this.autoScrollSupported,
     required this.reverseSeekBar,
     required this.onChanged,
     required this.onOpenSettings,
@@ -83,6 +87,10 @@ class ReaderChrome extends HookConsumerWidget {
   /// The controller tracks this notifier; [visibility] is never written here.
   final ValueNotifier<bool> visibility;
 
+  /// Owned by [ReaderWrapper]; toggled by [ReaderTopBar]'s tune button.
+  /// Expands [ReaderUtilsBar] beneath the top bar.
+  final ValueNotifier<bool> utilsBarExpanded;
+
   /// True when the horizontal bottom seek bar should be shown (paged / landscape).
   final bool useBottomSeekBar;
 
@@ -93,6 +101,11 @@ class ReaderChrome extends HookConsumerWidget {
   final Axis scrollDirection;
   final ({ChapterDto? first, ChapterDto? second})? nextPrevChapterPair;
   final ReaderMode resolvedReaderMode;
+
+  /// True only in modes that actually mount an auto-scroll/auto-advance engine.
+  /// The utils bar (and its toggle) is hidden otherwise, so it's never a dead
+  /// control.
+  final bool autoScrollSupported;
   final bool reverseSeekBar;
   final ValueChanged<int> onChanged;
   final VoidCallback onOpenSettings;
@@ -271,10 +284,20 @@ class ReaderChrome extends HookConsumerWidget {
                 ),
               ),
 
-            // ── Top bar ───────────────────────────────────────────────────────
+            // ── Top bar + utils bar ──────────────────────────────────────────
             // SlideTransition from Offset(0, -1) (fully above viewport) → zero.
             // FadeTransition from 0 → 1, driven by the same curved animation.
             // IgnorePointer when dismissed so the hidden bar doesn't eat taps.
+            //
+            // ReaderUtilsBar rides in the same Column as the top bar so it
+            // slides/fades as one rigid unit with it — its own expand/collapse
+            // is a separate, local AnimatedSize.
+            //
+            // MeasureSize now wraps BOTH bars (moved down from ReaderTopBar
+            // alone) so chromeExtentsNotifierProvider's topInset covers the
+            // utils bar's height too when it's expanded — otherwise the side
+            // seekbar's `top` offset would sit above the top bar only and
+            // overlap the expanded utils bar.
             Positioned(
               top: 0,
               left: 0,
@@ -288,10 +311,38 @@ class ReaderChrome extends HookConsumerWidget {
                       begin: const Offset(0, -1),
                       end: Offset.zero,
                     ).animate(slide),
-                    child: ReaderTopBar(
-                      manga: manga,
-                      chapter: chapter,
-                      onBack: () => context.pop(),
+                    child: MeasureSize(
+                      onChange: (size) {
+                        // Fires from a post-frame callback; the reader may have
+                        // unmounted by then, so never touch ref after dispose.
+                        if (!context.mounted) return;
+                        final current = ref.read(chromeExtentsNotifierProvider);
+                        final next = ChromeExtents(
+                          topInset: size.height,
+                          bottomInset: current.bottomInset,
+                        );
+                        ref
+                            .read(chromeExtentsNotifierProvider.notifier)
+                            .update(next);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ReaderTopBar(
+                            manga: manga,
+                            chapter: chapter,
+                            onBack: () => context.pop(),
+                          ),
+                          // Komikku-style pulldown, shown only where an
+                          // auto-scroll/advance engine is actually mounted so
+                          // the toggle is never a dead control.
+                          if (autoScrollSupported)
+                            ReaderUtilsBar(
+                              expanded: utilsBarExpanded,
+                              readerMode: resolvedReaderMode,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

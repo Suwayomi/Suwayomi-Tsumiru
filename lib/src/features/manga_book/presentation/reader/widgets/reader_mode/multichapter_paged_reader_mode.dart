@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../history/presentation/history_controller.dart';
@@ -17,12 +18,14 @@ import '../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../offline/data/offline_repository.dart';
 import '../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../../../../tracking/domain/track_progress_gate.dart';
 import '../../../../data/manga_book/manga_book_repository.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
+import '../../controller/auto_scroll_controller.dart';
 import '../../controller/reader_controller.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
@@ -96,6 +99,39 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
     final controller = useMemoized(() => PagedReaderController());
     final settings = ref.watch(readerEffectiveSettingsProvider(manga.id));
+
+    // Komikku parity (ExhUtils / ReaderActivity autoscroll loop): in paged
+    // modes the shared auto-scroll toggle turns one page per interval
+    // (moveToNext), with no smooth glide — that's webtoon-only. It reads its
+    // own "auto advance" interval, which defaults slower than webtoon scroll,
+    // and stops once the last page is reached.
+    final autoAdvanceActive = ref.watch(autoScrollActiveProvider);
+    final autoAdvanceInterval = ref.watch(autoAdvanceIntervalSecondsProvider) ??
+        DBKeys.autoAdvanceIntervalSeconds.initial as int;
+    useEffect(() {
+      if (!autoAdvanceActive) return null;
+      final timer = Timer.periodic(
+        Duration(seconds: autoAdvanceInterval),
+        (_) {
+          if (controller.isAtLast) {
+            ref.read(autoScrollActiveProvider.notifier).stop();
+            return;
+          }
+          controller.next();
+        },
+      );
+      return timer.cancel;
+    }, [autoAdvanceActive, autoAdvanceInterval]);
+
+    // Backgrounding the app would otherwise keep turning pages (and writing
+    // progress) while the user isn't looking — mirror the continuous engine.
+    useEffect(() {
+      final listener = AppLifecycleListener(
+        onHide: () => ref.read(autoScrollActiveProvider.notifier).stop(),
+        onPause: () => ref.read(autoScrollActiveProvider.notifier).stop(),
+      );
+      return listener.dispose;
+    }, const []);
 
     final isHorizontal = scrollDirection == Axis.horizontal;
     final isLandscape = context.width > context.height;
@@ -544,6 +580,25 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       showReaderLayoutAnimation: showReaderLayoutAnimation,
       onPrevious: controller.previous,
       onNext: controller.next,
+      // Same auto-motion toggle as webtoon, but here it drives auto-advance;
+      // in vertical paged this makes Space toggle it, in horizontal the utils
+      // bar switch does. Speed keys tune the separate auto-advance interval.
+      onToggleAutoScroll: () =>
+          ref.read(autoScrollActiveProvider.notifier).toggle(),
+      onAutoScrollFaster: () {
+        final cur = ref.read(autoAdvanceIntervalSecondsProvider) ??
+            DBKeys.autoAdvanceIntervalSeconds.initial as int;
+        ref
+            .read(autoAdvanceIntervalSecondsProvider.notifier)
+            .update((cur - 1).clamp(1, 30));
+      },
+      onAutoScrollSlower: () {
+        final cur = ref.read(autoAdvanceIntervalSecondsProvider) ??
+            DBKeys.autoAdvanceIntervalSeconds.initial as int;
+        ref
+            .read(autoAdvanceIntervalSecondsProvider.notifier)
+            .update((cur + 1).clamp(1, 30));
+      },
       childHandlesGestures: true,
       handlesOwnChapterNavigation: true,
       isAtFirstBoundary: () => controller.isAtFirst,

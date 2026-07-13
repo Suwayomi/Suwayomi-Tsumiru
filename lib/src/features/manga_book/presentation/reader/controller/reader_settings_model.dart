@@ -226,6 +226,24 @@ abstract final class ReaderSettings {
     fallback: DBKeys.smoothAutoScroll.initial as bool,
   );
 
+  static final readerScrollAmount = ReaderSetting<ReaderScrollAmount>(
+    scope: ReaderSettingScope.global,
+    global: readerScrollAmountKeyProvider,
+    fallback: DBKeys.readerScrollAmount.initial as ReaderScrollAmount,
+  );
+
+  static final autoScrollIntervalSeconds = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: autoScrollIntervalSecondsProvider,
+    fallback: DBKeys.autoScrollIntervalSeconds.initial as int,
+  );
+
+  static final autoAdvanceIntervalSeconds = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: autoAdvanceIntervalSecondsProvider,
+    fallback: DBKeys.autoAdvanceIntervalSeconds.initial as int,
+  );
+
   static final dualPageSplitWebtoon = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: dualPageSplitWebtoonProvider,
@@ -382,6 +400,9 @@ class ReaderSettingsState with _$ReaderSettingsState {
     required bool cropBordersWebtoon,
     required bool cropBordersGaps,
     required bool smoothAutoScroll,
+    required ReaderScrollAmount readerScrollAmount,
+    required int autoScrollIntervalSeconds,
+    required int autoAdvanceIntervalSeconds,
     required bool dualPageSplitWebtoon,
     required bool dualPageInvertWebtoon,
     required ReaderBackgroundColor backgroundColor,
@@ -434,6 +455,9 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late CropBordersWebtoon _cropBordersWebtoon;
   late CropBordersGaps _cropBordersGaps;
   late SmoothAutoScroll _smoothAutoScroll;
+  late ReaderScrollAmountKey _readerScrollAmount;
+  late AutoScrollIntervalSeconds _autoScrollIntervalSeconds;
+  late AutoAdvanceIntervalSeconds _autoAdvanceIntervalSeconds;
   late DualPageSplitWebtoon _dualPageSplitWebtoon;
   late DualPageInvertWebtoon _dualPageInvertWebtoon;
   late ReaderBackgroundColorKey _backgroundColor;
@@ -487,6 +511,11 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _cropBordersWebtoon = ref.read(cropBordersWebtoonProvider.notifier);
     _cropBordersGaps = ref.read(cropBordersGapsProvider.notifier);
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
+    _readerScrollAmount = ref.read(readerScrollAmountKeyProvider.notifier);
+    _autoScrollIntervalSeconds =
+        ref.read(autoScrollIntervalSecondsProvider.notifier);
+    _autoAdvanceIntervalSeconds =
+        ref.read(autoAdvanceIntervalSecondsProvider.notifier);
     _dualPageSplitWebtoon = ref.read(dualPageSplitWebtoonProvider.notifier);
     _dualPageInvertWebtoon = ref.read(dualPageInvertWebtoonProvider.notifier);
     _backgroundColor = ref.read(readerBackgroundColorKeyProvider.notifier);
@@ -559,6 +588,12 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
           ReaderSettings.cropBordersWebtoon.resolveWith(ref, null),
       cropBordersGaps: ReaderSettings.cropBordersGaps.resolveWith(ref, null),
       smoothAutoScroll: ReaderSettings.smoothAutoScroll.resolveWith(ref, null),
+      readerScrollAmount:
+          ReaderSettings.readerScrollAmount.resolveWith(ref, null),
+      autoScrollIntervalSeconds:
+          ReaderSettings.autoScrollIntervalSeconds.resolveWith(ref, null),
+      autoAdvanceIntervalSeconds:
+          ReaderSettings.autoAdvanceIntervalSeconds.resolveWith(ref, null),
       dualPageSplitWebtoon:
           ReaderSettings.dualPageSplitWebtoon.resolveWith(ref, null),
       dualPageInvertWebtoon:
@@ -631,6 +666,15 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setCropBordersGaps(bool value) => _cropBordersGaps.update(value);
 
   void setSmoothAutoScroll(bool value) => _smoothAutoScroll.update(value);
+
+  void setReaderScrollAmount(ReaderScrollAmount value) =>
+      _readerScrollAmount.update(value);
+
+  void setAutoScrollIntervalSeconds(int value) =>
+      _autoScrollIntervalSeconds.update(value);
+
+  void setAutoAdvanceIntervalSeconds(int value) =>
+      _autoAdvanceIntervalSeconds.update(value);
 
   void setDualPageSplitPaged(bool value) => _dualPageSplitPaged.update(value);
 

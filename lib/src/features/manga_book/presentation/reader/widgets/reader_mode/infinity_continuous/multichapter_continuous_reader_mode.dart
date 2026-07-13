@@ -9,10 +9,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
@@ -32,6 +34,7 @@ import '../../../../../domain/chapter/chapter_model.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../../domain/manga/manga_model.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
+import '../../../controller/auto_scroll_controller.dart';
 import '../../../controller/reader_controller.dart';
 import '../../../utils/flush_progress_on_lifecycle.dart';
 import '../../../utils/reader_initial_page.dart';
@@ -42,13 +45,24 @@ import 'infinity_continuous_feedback.dart';
 import 'infinity_continuous_utils.dart';
 import 'measure_size.dart';
 
+/// Pixels to advance this auto-scroll frame. [intervalSeconds] is the pace
+/// setting (seconds to glide one full viewport); [dtMs] is elapsed time since
+/// the previous tick.
+double autoScrollDelta({
+  required double viewport,
+  required int intervalSeconds,
+  required int dtMs,
+}) {
+  if (intervalSeconds <= 0) return 0;
+  final pxPerMs = viewport / (intervalSeconds * 1000);
+  return pxPerMs * dtMs;
+}
+
 typedef _LoadedChapter = ({
   ChapterPagesDto pages,
   ChapterDto chapter,
   int chapterId,
 });
-
-const double _kViewportScrollFraction = 0.9; // ~one screen, small overlap
 
 /// Multi-chapter webtoon reader built on ``ScrollablePositionedList``.
 ///
@@ -318,6 +332,21 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // below, which still reserves placeholderHeight and measures the cropped
     // strip — the scroll/height math is untouched.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final ReaderScrollAmount scrollAmount =
+        ref.watch(readerScrollAmountKeyProvider) ??
+            DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
+
+    final bool autoScrollActive = ref.watch(autoScrollActiveProvider);
+    final bool smoothAutoScroll = ref.watch(smoothAutoScrollProvider) ??
+        DBKeys.smoothAutoScroll.initial as bool;
+    final int autoScrollIntervalSeconds =
+        ref.watch(autoScrollIntervalSecondsProvider) ??
+            DBKeys.autoScrollIntervalSeconds.initial as int;
+    // Set around every auto-scroll-driven jump so the manual-scroll listener
+    // (below) doesn't mistake the engine's own motion for the user grabbing
+    // the strip and stop itself.
+    final programmaticScroll = useRef<bool>(false);
+    final lastAutoScrollTick = useRef<Duration>(Duration.zero);
 
     // Decode a page's image off-screen AND record its true rendered height from
     // the decoded aspect ratio. Caching the height
@@ -699,7 +728,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // reverse:true flips the visual direction of the list.
         final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
         scrollOffsetController.animateScroll(
-          offset: viewport * _kViewportScrollFraction * sign,
+          offset: viewport * scrollAmount.fraction * sign,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
@@ -707,6 +736,106 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // Attached but not laid out yet (no ScrollPosition) — skip this press.
       }
     }
+
+    // --- auto-scroll engine -----------------------------------------------
+    //
+    // Smooth mode drives per-frame pixel deltas straight on the
+    // ScrollPosition; jump mode reuses handlePageNavigation on a periodic
+    // timer (Komikku's scrollDown() analog). Both stop themselves at the end
+    // of the last loaded chapter, and are stopped externally by the manual-
+    // scroll listener and the app-lifecycle listener below.
+
+    bool atLastLoadedPage() =>
+        hasReachedEnd.value &&
+        currentGlobalIndex() >=
+            InfinityContinuousUtils.getTotalPages(loadedChapters.value) - 1;
+
+    void onAutoScrollTick(Duration elapsed) {
+      if (!itemScrollController.isAttached) return;
+      final dtMs = (elapsed - lastAutoScrollTick.value).inMilliseconds;
+      lastAutoScrollTick.value = elapsed;
+      if (dtMs <= 0) return;
+      try {
+        final pos = scrollOffsetController.position;
+        final interval = ref.read(autoScrollIntervalSecondsProvider) ??
+            DBKeys.autoScrollIntervalSeconds.initial as int;
+        final delta = autoScrollDelta(
+          viewport: pos.viewportDimension,
+          intervalSeconds: interval,
+          dtMs: dtMs,
+        );
+        final target = pos.pixels + (reverse ? -delta : delta);
+        if (target >= pos.maxScrollExtent && hasReachedEnd.value) {
+          ref.read(autoScrollActiveProvider.notifier).stop();
+          return;
+        }
+        programmaticScroll.value = true;
+        pos.jumpTo(target.clamp(pos.minScrollExtent, pos.maxScrollExtent));
+        programmaticScroll.value = false;
+      } catch (_) {
+        // Attached but not laid out yet (no ScrollPosition) — skip this tick.
+      }
+    }
+
+    // useSingleTickerProvider's TickerProvider only permits ONE createTicker
+    // call per hook instance (a second call asserts) — so the Ticker itself
+    // is built exactly once via useMemoized and then just started/stopped as
+    // the active/smooth state changes, never recreated.
+    final autoScrollTickerProvider = useSingleTickerProvider();
+    final autoScrollTicker = useMemoized(
+      () => autoScrollTickerProvider.createTicker(onAutoScrollTick),
+      const [],
+    );
+
+    useEffect(() {
+      if (autoScrollActive && smoothAutoScroll) {
+        lastAutoScrollTick.value = Duration.zero;
+        if (!autoScrollTicker.isActive) autoScrollTicker.start();
+      } else if (autoScrollTicker.isActive) {
+        autoScrollTicker.stop();
+      }
+      return null;
+    }, [autoScrollActive, smoothAutoScroll]);
+
+    // Jump mode (smoothAutoScroll off): periodic page-advance instead of a
+    // per-frame glide.
+    useEffect(() {
+      Timer? timer;
+      if (autoScrollActive && !smoothAutoScroll) {
+        timer = Timer.periodic(
+          Duration(seconds: autoScrollIntervalSeconds),
+          (_) {
+            if (atLastLoadedPage()) {
+              ref.read(autoScrollActiveProvider.notifier).stop();
+              return;
+            }
+            programmaticScroll.value = true;
+            handlePageNavigation(isNext: true);
+            programmaticScroll.value = false;
+          },
+        );
+      }
+      return () => timer?.cancel();
+    }, [autoScrollActive, smoothAutoScroll, autoScrollIntervalSeconds]);
+
+    // The ticker outlives both effects above (it's created once); stop and
+    // dispose it only on the widget's own teardown.
+    useEffect(() {
+      return () {
+        if (autoScrollTicker.isActive) autoScrollTicker.stop();
+        autoScrollTicker.dispose();
+      };
+    }, const []);
+
+    // Backgrounding the app mid-glide would otherwise leave auto-scroll
+    // running (and writing progress) while the user isn't looking.
+    useEffect(() {
+      final listener = AppLifecycleListener(
+        onHide: () => ref.read(autoScrollActiveProvider.notifier).stop(),
+        onPause: () => ref.read(autoScrollActiveProvider.notifier).stop(),
+      );
+      return listener.dispose;
+    }, const []);
 
     // --- build -----------------------------------------------------------
 
@@ -820,6 +949,20 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       separatorBuilder: buildSeparator,
     );
 
+    // A real user drag/fling stops auto-scroll immediately; the engine's own
+    // jumps are excluded via the programmaticScroll guard set around them.
+    final autoScrollAwareList = NotificationListener<UserScrollNotification>(
+      onNotification: (notification) {
+        if (!programmaticScroll.value &&
+            notification.direction != ScrollDirection.idle &&
+            ref.read(autoScrollActiveProvider)) {
+          ref.read(autoScrollActiveProvider.notifier).stop();
+        }
+        return false;
+      },
+      child: positionedList,
+    );
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
@@ -835,7 +978,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 child: child,
               )
           : null,
-      positionedList,
+      autoScrollAwareList,
     );
 
     return ReaderWrapper(
@@ -852,6 +995,22 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       onNext: () => handlePageNavigation(isNext: true),
       onViewportScrollForward: () => handleViewportScroll(forward: true),
       onViewportScrollBackward: () => handleViewportScroll(forward: false),
+      onToggleAutoScroll: () =>
+          ref.read(autoScrollActiveProvider.notifier).toggle(),
+      onAutoScrollFaster: () {
+        final cur = ref.read(autoScrollIntervalSecondsProvider) ??
+            DBKeys.autoScrollIntervalSeconds.initial as int;
+        ref
+            .read(autoScrollIntervalSecondsProvider.notifier)
+            .update((cur - 1).clamp(1, 30));
+      },
+      onAutoScrollSlower: () {
+        final cur = ref.read(autoScrollIntervalSecondsProvider) ??
+            DBKeys.autoScrollIntervalSeconds.initial as int;
+        ref
+            .read(autoScrollIntervalSecondsProvider.notifier)
+            .update((cur + 1).clamp(1, 30));
+      },
       child: child,
     );
   }

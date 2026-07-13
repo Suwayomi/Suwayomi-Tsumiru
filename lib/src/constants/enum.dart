@@ -240,6 +240,25 @@ enum FlashColor {
       };
 }
 
+/// Fraction of the viewport advanced per keyboard/manual scroll step.
+enum ReaderScrollAmount {
+  tiny(0.10),
+  small(0.25),
+  medium(0.75),
+  large(0.95);
+
+  const ReaderScrollAmount(this.fraction);
+
+  final double fraction;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ReaderScrollAmount.tiny => context.l10n.scrollAmountTiny,
+        ReaderScrollAmount.small => context.l10n.scrollAmountSmall,
+        ReaderScrollAmount.medium => context.l10n.scrollAmountMedium,
+        ReaderScrollAmount.large => context.l10n.scrollAmountLarge,
+      };
+}
+
 /// Custom color-filter blend (order 0-5). Native Android
 /// gates the last three behind API level P+; Flutter's BlendMode supports all
 /// six everywhere, so no gate. "Multiply" is Compose Modulate (src×dst).

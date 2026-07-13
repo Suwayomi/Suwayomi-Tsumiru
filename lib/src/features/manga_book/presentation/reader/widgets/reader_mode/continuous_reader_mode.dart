@@ -14,6 +14,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
@@ -33,8 +34,6 @@ import '../chapter_separator.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous_reader_mode.dart';
 import 'reader_zoom_view.dart';
-
-const double _kViewportScrollFraction = 0.9; // ~one screen, small overlap
 
 class _ScrollConfig {
   const _ScrollConfig._();
@@ -189,6 +188,9 @@ class ContinuousReaderMode extends HookConsumerWidget {
         : context.width;
     // Auto-crop solid borders in the long-strip.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final ReaderScrollAmount scrollAmount =
+        ref.watch(readerScrollAmountKeyProvider) ??
+            DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
     final wrapperReaderMode = effectiveReaderMode ??
         _continuousReaderMode(
           scrollDirection: scrollDirection,
@@ -203,7 +205,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
         final double viewport = pos.viewportDimension;
         final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
         scrollOffsetController.animateScroll(
-          offset: viewport * _kViewportScrollFraction * sign,
+          offset: viewport * scrollAmount.fraction * sign,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );

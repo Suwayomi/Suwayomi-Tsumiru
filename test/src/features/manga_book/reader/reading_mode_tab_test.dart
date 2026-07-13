@@ -12,12 +12,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/tabs/reading_mode_tab.dart';
 import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
+import 'package:tsumiru/src/features/settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -237,6 +239,51 @@ void main() {
     expect(find.text('Crop borders'), findsOneWidget);
   });
 
+  testWidgets(
+      'long strip auto-scroll tiles: toggle, interval slider, and scroll '
+      'amount chips all write their providers', (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'webtoon'});
+
+    await tester.scrollUntilVisible(
+      find.text('Smooth Auto Scroll'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    expect(find.text('Smooth Auto Scroll'), findsOneWidget);
+    // Defaults ON (DBKeys.smoothAutoScroll(true)), so a tap flips it OFF.
+    await tester.tap(find.text('Smooth Auto Scroll'));
+    await tester.pumpAndSettle();
+    expect(container(tester).read(smoothAutoScrollProvider), isFalse);
+
+    await tester.scrollUntilVisible(
+      find.text('Auto scroll interval'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    expect(find.text('Auto scroll interval'), findsOneWidget);
+    final slider = find.descendant(
+      of: find.widgetWithText(ListTile, 'Auto scroll interval'),
+      matching: find.byType(Slider),
+    );
+    tester.widget<Slider>(slider).onChanged!(20);
+    await tester.pumpAndSettle();
+    expect(container(tester).read(autoScrollIntervalSecondsProvider), 20);
+
+    await tester.scrollUntilVisible(
+      find.text('Keyboard scroll distance'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    expect(find.text('Keyboard scroll distance'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Large'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, 'Tiny'));
+    await tester.pumpAndSettle();
+    expect(
+      container(tester).read(readerScrollAmountKeyProvider),
+      ReaderScrollAmount.tiny,
+    );
+  });
+
   testWidgets('long strip with gaps adds the gaps-scoped crop borders',
       (tester) async {
     await pumpTab(tester, meta: {'flutter_readerMode': 'continuousVertical'});
@@ -354,6 +401,8 @@ void main() {
       200,
       scrollable: tabScrollable(),
     );
+    await tester.ensureVisible(find.text('Dual page spread in landscape'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dual page spread in landscape'));
     await tester.pumpAndSettle();
 

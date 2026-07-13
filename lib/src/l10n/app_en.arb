@@ -1456,6 +1456,30 @@
     },
     "smallerTapZones": "Smaller tap zones",
     "smoothAutoScroll": "Smooth Auto Scroll",
+    "scrollAmount": "Keyboard scroll distance",
+    "@scrollAmount": {
+        "description": "Keyboard scroll step, fraction of the screen"
+    },
+    "scrollAmountTiny": "Tiny",
+    "scrollAmountSmall": "Small",
+    "scrollAmountMedium": "Medium",
+    "scrollAmountLarge": "Large",
+    "autoScrollInterval": "Auto scroll interval",
+    "@autoScrollInterval": {
+        "description": "Long-strip auto-scroll: seconds per advance"
+    },
+    "autoAdvanceInterval": "Auto advance interval",
+    "@autoAdvanceInterval": {
+        "description": "Paged reader auto-advance: seconds per page turn"
+    },
+    "autoScrollSeconds": "{count, plural, =1{1 second} other{{count} seconds}}",
+    "@autoScrollSeconds": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "tabs": "Tabs",
     "@tabs": {
         "description": "Library Display sheet section heading for tab-related toggles"

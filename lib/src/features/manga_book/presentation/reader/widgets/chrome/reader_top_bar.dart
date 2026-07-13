@@ -13,8 +13,6 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/manga/manga_model.dart';
-import '../reader_mode/infinity_continuous/measure_size.dart';
-import 'chrome_extents.dart';
 import 'reader_bookmark_button.dart';
 
 /// The reader's top chrome bar — mirrors the content that was previously in
@@ -23,6 +21,11 @@ import 'reader_bookmark_button.dart';
 /// This is a plain [Material]+[Row] widget, NOT a [Scaffold.appBar], so it can
 /// live in the body [Stack] and be driven by a shared animation controller.
 /// Visual output is byte-identical to the old AppBar.
+///
+/// Height measurement ([MeasureSize] → `chromeExtentsNotifierProvider`) lives
+/// one level up in `ReaderChrome`, wrapping this bar together with
+/// [ReaderUtilsBar] — so the reported inset covers both, and the side
+/// seekbar clears the utils bar when it's expanded.
 class ReaderTopBar extends ConsumerWidget {
   const ReaderTopBar({
     super.key,
@@ -41,77 +44,55 @@ class ReaderTopBar extends ConsumerWidget {
     final view = View.of(context);
     final systemTopInset = view.viewPadding.top / view.devicePixelRatio;
 
-    // Wrap the bar in MeasureSize so its resting laid-out height is reported to
-    // chromeExtentsNotifierProvider.  MeasureSize already defers via
-    // addPostFrameCallback, so we are safely outside the build phase when
-    // the provider.update() call runs. The SlideTransition that animates this
-    // bar uses a Transform (no relayout), so MeasureSize always sees the
-    // resting height — never a mid-animation partial height.
-    return MeasureSize(
-      onChange: (size) {
-        final current = ref.read(chromeExtentsNotifierProvider);
-        // size.height is the full Material height: it already includes the
-        // status-bar padding baked in via Padding(top: systemTopInset) below.
-        // Adding systemTopInset again would double-count it, pushing the side
-        // seekbar ~44 dp too low on notch devices.  Mirror the bottom bar:
-        //   its onChange uses `bottomInset: size.height` for
-        //   the same reason — the nav-bar Padding is inside the measured subtree.
-        final next = ChromeExtents(
-          topInset: size.height,
-          bottomInset: current.bottomInset,
-        );
-        ref.read(chromeExtentsNotifierProvider.notifier).update(next);
-      },
-      child: Material(
-        // Shared chrome surface; the Material fills behind the status bar.
-        color: readerNavSurface(context.theme.colorScheme),
-        elevation: 0,
-        child: Padding(
-          padding: EdgeInsets.only(top: systemTopInset),
-          child: Row(
-            children: [
-              // Back button (mirrors AppBar's leading).
-              IconButton(
-                onPressed: onBack,
-                icon: const BackButtonIcon(),
+    return Material(
+      // Shared chrome surface; the Material fills behind the status bar.
+      color: readerNavSurface(context.theme.colorScheme),
+      elevation: 0,
+      child: Padding(
+        padding: EdgeInsets.only(top: systemTopInset),
+        child: Row(
+          children: [
+            // Back button (mirrors AppBar's leading).
+            IconButton(
+              onPressed: onBack,
+              icon: const BackButtonIcon(),
+            ),
+            // Title + subtitle (mirrors AppBar's title ListTile).
+            Expanded(
+              child: ListTile(
+                title: (manga.title).isNotBlank
+                    ? Text(
+                        manga.title,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                subtitle: (chapter.name).isNotBlank
+                    ? Text(
+                        chapter.name,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                contentPadding: EdgeInsets.zero,
               ),
-              // Title + subtitle (mirrors AppBar's title ListTile).
-              Expanded(
-                child: ListTile(
-                  title: (manga.title).isNotBlank
-                      ? Text(
-                          manga.title,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  subtitle: (chapter.name).isNotBlank
-                      ? Text(
-                          chapter.name,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              // Actions (mirrors AppBar.actions).
-              ReaderBookmarkButton(
-                chapterId: chapter.id,
-                fallbackIsBookmarked: chapter.isBookmarked,
-              ),
-              chapter.realUrl.isBlank
-                  ? const SizedBox.shrink()
-                  : IconButton(
-                      onPressed: () async {
-                        launchUrlInWeb(
-                          context,
-                          (chapter.realUrl ?? ""),
-                          ref.read(toastProvider),
-                        );
-                      },
-                      icon: const Icon(Icons.public_rounded),
-                    ),
-            ],
-          ),
+            ),
+            // Actions (mirrors AppBar.actions).
+            ReaderBookmarkButton(
+              chapterId: chapter.id,
+              fallbackIsBookmarked: chapter.isBookmarked,
+            ),
+            chapter.realUrl.isBlank
+                ? const SizedBox.shrink()
+                : IconButton(
+                    onPressed: () async {
+                      launchUrlInWeb(
+                        context,
+                        (chapter.realUrl ?? ""),
+                        ref.read(toastProvider),
+                      );
+                    },
+                    icon: const Icon(Icons.public_rounded),
+                  ),
+          ],
         ),
       ),
     );

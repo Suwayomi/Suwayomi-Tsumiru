@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
@@ -32,8 +33,6 @@ import 'infinity_continuous/infinity_continuous_navigation.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
 import 'infinity_continuous/multichapter_continuous_reader_mode.dart';
 import 'reader_zoom_view.dart';
-
-const double _kViewportScrollFraction = 0.9; // ~one screen, small overlap
 
 /// Continuous reader mode entry point.
 ///
@@ -152,6 +151,9 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
         ref.watch(doubleTapToZoomProvider).ifNull(true);
     final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final ReaderScrollAmount scrollAmount =
+        ref.watch(readerScrollAmountKeyProvider) ??
+            DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
 
     void handleViewportScroll({required bool forward}) {
       if (!scrollController.isAttached) return;
@@ -160,7 +162,7 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
         final double viewport = pos.viewportDimension;
         final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
         scrollOffsetController.animateScroll(
-          offset: viewport * _kViewportScrollFraction * sign,
+          offset: viewport * scrollAmount.fraction * sign,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );

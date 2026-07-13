@@ -46,6 +46,30 @@ class SmoothAutoScroll extends _$SmoothAutoScroll
   bool? build() => initialize(DBKeys.smoothAutoScroll);
 }
 
+@riverpod
+class ReaderScrollAmountKey extends _$ReaderScrollAmountKey
+    with SharedPreferenceEnumClientMixin<ReaderScrollAmount> {
+  @override
+  ReaderScrollAmount? build() => initialize(
+        DBKeys.readerScrollAmount,
+        enumList: ReaderScrollAmount.values,
+      );
+}
+
+@riverpod
+class AutoScrollIntervalSeconds extends _$AutoScrollIntervalSeconds
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.autoScrollIntervalSeconds);
+}
+
+@riverpod
+class AutoAdvanceIntervalSeconds extends _$AutoAdvanceIntervalSeconds
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.autoAdvanceIntervalSeconds);
+}
+
 // Webtoon wide-page split (+invert): persists for a later engine PR — the
 // frozen webtoon engine can't remap 1 page → 2 entries yet.
 

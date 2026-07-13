@@ -15,6 +15,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_general_pr
 import '../../../../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.dart';
 import '../../../controller/reader_settings_model.dart';
+import 'int_slider_tile.dart';
 
 /// General tab: background color,
 /// page number, seekbar chain, fullscreen, keep-screen-on, long-tap actions,
@@ -120,7 +121,7 @@ class GeneralTab extends ConsumerWidget {
           onChanged: model.setFlashOnPageChange,
         ),
         if (settings.flashOnPageChange) ...[
-          _IntSliderTile(
+          IntSliderTile(
             title: context.l10n.flashDuration,
             valueLabel: context.l10n.flashDurationMs(
               settings.flashDuration * kFlashMsPerTick,
@@ -130,9 +131,10 @@ class GeneralTab extends ConsumerWidget {
             max: 15,
             onChanged: model.setFlashDuration,
           ),
-          _IntSliderTile(
+          IntSliderTile(
             title: context.l10n.flashEvery,
-            valueLabel: context.l10n.flashEveryPages(settings.flashPageInterval),
+            valueLabel:
+                context.l10n.flashEveryPages(settings.flashPageInterval),
             value: settings.flashPageInterval,
             min: 1,
             max: 10,
@@ -159,47 +161,6 @@ class GeneralTab extends ConsumerWidget {
           onChanged: ref.read(autoWebtoonModeProvider.notifier).update,
         ),
       ],
-    );
-  }
-}
-
-/// Discrete int slider with a trailing value readout.
-class _IntSliderTile extends StatelessWidget {
-  const _IntSliderTile({
-    required this.title,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  final String title;
-  final String valueLabel;
-  final int value;
-  final int min;
-  final int max;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Row(
-        children: [
-          Expanded(
-            child: Slider(
-              value: value.toDouble(),
-              min: min.toDouble(),
-              max: max.toDouble(),
-              divisions: max - min,
-              label: valueLabel,
-              onChanged: (v) => onChanged(v.round()),
-            ),
-          ),
-          Text(valueLabel),
-        ],
-      ),
     );
   }
 }

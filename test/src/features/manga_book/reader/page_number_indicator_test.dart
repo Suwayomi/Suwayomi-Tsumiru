@@ -80,6 +80,8 @@ Future<void> _pumpChrome(
   final prefs = await SharedPreferences.getInstance();
   final visibility = ValueNotifier(visible);
   addTearDown(visibility.dispose);
+  final utilsBarExpanded = ValueNotifier(false);
+  addTearDown(utilsBarExpanded.dispose);
 
   await tester.pumpWidget(
     ProviderScope(
@@ -101,6 +103,7 @@ Future<void> _pumpChrome(
             currentIndex: currentIndex,
             totalPageCount: null,
             visibility: visibility,
+            utilsBarExpanded: utilsBarExpanded,
             useBottomSeekBar: true,
             showSideSeekBar: false,
             scrollDirection: Axis.horizontal,
@@ -108,6 +111,7 @@ Future<void> _pumpChrome(
             resolvedReaderMode: reverseSeekBar
                 ? ReaderMode.singleHorizontalRTL
                 : ReaderMode.singleHorizontalLTR,
+            autoScrollSupported: false,
             reverseSeekBar: reverseSeekBar,
             onChanged: (_) {},
             onOpenSettings: () {},

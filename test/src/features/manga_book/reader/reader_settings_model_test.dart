@@ -228,6 +228,16 @@ void main() {
       expect(state.disableZoomIn, false);
     });
 
+    test('scroll amount and auto-scroll interval seed from DBKeys defaults',
+        () async {
+      final container = await _container(_manga());
+
+      final state = await _resolvedState(container);
+      expect(state.readerScrollAmount, ReaderScrollAmount.large);
+      expect(state.autoScrollIntervalSeconds, 3);
+      expect(state.autoAdvanceIntervalSeconds, 5);
+    });
+
     test('zoom toggles resolve the live global providers', () async {
       final container = await _container(_manga());
       container.read(pinchToZoomProvider.notifier).update(false);

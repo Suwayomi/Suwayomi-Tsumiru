@@ -132,6 +132,9 @@ class ReaderWrapper extends HookConsumerWidget {
     required this.onPrevious,
     this.onViewportScrollForward,
     this.onViewportScrollBackward,
+    this.onToggleAutoScroll,
+    this.onAutoScrollFaster,
+    this.onAutoScrollSlower,
     required this.scrollDirection,
     this.showReaderLayoutAnimation = false,
     required this.chapterPages,
@@ -152,6 +155,9 @@ class ReaderWrapper extends HookConsumerWidget {
   final VoidCallback onNext;
   final VoidCallback? onViewportScrollForward;
   final VoidCallback? onViewportScrollBackward;
+  final VoidCallback? onToggleAutoScroll;
+  final VoidCallback? onAutoScrollFaster;
+  final VoidCallback? onAutoScrollSlower;
   final int currentIndex;
   final Axis scrollDirection;
   final bool showReaderLayoutAnimation;
@@ -253,6 +259,9 @@ class ReaderWrapper extends HookConsumerWidget {
     final visibility = useState(
       sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
     );
+    // Komikku-style utils bar (auto-scroll control): starts collapsed each
+    // reader open, unlike chrome visibility which persists across chapters.
+    final utilsBarExpanded = useState(false);
     final mangaReaderPadding =
         useState(manga.metaData.readerPadding ?? localMangaReaderPadding);
     final mangaReaderMagnifierSize = useState(
@@ -536,7 +545,8 @@ class ReaderWrapper extends HookConsumerWidget {
             Positioned.fill(
               child: Shortcuts.manager(
                 manager: readerShortcutManager(scrollDirection,
-                    isRtl: _isRTLReaderMode(resolvedReaderMode)),
+                    isRtl: _isRTLReaderMode(resolvedReaderMode),
+                    autoScrollSupported: onToggleAutoScroll != null),
                 child: Actions(
                   actions: {
                     PreviousScrollIntent: CallbackAction<PreviousScrollIntent>(
@@ -580,6 +590,29 @@ class ReaderWrapper extends HookConsumerWidget {
                         CallbackAction<ViewportScrollBackwardIntent>(
                       onInvoke: (intent) {
                         (onViewportScrollBackward ?? onReaderPrevious)();
+                        return null;
+                      },
+                    ),
+                    // Nullable callbacks: any non-continuous vertical mode
+                    // that doesn't supply these is a safe no-op.
+                    AutoScrollToggleIntent:
+                        CallbackAction<AutoScrollToggleIntent>(
+                      onInvoke: (intent) {
+                        onToggleAutoScroll?.call();
+                        return null;
+                      },
+                    ),
+                    AutoScrollFasterIntent:
+                        CallbackAction<AutoScrollFasterIntent>(
+                      onInvoke: (intent) {
+                        onAutoScrollFaster?.call();
+                        return null;
+                      },
+                    ),
+                    AutoScrollSlowerIntent:
+                        CallbackAction<AutoScrollSlowerIntent>(
+                      onInvoke: (intent) {
+                        onAutoScrollSlower?.call();
                         return null;
                       },
                     ),
@@ -648,11 +681,13 @@ class ReaderWrapper extends HookConsumerWidget {
                 currentIndex: currentIndex,
                 totalPageCount: totalPageCount,
                 visibility: visibility,
+                utilsBarExpanded: utilsBarExpanded,
                 useBottomSeekBar: useBottomSeekBar,
                 showSideSeekBar: showSideSeekBar,
                 scrollDirection: scrollDirection,
                 nextPrevChapterPair: nextPrevChapterPair,
                 resolvedReaderMode: resolvedReaderMode,
+                autoScrollSupported: onToggleAutoScroll != null,
                 reverseSeekBar: _isRTLReaderMode(resolvedReaderMode),
                 onChanged: onChanged,
                 onOpenSettings: () async {

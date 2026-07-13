@@ -21,13 +21,37 @@ class ViewportScrollForwardIntent extends Intent {}
 
 class ViewportScrollBackwardIntent extends Intent {}
 
+class AutoScrollToggleIntent extends Intent {}
+
+class AutoScrollFasterIntent extends Intent {}
+
+class AutoScrollSlowerIntent extends Intent {}
+
 ShortcutManager readerShortcutManager(Axis scrollDirection,
-        {bool isRtl = false}) =>
+        {bool isRtl = false, bool autoScrollSupported = false}) =>
     ShortcutManager(
       shortcuts: {
-        const SingleActivator(LogicalKeyboardKey.space): NextScrollIntent(),
+        // Space toggles auto-scroll only in vertical modes that actually mount
+        // an auto-scroll engine; elsewhere it stays page-advance (and
+        // Shift+Space page-back), so keyboard paging never goes dead.
+        const SingleActivator(LogicalKeyboardKey.space):
+            scrollDirection == Axis.vertical && autoScrollSupported
+                ? AutoScrollToggleIntent()
+                : NextScrollIntent(),
         const SingleActivator(LogicalKeyboardKey.space, shift: true):
-            PreviousScrollIntent(),
+            scrollDirection == Axis.vertical && autoScrollSupported
+                ? AutoScrollToggleIntent()
+                : PreviousScrollIntent(),
+        if (scrollDirection == Axis.vertical && autoScrollSupported) ...{
+          const SingleActivator(LogicalKeyboardKey.equal):
+              AutoScrollFasterIntent(),
+          const SingleActivator(LogicalKeyboardKey.numpadAdd):
+              AutoScrollFasterIntent(),
+          const SingleActivator(LogicalKeyboardKey.minus):
+              AutoScrollSlowerIntent(),
+          const SingleActivator(LogicalKeyboardKey.numpadSubtract):
+              AutoScrollSlowerIntent(),
+        },
         // RTL manga reads right→left, so the physical left key advances.
         const SingleActivator(LogicalKeyboardKey.arrowLeft):
             isRtl ? NextScrollIntent() : PreviousScrollIntent(),

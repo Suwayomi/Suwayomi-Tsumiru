@@ -301,6 +301,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final visibility = ValueNotifier(true);
       addTearDown(visibility.dispose);
+      final utilsBarExpanded = ValueNotifier(false);
+      addTearDown(utilsBarExpanded.dispose);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -322,11 +324,13 @@ void main() {
                 currentIndex: 0,
                 totalPageCount: null,
                 visibility: visibility,
+                utilsBarExpanded: utilsBarExpanded,
                 useBottomSeekBar: true,
                 showSideSeekBar: false,
                 scrollDirection: Axis.horizontal,
                 nextPrevChapterPair: null,
                 resolvedReaderMode: ReaderMode.singleHorizontalLTR,
+                autoScrollSupported: false,
                 reverseSeekBar: false,
                 onChanged: (_) {},
                 onOpenSettings: () {},
