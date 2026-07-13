@@ -2117,6 +2117,18 @@
     "serverPort": "Server Port",
     "serverPortHintText": "Server port",
     "serverSettingsSubtitle": "Configure the Suwayomi server itself.",
+    "serverUnreachableTitle": "Can't reach your server",
+    "@serverUnreachableTitle": {
+        "description": "Shown when the app cannot connect to the Suwayomi server"
+    },
+    "serverUnreachableSubtitle": "Make sure it's running, then check your connection settings.",
+    "@serverUnreachableSubtitle": {
+        "description": "Guidance under the server-unreachable message"
+    },
+    "serverUnreachableAction": "Connection settings",
+    "@serverUnreachableAction": {
+        "description": "Button that opens the connection settings screen"
+    },
     "clearCrashLog": "Clear crash log",
     "copyCrashLog": "Copy crash log",
     "copyCrashLogSubtitle": "For bug reports — copies the latest error log to the clipboard",
