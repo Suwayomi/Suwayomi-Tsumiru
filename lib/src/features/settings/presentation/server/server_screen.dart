@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/network/graphql_errors.dart';
+import '../../../../widgets/server_unreachable_view.dart';
 import '../../controller/server_controller.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
@@ -46,6 +48,26 @@ class ServerScreen extends ConsumerWidget {
                   padding: EdgeInsets.all(24),
                   child: Center(child: CircularProgressIndicator()),
                 ),
+              // On error these settings can't load (they live on the server).
+              // A connection failure gets the "can't reach server" view with a
+              // path to Connection settings, instead of a blank page.
+              if (serverSettings.hasError && !serverSettings.hasValue)
+                Builder(builder: (context) {
+                  final error = serverSettings.error!;
+                  final unwrapped = error is OperationMessageException
+                      ? error.exception
+                      : error;
+                  if (isConnectionError(unwrapped)) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: ServerUnreachableView(onRetry: onRefresh),
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(child: Text(error.toString())),
+                  );
+                }),
               if (serverSettings.valueOrNull != null) ...[
                 ServerBindingSection(serverBindingDto: serverSettings.value!),
                 SocksProxySection(socksProxyDto: serverSettings.value!),

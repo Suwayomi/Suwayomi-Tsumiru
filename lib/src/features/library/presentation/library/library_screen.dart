@@ -25,6 +25,7 @@ import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
+import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../domain/category/category_model.dart';
 import '../../domain/library_group.dart';
@@ -39,6 +40,7 @@ import 'widgets/library_manga_organizer.dart';
 /// below the app bar (inside the Scaffold), not floating over the status bar.
 Widget _libraryBody(Widget body) => Column(
       children: [
+        const ServerUnreachableBanner(),
         const OfflineServerMismatchBanner(),
         Expanded(child: body),
       ],

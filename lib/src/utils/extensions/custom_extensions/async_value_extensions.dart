@@ -46,19 +46,30 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     return when(
       data: data,
       skipError: true,
-      error: (error, trace) => AppUtils.wrapOn(
-          wrapper,
-          Emoticons(
-            title: showGenericError
-                ? context.l10n.errorSomethingWentWrong
-                : error.toString(),
-            button: refresh != null
-                ? TextButton(
-                    onPressed: refresh,
-                    child: Text(context.l10n.refresh),
-                  )
-                : null,
-          )),
+      error: (error, trace) {
+        // A genuine "can't reach the server" failure gets a dedicated view
+        // that points at Connection settings, instead of a blank/opaque error
+        // (the connection exception's own message is empty).
+        final unwrapped =
+            error is OperationMessageException ? error.exception : error;
+        if (isConnectionError(unwrapped)) {
+          return AppUtils.wrapOn(
+              wrapper, ServerUnreachableView(onRetry: refresh));
+        }
+        return AppUtils.wrapOn(
+            wrapper,
+            Emoticons(
+              title: showGenericError
+                  ? context.l10n.errorSomethingWentWrong
+                  : error.toString(),
+              button: refresh != null
+                  ? TextButton(
+                      onPressed: refresh,
+                      child: Text(context.l10n.refresh),
+                    )
+                  : null,
+            ));
+      },
       loading: () =>
           AppUtils.wrapOn(wrapper, const CenterSorayomiShimmerIndicator()),
     );
