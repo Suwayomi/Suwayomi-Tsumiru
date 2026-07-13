@@ -67,8 +67,10 @@ void main() {
     final container = await _pumpBar(tester, expanded);
 
     expect(container.read(autoScrollActiveProvider), false);
-    // Auto-scroll switch is the first of the two switches (auto-scroll, smooth).
-    await tester.tap(find.byType(Switch).first);
+    // One switch only — smooth/jump is a settings-only preference, never here.
+    expect(find.byType(Switch), findsOneWidget);
+    expect(find.text('Auto scroll'), findsOneWidget);
+    await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
     expect(container.read(autoScrollActiveProvider), true);
@@ -94,8 +96,7 @@ void main() {
     expect(container.read(autoScrollIntervalSecondsProvider), 12);
   });
 
-  testWidgets(
-      'paged mode surfaces Auto advance: its own interval, no smooth switch',
+  testWidgets('paged mode surfaces Auto advance with its own interval',
       (tester) async {
     final expanded = ValueNotifier(true);
     addTearDown(expanded.dispose);
@@ -105,12 +106,11 @@ void main() {
       readerMode: ReaderMode.continuousHorizontalLTR,
     );
 
-    // "Auto advance interval" label, not "Auto scroll interval".
-    expect(find.text('Auto advance interval'), findsOneWidget);
-    expect(find.text('Auto scroll interval'), findsNothing);
+    // "Auto advance" label, not "Auto scroll".
+    expect(find.text('Auto advance'), findsOneWidget);
+    expect(find.text('Auto scroll'), findsNothing);
 
-    // Smooth/jump is meaningless when turning pages, so only the toggle switch
-    // is present.
+    // Only the on/off toggle — no smooth switch anywhere.
     expect(find.byType(Switch), findsOneWidget);
 
     // The stepper drives the separate auto-advance interval (default 5).

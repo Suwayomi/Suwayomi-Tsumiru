@@ -1464,6 +1464,14 @@
     "scrollAmountSmall": "Small",
     "scrollAmountMedium": "Medium",
     "scrollAmountLarge": "Large",
+    "autoScroll": "Auto scroll",
+    "@autoScroll": {
+        "description": "Reader utils bar: auto-scroll toggle label (webtoon)"
+    },
+    "autoAdvance": "Auto advance",
+    "@autoAdvance": {
+        "description": "Reader utils bar: auto-advance toggle label (paged)"
+    },
     "autoScrollInterval": "Auto scroll interval",
     "@autoScrollInterval": {
         "description": "Long-strip auto-scroll: seconds per advance"

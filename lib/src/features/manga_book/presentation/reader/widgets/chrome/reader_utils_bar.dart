@@ -42,13 +42,12 @@ class ReaderUtilsBar extends ConsumerWidget {
     final cs = context.theme.colorScheme;
     final active = ref.watch(autoScrollActiveProvider);
 
-    // Vertical glide vs page-flip: same toggle, but different label, a
-    // different stored interval, and no smooth option when turning pages.
+    // Vertical glide vs page-flip: same toggle, different label and a different
+    // stored interval. Smooth-vs-jump is a set-once preference and lives in
+    // reader settings only, never here.
     final isScrollMode = readerMode == ReaderMode.webtoon ||
         readerMode == ReaderMode.continuousVertical;
 
-    final smooth = ref.watch(smoothAutoScrollProvider) ??
-        DBKeys.smoothAutoScroll.initial as bool;
     final int interval;
     if (isScrollMode) {
       interval = ref.watch(autoScrollIntervalSecondsProvider) ??
@@ -68,8 +67,8 @@ class ReaderUtilsBar extends ConsumerWidget {
     }
 
     final label = isScrollMode
-        ? context.l10n.autoScrollInterval
-        : context.l10n.autoAdvanceInterval;
+        ? context.l10n.autoScroll
+        : context.l10n.autoAdvance;
 
     return Material(
       color: readerNavSurface(cs),
@@ -117,29 +116,6 @@ class ReaderUtilsBar extends ConsumerWidget {
                             icon: Icon(Icons.add, color: cs.onSurface),
                             onPressed: () => setInterval(interval + 1),
                           ),
-                          // Smooth/jump only matters while gliding; page-flip
-                          // is always a discrete turn.
-                          if (isScrollMode) ...[
-                            const SizedBox(width: 8),
-                            Tooltip(
-                              message: context.l10n.smoothAutoScroll,
-                              child: Switch(
-                                value: smooth,
-                                activeThumbColor: cs.primary,
-                                thumbIcon: WidgetStateProperty.resolveWith(
-                                  (states) => Icon(
-                                    states.contains(WidgetState.selected)
-                                        ? Icons.waves_rounded
-                                        : Icons.arrow_downward_rounded,
-                                    size: 16,
-                                  ),
-                                ),
-                                onChanged: (value) => ref
-                                    .read(smoothAutoScrollProvider.notifier)
-                                    .update(value),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
