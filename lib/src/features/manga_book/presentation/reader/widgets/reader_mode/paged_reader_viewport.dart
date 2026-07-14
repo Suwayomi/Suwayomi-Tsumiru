@@ -986,7 +986,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
                     _PositionedDisplayEntry(
                       axis: widget.axis,
                       offset: _entryOffset(index),
-                      child: _buildDisplayEntry(index),
+                      child: _buildDisplayEntry(
+                        index,
+                        active: index == _displayIndex,
+                      ),
                     ),
                 ],
               ),
@@ -1006,7 +1009,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   double _entryOffset(int index) =>
       (index - _displayIndex) * _axisExtent * _axisSign + _dragOffset;
 
-  Widget _buildDisplayEntry(int index) {
+  Widget _buildDisplayEntry(int index, {required bool active}) {
     final item = widget.window.items[index];
     if (item is TransitionDisplay) {
       return widget.transitionBuilder(item);
@@ -1014,6 +1017,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final spread = item as SpreadDisplay;
     return _ZoomedDisplayEntry(
       controller: _zoomControllerFor(index),
+      // Only the focused page applies its zoom/pan transform. A neighbor still
+      // carries whatever zoom/pan it was left with; applying that off-screen
+      // drags it partly back into view, overlapping the current page.
+      active: active,
       child: DoublePageView(
         entry: spread.entry,
         pages: widget.window.pagesAt(index)!,
@@ -1053,14 +1060,20 @@ class _PositionedDisplayEntry extends StatelessWidget {
 class _ZoomedDisplayEntry extends StatelessWidget {
   const _ZoomedDisplayEntry({
     required this.controller,
+    required this.active,
     required this.child,
   });
 
   final _PageZoomController controller;
+
+  /// True only for the focused page. A neighbor renders at base fit so its
+  /// retained zoom/pan can't displace it into the viewport.
+  final bool active;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    if (!active) return child;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
