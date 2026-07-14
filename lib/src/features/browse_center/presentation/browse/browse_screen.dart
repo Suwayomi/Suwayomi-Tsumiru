@@ -56,6 +56,11 @@ class BrowseScreen extends HookConsumerWidget {
               icon: const Icon(Icons.travel_explore_rounded),
             ),
           if (tabController.index == 1) ...[
+            IconButton(
+              tooltip: context.l10n.extensionRepository,
+              onPressed: () => const ExtensionRepositoryRoute().push(context),
+              icon: const Icon(Icons.dns_rounded),
+            ),
             const InstallExtensionFile(),
           ],
           IconButton(
