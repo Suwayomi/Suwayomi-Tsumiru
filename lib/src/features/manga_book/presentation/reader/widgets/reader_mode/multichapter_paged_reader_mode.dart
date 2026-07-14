@@ -135,10 +135,16 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
 
     final isHorizontal = scrollDirection == Axis.horizontal;
     final isLandscape = context.width > context.height;
+    // An explicit page-layout choice (the bottom-bar toggle) always wins.
+    // "Dual page spread in landscape" only augments Automatic, and respects
+    // landscape — otherwise it forced dual everywhere and made the toggle a
+    // no-op.
     final wantDouble = isHorizontal &&
-        (settings.pageLayout == PageLayout.doublePages ||
-            (settings.pageLayout == PageLayout.automatic && isLandscape) ||
-            settings.trueDualPageSpread);
+        switch (settings.pageLayout) {
+          PageLayout.doublePages => true,
+          PageLayout.singlePage => false,
+          PageLayout.automatic => isLandscape || settings.trueDualPageSpread,
+        };
     final splitWide = settings.dualPageSplitPaged && isHorizontal;
     final splitInvert = settings.dualPageInvertPaged;
     final reversePair = settings.invertDoublePages != reverse;
