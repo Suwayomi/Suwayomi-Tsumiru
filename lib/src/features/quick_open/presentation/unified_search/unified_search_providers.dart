@@ -6,10 +6,34 @@
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 
 const int kUnifiedSectionLimit = 6;
+
+/// Matches a recognized metatag operator (`source:`, `tag:`, `-status:`…) at a
+/// term boundary — same shape the DSL highlighter uses. An unknown key like
+/// `Re:Zero` is intentionally excluded so plain titles still search plainly.
+final _operatorPattern = RegExp(
+  '(^|[\\s,])(-?)(${librarySearchMetatagKeys.join('|')}):',
+  caseSensitive: false,
+);
+
+/// Whether [q] should run through the full library DSL rather than title-only.
+bool queryUsesOperator(String q) => _operatorPattern.hasMatch(q);
+
+/// The plain-text portion of [q] with metatag operator tokens removed — what a
+/// global *source* search should receive. Operators like `unread:true` are
+/// local filters that make no sense against a source, so `unread:true` → ``,
+/// `bad source:mangadex` → `bad`.
+String plainQueryText(String q) {
+  final kept = [
+    for (final token in q.split(RegExp(r'[\s,]+')))
+      if (token.isNotEmpty && !queryUsesOperator(token)) token,
+  ];
+  return kept.join(' ');
+}
 
 /// The live query text in the unified search field.
 final unifiedSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -39,12 +63,17 @@ bool titleMatchesQuery(String title, String query) =>
     title.toLowerCase().contains(query.trim().toLowerCase());
 
 /// Top matching in-library manga for the current query (instant, local).
+///
+/// Hybrid: plain words match the TITLE only (keeps "bad" clean); the moment the
+/// query contains a metatag operator it runs the full library DSL, so quick
+/// search is never weaker than the library filter bar.
 final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((ref) {
   final query = ref.watch(unifiedSearchQueryProvider);
   final library = ref.watch(libraryMangaListProvider).valueOrNull ?? const [];
+  final useDsl = queryUsesOperator(query);
   return matchLibraryTitles<MangaDto>(
     library,
     query,
-    (m, q) => titleMatchesQuery(m.title, q),
+    (m, q) => useDsl ? m.query(q) : titleMatchesQuery(m.title, q),
   );
 });
