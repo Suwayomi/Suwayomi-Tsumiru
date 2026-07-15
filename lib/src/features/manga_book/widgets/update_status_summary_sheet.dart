@@ -7,9 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/theme/brand.dart';
 import '../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
+import '../../migration/domain/migration_models.dart';
 import '../data/updates/updates_repository.dart';
 import '../domain/manga/manga_model.dart';
 import '../domain/update_status/update_status_model.dart';
@@ -58,6 +61,9 @@ class UpdateStatusSummaryDialog extends ConsumerWidget {
                   mangas: data!.failedJobs.mangaList,
                   title: context.l10n.failed,
                   initiallyExpanded: true,
+                  onMigrate: (manga) => MigrationGlobalSearchRoute(
+                    $extra: MigrationRouteData(sourceManga: manga),
+                  ).push(context),
                 ),
             ],
           ),
@@ -74,12 +80,18 @@ class UpdateStatusExpansionTile extends StatelessWidget {
     required this.mangas,
     required this.title,
     this.initiallyExpanded = false,
+    this.onMigrate,
   });
   final List<MangaDto> mangas;
   final String title;
   final bool initiallyExpanded;
+
+  /// When set, each row shows a Migrate button that runs this with the row's
+  /// series — wired only for failed updates, whose source may have moved away.
+  final void Function(MangaDto manga)? onMigrate;
   @override
   Widget build(BuildContext context) {
+    final onMigrate = this.onMigrate;
     return ExpansionTile(
       title: Text("$title (${mangas.length.padLeft()})"),
       initiallyExpanded: initiallyExpanded,
@@ -91,8 +103,56 @@ class UpdateStatusExpansionTile extends StatelessWidget {
                 manga: e,
                 showCountBadges: true,
                 onPressed: () => MangaRoute(mangaId: e.id).push(context),
+                trailing: onMigrate != null
+                    ? _MigrateButton(onPressed: () => onMigrate(e))
+                    : null,
               ))
           .toList(),
+    );
+  }
+}
+
+/// A pill button that sends a series into the migration flow — shown on failed
+/// library-update rows so a dead source can be swapped without hunting for the
+/// entry.
+class _MigrateButton extends StatelessWidget {
+  const _MigrateButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final accent = brandBrightAccent(cs);
+    return Padding(
+      padding: KEdgeInsets.h8.size,
+      child: Material(
+        color: cs.primary.withValues(alpha: 0.14),
+        shape: StadiumBorder(
+          side: BorderSide(color: cs.primary.withValues(alpha: 0.5)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.swap_horiz_rounded, size: 17, color: accent),
+                const SizedBox(width: 6),
+                Text(
+                  context.l10n.migrate,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
