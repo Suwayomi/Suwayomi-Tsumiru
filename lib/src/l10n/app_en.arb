@@ -834,27 +834,6 @@
     "@quickSearch": {
         "description": "Screen title and Button text of Quick Search screen"
     },
-    "@quickSearchCategory": {
-        "description": "Quick Open Hint text for Category C with prefill '#C'"
-    },
-    "@quickSearchCategoryManga": {
-        "description": "Quick Open Hint text for searching Manga M in Category C with prefill '#C/M'"
-    },
-    "@quickSearchCategoryMangaChapter": {
-        "description": "Quick Open Hint text for searching Chapter name CN from Manga M in Source S with prefill '#C/M:CN'"
-    },
-    "@quickSearchContext": {
-        "description": "Quick Open Hint text for query X"
-    },
-    "@quickSearchShowAllCommandTip": {
-        "description": "Quick Open Tip text for showing all commands by entering '?'"
-    },
-    "@quickSearchSource": {
-        "description": "Quick Open Hint text for Source S with prefill '@S'"
-    },
-    "@quickSearchSourceManga": {
-        "description": "Quick Open Hint text for searching Manga M in Source S with prefill '@S/M'"
-    },
     "@reader": {
         "description": "Screen title and Button text of Reader screen"
     },
@@ -1169,6 +1148,29 @@
     },
     "@today": {
         "description": "Today Text to show the release date of manga"
+    },
+    "@unifiedSearchHint": {
+        "description": "Placeholder text in the unified search field"
+    },
+    "@unifiedSearchLibrarySection": {
+        "description": "Unified search section header"
+    },
+    "@unifiedSearchGoToSection": {
+        "description": "Unified search section header for app navigation"
+    },
+    "@unifiedSearchAllSources": {
+        "description": "Row that hands off to global source search",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "@unifiedSearchFiltersSection": {
+        "description": "Unified search section header for operator autocomplete suggestions"
+    },
+    "@unifiedSearchExamplesSection": {
+        "description": "Unified search section header for example queries in the empty state"
     },
     "@uninstall": {
         "description": "Button text to Uninstall the extension"
@@ -1948,13 +1950,6 @@
     "previousChapter": "Previous: {chapterTitle}",
     "queued": "Queued",
     "quickSearch": "Quick Search",
-    "quickSearchCategory": "Go to Category 'C'",
-    "quickSearchCategoryManga": "Go to Manga 'M' in Category 'C'",
-    "quickSearchCategoryMangaChapter": "Go to Chapter Name 'CN' from Manga 'M' in Category 'C'",
-    "quickSearchContext": "Search for query X (Results are based on screen context)",
-    "quickSearchShowAllCommandTip": "Tip: Enter '?' to see all commands",
-    "quickSearchSource": "Go to Source 'S'",
-    "quickSearchSourceManga": "Search for Manga 'M' in Source 'S'",
     "reader": "Reader",
     "readerMagnifierSize": "Magnifier Size",
     "readerMode": "Reading Mode",
@@ -2171,6 +2166,12 @@
     "upcomingGuide": "What's this?",
     "upcomingGuideBody": "Predicted next-release dates for your library, estimated from each series' recent update cadence. These are estimates, not guarantees, and completed series are left out.",
     "upcomingEmpty": "No upcoming releases predicted yet. They'll appear here once your library has enough chapter history to estimate from.",
+    "unifiedSearchHint": "Search your library, app, and sources",
+    "unifiedSearchLibrarySection": "Library",
+    "unifiedSearchGoToSection": "Go to",
+    "unifiedSearchFiltersSection": "Filters",
+    "unifiedSearchExamplesSection": "Examples",
+    "unifiedSearchAllSources": "Search all sources for \"{query}\"",
     "uninstall": "Uninstall",
     "uninstalling": "Uninstalling",
     "unknownAuthor": "Unknown Author",

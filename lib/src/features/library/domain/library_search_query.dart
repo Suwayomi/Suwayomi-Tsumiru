@@ -126,6 +126,39 @@ class LibrarySearchQuery {
     return LibrarySearchQuery(terms);
   }
 
+  /// Whether [raw] contains a structured term — a recognized `key:` metatag or a
+  /// `{…}` group. Quick search uses this to pick title-only vs full-DSL matching,
+  /// so it agrees with [parse] on what counts (a bare `Re:Zero` does not).
+  static bool hasOperator(String? raw) {
+    if (raw == null) return false;
+    for (final token in _tokenize(raw)) {
+      if (_isStructured(token)) return true;
+    }
+    return false;
+  }
+
+  /// The plain-text portion of [raw] with metatag operators and `{…}` groups
+  /// removed — what a *source* search should receive (`bad source:x` → `bad`,
+  /// `tag:"slice of life"` → ``). Reuses the quote/brace-aware tokenizer so a
+  /// quoted value isn't split into leaked fragments.
+  static String plainText(String? raw) {
+    if (raw == null) return '';
+    return [
+      for (final token in _tokenize(raw))
+        if (!_isStructured(token)) token,
+    ].join(' ');
+  }
+
+  /// A token is structured if it's an operator (`[-]key:…` with a recognized
+  /// key) or a `{…}` group, as opposed to plain search text.
+  static bool _isStructured(String token) {
+    var t = token;
+    if (t.length > 1 && t.startsWith('-')) t = t.substring(1);
+    if (t.length > 1 && t.startsWith('{') && t.endsWith('}')) return true;
+    final colon = t.indexOf(':');
+    return colon > 0 && _fieldFor(t.substring(0, colon).toLowerCase()) != null;
+  }
+
   /// Splits on spaces/commas, keeping double-quoted spans and `{…}` groups
   /// intact. Quote chars are consumed, so `tag:"slice of life"` becomes the
   /// single token `tag:slice of life`; a `{a|b}` group stays one token so its

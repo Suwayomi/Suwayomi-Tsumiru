@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/hotkeys/presentation/global_shortcut_host.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/search_stack/search_stack_screen.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 
 // Faithful reproduction: the host wraps a router shell and NOTHING is given
@@ -173,6 +174,35 @@ void main() {
 
     expect(container.read(quickOpenVisibleProvider), isTrue,
         reason: 'Ctrl+F opens search');
+  });
+
+  testWidgets('opening search clears a stale query (C1 regression)',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [quickSearchToggleProvider.overrideWith(_ToggleOn.new)],
+    );
+    addTearDown(container.dispose);
+    // A leftover query from a previous session (e.g. closed via Esc, which
+    // does not reset it) must not survive to the next open.
+    container.read(unifiedSearchQueryProvider.notifier).state = 'stale';
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        home: GlobalShortcutHost(
+          child: Scaffold(body: Center(child: Text('home'))),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+
+    expect(container.read(unifiedSearchQueryProvider), isEmpty,
+        reason: 'opening resets the query');
+    expect(container.read(quickOpenVisibleProvider), isTrue);
   });
 
   testWidgets('Esc closes the quick-open overlay instead of going back',

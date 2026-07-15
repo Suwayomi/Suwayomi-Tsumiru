@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../quick_open/presentation/search_stack/search_stack_screen.dart';
+import '../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import '../data/hotkey_binding.dart';
 
@@ -35,6 +36,7 @@ class GlobalShortcutHost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     void openSearch() {
       if (ref.read(quickSearchToggleProvider).ifNull()) {
+        ref.read(unifiedSearchQueryProvider.notifier).state = '';
         ref.read(quickOpenVisibleProvider.notifier).state = true;
       }
     }
