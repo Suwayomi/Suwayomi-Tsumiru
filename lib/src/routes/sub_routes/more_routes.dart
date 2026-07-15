@@ -114,3 +114,10 @@ class TrackingSettingsRoute extends GoRouteData {
   @override
   Widget build(context, state) => const TrackingSettingsScreen();
 }
+
+class HotkeysSettingsRoute extends GoRouteData {
+  const HotkeysSettingsRoute();
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const HotkeysSettingsScreen();
+}

@@ -15,6 +15,8 @@ import '../features/browse_center/presentation/source/source_screen.dart';
 import '../features/browse_center/presentation/source_manga_list/source_manga_list_screen.dart';
 import '../features/browse_center/presentation/source_preference/source_preference_screen.dart';
 import '../features/history/presentation/history_screen.dart';
+import '../features/hotkeys/presentation/global_shortcut_host.dart';
+import '../features/hotkeys/presentation/hotkeys_settings_screen.dart';
 import '../features/library/presentation/category/edit_category_screen.dart';
 import '../features/library/presentation/library/library_screen.dart';
 import '../features/manga_book/presentation/downloads/downloads_screen.dart';
@@ -101,6 +103,7 @@ abstract class Routes {
   static const offlineSettings = 'offline';
   static const connection = 'connection';
   static const trackingSettings = 'tracking';
+  static const hotkeysSettings = 'hotkeys';
 
   // Commons
   static const mangaRoute = '/manga/:mangaId';
@@ -231,6 +234,8 @@ GoRouter routerConfig(ref) {
                         path: Routes.offlineSettings),
                     TypedGoRoute<TrackingSettingsRoute>(
                         path: Routes.trackingSettings),
+                    TypedGoRoute<HotkeysSettingsRoute>(
+                        path: Routes.hotkeysSettings),
                   ],
                 ),
               ],
@@ -274,7 +279,9 @@ class QuickSearchRoute extends ShellRouteData {
                   : Brightness.dark,
           systemNavigationBarDividerColor: Colors.transparent,
         ),
-        child: SearchStackScreen(child: navigator),
+        child: GlobalShortcutHost(
+          child: SearchStackScreen(child: navigator),
+        ),
       );
 }
 
