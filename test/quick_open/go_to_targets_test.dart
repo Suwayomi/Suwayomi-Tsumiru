@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/go_to_targets.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
