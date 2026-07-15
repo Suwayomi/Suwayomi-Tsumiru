@@ -10,7 +10,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/server_image.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
+import '../../../manga_book/domain/manga/manga_model.dart';
 import 'go_to_targets.dart';
 import 'unified_search_providers.dart';
 
@@ -24,20 +26,31 @@ class UnifiedSearchScreen extends ConsumerWidget {
     final l = context.l10n;
     final query = ref.watch(unifiedSearchQueryProvider);
     final libraryHits = ref.watch(unifiedLibraryResultsProvider);
+    // Same visible set the library tab bar uses: non-empty AND not-hidden.
     final categories =
-        ref.watch(categoryControllerProvider).valueOrNull ?? const [];
+        ref.watch(visibleCategoryListProvider).valueOrNull ?? const [];
 
     final categoryTargets = [
       for (final c in categories)
         GoToTarget(
           label: (_) => c.name,
           icon: Icons.folder_rounded,
-          navigate: (ctx) => LibraryRoute(categoryId: c.id).go(ctx),
+          // .push (not .go) rebuilds LibraryScreen so its DefaultTabController
+          // lands on the chosen category — .go reuses the live screen and the
+          // tab never changes.
+          navigate: (ctx) => LibraryRoute(categoryId: c.id).push(ctx),
         ),
     ];
-    final goToHits = matchGoToTargets(query, l,
-        includeHotkeys: isKeyboardRuntime, extra: categoryTargets);
     final hasQuery = query.trim().isNotEmpty;
+    // Empty query = a launcher of every destination (teaches what's
+    // searchable); typing filters it.
+    final goToHits = hasQuery
+        ? matchGoToTargets(query, l,
+            includeHotkeys: isKeyboardRuntime, extra: categoryTargets)
+        : [
+            ...appGoToTargets(includeHotkeys: isKeyboardRuntime),
+            ...categoryTargets,
+          ];
 
     void close() => afterClick();
 
@@ -87,35 +100,44 @@ class UnifiedSearchScreen extends ConsumerWidget {
                       },
                     ),
                   ),
-                  if (hasQuery)
-                    Flexible(
-                      child: ListView(
-                        shrinkWrap: true,
-                        children: [
-                          if (libraryHits.isNotEmpty) ...[
-                            _Header(l.unifiedSearchLibrarySection),
-                            for (final m in libraryHits)
-                              ListTile(
-                                leading: const Icon(Icons.book_rounded),
-                                title: Text(m.title),
-                                onTap: () {
-                                  MangaRoute(mangaId: m.id).push(context);
-                                  close();
-                                },
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        if (hasQuery && libraryHits.isNotEmpty) ...[
+                          _Header(l.unifiedSearchLibrarySection),
+                          for (final m in libraryHits)
+                            ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: ServerImage(
+                                  imageUrl: m.thumbnailUrl ?? "",
+                                  size: const Size(40, 56),
+                                ),
                               ),
-                          ],
-                          if (goToHits.isNotEmpty) ...[
-                            _Header(l.unifiedSearchGoToSection),
-                            for (final t in goToHits)
-                              ListTile(
-                                leading: Icon(t.icon),
-                                title: Text(t.label(l)),
-                                onTap: () {
-                                  t.navigate(context);
-                                  close();
-                                },
-                              ),
-                          ],
+                              title: Text(m.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              subtitle: _mangaSubtitle(context, m),
+                              onTap: () {
+                                MangaRoute(mangaId: m.id).push(context);
+                                close();
+                              },
+                            ),
+                        ],
+                        if (goToHits.isNotEmpty) ...[
+                          _Header(l.unifiedSearchGoToSection),
+                          for (final t in goToHits)
+                            ListTile(
+                              leading: Icon(t.icon),
+                              title: Text(t.label(l)),
+                              onTap: () {
+                                t.navigate(context);
+                                close();
+                              },
+                            ),
+                        ],
+                        if (hasQuery) ...[
                           const Divider(height: 1),
                           ListTile(
                             leading: const Icon(Icons.travel_explore_rounded),
@@ -126,8 +148,9 @@ class UnifiedSearchScreen extends ConsumerWidget {
                             },
                           ),
                         ],
-                      ),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
@@ -135,6 +158,20 @@ class UnifiedSearchScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // Source name + unread count, whichever are present; null when neither.
+  Widget? _mangaSubtitle(BuildContext context, MangaDto manga) {
+    final source = manga.source?.displayName;
+    final parts = [
+      if (source != null && source.isNotEmpty) source,
+      if (manga.unreadCount > 0) '${manga.unreadCount} unread',
+    ];
+    if (parts.isEmpty) return null;
+    return Text(parts.join(' • '),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.textTheme.bodySmall);
   }
 }
 
