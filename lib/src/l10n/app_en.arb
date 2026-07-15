@@ -1170,6 +1170,23 @@
     "@today": {
         "description": "Today Text to show the release date of manga"
     },
+    "@unifiedSearchHint": {
+        "description": "Placeholder text in the unified search field"
+    },
+    "@unifiedSearchLibrarySection": {
+        "description": "Unified search section header"
+    },
+    "@unifiedSearchGoToSection": {
+        "description": "Unified search section header for app navigation"
+    },
+    "@unifiedSearchAllSources": {
+        "description": "Row that hands off to global source search",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
     "@uninstall": {
         "description": "Button text to Uninstall the extension"
     },
@@ -2171,6 +2188,10 @@
     "upcomingGuide": "What's this?",
     "upcomingGuideBody": "Predicted next-release dates for your library, estimated from each series' recent update cadence. These are estimates, not guarantees, and completed series are left out.",
     "upcomingEmpty": "No upcoming releases predicted yet. They'll appear here once your library has enough chapter history to estimate from.",
+    "unifiedSearchHint": "Search your library and app",
+    "unifiedSearchLibrarySection": "Library",
+    "unifiedSearchGoToSection": "Go to",
+    "unifiedSearchAllSources": "Search all sources for \"{query}\"",
     "uninstall": "Uninstall",
     "uninstalling": "Uninstalling",
     "unknownAuthor": "Unknown Author",
