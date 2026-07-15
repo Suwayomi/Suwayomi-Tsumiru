@@ -19,6 +19,9 @@ class CreateBackupDialog extends HookConsumerWidget {
   Widget build(context, ref) {
     final includeCategory = useState(true);
     final includeChapters = useState(true);
+    final includeHistory = useState(true);
+    final includeTracking = useState(true);
+    final includeClientData = useState(true);
     return AlertDialog(
       title: Text(context.l10n.createBackupTitle),
       content: SingleChildScrollView(
@@ -36,6 +39,21 @@ class CreateBackupDialog extends HookConsumerWidget {
               value: includeChapters.value,
               onChanged: (value) => includeChapters.value = value.ifNull(),
             ),
+            CheckboxListTile(
+              title: Text(context.l10n.includeHistory),
+              value: includeHistory.value,
+              onChanged: (value) => includeHistory.value = value.ifNull(),
+            ),
+            CheckboxListTile(
+              title: Text(context.l10n.includeTracking),
+              value: includeTracking.value,
+              onChanged: (value) => includeTracking.value = value.ifNull(),
+            ),
+            CheckboxListTile(
+              title: Text(context.l10n.includeClientData),
+              value: includeClientData.value,
+              onChanged: (value) => includeClientData.value = value.ifNull(),
+            ),
           ],
         ),
       ),
@@ -46,7 +64,13 @@ class CreateBackupDialog extends HookConsumerWidget {
             final toast = ref.read(toastProvider);
             final backupUrl = await AsyncValue.guard(() => ref
                 .read(backupSettingsRepositoryProvider)
-                .createBackup(includeCategory.value, includeChapters.value));
+                .createBackup(
+                  includeCategories: includeCategory.value,
+                  includeChapters: includeChapters.value,
+                  includeHistory: includeHistory.value,
+                  includeTracking: includeTracking.value,
+                  includeClientData: includeClientData.value,
+                ));
             if (!context.mounted) return;
             if (backupUrl.hasError || backupUrl.valueOrNull.isBlank) {
               {
@@ -70,7 +94,7 @@ class CreateBackupDialog extends HookConsumerWidget {
             );
             context.navPop();
           },
-          child: Text(context.l10n.restore),
+          child: Text(context.l10n.createBackupTitle),
         ),
       ],
     );

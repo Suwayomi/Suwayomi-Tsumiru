@@ -47,9 +47,24 @@ mutation RestoreBackup($backup: Upload!) {
   }
 }
 
-mutation CreateBackup($includeCategories: Boolean = true, $includeChapters: Boolean = true) {
+mutation CreateBackup(
+  $includeCategories: Boolean = true
+  $includeChapters: Boolean = true
+  $includeHistory: Boolean = true
+  $includeTracking: Boolean = true
+  $includeClientData: Boolean = true
+) {
   createBackup(
-    input: {includeCategories: $includeCategories, includeChapters: $includeChapters}
+    input: {
+      flags: {
+        includeManga: true
+        includeCategories: $includeCategories
+        includeChapters: $includeChapters
+        includeHistory: $includeHistory
+        includeTracking: $includeTracking
+        includeClientData: $includeClientData
+      }
+    }
   ) {
     clientMutationId
     url

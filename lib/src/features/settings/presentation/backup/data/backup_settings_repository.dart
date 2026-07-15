@@ -39,12 +39,21 @@ class BackupSettingsRepository {
           variables: Variables$Query$RestoreStatus(restoreId: restoreId)))
       .getData((data) => data.restoreStatus);
 
-  Future<String?> createBackup(bool includeCategories, bool includeChapters) =>
+  Future<String?> createBackup({
+    required bool includeCategories,
+    required bool includeChapters,
+    required bool includeHistory,
+    required bool includeTracking,
+    required bool includeClientData,
+  }) =>
       ferryClient
           .mutate$CreateBackup(Options$Mutation$CreateBackup(
               variables: Variables$Mutation$CreateBackup(
                   includeCategories: includeCategories,
-                  includeChapters: includeCategories)))
+                  includeChapters: includeChapters,
+                  includeHistory: includeHistory,
+                  includeTracking: includeTracking,
+                  includeClientData: includeClientData)))
           .getData((data) => data.createBackup.url);
 
   Future<SettingsDto?> updateBackupLocation(String? backupPath) => ferryClient
