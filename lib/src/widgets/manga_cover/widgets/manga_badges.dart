@@ -9,7 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
+import '../../../features/offline/data/offline_download_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/theme/brand.dart';
 import '../../server_image.dart';
 import '../providers/manga_cover_providers.dart';
 
@@ -37,13 +39,20 @@ class MangaBadgesRow extends ConsumerWidget {
     final localBadge = ref.watch(localBadgeProvider).ifNull(false);
     final sourceBadge = ref.watch(sourceBadgeProvider).ifNull(false);
 
+    // At least one chapter downloaded to THIS device — a subset of the server.
+    // Empty set when the offline feature is off, so the badge self-hides.
+    final onDevice = showCountBadges &&
+        (ref.watch(offlineDeviceMangaIdsProvider).valueOrNull ?? const <int>{})
+            .contains(manga.id);
+
     final source = manga.source;
     final isLocal = source?.lang == _kLocalSourceLang;
     final langCode = source?.lang;
     final hasLangBadge = languageBadge && langCode != null && !isLocal;
     final hasLocalBadge = localBadge && isLocal;
     final hasSourceBadge = sourceBadge && source != null && !isLocal;
-    final hasEndBadges = showCountBadges && (hasLangBadge || hasLocalBadge || hasSourceBadge);
+    final hasEndBadges = showCountBadges &&
+        (hasLangBadge || hasLocalBadge || hasSourceBadge || onDevice);
 
     // When we have end badges, expand the row to full width so the end cluster
     // sits at the top-right corner.
@@ -93,6 +102,7 @@ class MangaBadgesRow extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (onDevice) const _OnDeviceBadge(),
           if (hasLangBadge && sourceNN != null && langCodeNN != null)
             useLangIcon
                 ? _SourceIconBadge(iconUrl: sourceNN.iconUrl)
@@ -130,6 +140,28 @@ class MangaBadgesRow extends ConsumerWidget {
                 if (showCountBadges && needSpacer) const Spacer(),
               ],
             ),
+    );
+  }
+}
+
+/// Passive "on device" badge — this series has at least one chapter downloaded
+/// to THIS device. Brand gradient + the app's downloaded pin so it reads as the
+/// downloaded motif, distinct from the flat server-download count badge.
+class _OnDeviceBadge extends StatelessWidget {
+  const _OnDeviceBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(gradient: brandGradient(context.theme.colorScheme)),
+      child: Padding(
+        padding: KEdgeInsets.a4.size,
+        child: const Icon(
+          Icons.offline_pin_rounded,
+          color: onBrandGradient,
+          size: 16,
+        ),
+      ),
     );
   }
 }
