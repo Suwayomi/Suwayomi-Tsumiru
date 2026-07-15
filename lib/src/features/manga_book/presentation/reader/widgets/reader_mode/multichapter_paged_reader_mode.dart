@@ -609,6 +609,12 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       handlesOwnChapterNavigation: true,
       isAtFirstBoundary: () => controller.isAtFirst,
       isAtLastBoundary: () => controller.isAtLast,
+      // jumpToRaw is scoped to the currently DISPLAYED chapter internally, so
+      // the last-page bound must come from visibleChapterPages, not the
+      // originally-opened chapterPages param.
+      onJumpToFirst: () => controller.jumpToRaw(0),
+      onJumpToLast: () =>
+          controller.jumpToRaw(visibleChapterPages.pages.length - 1),
       spreadPageIndexes: spreadPageIndexes,
       effectiveReaderMode: wrapperReaderMode,
       child: PagedReaderViewport(

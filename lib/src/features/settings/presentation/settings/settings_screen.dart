@@ -12,6 +12,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/platform/platform_runtime.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -51,6 +52,12 @@ class SettingsScreen extends StatelessWidget {
             leading: const Icon(Icons.chrome_reader_mode_rounded),
             onTap: () => const ReaderSettingsRoute().go(context),
           ),
+          if (isKeyboardRuntime)
+            ListTile(
+              title: Text(context.l10n.keyboardShortcuts),
+              leading: const Icon(Icons.keyboard_rounded),
+              onTap: () => const HotkeysSettingsRoute().go(context),
+            ),
           ListTile(
             title: Text(context.l10n.browse),
             leading: const Icon(Icons.explore_rounded),

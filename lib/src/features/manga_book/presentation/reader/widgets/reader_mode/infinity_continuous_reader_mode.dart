@@ -197,6 +197,9 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
       ),
       onViewportScrollForward: () => handleViewportScroll(forward: true),
       onViewportScrollBackward: () => handleViewportScroll(forward: false),
+      onJumpToFirst: () => scrollController.jumpTo(index: 0),
+      onJumpToLast: () =>
+          scrollController.jumpTo(index: chapterPages.pages.length - 1),
       child: AppUtils.wrapOn(
         !kIsWeb &&
                 (Platform.isAndroid || Platform.isIOS) &&
