@@ -136,8 +136,13 @@ SuggestionEdit applySuggestion(
   ActiveToken token,
   SearchSuggestion suggestion,
 ) {
-  final insert =
-      suggestion.isKey ? suggestion.insertText : '${suggestion.insertText} ';
+  // Value completions get a trailing space so the next term can follow — but not
+  // when a separator already follows (avoids `source:MangaDex ,bar`).
+  final followed =
+      token.end < text.length && (text[token.end] == ' ' || text[token.end] == ',');
+  final insert = (suggestion.isKey || followed)
+      ? suggestion.insertText
+      : '${suggestion.insertText} ';
   final next = text.replaceRange(token.start, token.end, insert);
   return (text: next, caret: token.start + insert.length);
 }

@@ -45,8 +45,17 @@ class UnifiedSearchScreen extends HookConsumerWidget {
     );
     final focusNode = useFocusNode();
     useEffect(() {
-      void sync() =>
-          ref.read(unifiedSearchQueryProvider.notifier).state = controller.text;
+      var lastText = controller.text;
+      void sync() {
+        // Only mirror real text edits into the provider. Selection/caret-only
+        // changes (e.g. a layout-driven selection clamp) must NOT write state —
+        // that could land mid-build and throw. Text only changes from user
+        // input or our own setQuery, never during build.
+        if (controller.text == lastText) return;
+        lastText = controller.text;
+        ref.read(unifiedSearchQueryProvider.notifier).state = controller.text;
+      }
+
       controller.addListener(sync);
       return () {
         controller.removeListener(sync);

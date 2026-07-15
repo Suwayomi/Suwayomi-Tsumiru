@@ -53,6 +53,15 @@ void main() {
       expect(queryUsesOperator('Re:Zero'), isFalse);
       expect(queryUsesOperator('chapter:1 club'), isFalse);
     });
+
+    test('a {a|b} group counts as an operator (parity with the library bar)', () {
+      expect(queryUsesOperator('{genre:action|genre:romance}'), isTrue);
+    });
+
+    test('operators inside quoted values are not confused for plain text', () {
+      // The quoted value contains a space but is one operator token.
+      expect(queryUsesOperator('tag:"slice of life"'), isTrue);
+    });
   });
 
   group('plainQueryText', () {
@@ -67,6 +76,21 @@ void main() {
       expect(plainQueryText('bad'), 'bad');
       expect(plainQueryText('chainsaw source:mangadex'), 'chainsaw');
       expect(plainQueryText('the player, unread:true'), 'the player');
+    });
+
+    test('quoted multi-word values stay whole and are not leaked as fragments',
+        () {
+      // Regression: a naive space-split leaked `of life"` to source search.
+      expect(plainQueryText('tag:"slice of life"'), '');
+      expect(plainQueryText('author:"Kubo Tite" bleach'), 'bleach');
+    });
+
+    test('comma-separated operators are stripped, plain words kept', () {
+      expect(plainQueryText('author:oda,naruto'), 'naruto');
+    });
+
+    test('a {a|b} group has no plain text to hand off', () {
+      expect(plainQueryText('{genre:action|genre:romance}'), '');
     });
   });
 }

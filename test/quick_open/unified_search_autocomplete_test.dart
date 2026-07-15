@@ -140,5 +140,14 @@ void main() {
       final r = applySuggestion('-source:man', t, s);
       expect(r.text, '-source:MangaDex ');
     });
+
+    test('no stray space is inserted when a separator already follows', () {
+      // "source:man,bar", caret after 'man'.
+      const text = 'source:man,bar';
+      final t = activeTokenAt(text, 10);
+      final s = suggestFor(t, _facets).single;
+      final r = applySuggestion(text, t, s);
+      expect(r.text, 'source:MangaDex,bar');
+    });
   });
 }

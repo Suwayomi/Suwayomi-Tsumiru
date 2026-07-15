@@ -12,28 +12,16 @@ import '../../../manga_book/domain/manga/manga_model.dart';
 
 const int kUnifiedSectionLimit = 6;
 
-/// Matches a recognized metatag operator (`source:`, `tag:`, `-status:`…) at a
-/// term boundary — same shape the DSL highlighter uses. An unknown key like
-/// `Re:Zero` is intentionally excluded so plain titles still search plainly.
-final _operatorPattern = RegExp(
-  '(^|[\\s,])(-?)(${librarySearchMetatagKeys.join('|')}):',
-  caseSensitive: false,
-);
-
 /// Whether [q] should run through the full library DSL rather than title-only.
-bool queryUsesOperator(String q) => _operatorPattern.hasMatch(q);
+/// Delegates to the DSL's own quote/brace-aware parser so detection matches
+/// exactly what the library filter bar treats as an operator (incl. `{a|b}`).
+bool queryUsesOperator(String q) => LibrarySearchQuery.hasOperator(q);
 
-/// The plain-text portion of [q] with metatag operator tokens removed — what a
-/// global *source* search should receive. Operators like `unread:true` are
-/// local filters that make no sense against a source, so `unread:true` → ``,
-/// `bad source:mangadex` → `bad`.
-String plainQueryText(String q) {
-  final kept = [
-    for (final token in q.split(RegExp(r'[\s,]+')))
-      if (token.isNotEmpty && !queryUsesOperator(token)) token,
-  ];
-  return kept.join(' ');
-}
+/// The plain-text portion of [q] with metatag operators removed — what a global
+/// *source* search should receive. Operators like `unread:true` are local
+/// filters that make no sense against a source (`unread:true` → ``,
+/// `bad source:x` → `bad`). Quote/brace-aware via the DSL tokenizer.
+String plainQueryText(String q) => LibrarySearchQuery.plainText(q);
 
 /// The live query text in the unified search field.
 final unifiedSearchQueryProvider = StateProvider<String>((ref) => '');
