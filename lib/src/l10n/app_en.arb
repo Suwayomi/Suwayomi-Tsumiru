@@ -834,27 +834,6 @@
     "@quickSearch": {
         "description": "Screen title and Button text of Quick Search screen"
     },
-    "@quickSearchCategory": {
-        "description": "Quick Open Hint text for Category C with prefill '#C'"
-    },
-    "@quickSearchCategoryManga": {
-        "description": "Quick Open Hint text for searching Manga M in Category C with prefill '#C/M'"
-    },
-    "@quickSearchCategoryMangaChapter": {
-        "description": "Quick Open Hint text for searching Chapter name CN from Manga M in Source S with prefill '#C/M:CN'"
-    },
-    "@quickSearchContext": {
-        "description": "Quick Open Hint text for query X"
-    },
-    "@quickSearchShowAllCommandTip": {
-        "description": "Quick Open Tip text for showing all commands by entering '?'"
-    },
-    "@quickSearchSource": {
-        "description": "Quick Open Hint text for Source S with prefill '@S'"
-    },
-    "@quickSearchSourceManga": {
-        "description": "Quick Open Hint text for searching Manga M in Source S with prefill '@S/M'"
-    },
     "@reader": {
         "description": "Screen title and Button text of Reader screen"
     },
@@ -1965,13 +1944,6 @@
     "previousChapter": "Previous: {chapterTitle}",
     "queued": "Queued",
     "quickSearch": "Quick Search",
-    "quickSearchCategory": "Go to Category 'C'",
-    "quickSearchCategoryManga": "Go to Manga 'M' in Category 'C'",
-    "quickSearchCategoryMangaChapter": "Go to Chapter Name 'CN' from Manga 'M' in Category 'C'",
-    "quickSearchContext": "Search for query X (Results are based on screen context)",
-    "quickSearchShowAllCommandTip": "Tip: Enter '?' to see all commands",
-    "quickSearchSource": "Go to Source 'S'",
-    "quickSearchSourceManga": "Search for Manga 'M' in Source 'S'",
     "reader": "Reader",
     "readerMagnifierSize": "Magnifier Size",
     "readerMode": "Reading Mode",
