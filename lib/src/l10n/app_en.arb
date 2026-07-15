@@ -1166,6 +1166,12 @@
             }
         }
     },
+    "@unifiedSearchFiltersSection": {
+        "description": "Unified search section header for operator autocomplete suggestions"
+    },
+    "@unifiedSearchExamplesSection": {
+        "description": "Unified search section header for example queries in the empty state"
+    },
     "@uninstall": {
         "description": "Button text to Uninstall the extension"
     },
@@ -2163,6 +2169,8 @@
     "unifiedSearchHint": "Search your library and app",
     "unifiedSearchLibrarySection": "Library",
     "unifiedSearchGoToSection": "Go to",
+    "unifiedSearchFiltersSection": "Filters",
+    "unifiedSearchExamplesSection": "Examples",
     "unifiedSearchAllSources": "Search all sources for \"{query}\"",
     "uninstall": "Uninstall",
     "uninstalling": "Uninstalling",
