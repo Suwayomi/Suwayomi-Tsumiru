@@ -46,8 +46,7 @@ class UnifiedSearchScreen extends ConsumerWidget {
       child: Align(
         alignment: Alignment.topCenter,
         // Absorb taps on the card's blank areas so a near-miss doesn't fall
-        // through to the overlay's outer close-on-tap. (Taps on the ListTiles
-        // themselves still win the gesture arena — the old palette proved it.)
+        // through to the overlay's outer close-on-tap.
         child: GestureDetector(
           onTap: () {},
           behavior: HitTestBehavior.opaque,
