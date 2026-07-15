@@ -2166,7 +2166,7 @@
     "upcomingGuide": "What's this?",
     "upcomingGuideBody": "Predicted next-release dates for your library, estimated from each series' recent update cadence. These are estimates, not guarantees, and completed series are left out.",
     "upcomingEmpty": "No upcoming releases predicted yet. They'll appear here once your library has enough chapter history to estimate from.",
-    "unifiedSearchHint": "Search your library and app",
+    "unifiedSearchHint": "Search your library, app, and sources",
     "unifiedSearchLibrarySection": "Library",
     "unifiedSearchGoToSection": "Go to",
     "unifiedSearchFiltersSection": "Filters",
