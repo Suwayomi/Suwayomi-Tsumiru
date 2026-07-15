@@ -11,7 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
-import '../quick_search/quick_search_screen.dart';
+import '../unified_search/unified_search_screen.dart';
 
 /// Whether the quick-open overlay is showing. The keyboard shortcuts that
 /// open it live in the app-wide GlobalShortcutHost (which holds focus, unlike
@@ -42,7 +42,7 @@ class SearchStackScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: context.theme.canvasColor.withValues(alpha: .1),
                 ),
-                child: QuickSearchScreen(afterClick: hide),
+                child: UnifiedSearchScreen(afterClick: hide),
               ),
             ),
           ),
