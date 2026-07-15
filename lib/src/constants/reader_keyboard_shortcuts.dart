@@ -27,6 +27,10 @@ class AutoScrollFasterIntent extends Intent {}
 
 class AutoScrollSlowerIntent extends Intent {}
 
+class FirstPageIntent extends Intent {}
+
+class LastPageIntent extends Intent {}
+
 ShortcutManager readerShortcutManager(Axis scrollDirection,
         {bool isRtl = false, bool autoScrollSupported = false}) =>
     ShortcutManager(
@@ -84,6 +88,8 @@ ShortcutManager readerShortcutManager(Axis scrollDirection,
             ViewportScrollBackwardIntent(),
         const SingleActivator(LogicalKeyboardKey.pageDown):
             ViewportScrollForwardIntent(),
+        const SingleActivator(LogicalKeyboardKey.home): FirstPageIntent(),
+        const SingleActivator(LogicalKeyboardKey.end): LastPageIntent(),
         const SingleActivator(LogicalKeyboardKey.escape): HideQuickOpenIntent(),
       },
     );

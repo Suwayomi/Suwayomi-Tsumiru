@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -118,5 +119,62 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(chapterFetches, 1);
     expect(pageFetches, 1);
+  });
+
+  testWidgets('Home/End dispatch onJumpToFirst/onJumpToLast', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    var firstInvoked = false;
+    var lastInvoked = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ReaderWrapper(
+            manga: testManga(),
+            chapter: testChapter(),
+            chapterPages: ChapterPagesDto(
+              chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+              pages: const ['a', 'b', 'c'],
+            ),
+            currentIndex: 1,
+            onChanged: (_) {},
+            onNext: () {},
+            onPrevious: () {},
+            onJumpToFirst: () => firstInvoked = true,
+            onJumpToLast: () => lastInvoked = true,
+            scrollDirection: Axis.horizontal,
+            effectiveReaderMode: ReaderMode.singleHorizontalLTR,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Focus lands on the reader's own FocusNode via a post-frame callback.
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pump();
+    expect(firstInvoked, isTrue);
+    expect(lastInvoked, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump();
+    expect(lastInvoked, isTrue);
+
+    expect(tester.takeException(), isNull);
   });
 }

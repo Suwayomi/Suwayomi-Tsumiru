@@ -177,6 +177,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
       childHandlesGestures: true,
       isAtFirstBoundary: () => controller.isAtFirst,
       isAtLastBoundary: () => controller.isAtLast,
+      onJumpToFirst: () => controller.jumpToRaw(0),
+      onJumpToLast: () => controller.jumpToRaw(chapterPages.pages.length - 1),
       spreadPageIndexes: spreadPageIndexes,
       effectiveReaderMode: wrapperReaderMode,
       child: PagedReaderViewport(

@@ -995,6 +995,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       onNext: () => handlePageNavigation(isNext: true),
       onViewportScrollForward: () => handleViewportScroll(forward: true),
       onViewportScrollBackward: () => handleViewportScroll(forward: false),
+      // Reuse the slider-jump primitive (chapter-relative index -> global) so
+      // currentChapterPageIndex/prefetch/scroll-adjust guard stay in sync,
+      // rather than calling itemScrollController.jumpTo directly.
+      onJumpToFirst: () => jumpToChapterRelative(0),
+      onJumpToLast: () => jumpToChapterRelative(
+          (loadedById(currentVisibleChapter.value.id)?.pages.pages.length ??
+                  chapterPages.pages.length) -
+              1),
       onToggleAutoScroll: () =>
           ref.read(autoScrollActiveProvider.notifier).toggle(),
       onAutoScrollFaster: () {

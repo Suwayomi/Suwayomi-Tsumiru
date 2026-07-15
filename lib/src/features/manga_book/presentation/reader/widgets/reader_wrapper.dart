@@ -135,6 +135,8 @@ class ReaderWrapper extends HookConsumerWidget {
     this.onToggleAutoScroll,
     this.onAutoScrollFaster,
     this.onAutoScrollSlower,
+    this.onJumpToFirst,
+    this.onJumpToLast,
     required this.scrollDirection,
     this.showReaderLayoutAnimation = false,
     required this.chapterPages,
@@ -158,6 +160,8 @@ class ReaderWrapper extends HookConsumerWidget {
   final VoidCallback? onToggleAutoScroll;
   final VoidCallback? onAutoScrollFaster;
   final VoidCallback? onAutoScrollSlower;
+  final VoidCallback? onJumpToFirst;
+  final VoidCallback? onJumpToLast;
   final int currentIndex;
   final Axis scrollDirection;
   final bool showReaderLayoutAnimation;
@@ -613,6 +617,18 @@ class ReaderWrapper extends HookConsumerWidget {
                         CallbackAction<AutoScrollSlowerIntent>(
                       onInvoke: (intent) {
                         onAutoScrollSlower?.call();
+                        return null;
+                      },
+                    ),
+                    FirstPageIntent: CallbackAction<FirstPageIntent>(
+                      onInvoke: (intent) {
+                        onJumpToFirst?.call();
+                        return null;
+                      },
+                    ),
+                    LastPageIntent: CallbackAction<LastPageIntent>(
+                      onInvoke: (intent) {
+                        onJumpToLast?.call();
                         return null;
                       },
                     ),
