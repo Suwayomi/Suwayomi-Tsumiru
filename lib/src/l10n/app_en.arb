@@ -2670,5 +2670,61 @@
     "offlineServerMismatchDismiss": "Dismiss",
     "offlineServerMismatchConfirmTitle": "Clear offline data?",
     "offlineServerMismatchConfirmBody": "This removes all on-device manga and queued downloads from the previous server.",
-    "offlineServerMismatchClearAction": "Clear offline data"
+    "offlineServerMismatchClearAction": "Clear offline data",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "@keyboardShortcuts": {
+        "description": "Settings tile + Hotkeys page title"
+    },
+    "hotkeysGlobalSection": "Global",
+    "@hotkeysGlobalSection": {
+        "description": "Hotkeys page section header"
+    },
+    "hotkeysReaderSection": "Reader",
+    "@hotkeysReaderSection": {
+        "description": "Hotkeys page section header"
+    },
+    "hotkeyGoBack": "Go back",
+    "@hotkeyGoBack": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenLibrary": "Open library",
+    "@hotkeyOpenLibrary": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenDownloads": "Open downloads",
+    "@hotkeyOpenDownloads": {
+        "description": "Hotkey action"
+    },
+    "hotkeyOpenSearch": "Search",
+    "@hotkeyOpenSearch": {
+        "description": "Hotkey action"
+    },
+    "hotkeyReaderPrevPage": "Previous page",
+    "@hotkeyReaderPrevPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderNextPage": "Next page",
+    "@hotkeyReaderNextPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderFirstPage": "First page",
+    "@hotkeyReaderFirstPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderLastPage": "Last page",
+    "@hotkeyReaderLastPage": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderPrevChapter": "Previous chapter",
+    "@hotkeyReaderPrevChapter": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderNextChapter": "Next chapter",
+    "@hotkeyReaderNextChapter": {
+        "description": "Reader hotkey action"
+    },
+    "hotkeyReaderToggleMenu": "Toggle menu",
+    "@hotkeyReaderToggleMenu": {
+        "description": "Reader hotkey action"
+    }
 }
