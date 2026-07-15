@@ -32,6 +32,12 @@ List<T> matchLibraryTitles<T>(
   return out;
 }
 
+/// Quick search matches the TITLE only. The library DSL (`MangaDto.query`)
+/// also matches author/genre/description/tags, which surfaces confusing hits
+/// like "bad" → a manga whose description mentions "bad".
+bool titleMatchesQuery(String title, String query) =>
+    title.toLowerCase().contains(query.trim().toLowerCase());
+
 /// Top matching in-library manga for the current query (instant, local).
 final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((ref) {
   final query = ref.watch(unifiedSearchQueryProvider);
@@ -39,6 +45,6 @@ final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((ref) {
   return matchLibraryTitles<MangaDto>(
     library,
     query,
-    (m, q) => m.query(q),
+    (m, q) => titleMatchesQuery(m.title, q),
   );
 });

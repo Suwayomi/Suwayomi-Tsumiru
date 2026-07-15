@@ -17,4 +17,17 @@ void main() {
         matchLibraryTitles(const ['Naruto', 'Bleach'], 'nar', (s, q) => s == 'Naruto');
     expect(hits, ['Naruto']);
   });
+
+  group('titleMatchesQuery', () {
+    test('matches only the title, not other metadata', () {
+      // The reported bug: "bad" surfaced titles that only mention it in their
+      // description/author. Title-only matching must reject those.
+      expect(titleMatchesQuery('The Player Hides His Past', 'bad'), isFalse);
+      expect(titleMatchesQuery('Bad Born Blood', 'bad'), isTrue);
+    });
+
+    test('is case-insensitive and trims the query', () {
+      expect(titleMatchesQuery('Bad Born Blood', '  BAD '), isTrue);
+    });
+  });
 }
