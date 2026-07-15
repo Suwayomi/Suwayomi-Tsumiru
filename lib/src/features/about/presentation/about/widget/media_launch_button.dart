@@ -15,13 +15,13 @@ class MediaLaunchButton extends StatelessWidget {
     super.key,
     required this.toast,
     required this.title,
-    required this.iconData,
+    required this.icon,
     required this.url,
   });
 
   final Toast? toast;
   final String title;
-  final IconData iconData;
+  final Widget icon;
   final String url;
 
   @override
@@ -31,12 +31,12 @@ class MediaLaunchButton extends StatelessWidget {
             ? IconButton(
                 tooltip: title,
                 onPressed: () => launchUrlInWeb(context, url, toast),
-                icon: Icon(iconData),
+                icon: icon,
               )
             : TextButton.icon(
                 label: Text(title),
                 onPressed: () => launchUrlInWeb(context, url, toast),
-                icon: Icon(iconData),
+                icon: icon,
               )
         : const SizedBox.shrink();
   }
