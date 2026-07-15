@@ -66,6 +66,7 @@ List<MangaDto> applyLibraryFilterSort(
   int seed = 0,
   Map<int, double> trackerScales = const {},
   Map<int, bool?> trackerFilters = const {},
+  Map<int, String> trackerNames = const {},
 }) {
   final searchQuery = LibrarySearchQuery.parse(query);
   // Tags match case-insensitively (aligning with the `tag:` search operator),
@@ -107,7 +108,7 @@ List<MangaDto> applyLibraryFilterSort(
     }
     // Meta-derived fields (rating, tags) plus the DSL-searchable fields, built
     // once and reused by the rating filter, tags filter, and search below.
-    final fields = manga.filterFields;
+    final fields = manga.filterFields(trackerNames);
     if (mangaFilterMinRating > 0 &&
         (fields.rating ?? 0) < mangaFilterMinRating) {
       return false;
@@ -306,6 +307,7 @@ class CategoryMangaListWithQueryAndFilter
               seed: seed,
               trackerScales: ref.watch(libraryTrackerScalesProvider),
               trackerFilters: ref.watch(libraryTrackerFiltersProvider),
+              trackerNames: ref.watch(libraryTrackerNamesProvider),
             )),
       error: (e) => e,
       loading: (e) => e,
@@ -538,6 +540,15 @@ Map<int, double> libraryTrackerScales(Ref ref) {
   };
 }
 
+/// Map of tracker id → display name, resolving the `tracked:<service>` search
+/// metatag (e.g. `tracked:anilist`). Uses all known trackers, not just
+/// logged-in ones, so a bound record still resolves after a logout.
+@riverpod
+Map<int, String> libraryTrackerNames(Ref ref) {
+  final all = ref.watch(trackersProvider).valueOrNull ?? const [];
+  return {for (final t in all) t.id: t.name};
+}
+
 @riverpod
 class LibraryDisplayMode extends _$LibraryDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
@@ -668,6 +679,7 @@ class GroupedMangaListWithQueryAndFilter
               seed: seed,
               trackerScales: ref.watch(libraryTrackerScalesProvider),
               trackerFilters: ref.watch(libraryTrackerFiltersProvider),
+              trackerNames: ref.watch(libraryTrackerNamesProvider),
             )),
       error: (e) => e,
       loading: (e) => e,

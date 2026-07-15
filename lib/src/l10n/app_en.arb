@@ -2429,7 +2429,7 @@
     "copyToClipboard": "Copy to clipboard",
     "copiedToClipboard": "Copied to clipboard",
     "searchTips": "Search tips",
-    "searchTipsBody": "Filter by field with key:value.\n\ntag:seinen (source tags or your own)\ngenre:action (source genres)\nauthor:oda\nrating:>=4 (your rating)\nunread:true, downloaded:true\n\nQuote multi-word values: tag:\"slice of life\"\nExclude with a minus sign: -tag:dropped",
+    "searchTipsBody": "Filter by field with key:value.\n\ntag:seinen (source tags or your own)\ngenre:action (source genres)\nauthor:oda\nstatus:ongoing (also completed, hiatus, cancelled)\nsource:mangadex\ntracked:true, tracked:anilist\nrating:>=4 (your rating)\nunread:true, downloaded:true\n\nQuote multi-word values: tag:\"slice of life\"\nExclude with a minus sign: -tag:dropped",
     "@tracking": {
         "description": "Settings entry and screen title for the Tracking screen"
     },

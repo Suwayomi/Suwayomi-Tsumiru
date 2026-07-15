@@ -16,8 +16,14 @@
 /// Supported keys: `tag:` (exact match on a source genre OR a custom tag,
 /// case-insensitive), `genre:` (source genre, substring), `author:`, `artist:`,
 /// `title:` (substring), `unread:`/`downloaded:` (bool), `rating:` (int with
-/// optional `>=`/`<=`/`>`/`<`/`=`). An unrecognized key is treated as plain
-/// text, so titles like `Re:Zero` still search normally.
+/// optional `>=`/`<=`/`>`/`<`/`=`), `status:` (ongoing/completed/hiatus/…),
+/// `source:` (source name, substring), and `tracked:` (bool, or a service name
+/// like `tracked:anilist`). An unrecognized key is treated as plain text, so
+/// titles like `Re:Zero` still search normally.
+///
+/// `{a|b}` groups alternatives: the group matches if ANY term inside it matches,
+/// so `{genre:action|genre:romance}` finds either. A leading `-` negates a whole
+/// group.
 library;
 
 /// Flat, GraphQL-free view of the fields the DSL can match against. Keeps the
@@ -32,6 +38,9 @@ class LibraryFilterFields {
     this.downloadCount = 0,
     this.rating,
     this.userTags = const [],
+    this.status,
+    this.sourceName,
+    this.trackers = const {},
   });
 
   final String title;
@@ -42,9 +51,30 @@ class LibraryFilterFields {
   final int downloadCount;
   final int? rating;
   final List<String> userTags;
+
+  /// The manga's publication status, as the enum name (e.g. `COMPLETED`).
+  final String? status;
+
+  /// The source's display name.
+  final String? sourceName;
+
+  /// Lowercased names of the tracker services this manga is bound to.
+  final Set<String> trackers;
 }
 
-enum _Field { tag, genre, author, artist, title, unread, downloaded, rating }
+enum _Field {
+  tag,
+  genre,
+  author,
+  artist,
+  title,
+  unread,
+  downloaded,
+  rating,
+  status,
+  source,
+  tracked,
+}
 
 /// Recognized metatag keys, in display order. Exported so the search field's
 /// syntax highlighter colors exactly the keys the parser understands.
@@ -57,6 +87,9 @@ const List<String> librarySearchMetatagKeys = [
   'unread',
   'downloaded',
   'rating',
+  'status',
+  'source',
+  'tracked',
 ];
 
 _Field? _fieldFor(String key) => switch (key) {
@@ -68,6 +101,9 @@ _Field? _fieldFor(String key) => switch (key) {
       'unread' => _Field.unread,
       'downloaded' => _Field.downloaded,
       'rating' => _Field.rating,
+      'status' => _Field.status,
+      'source' => _Field.source,
+      'tracked' => _Field.tracked,
       _ => null,
     };
 
@@ -90,20 +126,26 @@ class LibrarySearchQuery {
     return LibrarySearchQuery(terms);
   }
 
-  /// Splits on spaces/commas, keeping double-quoted spans intact. Quote chars
-  /// are consumed, so `tag:"slice of life"` becomes the single token
-  /// `tag:slice of life`.
+  /// Splits on spaces/commas, keeping double-quoted spans and `{…}` groups
+  /// intact. Quote chars are consumed, so `tag:"slice of life"` becomes the
+  /// single token `tag:slice of life`; a `{a|b}` group stays one token so its
+  /// inner spaces don't split it.
   static List<String> _tokenize(String raw) {
     final tokens = <String>[];
     final buf = StringBuffer();
     var inQuotes = false;
+    var braceDepth = 0;
     for (var i = 0; i < raw.length; i++) {
       final ch = raw[i];
       if (ch == '"') {
         inQuotes = !inQuotes;
         continue;
       }
-      if (!inQuotes && (ch == ' ' || ch == ',')) {
+      if (!inQuotes) {
+        if (ch == '{') braceDepth++;
+        if (ch == '}' && braceDepth > 0) braceDepth--;
+      }
+      if (!inQuotes && braceDepth == 0 && (ch == ' ' || ch == ',')) {
         if (buf.isNotEmpty) {
           tokens.add(buf.toString());
           buf.clear();
@@ -125,6 +167,18 @@ class LibrarySearchQuery {
     }
     if (t.isEmpty) return null;
 
+    // `{a|b|c}` — matches if any inner alternative matches.
+    if (t.length > 1 && t.startsWith('{') && t.endsWith('}')) {
+      final alts = <SearchTerm>[];
+      for (final part in t.substring(1, t.length - 1).split('|')) {
+        final sub = _parseToken(part.trim());
+        if (sub != null) alts.add(sub);
+      }
+      // An empty/half-typed group imposes no constraint rather than hiding all.
+      if (alts.isEmpty) return null;
+      return SearchTerm._group(alts, negated);
+    }
+
     final colon = t.indexOf(':');
     if (colon > 0) {
       final field = _fieldFor(t.substring(0, colon).toLowerCase());
@@ -145,7 +199,9 @@ class SearchTerm {
     this.text,
     _Field? field,
     this.value,
-  }) : _field = field;
+    List<SearchTerm>? alternatives,
+  })  : _field = field,
+        _alternatives = alternatives;
 
   factory SearchTerm._text(String text, bool negated) =>
       SearchTerm._(negated: negated, text: text.toLowerCase());
@@ -153,10 +209,14 @@ class SearchTerm {
   factory SearchTerm._field(_Field field, String value, bool negated) =>
       SearchTerm._(negated: negated, field: field, value: value);
 
+  factory SearchTerm._group(List<SearchTerm> alternatives, bool negated) =>
+      SearchTerm._(negated: negated, alternatives: alternatives);
+
   final bool negated;
   final String? text;
   final _Field? _field;
   final String? value;
+  final List<SearchTerm>? _alternatives;
 
   bool matches(LibraryFilterFields f) {
     final res = _rawMatch(f);
@@ -167,6 +227,8 @@ class SearchTerm {
   }
 
   bool? _rawMatch(LibraryFilterFields f) {
+    final alts = _alternatives;
+    if (alts != null) return alts.any((a) => a.matches(f));
     final t = text;
     if (t != null) {
       return f.title.toLowerCase().contains(t) ||
@@ -198,6 +260,23 @@ class SearchTerm {
         return want == null ? null : (f.downloadCount > 0) == want;
       case _Field.rating:
         return _matchRating(f.rating ?? 0, v);
+      case _Field.status:
+        final s = f.status;
+        if (s == null) return null;
+        final ns = s.toLowerCase();
+        final lv = v.toLowerCase();
+        // Match the exact enum name, or a partial like `hiatus` → `on_hiatus`
+        // and `finished` → `publishing_finished`.
+        return ns == lv || ns.replaceAll('_', ' ').contains(lv) || ns.contains(lv);
+      case _Field.source:
+        return f.sourceName?.toLowerCase().contains(v.toLowerCase());
+      case _Field.tracked:
+        final want = _parseBool(v);
+        // `tracked:true`/`false` = has any tracker; otherwise match a service
+        // name, e.g. `tracked:anilist`.
+        if (want != null) return f.trackers.isNotEmpty == want;
+        final lv = v.toLowerCase();
+        return f.trackers.any((name) => name.contains(lv));
     }
   }
 

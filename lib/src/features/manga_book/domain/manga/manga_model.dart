@@ -27,12 +27,14 @@ extension MangaExtensions on MangaDto {
   /// quick-search; the library list parses the query once instead (see
   /// applyLibraryFilterSort).
   bool query([String? query]) =>
-      LibrarySearchQuery.parse(query).matches(filterFields);
+      LibrarySearchQuery.parse(query).matches(filterFields());
 
   /// Flattened field view used by the library search DSL (see
   /// [LibrarySearchQuery]). Resolves meta once so rating/tags come from the same
-  /// build as the rest of the fields.
-  LibraryFilterFields get filterFields {
+  /// build as the rest of the fields. [trackerNames] maps tracker id → service
+  /// name so the `tracked:<service>` metatag can resolve; pass it empty (the
+  /// default) when only the bool `tracked:` form is needed.
+  LibraryFilterFields filterFields([Map<int, String> trackerNames = const {}]) {
     final m = metaData;
     return LibraryFilterFields(
       title: title,
@@ -43,6 +45,12 @@ extension MangaExtensions on MangaDto {
       downloadCount: downloadCount,
       rating: m.rating,
       userTags: m.userTags ?? const [],
+      status: status.name,
+      sourceName: source?.displayName ?? source?.name,
+      trackers: {
+        for (final r in trackRecords.nodes)
+          if (trackerNames[r.trackerId] case final name?) name.toLowerCase(),
+      },
     );
   }
 }

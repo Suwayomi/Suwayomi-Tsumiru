@@ -526,7 +526,12 @@ void showSearchTips(BuildContext context) {
     context: context,
     builder: (context) => AlertDialog(
       title: Text(context.l10n.searchTips),
-      content: Text(context.l10n.searchTipsBody),
+      // The `{a|b}` OR-group example lives here rather than in the l10n string
+      // because ICU message syntax reserves curly braces for placeholders.
+      content: Text(
+        '${context.l10n.searchTipsBody}'
+        '\nMatch any of these: {genre:action|genre:romance}',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),

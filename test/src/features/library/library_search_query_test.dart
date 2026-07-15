@@ -16,6 +16,9 @@ LibraryFilterFields _manga({
   int downloadCount = 0,
   int? rating,
   List<String> userTags = const [],
+  String? status = 'ONGOING',
+  String? sourceName = 'MangaDex',
+  Set<String> trackers = const {},
 }) =>
     LibraryFilterFields(
       title: title,
@@ -26,6 +29,9 @@ LibraryFilterFields _manga({
       downloadCount: downloadCount,
       rating: rating,
       userTags: userTags,
+      status: status,
+      sourceName: sourceName,
+      trackers: trackers,
     );
 
 bool _matches(String query, LibraryFilterFields f) =>
@@ -163,6 +169,73 @@ void main() {
       final m = _manga(userTags: ['Reread'], rating: 5);
       expect(_matches('tag:reread rating:>=4 piece', m), isTrue);
       expect(_matches('tag:reread rating:>=4 naruto', m), isFalse);
+    });
+  });
+
+  group('status:', () {
+    test('exact enum name matches', () {
+      expect(_matches('status:ongoing', _manga(status: 'ONGOING')), isTrue);
+      expect(_matches('status:completed', _manga(status: 'ONGOING')), isFalse);
+    });
+    test('partial matches a multi-word enum', () {
+      expect(_matches('status:hiatus', _manga(status: 'ON_HIATUS')), isTrue);
+      expect(
+          _matches('status:finished', _manga(status: 'PUBLISHING_FINISHED')),
+          isTrue);
+    });
+    test('null status is a no-op, not a hide-all', () {
+      expect(_matches('status:completed', _manga(status: null)), isTrue);
+    });
+    test('negation works', () {
+      expect(_matches('-status:completed', _manga(status: 'ONGOING')), isTrue);
+    });
+  });
+
+  group('source:', () {
+    test('substring match on source name, case-insensitive', () {
+      expect(_matches('source:mangadex', _manga(sourceName: 'MangaDex')), isTrue);
+      expect(_matches('source:dex', _manga(sourceName: 'MangaDex')), isTrue);
+      expect(
+          _matches('source:comick', _manga(sourceName: 'MangaDex')), isFalse);
+    });
+  });
+
+  group('tracked:', () {
+    test('bool form checks for any tracker', () {
+      expect(_matches('tracked:true', _manga(trackers: {'anilist'})), isTrue);
+      expect(_matches('tracked:true', _manga(trackers: {})), isFalse);
+      expect(_matches('tracked:false', _manga(trackers: {})), isTrue);
+    });
+    test('service name matches a bound tracker', () {
+      final m = _manga(trackers: {'anilist', 'myanimelist'});
+      expect(_matches('tracked:anilist', m), isTrue);
+      expect(_matches('tracked:kitsu', m), isFalse);
+    });
+  });
+
+  group('{a|b} OR groups', () {
+    test('matches when any alternative matches', () {
+      final m = _manga(genres: ['Romance']);
+      expect(_matches('{genre:action|genre:romance}', m), isTrue);
+      expect(_matches('{genre:action|genre:horror}', m), isFalse);
+    });
+    test('keeps quoted multi-word alternatives intact', () {
+      final m = _manga(genres: ['Slice of Life']);
+      expect(_matches('{tag:"slice of life"|genre:action}', m), isTrue);
+    });
+    test('AND-s with terms outside the group', () {
+      final m = _manga(title: 'One Piece', genres: ['Adventure']);
+      expect(_matches('piece {genre:action|genre:adventure}', m), isTrue);
+      expect(_matches('naruto {genre:action|genre:adventure}', m), isFalse);
+    });
+    test('a negated group excludes any match', () {
+      final m = _manga(genres: ['Action']);
+      expect(_matches('-{genre:action|genre:romance}', m), isFalse);
+      expect(_matches('-{genre:horror|genre:romance}', m), isTrue);
+    });
+    test('empty group is a no-op', () {
+      expect(_matches('{}', _manga()), isTrue);
+      expect(_matches('{|}', _manga()), isTrue);
     });
   });
 }
