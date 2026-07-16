@@ -282,7 +282,12 @@ Future<void> recordReadingProgressWithDependencies({
   );
   if (offlineEnabled && db != null && !result.hasError) {
     await db.clearProgressDirtyIfUnchanged(chapterId,
-        lastPageRead: lastPageRead, isRead: markRead);
+        lastPageRead: lastPageRead);
+    // Completion set isRead (and thus readStateDirty) too — clear that flag on
+    // the same successful push so a completed read isn't re-pushed forever.
+    if (markRead != null) {
+      await db.clearReadStateDirtyIfUnchanged(chapterId, isRead: markRead);
+    }
   }
 }
 
@@ -503,7 +508,7 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
       // re-syncs on the next pass (no silent data loss).
       if (c.progressDirty) {
         await db.clearProgressDirtyIfUnchanged(c.id,
-            lastPageRead: c.lastPageRead, isRead: c.isRead);
+            lastPageRead: c.lastPageRead);
       }
       if (c.bookmarkDirty) {
         await db.clearBookmarkDirtyIfUnchanged(c.id,
