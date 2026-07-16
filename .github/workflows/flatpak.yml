@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.7"
+          flutter-version-file: .fvmrc
           channel: stable
           cache: true
       - name: Install Linux build deps
@@ -81,7 +81,7 @@ jobs:
           entry="<releases>\n    <release version=\"$version\" date=\"$today\">\n      <url>https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/tag/v$version</url>\n    </release>\n  </releases>"
           perl -0pi -e "s|<releases>.*</releases>|$entry|s" flatpak/io.github.aaronbamblett.tsumiru.metainfo.xml
           grep -A3 "<releases>" flatpak/io.github.aaronbamblett.tsumiru.metainfo.xml | head -5
-      - uses: andyholmes/flatter@main
+      - uses: andyholmes/flatter@v1.0.0
         with:
           files: flatpak/io.github.aaronbamblett.tsumiru.yml
           gpg-sign: ${{ secrets.FLATPAK_GPG_KEY_ID }}

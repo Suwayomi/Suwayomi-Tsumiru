@@ -68,3 +68,6 @@ flatpak/bundle/
 
 # Claude Code local settings (personal hooks/config)
 .claude/settings.local.json
+
+# FVM local SDK symlink (version pinned in .fvmrc)
+.fvm/
