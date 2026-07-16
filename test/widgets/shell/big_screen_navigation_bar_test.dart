@@ -51,7 +51,7 @@ NavigationRail _rail(WidgetTester tester) =>
     tester.widget<NavigationRail>(find.byType(NavigationRail));
 
 void main() {
-  testWidgets('collapse chevron toggles the desktop rail to an icon rail',
+  testWidgets('collapse toggles the desktop rail; the logo stays as expand',
       (tester) async {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
@@ -68,13 +68,15 @@ void main() {
 
     expect(_rail(tester).extended, isFalse,
         reason: 'tapping collapse must switch to the icon-only rail');
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget,
-        reason: 'collapsed rail shows an expand chevron');
+    expect(find.byIcon(Icons.chevron_right), findsNothing,
+        reason: 'the header must not swap to a chevron when collapsed');
+    expect(find.byType(ImageIcon), findsOneWidget,
+        reason: 'collapsed rail keeps the logo (tap to expand)');
     expect(tester.takeException(), isNull,
         reason: 'the narrow collapsed leading must not overflow');
 
-    // Expand again.
-    await tester.tap(find.byIcon(Icons.chevron_right));
+    // Expand again by tapping the logo.
+    await tester.tap(find.byType(ImageIcon));
     await tester.pumpAndSettle();
     expect(_rail(tester).extended, isTrue);
   });

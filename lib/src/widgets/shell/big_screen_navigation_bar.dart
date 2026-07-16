@@ -93,10 +93,10 @@ class BigScreenNavigationBar extends ConsumerWidget {
         ),
       );
     } else if (context.isDesktop) {
-      // Collapsed: the header is just the expand chevron (logo hidden to keep the
-      // rail narrow). Toggle stays at the top, so it never jumps between states.
+      // Collapsed: keep the logo (tap to expand) so the header never swaps
+      // between logo and chevron as the rail collapses or the width changes.
       leadingIcon = IconButton(
-        icon: const Icon(Icons.chevron_right),
+        icon: logoIcon,
         tooltip: context.l10n.expandSidebar,
         onPressed: toggleSidebar,
       );
