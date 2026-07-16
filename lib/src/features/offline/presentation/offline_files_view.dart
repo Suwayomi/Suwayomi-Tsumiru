@@ -16,10 +16,11 @@ import '../../../widgets/server_image.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
+import '../data/offline_series_entry.dart';
 import 'keep_rule_picker.dart';
 import 'offline_settings_format.dart';
 
-typedef _SeriesRow = ({OfflineManga manga, int downloaded, int inFlight, int bytes});
+typedef _SeriesRow = OfflineSeriesEntry;
 
 /// The "On device" segment of the Downloads tab — the single surface for
 /// on-device downloads: every series with files saved here OR an active
@@ -45,8 +46,8 @@ class OfflineFilesView extends HookConsumerWidget {
     if (!ref.watch(offlineEnabledProvider)) {
       return Center(child: Text(context.l10n.offlineNotAvailable));
     }
-    final series = ref.watch(offlineSeriesProvider).valueOrNull ?? const [];
-    final totalBytes = ref.watch(offlineUsageBytesProvider).valueOrNull ?? 0;
+    final series = ref.watch(offlineSeriesProvider).value ?? const [];
+    final totalBytes = ref.watch(offlineUsageBytesProvider).value ?? 0;
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
 

@@ -6,20 +6,11 @@
 
 import 'package:drift/drift.dart';
 
+import 'offline_types.dart';
+
+export 'offline_types.dart';
+
 part 'offline_database.g.dart';
-
-/// On-device state of a chapter's bytes.
-enum OfflineDeviceState {
-  none,
-  queued,
-  downloading,
-  downloaded,
-  error,
-  orphaned
-}
-
-/// How many of a series' chapters to keep on this device automatically.
-enum OfflineKeepRule { off, nUnread, allUnread, all }
 
 /// Library manga mirrored for offline browsing. Keyed by the server's stable
 /// manga id.
