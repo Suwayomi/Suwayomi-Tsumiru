@@ -114,12 +114,52 @@ void main() {
     // A newer local write arrives (e.g. during the up-sync push).
     await db.setChapterProgress(10, lastPageRead: 9, isRead: false);
     // Clearing with the OLD pushed values must NOT mark the newer row clean.
-    await db.clearProgressDirtyIfUnchanged(10, lastPageRead: 5, isRead: false);
+    await db.clearProgressDirtyIfUnchanged(10, lastPageRead: 5);
     final c = await db.chapterById(10);
     expect(c!.progressDirty, true); // newer write still pending up-sync
     expect(c.lastPageRead, 9);
     // Clearing with the CURRENT values clears it.
-    await db.clearProgressDirtyIfUnchanged(10, lastPageRead: 9, isRead: false);
+    await db.clearProgressDirtyIfUnchanged(10, lastPageRead: 9);
     expect((await db.chapterById(10))!.progressDirty, false);
+  });
+
+  test('partial write dirties position only; completion dirties both', () async {
+    await seed(5);
+    await db.setChapterProgress(5, lastPageRead: 4, isRead: null);
+    var c = (await db.chapterById(5))!;
+    expect(c.progressDirty, isTrue);
+    expect(c.readStateDirty, isFalse);
+    await db.setChapterProgress(5, lastPageRead: 0, isRead: true);
+    c = (await db.chapterById(5))!;
+    expect(c.readStateDirty, isTrue);
+    expect(c.isRead, isTrue);
+  });
+
+  test('setChapterReadState writes isRead + readStateDirty, not position',
+      () async {
+    await seed(5);
+    await db.setChapterProgress(5, lastPageRead: 4, isRead: null);
+    await db.clearProgressDirtyIfUnchanged(5, lastPageRead: 4);
+    await db.setChapterReadState(5, true);
+    final c = (await db.chapterById(5))!;
+    expect(c.isRead, isTrue);
+    expect(c.readStateDirty, isTrue);
+    expect(c.progressDirty, isFalse);
+    expect(c.lastPageRead, 4);
+  });
+
+  test('read-state clear-if-unchanged mirrors bookmark race guard', () async {
+    await seed(5);
+    await db.setChapterReadState(5, true);
+    await db.clearReadStateDirtyIfUnchanged(5, isRead: false); // mismatch
+    expect((await db.chapterById(5))!.readStateDirty, isTrue);
+    await db.clearReadStateDirtyIfUnchanged(5, isRead: true); // match
+    expect((await db.chapterById(5))!.readStateDirty, isFalse);
+  });
+
+  test('dirtyChapters includes read-state-only-dirty rows', () async {
+    await seed(5);
+    await db.setChapterReadState(5, true);
+    expect((await db.dirtyChapters()).map((e) => e.id), contains(5));
   });
 }

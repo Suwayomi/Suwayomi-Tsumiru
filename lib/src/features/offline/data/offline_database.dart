@@ -83,6 +83,13 @@ class OfflineChapters extends Table {
   BoolColumn get bookmarkDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// True when this chapter's read-STATE (isRead) was changed locally but not
+  /// yet pushed. Tracked separately from [progressDirty] so a position-only
+  /// write can never push a stale isRead (the ch-99 un-read loop), mirroring
+  /// [bookmarkDirty] (#13).
+  BoolColumn get readStateDirty =>
+      boolean().withDefault(const Constant(false))();
+
   /// The server's last-read timestamp (epoch millis as a string, matching the
   /// server's LongString) — synced down so the offline library can sort by
   /// "Last Read". Server is the source of truth; this is never the device clock.
@@ -134,7 +141,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -187,6 +194,18 @@ class OfflineDatabase extends _$OfflineDatabase {
                 m, offlineMangas, offlineMangas.latestUploadedAt);
             await _addColumnIfMissing(
                 m, offlineMangas, offlineMangas.totalChapters);
+          }
+          if (from < 7) {
+            await _addColumnIfMissing(
+                m, offlineChapters, offlineChapters.readStateDirty);
+            // Carry pending reads across the split: a progress-dirty row with
+            // isRead=true is usually a completed offline read awaiting push
+            // (it may also be a server-sourced true on a partial re-read —
+            // pushing true is the safe direction). is_read=0 dirty rows are
+            // exactly the stale class; they stay position-only.
+            await customStatement(
+                'UPDATE offline_chapters SET read_state_dirty = 1 '
+                'WHERE progress_dirty = 1 AND is_read = 1');
           }
         },
       );
@@ -379,9 +398,23 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
         OfflineChaptersCompanion(
           lastPageRead: Value(lastPageRead),
-          // null → leave read-state untouched (a partial write must not un-read).
-          isRead: isRead == null ? const Value.absent() : Value(isRead),
           progressDirty: const Value(true),
+          // null → leave read-state untouched (a partial write must not un-read).
+          // A read-state change rides its OWN flag so a position-only write can
+          // never push a stale isRead (the ch-99 un-read loop).
+          isRead: isRead == null ? const Value.absent() : Value(isRead),
+          readStateDirty:
+              isRead == null ? const Value.absent() : const Value(true),
+        ),
+      );
+
+  /// Record a local read/unread change (list actions, mark-read). Position
+  /// untouched; pushed under its own flag on the next online sync.
+  Future<void> setChapterReadState(int chapterId, bool isRead) =>
+      (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+        OfflineChaptersCompanion(
+          isRead: Value(isRead),
+          readStateDirty: const Value(true),
         ),
       );
 
@@ -400,15 +433,20 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// clean and lost (the snapshot-then-clear race). A non-matching row keeps its
   /// flag and re-syncs on the next pass.
   Future<void> clearProgressDirtyIfUnchanged(int chapterId,
-          {required int lastPageRead, bool? isRead}) =>
+          {required int lastPageRead}) =>
       (update(offlineChapters)
-            ..where((t) {
-              final matches =
-                  t.id.equals(chapterId) & t.lastPageRead.equals(lastPageRead);
-              // isRead null → match on position alone (we never set it).
-              return isRead == null ? matches : matches & t.isRead.equals(isRead);
-            }))
+            ..where((t) =>
+                t.id.equals(chapterId) & t.lastPageRead.equals(lastPageRead)))
           .write(const OfflineChaptersCompanion(progressDirty: Value(false)));
+
+  /// Clear readStateDirty only if the row's isRead still matches what was
+  /// pushed — the same race guard as [clearProgressDirtyIfUnchanged], mirroring
+  /// [clearBookmarkDirtyIfUnchanged].
+  Future<void> clearReadStateDirtyIfUnchanged(int chapterId,
+          {required bool isRead}) =>
+      (update(offlineChapters)
+            ..where((t) => t.id.equals(chapterId) & t.isRead.equals(isRead)))
+          .write(const OfflineChaptersCompanion(readStateDirty: Value(false)));
 
   /// Clear bookmarkDirty only if the bookmark still matches what was pushed —
   /// same race guard as [clearProgressDirtyIfUnchanged].
@@ -438,8 +476,10 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// Chapters with any unpushed local change — read progress OR bookmark — for
   /// the up-sync to flush and the down-sync to preserve.
   Future<List<OfflineChapter>> dirtyChapters() => (select(offlineChapters)
-        ..where(
-            (t) => t.progressDirty.equals(true) | t.bookmarkDirty.equals(true)))
+        ..where((t) =>
+            t.progressDirty.equals(true) |
+            t.bookmarkDirty.equals(true) |
+            t.readStateDirty.equals(true)))
       .get();
 
   // --- offline queries -------------------------------------------------------

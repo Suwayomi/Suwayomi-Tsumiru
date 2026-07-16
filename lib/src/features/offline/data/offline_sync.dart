@@ -57,21 +57,22 @@ class OfflineSync {
     };
     for (final c in chapters) {
       final local = dirty[c.id];
-      // Keep a locally-changed value only while its own flag is still dirty;
-      // otherwise take the server's. Tracking read-progress and bookmark
-      // dirtiness separately means a server bookmark set elsewhere still
-      // propagates to the device even while a read is pending up-sync, and
-      // vice versa — instead of the old code pinning ALL of progress+bookmark
-      // to the stale local value whenever either was dirty (#13).
-      final keepProgress = local?.progressDirty ?? false;
+      // Keep a locally-changed value only while its OWN flag is still dirty;
+      // otherwise take the server's. Position, read-state, and bookmark each
+      // have their own flag, so a server change to one still lands locally
+      // while another is pending up-sync — instead of the old code pinning
+      // isRead to the stale local value whenever position was dirty (the ch-99
+      // un-read loop), and vice versa (#13).
+      final keepPosition = local?.progressDirty ?? false;
+      final keepReadState = local?.readStateDirty ?? false;
       final keepBookmark = local?.bookmarkDirty ?? false;
       await _db.upsertChapterMetadata(
         id: c.id,
         mangaId: c.mangaId,
         name: c.name,
         chapterIndex: c.sourceOrder,
-        isRead: keepProgress ? local!.isRead : c.isRead,
-        lastPageRead: keepProgress ? local!.lastPageRead : c.lastPageRead,
+        isRead: keepReadState ? local!.isRead : c.isRead,
+        lastPageRead: keepPosition ? local!.lastPageRead : c.lastPageRead,
         isBookmarked: keepBookmark ? local!.isBookmarked : c.isBookmarked,
         serverIsDownloaded: c.isDownloaded,
         pageCount: c.pageCount,

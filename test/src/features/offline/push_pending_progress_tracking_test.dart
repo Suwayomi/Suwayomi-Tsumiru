@@ -60,6 +60,22 @@ class _FakeMangaBookRepository extends MangaBookRepository {
   }
 }
 
+/// Captures every pushed patch so a test can assert exactly which fields the
+/// up-sync sent (the ch-99 fix: a position-dirty row must push no isRead).
+class _CapturingMangaBookRepository extends MangaBookRepository {
+  _CapturingMangaBookRepository() : super(_dummyClient());
+
+  final List<ChapterChange> patches = [];
+
+  @override
+  Future<void> putChapter({
+    required int chapterId,
+    required ChapterChange patch,
+  }) async {
+    patches.add(patch);
+  }
+}
+
 /// putChapter that fails like an offline mutation — used to prove a failed push
 /// keeps the dirty flag (the bug where offline progress/bookmarks were cleared
 /// without ever reaching the server).
@@ -142,12 +158,13 @@ Future<
   required List<int> mangaIds,
   int trackRecordCount = 1,
   bool toggleOn = true,
+  MangaBookRepository? repository,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final db = testOfflineDatabase();
   final fakeTracker = _FakeTrackerRepository();
-  final fakeMangaBook = _FakeMangaBookRepository();
+  final fakeMangaBook = repository ?? _FakeMangaBookRepository();
 
   final records = List.generate(trackRecordCount, (_) => _fakeRecord());
 
@@ -304,6 +321,92 @@ void main() {
 
       expect(tracker.trackProgressCalls, isEmpty,
           reason: 'isRead=false chapters must not trigger tracker');
+    });
+  });
+
+  group('pushPendingProgress → per-field push', () {
+    test('position-dirty row never pushes isRead (ch-99 revert)', () async {
+      final repo = _CapturingMangaBookRepository();
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1); // clean row
+      await db.setChapterProgress(10, lastPageRead: 5, isRead: null); // partial
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches.single.lastPageRead, 5);
+      expect(repo.patches.single.isRead, isNull); // THE fix
+      expect((await db.chapterById(10))!.progressDirty, isFalse);
+    });
+
+    test('read-state-dirty row pushes isRead and clears its flag', () async {
+      final repo = _CapturingMangaBookRepository();
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterReadState(10, true);
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches.single.isRead, isTrue);
+      expect((await db.chapterById(10))!.readStateDirty, isFalse);
+    });
+
+    // The full reported loop, end to end. Pre-fix this reverted 100%: the
+    // partial read left the row position-dirty with isRead=false, list
+    // mark-read never touched the local row, and the reconnect push sent that
+    // stale isRead=false — reverting the chapter to unread on the server.
+    test('ch-99 loop is dead: offline partial-read then mark-read syncs '
+        'read=true, never a stale unread', () async {
+      final repo = _CapturingMangaBookRepository();
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 99, mangaId: 1);
+      // Offline partial read of ch 99 (back out): records position only.
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterId: 99,
+        lastPageRead: 5,
+        isRead: false,
+      );
+      // Offline mark-read from the list: write-through updates the local row.
+      await recordReadStateWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterIds: [99],
+        isRead: true,
+        resetPosition: true,
+      );
+
+      // Reconnect and flush.
+      await pushPendingProgress(container);
+
+      final patch = repo.patches.single;
+      expect(patch.isRead, isTrue,
+          reason: 'the mark-read reaches the server (used to revert to unread)');
+      expect(patch.lastPageRead, 0, reason: 'mark-read reset the position');
+      final c = (await db.chapterById(99))!;
+      expect(c.isRead, isTrue);
+      expect(c.progressDirty, isFalse);
+      expect(c.readStateDirty, isFalse);
     });
   });
 }

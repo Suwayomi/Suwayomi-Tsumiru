@@ -282,7 +282,12 @@ Future<void> recordReadingProgressWithDependencies({
   );
   if (offlineEnabled && db != null && !result.hasError) {
     await db.clearProgressDirtyIfUnchanged(chapterId,
-        lastPageRead: lastPageRead, isRead: markRead);
+        lastPageRead: lastPageRead);
+    // Completion set isRead (and thus readStateDirty) too — clear that flag on
+    // the same successful push so a completed read isn't re-pushed forever.
+    if (markRead != null) {
+      await db.clearReadStateDirtyIfUnchanged(chapterId, isRead: markRead);
+    }
   }
 }
 
@@ -315,6 +320,72 @@ Future<void> recordBookmark(
         .read(offlineDatabaseProvider)
         .clearBookmarkDirtyIfUnchanged(chapterId, isBookmarked: isBookmarked);
   }
+}
+
+/// Mark chapters read/unread, offline-aware. Writes the local row FIRST (so the
+/// change survives offline + restart and keeps Resume and the offline UI
+/// truthful — the root of the ch-99 loop was that list mark-read never touched
+/// the local row), then the server bulk write; on failure the change stays
+/// dirty and up-syncs on reconnect. [resetPosition] mirrors the mark-read
+/// action's `lastPageRead: 0` reset (recorded locally as a deliberate position
+/// write); mark-unread leaves position alone. Returns the server write's
+/// success, so callers keep firing trackers / delete-on-manual online only.
+Future<bool> recordReadStateWithDependencies({
+  required bool offlineEnabled,
+  required OfflineDatabase? offlineDatabase,
+  required MangaBookRepository repository,
+  required List<int> chapterIds,
+  required bool isRead,
+  bool resetPosition = false,
+}) async {
+  final db = offlineDatabase;
+  if (offlineEnabled && db != null) {
+    for (final id in chapterIds) {
+      if (resetPosition) {
+        await db.setChapterProgress(id, lastPageRead: 0, isRead: isRead);
+      } else {
+        await db.setChapterReadState(id, isRead);
+      }
+    }
+  }
+  final result = await AsyncValue.guard(
+    () => repository.modifyBulkChapters(
+      ChapterBatch(
+        ids: chapterIds,
+        patch: resetPosition
+            ? ChapterChange(isRead: isRead, lastPageRead: 0)
+            : ChapterChange(isRead: isRead),
+      ),
+    ),
+  );
+  if (offlineEnabled && db != null && !result.hasError) {
+    for (final id in chapterIds) {
+      await db.clearReadStateDirtyIfUnchanged(id, isRead: isRead);
+      if (resetPosition) {
+        await db.clearProgressDirtyIfUnchanged(id, lastPageRead: 0);
+      }
+    }
+  }
+  return !result.hasError;
+}
+
+/// Widget entry point for [recordReadStateWithDependencies] — resolves the
+/// offline deps from [ref]. Mirrors [recordReadingProgress].
+Future<bool> recordReadState(
+  WidgetRef ref, {
+  required List<int> chapterIds,
+  required bool isRead,
+  bool resetPosition = false,
+}) {
+  final offline = ref.read(offlineActiveProvider);
+  return recordReadStateWithDependencies(
+    offlineEnabled: offline,
+    offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
+    repository: ref.read(mangaBookRepositoryProvider),
+    chapterIds: chapterIds,
+    isRead: isRead,
+    resetPosition: resetPosition,
+  );
 }
 
 // === Delete-on-read =========================================================
@@ -488,11 +559,12 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
         chapterId: c.id,
         patch: ChapterChange(
           // Send only the locally-changed fields (null = omitted from the
-          // patch), so a progress sync never overwrites a server bookmark that
-          // hasn't down-synced, and a bookmark sync never overwrites pending
-          // read progress (#13).
+          // patch), each gated on its OWN dirty flag. isRead rides
+          // readStateDirty — NOT progressDirty — so a position-only write can
+          // never push a stale isRead (the ch-99 un-read loop), just as a
+          // bookmark sync never overwrites pending read progress (#13).
           lastPageRead: c.progressDirty ? c.lastPageRead : null,
-          isRead: c.progressDirty ? c.isRead : null,
+          isRead: c.readStateDirty ? c.isRead : null,
           isBookmarked: c.bookmarkDirty ? c.isBookmarked : null,
         ),
       ),
@@ -503,13 +575,16 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
       // re-syncs on the next pass (no silent data loss).
       if (c.progressDirty) {
         await db.clearProgressDirtyIfUnchanged(c.id,
-            lastPageRead: c.lastPageRead, isRead: c.isRead);
+            lastPageRead: c.lastPageRead);
+      }
+      if (c.readStateDirty) {
+        await db.clearReadStateDirtyIfUnchanged(c.id, isRead: c.isRead);
       }
       if (c.bookmarkDirty) {
         await db.clearBookmarkDirtyIfUnchanged(c.id,
             isBookmarked: c.isBookmarked);
       }
-      if (c.progressDirty && c.isRead) syncedReadMangaIds.add(c.mangaId);
+      if (c.readStateDirty && c.isRead) syncedReadMangaIds.add(c.mangaId);
     }
   }
 

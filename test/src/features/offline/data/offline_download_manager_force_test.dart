@@ -45,6 +45,7 @@ void main() {
         downloadedAt: null,
         progressDirty: false,
         bookmarkDirty: false,
+        readStateDirty: false,
         updatedAt: DateTime(2026),
       );
 
