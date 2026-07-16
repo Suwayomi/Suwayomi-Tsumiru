@@ -2,7 +2,7 @@
 
 ## Tech stack
 
-- **Flutter 3.35.7 / Dart 3.9.2** (pinned).
+- **Flutter 3.44.6** (pinned via `.fvmrc`; Dart SDK ≥3.9).
 - **Riverpod** (`hooks_riverpod`) + `riverpod_generator` (`@riverpod`) for state/DI.
 - **flutter_hooks** for local widget state.
 - **graphql_flutter** + **graphql_codegen** for the Suwayomi GraphQL API.

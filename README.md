@@ -60,7 +60,7 @@ that Tsumiru can reach. On first launch, point it at your server's address.
 
 ## Building
 
-Flutter 3.35.7 / Dart 3.9.2 (pinned).
+Flutter 3.44.6 (pinned via `.fvmrc`; Dart SDK ≥3.9).
 
 ```bash
 flutter pub get

@@ -16,16 +16,19 @@ Tsumiru is its **own application** published at `Suwayomi/Suwayomi-Tsumiru` insi
 
 ## Version scheme
 
-`pubspec.yaml`: `version: 0.6.0+32`
+`pubspec.yaml`: `version: 0.8.5+41`
 
-- **Public version** (`0.6.0`) matches the release tag line (`v0.6.0`). Release tags carry a `v` prefix; the pubspec version does not.
-- **Build number** (`+32`) is a monotonically increasing integer (inherited from the upstream `0.6.4+N` series). It MUST increase on every build pushed to a device — Android rejects a same-or-lower build number as a downgrade. CI does not enforce this; bump it manually before tagging.
+- **Public version** (`0.8.5`) matches the release tag line (`v0.8.5`). Release tags carry a `v` prefix; the pubspec version does not.
+- **Build number** (`+41`) is a monotonically increasing integer (inherited from the upstream `0.6.4+N` series). It MUST increase on every build pushed to a device — Android rejects a same-or-lower build number as a downgrade. CI does not enforce this; bump it manually before tagging.
 
 ## Release flow
 
-Pushing a `v*.*.*` tag fires two workflows in parallel:
+A release is **maintainer-initiated as a draft, then auto-published once every platform builds:**
 
-**`release-fork.yml`** (primary release builder) — Flutter pinned to `3.35.7` (stable). A 5-job matrix (`fail-fast: false`):
+1. `gh release create vX.Y.Z --target <sha> --notes-file notes.md --draft` — create the draft with its notes.
+2. `git tag vX.Y.Z <sha> && git push origin vX.Y.Z` — the tag push fires two workflows in parallel.
+
+**`release-fork.yml`** (primary release builder) — Flutter read from `.fvmrc` (currently 3.44.6). A **6-job** build matrix (`fail-fast: false`):
 
 | Job | Runner | Output |
 |---|---|---|
@@ -33,23 +36,23 @@ Pushing a `v*.*.*` tag fires two workflows in parallel:
 | linux | ubuntu-latest | AppImage (fastforge + appimagetool) |
 | web | ubuntu-latest | `*-web.zip` |
 | macos | macos-latest | `.app` zip |
+| ios | macos-latest | **unsigned** `.ipa` (no Apple Developer account; users re-sign via AltStore / SideStore / TrollStore) |
 | windows | **windows-2022** (pinned, not `latest`) | `*-windows-x64.zip` |
 
+- Each platform attaches its artifact to the **draft** release (guarded by `startsWith(github.ref, 'refs/tags/')`). A separate **`publish`** job flips the draft to published (`--latest`) only after all six builds succeed — and refuses to publish if the release notes are empty, so an incomplete or blank release never goes public. A failed platform leaves the release a draft. On publish it best-effort triggers a `tsumiru.app` rebuild so the new release shows immediately.
+- **Weekly dry run:** a Monday 06:00 UTC cron builds all platforms with no tag ref — it catches iOS/macOS breakage before release day (the PR check builds only a single platform) and, without a tag, skips the attach + publish steps entirely.
 - Android signing secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
 - Linux build deps: `clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libblkid-dev liblzma-dev libsecret-1-dev libjsoncpp-dev` (last two needed for `flutter_secure_storage_linux`).
-- Artifacts attach to the release only on a tag push (guarded by `startsWith(github.ref, 'refs/tags/')`); `workflow_dispatch` builds but does not attach.
 
 **`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build the Linux bundle, package + GPG-sign in the `freedesktop:24.08` flatter container, deploy to Pages at `suwayomi.github.io/Suwayomi-Tsumiru` (the app repo's own Pages — it moved with the repo; the docs site lives at `tsumiru.app`, served from `tsumiru-app/tsumiru-app.github.io` behind Cloudflare). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Manifest id is still `io.github.aaronbamblett.tsumiru`.
 
-**Manual-only / vestigial:**
-- `publish.yml` — inherited upstream (winget/homebrew/Play/iOS). Stale: still names `tachidesk-sorayomi`, needs secrets this fork lacks. `workflow_dispatch` only; do not run.
-- `web.yml` — inherited upstream Pages deployer (`baseHref: /Tachidesk-Sorayomi/`). Stale; Web is covered by `release-fork.yml`.
-
 ## CI quality gates
 
-- `claude-code-review.yml` — Claude code-review commentary on PRs (needs `CLAUDE_CODE_OAUTH_TOKEN`). Not a build/test gate.
-- `claude.yml` — `@claude` interactive assistant. Not a gate.
-- **Gap:** there is currently **no workflow that runs `flutter analyze` / `flutter test` on PRs** — a broken build can merge undetected until a release tag. (A visual-verification + test gate is planned; see the vault plans.)
+**`pr-checks.yml`** runs on every PR to `main`: `flutter pub get → flutter gen-l10n → build_runner build → flutter analyze → flutter test`. Analyze runs with `--no-fatal-warnings --no-fatal-infos`, so only real errors (or a failing test) block the merge — the repo's inherited warnings/infos are reported but don't gate. This is the safety net that keeps a broken build from merging.
+
+## Automated dependency updates (Renovate)
+
+**`renovate.yml`** runs self-hosted Renovate weekly (Mondays 06:00 UTC) and on demand, opening small, CI-gated PRs to keep dependencies current. It authenticates with a fine-grained PAT in the `RENOVATE_TOKEN` secret — not the default `GITHUB_TOKEN`, whose PRs wouldn't trigger `pr-checks.yml`. Config lives in `renovate.json` + `.github/renovate-global.js`. This is the mechanism that cleared the dependency backlog and drove the Riverpod 3 / freezed 3 / graphql_codegen 3 / go_router 17 migration.
 
 ## Codegen — what regenerates and when
 

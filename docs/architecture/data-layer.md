@@ -46,8 +46,8 @@ features/<f>/domain/<type>/graphql/fragment.graphql  # fragments near their doma
 
 ## Riverpod conventions
 
-- `@riverpod` on a function → `AutoDisposeProvider<T>` (repositories).
-- `@riverpod` on a class extending `_$X` → `AutoDisposeNotifierProvider<T?>`.
+- `@riverpod` on a function → a provider (repositories); `@riverpod` on a class extending `_$X` → a notifier provider.
+- Riverpod 3 codegen providers **auto-dispose by default** (`$NotifierProvider` / `$Notifier` with `isAutoDispose: true`) — there is no separate `AutoDispose*` type prefix anymore. Add `keepAlive: true` to opt a provider out.
 - **Persisted prefs** follow the mixin pattern: class mixes `SharedPreference[Enum]ClientMixin`, `build()` calls `initialize(DBKeys.key)` (watches `sharedPreferencesProvider`, `ref.listenSelf` auto-persists), callers use `.update(value)`.
 - `sharedPreferencesProvider` and `hiveStoreProvider` are `throw UnimplementedError()` sentinels — overridden in `ProviderScope` at startup.
 

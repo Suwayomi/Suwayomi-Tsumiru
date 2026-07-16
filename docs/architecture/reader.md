@@ -105,7 +105,7 @@ each with a concrete architectural blocker below.
 | Setting(s) | Blocker |
 |---|---|
 | `dualPageSplitWebtoon` (+`Invert`) | Splitting one strip page into two entries needs a page-list remap (1→2) inside the **frozen** webtoon scroll/index math. |
-| `smoothAutoScroll` | No auto-scroll driver exists yet (a webtoon auto-advance feature); the toggle has nothing to modify. |
+| `smoothAutoScroll` | Superseded by the auto-scroll (webtoon) / auto-advance (paged) driver shipped in #181, which is a **pull-down-bar** control (`reader_utils_bar.dart` → `autoScrollActiveProvider` + `autoScrollIntervalSeconds`), not this settings toggle. `smoothAutoScroll` is now an orphaned l10n string wired to no engine. |
 
 **Still shown but inert (niche):** `cropBordersGaps` — appears only in the
 non-default "Long strip with gaps" mode; its own key isn't read by an engine

@@ -90,9 +90,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   freezed: ^3.0.0
-  # Pinned to the 2.7.x line: 2.8.0+ targets go_router 15 (adds TypedGoRoute
-  # .caseSensitive), but go_router itself is held at ^14 here — the go_router 15→17
-  # major bump is a separate, deliberate migration. Keep builder + runtime aligned.
+  # Keep aligned with the go_router runtime major (builder 4.x ↔ go_router 17.x).
   go_router_builder: ^4.0.0
   graphql_codegen: ^3.0.0
   json_serializable: ^6.5.4
