@@ -32,7 +32,14 @@ mixin SharedPreferenceClientMixin<T extends Object> {
   T? get state;
   late final dynamic Function(T)? _toJson;
   late final T? Function(dynamic)? _fromJson;
-  AutoDisposeNotifierProviderRef<T?> get ref;
+  Ref get ref;
+
+  /// Satisfied by the Notifier this mixes into — Riverpod 3 moved listenSelf
+  /// off Ref onto the notifier itself.
+  void Function() listenSelf(
+    void Function(T? previous, T? next) listener, {
+    void Function(Object error, StackTrace stackTrace)? onError,
+  });
 
   T? initialize(
     DBKeys key, {
@@ -45,7 +52,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
     _initial = initial ?? key.initial;
     _toJson = toJson;
     _fromJson = fromJson;
-    _persistenceRefreshLogic(ref);
+    _persistenceRefreshLogic();
     return _get ?? _initial;
   }
 
@@ -69,8 +76,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
     return value is T? ? value : _initial;
   }
 
-  void _persistenceRefreshLogic(AutoDisposeNotifierProviderRef<T?> ref) =>
-      ref.listenSelf((_, next) => _set(next));
+  void _persistenceRefreshLogic() => listenSelf((_, next) => _set(next));
 
   Future<bool> _set(T? value) async {
     if (value == null) return _client.remove(_key);
@@ -103,14 +109,21 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   T? _initial;
   late List<T> _enumList;
   set state(T? newState);
-  AutoDisposeNotifierProviderRef<T?> get ref;
+  Ref get ref;
+
+  /// Satisfied by the Notifier this mixes into — Riverpod 3 moved listenSelf
+  /// off Ref onto the notifier itself.
+  void Function() listenSelf(
+    void Function(T? previous, T? next) listener, {
+    void Function(Object error, StackTrace stackTrace)? onError,
+  });
 
   T? initialize(DBKeys key, {required List<T> enumList}) {
     _client = ref.watch(sharedPreferencesProvider);
     _key = key.name;
     _initial = key.initial;
     _enumList = enumList;
-    _persistenceRefreshLogic(ref);
+    _persistenceRefreshLogic();
     return _get;
   }
 
@@ -128,8 +141,7 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
     return _client.setInt(_key, value);
   }
 
-  void _persistenceRefreshLogic(AutoDisposeNotifierProviderRef<T?> ref) =>
-      ref.listenSelf(
+  void _persistenceRefreshLogic() => listenSelf(
         (_, next) => _set(
           next == null ? null : _enumList.indexOf(next),
         ),

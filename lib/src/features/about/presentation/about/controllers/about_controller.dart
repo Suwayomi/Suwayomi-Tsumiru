@@ -20,4 +20,4 @@ Future<AboutDto?> about(Ref ref) =>
     ref.watch(aboutRepositoryProvider).getAbout();
 
 @riverpod
-PackageInfo packageInfo(ref) => throw UnimplementedError();
+PackageInfo packageInfo(Ref ref) => throw UnimplementedError();

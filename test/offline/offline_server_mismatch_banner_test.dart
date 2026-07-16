@@ -18,6 +18,7 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/presentation/offline_server_mismatch_banner.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:hooks_riverpod/misc.dart';
 
 /// Load the SDK's Roboto so captured screenshots have readable text (test hosts
 /// otherwise render the Ahem box font). Best-effort — falls through on CI.

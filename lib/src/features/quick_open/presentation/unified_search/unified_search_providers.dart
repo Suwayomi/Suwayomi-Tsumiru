@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/legacy.dart';
 
 import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
@@ -24,7 +25,7 @@ bool queryUsesOperator(String q) => LibrarySearchQuery.hasOperator(q);
 String plainQueryText(String q) => LibrarySearchQuery.plainText(q);
 
 /// The live query text in the unified search field.
-final unifiedSearchQueryProvider = StateProvider<String>((ref) => '');
+final unifiedSearchQueryProvider = StateProvider<String>((Ref ref) => '');
 
 /// Generic, testable filter+cap over a list, using an injected predicate.
 /// Extracted so the matching/cap rule is unit-testable without GraphQL DTOs.
@@ -55,9 +56,9 @@ bool titleMatchesQuery(String title, String query) =>
 /// Hybrid: plain words match the TITLE only (keeps "bad" clean); the moment the
 /// query contains a metatag operator it runs the full library DSL, so quick
 /// search is never weaker than the library filter bar.
-final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((ref) {
+final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((Ref ref) {
   final query = ref.watch(unifiedSearchQueryProvider);
-  final library = ref.watch(libraryMangaListProvider).valueOrNull ?? const [];
+  final library = ref.watch(libraryMangaListProvider).value ?? const [];
   final useDsl = queryUsesOperator(query);
   return matchLibraryTitles<MangaDto>(
     library,

@@ -422,5 +422,5 @@ class MigrationRepositoryImpl implements MigrationRepository {
 }
 
 @riverpod
-MigrationRepository migrationRepository(ref) =>
+MigrationRepository migrationRepository(Ref ref) =>
     MigrationRepositoryImpl(ref.watch(graphQlClientProvider));

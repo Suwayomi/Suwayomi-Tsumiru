@@ -17,7 +17,7 @@ part 'next_update_controller.g.dart';
 @riverpod
 NextUpdatePrediction? mangaNextUpdate(Ref ref, {required int mangaId}) {
   final chapters =
-      ref.watch(mangaChapterListProvider(mangaId: mangaId)).valueOrNull;
+      ref.watch(mangaChapterListProvider(mangaId: mangaId)).value;
   if (chapters == null || chapters.isEmpty) return null;
   final releases = <ChapterRelease>[
     for (final c in chapters)

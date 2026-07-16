@@ -21,7 +21,7 @@ class OfflineServerMismatchBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mismatch = ref.watch(offlineServerMismatchProvider).valueOrNull;
+    final mismatch = ref.watch(offlineServerMismatchProvider).value;
     if (mismatch == null || (mismatch.dismissed && !showAfterDismissal)) {
       return const SizedBox.shrink();
     }

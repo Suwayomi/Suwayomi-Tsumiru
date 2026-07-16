@@ -15,7 +15,7 @@ import 'history_item.dart';
 part 'history_group.freezed.dart';
 
 @freezed
-class HistoryGroup with _$HistoryGroup {
+abstract class HistoryGroup with _$HistoryGroup {
   const factory HistoryGroup({
     required String title,
     required List<HistoryItemDto> items,

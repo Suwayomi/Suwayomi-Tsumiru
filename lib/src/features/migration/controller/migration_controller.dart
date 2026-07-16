@@ -109,7 +109,7 @@ AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
   // Pinned-first list of every searchable source (shared with global search;
   // pinned sources are otherwise excluded from the grouped map).
   final sourcesData = ref.watch(searchableSourcesProvider);
-  final sourceList = sourcesData.valueOrNull ?? const <SourceDto>[];
+  final sourceList = sourcesData.value ?? const <SourceDto>[];
 
   final List<MigrationQuickSearchResults> sourceMangaListPairList = [];
   for (SourceDto source in sourceList) {
@@ -243,7 +243,7 @@ class MigrationExecution extends _$MigrationExecution {
       // per-category slices so all reactive descendants re-partition.
       ref.invalidate(libraryMangaListProvider);
       // Invalidate all category manga lists to refresh library
-      final categories = ref.read(categoryControllerProvider).valueOrNull ?? [];
+      final categories = ref.read(categoryControllerProvider).value ?? [];
       for (final category in categories) {
         ref.invalidate(categoryMangaListProvider(category.id));
       }

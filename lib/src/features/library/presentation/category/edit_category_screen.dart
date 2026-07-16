@@ -28,7 +28,7 @@ class EditCategoryScreen extends HookConsumerWidget {
         withMicrotask: true,
       );
       return;
-    }, [categoryList.valueOrNull]);
+    }, [categoryList.value]);
 
     return Scaffold(
       appBar: AppBar(

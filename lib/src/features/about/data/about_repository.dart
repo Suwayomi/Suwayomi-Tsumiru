@@ -66,7 +66,7 @@ class AboutRepository {
 }
 
 @riverpod
-AboutRepository aboutRepository(ref) => AboutRepository(
+AboutRepository aboutRepository(Ref ref) => AboutRepository(
       client: ref.watch(graphQlClientProvider),
       packageInfo: ref.watch(packageInfoProvider),
     );

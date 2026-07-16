@@ -24,7 +24,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
-    final BrowserSettingsDto? browseSettings = serverSettings.valueOrNull;
+    final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.browse)),
@@ -54,7 +54,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                 ],
               ),
               const Divider(),
-              if (serverSettings.valueOrNull != null) ...[
+              if (serverSettings.value != null) ...[
                 SettingsPropTile(
                   leading: const Icon(Icons.swap_vert_rounded),
                   title: context.l10n.parallelSourceRequest,

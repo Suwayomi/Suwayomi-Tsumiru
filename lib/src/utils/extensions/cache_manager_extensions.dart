@@ -22,8 +22,8 @@ extension CacheManagerExtension on CacheManager {
   Future<File> getServerFile(WidgetRef ref, String url,
       {bool appendApiToUrl = true}) async {
     final authType = ref.read(authTypeKeyProvider);
-    final basicToken = ref.read(credentialsProvider).valueOrNull;
-    final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+    final basicToken = ref.read(credentialsProvider).value;
+    final creds = ref.read(authCredentialsStoreProvider).value;
     final baseApi = "${Endpoints.baseApi(
       baseUrl: ref.read(serverUrlProvider),
       port: ref.read(serverPortProvider),

@@ -20,7 +20,7 @@ class UpdateStatusFab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final updateStatus = ref.watch(updatesSocketProvider);
-    final showStatus = (updateStatus.valueOrNull?.isUpdateChecking).ifNull();
+    final showStatus = (updateStatus.value?.isUpdateChecking).ifNull();
     return BrandFab(
       icon: showStatus ? null : const Icon(Icons.refresh_rounded),
       onPressed: () {
@@ -32,8 +32,8 @@ class UpdateStatusFab extends ConsumerWidget {
         }
       },
       label: showStatus
-          ? Text("${updateStatus.valueOrNull?.updateChecked.padLeft()}"
-              "/${updateStatus.valueOrNull?.total.padLeft()}")
+          ? Text("${updateStatus.value?.updateChecked.padLeft()}"
+              "/${updateStatus.value?.total.padLeft()}")
           : Text(context.l10n.update),
     );
   }

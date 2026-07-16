@@ -166,7 +166,7 @@ bool offlineActive(Ref ref) {
   final stamp = ref.watch(sharedPreferencesProvider).getString(
         DBKeys.offlineCatalogServerId.name,
       );
-  final current = ref.watch(serverInstanceIdProvider).valueOrNull;
+  final current = ref.watch(serverInstanceIdProvider).value;
   if (current == null) return false;
   return isOfflineCatalogActive(
     offlineEnabled: true,
@@ -249,7 +249,7 @@ OfflineDatabase? offlineReadDatabase(Ref ref) {
 @riverpod
 OfflineSync? offlineSync(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
-  final identity = ref.watch(serverInstanceIdProvider).valueOrNull;
+  final identity = ref.watch(serverInstanceIdProvider).value;
   if (identity == null) return null;
   final preferences = ref.watch(sharedPreferencesProvider);
   return OfflineSync(

@@ -23,11 +23,11 @@ class SourcePreferenceScreen extends HookConsumerWidget {
     final source = ref.watch(sourceProvider(sourceId));
     final preferenceProvider = baseSourcePreferenceListProvider(sourceId);
     final networkPreferences = ref.watch(preferenceProvider);
-    final preferences = networkPreferences.valueOrNull;
+    final preferences = networkPreferences.value;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          source.valueOrNull?.displayName ?? "",
+          source.value?.displayName ?? "",
           style: context.textTheme.titleLarge,
         ),
       ),

@@ -94,7 +94,7 @@ List<CategoryDto>? categoryListQuery(
   Ref ref, {
   required String query,
 }) {
-  final categoryList = ref.watch(categoryControllerProvider).valueOrNull;
+  final categoryList = ref.watch(categoryControllerProvider).value;
   return categoryList
       ?.where((element) => (element.name.query(query)).ifNull())
       .toList();
@@ -103,7 +103,7 @@ List<CategoryDto>? categoryListQuery(
 @riverpod
 AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   final categoryList = ref.watch(categoryControllerProvider);
-  return categoryList.copyWithData((_) => categoryList.valueOrNull
+  return categoryList.copyWithData((_) => categoryList.value
       ?.where((element) => element.mangas.totalCount > 0)
       .toList());
 }
@@ -116,7 +116,7 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
 AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
   final categoryList = ref.watch(nonZeroCategoryListProvider);
   final showHidden = ref.watch(showHiddenCategoriesProvider).ifNull(false);
-  return categoryList.copyWithData((_) => categoryList.valueOrNull
+  return categoryList.copyWithData((_) => categoryList.value
       ?.where((element) => showHidden || !element.isHidden)
       .toList());
 }

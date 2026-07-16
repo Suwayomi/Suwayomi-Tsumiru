@@ -120,7 +120,7 @@ class DeleteChaptersSettingsController
   }
 
   DeleteChaptersSettings get _current =>
-      state.valueOrNull ?? const DeleteChaptersSettings();
+      state.value ?? const DeleteChaptersSettings();
 
   Future<void> setDeleteManuallyMarkedRead(bool value) => _write(
         kDeleteChaptersManuallyMarkedReadKey,

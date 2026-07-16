@@ -69,7 +69,7 @@ class UnifiedSearchScreen extends HookConsumerWidget {
     final facets = ref.watch(unifiedLibraryFacetsProvider);
     // Same visible set the library tab bar uses: non-empty AND not-hidden.
     final categories =
-        ref.watch(visibleCategoryListProvider).valueOrNull ?? const [];
+        ref.watch(visibleCategoryListProvider).value ?? const [];
 
     final caretRaw = controller.selection.baseOffset;
     final caret = caretRaw < 0 ? controller.text.length : caretRaw;

@@ -99,7 +99,7 @@ void main() {
         'en': [mangaDex, allManga],
         'ko': [bato],
       });
-      final out = c.read(sourceMapFilteredAndQueriedProvider).valueOrNull!;
+      final out = c.read(sourceMapFilteredAndQueriedProvider).value!;
       expect(out['en']!.map((e) => e.name), ['MangaDex', 'allmanga']);
       expect(out['ko']!.map((e) => e.name), ['Bato']);
     });
@@ -110,7 +110,7 @@ void main() {
         'ko': [bato],
       });
       c.read(sourceSearchQueryProvider.notifier).update('dex');
-      final out = c.read(sourceMapFilteredAndQueriedProvider).valueOrNull!;
+      final out = c.read(sourceMapFilteredAndQueriedProvider).value!;
       expect(out['en']!.map((e) => e.name), ['MangaDex']);
       expect(out['ko'], isEmpty);
     });

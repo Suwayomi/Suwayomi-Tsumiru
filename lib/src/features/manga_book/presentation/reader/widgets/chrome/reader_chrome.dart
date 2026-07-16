@@ -229,7 +229,7 @@ class ReaderChrome extends HookConsumerWidget {
     // Adding 8 dp of breathing room keeps the seekbar from kissing the bar edge.
     // When [forceHorizontalSeekbar] is true, the vertical side seekbar is hidden
     // and the horizontal bottom seekbar serves all modes (including webtoon).
-    final extents = ref.watch(chromeExtentsNotifierProvider);
+    final extents = ref.watch(chromeExtentsProvider);
     final forceHorizontal =
         ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
     final leftHanded =
@@ -294,7 +294,7 @@ class ReaderChrome extends HookConsumerWidget {
             // is a separate, local AnimatedSize.
             //
             // MeasureSize now wraps BOTH bars (moved down from ReaderTopBar
-            // alone) so chromeExtentsNotifierProvider's topInset covers the
+            // alone) so chromeExtentsProvider's topInset covers the
             // utils bar's height too when it's expanded — otherwise the side
             // seekbar's `top` offset would sit above the top bar only and
             // overlap the expanded utils bar.
@@ -316,13 +316,13 @@ class ReaderChrome extends HookConsumerWidget {
                         // Fires from a post-frame callback; the reader may have
                         // unmounted by then, so never touch ref after dispose.
                         if (!context.mounted) return;
-                        final current = ref.read(chromeExtentsNotifierProvider);
+                        final current = ref.read(chromeExtentsProvider);
                         final next = ChromeExtents(
                           topInset: size.height,
                           bottomInset: current.bottomInset,
                         );
                         ref
-                            .read(chromeExtentsNotifierProvider.notifier)
+                            .read(chromeExtentsProvider.notifier)
                             .update(next);
                       },
                       child: Column(

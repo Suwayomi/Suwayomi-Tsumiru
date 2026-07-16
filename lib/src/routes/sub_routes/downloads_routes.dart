@@ -4,7 +4,7 @@ class DownloadsBranch extends StatefulShellBranchData {
   const DownloadsBranch();
 }
 
-class DownloadsRoute extends GoRouteData {
+class DownloadsRoute extends GoRouteData with $DownloadsRoute {
   const DownloadsRoute();
   @override
   Widget build(context, state) => const DownloadsScreen();

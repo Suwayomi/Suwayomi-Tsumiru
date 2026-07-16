@@ -35,7 +35,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ListTile(
       title: Text(context.l10n.offlineStorageUsage),
       subtitle: Text(
-        formatBytes(ref.watch(offlineUsageBytesProvider).valueOrNull ?? 0),
+        formatBytes(ref.watch(offlineUsageBytesProvider).value ?? 0),
       ),
     ),
     ListTile(

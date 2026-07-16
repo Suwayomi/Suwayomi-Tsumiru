@@ -28,14 +28,14 @@ class SeriesOfflineButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!ref.watch(offlineEnabledProvider)) return const SizedBox.shrink();
     final progress =
-        ref.watch(mangaOfflineProgressProvider(mangaId)).valueOrNull;
+        ref.watch(mangaOfflineProgressProvider(mangaId)).value;
     final downloaded = progress?.downloaded ?? 0;
     final inFlight = progress?.inFlight ?? 0;
     final onDevice = downloaded > 0;
     final downloading = inFlight > 0;
     // Surface the active keep-rule on the button so users can see at a glance
     // why a series keeps re-downloading, without opening the sheet (#74).
-    final config = ref.watch(mangaKeepConfigProvider(mangaId)).valueOrNull;
+    final config = ref.watch(mangaKeepConfigProvider(mangaId)).value;
     return MangaActionButton(
       active: onDevice || downloading,
       icon: downloading
@@ -68,7 +68,7 @@ class SeriesOfflineButton extends ConsumerWidget {
       };
 
   void _openSheet(BuildContext context, WidgetRef ref, bool onDevice) {
-    final config = ref.read(mangaKeepConfigProvider(mangaId)).valueOrNull ??
+    final config = ref.read(mangaKeepConfigProvider(mangaId)).value ??
         (rule: OfflineKeepRule.off, count: 5);
     final rule = config.rule;
     showModalBottomSheet<void>(

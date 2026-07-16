@@ -114,7 +114,7 @@ class AboutScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
     final aboutAsync = ref.watch(aboutProvider);
-    final about = aboutAsync.valueOrNull;
+    final about = aboutAsync.value;
     final serverVer = about?.buildType == "Stable"
         ? about?.version
         : "${about?.version}-${about?.revision}";
@@ -125,7 +125,7 @@ class AboutScreen extends HookConsumerWidget {
         aboutAsync.showToastOnError(toast, withMicrotask: true);
       }
       return;
-    }, [aboutAsync.valueOrNull]);
+    }, [aboutAsync.value]);
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.about)),

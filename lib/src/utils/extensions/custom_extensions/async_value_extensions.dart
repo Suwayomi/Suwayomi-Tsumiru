@@ -30,7 +30,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
   }
 
   T? valueOrToast(Toast? toast, {bool withMicrotask = false}) =>
-      (this..showToastOnError(toast, withMicrotask: withMicrotask)).valueOrNull;
+      (this..showToastOnError(toast, withMicrotask: withMicrotask)).value;
 
   Widget showUiWhenData(
     BuildContext context,

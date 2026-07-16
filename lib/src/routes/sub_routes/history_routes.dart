@@ -7,14 +7,14 @@ class HistoryBranch extends StatefulShellBranchData {
 }
 
 // History route for tablet navigation tab
-class HistoryTabRoute extends GoRouteData {
+class HistoryTabRoute extends GoRouteData with $HistoryTabRoute {
   const HistoryTabRoute();
   @override
   Widget build(context, state) => const HistoryScreen();
 }
 
 // History route for phone navigation (under More)
-class HistoryRoute extends GoRouteData {
+class HistoryRoute extends GoRouteData with $HistoryRoute {
   const HistoryRoute();
   @override
   Widget build(context, state) => const HistoryScreen();

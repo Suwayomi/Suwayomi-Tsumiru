@@ -32,7 +32,7 @@ class ChapterDownloadPresetsButton extends ConsumerWidget {
     WidgetRef ref,
     DownloadPreset preset,
   ) async {
-    final chapters = chapterList.valueOrNull ?? const [];
+    final chapters = chapterList.value ?? const [];
     final candidates = [
       for (final c in chapters)
         ChapterDownloadCandidate(

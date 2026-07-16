@@ -121,7 +121,7 @@ class _TrackerFilterSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loggedIn =
-        ref.watch(loggedInTrackersProvider).valueOrNull ?? const [];
+        ref.watch(loggedInTrackersProvider).value ?? const [];
     if (loggedIn.isEmpty) return const SizedBox.shrink();
 
     if (loggedIn.length == 1) {
@@ -349,7 +349,7 @@ class _TagFilterDialog extends ConsumerWidget {
           .update(newExclude.toList());
     }
 
-    final tags = tagsAsync.valueOrNull ?? const <String>[];
+    final tags = tagsAsync.value ?? const <String>[];
 
     return AlertDialog(
       title: Text(context.l10n.tags),
@@ -450,7 +450,7 @@ class _CategoryFilterDialog extends ConsumerWidget {
           .update(newExclude.toList());
     }
 
-    final categories = categoriesAsync.valueOrNull ?? [];
+    final categories = categoriesAsync.value ?? [];
 
     return AlertDialog(
       title: Text(context.l10n.categories),

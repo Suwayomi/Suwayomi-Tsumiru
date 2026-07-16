@@ -34,7 +34,7 @@ class BrowseExtensionBranch extends StatefulShellBranchData {
   static final $initialLocation = const BrowseExtensionRoute().location;
 }
 
-class BrowseExtensionRoute extends GoRouteData {
+class BrowseExtensionRoute extends GoRouteData with $BrowseExtensionRoute {
   const BrowseExtensionRoute();
 
   @override
@@ -46,14 +46,14 @@ class BrowseSourceBranch extends StatefulShellBranchData {
   static final $initialLocation = const BrowseSourceRoute().location;
 }
 
-class BrowseSourceRoute extends GoRouteData {
+class BrowseSourceRoute extends GoRouteData with $BrowseSourceRoute {
   const BrowseSourceRoute();
 
   @override
   Widget build(context, state) => const SourceScreen();
 }
 
-class SourceTypeRoute extends GoRouteData {
+class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
   const SourceTypeRoute({
     required this.sourceId,
     required this.sourceType,
@@ -74,7 +74,7 @@ class SourceTypeRoute extends GoRouteData {
       );
 }
 
-class SourcePreferenceRoute extends GoRouteData {
+class SourcePreferenceRoute extends GoRouteData with $SourcePreferenceRoute {
   const SourcePreferenceRoute({required this.sourceId});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;

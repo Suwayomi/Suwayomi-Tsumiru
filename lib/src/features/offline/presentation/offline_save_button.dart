@@ -31,7 +31,7 @@ class OfflineSaveButton extends ConsumerWidget {
     }
     final state = ref
         .watch(offlineChapterStateProvider(chapterId))
-        .valueOrNull ??
+        .value ??
         OfflineDeviceState.none;
     final cs = Theme.of(context).colorScheme;
 
@@ -81,7 +81,7 @@ class _DownloadingIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress =
-        ref.watch(offlineChapterProgressProvider(chapterId)).valueOrNull;
+        ref.watch(offlineChapterProgressProvider(chapterId)).value;
     // Spin (indeterminate) while queued or at 0% so the icon is
     // never invisible; switch to a determinate fill only once pages land.
     final value = (progress == null || progress <= 0.0) ? null : progress;

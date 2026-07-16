@@ -121,6 +121,6 @@ Future<void> maybeTrackProgressOnReadFetch(
     mangaId: mangaId,
     isRead: isRead,
     manual: manual,
-    trackRecordCount: records.valueOrNull?.length ?? 0,
+    trackRecordCount: records.value?.length ?? 0,
   );
 }

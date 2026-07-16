@@ -105,7 +105,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                 final visible = onlyHasResults
                     ? data
                         .where((e) =>
-                            (e.mangaList.valueOrNull?.isNotEmpty).ifNull())
+                            (e.mangaList.value?.isNotEmpty).ifNull())
                         .toList()
                     : data;
                 return ListView.builder(

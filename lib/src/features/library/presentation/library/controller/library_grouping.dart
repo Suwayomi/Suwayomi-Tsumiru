@@ -249,7 +249,7 @@ Future<List<GroupedTab>> libraryGroupedTabs(Ref ref) async {
   // don't watch the category provider at all — it just couples them into the
   // loop above and isn't used.
   final List<CategoryProxy> catProxies = groupType == LibraryGroup.byDefault
-      ? (ref.watch(visibleCategoryListProvider).valueOrNull ?? const [])
+      ? (ref.watch(visibleCategoryListProvider).value ?? const [])
           .map(categoryToProxy)
           .toList()
       : const [];

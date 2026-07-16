@@ -22,7 +22,7 @@ import 'reader_bookmark_button.dart';
 /// live in the body [Stack] and be driven by a shared animation controller.
 /// Visual output is byte-identical to the old AppBar.
 ///
-/// Height measurement ([MeasureSize] → `chromeExtentsNotifierProvider`) lives
+/// Height measurement ([MeasureSize] → `chromeExtentsProvider`) lives
 /// one level up in `ReaderChrome`, wrapping this bar together with
 /// [ReaderUtilsBar] — so the reported inset covers both, and the side
 /// seekbar clears the utils bar when it's expanded.

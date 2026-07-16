@@ -256,7 +256,7 @@ class CategoryMangaListWithQueryAndFilter
         ref.watch(libraryMangaFilterBookmarkedProvider);
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
-        ref.watch(offlineDeviceMangaIdsProvider).valueOrNull ?? const <int>{};
+        ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
     final filterCategories =
         ref.watch(libraryFilterCategoriesProvider).ifNull(false);
@@ -281,10 +281,10 @@ class CategoryMangaListWithQueryAndFilter
         ref.watch(librarySortRandomSeedProvider) ?? DBKeys.librarySortRandomSeed.initial as int;
 
     return mangaList.map<AsyncValue<List<MangaDto>?>>(
-      data: (e) => AsyncData(e.valueOrNull == null
+      data: (e) => AsyncData(e.value == null
           ? null
           : applyLibraryFilterSort(
-              e.valueOrNull!,
+              e.value!,
               query: query,
               mangaFilterUnread: mangaFilterUnread,
               mangaFilterDownloaded: mangaFilterDownloaded,
@@ -490,7 +490,7 @@ class LibraryMangaFilterTracker extends _$LibraryMangaFilterTracker {
   bool? build({required int trackerId}) {
     final prefs = ref.watch(sharedPreferencesProvider);
     final key = 'mangaFilterTracker_$trackerId';
-    ref.listenSelf((_, next) {
+    listenSelf((_, next) {
       if (next == null) {
         prefs.remove(key);
       } else {
@@ -508,7 +508,7 @@ class LibraryMangaFilterTracker extends _$LibraryMangaFilterTracker {
 @riverpod
 Map<int, bool?> libraryTrackerFilters(Ref ref) {
   final loggedIn =
-      ref.watch(loggedInTrackersProvider).valueOrNull ?? const [];
+      ref.watch(loggedInTrackersProvider).value ?? const [];
   final Map<int, bool?> result = {};
   for (final tracker in loggedIn) {
     final pref = ref.watch(
@@ -530,7 +530,7 @@ Map<int, bool?> libraryTrackerFilters(Ref ref) {
 @riverpod
 Map<int, double> libraryTrackerScales(Ref ref) {
   final loggedIn =
-      ref.watch(loggedInTrackersProvider).valueOrNull ?? const [];
+      ref.watch(loggedInTrackersProvider).value ?? const [];
   return {
     for (final t in loggedIn)
       t.id: t.scores.isEmpty
@@ -545,7 +545,7 @@ Map<int, double> libraryTrackerScales(Ref ref) {
 /// logged-in ones, so a bound record still resolves after a logout.
 @riverpod
 Map<int, String> libraryTrackerNames(Ref ref) {
-  final all = ref.watch(trackersProvider).valueOrNull ?? const [];
+  final all = ref.watch(trackersProvider).value ?? const [];
   return {for (final t in all) t.id: t.name};
 }
 
@@ -606,7 +606,7 @@ class GroupedMangaListWithQueryAndFilter
     // value equality, so passing a freshly-built Set as the family key minted a
     // new provider on every rebuild and thrashed into an infinite loading
     // flicker. Resolve the id-set here from the grouped-tabs provider instead.
-    final tabs = ref.watch(libraryGroupedTabsProvider).valueOrNull;
+    final tabs = ref.watch(libraryGroupedTabsProvider).value;
     Set<int> mangaIds = const <int>{};
     if (tabs != null) {
       for (final t in tabs) {
@@ -627,7 +627,7 @@ class GroupedMangaListWithQueryAndFilter
         ref.watch(libraryMangaFilterBookmarkedProvider);
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
-        ref.watch(offlineDeviceMangaIdsProvider).valueOrNull ?? const <int>{};
+        ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
     final filterCategories =
         ref.watch(libraryFilterCategoriesProvider).ifNull(false);
@@ -652,10 +652,10 @@ class GroupedMangaListWithQueryAndFilter
         ref.watch(librarySortRandomSeedProvider) ?? DBKeys.librarySortRandomSeed.initial as int;
 
     return allAsync.map<AsyncValue<List<MangaDto>?>>(
-      data: (e) => AsyncData(e.valueOrNull == null
+      data: (e) => AsyncData(e.value == null
           ? null
           : applyLibraryFilterSort(
-              e.valueOrNull!,
+              e.value!,
               mangaIds: mangaIds,
               query: query,
               mangaFilterUnread: mangaFilterUnread,

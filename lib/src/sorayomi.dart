@@ -33,7 +33,7 @@ class Sorayomi extends ConsumerWidget {
     final appTheme = ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight;
     final customSeed = ref.watch(customThemeColorProvider);
     final isTrueBlack = ref.watch(isTrueBlackProvider).ifNull();
-    final client = ref.watch(graphQlClientNotifierProvider);
+    final client = ref.watch(graphQlClientHolderProvider);
     // Honour the portrait-lock preference on launch and whenever it changes
     // (phones only; idempotent so re-applying on rebuild is harmless).
     applyForcePortrait(ref.watch(forcePortraitProvider).ifNull());
