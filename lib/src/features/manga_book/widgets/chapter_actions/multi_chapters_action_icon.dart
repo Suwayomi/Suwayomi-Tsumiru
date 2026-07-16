@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../offline/data/offline_download_providers.dart';
+import '../../../offline/data/offline_repository.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -43,22 +44,39 @@ class MultiChaptersActionIcon extends ConsumerWidget {
     return IconButton(
       icon: icon ?? Icon(iconData),
       onPressed: () async {
-        final result = await AsyncValue.guard(
-          () => ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
-                ChapterBatch(
-                  ids: [for (final c in chapters) c.id],
-                  patch: change,
+        final ids = [for (final c in chapters) c.id];
+        final bool ok;
+        if (change.isRead != null) {
+          // Read/unread goes through the offline-aware write-through path: the
+          // local row is updated first (so it survives offline + restart and
+          // keeps Resume truthful), then the server. A failure with offline
+          // active is queued, not lost, so only surface an error when there's
+          // no local fallback.
+          ok = await recordReadState(
+            ref,
+            chapterIds: ids,
+            isRead: change.isRead!,
+            resetPosition: change.lastPageRead == 0 && change.isRead == true,
+          );
+          if (!ok && !ref.read(offlineActiveProvider) && context.mounted) {
+            ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+          }
+        } else {
+          final result = await AsyncValue.guard(
+            () => ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
+                  ChapterBatch(ids: ids, patch: change),
                 ),
-              ),
-        );
-        if (context.mounted) {
-          result.showToastOnError(ref.read(toastProvider));
+          );
+          if (context.mounted) {
+            result.showToastOnError(ref.read(toastProvider));
+          }
+          ok = !result.hasError;
         }
         // On a successful mark-read, sync each affected manga to its tracker and
         // honour the delete-on-manual-read setting — keyed off each chapter's
         // own mangaId, so a multi-manga selection (updates screen) syncs them
         // all instead of being silently skipped.
-        if (!result.hasError && change.isRead == true) {
+        if (ok && change.isRead == true) {
           for (final mangaId in {for (final c in chapters) c.mangaId}) {
             unawaited(maybeTrackProgressOnReadFetch(
               ref,

@@ -25,7 +25,6 @@ import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/downloads/downloads_repository.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
-import '../../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
@@ -120,8 +119,10 @@ class CategoryMangaList extends HookConsumerWidget {
         final chapters = await repo.getChapterList(id);
         final cids = <int>[for (final c in chapters ?? const []) c.id];
         if (cids.isNotEmpty) {
-          await repo.modifyBulkChapters(
-              ChapterBatch(ids: cids, patch: ChapterChange(isRead: read)));
+          // Offline-aware write-through: the local rows are updated first (so
+          // the change survives offline + restart and keeps Resume truthful),
+          // then the server bulk write — same fix as the chapter-list icons.
+          await recordReadState(ref, chapterIds: cids, isRead: read);
           // Marking a whole series read here bypasses the reader, so push the
           // new progress to the bound tracker(s) explicitly (manual path).
           if (read) {

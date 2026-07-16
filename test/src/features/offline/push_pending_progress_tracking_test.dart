@@ -361,5 +361,52 @@ void main() {
       expect(repo.patches.single.isRead, isTrue);
       expect((await db.chapterById(10))!.readStateDirty, isFalse);
     });
+
+    // The full reported loop, end to end. Pre-fix this reverted 100%: the
+    // partial read left the row position-dirty with isRead=false, list
+    // mark-read never touched the local row, and the reconnect push sent that
+    // stale isRead=false — reverting the chapter to unread on the server.
+    test('ch-99 loop is dead: offline partial-read then mark-read syncs '
+        'read=true, never a stale unread', () async {
+      final repo = _CapturingMangaBookRepository();
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 99, mangaId: 1);
+      // Offline partial read of ch 99 (back out): records position only.
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterId: 99,
+        lastPageRead: 5,
+        isRead: false,
+      );
+      // Offline mark-read from the list: write-through updates the local row.
+      await recordReadStateWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterIds: [99],
+        isRead: true,
+        resetPosition: true,
+      );
+
+      // Reconnect and flush.
+      await pushPendingProgress(container);
+
+      final patch = repo.patches.single;
+      expect(patch.isRead, isTrue,
+          reason: 'the mark-read reaches the server (used to revert to unread)');
+      expect(patch.lastPageRead, 0, reason: 'mark-read reset the position');
+      final c = (await db.chapterById(99))!;
+      expect(c.isRead, isTrue);
+      expect(c.progressDirty, isFalse);
+      expect(c.readStateDirty, isFalse);
+    });
   });
 }

@@ -322,6 +322,72 @@ Future<void> recordBookmark(
   }
 }
 
+/// Mark chapters read/unread, offline-aware. Writes the local row FIRST (so the
+/// change survives offline + restart and keeps Resume and the offline UI
+/// truthful — the root of the ch-99 loop was that list mark-read never touched
+/// the local row), then the server bulk write; on failure the change stays
+/// dirty and up-syncs on reconnect. [resetPosition] mirrors the mark-read
+/// action's `lastPageRead: 0` reset (recorded locally as a deliberate position
+/// write); mark-unread leaves position alone. Returns the server write's
+/// success, so callers keep firing trackers / delete-on-manual online only.
+Future<bool> recordReadStateWithDependencies({
+  required bool offlineEnabled,
+  required OfflineDatabase? offlineDatabase,
+  required MangaBookRepository repository,
+  required List<int> chapterIds,
+  required bool isRead,
+  bool resetPosition = false,
+}) async {
+  final db = offlineDatabase;
+  if (offlineEnabled && db != null) {
+    for (final id in chapterIds) {
+      if (resetPosition) {
+        await db.setChapterProgress(id, lastPageRead: 0, isRead: isRead);
+      } else {
+        await db.setChapterReadState(id, isRead);
+      }
+    }
+  }
+  final result = await AsyncValue.guard(
+    () => repository.modifyBulkChapters(
+      ChapterBatch(
+        ids: chapterIds,
+        patch: resetPosition
+            ? ChapterChange(isRead: isRead, lastPageRead: 0)
+            : ChapterChange(isRead: isRead),
+      ),
+    ),
+  );
+  if (offlineEnabled && db != null && !result.hasError) {
+    for (final id in chapterIds) {
+      await db.clearReadStateDirtyIfUnchanged(id, isRead: isRead);
+      if (resetPosition) {
+        await db.clearProgressDirtyIfUnchanged(id, lastPageRead: 0);
+      }
+    }
+  }
+  return !result.hasError;
+}
+
+/// Widget entry point for [recordReadStateWithDependencies] — resolves the
+/// offline deps from [ref]. Mirrors [recordReadingProgress].
+Future<bool> recordReadState(
+  WidgetRef ref, {
+  required List<int> chapterIds,
+  required bool isRead,
+  bool resetPosition = false,
+}) {
+  final offline = ref.read(offlineActiveProvider);
+  return recordReadStateWithDependencies(
+    offlineEnabled: offline,
+    offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
+    repository: ref.read(mangaBookRepositoryProvider),
+    chapterIds: chapterIds,
+    isRead: isRead,
+    resetPosition: resetPosition,
+  );
+}
+
 // === Delete-on-read =========================================================
 // Two INDEPENDENT features, each with its own settings (see
 // delete_chapters_settings_repository): the on-device set (local prefs) deletes

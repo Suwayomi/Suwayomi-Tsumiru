@@ -38,6 +38,16 @@ class SingleChapterActionIcon extends ConsumerWidget {
           // Bookmark toggles go through the offline-aware path (#33): recorded
           // on-device + dirty-flagged, so they stick offline and sync later.
           await recordBookmark(ref, chapterId: chapterId, isBookmarked: bookmark);
+        } else if (change.isRead != null) {
+          // Read-state toggles use the same offline-aware write-through as the
+          // bulk action (no production caller sends isRead here today; wired for
+          // consistency and future use).
+          await recordReadState(
+            ref,
+            chapterIds: [chapterId],
+            isRead: change.isRead!,
+            resetPosition: change.lastPageRead == 0 && change.isRead == true,
+          );
         } else {
           final result = (await AsyncValue.guard(
             () => ref.read(mangaBookRepositoryProvider).putChapter(
