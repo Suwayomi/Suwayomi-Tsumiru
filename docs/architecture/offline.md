@@ -19,7 +19,7 @@ Design notes: there is **no foreign key** from chapters to mangas — a chapter 
 Four layers, all driven through one entry point — **`downloadStarterProvider`** (never call the lower layers directly):
 
 1. `chapter_download_engine.dart` — `ChapterDownloadEngine` downloads one chapter's pages with up to N concurrent workers (N = `OfflineDownloadConcurrency`, default 2), each page retried 3× with backoff. `PageAuthException` → one auth refresh + retry; `PageOfflineException` → stop and leave the run resumable.
-2. `offline_download_coordinator.dart` — `OfflineDownloadCoordinator` queues and runs **one chapter at a time** (Komikku model) via the engine; `pumpDownloads()` drains the queue. Process-wide single-flight via a `static _pumping` flag.
+2. `offline_download_coordinator.dart` — `OfflineDownloadCoordinator` queues and runs **one chapter at a time** (Komikku model) via the engine; `pumpDownloads()` drains the queue. Process-wide single-flight via a `static _pumping` flag. The coordinator and engine providers are **keep-alive**: nothing watches them (all consumers are one-shot reads), and an auto-dispose Ref dies at the first async gap — under Riverpod 3 its call-time reads then throw `UnmountedRefException`, which silently killed launch resume and the desktop pump.
 3. `offline_download_providers.dart` — the wiring + the public surface: `saveChapterToDevice`, `deleteChapterFromDevice`, `reconcileManga`, `recordReadingProgress`, `recordReadState` (offline-aware write-through for mark-read/unread), `pushPendingProgress`, and the state streams (`offlineChapterStateProvider`, `mangaOfflineProgressProvider`, `mangaKeepRuleProvider`, …).
 4. `data/background/` — **Android only**: `BackgroundDownloadController` owns a `FlutterForegroundTask` foreground service (its own isolate, `download_task_handler.dart`) so downloads survive leaving the app. Auth is snapshotted into a `BackgroundWorkOrder`; completions are durably logged to a file and replayed into Drift on resume; rotated `ui_login` tokens are written back via `BackgroundTokenRecord`.
 
@@ -64,6 +64,6 @@ A mismatch with catalog data shows a persistent warning in Library and Offline s
 ## Gotchas
 
 - **Android downloads ride entirely on the foreground service.** If `ensureServiceRunning()` can't start (e.g. notification permission denied), chapters queue in Drift but nothing downloads.
-- **`_pumping` is a process-wide static.** If the coordinator provider rebuilds mid-drain (e.g. a concurrency change), the new instance is blocked until the old drain finishes or the app restarts.
+- **`_pumping` is a process-wide static.** If the coordinator provider rebuilds mid-drain (a concurrency change, or a token refresh rotating the GraphQL client → repo dependency), the new instance is blocked until the old drain finishes or the app restarts. Pause still reaches the old drain via the persisted flag (captured prefs, read live per chapter); cancelling an in-flight chapter across a rebuild does not.
 - **Wi-Fi-only** is enforced when work starts, but a Wi-Fi → mobile switch while the app is backgrounded isn't currently caught.
 - **`offlineDatabaseProvider` (and the other storage providers) throw on web** by design — never touch them without the `offlineEnabledProvider` guard.

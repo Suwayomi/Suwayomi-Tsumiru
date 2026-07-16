@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
@@ -32,7 +31,11 @@ part 'offline_background_downloads.g.dart';
 /// (resolving the server base + current auth at request time), the on-disk page
 /// store, and a token refresher. Pure Dart — runs the same on Android and the
 /// Linux desktop build. Null on web / when offline storage is unavailable.
-@riverpod
+///
+/// Keep-alive: nothing watches the download pipeline — it's only read by
+/// fire-and-forget triggers — and an auto-dispose Ref dies at the first async
+/// gap, so the engine's run-time auth reads would throw mid-download.
+@Riverpod(keepAlive: true)
 ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
   // Page-level parallelism. One chapter downloads
@@ -72,13 +75,20 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
 /// The offline download orchestrator (one chapter at a time,
 /// page-parallel inside the engine, run-time auth). Null on web / when offline
 /// storage is unavailable.
-@riverpod
+///
+/// Keep-alive so every trigger (launch resume, download starter, pause,
+/// catalog clear) reaches the SAME live instance — the in-memory
+/// active/cancelled state is only meaningful on the instance actually pumping.
+@Riverpod(keepAlive: true)
 OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
   final engine = ref.watch(chapterDownloadEngineProvider);
   if (engine == null) return null;
   final repo = ref.watch(mangaBookRepositoryProvider);
   final store = ref.watch(offlinePageStoreProvider);
+  // Captured at build, read live per call: a rebuild mid-pump unmounts the old
+  // Ref, and the old instance still polls this between chapters.
+  final prefs = ref.watch(sharedPreferencesProvider);
   return OfflineDownloadCoordinator(
     db: ref.watch(offlineDatabaseProvider),
     engine: engine,
@@ -87,10 +97,7 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
         const <String>[],
     measureChapterBytes: store.chapterBytes,
     persistedPaused: () =>
-        ref
-            .read(sharedPreferencesProvider)
-            .getBool(DBKeys.offlineDownloadsPaused.name) ??
-        false,
+        prefs.getBool(DBKeys.offlineDownloadsPaused.name) ?? false,
   );
 }
 
