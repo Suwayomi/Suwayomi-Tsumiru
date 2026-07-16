@@ -39,6 +39,7 @@ import 'src/features/tracking/domain/tracker_oauth_helpers.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
+import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/platform/is_android_native.dart';
 import 'src/widgets/app_error_app.dart';
@@ -67,6 +68,9 @@ Future<void> _startApp() async {
   initForegroundTaskService();
   final packageInfo = await PackageInfo.fromPlatform();
   final sharedPreferences = await SharedPreferences.getInstance();
+  // Desktop: hide the OS title bar + restore saved window size before first
+  // frame. No-op on web/mobile.
+  await initDesktopWindow(sharedPreferences);
   await initHiveForFlutter();
 
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
