@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "enabledManagers": ["fvm", "pub", "github-actions", "gradle", "cocoapods", "custom.regex"],
+  "constraints": {
+    "flutter": "3.44.6"
+  },
+  "rangeStrategy": "update-lockfile",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "branchConcurrentLimit": 5,
+  "separateMajorMinor": true,
+  "separateMultipleMajor": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Major bumps wait on the dashboard so they land one at a time, reviewed",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Riverpod moves as one migration",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["hooks_riverpod", "riverpod_annotation", "riverpod_generator", "flutter_riverpod", "riverpod"],
+      "groupName": "riverpod"
+    },
+    {
+      "description": "go_router runtime and builder move together",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["go_router", "go_router_builder"],
+      "groupName": "go_router"
+    },
+    {
+      "description": "freezed runtime and annotation move together",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["freezed", "freezed_annotation"],
+      "groupName": "freezed"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": ["ghcr\\.io/andyholmes/flatter/freedesktop:(?<currentValue>[0-9]+\\.[0-9]+)"],
+      "depNameTemplate": "ghcr.io/andyholmes/flatter/freedesktop",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ]
+}
