@@ -2,7 +2,7 @@
 # `fastforge package --platform linux --targets appimage`.
 display_name: Tsumiru
 generic_name: Manga Reader
-icon: assets/icons/launcher/tsumiru_icon.png
+icon: assets/icons/launcher/tsumiru_icon_desktop.png
 startup_notify: true
 categories:
   - Graphics
