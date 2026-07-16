@@ -21,6 +21,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'routes/router_config.dart';
 import 'utils/extensions/custom_extensions.dart';
 import 'utils/theme/app_theme_builder.dart';
+import 'widgets/desktop/desktop_window_scaffold.dart';
 
 class Sorayomi extends ConsumerWidget {
   const Sorayomi({super.key});
@@ -42,7 +43,9 @@ class Sorayomi extends ConsumerWidget {
       child: MaterialApp.router(
         builder: (context, child) {
           final toastWrapped = FToastBuilder()(context, child);
-          return ReauthBannerHost(child: toastWrapped);
+          return DesktopWindowScaffold(
+            child: ReauthBannerHost(child: toastWrapped),
+          );
         },
         onGenerateTitle: (context) => context.l10n.appTitle,
         debugShowCheckedModeBanner: false,
