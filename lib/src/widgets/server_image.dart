@@ -41,6 +41,8 @@ class ServerImage extends HookConsumerWidget {
     this.showReloadButton = false,
     this.localFilePath,
     this.cropBorders = false,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   /// When set, the page is rendered straight off disk (downloaded chapter,
@@ -65,6 +67,23 @@ class ServerImage extends HookConsumerWidget {
   /// double via the existing [imageBuilder]. No-op on web.
   final bool cropBorders;
 
+  /// Decode the image at this pixel size instead of the source's native
+  /// resolution. Long-strip webtoon pages are ~800×15000 source; decoding at
+  /// the actual on-screen width shrinks the GPU texture the compositor samples
+  /// every frame (the #196 high-GPU-while-scrolling cost). Aspect is preserved
+  /// when only one dimension is given. Callers pass display-px = logical × DPR.
+  final int? memCacheWidth;
+  final int? memCacheHeight;
+
+  /// Wrap [base] so it decodes at [memCacheWidth]/[memCacheHeight] (display px)
+  /// instead of the source's native resolution. Returns [base] unchanged when
+  /// no cap is set. Used for the offline/crop provider paths; the network path
+  /// takes memCache* directly on [CachedNetworkImage].
+  ImageProvider _capDecode(ImageProvider base) =>
+      (memCacheWidth == null && memCacheHeight == null)
+          ? base
+          : ResizeImage(base, width: memCacheWidth, height: memCacheHeight);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
@@ -72,7 +91,8 @@ class ServerImage extends HookConsumerWidget {
     // Renders a crop provider through the same imageBuilder/wrapper contract as
     // the normal paths (imageBuilder fires immediately with the provider, like
     // the offline branch; consumers show the frame once it decodes).
-    Widget renderCrop(ImageProvider provider) {
+    Widget renderCrop(ImageProvider rawProvider) {
+      final provider = _capDecode(rawProvider);
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
       }
@@ -111,7 +131,7 @@ class ServerImage extends HookConsumerWidget {
           localPath: localPath,
         ));
       }
-      final provider = offlineImageProvider(localPath);
+      final ImageProvider provider = _capDecode(offlineImageProvider(localPath));
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
       }
@@ -277,6 +297,15 @@ class ServerImage extends HookConsumerWidget {
       ));
     }
 
+    // cached_network_image hands `imageBuilder` the RAW provider, so its
+    // memCache* is ignored whenever an imageBuilder is set (multichapter /
+    // infinity / paged all set one). Inject the decode cap into the caller's
+    // builder instead, and only pass memCache* to the plain-render path.
+    final imageBuilderCapped = imageBuilder == null
+        ? null
+        : (BuildContext ctx, ImageProvider provider) =>
+            imageBuilder!(ctx, _capDecode(provider));
+
     return CachedNetworkImage(
       key: key.value,
       imageUrl: fetchUrl,
@@ -286,9 +315,11 @@ class ServerImage extends HookConsumerWidget {
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,
+      memCacheWidth: imageBuilder == null ? memCacheWidth : null,
+      memCacheHeight: imageBuilder == null ? memCacheHeight : null,
       imageRenderMethodForWeb: renderMethod,
       progressIndicatorBuilder: finalProgressIndicatorBuilder,
-      imageBuilder: imageBuilder,
+      imageBuilder: imageBuilderCapped,
       errorWidget: errorWidget,
     );
   }

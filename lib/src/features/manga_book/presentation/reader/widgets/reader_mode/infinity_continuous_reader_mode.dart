@@ -244,6 +244,17 @@ class InfinityContinuousReaderMode extends HookConsumerWidget {
           scrollDirection == Axis.vertical ? BoxFit.fitWidth : BoxFit.fitHeight,
       appendApiToUrl: false,
       cropBorders: cropBorders,
+      // Decode at on-screen size, not the tall native source (#196 GPU cost).
+      memCacheWidth: scrollDirection == Axis.vertical
+          ? (context.width * MediaQuery.devicePixelRatioOf(context))
+              .round()
+              .clamp(1, 1 << 20)
+          : null,
+      memCacheHeight: scrollDirection == Axis.vertical
+          ? null
+          : (context.height * MediaQuery.devicePixelRatioOf(context))
+              .round()
+              .clamp(1, 1 << 20),
       imageUrl: chapterPages.pages[index],
       progressIndicatorBuilder: (_, __, downloadProgress) => Center(
         child: CircularProgressIndicator(value: downloadProgress.progress),

@@ -872,6 +872,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         fit: BoxFit.fitWidth,
         appendApiToUrl: false,
         cropBorders: cropBorders,
+        // Decode at on-screen width, not the ~800×15000 source (#196 GPU cost).
+        memCacheWidth: (context.width * MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(1, 1 << 20),
         imageUrl: loc.imageUrl,
         progressIndicatorBuilder: (_, __, progress) => SizedBox(
           height: placeholderHeight,
