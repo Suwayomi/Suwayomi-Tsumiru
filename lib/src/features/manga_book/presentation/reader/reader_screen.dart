@@ -74,7 +74,7 @@ class ReaderScreen extends HookConsumerWidget {
     // manga) THIS session; never written to meta. Null when auto-detect is off,
     // the series has an explicit per-series mode, or the type carries no
     // opinion — in which case the per-series/global default takes over below.
-    final mangaData = manga.valueOrNull;
+    final mangaData = manga.value;
     final autoReaderMode = (ref.watch(autoWebtoonModeProvider).ifNull(true) &&
             mangaData != null &&
             (mangaData.metaData.readerMode ?? ReaderMode.defaultReader) ==
@@ -111,8 +111,8 @@ class ReaderScreen extends HookConsumerWidget {
       // both the debounced call and the PopScope flush). The PopScope's own
       // provider invalidations still run — they're outside this callback.
       if (incognitoMode) return;
-      final chapterValue = chapter.valueOrNull;
-      final chapterPagesValue = chapterPages.valueOrNull;
+      final chapterValue = chapter.value;
+      final chapterPagesValue = chapterPages.value;
       if (chapterValue == null || chapterPagesValue == null) return;
 
       // Use the actual loaded pages count, not the chapter's pageCount metadata
@@ -162,8 +162,8 @@ class ReaderScreen extends HookConsumerWidget {
       // Invalidate history to refresh the reading progress
       providerContainer.invalidate(readingHistoryProvider);
     }, [
-      chapter.valueOrNull,
-      chapterPages.valueOrNull,
+      chapter.value,
+      chapterPages.value,
       incognitoMode,
       offlineEnabled,
       offlineDatabase,
@@ -175,8 +175,8 @@ class ReaderScreen extends HookConsumerWidget {
       (int index) async {
         // Incognito: don't track progress (also avoids needless debounce churn).
         if (ref.read(incognitoModeProvider)) return;
-        final chapterValue = chapter.valueOrNull;
-        final chapterPagesValue = chapterPages.valueOrNull;
+        final chapterValue = chapter.value;
+        final chapterPagesValue = chapterPages.value;
         if (chapterValue == null || chapterPagesValue == null) return;
 
         // Consume the initial restore emit — don't record or complete off it.

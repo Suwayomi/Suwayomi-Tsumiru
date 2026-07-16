@@ -10,7 +10,7 @@ part 'chapter_put_model.freezed.dart';
 part 'chapter_put_model.g.dart';
 
 @freezed
-class ChapterPut with _$ChapterPut {
+abstract class ChapterPut with _$ChapterPut {
   factory ChapterPut({
     bool? read,
     bool? bookmarked,

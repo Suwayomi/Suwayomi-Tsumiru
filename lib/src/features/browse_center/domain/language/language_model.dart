@@ -10,7 +10,7 @@ part 'language_model.freezed.dart';
 part 'language_model.g.dart';
 
 @freezed
-class Language with _$Language {
+abstract class Language with _$Language {
   Language._();
   factory Language({
     String? code,

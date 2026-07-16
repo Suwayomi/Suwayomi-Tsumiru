@@ -13,7 +13,7 @@ part 'migration_models.freezed.dart';
 part 'migration_models.g.dart';
 
 @freezed
-class MigrationSource with _$MigrationSource {
+abstract class MigrationSource with _$MigrationSource {
   const factory MigrationSource({
     required String id,
     required String name,
@@ -29,7 +29,7 @@ class MigrationSource with _$MigrationSource {
 }
 
 @freezed
-class MigrationOption with _$MigrationOption {
+abstract class MigrationOption with _$MigrationOption {
   const factory MigrationOption({
     @Default(true) bool migrateChapters,
     @Default(true) bool migrateCategories,
@@ -43,7 +43,7 @@ class MigrationOption with _$MigrationOption {
 }
 
 @freezed
-class MigrationResult with _$MigrationResult {
+abstract class MigrationResult with _$MigrationResult {
   const factory MigrationResult({
     required bool success,
     String? error,
@@ -79,7 +79,7 @@ enum MigrationStep {
 }
 
 @freezed
-class MigrationProgress with _$MigrationProgress {
+abstract class MigrationProgress with _$MigrationProgress {
   const factory MigrationProgress({
     required MigrationStep currentStep,
     @Default(0.0) double percentage,
@@ -94,7 +94,7 @@ class MigrationProgress with _$MigrationProgress {
 }
 
 @freezed
-class MangaSearchResult with _$MangaSearchResult {
+abstract class MangaSearchResult with _$MangaSearchResult {
   const factory MangaSearchResult({
     required Fragment$MangaDto manga,
     @Default(0.0) double similarity,
@@ -108,14 +108,14 @@ class MangaSearchResult with _$MangaSearchResult {
 // Route Data Classes to replace Map<String, dynamic>
 // These classes don't need JSON serialization since they're only used for navigation
 @freezed
-class MigrationRouteData with _$MigrationRouteData {
+abstract class MigrationRouteData with _$MigrationRouteData {
   const factory MigrationRouteData({
     required Fragment$MangaDto sourceManga,
   }) = _MigrationRouteData;
 }
 
 @freezed
-class MigrationSearchRouteData with _$MigrationSearchRouteData {
+abstract class MigrationSearchRouteData with _$MigrationSearchRouteData {
   const factory MigrationSearchRouteData({
     required Fragment$MangaDto sourceManga,
     required Fragment$SourceDto targetSource,
@@ -123,7 +123,7 @@ class MigrationSearchRouteData with _$MigrationSearchRouteData {
 }
 
 @freezed
-class MigrationPreviewRouteData with _$MigrationPreviewRouteData {
+abstract class MigrationPreviewRouteData with _$MigrationPreviewRouteData {
   const factory MigrationPreviewRouteData({
     required Fragment$MangaDto sourceManga,
     required Fragment$MangaDto targetManga,
@@ -132,7 +132,7 @@ class MigrationPreviewRouteData with _$MigrationPreviewRouteData {
 }
 
 @freezed
-class MigrationProgressRouteData with _$MigrationProgressRouteData {
+abstract class MigrationProgressRouteData with _$MigrationProgressRouteData {
   const factory MigrationProgressRouteData({
     required Fragment$MangaDto sourceManga,
     required Fragment$MangaDto targetManga,

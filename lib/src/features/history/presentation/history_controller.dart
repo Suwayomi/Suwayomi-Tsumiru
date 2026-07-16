@@ -43,7 +43,7 @@ class ReadingHistory extends _$ReadingHistory {
   }
 
   Future<void> loadMore() async {
-    final currentItems = state.valueOrNull ?? [];
+    final currentItems = state.value ?? [];
     final pageNo = (currentItems.length / 50).floor() + 1;
 
     final result = await AsyncValue.guard(
@@ -69,7 +69,7 @@ class ReadingHistory extends _$ReadingHistory {
   Future<void> removeFromHistory(int chapterId) async {
     state = await AsyncValue.guard(() async {
       // First get the chapter to extract mangaId for cache invalidation
-      final currentItems = state.valueOrNull ?? [];
+      final currentItems = state.value ?? [];
       HistoryItemDto? chapterToRemove;
 
       try {
@@ -125,7 +125,7 @@ class MangaReadingHistory extends _$MangaReadingHistory {
 
 @riverpod
 List<HistoryGroup> historyGroupedByDate(Ref ref) {
-  final historyItems = ref.watch(readingHistoryProvider).valueOrNull ?? [];
+  final historyItems = ref.watch(readingHistoryProvider).value ?? [];
 
   if (historyItems.isEmpty) return [];
 

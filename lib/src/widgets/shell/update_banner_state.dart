@@ -41,7 +41,7 @@ class UpdateOptimistic extends _$UpdateOptimistic {
     // second pull mid-run), treat it as already-seen so the next idle edge
     // releases the hold — otherwise the change-only running stream never
     // re-delivers `true` and only the safety timeout would clear it.
-    _sawRealRunning = ref.read(updateRunningSocketProvider).valueOrNull ?? false;
+    _sawRealRunning = ref.read(updateRunningSocketProvider).value ?? false;
     _safety?.cancel();
     _safety = Timer(const Duration(seconds: 12), _clear);
     state = true;

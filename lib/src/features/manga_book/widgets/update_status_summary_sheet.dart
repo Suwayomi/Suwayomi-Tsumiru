@@ -26,7 +26,7 @@ class UpdateStatusSummaryDialog extends ConsumerWidget {
     final statusUpdate = ref.watch(updateSummaryProvider);
     final statusUpdateStream = ref.watch(updatesSocketProvider);
     final AsyncValue<UpdateStatusDto?> finalStatus =
-        (statusUpdateStream.valueOrNull?.total.isGreaterThan(0)).ifNull()
+        (statusUpdateStream.value?.total.isGreaterThan(0)).ifNull()
             ? statusUpdateStream
             : statusUpdate;
     return Scaffold(

@@ -68,7 +68,7 @@ class ServerScreen extends ConsumerWidget {
                     child: Center(child: Text(error.toString())),
                   );
                 }),
-              if (serverSettings.valueOrNull != null) ...[
+              if (serverSettings.value != null) ...[
                 ServerBindingSection(serverBindingDto: serverSettings.value!),
                 SocksProxySection(socksProxyDto: serverSettings.value!),
                 CloudFlareSection(cloudFlareDto: serverSettings.value!),

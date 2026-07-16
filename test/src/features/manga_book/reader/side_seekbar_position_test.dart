@@ -8,7 +8,7 @@
 // [Positioned] offsets (top: 80, bottom: 100) that overlapped the chrome bars on
 // every device with a tall status bar or gesture-nav inset.
 //
-// The fix: ReaderChrome reads [chromeExtentsNotifierProvider] at build time and
+// The fix: ReaderChrome reads [chromeExtentsProvider] at build time and
 // computes:
 //
 //   top:    e.topInset    + 8   (breathing room)
@@ -36,7 +36,7 @@ class _TestSeekbarHost extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final extents = ref.watch(chromeExtentsNotifierProvider);
+    final extents = ref.watch(chromeExtentsProvider);
     final forceHorizontal =
         ref.watch(forceHorizontalSeekbarProvider) ?? false;
     final leftHanded =
@@ -77,7 +77,7 @@ void main() {
           overrides: [
             // Override the notifier to return the fixed extents immediately —
             // no MeasureSize, no timing.
-            chromeExtentsNotifierProvider.overrideWith(
+            chromeExtentsProvider.overrideWith(
               () => _FixedExtentsNotifier(extents),
             ),
             // Default prefs: force-horizontal OFF, left-handed OFF.
@@ -157,7 +157,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            chromeExtentsNotifierProvider.overrideWith(
+            chromeExtentsProvider.overrideWith(
               () => _FixedExtentsNotifier(testExtents),
             ),
             forceHorizontalSeekbarProvider.overrideWith(
@@ -193,7 +193,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            chromeExtentsNotifierProvider.overrideWith(
+            chromeExtentsProvider.overrideWith(
               () => _FixedExtentsNotifier(testExtents),
             ),
             forceHorizontalSeekbarProvider.overrideWith(

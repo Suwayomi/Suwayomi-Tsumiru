@@ -6,6 +6,7 @@
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:hooks_riverpod/legacy.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
@@ -75,7 +76,7 @@ class GlobalSearchScope extends _$GlobalSearchScope
 }
 
 /// When true, only sources that returned results are shown (hide empty/loading).
-final globalSearchOnlyHasResultsProvider = StateProvider<bool>((ref) => false);
+final globalSearchOnlyHasResultsProvider = StateProvider<bool>((Ref ref) => false);
 
 typedef QuickSearchResults = ({
   SourceDto source,
@@ -108,7 +109,7 @@ AsyncValue<List<QuickSearchResults>> quickSearchResults(Ref ref,
   final sourcesData = ref.watch(searchableSourcesProvider);
   final scope = ref.watch(globalSearchScopeProvider);
   final pinned = ref.watch(pinnedSourcesProvider);
-  final allSources = sourcesData.valueOrNull ?? const <SourceDto>[];
+  final allSources = sourcesData.value ?? const <SourceDto>[];
   final sourceList =
       (scope == GlobalSearchSourceFilter.pinned && pinned.isNotEmpty)
           ? pinned

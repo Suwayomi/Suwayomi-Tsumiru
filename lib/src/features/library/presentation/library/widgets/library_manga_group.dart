@@ -24,7 +24,7 @@ class LibraryMangaGroup extends ConsumerWidget {
     final current =
         ref.watch(libraryGroupTypeProvider) ?? kDefaultLibraryGroupType;
     final hasTrackers =
-        ref.watch(loggedInTrackersProvider).valueOrNull?.isNotEmpty ?? false;
+        ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
 
     final modes = [
       (value: LibraryGroup.byDefault, label: context.l10n.groupByDefault),

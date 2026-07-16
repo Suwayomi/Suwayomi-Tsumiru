@@ -42,7 +42,7 @@ class MangaBadgesRow extends ConsumerWidget {
     // At least one chapter downloaded to THIS device — a subset of the server.
     // Empty set when the offline feature is off, so the badge self-hides.
     final onDevice = showCountBadges &&
-        (ref.watch(offlineDeviceMangaIdsProvider).valueOrNull ?? const <int>{})
+        (ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{})
             .contains(manga.id);
 
     final source = manga.source;

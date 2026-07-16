@@ -1,7 +1,7 @@
 part of '../router_config.dart';
 
 //
-class MangaRoute extends GoRouteData {
+class MangaRoute extends GoRouteData with $MangaRoute {
   const MangaRoute({required this.mangaId, this.categoryId});
   final int mangaId;
   final int? categoryId;
@@ -11,14 +11,14 @@ class MangaRoute extends GoRouteData {
       MangaDetailsScreen(mangaId: mangaId, categoryId: categoryId);
 }
 
-class UpdateStatusRoute extends GoRouteData {
+class UpdateStatusRoute extends GoRouteData with $UpdateStatusRoute {
   const UpdateStatusRoute();
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const UpdateStatusSummaryDialog();
 }
 
-class ReaderRoute extends GoRouteData {
+class ReaderRoute extends GoRouteData with $ReaderRoute {
   const ReaderRoute({
     required this.mangaId,
     required this.chapterId,
@@ -86,7 +86,7 @@ class _ReaderRouteTransition extends ConsumerWidget {
   }
 }
 
-class GlobalSearchRoute extends GoRouteData {
+class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
   const GlobalSearchRoute({this.query});
   final String? query;
 
@@ -98,7 +98,7 @@ class GlobalSearchRoute extends GoRouteData {
 }
 
 @TypedGoRoute<UpcomingRoute>(path: Routes.upcoming)
-class UpcomingRoute extends GoRouteData {
+class UpcomingRoute extends GoRouteData with $UpcomingRoute {
   const UpcomingRoute();
 
   static final $parentNavigatorKey = rootNavigatorKey;
@@ -109,7 +109,7 @@ class UpcomingRoute extends GoRouteData {
 }
 
 @TypedGoRoute<OnboardingRoute>(path: Routes.onboarding)
-class OnboardingRoute extends GoRouteData {
+class OnboardingRoute extends GoRouteData with $OnboardingRoute {
   const OnboardingRoute();
 
   static final $parentNavigatorKey = rootNavigatorKey;

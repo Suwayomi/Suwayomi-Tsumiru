@@ -56,7 +56,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
         ref.invalidate(updateRunningSummaryProvider);
       }
       // Hand the optimistic hold back to the real running signal.
-      final running = next.valueOrNull;
+      final running = next.value;
       if (running != null) {
         ref.read(updateOptimisticProvider.notifier).onRealRunning(running);
       }
@@ -69,7 +69,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
       }
     });
 
-    final rawRunning = effectiveRun.valueOrNull ?? false;
+    final rawRunning = effectiveRun.value ?? false;
 
     final debouncedRunning = useState(false);
     final timer = useRef<Timer?>(null);
@@ -112,9 +112,9 @@ class UpdateProgressBanner extends HookConsumerWidget {
     if (visible && debouncedRunning.value) {
       final heavySocket = ref.watch(updatesSocketProvider);
       final heavyFallback = ref.watch(updateSummaryProvider);
-      status = (heavySocket.valueOrNull?.total.isGreaterThan(0)).ifNull()
-          ? heavySocket.valueOrNull
-          : heavyFallback.valueOrNull;
+      status = (heavySocket.value?.total.isGreaterThan(0)).ifNull()
+          ? heavySocket.value
+          : heavyFallback.value;
     }
 
     // The colour fills up behind the status bar and the content pads below it

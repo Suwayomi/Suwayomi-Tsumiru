@@ -402,8 +402,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// only the fields relevant to the active auth type.
   BackgroundTokenRecord _snapshotAuth() {
     final authType = _ref.read(authTypeKeyProvider) ?? AuthType.none;
-    final basicToken = _ref.read(credentialsProvider).valueOrNull;
-    final creds = _ref.read(authCredentialsStoreProvider).valueOrNull;
+    final basicToken = _ref.read(credentialsProvider).value;
+    final creds = _ref.read(authCredentialsStoreProvider).value;
     return BackgroundTokenRecord(
       gen: 0,
       authType: authType.name,
@@ -547,7 +547,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 /// (`background_download_controller_shim.dart`) swaps in a no-op stub.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>(
-        (ref) => BackgroundDownloadController(ref));
+        (Ref ref) => BackgroundDownloadController(ref));
 
 /// Initialise `flutter_foreground_task` (communication port + notification
 /// channel/options). Call once early in `main()`. Android-only; no-op elsewhere.

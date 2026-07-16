@@ -8,6 +8,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/legacy.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
@@ -17,7 +18,7 @@ import '../unified_search/unified_search_screen.dart';
 /// open it live in the app-wide GlobalShortcutHost (which holds focus, unlike
 /// this deep-in-the-tree widget), so they toggle this provider rather than a
 /// local state.
-final quickOpenVisibleProvider = StateProvider<bool>((ref) => false);
+final quickOpenVisibleProvider = StateProvider<bool>((Ref ref) => false);
 
 class SearchStackScreen extends ConsumerWidget {
   const SearchStackScreen({super.key, this.child});

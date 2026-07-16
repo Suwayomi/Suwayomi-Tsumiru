@@ -38,7 +38,9 @@ import 'offline_download_manager.dart';
 import 'offline_page_store.dart';
 import 'offline_reconciler.dart';
 import 'offline_repository.dart';
+import 'offline_series_entry.dart';
 import 'offline_settings_providers.dart';
+import 'offline_types.dart';
 import 'reconcile_types.dart';
 
 part 'offline_download_providers.g.dart';
@@ -52,7 +54,7 @@ bool get _useBgService => isAndroidNative;
 /// starts the foreground-service worker, elsewhere it drains via the
 /// main-isolate pump. Centralised (and overridable in tests) so no trigger can
 /// ever again silently rely on the Android-disabled pump.
-final downloadStarterProvider = Provider<Future<void> Function()>((ref) {
+final downloadStarterProvider = Provider<Future<void> Function()>((Ref ref) {
   return () async {
     if (!ref.read(offlineActiveProvider)) return;
     if (isAndroidNative) {
@@ -213,7 +215,7 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
   if (serverHasIt) {
     final fresh = await AsyncValue.guard(() =>
         ref.read(mangaBookRepositoryProvider).getChapter(chapterId: chapterId));
-    serverHasIt = fresh.valueOrNull?.isDownloaded ?? serverHasIt;
+    serverHasIt = fresh.value?.isDownloaded ?? serverHasIt;
   }
   if (!serverHasIt) {
     // Commit a server download too (grows the server library). The device copy
@@ -331,7 +333,7 @@ int? _whileReadingTarget(
     WidgetRef ref, int mangaId, int readChapterId, int slots) {
   final chapters = ref
       .read(mangaChapterListWithFilterProvider(mangaId: mangaId))
-      .valueOrNull;
+      .value;
   if (chapters == null) return null;
   final isAsc = ref.read(mangaChapterSortDirectionProvider) ??
       (DBKeys.chapterSortDirection.initial as bool);
@@ -444,7 +446,7 @@ Future<void> _deleteServerCopyIfDeletable(
 ) async {
   try {
     final chapters =
-        ref.read(mangaChapterListProvider(mangaId: mangaId)).valueOrNull;
+        ref.read(mangaChapterListProvider(mangaId: mangaId)).value;
     final idx = chapters?.indexWhere((e) => e.id == chapterId) ?? -1;
     if (chapters == null || idx < 0) return;
     final c = chapters[idx];
@@ -620,8 +622,8 @@ OfflineDownloadManager? offlineDownloadManager(Ref ref) {
 /// retries; any other non-200 is a plain (transient) exception.
 Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   final authType = ref.read(authTypeKeyProvider);
-  final basicToken = ref.read(credentialsProvider).valueOrNull;
-  final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+  final basicToken = ref.read(credentialsProvider).value;
+  final creds = ref.read(authCredentialsStoreProvider).value;
   final base = Endpoints.baseApi(
     baseUrl: ref.read(serverUrlProvider),
     port: ref.read(serverPortProvider),
@@ -727,11 +729,18 @@ Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
 /// Downloads → On device tab, which both shows what's downloaded AND manages the
 /// keep-rules. Sorted active-first, then biggest, then strongest rule.
 @riverpod
-Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
-    offlineSeries(Ref ref) {
+Stream<List<OfflineSeriesEntry>> offlineSeries(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return Stream.value(const []);
   return ref.watch(offlineDatabaseProvider).watchOfflineSeries().map((rows) {
-    final sorted = [...rows];
+    final sorted = [
+      for (final r in rows)
+        OfflineSeriesEntry(
+          manga: r.manga,
+          downloaded: r.downloaded,
+          inFlight: r.inFlight,
+          bytes: r.bytes,
+        ),
+    ];
     sorted.sort((a, b) {
       if ((a.inFlight > 0) != (b.inFlight > 0)) return a.inFlight > 0 ? -1 : 1;
       if (a.bytes != b.bytes) return b.bytes.compareTo(a.bytes);

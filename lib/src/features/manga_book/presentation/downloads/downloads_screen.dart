@@ -60,7 +60,7 @@ class DownloadsScreen extends HookConsumerWidget {
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB
               ? DownloadsFab(
-                  status: downloadsGlobalStatus.valueOrNull ??
+                  status: downloadsGlobalStatus.value ??
                       DownloaderState.STARTED)
               : null),
       body: TabBarView(
@@ -85,7 +85,7 @@ class OfflineDownloadsFab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasPending = ref.watch(offlineHasPendingProvider).valueOrNull ?? false;
+    final hasPending = ref.watch(offlineHasPendingProvider).value ?? false;
     final paused = ref.watch(offlineDownloadsPausedProvider) ?? false;
     // Hide when idle (no pending work) — paused-but-idle included; the next
     // enqueue flips it back to Resume.

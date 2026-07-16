@@ -132,7 +132,7 @@ class ServerImage extends HookConsumerWidget {
 
     // Providers
     final authType = ref.watch(authTypeKeyProvider);
-    final basicToken = ref.watch(credentialsProvider).valueOrNull;
+    final basicToken = ref.watch(credentialsProvider).value;
 
     // Watch ONLY the simple-login cookie via `select` — never the
     // uiAccessToken. Watching the whole credentials state caused a
@@ -145,12 +145,12 @@ class ServerImage extends HookConsumerWidget {
     // because the lookup hits via the stable cacheKey (baseApi).
     final simpleCookieHeader = ref.watch(
       authCredentialsStoreProvider.select(
-        (async) => async.valueOrNull?.simpleLoginCookieHeader,
+        (async) => async.value?.simpleLoginCookieHeader,
       ),
     );
     final uiAccessTokenSnapshot = ref
         .read(authCredentialsStoreProvider)
-        .valueOrNull
+        .value
         ?.uiAccessToken;
 
     final baseApi = "${Endpoints.baseApi(
@@ -350,8 +350,8 @@ class ServerImageWithCpi extends StatelessWidget {
   }
 
   final authType = ref.read(authTypeKeyProvider);
-  final basicToken = ref.read(credentialsProvider).valueOrNull;
-  final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+  final basicToken = ref.read(credentialsProvider).value;
+  final creds = ref.read(authCredentialsStoreProvider).value;
 
   final cacheKey = "${Endpoints.baseApi(
     baseUrl: ref.read(serverUrlProvider),
@@ -393,8 +393,8 @@ ImageProvider serverPageImageProvider(
   if (localPath != null) return offlineImageProvider(localPath);
 
   final authType = ref.read(authTypeKeyProvider);
-  final basicToken = ref.read(credentialsProvider).valueOrNull;
-  final creds = ref.read(authCredentialsStoreProvider).valueOrNull;
+  final basicToken = ref.read(credentialsProvider).value;
+  final creds = ref.read(authCredentialsStoreProvider).value;
 
   final baseApi = "${Endpoints.baseApi(
     baseUrl: ref.read(serverUrlProvider),

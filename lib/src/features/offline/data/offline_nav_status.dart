@@ -19,5 +19,5 @@ part 'offline_nav_status.g.dart';
 bool downloadsPausedBadge(Ref ref) {
   final paused = ref.watch(offlineDownloadsPausedProvider) ?? false;
   if (!paused) return false;
-  return ref.watch(offlineHasPendingProvider).valueOrNull ?? false;
+  return ref.watch(offlineHasPendingProvider).value ?? false;
 }

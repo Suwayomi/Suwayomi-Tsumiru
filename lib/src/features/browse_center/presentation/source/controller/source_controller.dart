@@ -72,7 +72,7 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
 /// language filter.
 @riverpod
 List<SourceDto> pinnedSources(Ref ref) => pinnedSourcesFrom(
-    ref.watch(visibleSourceListProvider).valueOrNull ?? const []);
+    ref.watch(visibleSourceListProvider).value ?? const []);
 
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
@@ -87,7 +87,7 @@ AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
 class SourceFilterLangMap extends _$SourceFilterLangMap {
   @override
   Map<String, bool> build() {
-    final sourceMap = {...?ref.watch(sourceMapProvider).valueOrNull};
+    final sourceMap = {...?ref.watch(sourceMapProvider).value};
     final enabledLanguages = ref.watch(sourceLanguageFilterProvider);
     sourceMap.remove("lastUsed");
     sourceMap.remove("localsourcelang");
@@ -113,7 +113,7 @@ class SourceFilterLangMap extends _$SourceFilterLangMap {
 AsyncValue<Map<String, List<SourceDto>>?> sourceMapFiltered(Ref ref) {
   final sourceMapFiltered = <String, List<SourceDto>>{};
   final sourceMapData = ref.watch(sourceMapProvider);
-  final sourceMap = {...?sourceMapData.valueOrNull};
+  final sourceMap = {...?sourceMapData.value};
   final enabledLangList = [...?ref.watch(sourceLanguageFilterProvider)]..sort();
   for (final e in enabledLangList) {
     if (sourceMap.containsKey(e)) sourceMapFiltered[e] = sourceMap[e]!;
@@ -140,7 +140,7 @@ AsyncValue<List<SourceDto>> searchableSources(Ref ref) {
 
 @riverpod
 List<SourceDto>? sourceQuery(Ref ref, {String? query}) {
-  final sourceMap = {...?ref.watch(sourceMapFilteredProvider).valueOrNull}
+  final sourceMap = {...?ref.watch(sourceMapFilteredProvider).value}
     ..remove('lastUsed');
   if (query.isNotBlank) {
     return sourceMap.values
@@ -158,7 +158,7 @@ List<SourceDto>? sourceQuery(Ref ref, {String? query}) {
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>?> sourceMapFilteredAndQueried(Ref ref) {
   final sourceMapData = ref.watch(sourceMapFilteredProvider);
-  final sourceMap = {...?sourceMapData.valueOrNull};
+  final sourceMap = {...?sourceMapData.value};
   final query = ref.watch(sourceSearchQueryProvider);
   if (query.isBlank) return sourceMapData;
   return sourceMapData.copyWithData(

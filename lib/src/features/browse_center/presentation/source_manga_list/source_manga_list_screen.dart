@@ -78,7 +78,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final sourceRepository = ref.watch(sourceRepositoryProvider);
     final appliedFilter = useState<List<FilterChange>>([]);
     final filterList =
-        ref.watch(baseSourceMangaFilterListProvider(sourceId)).valueOrNull;
+        ref.watch(baseSourceMangaFilterListProvider(sourceId)).value;
     final source = ref.watch(sourceProvider(sourceId));
 
     final query = useState(initialQuery);

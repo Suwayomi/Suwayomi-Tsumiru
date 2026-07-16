@@ -50,8 +50,8 @@ class DownloadsMap extends _$DownloadsMap {
   @override
   Map<int, DownloadDto> build() {
     ref.listen(downloadUpdatesProvider,
-        (_, next) => updateDownloadStatus(next.valueOrNull));
-    final downloadStatusDto = ref.watch(downloadStatusProvider).valueOrNull;
+        (_, next) => updateDownloadStatus(next.value));
+    final downloadStatusDto = ref.watch(downloadStatusProvider).value;
     return getStateFromUpdates(downloadStatusDto);
   }
 
@@ -104,9 +104,9 @@ AsyncValue<DownloaderState?> downloaderState(Ref ref) {
 @riverpod
 bool showDownloadsFAB(Ref ref) {
   final downloads = ref.watch(downloadUpdatesProvider);
-  return downloads.valueOrNull?.state == DownloaderState.STARTED ||
-      (downloads.valueOrNull?.updates).isNotBlank &&
-          downloads.valueOrNull!.updates.any(
+  return downloads.value?.state == DownloaderState.STARTED ||
+      (downloads.value?.updates).isNotBlank &&
+          downloads.value!.updates.any(
             (element) =>
                 element.download.state != DownloadState.ERROR ||
                 element.download.tries != 3,

@@ -88,7 +88,7 @@ LibraryFacets buildLibraryFacets(Iterable<LibraryFilterFields> fields) {
 
 /// Library facets for autocomplete — recomputed only when the library changes,
 /// not per keystroke.
-final unifiedLibraryFacetsProvider = Provider<LibraryFacets>((ref) {
-  final library = ref.watch(libraryMangaListProvider).valueOrNull ?? const [];
+final unifiedLibraryFacetsProvider = Provider<LibraryFacets>((Ref ref) {
+  final library = ref.watch(libraryMangaListProvider).value ?? const [];
   return buildLibraryFacets(library.map((m) => m.filterFields()));
 });

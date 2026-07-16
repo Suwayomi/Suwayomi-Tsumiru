@@ -6,7 +6,7 @@ class LibraryBranch extends StatefulShellBranchData {
   const LibraryBranch();
 }
 
-class LibraryRoute extends GoRouteData {
+class LibraryRoute extends GoRouteData with $LibraryRoute {
   const LibraryRoute({required this.categoryId});
   final int categoryId;
   @override

@@ -19,7 +19,7 @@ class RestoreStatusProgress extends HookConsumerWidget {
   Widget build(context, ref) {
     final statusProvider = restoreStatusProvider(restoreRequestId);
     final asyncRestoreStatus = ref.watch(statusProvider);
-    final restoreStatus = asyncRestoreStatus.valueOrNull;
+    final restoreStatus = asyncRestoreStatus.value;
 
     usePolling(
       pollingInterval: const Duration(milliseconds: 500),

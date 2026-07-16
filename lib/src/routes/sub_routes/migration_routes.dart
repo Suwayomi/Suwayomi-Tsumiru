@@ -1,6 +1,6 @@
 part of '../router_config.dart';
 
-class MigrationGlobalSearchRoute extends GoRouteData {
+class MigrationGlobalSearchRoute extends GoRouteData with $MigrationGlobalSearchRoute {
   const MigrationGlobalSearchRoute({this.$extra});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
@@ -22,7 +22,7 @@ class MigrationGlobalSearchRoute extends GoRouteData {
   }
 }
 
-class MigrationSourceSelectionRoute extends GoRouteData {
+class MigrationSourceSelectionRoute extends GoRouteData with $MigrationSourceSelectionRoute {
   const MigrationSourceSelectionRoute({this.$extra});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
@@ -44,7 +44,7 @@ class MigrationSourceSelectionRoute extends GoRouteData {
   }
 }
 
-class MigrationSearchRoute extends GoRouteData {
+class MigrationSearchRoute extends GoRouteData with $MigrationSearchRoute {
   const MigrationSearchRoute({this.$extra});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
@@ -69,7 +69,7 @@ class MigrationSearchRoute extends GoRouteData {
   }
 }
 
-class MigrationPreviewRoute extends GoRouteData {
+class MigrationPreviewRoute extends GoRouteData with $MigrationPreviewRoute {
   const MigrationPreviewRoute({this.$extra});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
@@ -95,7 +95,7 @@ class MigrationPreviewRoute extends GoRouteData {
   }
 }
 
-class MigrationProgressRoute extends GoRouteData {
+class MigrationProgressRoute extends GoRouteData with $MigrationProgressRoute {
   const MigrationProgressRoute({this.$extra});
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;

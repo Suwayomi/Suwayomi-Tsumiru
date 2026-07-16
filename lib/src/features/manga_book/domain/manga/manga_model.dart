@@ -56,7 +56,7 @@ extension MangaExtensions on MangaDto {
 }
 
 @freezed
-class MangaMeta with _$MangaMeta {
+abstract class MangaMeta with _$MangaMeta {
   factory MangaMeta({
     @JsonKey(
       name: "flutter_readerNavigationLayoutInvert",

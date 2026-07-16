@@ -100,12 +100,12 @@ class ReaderBottomControls extends ConsumerWidget {
 
     return MeasureSize(
       onChange: (size) {
-        final current = ref.read(chromeExtentsNotifierProvider);
+        final current = ref.read(chromeExtentsProvider);
         final next = ChromeExtents(
           topInset: current.topInset,
           bottomInset: size.height,
         );
-        ref.read(chromeExtentsNotifierProvider.notifier).update(next);
+        ref.read(chromeExtentsProvider.notifier).update(next);
       },
       child: ExcludeFocus(
         child: Column(

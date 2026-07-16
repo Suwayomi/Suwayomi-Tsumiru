@@ -35,7 +35,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(librarySettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
-    final categories = ref.watch(categoryControllerProvider).valueOrNull ??
+    final categories = ref.watch(categoryControllerProvider).value ??
         const <CategoryDto>[];
 
     return ListTileTheme(

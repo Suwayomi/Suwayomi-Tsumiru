@@ -72,7 +72,7 @@ class CreateBackupDialog extends HookConsumerWidget {
                   includeClientData: includeClientData.value,
                 ));
             if (!context.mounted) return;
-            if (backupUrl.hasError || backupUrl.valueOrNull.isBlank) {
+            if (backupUrl.hasError || backupUrl.value.isBlank) {
               {
                 toast?.showError(
                   backupUrl.error?.toString() ?? context.l10n.errorBackupCreate,

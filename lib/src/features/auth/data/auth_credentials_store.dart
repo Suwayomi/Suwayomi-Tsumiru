@@ -20,7 +20,7 @@ class UiLoginTokens {
 
 /// In-memory snapshot of every credential the app holds. This is the
 /// `state` of [AuthCredentialsStore] — synchronously readable via
-/// `ref.watch(authCredentialsStoreProvider).valueOrNull` so widgets like
+/// `ref.watch(authCredentialsStoreProvider).value` so widgets like
 /// `server_image` can authenticate on the first frame without an
 /// `AsyncLoading` flash that would otherwise cache a 401.
 ///
@@ -145,7 +145,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   /// hasn't completed yet. Used internally by mutators that need to
   /// apply `copyWith` even before the initial load finishes.
   AuthCredentialsState get _current =>
-      state.valueOrNull ?? const AuthCredentialsState.empty();
+      state.value ?? const AuthCredentialsState.empty();
 
   // ---------- Password ----------
 

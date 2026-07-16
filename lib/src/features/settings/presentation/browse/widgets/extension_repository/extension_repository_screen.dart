@@ -18,7 +18,7 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final List<String> repoList = [
-      ...?serverSettings.valueOrNull?.extensionRepos
+      ...?serverSettings.value?.extensionRepos
     ];
     onRefresh() => ref.refresh(settingsProvider.future);
     return Scaffold(

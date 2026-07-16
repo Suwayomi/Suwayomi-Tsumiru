@@ -29,7 +29,7 @@ Future<List<Extension>?> extension(Ref ref) {
 AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   final extensionMap = <String, List<Extension>>{};
   final extensionListData = ref.watch(extensionProvider);
-  final extensionList = [...?extensionListData.valueOrNull];
+  final extensionList = [...?extensionListData.value];
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
   for (final e in extensionList) {
     if (!showNsfw && (e.isNsfw.ifNull())) continue;
@@ -67,7 +67,7 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
 
 @riverpod
 List<String> extensionFilterLangList(Ref ref) {
-  final extensionMap = {...?ref.watch(extensionMapProvider).valueOrNull};
+  final extensionMap = {...?ref.watch(extensionMapProvider).value};
   extensionMap.remove("installed");
   extensionMap.remove("update");
   return [...extensionMap.keys]..sort();
@@ -84,7 +84,7 @@ class ExtensionLanguageFilter extends _$ExtensionLanguageFilter
 AsyncValue<Map<String, List<Extension>>> extensionMapFiltered(Ref ref) {
   final extensionMapFiltered = <String, List<Extension>>{};
   final extensionMapData = ref.watch(extensionMapProvider);
-  final extensionMap = {...?extensionMapData.valueOrNull};
+  final extensionMap = {...?extensionMapData.value};
   final enabledLangList = [...?ref.watch(extensionLanguageFilterProvider)];
   for (final e in enabledLangList) {
     if (extensionMap.containsKey(e)) extensionMapFiltered[e] = extensionMap[e]!;
@@ -97,7 +97,7 @@ AsyncValue<Map<String, List<Extension>>> extensionMapFilteredAndQueried(
   Ref ref,
 ) {
   final extensionMapData = ref.watch(extensionMapFilteredProvider);
-  final extensionMap = {...?extensionMapData.valueOrNull};
+  final extensionMap = {...?extensionMapData.value};
   final query = ref.watch(extensionQueryProvider);
   if (query.isBlank) return extensionMapData;
   return extensionMapData.copyWithData(

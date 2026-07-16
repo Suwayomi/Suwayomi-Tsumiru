@@ -273,7 +273,7 @@ enum _TestState {
 /// Factory for the throwaway HTTP client the resolver probes use. Overridable
 /// in widget tests so the connection flow can be driven against a MockClient.
 final onboardingHttpClientProvider =
-    Provider<http.Client Function()>((ref) => http.Client.new);
+    Provider<http.Client Function()>((Ref ref) => http.Client.new);
 
 class _ServerStep extends HookConsumerWidget {
   const _ServerStep({required this.onVerifiedChanged});
@@ -383,7 +383,7 @@ class _ServerStep extends HookConsumerWidget {
       await Future<void>.delayed(const Duration(milliseconds: 150));
       final result = await AsyncValue.guard(
           () => ref.read(aboutRepositoryProvider).getAbout());
-      if (result.hasError || result.valueOrNull == null) {
+      if (result.hasError || result.value == null) {
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
         onVerifiedChanged(false);

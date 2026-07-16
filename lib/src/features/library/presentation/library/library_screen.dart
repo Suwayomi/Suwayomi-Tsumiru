@@ -62,7 +62,7 @@ class LibraryScreen extends HookConsumerWidget {
     // transient null frames a socket reconnect emits.
     final lastRunning = useRef<bool>(false);
     ref.listen(updateRunningSocketProvider, (_, next) {
-      final running = next.valueOrNull;
+      final running = next.value;
       if (running == null) return;
       if (lastRunning.value && !running) {
         ref.invalidate(libraryMangaListProvider);
@@ -94,7 +94,7 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
       return;
-    }, [categoryList.valueOrNull]);
+    }, [categoryList.value]);
 
     return categoryList.showUiWhenData(
       context,
@@ -260,7 +260,7 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
       return;
-    }, [groupedTabsAsync.valueOrNull]);
+    }, [groupedTabsAsync.value]);
 
     return groupedTabsAsync.showUiWhenData(
       context,
@@ -390,7 +390,7 @@ class _CategoryTab extends ConsumerWidget {
         categoryId: category.id,
       ),
     );
-    final count = mangaListAsync.valueOrNull?.length;
+    final count = mangaListAsync.value?.length;
     final label = count != null ? '${category.name} ($count)' : category.name;
     return Tab(text: label);
   }

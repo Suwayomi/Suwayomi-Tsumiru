@@ -6,6 +6,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 
 import '../../../domain/manga/manga_model.dart';
 

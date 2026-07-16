@@ -28,7 +28,7 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categories =
-        (ref.watch(categoryControllerProvider).valueOrNull ?? const [])
+        (ref.watch(categoryControllerProvider).value ?? const [])
             .where((c) => c.id != 0)
             .toList();
 

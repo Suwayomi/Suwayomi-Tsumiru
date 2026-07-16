@@ -16,7 +16,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
   Widget build(context, ref) {
     final settingsDto = ref.watch(settingsProvider);
     final repository = ref.watch(librarySettingsRepositoryProvider);
-    final LibrarySettingsDto? librarySettingsDto = settingsDto.valueOrNull;
+    final LibrarySettingsDto? librarySettingsDto = settingsDto.value;
     return AlertDialog(
       title: Text(context.l10n.skipUpdatingEntries),
       contentPadding: KEdgeInsets.v8.size,

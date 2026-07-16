@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_android_volume_keydown/flutter_android_volume_keydown.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/legacy.dart';
 
 import '../../../../../constants/app_constants.dart';
 import '../../../../../constants/app_sizes.dart';
@@ -105,7 +106,7 @@ class ReaderInputScope extends InheritedWidget {
 bool _noBoundaryNavigation() => false;
 
 final _readerChromeSessionVisibilityProvider =
-    StateProvider.autoDispose<bool?>((ref) {
+    StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
   ref

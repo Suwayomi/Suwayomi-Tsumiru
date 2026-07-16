@@ -143,7 +143,7 @@ class MangaChapterList extends _$MangaChapterList {
       state = result.copyWithPrevious(state);
     } else {
       state = result;
-      final chapters = result.valueOrNull;
+      final chapters = result.value;
       if (chapters != null) {
         // Mirror build(): down-sync the fresh list (which orphans chapters the
         // server no longer lists) then reconcile to evict them — so a
@@ -158,7 +158,7 @@ class MangaChapterList extends _$MangaChapterList {
 
   void updateChapter(int index, ChapterDto chapter) {
     try {
-      final newList = [...?state.valueOrNull];
+      final newList = [...?state.value];
       newList[index] = chapter;
       state = AsyncData<List<ChapterDto>?>(newList).copyWithPrevious(state);
     } catch (e) {
@@ -187,7 +187,7 @@ class MangaChapterFilterScanlator extends _$MangaChapterFilterScanlator {
   @override
   String build({required int mangaId}) {
     final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
-    return manga.valueOrNull?.metaData.scanlator ?? MangaMetaKeys.scanlator.key;
+    return manga.value?.metaData.scanlator ?? MangaMetaKeys.scanlator.key;
   }
 
   void update(String? scanlator) async {
@@ -210,7 +210,7 @@ class MangaRating extends _$MangaRating {
   @override
   int build({required int mangaId}) {
     final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
-    return (manga.valueOrNull?.metaData.rating ?? 0).clamp(0, 5);
+    return (manga.value?.metaData.rating ?? 0).clamp(0, 5);
   }
 
   Future<void> update(int rating) async {
@@ -239,7 +239,7 @@ class MangaUserTags extends _$MangaUserTags {
   @override
   List<String> build({required int mangaId}) {
     final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
-    return manga.valueOrNull?.metaData.userTags ?? const [];
+    return manga.value?.metaData.userTags ?? const [];
   }
 
   Future<void> _persist(List<String> tags) async {
@@ -334,7 +334,7 @@ ChapterDto? firstUnreadInFilteredChapterList(
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
       .watch(mangaChapterListWithFilterProvider(mangaId: mangaId))
-      .valueOrNull;
+      .value;
   if (filteredList == null) {
     return null;
   } else {
@@ -359,7 +359,7 @@ ChapterDto? firstUnreadInFilteredChapterList(
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
       .watch(mangaChapterListWithFilterProvider(mangaId: mangaId))
-      .valueOrNull;
+      .value;
   if (filteredList == null) {
     return null;
   } else {

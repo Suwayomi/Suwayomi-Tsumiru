@@ -36,7 +36,7 @@ part 'global_providers.g.dart';
 @riverpod
 GraphQLClient graphQlClient(Ref ref) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
-  final credentials = ref.watch(credentialsProvider).valueOrNull;
+  final credentials = ref.watch(credentialsProvider).value;
 
   // Timeout settings
   final timeoutMs = ref.watch(serverRequestTimeoutProvider) ??
@@ -146,7 +146,7 @@ GraphQLClient graphQlClient(Ref ref) {
 @riverpod
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
-  final credentials = ref.watch(credentialsProvider).valueOrNull;
+  final credentials = ref.watch(credentialsProvider).value;
   // Watch ONLY the socket-relevant auth material (cookie + token raw strings)
   // so this client is rebuilt — and the socket reconnects with fresh auth — on
   // a re-login or token/cookie refresh. Reading it once (the old behaviour) left
@@ -157,8 +157,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   // also writes the saved password, which would otherwise reconnect twice.
   final socketAuth = ref.watch(authCredentialsStoreProvider.select(
     (s) => (
-      cookie: s.valueOrNull?.simpleLoginCookie,
-      token: s.valueOrNull?.uiAccessToken,
+      cookie: s.value?.simpleLoginCookie,
+      token: s.value?.uiAccessToken,
     ),
   ));
   final wsUrl = Endpoints.baseApi(
@@ -225,8 +225,12 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   );
 }
 
+// Named "holder" so its generated provider can't collide with
+// graphQlClientProvider: riverpod_generator 4 strips a trailing "Notifier"
+// from provider names, which made the old graphQlClientNotifier fold into
+// the same name as the client provider above.
 @riverpod
-ValueNotifier<GraphQLClient> graphQlClientNotifier(Ref ref) {
+ValueNotifier<GraphQLClient> graphQlClientHolder(Ref ref) {
   final notifier = ValueNotifier(ref.watch(graphQlClientProvider));
   // Dispose of the notifier when the provider is destroyed
   ref.onDispose(notifier.dispose);
@@ -271,7 +275,7 @@ class L10n extends _$L10n with SharedPreferenceClientMixin<Locale> {
 }
 
 @riverpod
-SharedPreferences sharedPreferences(ref) => throw UnimplementedError();
+SharedPreferences sharedPreferences(Ref ref) => throw UnimplementedError();
 
 @riverpod
 HiveStore hiveStore(Ref ref) => throw UnimplementedError();

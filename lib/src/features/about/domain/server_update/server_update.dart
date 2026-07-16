@@ -11,7 +11,7 @@ import 'graphql/__generated__/fragment.graphql.dart';
 part 'server_update.freezed.dart';
 
 @freezed
-class ServerUpdate with _$ServerUpdate {
+abstract class ServerUpdate with _$ServerUpdate {
   factory ServerUpdate({
     String? channel,
     String? tag,

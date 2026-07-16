@@ -130,11 +130,11 @@ class _ServerDownloadsTab extends ConsumerWidget {
     final repository = ref.watch(downloadsSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final serverDelete =
-        ref.watch(deleteChaptersSettingsControllerProvider).valueOrNull ??
+        ref.watch(deleteChaptersSettingsControllerProvider).value ??
             const DeleteChaptersSettings();
     final serverDeleteController =
         ref.read(deleteChaptersSettingsControllerProvider.notifier);
-    final categories = ref.watch(categoryControllerProvider).valueOrNull ??
+    final categories = ref.watch(categoryControllerProvider).value ??
         const <CategoryDto>[];
     return RefreshIndicator(
       onRefresh: () => ref.refresh(settingsProvider.future),

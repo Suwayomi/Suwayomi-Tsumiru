@@ -192,7 +192,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     ref.listen<AsyncValue<AuthCredentialsState>>(
       authCredentialsStoreProvider,
       (prev, next) {
-        final state = next.valueOrNull;
+        final state = next.value;
         if (state == null) return;
         if (state.uiAccessToken == null ||
             state.uiAccessTokenExpiresAt == null) {
@@ -202,7 +202,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         // Re-schedule only when the expiry actually changed (e.g.
         // post-refresh, post-login, post-bootstrap). Cheap idempotent
         // reschedule is also fine — we cancel any existing Timer first.
-        final prevExpiry = prev?.valueOrNull?.uiAccessTokenExpiresAt;
+        final prevExpiry = prev?.value?.uiAccessTokenExpiresAt;
         if (prevExpiry == state.uiAccessTokenExpiresAt &&
             _proactiveRefreshTimer != null) {
           return;
@@ -223,7 +223,7 @@ class AuthCoordinator extends _$AuthCoordinator {
 
     final expiresAt = ref
         .read(authCredentialsStoreProvider)
-        .valueOrNull
+        .value
         ?.uiAccessTokenExpiresAt;
     if (expiresAt == null) return;
 
@@ -531,7 +531,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     }
     final expiresAt = ref
         .read(authCredentialsStoreProvider)
-        .valueOrNull
+        .value
         ?.uiAccessTokenExpiresAt;
     if (expiresAt == null) return null;
     final remaining = expiresAt.difference(DateTime.now().toUtc());

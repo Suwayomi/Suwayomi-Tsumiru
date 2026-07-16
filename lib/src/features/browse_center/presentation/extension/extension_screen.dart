@@ -52,7 +52,7 @@ class ExtensionScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final extensionMapData = ref.watch(extensionMapFilteredAndQueriedProvider);
 
-    final extensionMap = {...?extensionMapData.valueOrNull};
+    final extensionMap = {...?extensionMapData.value};
     final installed = extensionMap.remove("installed");
     final update = extensionMap.remove("update");
     final all = extensionMap.remove("all");
@@ -73,7 +73,7 @@ class ExtensionScreen extends HookConsumerWidget {
         );
       }
       return;
-    }, [extensionMapData.valueOrNull]);
+    }, [extensionMapData.value]);
 
     final body = extensionMapData.showUiWhenData(
       context,

@@ -61,9 +61,9 @@ class UpdatesScreen extends HookConsumerWidget {
     final updatesRepository = ref.watch(updatesRepositoryProvider);
     final isUpdatesChecking = ref
         .watch(updatesSocketProvider
-            .select((value) => value.valueOrNull?.isRunning))
+            .select((value) => value.value?.isRunning))
         .ifNull();
-    final lastUpdated = ref.watch(libraryLastUpdatedProvider).valueOrNull;
+    final lastUpdated = ref.watch(libraryLastUpdatedProvider).value;
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     useEffect(() {
       controller.addPageRequestListener((pageKey) => _fetchPage(

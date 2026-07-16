@@ -357,7 +357,7 @@ String? _buildPageUrl(
 
   if (withToken && ref.read(authTypeKeyProvider) == AuthType.uiLogin) {
     final token =
-        ref.read(authCredentialsStoreProvider).valueOrNull?.uiAccessToken;
+        ref.read(authCredentialsStoreProvider).value?.uiAccessToken;
     if (token != null && token.isNotEmpty) {
       final sep = url.contains('?') ? '&' : '?';
       url = "$url${sep}token=${Uri.encodeQueryComponent(token)}";
@@ -372,12 +372,12 @@ String? _buildPageUrl(
 Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
   final authType = ref.read(authTypeKeyProvider);
   if (authType == AuthType.basic) {
-    final basicToken = ref.read(credentialsProvider).valueOrNull;
+    final basicToken = ref.read(credentialsProvider).value;
     if (basicToken != null) return {"Authorization": basicToken};
   } else if (authType == AuthType.simpleLogin) {
     return ref
         .read(authCredentialsStoreProvider)
-        .valueOrNull
+        .value
         ?.simpleLoginCookieHeader;
   }
   return null;

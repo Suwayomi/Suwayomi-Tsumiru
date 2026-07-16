@@ -156,7 +156,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     IconButton(
                       onPressed: () {
                         final chapterList = [
-                          ...?filteredChapterList.valueOrNull
+                          ...?filteredChapterList.value
                         ];
                         selectedChapters.value =
                             ({for (ChapterDto i in chapterList) i.id: i});
@@ -166,7 +166,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     IconButton(
                       onPressed: () {
                         final chapterList = [
-                          ...?filteredChapterList.valueOrNull
+                          ...?filteredChapterList.value
                         ];
                         selectedChapters.value = ({
                           for (ChapterDto i in chapterList)
@@ -442,7 +442,7 @@ class MultiSelectPopupButton extends StatelessWidget {
         PopupMenuItem(
           onTap: () {
             List<ChapterDto> chapterList = [
-              ...?filteredChapterList.valueOrNull
+              ...?filteredChapterList.value
             ];
             final lastId = selectedChapters.value.keys.last;
             final lastIndex =
@@ -458,7 +458,7 @@ class MultiSelectPopupButton extends StatelessWidget {
         ),
         PopupMenuItem(
           onTap: () {
-            final chapterList = [...?filteredChapterList.valueOrNull];
+            final chapterList = [...?filteredChapterList.value];
 
             selectedChapters.value = ({
               for (ChapterDto i in chapterList)
@@ -469,7 +469,7 @@ class MultiSelectPopupButton extends StatelessWidget {
         ),
         PopupMenuItem(
           onTap: () {
-            final chapterList = [...?filteredChapterList.valueOrNull];
+            final chapterList = [...?filteredChapterList.value];
             final selectedChapterIds =
                 selectedChapters.value.keys.toList(growable: false);
             final firstSelectedIndex = chapterList.indexWhere(

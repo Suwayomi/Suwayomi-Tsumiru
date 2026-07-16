@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 
 import '../utils/extensions/custom_extensions.dart';
 
@@ -20,8 +21,10 @@ import '../utils/extensions/custom_extensions.dart';
 /// In binary mode (`tristate: false`) the widget falls back to Flutter's
 /// `CheckboxListTile`, which is what existing display-preference callers
 /// (e.g. badge toggles) rely on.
-class CustomCheckboxListTile<NotifierT extends AutoDisposeNotifier<bool?>>
-    extends ConsumerWidget {
+// Reads any bool? provider: mutation flows through onChanged, so the loose
+// ProviderListenable type is enough — and riverpod_generator 4's provider
+// classes no longer subtype the public NotifierProvider this used to require.
+class CustomCheckboxListTile extends ConsumerWidget {
   const CustomCheckboxListTile({
     super.key,
     required this.title,
@@ -30,7 +33,7 @@ class CustomCheckboxListTile<NotifierT extends AutoDisposeNotifier<bool?>>
     this.tristate = true,
   });
   final String title;
-  final AutoDisposeNotifierProvider<NotifierT, bool?> provider;
+  final ProviderListenable<bool?> provider;
   final ValueChanged<bool?> onChanged;
   final bool tristate;
 

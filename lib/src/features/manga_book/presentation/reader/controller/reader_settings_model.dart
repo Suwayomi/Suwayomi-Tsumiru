@@ -368,7 +368,7 @@ abstract final class ReaderSettings {
 }
 
 @freezed
-class ReaderSettingsState with _$ReaderSettingsState {
+abstract class ReaderSettingsState with _$ReaderSettingsState {
   const factory ReaderSettingsState({
     required ReaderMode readerMode,
     required ReaderNavigationLayout navigationLayout,
@@ -545,7 +545,7 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _readerPaddingKey = ref.read(readerPaddingKeyProvider.notifier);
     _readerMagnifierSizeKey = ref.read(readerMagnifierSizeKeyProvider.notifier);
     final meta =
-        ref.watch(mangaWithIdProvider(mangaId: mangaId)).valueOrNull?.metaData;
+        ref.watch(mangaWithIdProvider(mangaId: mangaId)).value?.metaData;
     return ReaderSettingsState(
       readerMode: ReaderSettings.mode.resolveWith(ref, meta?.readerMode),
       navigationLayout: ReaderSettings.navigationLayout

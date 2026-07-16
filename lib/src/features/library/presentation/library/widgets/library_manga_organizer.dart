@@ -37,7 +37,7 @@ class LibraryMangaOrganizer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasTrackers =
-        ref.watch(loggedInTrackersProvider).valueOrNull?.isNotEmpty ?? false;
+        ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
     return DefaultTabController(
       length: 4,
       child: _OrganizerBody(hasTrackers: hasTrackers),

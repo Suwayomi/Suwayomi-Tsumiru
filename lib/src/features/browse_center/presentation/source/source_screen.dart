@@ -28,7 +28,7 @@ class SourceScreen extends HookConsumerWidget {
         ? allPinned
         : allPinned.where((s) => s.name.query(query)).toList();
 
-    final sourceMap = {...?sourceMapData.valueOrNull};
+    final sourceMap = {...?sourceMapData.value};
     final localSource = sourceMap.remove("localsourcelang");
     final lastUsed = sourceMap.remove("lastUsed");
     final allSource = sourceMap.remove("all");
@@ -45,7 +45,7 @@ class SourceScreen extends HookConsumerWidget {
         withMicrotask: true,
       );
       return;
-    }, [sourceMapData.valueOrNull]);
+    }, [sourceMapData.value]);
 
     final body = sourceMapData.showUiWhenData(
       context,
