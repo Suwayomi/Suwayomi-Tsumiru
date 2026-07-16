@@ -186,6 +186,18 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final double maxContentWidth = scrollDirection == Axis.vertical
         ? scaleType.maxContentWidth(context.width, context.height)
         : context.width;
+    // Decode each page at its on-screen pixel size, not the ~800×15000 source.
+    // Shrinks the GPU texture the compositor samples every frame — the #196
+    // high-GPU-while-scrolling cost, worst on tall/thin windows. Cap the strip's
+    // constrained axis (fitWidth→width, fitHeight→height); the other scales with
+    // aspect. Larger-than-source caps are a no-op (never upscales at decode).
+    final double devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final int? pageDecodeWidth = scrollDirection == Axis.vertical
+        ? (maxContentWidth * devicePixelRatio).round().clamp(1, 1 << 20)
+        : null;
+    final int? pageDecodeHeight = scrollDirection == Axis.vertical
+        ? null
+        : (context.height * devicePixelRatio).round().clamp(1, 1 << 20);
     // Auto-crop solid borders in the long-strip.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
     final ReaderScrollAmount scrollAmount =
@@ -285,6 +297,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   : BoxFit.fitHeight,
               appendApiToUrl: false,
               cropBorders: cropBorders,
+              memCacheWidth: pageDecodeWidth,
+              memCacheHeight: pageDecodeHeight,
               imageUrl: chapterPages.pages[index],
               progressIndicatorBuilder: (_, __, downloadProgress) => Center(
                 child: CircularProgressIndicator(
