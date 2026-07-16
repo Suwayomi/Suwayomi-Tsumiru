@@ -1,0 +1,35 @@
+# Self-hosted dependency updater. Runs weekly (and on demand), opens small,
+# CI-gated PRs to keep dependencies current. Authenticated with a fine-grained
+# PAT in the RENOVATE_TOKEN secret — NOT the default GITHUB_TOKEN, whose PRs
+# wouldn't trigger the PR checks.
+name: Renovate
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: Renovate log level
+        default: info
+        type: choice
+        options: [debug, info, warn, error]
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: renovatebot/github-action@v46.1.19
+        with:
+          configurationFile: .github/renovate-global.js
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
