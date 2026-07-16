@@ -115,6 +115,7 @@ class CategoryMangaList extends HookConsumerWidget {
       final ids = selection.value.toList();
       selection.value = const {};
       final repo = ref.read(mangaBookRepositoryProvider);
+      var allOk = true;
       for (final id in ids) {
         final chapters = await repo.getChapterList(id);
         final cids = <int>[for (final c in chapters ?? const []) c.id];
@@ -122,10 +123,11 @@ class CategoryMangaList extends HookConsumerWidget {
           // Offline-aware write-through: the local rows are updated first (so
           // the change survives offline + restart and keeps Resume truthful),
           // then the server bulk write — same fix as the chapter-list icons.
-          await recordReadState(ref, chapterIds: cids, isRead: read);
+          final ok = await recordReadState(ref, chapterIds: cids, isRead: read);
+          if (!ok) allOk = false;
           // Marking a whole series read here bypasses the reader, so push the
           // new progress to the bound tracker(s) explicitly (manual path).
-          if (read) {
+          if (read && ok) {
             unawaited(maybeTrackProgressOnReadFetch(
               ref,
               mangaId: id,
@@ -136,13 +138,21 @@ class CategoryMangaList extends HookConsumerWidget {
         }
       }
       refresh();
-      if (context.mounted) {
+      if (!context.mounted) return;
+      // A server failure with offline inactive means nothing was persisted, so
+      // surface it instead of a false success. (An offline-active failure is
+      // queued locally and up-syncs later, so the success message still holds.)
+      if (!allOk && !ref.read(offlineActiveProvider)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(read
-              ? 'Marked ${ids.length} series read'
-              : 'Marked ${ids.length} series unread'),
+          content: Text(context.l10n.errorSomethingWentWrong),
         ));
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(read
+            ? 'Marked ${ids.length} series read'
+            : 'Marked ${ids.length} series unread'),
+      ));
     }
 
     return mangaList.showUiWhenData(

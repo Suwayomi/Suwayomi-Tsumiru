@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../offline/data/offline_download_providers.dart';
+import '../../../offline/data/offline_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 
@@ -42,12 +43,15 @@ class SingleChapterActionIcon extends ConsumerWidget {
           // Read-state toggles use the same offline-aware write-through as the
           // bulk action (no production caller sends isRead here today; wired for
           // consistency and future use).
-          await recordReadState(
+          final ok = await recordReadState(
             ref,
             chapterIds: [chapterId],
             isRead: change.isRead!,
             resetPosition: change.lastPageRead == 0 && change.isRead == true,
           );
+          if (!ok && !ref.read(offlineActiveProvider) && context.mounted) {
+            ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+          }
         } else {
           final result = (await AsyncValue.guard(
             () => ref.read(mangaBookRepositoryProvider).putChapter(
