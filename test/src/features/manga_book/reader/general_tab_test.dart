@@ -240,7 +240,13 @@ void main() {
     }
 
     Color? overlayColor(WidgetTester tester) {
-      final boxes = find.byType(ColoredBox);
+      // Scope to the overlay's own box — the framework wraps the tree in other
+      // ColoredBoxes (a transparent one sorts first on newer Flutter), so a
+      // bare find.byType(ColoredBox).first reads the wrong widget.
+      final boxes = find.descendant(
+        of: find.byType(ReaderFlashOverlay),
+        matching: find.byType(ColoredBox),
+      );
       if (boxes.evaluate().isEmpty) return null;
       return tester.widget<ColoredBox>(boxes.first).color;
     }
