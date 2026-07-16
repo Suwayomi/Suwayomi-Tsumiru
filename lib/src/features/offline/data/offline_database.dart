@@ -83,6 +83,13 @@ class OfflineChapters extends Table {
   BoolColumn get bookmarkDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// True when this chapter's read-STATE (isRead) was changed locally but not
+  /// yet pushed. Tracked separately from [progressDirty] so a position-only
+  /// write can never push a stale isRead (the ch-99 un-read loop), mirroring
+  /// [bookmarkDirty] (#13).
+  BoolColumn get readStateDirty =>
+      boolean().withDefault(const Constant(false))();
+
   /// The server's last-read timestamp (epoch millis as a string, matching the
   /// server's LongString) — synced down so the offline library can sort by
   /// "Last Read". Server is the source of truth; this is never the device clock.
@@ -134,7 +141,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -187,6 +194,18 @@ class OfflineDatabase extends _$OfflineDatabase {
                 m, offlineMangas, offlineMangas.latestUploadedAt);
             await _addColumnIfMissing(
                 m, offlineMangas, offlineMangas.totalChapters);
+          }
+          if (from < 7) {
+            await _addColumnIfMissing(
+                m, offlineChapters, offlineChapters.readStateDirty);
+            // Carry pending reads across the split: a progress-dirty row with
+            // isRead=true is usually a completed offline read awaiting push
+            // (it may also be a server-sourced true on a partial re-read —
+            // pushing true is the safe direction). is_read=0 dirty rows are
+            // exactly the stale class; they stay position-only.
+            await customStatement(
+                'UPDATE offline_chapters SET read_state_dirty = 1 '
+                'WHERE progress_dirty = 1 AND is_read = 1');
           }
         },
       );
