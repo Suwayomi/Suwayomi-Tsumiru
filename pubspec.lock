@@ -418,7 +418,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: HEAD
+      ref: "9db2306fd2b4f804f5b9fbf69b97b211f47f527c"
       resolved-ref: "9db2306fd2b4f804f5b9fbf69b97b211f47f527c"
       url: "https://github.com/DattatreyaReddy/flutter_android_volume_keydown"
     source: git

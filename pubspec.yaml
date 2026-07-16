@@ -7,7 +7,7 @@ publish_to: "none"
 version: 0.8.5+41
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
   app_links: ^6.4.0
@@ -25,7 +25,9 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_android_volume_keydown:
-    git: https://github.com/DattatreyaReddy/flutter_android_volume_keydown
+    git:
+      url: https://github.com/DattatreyaReddy/flutter_android_volume_keydown
+      ref: "9db2306fd2b4f804f5b9fbf69b97b211f47f527c"
   flutter_cache_manager: ^3.3.0
   flutter_foreground_task: ^9.2.2
   flutter_hooks: ^0.20.0
