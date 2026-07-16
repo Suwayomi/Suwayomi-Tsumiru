@@ -126,6 +126,14 @@ foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
     COMPONENT Runtime)
 endforeach(bundled_library)
 
+# Copy native assets (Dart code-assets) into the bundle. sqlite3 3.x ships its
+# own libsqlite3.so this way; without this step the .so is built but never
+# bundled, so the native-asset loader can't find it, falls back to an external
+# libsqlite3.so, and SQLite crashes on a null call at DB open (Linux flatpak).
+install(DIRECTORY "${PROJECT_BUILD_DIR}/native_assets/linux/"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.
 set(FLUTTER_ASSET_DIR_NAME "flutter_assets")

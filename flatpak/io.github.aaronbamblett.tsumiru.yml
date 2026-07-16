@@ -43,31 +43,6 @@ modules:
         url: https://download.gnome.org/sources/libsecret/0.21/libsecret-0.21.7.tar.xz
         sha256: 6b452e4750590a2b5617adc40026f28d2f4903de15f1250e1d1c40bfd68ed55e
 
-  # sqlite3 3.x (pulled in by the drift/codegen upgrade) switched the Dart
-  # `sqlite3` package to native-FFI symbol resolution, which needs a real
-  # `libsqlite3.so`. sqlite3_flutter_libs compiles SQLite into its plugin with
-  # hidden symbols and never emits that file, and the freedesktop runtime only
-  # ships `libsqlite3.so.0` — so on Linux the app can't open its database and
-  # dies at startup. Build the SQLite amalgamation here (matching the feature
-  # flags sqlite3_flutter_libs enables) and drop it in /app/lib.
-  - name: sqlite3
-    buildsystem: simple
-    build-commands:
-      - |
-        gcc -shared -fPIC -O2 -o libsqlite3.so.0 sqlite3.c \
-          -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_FTS5 \
-          -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_MATH_FUNCTIONS \
-          -DSQLITE_ENABLE_SESSION -DSQLITE_ENABLE_PREUPDATE_HOOK \
-          -DSQLITE_DQS=0 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_TEMP_STORE=2 \
-          -DSQLITE_STRICT_SUBTYPE=1 -DSQLITE_THREADSAFE=1 \
-          -Wl,-soname,libsqlite3.so.0 -lm -lpthread
-      - install -Dm755 libsqlite3.so.0 /app/lib/libsqlite3.so.0
-      - ln -sf libsqlite3.so.0 /app/lib/libsqlite3.so
-    sources:
-      - type: archive
-        url: https://sqlite.org/2026/sqlite-autoconf-3520000.tar.gz
-        sha256: f6b50b0c103392af32a8be15b2b9d25959de9a00a70c3979128aafeaa5338b3f
-
   - name: tsumiru
     buildsystem: simple
     build-commands:
