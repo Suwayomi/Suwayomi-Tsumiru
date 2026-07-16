@@ -1,3 +1,12 @@
+# riverpod_generator 4.x resolves provider signature types for real, so the
+# GraphQL types our DTOs alias must exist in its build phase. Without this,
+# build_runner phases riverpod_generator first (reverse-alphabetical tiebreak)
+# and every provider touching a Fragment$* type dies with InvalidTypeException.
+global_options:
+  graphql_codegen:graphql_codegen:
+    runs_before:
+      - riverpod_generator:riverpod_generator
+
 targets:
   $default:
     builders:
