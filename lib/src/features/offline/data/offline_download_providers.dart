@@ -493,11 +493,12 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
         chapterId: c.id,
         patch: ChapterChange(
           // Send only the locally-changed fields (null = omitted from the
-          // patch), so a progress sync never overwrites a server bookmark that
-          // hasn't down-synced, and a bookmark sync never overwrites pending
-          // read progress (#13).
+          // patch), each gated on its OWN dirty flag. isRead rides
+          // readStateDirty — NOT progressDirty — so a position-only write can
+          // never push a stale isRead (the ch-99 un-read loop), just as a
+          // bookmark sync never overwrites pending read progress (#13).
           lastPageRead: c.progressDirty ? c.lastPageRead : null,
-          isRead: c.progressDirty ? c.isRead : null,
+          isRead: c.readStateDirty ? c.isRead : null,
           isBookmarked: c.bookmarkDirty ? c.isBookmarked : null,
         ),
       ),
@@ -510,11 +511,14 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
         await db.clearProgressDirtyIfUnchanged(c.id,
             lastPageRead: c.lastPageRead);
       }
+      if (c.readStateDirty) {
+        await db.clearReadStateDirtyIfUnchanged(c.id, isRead: c.isRead);
+      }
       if (c.bookmarkDirty) {
         await db.clearBookmarkDirtyIfUnchanged(c.id,
             isBookmarked: c.isBookmarked);
       }
-      if (c.progressDirty && c.isRead) syncedReadMangaIds.add(c.mangaId);
+      if (c.readStateDirty && c.isRead) syncedReadMangaIds.add(c.mangaId);
     }
   }
 
