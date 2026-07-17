@@ -85,7 +85,7 @@ dev_dependencies:
   # flutter_flavorizr: ^2.1.5
   drift_dev: ^2.32.0
   flutter_launcher_icons: ^0.14.1
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   flutter_native_splash: ^2.2.14
   flutter_test:
     sdk: flutter
