@@ -174,21 +174,18 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // only when the user scrolls TOWARD an edge — never on initial open.
     final lastTop = useRef<({int index, double edge})?>(null);
 
+    // WATCH, not a one-time read: on a cold open the filtered chapter list is
+    // still loading, so a read-once here pinned both neighbours to null for
+    // the whole session (no next/previous chapter ever loaded). Mirrored into
+    // a ref so the once-bound scroll listener below reads the live value.
     final nextPrevChapterPair =
-        useState<({ChapterDto? first, ChapterDto? second})?>(null);
-    useEffect(() {
-      try {
-        nextPrevChapterPair.value = ref.read(
-          getNextAndPreviousChaptersProvider(
-            mangaId: manga.id,
-            chapterId: currentVisibleChapter.value.id,
-          ),
-        );
-      } catch (_) {
-        nextPrevChapterPair.value = null;
-      }
-      return null;
-    }, [currentVisibleChapter.value.id]);
+        useRef<({ChapterDto? first, ChapterDto? second})?>(null);
+    nextPrevChapterPair.value = ref.watch(
+      getNextAndPreviousChaptersProvider(
+        mangaId: manga.id,
+        chapterId: currentVisibleChapter.value.id,
+      ),
+    );
 
     // --- reading-progress recording -------------------------------------
     // Record progress for the CURRENTLY VISIBLE chapter, not the chapter the
@@ -454,10 +451,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           InfinityContinuousFeedback.showLoadingNextChapterFeedback(
               context, next.name);
         }
-        final pages =
-            await ref.read(chapterPagesProvider(chapterId: next.id).future);
+        // Timeout so a hung fetch (Riverpod 3 retries a failing provider
+        // while .future waits) releases the loading guard; a failed or null
+        // fetch stays retryable on the next edge gesture instead of latching
+        // "end reached" for the whole session.
+        final pages = await ref
+            .read(chapterPagesProvider(chapterId: next.id).future)
+            .timeout(const Duration(seconds: 15));
         if (pages == null) {
-          hasReachedEnd.value = true;
+          // Drop the cached null so the next gesture refetches.
+          ref.invalidate(chapterPagesProvider(chapterId: next.id));
           return;
         }
         if (loadedRef.value.any((e) => e.chapterId == next.id)) return;
@@ -472,7 +475,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               context, next.name);
         }
       } catch (_) {
-        hasReachedEnd.value = true;
+        // Transient failure — leave unlatched and refetchable so the next
+        // gesture retries.
+        ref.invalidate(chapterPagesProvider(chapterId: next.id));
       } finally {
         loadingNext.value = false;
       }
@@ -487,10 +492,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           InfinityContinuousFeedback.showLoadingPreviousChapterFeedback(
               context, prev.name);
         }
-        final pages =
-            await ref.read(chapterPagesProvider(chapterId: prev.id).future);
+        // Same timeout/no-latch/refetch treatment as loadNextChapter above.
+        final pages = await ref
+            .read(chapterPagesProvider(chapterId: prev.id).future)
+            .timeout(const Duration(seconds: 15));
         if (pages == null) {
-          hasReachedStart.value = true;
+          ref.invalidate(chapterPagesProvider(chapterId: prev.id));
           return;
         }
         if (loadedRef.value.any((e) => e.chapterId == prev.id)) return;
@@ -539,7 +546,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               context, prev.name);
         }
       } catch (_) {
-        hasReachedStart.value = true;
+        // Transient failure — leave unlatched and refetchable so the next
+        // gesture retries.
+        ref.invalidate(chapterPagesProvider(chapterId: prev.id));
       } finally {
         loadingPrevious.value = false;
       }
@@ -636,10 +645,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
 
         if (scrollingDown && maxIdx >= total - 2) {
-          final next = nextPrevChapterPair.value?.first;
+          final pair = nextPrevChapterPair.value;
+          final next = pair?.first;
           if (next != null) {
             loadNextChapter(next);
-          } else if (!hasReachedEnd.value) {
+          } else if (pair != null && !hasReachedEnd.value) {
+            // The list resolved and there is genuinely no next chapter — the
+            // only state that may latch the end (a null pair just means the
+            // chapter list hasn't loaded yet).
+            hasReachedEnd.value = true;
             // Only surface the end-of-manga toast once the bottom of the very
             // last page is actually on screen. On long webtoon pages the last
             // page item becomes "visible" (counts toward maxIdx) long before
@@ -656,12 +670,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           }
         }
         if (scrollingUp && minIdx <= 0) {
-          final prev = nextPrevChapterPair.value?.second;
+          final pair = nextPrevChapterPair.value;
+          final prev = pair?.second;
           if (prev != null) {
             loadPreviousChapter(prev);
-          } else if (!hasReachedStart.value && readerToastsEnabled()) {
-            InfinityContinuousFeedback.showStartOfMangaFeedback(
-                context, lastStartFeedbackTime);
+          } else if (pair != null && !hasReachedStart.value) {
+            hasReachedStart.value = true;
+            if (readerToastsEnabled()) {
+              InfinityContinuousFeedback.showStartOfMangaFeedback(
+                  context, lastStartFeedbackTime);
+            }
           }
         }
       }
@@ -967,6 +985,36 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       child: positionedList,
     );
 
+    // Pinned at the scroll clamp a drag moves nothing, so the position
+    // listener above never ticks and the direction-gated boundary triggers
+    // can never fire — a resume landing on page 0 was an upward dead-end.
+    // Clamping physics still reports every blocked drag as overscroll, so
+    // treat edge overscroll as the boundary gesture.
+    final edgeAwareList = NotificationListener<OverscrollNotification>(
+      onNotification: (n) {
+        if (isAdjustingScroll.value || programmaticScroll.value) return false;
+        final positions = positionsListener.itemPositions.value;
+        if (positions.isEmpty) return false;
+        var minIdx = positions.first.index;
+        var maxIdx = positions.first.index;
+        for (final p in positions) {
+          if (p.index < minIdx) minIdx = p.index;
+          if (p.index > maxIdx) maxIdx = p.index;
+        }
+        if (n.overscroll < 0 && minIdx <= 0) {
+          final prev = nextPrevChapterPair.value?.second;
+          if (prev != null) loadPreviousChapter(prev);
+        } else if (n.overscroll > 0 &&
+            maxIdx >=
+                InfinityContinuousUtils.getTotalPages(loadedRef.value) - 1) {
+          final next = nextPrevChapterPair.value?.first;
+          if (next != null) loadNextChapter(next);
+        }
+        return false;
+      },
+      child: autoScrollAwareList,
+    );
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
@@ -982,7 +1030,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 child: child,
               )
           : null,
-      autoScrollAwareList,
+      edgeAwareList,
     );
 
     return ReaderWrapper(
