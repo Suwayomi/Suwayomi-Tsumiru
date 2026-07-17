@@ -401,6 +401,21 @@ enum DisplayMode {
       };
 }
 
+/// Chapter list presentation on the manga details page (per-series, stored in
+/// manga meta).
+enum ChapterListMode {
+  list(Icons.view_list_rounded),
+  grid(Icons.grid_view_rounded);
+
+  const ChapterListMode(this.icon);
+  final IconData icon;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ChapterListMode.list => context.l10n.displayModeList,
+        ChapterListMode.grid => context.l10n.displayModeGrid,
+      };
+}
+
 enum MangaStatus {
   unknown("UNKNOWN", Icons.block_outlined),
   ongoing("ONGOING", Icons.schedule_rounded),
