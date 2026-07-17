@@ -1,10 +1,17 @@
 A manga and webtoon reader for your [Suwayomi](https://suwayomi.org/) server.
 
-## What's new in vX.Y.Z
+<!-- Verb-led single-line bullets with no trailing period, each ending with the
+     author's (@handle). Use only the sections that have content. "Fixed X"
+     beats explaining what broke; root-cause detail belongs in the PR, not
+     here. Setting and button names bold and exactly as the app shows them. -->
 
-<!-- Short single-line bullets: what changed or got fixed, from the user's side.
-     "Fixed X" beats explaining what broke; root-cause detail belongs in the PR,
-     not here. Setting and button names exactly as the app shows them. -->
+### ✨ New Features
+
+### ⚙️ Changes
+
+### 🚀 Improvements
+
+### 🧩 Fixes
 
 ## Install
 
