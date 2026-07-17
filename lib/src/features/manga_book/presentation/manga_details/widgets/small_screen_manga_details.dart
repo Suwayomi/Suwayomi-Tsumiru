@@ -8,12 +8,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../controller/manga_details_controller.dart';
 import 'add_to_library_category.dart';
+import 'chapter_grid_tile.dart';
+import 'chapter_list_mode_toggle.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 
@@ -38,6 +42,8 @@ class SmallScreenMangaDetails extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredChapterList = chapterList.value;
+    final listMode =
+        ref.watch(mangaChapterListModeProvider(mangaId: mangaId));
     return RefreshIndicator(
       onRefresh: () => onRefresh(true),
       child: CustomScrollView(
@@ -60,12 +66,43 @@ class SmallScreenMangaDetails extends ConsumerWidget {
               title: Text(
                 context.l10n.noOfChapters(filteredChapterList?.length ?? 0),
               ),
+              trailing: ChapterListModeToggle(mangaId: mangaId),
             ),
           ),
           chapterList.showUiWhenData(
             context,
             (data) {
               if (data.isNotBlank) {
+                void toggleSelect(ChapterDto val) {
+                  if ((val.id).isNull) return;
+                  selectedChapters.value =
+                      selectedChapters.value.toggleKey(val.id, val);
+                }
+
+                if (listMode == ChapterListMode.grid) {
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    sliver: SliverGrid.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 64,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
+                      itemCount: filteredChapterList!.length,
+                      itemBuilder: (context, index) => ChapterGridTile(
+                        key: ValueKey("${filteredChapterList[index].id}"),
+                        manga: manga,
+                        chapter: filteredChapterList[index],
+                        isSelected: selectedChapters.value
+                            .containsKey(filteredChapterList[index].id),
+                        canTapSelect: selectedChapters.value.isNotEmpty,
+                        toggleSelect: toggleSelect,
+                      ),
+                    ),
+                  );
+                }
                 return SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => ChapterListTile(
@@ -76,11 +113,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
                       isSelected: selectedChapters.value
                           .containsKey(filteredChapterList[index].id),
                       canTapSelect: selectedChapters.value.isNotEmpty,
-                      toggleSelect: (ChapterDto val) {
-                        if ((val.id).isNull) return;
-                        selectedChapters.value =
-                            selectedChapters.value.toggleKey(val.id, val);
-                      },
+                      toggleSelect: toggleSelect,
                     ),
                     childCount: filteredChapterList!.length,
                   ),
