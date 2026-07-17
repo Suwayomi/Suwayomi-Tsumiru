@@ -7,7 +7,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   flutter_secure_storage_windows
   gal
-  permission_handler_windows
   screen_brightness_windows
   screen_retriever_windows
   share_plus

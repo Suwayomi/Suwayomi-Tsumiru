@@ -9,19 +9,19 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
   final Map<String, String> _store = {};
   @override
   Future<void> write({required String key, required String? value,
-      IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions,
-      WebOptions? webOptions, MacOsOptions? mOptions,
+      AppleOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions,
+      WebOptions? webOptions, AppleOptions? mOptions,
       WindowsOptions? wOptions}) async {
     if (value == null) _store.remove(key); else _store[key] = value;
   }
   @override
-  Future<String?> read({required String key, IOSOptions? iOptions,
+  Future<String?> read({required String key, AppleOptions? iOptions,
       AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions,
-      MacOsOptions? mOptions, WindowsOptions? wOptions}) async => _store[key];
+      AppleOptions? mOptions, WindowsOptions? wOptions}) async => _store[key];
   @override
-  Future<void> delete({required String key, IOSOptions? iOptions,
+  Future<void> delete({required String key, AppleOptions? iOptions,
       AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions,
-      MacOsOptions? mOptions, WindowsOptions? wOptions}) async => _store.remove(key);
+      AppleOptions? mOptions, WindowsOptions? wOptions}) async => _store.remove(key);
   @override
   noSuchMethod(Invocation i) => throw UnimplementedError();
 }
