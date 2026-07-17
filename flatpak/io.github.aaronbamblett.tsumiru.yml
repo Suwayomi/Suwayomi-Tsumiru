@@ -20,17 +20,9 @@ finish-args:
   - --talk-name=org.freedesktop.secrets   # libsecret credential store (host keyring)
 
 modules:
-  # flutter_secure_storage_linux needs libsecret + jsoncpp, which aren't in the
-  # freedesktop runtime. Build them against the SDK so they're ABI-compatible.
-  - name: jsoncpp
-    buildsystem: meson
-    config-opts:
-      - -Dtests=false
-    sources:
-      - type: archive
-        url: https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/1.9.6.tar.gz
-        sha256: f93b6dd7ce796b13d02c108bc9f79812245a82e577581c4c9aabe57075c90ea2
-
+  # flutter_secure_storage_linux needs libsecret, which isn't in the
+  # freedesktop runtime. Build it against the SDK so it's ABI-compatible.
+  # (jsoncpp was dropped: secure_storage 10's Linux impl no longer uses it.)
   - name: libsecret
     buildsystem: meson
     config-opts:
