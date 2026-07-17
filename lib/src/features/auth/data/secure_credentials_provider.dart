@@ -18,6 +18,10 @@ part 'secure_credentials_provider.g.dart';
 /// desktop/web best-available platform stores. Always preferred over
 /// SharedPreferences for anything bearer-equivalent (passwords, JWTs,
 /// session cookies).
+///
+/// v10's resetOnError default is accepted deliberately: an unrecoverable
+/// keystore/decrypt error wipes the store (clean re-login) instead of
+/// crashing every read.
 @Riverpod(keepAlive: true)
 FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
       aOptions: AndroidOptions(
