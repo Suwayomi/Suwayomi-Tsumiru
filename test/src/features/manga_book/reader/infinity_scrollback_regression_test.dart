@@ -11,6 +11,7 @@
 // 3. A cold open read the next/prev pair once while the chapter list was
 //    still loading, pinning both neighbours to null for the session.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -142,7 +143,7 @@ ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
 /// [coldOpenPair] gates ch2's next/prev pair behind [_pairReadyProvider].
 Future<void> _pumpReaderOnChapter2(
   WidgetTester tester, {
-  required ChapterPagesDto? Function() prevPages,
+  required FutureOr<ChapterPagesDto?> Function() prevPages,
   bool coldOpenPair = false,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
@@ -217,18 +218,33 @@ void main() {
     var prevFetches = 0;
     await _pumpReaderOnChapter2(
       tester,
-      prevPages: () {
+      // Async with a real delay: an unheld autoDispose fetch gets disposed
+      // mid-flight and never completes (the "loading… that never loads").
+      prevPages: () async {
         prevFetches++;
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         return _pages(1, 3);
       },
     );
 
     // No downward movement first — the deadlock precondition.
     await _dragUp(tester);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
 
     expect(prevFetches, greaterThanOrEqualTo(1),
         reason: 'blocked upward drag at page 0 never asked for the previous '
             'chapter (the resume deadlock)');
+
+    // A second pull must be a no-op: the chapter LOADED, so the engine's
+    // already-loaded guard stops a refetch. If the fetch had been disposed
+    // mid-flight (never completing), this drag would fetch again.
+    await _dragUp(tester);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    expect(prevFetches, 1,
+        reason: 'previous chapter never finished loading; the fetch was '
+            'disposed mid-flight and the gesture refetched');
     expect(tester.takeException(), isNull);
   });
 

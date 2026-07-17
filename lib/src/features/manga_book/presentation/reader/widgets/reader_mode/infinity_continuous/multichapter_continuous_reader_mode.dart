@@ -461,16 +461,22 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           InfinityContinuousFeedback.showLoadingNextChapterFeedback(
               context, next.name);
         }
-        // Timeout so a hung fetch (Riverpod 3 retries a failing provider
-        // while .future waits) releases the loading guard; a failed or null
-        // fetch stays retryable on the next edge gesture instead of latching
-        // "end reached" for the whole session. On timeout the underlying
-        // fetch keeps running and caches its result for the next attempt.
+        // Hold a subscription for the whole fetch: chapterPages is autoDispose
+        // and nothing else listens to the NEIGHBOUR chapter's instance, so
+        // under Riverpod 3 an unheld read gets disposed mid-fetch and its
+        // future never completes (the "loading…" that never loads). The
+        // timeout releases the loading guard; the held fetch finishes and
+        // caches for the next attempt.
+        final sub = ref.listenManual(
+            chapterPagesProvider(chapterId: next.id), (_, __) {});
+        final fetch =
+            ref.read(chapterPagesProvider(chapterId: next.id).future);
+        // Release the hold when the FETCH ends, not when the timeout fires —
+        // a late result must still land in the cache for the next attempt.
+        fetch.whenComplete(sub.close).ignore();
         final ChapterPagesDto? pages;
         try {
-          pages = await ref
-              .read(chapterPagesProvider(chapterId: next.id).future)
-              .timeout(const Duration(seconds: 15));
+          pages = await fetch.timeout(const Duration(seconds: 15));
         } on TimeoutException {
           return;
         }
@@ -508,14 +514,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           InfinityContinuousFeedback.showLoadingPreviousChapterFeedback(
               context, prev.name);
         }
-        // Same timeout/no-latch treatment as loadNextChapter above. On
-        // timeout the underlying fetch keeps running and caches its result,
-        // so a later attempt picks it up instead of restarting from zero.
+        // Same held-subscription + timeout treatment as loadNextChapter above.
+        final sub = ref.listenManual(
+            chapterPagesProvider(chapterId: prev.id), (_, __) {});
+        final fetch =
+            ref.read(chapterPagesProvider(chapterId: prev.id).future);
+        fetch.whenComplete(sub.close).ignore();
         final ChapterPagesDto? pages;
         try {
-          pages = await ref
-              .read(chapterPagesProvider(chapterId: prev.id).future)
-              .timeout(const Duration(seconds: 15));
+          pages = await fetch.timeout(const Duration(seconds: 15));
         } on TimeoutException {
           return;
         }
