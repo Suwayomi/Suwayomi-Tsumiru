@@ -356,12 +356,15 @@ enum MangaSort {
 enum ChapterSort {
   source,
   uploadDate,
-  fetchedDate;
+  fetchedDate,
+  // Appended last: saved prefs store the index into [values].
+  alphabetical;
 
   String toLocale(BuildContext context) => switch (this) {
         ChapterSort.source => context.l10n.chapterSortSource,
         ChapterSort.fetchedDate => context.l10n.chapterSortFetchedDate,
-        ChapterSort.uploadDate => context.l10n.chapterSortUploadDate
+        ChapterSort.uploadDate => context.l10n.chapterSortUploadDate,
+        ChapterSort.alphabetical => context.l10n.chapterSortAlphabetical,
       };
 }
 

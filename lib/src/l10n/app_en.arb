@@ -270,6 +270,9 @@
             }
         }
     },
+    "@chapterSortAlphabetical": {
+        "description": "Radio button text for sort Alphabetically"
+    },
     "@chapterSortFetchedDate": {
         "description": "Radio button text for sort by Fetched Date"
     },
@@ -1509,6 +1512,7 @@
     "chapterDownloadLimit": "Chapter download limit",
     "chapterDownloadLimitDesc": "Limit the amount of new chapters that are going to get downloaded.",
     "chapterNumber": "Chapter {number}",
+    "chapterSortAlphabetical": "Alphabetically",
     "chapterSortFetchedDate": "By Fetched Date",
     "chapterSortSource": "By Source",
     "chapterSortUploadDate": "By Upload Date",
