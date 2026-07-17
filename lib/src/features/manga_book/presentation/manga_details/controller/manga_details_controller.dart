@@ -203,6 +203,29 @@ class MangaChapterFilterScanlator extends _$MangaChapterFilterScanlator {
   }
 }
 
+/// List vs grid presentation for the chapter list, per-series in the manga
+/// meta store so the choice follows the series across devices.
+@riverpod
+class MangaChapterListMode extends _$MangaChapterListMode {
+  @override
+  ChapterListMode build({required int mangaId}) {
+    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
+    return manga.value?.metaData.chapterListMode ?? ChapterListMode.list;
+  }
+
+  Future<void> update(ChapterListMode mode) async {
+    await AsyncValue.guard(
+      () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
+            mangaId: mangaId,
+            key: MangaMetaKeys.chapterListMode.key,
+            value: mode.name,
+          ),
+    );
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    state = mode;
+  }
+}
+
 /// Personal 0-5 star rating for a manga, stored in the per-manga meta store
 /// (no server rating field exists). 0 means unrated.
 @riverpod
