@@ -64,6 +64,6 @@ A mismatch with catalog data shows a persistent warning in Library and Offline s
 ## Gotchas
 
 - **Android downloads ride entirely on the foreground service.** If `ensureServiceRunning()` can't start (e.g. notification permission denied), chapters queue in Drift but nothing downloads.
-- **`_pumping` is a process-wide static.** If the coordinator provider rebuilds mid-drain (a concurrency change, or a token refresh rotating the GraphQL client → repo dependency), the new instance is blocked until the old drain finishes or the app restarts. Pause still reaches the old drain via the persisted flag (captured prefs, read live per chapter); cancelling an in-flight chapter across a rebuild does not.
+- **`_pumping` is a process-wide static.** If the coordinator provider rebuilds mid-drain (a concurrency change, or a token refresh rotating the GraphQL client → repo dependency), the new instance is blocked until the old drain finishes or the app restarts. Pause still reaches the old drain via the persisted flag (captured prefs, read live per chapter); cancelling an in-flight chapter across a rebuild does not. A chapter mid-download when the engine itself rebuilds fails its next page fetch, is marked `error`, and self-heals via the launch requeue.
 - **Wi-Fi-only** is enforced when work starts, but a Wi-Fi → mobile switch while the app is backgrounded isn't currently caught.
 - **`offlineDatabaseProvider` (and the other storage providers) throw on web** by design — never touch them without the `offlineEnabledProvider` guard.
