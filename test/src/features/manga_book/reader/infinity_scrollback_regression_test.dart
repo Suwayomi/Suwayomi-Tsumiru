@@ -30,6 +30,7 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -200,6 +201,16 @@ Future<void> _dragUp(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    // Wall-clock time doesn't advance in widget tests; drop the gesture
+    // cooldown so successive drags count as separate attempts.
+    MultiChapterContinuousReaderMode.edgeAttemptCooldown = Duration.zero;
+  });
+  tearDown(() {
+    MultiChapterContinuousReaderMode.edgeAttemptCooldown =
+        const Duration(seconds: 4);
+  });
+
   testWidgets(
       'resume at page 0: an upward drag at the clamp loads the previous chapter',
       (tester) async {
