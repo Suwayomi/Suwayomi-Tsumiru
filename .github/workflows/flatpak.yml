@@ -28,7 +28,7 @@ jobs:
     name: Build Linux bundle
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
@@ -64,7 +64,7 @@ jobs:
       image: ghcr.io/andyholmes/flatter/freedesktop:24.08
       options: --privileged
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Restore prebuilt bundle into the manifest dir
         uses: actions/download-artifact@v4
         with:
