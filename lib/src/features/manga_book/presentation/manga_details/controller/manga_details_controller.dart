@@ -339,6 +339,8 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
           ChapterSort.source => (m1.index).compareTo(m2.index),
           ChapterSort.uploadDate => (int.tryParse(m1.uploadDate) ?? 0)
               .compareTo(int.tryParse(m2.uploadDate) ?? 0),
+          ChapterSort.chapterNumber =>
+            m1.chapterNumber.compareTo(m2.chapterNumber),
           ChapterSort.alphabetical =>
             m1.name.toLowerCase().compareTo(m2.name.toLowerCase()),
         }) *
@@ -415,6 +417,16 @@ class MangaChapterSortDirection extends _$MangaChapterSortDirection
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.chapterSortDirection);
+}
+
+@riverpod
+class MangaChapterDisplayMode extends _$MangaChapterDisplayMode
+    with SharedPreferenceEnumClientMixin<ChapterDisplay> {
+  @override
+  ChapterDisplay? build() => initialize(
+        DBKeys.chapterDisplay,
+        enumList: ChapterDisplay.values,
+      );
 }
 
 @riverpod

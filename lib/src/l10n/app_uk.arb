@@ -527,7 +527,7 @@
     "placeholders": {
       "number": {
         "example": "12.5",
-        "type": "double"
+        "type": "String"
       }
     }
   },

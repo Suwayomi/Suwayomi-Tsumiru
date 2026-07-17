@@ -65,6 +65,7 @@ enum DBKeys {
   mangaSortDirection(false),
   chapterSort(ChapterSort.source),
   chapterSortDirection(false), // asc=true, dsc=false
+  chapterDisplay(ChapterDisplay.sourceTitle),
   libraryDisplayMode(DisplayMode.grid),
   sourceDisplayMode(DisplayMode.grid),
   globalSearchSourceFilter(GlobalSearchSourceFilter.pinned),

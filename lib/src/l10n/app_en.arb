@@ -261,17 +261,26 @@
     "@chapterDownloadLimitDesc": {
         "description": "Sub Title Text for changing Chapter download limit settings"
     },
+    "@chapterDisplayChapterNumber": {
+        "description": "Radio button text for displaying chapters by chapter number"
+    },
+    "@chapterDisplaySourceTitle": {
+        "description": "Radio button text for displaying chapters by source title"
+    },
     "@chapterNumber": {
         "description": "Text title for Chapter name in chapter list",
         "placeholders": {
             "number": {
                 "example": "12.5",
-                "type": "double"
+                "type": "String"
             }
         }
     },
     "@chapterSortAlphabetical": {
         "description": "Radio button text for sort Alphabetically"
+    },
+    "@chapterSortChapterNumber": {
+        "description": "Radio button text for sort by Chapter Number"
     },
     "@chapterSortFetchedDate": {
         "description": "Radio button text for sort by Fetched Date"
@@ -1511,8 +1520,11 @@
     "channel": "Channel",
     "chapterDownloadLimit": "Chapter download limit",
     "chapterDownloadLimitDesc": "Limit the amount of new chapters that are going to get downloaded.",
+    "chapterDisplayChapterNumber": "Chapter number",
+    "chapterDisplaySourceTitle": "Source title",
     "chapterNumber": "Chapter {number}",
     "chapterSortAlphabetical": "Alphabetically",
+    "chapterSortChapterNumber": "By Chapter Number",
     "chapterSortFetchedDate": "By Fetched Date",
     "chapterSortSource": "By Source",
     "chapterSortUploadDate": "By Upload Date",

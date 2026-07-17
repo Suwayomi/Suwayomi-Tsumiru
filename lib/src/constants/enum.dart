@@ -358,13 +358,26 @@ enum ChapterSort {
   uploadDate,
   fetchedDate,
   // Appended last: saved prefs store the index into [values].
+  chapterNumber,
   alphabetical;
 
   String toLocale(BuildContext context) => switch (this) {
         ChapterSort.source => context.l10n.chapterSortSource,
         ChapterSort.fetchedDate => context.l10n.chapterSortFetchedDate,
         ChapterSort.uploadDate => context.l10n.chapterSortUploadDate,
+        ChapterSort.chapterNumber => context.l10n.chapterSortChapterNumber,
         ChapterSort.alphabetical => context.l10n.chapterSortAlphabetical,
+      };
+}
+
+enum ChapterDisplay {
+  sourceTitle,
+  chapterNumber;
+
+  String toLocale(BuildContext context) => switch (this) {
+        ChapterDisplay.sourceTitle => context.l10n.chapterDisplaySourceTitle,
+        ChapterDisplay.chapterNumber =>
+          context.l10n.chapterDisplayChapterNumber,
       };
 }
 

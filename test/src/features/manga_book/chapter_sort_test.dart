@@ -16,9 +16,10 @@ ChapterDto _chapter({
   required String name,
   int sourceOrder = 0,
   String uploadDate = '0',
+  double chapterNumber = 0,
 }) =>
     Fragment$ChapterDto(
-      chapterNumber: id.toDouble(),
+      chapterNumber: chapterNumber,
       fetchedAt: '0',
       id: id,
       isBookmarked: false,
@@ -64,10 +65,15 @@ List<String> _names(ProviderContainer c) =>
         .toList();
 
 void main() {
+  // Chapter numbers deliberately disagree with source order so the two sorts
+  // are distinguishable.
   final chapters = [
-    _chapter(id: 1, name: 'Gamma', sourceOrder: 1, uploadDate: '300'),
-    _chapter(id: 2, name: 'alpha', sourceOrder: 2, uploadDate: '100'),
-    _chapter(id: 3, name: 'Beta', sourceOrder: 3, uploadDate: '200'),
+    _chapter(
+        id: 1, name: 'Gamma', sourceOrder: 1, uploadDate: '300', chapterNumber: 2.5),
+    _chapter(
+        id: 2, name: 'alpha', sourceOrder: 2, uploadDate: '100', chapterNumber: 10),
+    _chapter(
+        id: 3, name: 'Beta', sourceOrder: 3, uploadDate: '200', chapterNumber: 1),
   ];
 
   test('default sort is by source order, newest (descending) first', () async {
@@ -94,5 +100,22 @@ void main() {
     c.read(mangaChapterSortProvider.notifier).update(ChapterSort.uploadDate);
     c.read(mangaChapterSortDirectionProvider.notifier).update(true);
     expect(_names(c), ['alpha', 'Beta', 'Gamma']);
+  });
+
+  test('chapter number sort orders by parsed number, not source order',
+      () async {
+    final c = await _container(chapters);
+    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
+    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
+    expect(_names(c), ['Beta', 'Gamma', 'alpha']);
+  });
+
+  group('formattedChapterNumber', () {
+    test('drops trailing zeros and keeps up to 3 decimals', () {
+      expect(_chapter(id: 1, name: '', chapterNumber: 218).formattedChapterNumber, '218');
+      expect(_chapter(id: 1, name: '', chapterNumber: 218.5).formattedChapterNumber, '218.5');
+      expect(_chapter(id: 1, name: '', chapterNumber: 12.345).formattedChapterNumber, '12.345');
+      expect(_chapter(id: 1, name: '', chapterNumber: 0).formattedChapterNumber, '0');
+    });
   });
 }

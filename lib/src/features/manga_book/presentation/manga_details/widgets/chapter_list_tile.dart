@@ -7,15 +7,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../offline/presentation/offline_save_button.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/download_status_icon.dart';
+import '../controller/manga_details_controller.dart';
 
-class ChapterListTile extends StatelessWidget {
+class ChapterListTile extends ConsumerWidget {
   const ChapterListTile({
     super.key,
     required this.manga,
@@ -32,7 +35,9 @@ class ChapterListTile extends StatelessWidget {
   final bool canTapSelect;
   final bool isSelected;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showChapterNumber = ref.watch(mangaChapterDisplayModeProvider) ==
+        ChapterDisplay.chapterNumber;
     return GestureDetector(
       key: Key("manga-${manga.id}-chapter-${chapter.id}"),
       onSecondaryTap: () => toggleSelect(chapter),
@@ -51,7 +56,9 @@ class ChapterListTile extends StatelessWidget {
             ],
             Expanded(
               child: Text(
-                chapter.name,
+                showChapterNumber
+                    ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
+                    : chapter.name,
                 style: TextStyle(
                   color: chapter.isRead.ifNull() ? Colors.grey : null,
                 ),
