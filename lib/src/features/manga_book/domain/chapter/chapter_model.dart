@@ -11,6 +11,9 @@ import 'graphql/__generated__/fragment.graphql.dart';
 
 typedef ChapterDto = Fragment$ChapterDto;
 
+// Matches Komikku's formatter: up to 3 decimals, trailing zeros dropped.
+final _chapterNumberFormat = NumberFormat('#.###', 'en_US');
+
 typedef ChapterWithMangaDto = Fragment$ChapterWithMangaDto;
 
 extension ChapterExtension on Fragment$ChapterDto {
@@ -20,9 +23,8 @@ extension ChapterExtension on Fragment$ChapterDto {
 
   int get index => sourceOrder;
 
-  // Matches Komikku's formatter: up to 3 decimals, trailing zeros dropped.
   String get formattedChapterNumber =>
-      NumberFormat('#.###', 'en_US').format(chapterNumber);
+      _chapterNumberFormat.format(chapterNumber);
 
   bool get hasReadingProgress =>
       isRead || lastPageRead > 0 || lastReadAt != '0';

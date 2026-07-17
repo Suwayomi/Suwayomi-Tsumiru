@@ -333,7 +333,7 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
 
   int applyChapterSort(ChapterDto m1, ChapterDto m2) {
     final sortDirToggle = (sortedDirection ? 1 : -1);
-    return (switch (sortedBy) {
+    final result = (switch (sortedBy) {
           ChapterSort.fetchedDate => (int.tryParse(m1.fetchedAt) ?? 0)
               .compareTo(int.tryParse(m2.fetchedAt) ?? 0),
           ChapterSort.source => (m1.index).compareTo(m2.index),
@@ -345,6 +345,9 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
             m1.name.toLowerCase().compareTo(m2.name.toLowerCase()),
         }) *
         sortDirToggle;
+    // List.sort is unstable; keep ties in source order (matches Komikku,
+    // whose stable sort degrades to source order when numbers don't parse).
+    return result != 0 ? result : m1.index.compareTo(m2.index);
   }
 
   return chapterList.copyWithData(

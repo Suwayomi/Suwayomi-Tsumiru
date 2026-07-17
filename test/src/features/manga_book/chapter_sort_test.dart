@@ -110,6 +110,18 @@ void main() {
     expect(_names(c), ['Beta', 'Gamma', 'alpha']);
   });
 
+  test('tied chapter numbers fall back to source order', () async {
+    final tied = [
+      _chapter(id: 1, name: 'C', sourceOrder: 1, chapterNumber: -1),
+      _chapter(id: 2, name: 'A', sourceOrder: 2, chapterNumber: -1),
+      _chapter(id: 3, name: 'B', sourceOrder: 3, chapterNumber: -1),
+    ];
+    final c = await _container(tied);
+    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
+    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
+    expect(_names(c), ['C', 'A', 'B']);
+  });
+
   group('formattedChapterNumber', () {
     test('drops trailing zeros and keeps up to 3 decimals', () {
       expect(_chapter(id: 1, name: '', chapterNumber: 218).formattedChapterNumber, '218');
