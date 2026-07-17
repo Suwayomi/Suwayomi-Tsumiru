@@ -120,6 +120,9 @@ void main() {
     c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
     c.read(mangaChapterSortDirectionProvider.notifier).update(true);
     expect(_names(c), ['C', 'A', 'B']);
+    // Ties keep source order under either direction (stable-sort semantics).
+    c.read(mangaChapterSortDirectionProvider.notifier).update(false);
+    expect(_names(c), ['C', 'A', 'B']);
   });
 
   group('formattedChapterNumber', () {
@@ -128,6 +131,9 @@ void main() {
       expect(_chapter(id: 1, name: '', chapterNumber: 218.5).formattedChapterNumber, '218.5');
       expect(_chapter(id: 1, name: '', chapterNumber: 12.345).formattedChapterNumber, '12.345');
       expect(_chapter(id: 1, name: '', chapterNumber: 0).formattedChapterNumber, '0');
+      expect(_chapter(id: 1, name: '', chapterNumber: 0.5).formattedChapterNumber, '0.5');
+      // Unparsed numbers come through as -1; shown as-is (matches Komikku).
+      expect(_chapter(id: 1, name: '', chapterNumber: -1).formattedChapterNumber, '-1');
     });
   });
 }
