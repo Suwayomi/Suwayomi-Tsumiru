@@ -103,6 +103,12 @@ class LibraryMangaDisplay extends ConsumerWidget {
           tristate: false,
         ),
         CustomCheckboxListTile(
+          title: context.l10n.onDevice,
+          provider: onDeviceBadgeProvider,
+          onChanged: ref.read(onDeviceBadgeProvider.notifier).update,
+          tristate: false,
+        ),
+        CustomCheckboxListTile(
           title: context.l10n.unread,
           provider: unreadBadgeProvider,
           onChanged: ref.read(unreadBadgeProvider.notifier).update,

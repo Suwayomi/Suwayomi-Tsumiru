@@ -36,8 +36,12 @@ MangaDto _manga(int id) => Fragment$MangaDto(
       url: '/manga/$id',
     );
 
-Future<Widget> _harness(Set<int> deviceIds, MangaDto manga) async {
-  SharedPreferences.setMockInitialValues({});
+Future<Widget> _harness(
+  Set<int> deviceIds,
+  MangaDto manga, {
+  Map<String, Object> prefValues = const {},
+}) async {
+  SharedPreferences.setMockInitialValues(prefValues);
   final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
     overrides: [
@@ -63,6 +67,17 @@ void main() {
   testWidgets('no badge when the series has nothing on this device',
       (tester) async {
     await tester.pumpWidget(await _harness({7}, _manga(5)));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
+  });
+
+  testWidgets('no badge when the On device badge setting is off',
+      (tester) async {
+    await tester.pumpWidget(await _harness(
+      {5},
+      _manga(5),
+      prefValues: {'onDeviceBadge': false},
+    ));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
   });

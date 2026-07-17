@@ -36,6 +36,8 @@ enum DBKeys {
   scrollAnimation(true),
   showNSFW(true),
   downloadedBadge(false),
+  // On by default: the badge shipped always-on, so off would change behavior.
+  onDeviceBadge(true),
   unreadBadge(true),
   readProgressBar(false),
   languageBadge(false),

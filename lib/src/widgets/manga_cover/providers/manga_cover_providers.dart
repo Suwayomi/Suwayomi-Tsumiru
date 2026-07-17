@@ -19,6 +19,13 @@ class DownloadedBadge extends _$DownloadedBadge
 }
 
 @riverpod
+class OnDeviceBadge extends _$OnDeviceBadge
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.onDeviceBadge);
+}
+
+@riverpod
 class UnreadBadge extends _$UnreadBadge with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.unreadBadge);
