@@ -16,6 +16,8 @@
 | `.../manga_details/controller/manga_details_controller.dart` | All manga-details providers |
 | `.../manga_details/widgets/{small,big}_screen_manga_details.dart` | Phone / tablet layouts |
 | `.../manga_details/widgets/chapter_list_tile.dart` | Chapter row + trailing `DownloadStatusIcon` |
+| `.../manga_details/widgets/chapter_grid_tile.dart` | Compact number tile for the grid view (read/downloaded/bookmark/in-progress states) |
+| `.../manga_details/widgets/chapter_list_mode_toggle.dart` | List/grid segmented toggle in the chapter-count header |
 | `.../manga_details/widgets/chapter_download_presets_button.dart` | Bulk-download presets (operates on the **unfiltered** list) |
 | `.../manga_details/widgets/manga_chapter_{organizer,filter}.dart` | Filter/Sort sheet (tri-state + scanlator radio) |
 | `manga_book/widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart` | Multi-select action bar |
@@ -29,6 +31,7 @@
 ## Chapters & actions
 
 - Filtering/sorting is client-side in `mangaChapterListWithFilterProvider`. Filter/sort state is **global** (SharedPreferences); the **scanlator** filter is **per-manga** (server meta `flutter_scanlator`). `ChapterSort`: `source`, `fetchedDate`, `uploadDate`.
+- **List vs grid** (`ChapterListMode`) is **per-manga** (server meta `flutter_chapterListMode`, default list) via `mangaChapterListModeProvider`. Grid tiles show the chapter number only (`ChapterGridTile.label`: whole numbers drop `.0`, unparsed fall back to `#sourceOrder`); states = dim read, gradient dot downloaded, bookmark icon, gradient ring + page marker on the in-progress chapter. Same tap/long-press/right-click semantics as list rows.
 - Tile: tap → reader; long-press / right-click → multi-select.
 - Multi-select bar: bookmark add/remove, mark-previous-read, mark read (`lastPageRead: 0`), mark unread, download, delete — then clears selection + refreshes.
 - **Bulk-download presets** operate on the **full unfiltered** list: sort by `chapterNumber` asc, find highest read, walk forward collecting un-downloaded IDs ("Next N" skips downloaded).

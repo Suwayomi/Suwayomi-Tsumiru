@@ -22,3 +22,22 @@ jobs:
       # Fail only on real errors, not the repo's inherited warnings/infos.
       - run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - run: flutter test
+
+  # Analyze/test alone let an AGP bump break Android builds unnoticed
+  # (2026-07-16); a real compile is the only signal for Gradle-side changes.
+  android-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+          channel: stable
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter build apk --debug
