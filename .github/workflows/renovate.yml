@@ -26,7 +26,7 @@ jobs:
   renovate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: renovatebot/github-action@v46.1.19
         with:
           configurationFile: .github/renovate-global.js
