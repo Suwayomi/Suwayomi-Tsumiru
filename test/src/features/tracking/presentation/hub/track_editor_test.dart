@@ -49,6 +49,7 @@ Fragment$TrackerDto _fakeTracker({
 Fragment$TrackRecordDto _fakeRecord({
   int status = 1,
   double lastChapterRead = 5.0,
+  int totalChapters = 100,
   bool private = false,
 }) =>
     Fragment$TrackRecordDto(
@@ -59,7 +60,7 @@ Fragment$TrackRecordDto _fakeRecord({
       remoteUrl: 'https://myanimelist.net/manga/42',
       status: status,
       lastChapterRead: lastChapterRead,
-      totalChapters: 100,
+      totalChapters: totalChapters,
       score: 0.0,
       displayScore: '0.0',
       startDate: '0',
@@ -153,6 +154,56 @@ void main() {
       // Date rows MUST appear when supportsReadingDates is true.
       expect(find.text('Start date'), findsOneWidget);
       expect(find.text('Finish date'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Chapters row shows "read / total" when the tracker reports a total',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final record = _fakeRecord(lastChapterRead: 5.0, totalChapters: 100);
+
+      await tester.pumpWidget(_testApp(tracker: tracker, record: record));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('5 / 100'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Chapters row shows just the read count when no total is reported (no "/0")',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final record = _fakeRecord(lastChapterRead: 5.0, totalChapters: 0);
+
+      await tester.pumpWidget(_testApp(tracker: tracker, record: record));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('5'), findsOneWidget);
+      expect(find.textContaining('/'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Tapping the chapters value opens a number dialog to edit it',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final record = _fakeRecord(lastChapterRead: 5.0, totalChapters: 100);
+
+      await tester.pumpWidget(_testApp(tracker: tracker, record: record));
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.text('5 / 100'));
+      await tester.pumpAndSettle();
+
+      // A dialog with an editable field and Save/Cancel actions appears.
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
     },
   );
 }
