@@ -37,6 +37,20 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateManga?.manga);
 
+  /// Add many series to the library in one request (bulk favorite from browse).
+  Future<void> addMangasToLibrary(List<int> mangaIds) => client
+      .mutate$UpdateMangas(
+        Options$Mutation$UpdateMangas(
+          variables: Variables$Mutation$UpdateMangas(
+            input: Input$UpdateMangasInput(
+              ids: mangaIds,
+              patch: Input$UpdateMangaPatchInput(inLibrary: true),
+            ),
+          ),
+        ),
+      )
+      .getData((data) => null);
+
   Future<void> removeMangaFromLibrary(int mangaId) => client
       .mutate$UpdateManga(
         Options$Mutation$UpdateManga(

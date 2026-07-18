@@ -40,6 +40,14 @@ mutation UpdateMangasCategories($input: UpdateMangasCategoriesInput!) {
   }
 }
 
+mutation UpdateMangas($input: UpdateMangasInput!) {
+  updateMangas(input: $input) {
+    mangas {
+      id
+    }
+  }
+}
+
 query GetChapter($id: Int!) {
   chapter(id: $id) {
     ...ChapterDto

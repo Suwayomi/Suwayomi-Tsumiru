@@ -14,7 +14,6 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
-import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../../domain/source/source_model.dart';
@@ -22,17 +21,21 @@ import '../../../domain/source/source_model.dart';
 class SourceMangaGridView extends ConsumerWidget {
   const SourceMangaGridView({
     super.key,
-    required this.toggleFavorite,
     required this.controller,
     required this.sourceId,
     required this.sourceType,
+    required this.selectedIds,
+    required this.selecting,
+    required this.onToggleSelection,
     this.source,
   });
-  final Future<AsyncValue?> Function(MangaDto) toggleFavorite;
   final PagingController<int, MangaDto> controller;
   final SourceDto? source;
   final String sourceId;
   final SourceType sourceType;
+  final Set<int> selectedIds;
+  final bool selecting;
+  final void Function(int mangaId) onToggleSelection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,17 +62,12 @@ class SourceMangaGridView extends ConsumerWidget {
         ),
         itemBuilder: (context, item, index) => MangaCoverGridTile(
           manga: item,
+          selected: selectedIds.contains(item.id),
           showDarkOverlay: item.inLibrary.ifNull(),
-          onLongPress: () async {
-            final value = await toggleFavorite(item);
-            if (value == null) return;
-            if (value is! AsyncError) {
-              final items = [...?controller.itemList];
-              items[index] = item.copyWith(inLibrary: !item.inLibrary.ifNull());
-              controller.itemList = items;
-            }
-          },
-          onPressed: () => MangaRoute(mangaId: item.id).push(context),
+          onLongPress: () => onToggleSelection(item.id),
+          onPressed: () => selecting
+              ? onToggleSelection(item.id)
+              : MangaRoute(mangaId: item.id).push(context),
         ),
       ),
       gridDelegate: mangaCoverGridDelegate(ref.watch(gridMinWidthProvider)),

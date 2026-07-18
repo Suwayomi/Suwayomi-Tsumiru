@@ -15,20 +15,23 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
-import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../domain/source/source_model.dart';
 
 class SourceMangaListView extends ConsumerWidget {
   const SourceMangaListView({
     super.key,
-    required this.toggleFavorite,
     required this.controller,
+    required this.selectedIds,
+    required this.selecting,
+    required this.onToggleSelection,
     this.source,
   });
-  final Future<AsyncValue?> Function(MangaDto) toggleFavorite;
   final PagingController<int, MangaDto> controller;
   final SourceDto? source;
+  final Set<int> selectedIds;
+  final bool selecting;
+  final void Function(int mangaId) onToggleSelection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,19 +84,13 @@ class SourceMangaListView extends ConsumerWidget {
         ),
         itemBuilder: (context, item, index) => MangaCoverListTile(
           manga: item,
-          onLongPress: () async {
-            final value = await toggleFavorite(item);
-            if (value == null) return;
-            if (value is! AsyncError) {
-              final items = [...?controller.itemList];
-              items[index] = item.copyWith(inLibrary: !item.inLibrary.ifNull());
-              controller.itemList = items;
-            }
-          },
-          onPressed: () {
-            MangaRoute(mangaId: item.id).push(context);
-          },
+          selected: selectedIds.contains(item.id),
+          onLongPress: () => onToggleSelection(item.id),
+          onPressed: () => selecting
+              ? onToggleSelection(item.id)
+              : MangaRoute(mangaId: item.id).push(context),
         ),
+
       ),
     );
   }
