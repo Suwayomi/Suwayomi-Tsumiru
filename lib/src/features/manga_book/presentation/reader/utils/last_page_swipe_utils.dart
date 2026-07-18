@@ -54,7 +54,7 @@ class LastPageSwipeUtils {
   }) {
     if (mangaReaderMode == null ||
         mangaReaderMode == ReaderMode.defaultReader) {
-      return defaultReaderMode ?? ReaderMode.webtoon;
+      return defaultReaderMode ?? ReaderMode.singleHorizontalRTL;
     }
     return mangaReaderMode;
   }

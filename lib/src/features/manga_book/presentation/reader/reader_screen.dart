@@ -69,11 +69,11 @@ class ReaderScreen extends HookConsumerWidget {
         offlineEnabled ? ref.watch(offlineDatabaseProvider) : null;
     final mangaBookRepository = ref.watch(mangaBookRepositoryProvider);
 
-    // Auto reading mode: a Default-mode series opens in the reader its type
-    // implies (webtoon scroll for manhwa/webtoon, right-to-left paged for
-    // manga) THIS session; never written to meta. Null when auto-detect is off,
-    // the series has an explicit per-series mode, or the type carries no
-    // opinion — in which case the per-series/global default takes over below.
+    // Auto reading mode: a Default-mode long-strip series (manhwa/manhua/
+    // webtoon) opens in webtoon scroll THIS session; never written to meta.
+    // Null when auto-detect is off, the series has an explicit per-series mode,
+    // or it isn't long-strip — in which case the per-series/global default
+    // takes over below. Auto never picks a page direction (LTR/RTL).
     final mangaData = manga.value;
     final autoReaderMode = (ref.watch(autoWebtoonModeProvider).ifNull(true) &&
             mangaData != null &&
@@ -403,7 +403,7 @@ class ReaderScreen extends HookConsumerWidget {
                             openAtEnd: openAtEnd,
                           ),
                         ReaderMode.defaultReader || null => switch (
-                              defaultReaderMode ?? ReaderMode.webtoon) {
+                              defaultReaderMode ?? ReaderMode.singleHorizontalRTL) {
                             ReaderMode.singleHorizontalLTR ||
                             ReaderMode.continuousHorizontalLTR =>
                               MultiChapterPagedReaderMode(

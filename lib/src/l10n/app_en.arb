@@ -1406,7 +1406,7 @@
     "splitWidePages": "Split wide pages",
     "alwaysShowChapterTransition": "Always show chapter transition",
     "autoWebtoonMode": "Auto reading mode",
-    "autoWebtoonModeSubtitle": "Pick the reading mode from the series type — webtoon scroll for manhwa/webtoons, right-to-left paged for manga",
+    "autoWebtoonModeSubtitle": "Open manhwa, manhua, and webtoons in webtoon scroll mode. Everything else keeps your default reading mode.",
     "backgroundColorAuto": "Auto",
     "backgroundColorBlack": "Black",
     "backgroundColorGray": "Gray",

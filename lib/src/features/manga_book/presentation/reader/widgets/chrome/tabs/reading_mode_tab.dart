@@ -41,7 +41,7 @@ class ReadingModeTab extends ConsumerWidget {
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
     // "Default" dereferences the app-wide mode, mirroring reader_screen.
     final resolvedMode = settings.readerMode == ReaderMode.defaultReader
-        ? (ref.watch(readerModeKeyProvider) ?? ReaderMode.webtoon)
+        ? (ref.watch(readerModeKeyProvider) ?? ReaderMode.singleHorizontalRTL)
         : settings.readerMode;
     final isLongStrip = switch (resolvedMode) {
       ReaderMode.webtoon ||
