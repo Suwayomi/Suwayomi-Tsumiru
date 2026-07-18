@@ -10,14 +10,14 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/a
 
 // Pins both the reader-mode mapping AND the underlying manga-type detection
 // (tag precedence, source-name lists, Cyrillic variants, substring matching).
-// Mapping: webtoon-family → webtoon; manga (incl. the fallback bucket) → RTL;
-// comic → null (fall through to the user's default).
+// Mapping (Komikku `defaultReaderType` parity): webtoon-family → webtoon;
+// manga and comic → null (fall through to the user's default). Auto-detect
+// never picks a page direction — RTL for manga comes from the factory default.
 void main() {
   group('autoReaderModeFor', () {
     ReaderMode? resolve({List<String>? genres, String? sourceName}) =>
         autoReaderModeFor(genres: genres, sourceName: sourceName);
 
-    const rtl = ReaderMode.singleHorizontalRTL;
     const webtoon = ReaderMode.webtoon;
 
     group('webtoon family → webtoon (scroll)', () {
@@ -59,22 +59,27 @@ void main() {
       });
     });
 
-    group('manga → single-page right-to-left, only on a positive manga tag', () {
-      test('explicit manga tag', () {
-        expect(resolve(genres: ['Manga']), rtl);
+    group('manga → null (never forces a direction; user default wins)', () {
+      // A manga tag is still a manga tag — but auto-detect deliberately has no
+      // opinion on LTR vs RTL. It returns null so the user's Default Reading
+      // Mode is honoured (RTL by default, LTR if they chose it).
+      test('explicit manga tag → null', () {
+        expect(resolve(genres: ['Manga']), isNull);
       });
 
-      test('manga tag beats a manhwa tag / webtoon source (precedence)', () {
-        expect(resolve(genres: ['Manhwa', 'Manga']), rtl);
-        expect(resolve(genres: ['Manga'], sourceName: 'Toonily'), rtl);
+      test('manga tag beats a manhwa tag / webtoon source, still → null', () {
+        // Precedence still lands on the manga bucket (not webtoon), so no
+        // webtoon override — it just falls through to the default.
+        expect(resolve(genres: ['Manhwa', 'Manga']), isNull);
+        expect(resolve(genres: ['Manga'], sourceName: 'Toonily'), isNull);
       });
 
-      test('Cyrillic манга tag wins precedence', () {
-        expect(resolve(genres: ['Манга', 'Манхва']), rtl);
+      test('Cyrillic манга tag → null', () {
+        expect(resolve(genres: ['Манга', 'Манхва']), isNull);
       });
     });
 
-    group('no reliable signal → null (respect the user default, not RTL)', () {
+    group('no reliable signal → null (respect the user default)', () {
       test('untagged / null genres', () {
         expect(resolve(genres: null), isNull);
         expect(resolve(genres: const [], sourceName: null), isNull);
@@ -82,7 +87,7 @@ void main() {
 
       test('content genres only, genuinely unknown source → null', () {
         // A source we don't recognise, with no type tag, has no reliable
-        // signal — it must fall to the user's default, NOT be forced to RTL.
+        // signal — it must fall to the user's default.
         expect(
           resolve(
             genres: ['Action', 'Adventure', 'Fantasy'],

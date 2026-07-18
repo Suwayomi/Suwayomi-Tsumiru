@@ -40,7 +40,7 @@ class ReaderModeTile extends ConsumerWidget {
           title: context.l10n.readerMode,
           optionList: ReaderMode.values.sublist(1),
           getOptionTitle: (value) => value.toLocale(context),
-          value: readerMode ?? ReaderMode.webtoon,
+          value: readerMode ?? ReaderMode.singleHorizontalRTL,
           onChange: (enumValue) async {
             ref.read(readerModeKeyProvider.notifier).update(enumValue);
             if (context.mounted) Navigator.pop(context);
