@@ -25,6 +25,7 @@ import '../features/settings/presentation/server/widget/client/server_url_tile/s
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../global_providers/global_providers.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
 import 'custom_circular_progress_indicator.dart';
 
@@ -79,20 +80,30 @@ class ServerImage extends HookConsumerWidget {
   /// instead of the source's native resolution. Returns [base] unchanged when
   /// no cap is set. Used for the offline/crop provider paths; the network path
   /// takes memCache* directly on [CachedNetworkImage].
-  ImageProvider _capDecode(ImageProvider base) =>
-      (memCacheWidth == null && memCacheHeight == null)
+  ImageProvider _capDecode(ImageProvider base, int? width, int? height) =>
+      (width == null && height == null)
           ? base
-          : ResizeImage(base, width: memCacheWidth, height: memCacheHeight);
+          : ResizeImage(base, width: width, height: height);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
+    // Debounce the decode resolution. Reader modes tie memCache* to the window
+    // size; a desktop window resize changes it every frame, which would evict
+    // and re-decode the page each frame — flashing its placeholder ("black")
+    // until the drag stops. Holding the last decode size lets the current bitmap
+    // stretch smoothly, then re-decodes once when the size settles. Static
+    // memCache* (thumbnails/covers) never changes, so this is a no-op there.
+    final int? cacheWidth =
+        useSettled(memCacheWidth, const Duration(milliseconds: 250));
+    final int? cacheHeight =
+        useSettled(memCacheHeight, const Duration(milliseconds: 250));
 
     // Renders a crop provider through the same imageBuilder/wrapper contract as
     // the normal paths (imageBuilder fires immediately with the provider, like
     // the offline branch; consumers show the frame once it decodes).
     Widget renderCrop(ImageProvider rawProvider) {
-      final provider = _capDecode(rawProvider);
+      final provider = _capDecode(rawProvider, cacheWidth, cacheHeight);
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
       }
@@ -131,7 +142,8 @@ class ServerImage extends HookConsumerWidget {
           localPath: localPath,
         ));
       }
-      final ImageProvider provider = _capDecode(offlineImageProvider(localPath));
+      final ImageProvider provider =
+          _capDecode(offlineImageProvider(localPath), cacheWidth, cacheHeight);
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
       }
@@ -304,7 +316,7 @@ class ServerImage extends HookConsumerWidget {
     final imageBuilderCapped = imageBuilder == null
         ? null
         : (BuildContext ctx, ImageProvider provider) =>
-            imageBuilder!(ctx, _capDecode(provider));
+            imageBuilder!(ctx, _capDecode(provider, cacheWidth, cacheHeight));
 
     return CachedNetworkImage(
       key: key.value,
@@ -315,8 +327,8 @@ class ServerImage extends HookConsumerWidget {
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,
-      memCacheWidth: imageBuilder == null ? memCacheWidth : null,
-      memCacheHeight: imageBuilder == null ? memCacheHeight : null,
+      memCacheWidth: imageBuilder == null ? cacheWidth : null,
+      memCacheHeight: imageBuilder == null ? cacheHeight : null,
       imageRenderMethodForWeb: renderMethod,
       progressIndicatorBuilder: finalProgressIndicatorBuilder,
       imageBuilder: imageBuilderCapped,
