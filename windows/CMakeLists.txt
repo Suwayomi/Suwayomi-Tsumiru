@@ -89,6 +89,14 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# Copy native assets (Dart code-assets) into the bundle. sqlite3 3.x ships its
+# own sqlite3.dll this way; without this step the .dll is built but never
+# bundled, so the loader can't find it and the app dies at DB open with
+# "Failed to load dynamic library 'sqlite3.dll'" (error 126). Mirrors linux/.
+install(DIRECTORY "${PROJECT_BUILD_DIR}/native_assets/windows/"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.
 set(FLUTTER_ASSET_DIR_NAME "flutter_assets")

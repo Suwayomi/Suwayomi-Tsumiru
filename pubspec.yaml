@@ -71,7 +71,6 @@ dependencies:
       ref: "4641e83"
   shared_preferences: ^2.0.15
   shimmer: ^3.0.0
-  sqlite3_flutter_libs: ^0.6.0
   url_launcher: ^6.1.6
   web_socket_channel: ^3.0.0
   screen_brightness: ^2.1.11
