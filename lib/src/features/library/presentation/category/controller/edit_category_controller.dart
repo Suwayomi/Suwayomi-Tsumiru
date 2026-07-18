@@ -22,13 +22,18 @@ part 'edit_category_controller.g.dart';
 class CategoryController extends _$CategoryController {
   @override
   Future<List<CategoryDto>?> build() async {
+    // Capture every ref-backed dependency BEFORE the await. This provider
+    // auto-disposes and can be torn down mid-build (e.g. add-to-library reading
+    // .future), after which any ref access throws "used after it has been
+    // disposed" — the crash this guards against.
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
+    final categoryRepository = ref.watch(categoryRepositoryProvider);
+    final sync = ref.read(offlineSyncProvider);
     final result = await categoriesWithOfflineFallback(
-      fetch: () => ref.watch(categoryRepositoryProvider).getCategoryList(),
+      fetch: () => categoryRepository.getCategoryList(),
       db: offlineDb,
       offlineEnabled: offlineDb != null,
     );
-    final sync = ref.read(offlineSyncProvider);
     if (sync != null && result != null) {
       unawaited(sync.syncCategories(result));
     }

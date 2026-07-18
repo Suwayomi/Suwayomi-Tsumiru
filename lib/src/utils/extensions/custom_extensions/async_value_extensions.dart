@@ -77,6 +77,10 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
 
   AsyncValue<U> copyWithData<U>(U Function(T) data) => when(
         skipError: true,
+        // Keep showing mapped stale data while an upstream dependency reloads,
+        // instead of collapsing the whole derived chain to a full-screen spinner
+        // (stale-while-revalidate on Sources / Extensions / global search).
+        skipLoadingOnReload: true,
         data: (prev) => AsyncData(data(prev)),
         error: (error, stackTrace) => AsyncError<U>(error, stackTrace),
         loading: () => AsyncLoading<U>(),

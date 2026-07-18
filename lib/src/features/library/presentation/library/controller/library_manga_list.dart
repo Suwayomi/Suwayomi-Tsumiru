@@ -20,10 +20,13 @@ part 'library_manga_list.g.dart';
 @riverpod
 Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
-  // Captured before the await; the keepAlive notifier outlives this provider.
+  final categoryRepository = ref.watch(categoryRepositoryProvider);
+  // Captured before the await; touching ref after the async gap throws if this
+  // provider was disposed mid-build. The keepAlive notifier outlives it.
   final reachability = ref.read(serverUnreachableProvider.notifier);
+  final sync = ref.read(offlineSyncProvider);
   final list = await libraryWithOfflineFallback(
-    fetch: () => ref.watch(categoryRepositoryProvider).getAllLibraryMangas(),
+    fetch: () => categoryRepository.getAllLibraryMangas(),
     // Only read the native-only DB when offline is available (never on web).
     db: offlineDb,
     offlineEnabled: offlineDb != null,
@@ -36,7 +39,6 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
       } catch (_) {}
     }),
   );
-  final sync = ref.read(offlineSyncProvider);
   if (sync != null && list != null) {
     for (final manga in list) {
       unawaited(sync.syncManga(manga));
