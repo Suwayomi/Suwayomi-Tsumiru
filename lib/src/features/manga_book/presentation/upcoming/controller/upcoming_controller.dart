@@ -76,8 +76,10 @@ Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
 /// once. Reuses the same [predictNextUpdate] the manga-details estimate uses.
 @riverpod
 Future<UpcomingData> upcoming(Ref ref) async {
-  final mangas = await ref.watch(upcomingLibraryMangasProvider.future);
+  // Read before the await: this provider auto-disposes and touching ref after
+  // the async gap throws UnmountedRefException.
   final client = ref.watch(graphQlClientProvider);
+  final mangas = await ref.watch(upcomingLibraryMangasProvider.future);
   final now = DateTime.now();
 
   final entries = <({MangaDto manga, DateTime date})>[];

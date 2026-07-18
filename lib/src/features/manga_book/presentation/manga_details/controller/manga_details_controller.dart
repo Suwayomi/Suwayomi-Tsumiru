@@ -30,6 +30,9 @@ part 'manga_details_controller.g.dart';
 class MangaWithId extends _$MangaWithId {
   @override
   Future<MangaDto?> build({required int mangaId}) async {
+    // Read before the await: touching ref after the async gap throws if this
+    // provider was disposed mid-build.
+    final sync = ref.read(offlineSyncProvider);
     final manga = await mangaWithOfflineFallback(
       fetch: () =>
           ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
@@ -39,8 +42,7 @@ class MangaWithId extends _$MangaWithId {
     );
     // Don't mirror browsed (non-library) manga into the offline catalog.
     if (manga != null && manga.inLibrary) {
-      unawaited(
-          ref.read(offlineSyncProvider)?.syncManga(manga) ?? Future.value());
+      unawaited(sync?.syncManga(manga) ?? Future.value());
     }
     return manga;
   }

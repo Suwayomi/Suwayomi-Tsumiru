@@ -191,13 +191,16 @@ class OfflineServerMismatch {
 Future<OfflineServerMismatch?> offlineServerMismatch(Ref ref) async {
   if (!ref.watch(offlineEnabledProvider)) return null;
   final preferences = ref.watch(sharedPreferencesProvider);
+  // Read before the await: touching ref after the async gap throws if this
+  // provider was disposed mid-build.
+  final catalogDb = ref.watch(offlineDatabaseProvider);
   final stamp = preferences.getString(DBKeys.offlineCatalogServerId.name);
   final current = await ref.watch(serverInstanceIdProvider.future);
   if (stamp == null || stamp == current) return null;
-  if (!await ref.watch(offlineDatabaseProvider).hasCatalogData()) {
+  if (!await catalogDb.hasCatalogData()) {
     await preferences.setString(DBKeys.offlineCatalogServerId.name, current);
     await preferences.remove(DBKeys.offlineServerMismatchDismissedList.name);
-    ref.invalidate(offlineActiveProvider);
+    if (ref.mounted) ref.invalidate(offlineActiveProvider);
     return null;
   }
   final key = serverMismatchKey(stamp, current);

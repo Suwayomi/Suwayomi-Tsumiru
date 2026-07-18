@@ -23,7 +23,9 @@ class ReadingHistory extends _$ReadingHistory {
   Future<List<HistoryItemDto>?> build() async {
     final result =
         await ref.watch(historyRepositoryProvider).getReadingHistory();
-    ref.keepAlive();
+    // Guard the post-await ref use: the provider may have been disposed during
+    // the fetch, and keepAlive() on a dead ref throws UnmountedRefException.
+    if (ref.mounted) ref.keepAlive();
     return result?.nodes;
   }
 
