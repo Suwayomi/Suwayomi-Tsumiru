@@ -30,18 +30,13 @@ class ReadingHistory extends _$ReadingHistory {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
-
+    // Don't reset to AsyncLoading — that blanks the list to a full-screen
+    // spinner on pull-to-refresh. Keep the current items visible until fresh
+    // data lands (the RefreshIndicator already shows the pull spinner).
     final result = await AsyncValue.guard(
       () => ref.read(historyRepositoryProvider).getReadingHistory(),
     );
-
-    ref.keepAlive();
-    state = result.when(
-      data: (data) => AsyncData(data?.nodes),
-      error: (error, stackTrace) => AsyncError(error, stackTrace),
-      loading: () => const AsyncLoading(),
-    );
+    if (ref.mounted) state = result.whenData((data) => data?.nodes);
   }
 
   Future<void> loadMore() async {
@@ -120,8 +115,7 @@ class MangaReadingHistory extends _$MangaReadingHistory {
           .read(historyRepositoryProvider)
           .getMangaReadingHistory(mangaId: mangaId),
     );
-
-    state = result;
+    if (ref.mounted) state = result;
   }
 }
 

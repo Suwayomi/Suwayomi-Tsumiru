@@ -70,8 +70,9 @@ class TrackSheetContent extends ConsumerWidget {
       );
     }
 
-    // Show a spinner while loading.
-    if (trackersAsync.isLoading || recordsAsync.isLoading) {
+    // Spinner only on the initial load (no data yet). A reload/retry keeps the
+    // current content visible instead of flashing a spinner over it.
+    if (!trackersAsync.hasValue || !recordsAsync.hasValue) {
       return const SizedBox(
         height: 200,
         child: Center(child: CircularProgressIndicator()),

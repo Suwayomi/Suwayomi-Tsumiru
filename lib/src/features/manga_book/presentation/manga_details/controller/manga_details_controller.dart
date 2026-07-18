@@ -40,6 +40,9 @@ class MangaWithId extends _$MangaWithId {
       offlineEnabled: ref.watch(offlineActiveProvider),
       mangaId: mangaId,
     );
+    // Keep this cached like its sibling MangaChapterList so revisiting details
+    // doesn't refetch. Guarded: keepAlive on a disposed ref throws.
+    if (ref.mounted) ref.keepAlive();
     // Don't mirror browsed (non-library) manga into the offline catalog.
     if (manga != null && manga.inLibrary) {
       unawaited(sync?.syncManga(manga) ?? Future.value());
@@ -63,6 +66,9 @@ class MangaChapterList extends _$MangaChapterList {
     // scrape (getChapterList) also populates the manga's description/metadata
     // server-side, so afterwards we refresh MangaWithId to pick it up (#363).
     var didSourceFetch = false;
+    // Read before the await: touching ref after the async gap throws if this
+    // provider was disposed mid-build.
+    final sync = ref.read(offlineSyncProvider);
     final result = await chaptersWithOfflineFallback(
       fetch: () async {
         // Read the chapters the server already has stored (like the WebUI).
@@ -88,10 +94,9 @@ class MangaChapterList extends _$MangaChapterList {
       offlineEnabled: ref.watch(offlineActiveProvider),
       mangaId: mangaId,
     );
-    ref.keepAlive();
+    if (ref.mounted) ref.keepAlive();
     if (result != null) {
-      unawaited((ref.read(offlineSyncProvider)?.syncChapters(result) ??
-              Future.value())
+      unawaited((sync?.syncChapters(result) ?? Future.value())
           .then((_) => reconcileManga(ref, mangaId)));
     }
     if (didSourceFetch) {
@@ -101,8 +106,9 @@ class MangaChapterList extends _$MangaChapterList {
       // details screen shows the metadata on first open instead of only after a
       // manual refresh (#363). Deferred past this build so we don't invalidate a
       // provider mid-build.
-      Future.microtask(
-          () => ref.invalidate(mangaWithIdProvider(mangaId: mangaId)));
+      Future.microtask(() {
+        if (ref.mounted) ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+      });
     }
     return result;
   }
@@ -140,32 +146,33 @@ class MangaChapterList extends _$MangaChapterList {
           offlineEnabled: offlineDb != null,
           mangaId: mangaId,
         ));
-    ref.keepAlive();
-    if (result.hasError) {
-      state = result.copyWithPrevious(state);
-    } else {
-      state = result;
-      final chapters = result.value;
-      if (chapters != null) {
-        // Mirror build(): down-sync the fresh list (which orphans chapters the
-        // server no longer lists) then reconcile to evict them — so a
-        // server-side delete discovered via pull-to-refresh is cleaned up too,
-        // not only on a cold provider rebuild.
-        unawaited((ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
-                Future.value())
-            .then((_) => reconcileManga(ref, mangaId)));
-      }
+    if (ref.mounted) ref.keepAlive();
+    // On a refresh failure keep the current chapters visible instead of
+    // overwriting the list with an errored state (drops the internal
+    // copyWithPrevious API the analyzer flagged).
+    if (result.hasError) return;
+    state = result;
+    final chapters = result.value;
+    if (chapters != null) {
+      // Mirror build(): down-sync the fresh list (which orphans chapters the
+      // server no longer lists) then reconcile to evict them — so a
+      // server-side delete discovered via pull-to-refresh is cleaned up too,
+      // not only on a cold provider rebuild.
+      unawaited((ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
+              Future.value())
+          .then((_) => reconcileManga(ref, mangaId)));
     }
   }
 
   void updateChapter(int index, ChapterDto chapter) {
-    try {
-      final newList = [...?state.value];
-      newList[index] = chapter;
-      state = AsyncData<List<ChapterDto>?>(newList).copyWithPrevious(state);
-    } catch (e) {
-      //
-    }
+    // Explicit bounds check instead of a bare try/catch that silently dropped
+    // the edit (and dropped the internal copyWithPrevious API the analyzer
+    // flagged). A no-op when the list isn't loaded / index is stale.
+    final current = state.value;
+    if (current == null || index < 0 || index >= current.length) return;
+    final newList = [...current];
+    newList[index] = chapter;
+    state = AsyncData<List<ChapterDto>?>(newList);
   }
 }
 
