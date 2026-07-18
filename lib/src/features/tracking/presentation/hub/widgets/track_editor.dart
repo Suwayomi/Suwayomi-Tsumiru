@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -20,7 +19,7 @@ import 'tracker_search.dart';
 /// Edits a bound track record's status, score, chapters, and dates.
 ///
 /// Signature is fixed — Task 8 fills the body.
-class TrackEditor extends HookConsumerWidget {
+class TrackEditor extends ConsumerWidget {
   const TrackEditor({
     super.key,
     required this.tracker,
@@ -80,13 +79,6 @@ class TrackEditor extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.read(trackerRepositoryProvider);
-
-    // Local state for the chapters text field.
-    final chaptersController = useTextEditingController(
-      text: trackRecord.lastChapterRead == trackRecord.lastChapterRead.truncateToDouble()
-          ? trackRecord.lastChapterRead.toInt().toString()
-          : trackRecord.lastChapterRead.toString(),
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -226,45 +218,18 @@ class TrackEditor extends HookConsumerWidget {
         ),
 
         // ---------------------------------------------------------------
-        // Chapters read row — commit on confirm/blur, not per keystroke
+        // Chapters read row — tap the value to edit it in a number dialog.
+        // Shows "read / total" when the tracker reports a total (WebUI
+        // parity), else just the read count.
         // ---------------------------------------------------------------
-        _EditorRow(
+        _ChaptersRow(
           label: context.l10n.trackChaptersRead,
-          child: Focus(
-            onFocusChange: (hasFocus) {
-              if (!hasFocus) {
-                final val = double.tryParse(chaptersController.text);
-                if (val != null && val != trackRecord.lastChapterRead) {
-                  _doUpdate(ref, context, () => repo.update(
-                        recordId: trackRecord.id,
-                        lastChapterRead: val,
-                      ));
-                }
-              }
-            },
-            child: TextFormField(
-              controller: chaptersController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 4),
-              ),
-              onFieldSubmitted: (value) {
-                final val = double.tryParse(value);
-                if (val != null && val != trackRecord.lastChapterRead) {
-                  _doUpdate(ref, context, () => repo.update(
-                        recordId: trackRecord.id,
-                        lastChapterRead: val,
-                      ));
-                }
-              },
-            ),
-          ),
+          chaptersRead: trackRecord.lastChapterRead,
+          totalChapters: trackRecord.totalChapters,
+          onSubmit: (val) => _doUpdate(ref, context, () => repo.update(
+                recordId: trackRecord.id,
+                lastChapterRead: val,
+              )),
         ),
 
         // ---------------------------------------------------------------
@@ -476,5 +441,73 @@ class _DateRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// A chapters row: shows "read / total" (or just the read count when the
+/// tracker reports no total) as a tappable value that opens a number dialog to
+/// edit the read count. Mirrors Suwayomi-WebUI's tracker NumberSetting.
+class _ChaptersRow extends StatelessWidget {
+  const _ChaptersRow({
+    required this.label,
+    required this.chaptersRead,
+    required this.totalChapters,
+    required this.onSubmit,
+  });
+
+  final String label;
+  final double chaptersRead;
+  final int totalChapters;
+  final void Function(double) onSubmit;
+
+  // Whole numbers show as "12"; fractional chapters keep their decimal.
+  String get _readText => chaptersRead == chaptersRead.truncateToDouble()
+      ? chaptersRead.toInt().toString()
+      : chaptersRead.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final display =
+        totalChapters > 0 ? '$_readText / $totalChapters' : _readText;
+    return _EditorRow(
+      label: label,
+      child: GestureDetector(
+        onTap: () => _edit(context),
+        child: Text(display, style: context.textTheme.bodyMedium),
+      ),
+    );
+  }
+
+  Future<void> _edit(BuildContext context) async {
+    final controller = TextEditingController(text: _readText);
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.trackChaptersRead),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          ],
+          decoration: totalChapters > 0
+              ? InputDecoration(suffixText: '/ $totalChapters')
+              : null,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(ctx.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(ctx).pop(double.tryParse(controller.text)),
+            child: Text(ctx.l10n.save),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result != chaptersRead) onSubmit(result);
   }
 }
