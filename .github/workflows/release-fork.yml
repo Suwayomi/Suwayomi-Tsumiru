@@ -177,13 +177,16 @@ jobs:
         run: |
           mkdir -p dist
           APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
-          # Guard: the SQLite dylib must be bundled inside the app. Its absence
-          # is the error-126 DB-open crash we shipped on Windows in 0.9.0/0.9.1.
-          if ! find "$APP" -iname '*sqlite3*.dylib' | grep -q .; then
+          # Guard: the SQLite native lib must be bundled inside the app. On macOS
+          # it ships as a code-asset framework (sqlite3.framework), not a loose
+          # dylib. Absence is the error-126 DB-open crash we shipped on Windows
+          # in 0.9.0/0.9.1.
+          sqlite=$(find "$APP" \( -iname '*sqlite3*.dylib' -o -iname 'sqlite3*.framework' \))
+          if [ -z "$sqlite" ]; then
             echo "::error::sqlite3 native library missing from the macOS bundle"
-            find "$APP" -iname '*.dylib'; exit 1
+            find "$APP/Contents/Frameworks" -maxdepth 1 2>/dev/null; exit 1
           fi
-          echo "Bundled SQLite: $(find "$APP" -iname '*sqlite3*.dylib')"
+          echo "Bundled SQLite: $sqlite"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-x64.zip"
 
       - name: Package iOS (unsigned IPA)
