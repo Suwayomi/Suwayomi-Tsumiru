@@ -177,6 +177,13 @@ jobs:
         run: |
           mkdir -p dist
           APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
+          # Guard: the SQLite dylib must be bundled inside the app. Its absence
+          # is the error-126 DB-open crash we shipped on Windows in 0.9.0/0.9.1.
+          if ! find "$APP" -iname '*sqlite3*.dylib' | grep -q .; then
+            echo "::error::sqlite3 native library missing from the macOS bundle"
+            find "$APP" -iname '*.dylib'; exit 1
+          fi
+          echo "Bundled SQLite: $(find "$APP" -iname '*sqlite3*.dylib')"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "dist/${pkg_name}-${{ github.ref_name }}-macos-x64.zip"
 
       - name: Package iOS (unsigned IPA)
@@ -200,6 +207,15 @@ jobs:
           # paints — a blank white screen — on otherwise-fine PCs.
           $redist = vswhere -latest -find 'VC\Redist\MSVC\*\x64\*\*.dll'
           Copy-Item $redist build\windows\x64\runner\Release\ -Force
+          # Guard: the SQLite native library must be bundled next to the exe.
+          # Its absence was the error-126 DB-open crash in 0.9.0/0.9.1.
+          $sqlite = Get-ChildItem build\windows\x64\runner\Release\ -Filter *.dll |
+            Where-Object { $_.Name -match 'sqlite3' }
+          if (-not $sqlite) {
+            Get-ChildItem build\windows\x64\runner\Release\ | Select-Object Name
+            throw "sqlite3 native library missing from the Windows bundle"
+          }
+          Write-Host "Bundled SQLite: $($sqlite.Name)"
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath "dist\${env:pkg_name}-${{ github.ref_name }}-windows-x64.zip"
 
       - name: Attach to the draft release
