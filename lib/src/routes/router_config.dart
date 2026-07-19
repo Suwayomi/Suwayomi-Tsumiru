@@ -11,6 +11,7 @@ import '../features/browse_center/domain/source/source_model.dart';
 import '../features/browse_center/presentation/browse/browse_screen.dart';
 import '../features/browse_center/presentation/extension/extension_screen.dart';
 import '../features/browse_center/presentation/global_search/global_search_screen.dart';
+import '../features/browse_center/presentation/source/source_filter_screen.dart';
 import '../features/browse_center/presentation/source/source_screen.dart';
 import '../features/browse_center/presentation/source_manga_list/source_manga_list_screen.dart';
 import '../features/browse_center/presentation/source_preference/source_preference_screen.dart';
@@ -83,6 +84,7 @@ abstract class Routes {
 
   static const extensionRoute = '/extension';
   static const source = '/source';
+  static const sourceFilter = '/source-filter';
   static const sourceManga = ':sourceId';
   static const sourceMangaType = '$sourceManga/:sourceType';
   static const sourcePreference = '$sourceManga/preference';
@@ -250,6 +252,7 @@ GoRouter routerConfig(Ref ref) {
     ),
     TypedGoRoute<UpdateStatusRoute>(path: Routes.updateStatus),
     TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
+    TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
     TypedGoRoute<MigrationGlobalSearchRoute>(
         path: Routes.migrationGlobalSearch),
     TypedGoRoute<MigrationSourceSelectionRoute>(

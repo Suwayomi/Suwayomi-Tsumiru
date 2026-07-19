@@ -49,12 +49,18 @@ class BrowseScreen extends HookConsumerWidget {
       appBar: AppBar(
         title: Text(context.l10n.browse),
         actions: [
-          if (tabController.index == 0)
+          if (tabController.index == 0) ...[
             IconButton(
               tooltip: context.l10n.globalSearch,
               onPressed: () => const GlobalSearchRoute().push(context),
               icon: const Icon(Icons.travel_explore_rounded),
             ),
+            IconButton(
+              tooltip: context.l10n.filterSources,
+              onPressed: () => const SourceFilterRoute().push(context),
+              icon: const Icon(Icons.filter_list_rounded),
+            ),
+          ],
           if (tabController.index == 1) ...[
             IconButton(
               tooltip: context.l10n.extensionRepository,

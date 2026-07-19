@@ -74,6 +74,15 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
       );
 }
 
+class SourceFilterRoute extends GoRouteData with $SourceFilterRoute {
+  const SourceFilterRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Widget build(context, state) => const SourceFilterScreen();
+}
+
 class SourcePreferenceRoute extends GoRouteData with $SourcePreferenceRoute {
   const SourcePreferenceRoute({required this.sourceId});
 

@@ -24,6 +24,7 @@ All `typedef`s over GraphQL codegen (except `Language`, which is `freezed`): `Ex
 
 - **Extensions:** grouped into update/installed/by-language; NSFW-gated; language allowlist persisted (`DBKeys.extensionLanguageFilter`). Install via `UpdateExtension` or file upload (`InstallExternalExtension`).
 - **Sources:** grouped lastUsed/all/by-language/localSource; tapping saves `sourceLastUsedProvider` and navigates to `SourceTypeRoute(POPULAR)`.
+- **Hide sources:** the Sources filter screen (`SourceFilterRoute`, tune action) toggles per-source visibility. Hidden state persists as the `tsumiru_isHidden` source meta key (sibling to pinning's `webUI_isPinned`), so it syncs across devices. `browsableSourceListProvider` strips hidden sources from browse/global-search/migration; the filter screen reads pre-hide `allSourcesByLanguageProvider` so hidden sources stay listable.
 - **Source browsing:** `infinite_scroll_pagination` `PagingController<int, MangaDto>` (`firstPageKey: 1`); POPULAR/LATEST/SEARCH chips; filter drawer (end-drawer tablet / bottom-sheet phone) rendered via exhaustive `switch` in `filter_to_widget.dart`.
 - **Global search:** `quickSearchResultsProvider(query)` fans out `sourceQuickSearchMangaListProvider(sourceId, query)` across filtered sources, all wrapped in `rateLimitQueueProvider(query)`.
 

@@ -14,6 +14,7 @@ SourceDto _src({
   required String name,
   String lang = 'en',
   bool pinned = false,
+  bool hidden = false,
 }) =>
     SourceDto.fromJson({
       'displayName': name,
@@ -25,15 +26,20 @@ SourceDto _src({
       'name': name,
       'supportsLatest': true,
       '__typename': 'SourceType',
-      'meta': pinned
-          ? [
-              {
-                'key': 'webUI_isPinned',
-                'value': 'true',
-                '__typename': 'SourceMetaType',
-              }
-            ]
-          : const <Map<String, dynamic>>[],
+      'meta': [
+        if (pinned)
+          {
+            'key': 'webUI_isPinned',
+            'value': 'true',
+            '__typename': 'SourceMetaType',
+          },
+        if (hidden)
+          {
+            'key': 'tsumiru_isHidden',
+            'value': 'true',
+            '__typename': 'SourceMetaType',
+          },
+      ],
       'extension': {
         'pkgName': 'pkg',
         'repo': 'repo',
@@ -58,6 +64,41 @@ void main() {
         _src(id: '9', name: 'x').isPinned,
         isFalse,
       );
+    });
+  });
+
+  group('isHidden', () {
+    test('true only when tsumiru_isHidden meta == "true"', () {
+      expect(_src(id: '9', name: 'x', hidden: true).isHidden, isTrue);
+      expect(mangaDex.isHidden, isFalse);
+      // a pinned-but-not-hidden source is not hidden
+      expect(asura.isHidden, isFalse);
+    });
+  });
+
+  group('groupAllSourcesByLanguage (Sources filter screen)', () {
+    test('keeps pinned/hidden sources; shown before hidden, then by name', () {
+      final hiddenSrc = _src(id: '5', name: 'Comick', hidden: true);
+      final map = groupAllSourcesByLanguage([...sources, hiddenSrc]);
+      // Asura is pinned but must still appear (unlike groupSourcesByLanguage);
+      // hidden Comick sorts after the shown sources.
+      expect(map['en']!.map((e) => e.name),
+          ['allmanga', 'Asura Scans', 'MangaDex', 'Comick']);
+      expect(map['ko']!.map((e) => e.name), ['Bato']);
+    });
+  });
+
+  group('browsableSourceList (hidden sources dropped from browse)', () {
+    test('removes hidden sources, keeps the rest', () {
+      final hiddenSrc = _src(id: '5', name: 'Comick', hidden: true);
+      final c = ProviderContainer(overrides: [
+        visibleSourceListProvider
+            .overrideWith((ref) => AsyncData([...sources, hiddenSrc])),
+      ]);
+      addTearDown(c.dispose);
+      final out = c.read(browsableSourceListProvider).value!;
+      expect(out.map((e) => e.name), isNot(contains('Comick')));
+      expect(out.length, sources.length);
     });
   });
 

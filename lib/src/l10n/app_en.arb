@@ -1958,6 +1958,8 @@
     "pinnedSources": "Pinned sources",
     "hasResults": "Has results",
     "pinSource": "Pin source",
+    "filterSources": "Filter sources",
+    "allSources": "All Sources",
     "pinchToZoom": "Pinch to Zoom",
     "doubleTapToZoom": "Double tap to zoom",
     "disableZoomOut": "Disable zoom out",

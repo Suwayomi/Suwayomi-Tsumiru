@@ -98,6 +98,24 @@ class SourceRepository {
         ),
       )
       .getData((data) => data.setSourceMeta?.meta);
+
+  /// Hides/unhides a source from the browse list by writing the
+  /// `tsumiru_isHidden` server meta key (syncs across Tsumiru devices).
+  Future<void> setSourceHidden(String sourceId, bool hidden) => ferryClient
+      .mutate$SetSourceMeta(
+        Options$Mutation$SetSourceMeta(
+          variables: Variables$Mutation$SetSourceMeta(
+            input: Input$SetSourceMetaInput(
+              meta: Input$SourceMetaTypeInput(
+                sourceId: sourceId,
+                key: kSourceHiddenMetaKey,
+                value: hidden ? 'true' : 'false',
+              ),
+            ),
+          ),
+        ),
+      )
+      .getData((data) => data.setSourceMeta?.meta);
 }
 
 @riverpod

@@ -25,11 +25,20 @@ typedef SourceType = Enum$FetchSourceMangaType;
 /// string "true"/"false".
 const kSourcePinnedMetaKey = 'webUI_isPinned';
 
+/// Server meta key marking a source hidden from the browse list. Tsumiru-owned
+/// (WebUI has no hide concept), so it syncs across Tsumiru devices via the
+/// server but is ignored by WebUI. Sibling to [kSourcePinnedMetaKey]; value is
+/// the plain string "true"/"false".
+const kSourceHiddenMetaKey = 'tsumiru_isHidden';
+
 extension SourceExtensions on SourceDto {
   Language? get language => LanguageJsonConverter.fromJson(lang);
 
   bool get isPinned =>
       meta.any((m) => m.key == kSourcePinnedMetaKey && m.value == 'true');
+
+  bool get isHidden =>
+      meta.any((m) => m.key == kSourceHiddenMetaKey && m.value == 'true');
 }
 
 extension SourceMangaTypeExtension on SourceType {

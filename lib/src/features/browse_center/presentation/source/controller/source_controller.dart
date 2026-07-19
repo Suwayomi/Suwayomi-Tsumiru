@@ -35,6 +35,17 @@ AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
       );
 }
 
+/// [visibleSourceList] with user-hidden sources removed. Every browse-facing
+/// list (grouped map, pinned section, global search, migration) derives from
+/// this, so hiding a source drops it everywhere. The Sources filter screen
+/// deliberately reads [visibleSourceList] instead, so hidden sources stay
+/// visible there to be un-hidden.
+@riverpod
+AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) =>
+    ref.watch(visibleSourceListProvider).copyWithData(
+          (list) => list == null ? list : [...list.where((e) => !e.isHidden)],
+        );
+
 int _byName(SourceDto a, SourceDto b) =>
     a.name.toLowerCase().compareTo(b.name.toLowerCase());
 
@@ -72,14 +83,47 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
 /// language filter.
 @riverpod
 List<SourceDto> pinnedSources(Ref ref) => pinnedSourcesFrom(
-    ref.watch(visibleSourceListProvider).value ?? const []);
+    ref.watch(browsableSourceListProvider).value ?? const []);
 
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
-  final sourceListData = ref.watch(visibleSourceListProvider);
+  final sourceListData = ref.watch(browsableSourceListProvider);
   final sourceLastUsed = ref.watch(sourceLastUsedProvider);
   return sourceListData.copyWithData(
     (data) => groupSourcesByLanguage(data ?? const [], sourceLastUsed),
+  );
+}
+
+/// Pure: group EVERY source by language code (pinned and hidden included, no
+/// last-used bucket), alphabetically by name. Backs the Sources filter screen
+/// where each source is toggled hidden/shown. Exposed for testing.
+Map<String, List<SourceDto>> groupAllSourcesByLanguage(
+  List<SourceDto> sources,
+) {
+  final sourceMap = <String, List<SourceDto>>{};
+  for (final e in sources) {
+    sourceMap.update(
+      e.language?.code ?? "other",
+      (value) => [...value, e],
+      ifAbsent: () => [e],
+    );
+  }
+  // Komikku within-language order: shown sources before hidden, then by name.
+  for (final list in sourceMap.values) {
+    list.sort((a, b) => a.isHidden == b.isHidden
+        ? _byName(a, b)
+        : (a.isHidden ? 1 : -1));
+  }
+  return sourceMap;
+}
+
+/// All sources grouped by language for the Sources filter screen. Reads the
+/// pre-hide [visibleSourceList] so hidden sources remain listed (to un-hide).
+@riverpod
+AsyncValue<Map<String, List<SourceDto>>> allSourcesByLanguage(Ref ref) {
+  final sourceListData = ref.watch(visibleSourceListProvider);
+  return sourceListData.copyWithData(
+    (data) => groupAllSourcesByLanguage(data ?? const []),
   );
 }
 
