@@ -43,7 +43,10 @@ void main() {
   late OfflineDatabase db;
   final store = _FakeStore();
 
-  setUp(() => db = testOfflineDatabase());
+  setUp(() {
+    OfflineDownloadCoordinator.resetSharedStateForTest();
+    db = testOfflineDatabase();
+  });
   tearDown(() => db.close());
 
   // Minimal non-null deps so the triggers reach the start step instead of

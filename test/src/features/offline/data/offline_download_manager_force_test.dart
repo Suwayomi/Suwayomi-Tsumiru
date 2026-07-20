@@ -47,6 +47,7 @@ void main() {
         bookmarkDirty: false,
         readStateDirty: false,
         updatedAt: DateTime(2026),
+        downloadGeneration: 0,
       );
 
   OfflineDownloadManager manager() => OfflineDownloadManager(

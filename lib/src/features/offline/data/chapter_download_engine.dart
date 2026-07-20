@@ -70,18 +70,11 @@ class ChapterDownloadOutcome {
       error == null && !cancelled && !authFailed && !offline;
 }
 
-/// Downloads a single chapter's pages: up to
-/// [parallelPageLimit] pages in flight at once (default 5), each retried a few
-/// times with short backoff for transient blips, and auth refreshed once on a
-/// 401 before retrying. Pure Dart and dependency-injected so it runs the same
-/// on Android and the Linux desktop build and is testable without HTTP, dart:io
-/// or the real auth stack.
-///
-/// Deliberately does ONE chapter: with a single-source model, the
-/// orchestrator runs chapters one at a time (everything comes from our own
-/// server, so there's nothing to spread chapter-level load against). The win is
-/// page-level parallelism, which also hides the server's cold upstream-fetch
-/// latency for chapters it hasn't cached yet.
+/// Downloads a single chapter's pages with up to [parallelPageLimit] in flight
+/// (default 5), retrying blips and refreshing auth once on a 401. Deliberately
+/// does ONE chapter at a time (page-level parallelism is the real win, since
+/// everything comes from our own server); pure Dart + dependency-injected, so
+/// it's testable without HTTP, dart:io, or the real auth stack.
 class ChapterDownloadEngine {
   ChapterDownloadEngine({
     required this.fetchPage,
@@ -136,7 +129,7 @@ class ChapterDownloadEngine {
         }
         if (cursor >= queue.length) return;
         final page = queue[cursor++];
-        final result = await _downloadOne(mangaId, chapterId, page);
+        final result = await _downloadOne(mangaId, chapterId, page, isCancelled);
         switch (result) {
           case _PageOk(:final relPath, :final bytes):
             stored[page.index] = (relPath: relPath, bytes: bytes);
@@ -147,6 +140,8 @@ class ChapterDownloadEngine {
             authFailed = true;
           case _PageOffline():
             offline = true;
+          case _PageCancelled():
+            return; // cancel landed mid-fetch; the loop's guard also stops us
           case _PageError(:final error):
             fatalError ??= error;
         }
@@ -166,12 +161,16 @@ class ChapterDownloadEngine {
     );
   }
 
-  Future<_PageResult> _downloadOne(
-      int mangaId, int chapterId, PageRef page) async {
+  Future<_PageResult> _downloadOne(int mangaId, int chapterId, PageRef page,
+      bool Function() isCancelled) async {
     var refreshedForAuth = false;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         final bytes = await fetchPage(page.url);
+        // The fetch can outlast a cancel (delete/pause landing mid-request);
+        // don't write a file for a chapter being deleted — the purge likely
+        // already ran, so the write would orphan on disk.
+        if (isCancelled()) return const _PageCancelled();
         final written = await writePage.writePage(
           mangaId,
           chapterId,
@@ -221,6 +220,10 @@ class _PageError extends _PageResult {
 
 class _PageAuthDead extends _PageResult {
   const _PageAuthDead();
+}
+
+class _PageCancelled extends _PageResult {
+  const _PageCancelled();
 }
 
 class _PageOffline extends _PageResult {

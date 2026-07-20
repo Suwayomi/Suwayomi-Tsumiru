@@ -138,6 +138,55 @@ void main() {
     expect(pages, isEmpty);
   });
 
+  // Mirrors the coordinator's onPageStored guard: check device state and insert
+  // the page row in one transaction, so it serializes with deleteChapter.
+  Future<void> storePageIfLive(int chapterId, int pageIndex, String rel) =>
+      db.transaction(() async {
+        final c = await db.chapterById(chapterId);
+        if (c == null || c.deviceState == OfflineDeviceState.none) return;
+        await db.into(db.offlinePages).insertOnConflictUpdate(
+              OfflinePagesCompanion.insert(
+                  chapterId: chapterId,
+                  pageIndex: pageIndex,
+                  relativePath: rel),
+            );
+      });
+
+  test('a page stored after deleteChapter is rejected (state is none)',
+      () async {
+    final chapter = await seedChapter();
+    await managerWith().downloadChapter(chapter);
+
+    await managerWith().deleteChapter((await db.chaptersForManga(552)).single);
+    // A page callback that fired just before the delete finally lands.
+    await storePageIfLive(2000, 5, '552/2000/005.jpg');
+
+    final rows = await (db.select(db.offlinePages)
+          ..where((t) => t.chapterId.equals(2000)))
+        .get();
+    expect(rows, isEmpty,
+        reason: 'the insert reads state=none and skips — no resurrected row');
+  });
+
+  test('a page store racing deleteChapter leaves no orphan row', () async {
+    final chapter = await seedChapter();
+    await db.setChapterDeviceState(chapter.id, OfflineDeviceState.downloading);
+    final downloading = (await db.chaptersForManga(552)).single;
+
+    await Future.wait([
+      managerWith().deleteChapter(downloading),
+      storePageIfLive(2000, 5, '552/2000/005.jpg'),
+    ]);
+
+    expect((await db.chaptersForManga(552)).single.deviceState,
+        OfflineDeviceState.none);
+    final rows = await (db.select(db.offlinePages)
+          ..where((t) => t.chapterId.equals(2000)))
+        .get();
+    expect(rows, isEmpty,
+        reason: 'state=none + row purge is one transaction — nothing survives');
+  });
+
   test('sweepInterrupted resets chapters stuck downloading', () async {
     final chapter = await seedChapter();
     await db.setChapterDeviceState(chapter.id, OfflineDeviceState.downloading);

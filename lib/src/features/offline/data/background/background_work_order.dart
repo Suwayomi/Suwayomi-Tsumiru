@@ -16,11 +16,16 @@ class BackgroundWorkOrder {
     required this.wifiOnly,
     required this.auth,
     required this.baseDir,
+    this.generationByChapter = const {},
     this.rootIsolateToken = 0,
   });
 
   final List<int> chapterIds;
   final Map<int, int> mangaIdByChapter;
+
+  /// Per-chapter download generation (bumped on delete). The worker echoes it on
+  /// every event so the main isolate can drop a stale generation's events.
+  final Map<int, int> generationByChapter;
   final String serverBase;
   final int? port;
   final bool addPort;
@@ -28,21 +33,22 @@ class BackgroundWorkOrder {
   final BackgroundTokenRecord auth;
 
   /// Absolute offline base directory (`<appSupport>/offline`), resolved by the
-  /// MAIN isolate via path_provider and handed to the worker so the worker
-  /// itself stays plugin-free: it builds [OfflinePaths]/[IoOfflinePageStore]
-  /// from this string with only dart:io.
+  /// MAIN isolate via path_provider and handed to the worker so it stays
+  /// plugin-free (builds [OfflinePaths]/[IoOfflinePageStore] from this string
+  /// with only dart:io).
   final String baseDir;
 
-  /// Vestigial — the plugin-free worker no longer reconstructs a
-  /// [RootIsolateToken] (it touches no platform channels), so this is unused.
-  /// Kept on the model so the JSON shape stays backward-compatible; defaults
-  /// to 0 and is ignored by the worker.
+  /// Vestigial — the plugin-free worker touches no platform channels so this
+  /// is unused. Kept only so the JSON shape stays backward-compatible;
+  /// defaults to 0 and is ignored.
   final int rootIsolateToken;
 
   Map<String, Object?> toJson() => {
         'chapterIds': chapterIds,
         'mangaIdByChapter':
             mangaIdByChapter.map((k, v) => MapEntry(k.toString(), v)),
+        'generationByChapter':
+            generationByChapter.map((k, v) => MapEntry(k.toString(), v)),
         'serverBase': serverBase,
         'port': port,
         'addPort': addPort,
@@ -57,6 +63,9 @@ class BackgroundWorkOrder {
         chapterIds: (j['chapterIds'] as List).cast<int>(),
         mangaIdByChapter: (j['mangaIdByChapter'] as Map)
             .map((k, v) => MapEntry(int.parse(k as String), v as int)),
+        generationByChapter: (j['generationByChapter'] as Map?)
+                ?.map((k, v) => MapEntry(int.parse(k as String), v as int)) ??
+            const {},
         serverBase: j['serverBase'] as String,
         port: j['port'] as int?,
         addPort: j['addPort'] as bool,

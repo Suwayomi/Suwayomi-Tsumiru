@@ -14,12 +14,15 @@ void main() {
       auth: const BackgroundTokenRecord(
           gen: 3, authType: 'uiLogin', accessToken: 'A', refreshToken: 'R'),
       baseDir: '/data/app/offline',
+      generationByChapter: const {5: 0, 6: 2, 7: 1},
       rootIsolateToken: 99887766,
     );
     final restored = BackgroundWorkOrder.fromJson(order.toJson());
     expect(restored.chapterIds, [5, 6, 7]);
     expect(restored.mangaIdByChapter[6], 1);
     expect(restored.mangaIdByChapter[7], 2);
+    expect(restored.generationByChapter[6], 2);
+    expect(restored.generationByChapter[7], 1);
     expect(restored.wifiOnly, isTrue);
     expect(restored.auth.gen, 3);
     expect(restored.auth.accessToken, 'A');
@@ -38,9 +41,12 @@ void main() {
       auth: const BackgroundTokenRecord(gen: 0, authType: 'none'),
       baseDir: '/x',
     );
-    final json = order.toJson()..remove('baseDir');
+    final json = order.toJson()
+      ..remove('baseDir')
+      ..remove('generationByChapter');
     final restored = BackgroundWorkOrder.fromJson(json);
     expect(restored.baseDir, '');
     expect(restored.rootIsolateToken, 0);
+    expect(restored.generationByChapter, isEmpty);
   });
 }

@@ -9,6 +9,7 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
@@ -90,6 +91,48 @@ class _FailingMangaBookRepository extends MangaBookRepository {
     throw Exception('offline — mutation failed');
   }
 }
+
+/// Captures pushed patches AND returns a fixed server chapter from getChapter,
+/// so the never-regress guard (cross-device) can be exercised.
+class _ServerStateRepository extends MangaBookRepository {
+  _ServerStateRepository(this._server) : super(_dummyClient());
+  final ChapterDto _server;
+  final List<ChapterChange> patches = [];
+
+  @override
+  Future<void> putChapter({
+    required int chapterId,
+    required ChapterChange patch,
+  }) async {
+    patches.add(patch);
+  }
+
+  @override
+  Future<ChapterDto?> getChapter({required int chapterId}) async => _server;
+}
+
+ChapterDto _serverChapter({
+  required int id,
+  required bool isRead,
+  required int lastPageRead,
+}) =>
+    ChapterDto(
+      chapterNumber: id.toDouble(),
+      fetchedAt: '0',
+      id: id,
+      isBookmarked: false,
+      isDownloaded: true,
+      isRead: isRead,
+      lastPageRead: lastPageRead,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: 'c$id',
+      pageCount: 10,
+      sourceOrder: id,
+      uploadDate: '0',
+      url: 'u$id',
+      meta: const [],
+    );
 
 /// Notifier subclass that returns a fixed bool? without touching SharedPreferences.
 class _FixedToggle extends UpdateProgressAfterReading {
@@ -407,6 +450,89 @@ void main() {
       expect(c.isRead, isTrue);
       expect(c.progressDirty, isFalse);
       expect(c.readStateDirty, isFalse);
+    });
+  });
+
+  group('pushPendingProgress → cross-device never-regress', () {
+    test('local completion beats a server partial (marked-read, low position)',
+        () async {
+      // The reported failure: mark-read leaves lastPageRead low, a server
+      // partial sits at a higher page — the guard used to drop the completion.
+      final repo = _ServerStateRepository(
+          _serverChapter(id: 10, isRead: false, lastPageRead: 7));
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterReadState(10, true); // local complete, position 0
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches.single.isRead, isTrue,
+          reason: 'a finished local chapter must still push over a server partial');
+      expect((await db.chapterById(10))!.readStateDirty, isFalse);
+    });
+
+    test('server completion is not un-finished by a local partial', () async {
+      final repo = _ServerStateRepository(
+          _serverChapter(id: 10, isRead: true, lastPageRead: 0));
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterProgress(10, lastPageRead: 3, isRead: null);
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches, isEmpty,
+          reason: 'the server already finished it — no lesser push');
+      expect((await db.chapterById(10))!.progressDirty, isFalse);
+    });
+
+    test('a further server position wins over a lesser local one', () async {
+      final repo = _ServerStateRepository(
+          _serverChapter(id: 10, isRead: false, lastPageRead: 8));
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterProgress(10, lastPageRead: 3, isRead: null);
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches, isEmpty);
+      expect((await db.chapterById(10))!.progressDirty, isFalse);
+    });
+
+    test('a further local position wins over a lesser server one', () async {
+      final repo = _ServerStateRepository(
+          _serverChapter(id: 10, isRead: false, lastPageRead: 3));
+      final (:container, :db, :tracker) =
+          await _build(mangaIds: [1], repository: repo);
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await db.setChapterProgress(10, lastPageRead: 8, isRead: null);
+
+      await pushPendingProgress(container);
+
+      expect(repo.patches.single.lastPageRead, 8);
+      expect((await db.chapterById(10))!.progressDirty, isFalse);
     });
   });
 }

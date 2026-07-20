@@ -42,14 +42,11 @@ class OfflineMangas extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Chapter metadata + per-chapter device-download state. Keyed by the server's
-/// stable chapter id (NEVER chapterIndex/sourceOrder, which renumbers).
-///
-/// No FK to [OfflineMangas] by design: the server is canonical, and a chapter
-/// whose manga/chapter disappears server-side is reconciled in app logic via
-/// [OfflineDeviceState.orphaned] rather than cascade-deleted; `orphaned` is a
-/// transient reconciliation marker — server-gone chapters are evicted on the
-/// next reconcile pass, not kept indefinitely for explicit cleanup.
+/// Chapter metadata + per-chapter device-download state, keyed by the server's
+/// stable chapter id (never chapterIndex/sourceOrder, which renumbers). No FK
+/// to [OfflineMangas] by design — a chapter whose manga disappears
+/// server-side is reconciled via [OfflineDeviceState.orphaned] and evicted on
+/// the next reconcile pass, not cascade-deleted.
 @TableIndex(name: 'idx_offline_chapter_manga', columns: {#mangaId})
 class OfflineChapters extends Table {
   IntColumn get id => integer()();
@@ -76,24 +73,29 @@ class OfflineChapters extends Table {
   BoolColumn get progressDirty =>
       boolean().withDefault(const Constant(false))();
 
-  /// True when this chapter's bookmark was toggled locally but not yet pushed
-  /// to the server. Tracked separately from [progressDirty] so a read-progress
-  /// sync can't clobber a server bookmark that hasn't down-synced yet, and a
-  /// bookmark sync can't clobber un-synced read progress (#13/#33).
+  /// True when this chapter's bookmark was toggled locally but not yet pushed.
+  /// Tracked separately from [progressDirty] so a read-progress sync can't
+  /// clobber an un-synced bookmark, or vice versa (#13/#33).
   BoolColumn get bookmarkDirty =>
       boolean().withDefault(const Constant(false))();
 
-  /// True when this chapter's read-STATE (isRead) was changed locally but not
-  /// yet pushed. Tracked separately from [progressDirty] so a position-only
-  /// write can never push a stale isRead (the ch-99 un-read loop), mirroring
-  /// [bookmarkDirty] (#13).
+  /// True when this chapter's read-STATE (isRead) changed locally but not yet
+  /// pushed — separate from [progressDirty] so a position-only write can't
+  /// push a stale isRead (the ch-99 loop), mirroring [bookmarkDirty] (#13).
   BoolColumn get readStateDirty =>
       boolean().withDefault(const Constant(false))();
 
-  /// The server's last-read timestamp (epoch millis as a string, matching the
-  /// server's LongString) — synced down so the offline library can sort by
-  /// "Last Read". Server is the source of truth; this is never the device clock.
+  /// The server's last-read timestamp (epoch millis as a string) synced down
+  /// so the offline library can sort by "Last Read" — server is the source of
+  /// truth, never the device clock.
   TextColumn get lastReadAt => text().nullable()();
+
+  /// Monotonic download generation, bumped on every delete and persisted so a
+  /// restart can't let a re-queued download reuse one. Background events carry
+  /// their starting generation; anything below the current value is dropped so
+  /// a stale event can't corrupt a re-queued download.
+  IntColumn get downloadGeneration =>
+      integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -141,7 +143,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -207,12 +209,16 @@ class OfflineDatabase extends _$OfflineDatabase {
                 'UPDATE offline_chapters SET read_state_dirty = 1 '
                 'WHERE progress_dirty = 1 AND is_read = 1');
           }
+          if (from < 8) {
+            await _addColumnIfMissing(
+                m, offlineChapters, offlineChapters.downloadGeneration);
+          }
         },
       );
 
-  /// drift's [Migrator.addColumn] throws if the column already exists. A device
-  /// migrated by an intermediate/dev build can have a column present while still
-  /// recording an older schema version, so guard each add to stay idempotent.
+  /// drift's [Migrator.addColumn] throws if the column already exists — a
+  /// device migrated by an intermediate/dev build can have it present at an
+  /// older recorded schema version, so guard each add to stay idempotent.
   Future<void> _addColumnIfMissing(
       Migrator m, TableInfo table, GeneratedColumn column) async {
     final info =
@@ -224,8 +230,7 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   // --- metadata down-sync upserts -------------------------------------------
   // These set ONLY server-sourced columns, so device-managed columns
-  // (deviceState, bytes, thumbnailRelPath) are preserved on conflict and never
-  // clobbered by a metadata refresh.
+  // (deviceState, bytes, thumbnailRelPath) survive a metadata refresh untouched.
 
   Future<void> upsertMangaMetadata({
     required int id,
@@ -366,9 +371,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
           .write(OfflineChaptersCompanion(pinned: Value(pinned)));
 
-  /// Set a chapter's resolved page count (used to drive the determinate
-  /// download progress arc for chapters whose total wasn't known until the
-  /// downloader resolved their pages — e.g. webtoon chapters).
+  /// Set a chapter's resolved page count — drives the determinate download
+  /// progress arc for chapters (e.g. webtoon) whose total wasn't known until
+  /// the downloader resolved their pages.
   Future<void> setChapterPageCount(int chapterId, int pageCount) =>
       (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
           .write(OfflineChaptersCompanion(pageCount: Value(pageCount)));
@@ -388,6 +393,17 @@ class OfflineDatabase extends _$OfflineDatabase {
         ),
       );
 
+  /// Bump a chapter's persistent download generation and return the new
+  /// value — called on every delete so a re-queued download outranks any
+  /// still-in-flight event, and persisted so it survives a restart.
+  Future<int> bumpChapterGeneration(int chapterId) => transaction(() async {
+        final current = await chapterById(chapterId);
+        final next = (current?.downloadGeneration ?? 0) + 1;
+        await (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
+            .write(OfflineChaptersCompanion(downloadGeneration: Value(next)));
+        return next;
+      });
+
   /// Record local reading progress (read offline / always). Marks it
   /// `progressDirty` so it's pushed to the server on the next online sync.
   Future<void> setChapterProgress(
@@ -399,9 +415,9 @@ class OfflineDatabase extends _$OfflineDatabase {
         OfflineChaptersCompanion(
           lastPageRead: Value(lastPageRead),
           progressDirty: const Value(true),
-          // null → leave read-state untouched (a partial write must not un-read).
-          // A read-state change rides its OWN flag so a position-only write can
-          // never push a stale isRead (the ch-99 un-read loop).
+          // null → leave read-state untouched (a partial write must not
+          // un-read); a read-state change rides its OWN flag so position-only
+          // writes can't push a stale isRead (the ch-99 loop).
           isRead: isRead == null ? const Value.absent() : Value(isRead),
           readStateDirty:
               isRead == null ? const Value.absent() : const Value(true),
@@ -428,10 +444,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       (update(offlineChapters)..where((t) => t.id.equals(chapterId)))
           .write(const OfflineChaptersCompanion(bookmarkDirty: Value(false)));
 
-  /// Clear progressDirty only if the row still holds the exact values that were
-  /// pushed — so a newer local write that landed during the push isn't marked
-  /// clean and lost (the snapshot-then-clear race). A non-matching row keeps its
-  /// flag and re-syncs on the next pass.
+  /// Clear progressDirty only if the row still holds the exact pushed values —
+  /// so a newer local write landing mid-push isn't marked clean and lost (the
+  /// snapshot-then-clear race); a non-matching row keeps its flag and re-syncs.
   Future<void> clearProgressDirtyIfUnchanged(int chapterId,
           {required int lastPageRead}) =>
       (update(offlineChapters)
@@ -457,9 +472,9 @@ class OfflineDatabase extends _$OfflineDatabase {
                 t.id.equals(chapterId) & t.isBookmarked.equals(isBookmarked)))
           .write(const OfflineChaptersCompanion(bookmarkDirty: Value(false)));
 
-  /// Record a local bookmark change. Marks `bookmarkDirty` (separate from
-  /// `progressDirty`) so the bookmark is pushed on the next online sync without
-  /// dragging stale read progress with it, and vice versa (#13/#33).
+  /// Record a local bookmark change, marking `bookmarkDirty` (separate from
+  /// `progressDirty`) so the bookmark pushes without dragging stale read
+  /// progress along, and vice versa (#13/#33).
   Future<void> setChapterBookmark(int chapterId, bool isBookmarked) =>
       (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
         OfflineChaptersCompanion(
@@ -508,8 +523,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       });
 
   /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
-  /// (null/'0') and nothing downloaded. Never touches downloads; a stray library
-  /// row swept here just re-mirrors on the next online load.
+  /// and nothing downloaded. Never touches downloads — a swept stray row just
+  /// re-mirrors on the next online load.
   Future<int> purgeNonLibraryManga() {
     final withDeviceContent = selectOnly(offlineChapters)
       ..addColumns([offlineChapters.mangaId])
@@ -523,10 +538,9 @@ class OfflineDatabase extends _$OfflineDatabase {
         .go();
   }
 
-  /// Most-recent read timestamp per manga (the max chapter `lastReadAt`), for
-  /// the offline library's "Last Read" sort. Mangas with no read chapter are
-  /// absent from the map. Values are the server's epoch-millis strings, so the
-  /// max is taken numerically to match how the sort parses them.
+  /// Most-recent read timestamp per manga (max chapter `lastReadAt`), for the
+  /// offline library's "Last Read" sort — absent for mangas with no read
+  /// chapter. Values are epoch-millis strings, so the max is taken numerically.
   Future<Map<int, String>> lastReadAtByManga() async {
     final maxExpr = offlineChapters.lastReadAt.cast<int>().max();
     final query = selectOnly(offlineChapters)
@@ -544,11 +558,10 @@ class OfflineDatabase extends _$OfflineDatabase {
     return result;
   }
 
-  /// The next unread chapter that is downloaded on this device, per manga — the
-  /// lowest `chapterIndex` row with `isRead = false` and
-  /// `deviceState = downloaded`. Drives the offline "continue reading" button:
-  /// offline you can only open a chapter that's actually on the device, so a
-  /// manga with no downloaded unread chapter is simply absent from the map.
+  /// The next unread downloaded chapter per manga (lowest `chapterIndex` with
+  /// `isRead = false` and `deviceState = downloaded`) — drives the offline
+  /// "continue reading" button; a manga with none downloaded is absent from
+  /// the map.
   Future<Map<int, OfflineChapter>> firstUnreadDownloadedChapterByManga() async {
     final rows = await (select(offlineChapters)
           ..where((t) =>
@@ -589,9 +602,9 @@ class OfflineDatabase extends _$OfflineDatabase {
       (select(offlineChapters)..where((t) => t.mangaId.equals(mangaId)))
           .watch();
 
-  /// Live stream of every chapter that's downloaded OR actively
-  /// downloading/queued on this device — drives the Downloads → Offline files
-  /// tab (so it shows in-progress downloads, not just finished ones).
+  /// Live stream of every chapter downloaded OR actively downloading/queued —
+  /// drives the Downloads → Offline files tab, so in-progress downloads show
+  /// too, not just finished ones.
   Stream<List<OfflineChapter>> watchOfflineChapters() =>
       (select(offlineChapters)
             ..where((t) => t.deviceState.isIn([
@@ -601,13 +614,11 @@ class OfflineDatabase extends _$OfflineDatabase {
                 ])))
           .watch();
 
-  /// Live list of every series with an offline footprint on this device —
-  /// either chapters present (downloaded / in-flight) OR an active keep-rule
-  /// (`keepRule != off`) — with per-series aggregates and the manga row (which
-  /// carries `keepRule` / `keepUnreadCount`). The union is what makes the
-  /// Downloads → On device tab the single surface: a rule with nothing
-  /// downloaded yet still appears, and hand-saved chapters with no rule still
-  /// appear. Updates on either table changing.
+  /// Live list of every series with an offline footprint — chapters present
+  /// OR an active keep-rule — with per-series aggregates and the manga row.
+  /// The union makes Downloads → On device the single surface: a rule with
+  /// nothing downloaded yet still appears, and hand-saved chapters with no
+  /// rule still appear.
   Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
       watchOfflineSeries() {
     final downloaded = offlineChapters.id.count(

@@ -57,6 +57,29 @@ void main() {
     expect(store.written.length, 10);
   });
 
+  test('a cancel landing during the fetch prevents the page write', () async {
+    final store = _FakeStore();
+    var cancelled = false;
+    final engine = ChapterDownloadEngine(
+      fetchPage: (url) async {
+        cancelled = true; // a delete/pause lands while this request was in flight
+        return (bytes: [1, 2, 3], ext: 'jpg');
+      },
+      writePage: store,
+      refreshAuth: () async => true,
+      backoff: (_) => noBackoff,
+    );
+    final out = await engine.download(
+      mangaId: 1,
+      chapterId: 2,
+      pages: _pages(1),
+      isCancelled: () => cancelled,
+    );
+    expect(store.written, isEmpty,
+        reason: 'no file may be written for a chapter cancelled mid-fetch');
+    expect(out.cancelled, isTrue);
+  });
+
   test('refreshes auth once on 401 then succeeds', () async {
     var refreshes = 0;
     var firstTry = true;

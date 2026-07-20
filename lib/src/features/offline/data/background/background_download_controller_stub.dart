@@ -23,6 +23,7 @@ class BackgroundDownloadController {
   Future<void> ensureServiceRunning() async {}
   Future<void> onEnqueued(List<int> chapterIds) async {}
   Future<void> onRemoved(int chapterId) async {}
+  Future<void> recordChapterDeleted(int chapterId, int newGeneration) async {}
   Future<void> onWifiOnlyChanged(bool value) async {}
   Future<void> pause() async {}
   Future<void> resume() async {}

@@ -14,12 +14,10 @@ typedef PageUrlsFetcher = Future<List<String>> Function(int chapterId);
 /// Fetches one page URL's bytes + extension (wraps the auth'd HTTP GET).
 typedef PageBytesFetcher = Future<PageBytes> Function(String url);
 
-/// Orchestrates saving a chapter's pages to the device.
-///
-/// Platform-agnostic: the page-URL resolver, the byte fetcher, and the file
-/// store are injected, so the download flow is hermetically testable. The
-/// runtime wiring (GraphQL page URLs, auth'd HTTP, dart:io store, free-space
-/// guard) is provided on native platforms.
+/// Orchestrates saving a chapter's pages to the device. Platform-agnostic —
+/// the page-URL resolver, byte fetcher, and file store are injected so the
+/// flow is hermetically testable; real wiring (GraphQL, auth'd HTTP, dart:io,
+/// free-space guard) is provided on native platforms.
 class OfflineDownloadManager {
   OfflineDownloadManager({
     required this.db,
@@ -33,10 +31,10 @@ class OfflineDownloadManager {
   final PageUrlsFetcher fetchPageUrls;
   final PageBytesFetcher fetchBytes;
 
-  /// Download every page of [chapter] to the device. Requires the chapter to be
-  /// server-downloaded (product policy). On any failure, partial files + page
-  /// rows are removed and the chapter is marked `error`, then the error
-  /// rethrows so the queue/UI can surface it.
+  /// Download every page of [chapter] to the device. Requires it to be
+  /// server-downloaded (product policy); on any failure, partial files/rows
+  /// are removed, the chapter is marked `error`, and the error rethrows so
+  /// the queue/UI can surface it.
   Future<void> downloadChapter(OfflineChapter chapter, {bool force = false}) async {
     if (!force && !chapter.serverIsDownloaded) {
       throw StateError(
@@ -83,8 +81,18 @@ class OfflineDownloadManager {
 
   /// Remove a chapter's device copy entirely and reset its state.
   Future<void> deleteChapter(OfflineChapter chapter) async {
-    await _purge(chapter);
-    await db.setChapterDeviceState(chapter.id, OfflineDeviceState.none, bytes: 0);
+    // Flip state and drop page rows in one transaction so it serializes with
+    // the coordinator's onPageStored insert: that insert either commits first
+    // and is deleted here, or reads state=none and skips. Files come after —
+    // reconcile sweeps an orphan file, not an orphan row.
+    await db.transaction(() async {
+      await db.setChapterDeviceState(chapter.id, OfflineDeviceState.none,
+          bytes: 0);
+      await (db.delete(db.offlinePages)
+            ..where((t) => t.chapterId.equals(chapter.id)))
+          .go();
+    });
+    await store.deleteChapter(chapter.mangaId, chapter.id);
   }
 
   /// On launch, reset chapters left mid-download (app killed) so they can be

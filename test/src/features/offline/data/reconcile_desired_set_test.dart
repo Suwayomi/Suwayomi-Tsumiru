@@ -9,6 +9,7 @@ OfflineChapter ch(int id, int idx, {bool read = false, bool pinned = false}) =>
       deviceState: OfflineDeviceState.none, pageCount: 1, bytes: 0,
       pinned: pinned, downloadedAt: null, progressDirty: false,
       bookmarkDirty: false, readStateDirty: false, updatedAt: DateTime(2026),
+      downloadGeneration: 0,
     );
 
 void main() {
