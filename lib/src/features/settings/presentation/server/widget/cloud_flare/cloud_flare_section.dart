@@ -40,7 +40,7 @@ class CloudFlareSection extends ConsumerWidget {
               final value = await AppUtils.guard(
                   () => repository.toggleFlareSolverr(isEnabled),
                   ref.read(toastProvider));
-              if (value != null) {
+              if (value != null && context.mounted) {
                 ref.read(settingsProvider.notifier).updateState(value);
               }
             },

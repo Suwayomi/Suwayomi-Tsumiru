@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/hooks/debounced_hook.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/search_field.dart';
 import '../../../controller/manga_track_records_controller.dart';
@@ -33,33 +34,46 @@ class TrackerSearch extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final query = useState(mangaTitle);
+    final rawInput = useState(mangaTitle);
+    // Debounce searchTracker calls or AniList/MAL rate-limits (429) and search looks broken.
+    final query = useSettled(rawInput.value, const Duration(milliseconds: 400));
     final selected = useState<Fragment$TrackSearchDto?>(null);
+    // Blocks selection/binding until results catch up with the typed query.
+    final searchPending = rawInput.value != query;
 
-    final resultsAsync = ref.watch(
-      searchTrackerProvider(trackerId: tracker.id, query: query.value),
-    );
+    void onInput(String? value) {
+      rawInput.value = value ?? '';
+      // Drop any selection from the previous query so it can't get bound.
+      selected.value = null;
+    }
+
+    // Don't fire a search for an empty query (e.g. the field was cleared).
+    final resultsAsync = query.isEmpty
+        ? null
+        : ref.watch(searchTrackerProvider(trackerId: tracker.id, query: query));
 
     Future<void> bind({required bool private}) async {
       final entry = selected.value;
       if (entry == null) return;
       final result = await AsyncValue.guard(
-        () => ref.read(trackerRepositoryProvider).bind(
+        () => ref
+            .read(trackerRepositoryProvider)
+            .bind(
               mangaId: mangaId,
               trackerId: tracker.id,
               remoteId: entry.remoteId,
               private: private,
             ),
       );
+      // Both branches touch ref; bail if the sheet was dismissed mid-flight.
+      if (!context.mounted) return;
       if (result.hasError) {
         result.showToastOnError(ref.read(toastProvider));
         return;
       }
-      if (context.mounted) {
-        ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
-        ref.read(toastProvider)?.show(context.l10n.trackBindSuccess(tracker.name));
-        onBound();
-      }
+      ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
+      ref.read(toastProvider)?.show(context.l10n.trackBindSuccess(tracker.name));
+      onBound();
     }
 
     return Padding(
@@ -85,22 +99,13 @@ class TrackerSearch extends HookConsumerWidget {
             initialText: mangaTitle,
             hintText: context.l10n.search,
             autofocus: false,
-            onSubmitted: (value) {
-              if (value != null && value.isNotEmpty) {
-                query.value = value;
-                selected.value = null;
-              }
-            },
-            onChanged: (value) {
-              if (value != null && value.isNotEmpty) {
-                query.value = value;
-                selected.value = null;
-              }
-            },
+            onSubmitted: onInput,
+            onChanged: onInput,
           ),
 
-          // Track / Track privately buttons (shown when a result is selected).
-          if (selected.value != null)
+          // Track / Track privately buttons (shown once a result is selected
+          // and the search has settled).
+          if (!searchPending && selected.value != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
@@ -124,36 +129,43 @@ class TrackerSearch extends HookConsumerWidget {
               ),
             ),
 
-          // Results list.
+          // Results list. Spinner while pending so nothing stale can be tapped.
           Flexible(
-            child: resultsAsync.showUiWhenData(
-              context,
-              (results) {
-                if (results.isEmpty) {
-                  return Center(
+            child: query.isEmpty
+                ? const SizedBox.shrink()
+                : searchPending
+                ? const Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(context.l10n.noSearchResults),
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
                     ),
-                  );
-                }
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: results.length,
-                  itemBuilder: (context, index) {
-                    final result = results[index];
-                    final isSelected = selected.value?.remoteId == result.remoteId;
-                    return _TrackSearchResultTile(
-                      result: result,
-                      isSelected: isSelected,
-                      onTap: () {
-                        selected.value = isSelected ? null : result;
+                  )
+                : resultsAsync!.showUiWhenData(context, (results) {
+                    if (results.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(context.l10n.noSearchResults),
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: results.length,
+                      itemBuilder: (context, index) {
+                        final result = results[index];
+                        final isSelected =
+                            selected.value?.remoteId == result.remoteId;
+                        return _TrackSearchResultTile(
+                          result: result,
+                          isSelected: isSelected,
+                          onTap: () {
+                            selected.value = isSelected ? null : result;
+                          },
+                        );
                       },
                     );
-                  },
-                );
-              },
-            ),
+                  }),
           ),
         ],
       ),

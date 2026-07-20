@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../utils/extensions/custom_extensions.dart';
 import '../data/settings_repository.dart';
 import '../domain/settings/settings.dart';
 
@@ -12,6 +11,7 @@ class Settings extends _$Settings {
   Future<SettingsDto?> build() =>
       ref.watch(settingsRepositoryProvider).getServerSettings();
 
-  void updateState(SettingsDto value) =>
-      state = state.copyWithData((_) => value);
+  // Set directly: copyWithData only touches the data branch, so an update
+  // landing while loading/errored was silently dropped.
+  void updateState(SettingsDto value) => state = AsyncValue.data(value);
 }

@@ -90,8 +90,10 @@ Future<List<MangaDto>> sourceQuickSearchMangaList(
   String? query,
 }) async {
   final rateLimiterQueue = ref.watch(rateLimitQueueProvider(query));
+  // Capture now — ref access after the gap may throw once disposed.
+  final sourceRepository = ref.watch(sourceRepositoryProvider);
   final mangaPage = await rateLimiterQueue
-      .add(() => ref.watch(sourceRepositoryProvider).fetchSourceManga(
+      .add(() => sourceRepository.fetchSourceManga(
             page: 1,
             sourceId: sourceId,
             sourceType: SourceType.SEARCH,

@@ -79,7 +79,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                     () =>
                         repository.updateGlobalUpdateInterval(value.toDouble()),
                     ref.read(toastProvider));
-                if (result != null) {
+                if (result != null && context.mounted) {
                   ref.read(settingsProvider.notifier).updateState(result);
                 }
               }
@@ -154,7 +154,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                         final result = await AppUtils.guard(
                             () => repository.updateMangaMetaData(value),
                             ref.read(toastProvider));
-                        if (result != null) {
+                        if (result != null && context.mounted) {
                           ref
                               .read(settingsProvider.notifier)
                               .updateState(result);

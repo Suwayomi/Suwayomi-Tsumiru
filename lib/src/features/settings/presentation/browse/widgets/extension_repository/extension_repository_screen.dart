@@ -38,7 +38,7 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
               () => repository.updateExtensionRepos({...repoList, newUrl!}),
               ref.read(toastProvider),
             );
-            if (result != null) {
+            if (result != null && context.mounted) {
               ref.read(settingsProvider.notifier).updateState(result);
             }
           } else if (context.mounted) {
@@ -87,7 +87,7 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
                                   () =>
                                       repository.updateExtensionRepos(newList),
                                   ref.read(toastProvider));
-                              if (result != null) {
+                              if (result != null && context.mounted) {
                                 ref
                                     .read(settingsProvider.notifier)
                                     .updateState(result);

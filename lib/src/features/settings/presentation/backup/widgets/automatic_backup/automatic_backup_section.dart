@@ -58,7 +58,7 @@ class AutomaticBackupSection extends ConsumerWidget {
                   final result = await AppUtils.guard(
                       () => repository.updateBackupTime(backupTime),
                       ref.read(toastProvider));
-                  if (result != null) {
+                  if (result != null && context.mounted) {
                     ref.read(settingsProvider.notifier).updateState(result);
                   }
                 } else {

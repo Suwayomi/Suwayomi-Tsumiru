@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../history/presentation/history_controller.dart';
 import '../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../offline/data/offline_repository.dart';
@@ -187,21 +188,17 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     // prepend shifts every index; committing mid-gesture would jump the page.
     final pending = useRef<List<_LoadedChapter>?>(null);
 
+    // watch, not a one-time read: on cold open the filtered list is still
+    // loading, so a read-once pinned both neighbours null for the session.
+    // Mirrored into a ref for the once-bound preload effect below.
     final nextPrevChapterPair =
-        useState<({ChapterDto? first, ChapterDto? second})?>(null);
-    useEffect(() {
-      try {
-        nextPrevChapterPair.value = ref.read(
-          getNextAndPreviousChaptersProvider(
-            mangaId: manga.id,
-            chapterId: currentVisibleChapter.value.id,
-          ),
-        );
-      } catch (_) {
-        nextPrevChapterPair.value = null;
-      }
-      return null;
-    }, [currentVisibleChapter.value.id]);
+        useRef<({ChapterDto? first, ChapterDto? second})?>(null);
+    nextPrevChapterPair.value = ref.watch(
+      getNextAndPreviousChaptersProvider(
+        mangaId: manga.id,
+        chapterId: currentVisibleChapter.value.id,
+      ),
+    );
 
     _LoadedChapter? loadedById(int id) {
       for (final c in loadedRef.value) {
@@ -230,12 +227,19 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           lc.chapter.lastPageRead.getValueOnNullOrNegative() >= rel) {
         return;
       }
-      await recordReadingProgress(
+      final progressResult = await recordReadingProgress(
         ref,
         chapterId: chapterId,
         lastPageRead: completed ? 0 : rel,
         isRead: completed,
       );
+      // Disposed during the await → the ref calls below would throw.
+      if (!context.mounted) return;
+      // Online-only users have no dirty row to retry, so a failed push would
+      // vanish — surface it instead of losing progress silently.
+      if (progressResult.hasError) {
+        ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+      }
       if (completed && !completedChapterIds.value.contains(chapterId)) {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
         unawaited(maybeTrackProgressOnReadFetch(ref,
@@ -245,7 +249,11 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         unawaited(maybeDeleteOnReadServer(ref,
             mangaId: manga.id, readChapterId: chapterId));
       }
-      ref.invalidate(readingHistoryProvider);
+      // Fired off a scroll/visibility notification — defer past the frame or
+      // it trips the Riverpod-3 modify-during-build assert.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) ref.invalidate(readingHistoryProvider);
+      });
     }
 
     void scheduleVisibleProgress(int chapterId, int rel) {
@@ -299,14 +307,16 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         // downloaded, otherwise the server repository — so leaving mid-chapter
         // saves the spot even with offline disabled (the single-chapter reader
         // did this via its PopScope flush; the offline-DB-only flush dropped it).
-        unawaited(recordReadingProgressWithDependencies(
+        // Fire-and-forget teardown flush; ignore() swallows any local-write
+        // throw (the server push is already guarded internally).
+        recordReadingProgressWithDependencies(
           offlineEnabled: offlineEnabledForFlush,
           offlineDatabase: offlineDbForFlush,
           repository: repoForFlush,
           chapterId: p.chapterId,
           lastPageRead: isCompletion ? 0 : p.rel,
           isRead: isCompletion,
-        ).catchError((_) {}));
+        ).ignore();
       };
     }, const []);
 
@@ -318,13 +328,27 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final staged = pending.value;
       if (staged != null && staged.any((e) => e.chapterId == next.id)) return;
       loadingNext.value = true;
+      // Hold a listener: chapterPages is autoDispose with no other subscriber
+      // for the neighbour, so an unheld read gets disposed mid-fetch under
+      // Riverpod 3. Closed in finally so retries can't leak subscriptions.
+      final sub = ref.listenManual(
+          chapterPagesProvider(chapterId: next.id), (_, __) {});
       try {
         deferFeedback(() => InfinityContinuousFeedback
             .showLoadingNextChapterFeedback(context, next.name));
-        final pages =
-            await ref.read(chapterPagesProvider(chapterId: next.id).future);
+        final ChapterPagesDto? pages;
+        try {
+          pages = await ref
+              .read(chapterPagesProvider(chapterId: next.id).future)
+              .timeout(const Duration(seconds: 15));
+        } on TimeoutException {
+          return;
+        }
+        if (!context.mounted) return;
         if (pages == null) {
-          hasReachedEnd.value = true;
+          // No pages is a transient/empty result, not the end of the manga —
+          // drop the cached null so the next gesture refetches; don't latch.
+          ref.invalidate(chapterPagesProvider(chapterId: next.id));
           return;
         }
         if (loadedRef.value.any((e) => e.chapterId == next.id)) return;
@@ -336,9 +360,14 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         deferFeedback(() => InfinityContinuousFeedback
             .showNextChapterLoadedFeedback(context, next.name));
       } catch (_) {
-        hasReachedEnd.value = true;
+        // Transient failure — leave unlatched and refetchable so the next
+        // gesture retries instead of dead-ending the boundary for the session.
+        if (context.mounted) {
+          ref.invalidate(chapterPagesProvider(chapterId: next.id));
+        }
       } finally {
-        loadingNext.value = false;
+        sub.close();
+        if (context.mounted) loadingNext.value = false;
       }
     }
 
@@ -348,13 +377,23 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final staged = pending.value;
       if (staged != null && staged.any((e) => e.chapterId == prev.id)) return;
       loadingPrevious.value = true;
+      // Same held-subscription + finally-close treatment as loadNextChapter.
+      final sub = ref.listenManual(
+          chapterPagesProvider(chapterId: prev.id), (_, __) {});
       try {
         deferFeedback(() => InfinityContinuousFeedback
             .showLoadingPreviousChapterFeedback(context, prev.name));
-        final pages =
-            await ref.read(chapterPagesProvider(chapterId: prev.id).future);
+        final ChapterPagesDto? pages;
+        try {
+          pages = await ref
+              .read(chapterPagesProvider(chapterId: prev.id).future)
+              .timeout(const Duration(seconds: 15));
+        } on TimeoutException {
+          return;
+        }
+        if (!context.mounted) return;
         if (pages == null) {
-          hasReachedStart.value = true;
+          ref.invalidate(chapterPagesProvider(chapterId: prev.id));
           return;
         }
         if (loadedRef.value.any((e) => e.chapterId == prev.id)) return;
@@ -366,9 +405,13 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         deferFeedback(() => InfinityContinuousFeedback
             .showPreviousChapterLoadedFeedback(context, prev.name));
       } catch (_) {
-        hasReachedStart.value = true;
+        // Transient failure — leave unlatched and refetchable.
+        if (context.mounted) {
+          ref.invalidate(chapterPagesProvider(chapterId: prev.id));
+        }
       } finally {
-        loadingPrevious.value = false;
+        sub.close();
+        if (context.mounted) loadingPrevious.value = false;
       }
     }
 
@@ -421,7 +464,14 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         unawaited(loadPreviousChapter(pair!.second!));
       }
       return null;
-    }, [currentChapterPageIndex.value, currentVisibleChapter.value.id]);
+      // Also keyed on neighbour ids: cold open has the pair null while the
+      // filtered list loads, so this reruns once it resolves.
+    }, [
+      currentChapterPageIndex.value,
+      currentVisibleChapter.value.id,
+      nextPrevChapterPair.value?.first?.id,
+      nextPrevChapterPair.value?.second?.id,
+    ]);
 
     // --- display window --------------------------------------------------
 
@@ -520,6 +570,17 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     void onReachedEndEdge() {
+      // Explicit fallback trigger: the scroll-toward-edge preloader needs a
+      // forward movement tick, which openAtEnd / a one-page chapter never give.
+      final nextToLoad = tailAdjacency?.first;
+      if (nextToLoad != null && !hasReachedEnd.value) {
+        // onIdle already fired when the edge bounce settled, before the fetch
+        // finished — commit explicitly or the swap waits for the next swipe.
+        unawaited(loadNextChapter(nextToLoad).then((_) {
+          if (context.mounted) commitPendingIfAny();
+        }));
+        return;
+      }
       if (nextChapterExists) return; // more to load — no end feedback
       if (!context.mounted || !readerToastsEnabled()) return;
       InfinityContinuousFeedback.showEndOfMangaFeedback(
@@ -527,6 +588,16 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     }
 
     void onReachedStartEdge() {
+      // Explicit fallback trigger: opening at page 0 and paging back gives no
+      // backward tick for the preloader, so it would dead-end otherwise.
+      final prevToLoad = headAdjacency?.second;
+      if (prevToLoad != null && !hasReachedStart.value) {
+        // Commit once the fetch lands (see onReachedEndEdge).
+        unawaited(loadPreviousChapter(prevToLoad).then((_) {
+          if (context.mounted) commitPendingIfAny();
+        }));
+        return;
+      }
       if (prevChapterExists) return;
       if (!context.mounted || !readerToastsEnabled()) return;
       InfinityContinuousFeedback.showStartOfMangaFeedback(
@@ -673,8 +744,12 @@ void _markChapterRead(
     chapterId: chapter.id,
     lastPageRead: 0,
     isRead: true,
-  ).then((_) {
+  ).then((progressResult) {
     if (!context.mounted) return;
+    // A failed boundary push has no dirty row to retry for online-only users.
+    if (progressResult.hasError) {
+      ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+    }
     unawaited(maybeTrackProgressOnReadFetch(
       ref,
       mangaId: mangaId,

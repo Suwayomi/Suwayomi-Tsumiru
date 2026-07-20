@@ -58,7 +58,7 @@ class MultiChaptersActionIcon extends ConsumerWidget {
             isRead: change.isRead!,
             resetPosition: change.lastPageRead == 0 && change.isRead == true,
           );
-          if (!ok && !ref.read(offlineActiveProvider) && context.mounted) {
+          if (!ok && context.mounted && !ref.read(offlineActiveProvider)) {
             ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
           }
         } else {

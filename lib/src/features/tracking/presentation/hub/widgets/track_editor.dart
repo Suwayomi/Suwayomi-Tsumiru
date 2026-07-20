@@ -43,15 +43,15 @@ class TrackEditor extends ConsumerWidget {
     Future<void> Function() mutation,
   ) async {
     final result = await AsyncValue.guard(mutation);
+    // Both branches touch ref; bail if the sheet was dismissed mid-flight.
+    if (!context.mounted) return;
     if (result.hasError) {
       result.showToastOnError(ref.read(toastProvider));
       // Revert: re-read from server.
       ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
       return;
     }
-    if (context.mounted) {
-      ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
-    }
+    ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
   }
 
   // ------------------------------------------------------------------

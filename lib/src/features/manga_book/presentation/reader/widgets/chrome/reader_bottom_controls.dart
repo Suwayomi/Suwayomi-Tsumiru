@@ -100,6 +100,8 @@ class ReaderBottomControls extends ConsumerWidget {
 
     return MeasureSize(
       onChange: (size) {
+        // Fires post-layout; guard against a teardown between frame and callback.
+        if (!context.mounted) return;
         final current = ref.read(chromeExtentsProvider);
         final next = ChromeExtents(
           topInset: current.topInset,

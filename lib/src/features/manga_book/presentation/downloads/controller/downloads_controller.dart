@@ -49,8 +49,14 @@ class DownloadsMap extends _$DownloadsMap {
 
   @override
   Map<int, DownloadDto> build() {
-    ref.listen(downloadUpdatesProvider,
-        (_, next) => updateDownloadStatus(next.value));
+    // The subscription can emit while any widget is mid-build; assigning state
+    // synchronously then trips the Riverpod-3 modify-during-build assert
+    // app-wide. Defer the write off the current frame.
+    ref.listen(downloadUpdatesProvider, (_, next) {
+      Future.microtask(() {
+        if (ref.mounted) updateDownloadStatus(next.value);
+      });
+    });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
     return getStateFromUpdates(downloadStatusDto);
   }
@@ -68,6 +74,7 @@ class DownloadsMap extends _$DownloadsMap {
     final downloadStatusDto = await ref
         .read(downloadsRepositoryProvider)
         .reorderDownload(chapterId, to);
+    if (!ref.mounted) return;
     state = getStateFromUpdates(downloadStatusDto);
   }
 
@@ -79,6 +86,7 @@ class DownloadsMap extends _$DownloadsMap {
   /// from the cached snapshot.
   Future<void> clearAll() async {
     await ref.read(downloadsRepositoryProvider).clearDownloads();
+    if (!ref.mounted) return;
     state = {};
     ref.invalidate(downloadStatusProvider);
   }

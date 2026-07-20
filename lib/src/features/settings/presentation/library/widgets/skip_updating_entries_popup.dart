@@ -34,7 +34,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   () => repository.toggleExcludeCompleted(value.ifNull()),
                   ref.read(toastProvider),
                 );
-                if (result != null) {
+                if (result != null && context.mounted) {
                   ref.read(settingsProvider.notifier).updateState(result);
                 }
               },
@@ -49,7 +49,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   () => repository.toggleExcludeNotStarted(value.ifNull()),
                   ref.read(toastProvider),
                 );
-                if (result != null) {
+                if (result != null && context.mounted) {
                   ref.read(settingsProvider.notifier).updateState(result);
                 }
               },
@@ -64,7 +64,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   () => repository.toggleExcludeUnreadChapters(value.ifNull()),
                   ref.read(toastProvider),
                 );
-                if (result != null) {
+                if (result != null && context.mounted) {
                   ref.read(settingsProvider.notifier).updateState(result);
                 }
               },

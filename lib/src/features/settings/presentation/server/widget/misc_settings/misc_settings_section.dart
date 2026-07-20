@@ -26,7 +26,7 @@ class MiscSettingsSection extends ConsumerWidget {
             final value = await AppUtils.guard(
                 () => repository.toggleDebugLogs(isEnabled),
                 ref.read(toastProvider));
-            if (value != null) {
+            if (value != null && context.mounted) {
               ref.read(settingsProvider.notifier).updateState(value);
             }
           },
@@ -39,7 +39,7 @@ class MiscSettingsSection extends ConsumerWidget {
             final value = await AppUtils.guard(
                 () => repository.toggleSystemTrayEnabled(isEnabled),
                 ref.read(toastProvider));
-            if (value != null) {
+            if (value != null && context.mounted) {
               ref.read(settingsProvider.notifier).updateState(value);
             }
           },

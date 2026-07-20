@@ -67,11 +67,13 @@ class MigrationSearch extends _$MigrationSearch {
   Future<void> search(String sourceId, String query) async {
     state = const AsyncLoading();
 
-    state = await AsyncValue.guard(() async {
+    final result = await AsyncValue.guard(() async {
       return await ref
           .read(migrationRepositoryProvider)
           .searchMangaInSource(sourceId, query);
     });
+    if (!ref.mounted) return;
+    state = result;
   }
 
   void clearResults() {
@@ -92,8 +94,10 @@ Future<List<MangaDto>> migrationSourceQuickSearchMangaList(
   String? query,
 }) async {
   final rateLimiterQueue = ref.watch(rateLimitQueueProvider(query));
+  // Capture now — ref access after the gap may throw once disposed.
+  final sourceRepository = ref.watch(sourceRepositoryProvider);
   final mangaPage = await rateLimiterQueue
-      .add(() => ref.watch(sourceRepositoryProvider).fetchSourceManga(
+      .add(() => sourceRepository.fetchSourceManga(
             page: 1,
             sourceId: sourceId,
             sourceType: SourceType.SEARCH,
@@ -135,49 +139,40 @@ class MigrationExecution extends _$MigrationExecution {
     required MigrationOption options,
   }) async {
     try {
-      // Set initial progress
       state = const MigrationProgress(
         currentStep: MigrationStep.preparingMigration,
         percentage: 0.0,
         status: MigrationStatus.preparing,
       );
 
-      // Add a delay for visual feedback
       await Future.delayed(const Duration(milliseconds: 1000));
 
-      // Update progress to migrating chapters
       state = const MigrationProgress(
         currentStep: MigrationStep.migrateChapters,
         percentage: 25.0,
         status: MigrationStatus.migrating,
       );
 
-      // Add another delay
       await Future.delayed(const Duration(milliseconds: 800));
 
-      // Update progress to migrating categories
       state = const MigrationProgress(
         currentStep: MigrationStep.migrateCategories,
         percentage: 50.0,
         status: MigrationStatus.migrating,
       );
 
-      // Add another delay
       await Future.delayed(const Duration(milliseconds: 600));
 
-      // Update progress to finalizing
       state = const MigrationProgress(
         currentStep: MigrationStep.migrationInProgress,
         percentage: 75.0,
         status: MigrationStatus.migrating,
       );
 
-      // Now execute the actual migration
       final result = await ref
           .read(migrationRepositoryProvider)
           .migrateManga(fromMangaId, toMangaId, options);
 
-      // Update final progress based on result
       if (result?.success == true) {
         state = const MigrationProgress(
           currentStep: MigrationStep.migrationCompleted,
@@ -185,7 +180,6 @@ class MigrationExecution extends _$MigrationExecution {
           status: MigrationStatus.completed,
         );
 
-        // Invalidate caches to refresh UI data after successful migration
         await _invalidateCachesAfterMigration(fromMangaId, toMangaId);
       } else {
         state = MigrationProgress(
@@ -227,11 +221,9 @@ class MigrationExecution extends _$MigrationExecution {
     state = null;
   }
 
-  /// Invalidate caches after successful migration to refresh UI data
   Future<void> _invalidateCachesAfterMigration(
       int fromMangaId, int toMangaId) async {
     try {
-      // Invalidate manga details for both source and target manga
       ref.invalidate(mangaWithIdProvider(mangaId: fromMangaId));
       ref.invalidate(mangaWithIdProvider(mangaId: toMangaId));
 
@@ -242,7 +234,6 @@ class MigrationExecution extends _$MigrationExecution {
       // Invalidate the full library fetch (source of truth) then the
       // per-category slices so all reactive descendants re-partition.
       ref.invalidate(libraryMangaListProvider);
-      // Invalidate all category manga lists to refresh library
       final categories = ref.read(categoryControllerProvider).value ?? [];
       for (final category in categories) {
         ref.invalidate(categoryMangaListProvider(category.id));

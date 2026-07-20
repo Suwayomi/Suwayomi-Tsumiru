@@ -207,6 +207,7 @@ class MangaChapterFilterScanlator extends _$MangaChapterFilterScanlator {
             value: scanlator ?? MangaMetaKeys.scanlator.key,
           ),
     );
+    if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     state = scanlator ?? MangaMetaKeys.scanlator.key;
   }
@@ -230,6 +231,7 @@ class MangaChapterListMode extends _$MangaChapterListMode {
             value: mode.name,
           ),
     );
+    if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     state = mode;
   }
@@ -256,6 +258,7 @@ class MangaRating extends _$MangaRating {
             value: '$next',
           ),
     );
+    if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     // Refresh the library list so rating sort/filter reflect the change without
     // waiting for the next full library fetch.
@@ -282,6 +285,7 @@ class MangaUserTags extends _$MangaUserTags {
             value: jsonEncode(tags),
           ),
     );
+    if (!ref.mounted) return;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     // Refresh the library list so the tag filter list picks up new/removed tags
     // without waiting for the next full library fetch.
@@ -404,6 +408,9 @@ ChapterDto? firstUnreadInFilteredChapterList(
   } else {
     final current =
         filteredList.indexWhere((element) => element.id == chapterId);
+    // Not in the filtered list (e.g. unread-only filter while re-reading):
+    // otherwise current == -1 would resolve nextChapter to filteredList[0].
+    if (current == -1) return (first: null, second: null);
     final prevChapter = current > 0 ? filteredList[current - 1] : null;
     final nextChapter =
         current < (filteredList.length - 1) ? filteredList[current + 1] : null;
