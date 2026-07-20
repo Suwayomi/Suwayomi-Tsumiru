@@ -67,6 +67,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify tag matches pubspec version
+        if: startsWith(github.ref, 'refs/tags/v')
+        # Stops a release built from a commit whose pubspec version doesn't match
+        # the tag (e.g. tagging v0.9.2 while pubspec still says 0.9.1); the
+        # artifacts would report the wrong in-app version.
+        run: |
+          tag_ver="${GITHUB_REF_NAME#v}"
+          pubspec_ver="$(grep -m1 '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
+          if [ "$tag_ver" != "$pubspec_ver" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME (version $tag_ver) does not match pubspec.yaml version $pubspec_ver"
+            exit 1
+          fi
+          echo "Tag matches pubspec version: $pubspec_ver"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
@@ -158,6 +172,14 @@ jobs:
           export PATH="$PATH:$HOME/.pub-cache/bin"
           # Builds `flutter build linux --release` + packages an AppImage.
           fastforge package --platform linux --targets appimage
+          # Guard: the SQLite native lib must be bundled, or the app crashes on
+          # DB open (the error-126 class we shipped on Windows in 0.9.0/0.9.1).
+          sqlite="$(find build/linux -iname 'libsqlite3*.so' | head -1)"
+          if [ -z "$sqlite" ]; then
+            echo "::error::sqlite3 native library missing from the Linux build"
+            find build/linux -iname '*.so' 2>/dev/null | head; exit 1
+          fi
+          echo "Bundled SQLite: $sqlite"
           # Collect the AppImage into dist/ with our release naming.
           mkdir -p dist
           built="$(find dist -name '*.AppImage' | head -1)"
