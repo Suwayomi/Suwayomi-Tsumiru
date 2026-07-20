@@ -28,8 +28,10 @@ Future<List<Filter>?> baseSourceMangaFilterList(Ref ref, String sourceId) =>
 class SourceDisplayMode extends _$SourceDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
   @override
+  // Persist against DisplayMode.values, not the curated sourceDisplayList —
+  // the latter would be a second, reorderable wire format for the same index.
   DisplayMode? build() => initialize(
         DBKeys.sourceDisplayMode,
-        enumList: DisplayMode.sourceDisplayList,
+        enumList: DisplayMode.values,
       );
 }

@@ -45,9 +45,9 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     final asyncBackupFile = await AsyncValue.guard(
         () => FilePickerUtils.convertToMultipartFile(pickedFile, "backup"));
 
-    if (context.mounted &&
-        (asyncBackupFile.hasError || asyncBackupFile.value == null)) {
-      asyncBackupFile.showToastOnError(toast);
+    if (asyncBackupFile.hasError || asyncBackupFile.value == null) {
+      // Bail unconditionally — mounted only gates the toast, not the null-assertion below.
+      if (context.mounted) asyncBackupFile.showToastOnError(toast);
       return null;
     }
 
@@ -57,14 +57,17 @@ class BackupAndRestoreSection extends HookConsumerWidget {
     final validateResult = await AsyncValue.guard(() =>
         ref.read(backupSettingsRepositoryProvider).validateBackup(backupFile));
 
-    if (context.mounted && validateResult.hasError) {
-      validateResult.showToastOnError(toast);
+    if (validateResult.hasError) {
+      // Bail unconditionally — don't let an unmounted validation failure proceed to restore.
+      if (context.mounted) validateResult.showToastOnError(toast);
       return null;
     }
 
     String? backupId;
     bool restoreBackup = true;
-    if (validateResult.value.isNotBlank && context.mounted) {
+    if (validateResult.value.isNotBlank) {
+      // Can't confirm missing sources without a context to show the dialog in.
+      if (!context.mounted) return null;
       restoreBackup = (await showDialog<bool>(
         context: context,
         builder: (context) =>
@@ -77,9 +80,9 @@ class BackupAndRestoreSection extends HookConsumerWidget {
       final asyncBackupFile = await AsyncValue.guard(
           () => FilePickerUtils.convertToMultipartFile(pickedFile, "backup"));
 
-      if (context.mounted &&
-          (asyncBackupFile.hasError || asyncBackupFile.value == null)) {
-        asyncBackupFile.showToastOnError(toast);
+      if (asyncBackupFile.hasError || asyncBackupFile.value == null) {
+        // Same unconditional bail as the first conversion.
+        if (context.mounted) asyncBackupFile.showToastOnError(toast);
         return null;
       }
       final backupResponse = (await AsyncValue.guard(() => ref
