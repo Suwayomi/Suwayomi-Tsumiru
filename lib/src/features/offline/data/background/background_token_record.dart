@@ -10,6 +10,7 @@ class BackgroundTokenRecord {
   const BackgroundTokenRecord({
     required this.gen,
     required this.authType,
+    this.endpoint,
     this.accessToken,
     this.refreshToken,
     this.password,
@@ -19,12 +20,15 @@ class BackgroundTokenRecord {
 
   final int gen;
   final String authType; // basic | simpleLogin | uiLogin | none
+  // Endpoint these creds belong to, checked before writeback after a switch.
+  final String? endpoint;
   final String? accessToken, refreshToken, password, basicCredential, simpleCookie;
 
   BackgroundTokenRecord copyWith({int? gen, String? accessToken, String? refreshToken}) =>
       BackgroundTokenRecord(
         gen: gen ?? this.gen,
         authType: authType,
+        endpoint: endpoint,
         accessToken: accessToken ?? this.accessToken,
         refreshToken: refreshToken ?? this.refreshToken,
         password: password,
@@ -33,15 +37,17 @@ class BackgroundTokenRecord {
       );
 
   Map<String, Object?> toJson() => {
-        'gen': gen, 'authType': authType, 'accessToken': accessToken,
-        'refreshToken': refreshToken, 'password': password,
-        'basicCredential': basicCredential, 'simpleCookie': simpleCookie,
+        'gen': gen, 'authType': authType, 'endpoint': endpoint,
+        'accessToken': accessToken, 'refreshToken': refreshToken,
+        'password': password, 'basicCredential': basicCredential,
+        'simpleCookie': simpleCookie,
       };
 
   factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) =>
       BackgroundTokenRecord(
         gen: j['gen'] as int,
         authType: j['authType'] as String,
+        endpoint: j['endpoint'] as String?,
         accessToken: j['accessToken'] as String?,
         refreshToken: j['refreshToken'] as String?,
         password: j['password'] as String?,

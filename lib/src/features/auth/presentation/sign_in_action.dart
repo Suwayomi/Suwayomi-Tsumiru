@@ -39,6 +39,8 @@ Future<void> performSignIn(
 }) async {
   ref.read(authUsernameProvider.notifier).update(username);
   final store = ref.read(authCredentialsStoreProvider.notifier);
+  // Guards every write below against a server switch racing this sign-in.
+  final epoch = store.serverEpoch;
   if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
   if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
   if (authType != AuthType.basic) await store.clearBasicCredentials();
@@ -46,9 +48,9 @@ Future<void> performSignIn(
   final coordinator = ref.read(authCoordinatorProvider.notifier);
   switch (authType) {
     case AuthType.basic:
-      await ref
-          .read(credentialsProvider.notifier)
-          .set('Basic ${base64.encode(utf8.encode('$username:$password'))}');
+      await ref.read(credentialsProvider.notifier).set(
+          'Basic ${base64.encode(utf8.encode('$username:$password'))}',
+          forEpoch: epoch);
     case AuthType.simpleLogin:
       await coordinator.loginSimple(
         serverBaseUrl: serverBaseUrl,

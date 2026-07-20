@@ -69,7 +69,14 @@ TestConnectionFailure classifyAuthError(Object e) {
         TestConnectionFailureKind.unexpectedShape, e.message);
   }
   final msg = e.toString().toLowerCase();
-  if (msg.contains('unauthor') || msg.contains('forbidden')) {
+  if (msg.contains('unauthor') ||
+      msg.contains('forbidden') ||
+      // Suwayomi's UI-login rejection ("Incorrect username or password.")
+      // and Simple Login's variants — none contain "unauthorized", so match
+      // them explicitly rather than fall through to the scary "wrong URL?".
+      msg.contains('incorrect username or password') ||
+      msg.contains('invalid username or password') ||
+      msg.contains('invalid credentials')) {
     return const TestConnectionFailure(
         TestConnectionFailureKind.invalidCredentials);
   }
@@ -357,14 +364,16 @@ class AuthCoordinator extends _$AuthCoordinator {
     required String username,
     required String password,
   }) async {
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    // Capture before verify so a switch mid-login can't persist creds for the new host.
+    final epoch = store.serverEpoch;
     final cookie = await verifySimpleCredentials(
       serverBaseUrl: serverBaseUrl,
       username: username,
       password: password,
     );
-    final store = ref.read(authCredentialsStoreProvider.notifier);
-    await store.saveSimpleLoginCookie(cookie);
-    await store.savePassword(password);
+    await store.saveSimpleLoginCookie(cookie, forEpoch: epoch);
+    await store.savePassword(password, forEpoch: epoch);
     ref.read(needsReauthProvider.notifier).set(false);
   }
 
@@ -374,17 +383,19 @@ class AuthCoordinator extends _$AuthCoordinator {
     required String username,
     required String password,
   }) async {
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    final epoch = store.serverEpoch;
     final tokens = await verifyUiCredentials(
       gqlClient: gqlClient,
       username: username,
       password: password,
     );
-    final store = ref.read(authCredentialsStoreProvider.notifier);
     await store.saveUiLoginTokens(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
+      forEpoch: epoch,
     );
-    await store.savePassword(password);
+    await store.savePassword(password, forEpoch: epoch);
     ref.read(needsReauthProvider.notifier).set(false);
   }
 
@@ -428,6 +439,8 @@ class AuthCoordinator extends _$AuthCoordinator {
   Future<RefreshOutcome> _refreshUiAccessTokenImpl(
       GraphQLClient gqlClient) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
+    // A switch bumping the epoch mid-refresh discards the write below.
+    final startEpoch = store.serverEpoch;
     final tokens = store.uiLoginTokens();
     if (tokens == null) {
       // No tokens to refresh = nothing more we can do. This is treated
@@ -509,7 +522,7 @@ class AuthCoordinator extends _$AuthCoordinator {
           Exception('auth mode changed during refresh'));
     }
 
-    await store.updateUiLoginAccessToken(newAccess);
+    await store.updateUiLoginAccessToken(newAccess, forEpoch: startEpoch);
     return RefreshOutcome.success(newAccess);
   }
 

@@ -14,6 +14,7 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../server_url_tile/server_url_tile.dart' show clearCredentialsForServerChange;
 
 part 'server_port_tile.g.dart';
 
@@ -21,6 +22,13 @@ part 'server_port_tile.g.dart';
 class ServerPort extends _$ServerPort with SharedPreferenceClientMixin<int> {
   @override
   int? build() => initialize(DBKeys.serverPort);
+
+  @override
+  void update(int? value) {
+    // Port is part of the effective endpoint, same as ServerUrl.
+    if (value != state) clearCredentialsForServerChange(ref);
+    super.update(value);
+  }
 }
 
 @riverpod
@@ -31,6 +39,13 @@ class ServerPortToggle extends _$ServerPortToggle
         DBKeys.serverPortToggle,
         initial: kIsWeb ? false : DBKeys.serverPortToggle.initial,
       );
+
+  @override
+  void update(bool? value) {
+    // Toggling the custom port on/off changes the effective endpoint too.
+    if (value != state) clearCredentialsForServerChange(ref);
+    super.update(value);
+  }
 }
 
 class ServerPortTile extends ConsumerWidget {

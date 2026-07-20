@@ -147,12 +147,21 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   AuthCredentialsState get _current =>
       state.value ?? const AuthCredentialsState.empty();
 
+  // Bumped by [clearAllForServerSwitch]; a delayed write racing a switch
+  // captures a stale epoch and discards itself instead of writing.
+  int _serverEpoch = 0;
+  int get serverEpoch => _serverEpoch;
+
   // ---------- Password ----------
 
-  Future<void> savePassword(String password) async {
-    await ref
-        .read(secureStorageProvider)
-        .write(key: _kPasswordKey, value: password);
+  Future<void> savePassword(String password, {int? forEpoch}) async {
+    if (forEpoch != null && forEpoch != _serverEpoch) return;
+    final storage = ref.read(secureStorageProvider);
+    await storage.write(key: _kPasswordKey, value: password);
+    if (forEpoch != null && forEpoch != _serverEpoch) {
+      await storage.delete(key: _kPasswordKey);
+      return;
+    }
     state = AsyncData(_current.copyWith(password: password));
   }
 
@@ -163,11 +172,14 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
 
   // ---------- Simple Login ----------
 
-  Future<void> saveSimpleLoginCookie(String cookieValue) async {
-    await ref.read(secureStorageProvider).write(
-          key: _kSimpleCookieKey,
-          value: cookieValue,
-        );
+  Future<void> saveSimpleLoginCookie(String cookieValue, {int? forEpoch}) async {
+    if (forEpoch != null && forEpoch != _serverEpoch) return;
+    final storage = ref.read(secureStorageProvider);
+    await storage.write(key: _kSimpleCookieKey, value: cookieValue);
+    if (forEpoch != null && forEpoch != _serverEpoch) {
+      await storage.delete(key: _kSimpleCookieKey);
+      return;
+    }
     state = AsyncData(_current.copyWith(simpleLoginCookie: cookieValue));
   }
 
@@ -178,13 +190,22 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
 
   // ---------- UI Login ----------
 
+  /// [forEpoch]: discards (or undoes) the write if a switch bumps [serverEpoch]
+  /// before or during the storage write.
   Future<void> saveUiLoginTokens({
     required String accessToken,
     required String refreshToken,
+    int? forEpoch,
   }) async {
+    if (forEpoch != null && forEpoch != _serverEpoch) return;
     final storage = ref.read(secureStorageProvider);
     await storage.write(key: _kUiAccessKey, value: accessToken);
     await storage.write(key: _kUiRefreshKey, value: refreshToken);
+    if (forEpoch != null && forEpoch != _serverEpoch) {
+      await storage.delete(key: _kUiAccessKey);
+      await storage.delete(key: _kUiRefreshKey);
+      return;
+    }
     final expiresAt = decodeJwtExp(accessToken);
     state = AsyncData(_current.copyWith(
       uiAccessToken: accessToken,
@@ -197,11 +218,15 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     ));
   }
 
-  Future<void> updateUiLoginAccessToken(String accessToken) async {
-    await ref.read(secureStorageProvider).write(
-          key: _kUiAccessKey,
-          value: accessToken,
-        );
+  Future<void> updateUiLoginAccessToken(String accessToken,
+      {int? forEpoch}) async {
+    if (forEpoch != null && forEpoch != _serverEpoch) return;
+    final storage = ref.read(secureStorageProvider);
+    await storage.write(key: _kUiAccessKey, value: accessToken);
+    if (forEpoch != null && forEpoch != _serverEpoch) {
+      await storage.delete(key: _kUiAccessKey);
+      return;
+    }
     final expiresAt = decodeJwtExp(accessToken);
     state = AsyncData(_current.copyWith(
       uiAccessToken: accessToken,
@@ -241,4 +266,19 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   /// a way to clear that entry post-migration.
   Future<void> clearBasicCredentials() =>
       ref.read(secureStorageProvider).delete(key: _kBasicCredentialsKey);
+
+  /// Wipe every credential for a server switch. Clears in-memory state
+  /// synchronously so nothing reads a stale cookie/token mid-delete.
+  Future<void> clearAllForServerSwitch() async {
+    _serverEpoch++;
+    state = const AsyncData(AuthCredentialsState.empty());
+    final storage = ref.read(secureStorageProvider);
+    await Future.wait([
+      storage.delete(key: _kPasswordKey),
+      storage.delete(key: _kSimpleCookieKey),
+      storage.delete(key: _kUiAccessKey),
+      storage.delete(key: _kUiRefreshKey),
+      storage.delete(key: _kBasicCredentialsKey),
+    ]);
+  }
 }

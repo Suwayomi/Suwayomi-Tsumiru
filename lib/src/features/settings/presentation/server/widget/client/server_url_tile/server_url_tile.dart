@@ -10,10 +10,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../../../constants/db_keys.dart';
+import '../../../../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../credential_popup/credentials_popup.dart';
 import 'server_search_button.dart';
 
 part 'server_url_tile.g.dart';
@@ -25,6 +27,29 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
         DBKeys.serverUrl,
         initial: kIsWeb ? Uri.base.origin : DBKeys.serverUrl.initial,
       );
+
+  @override
+  void update(String? value) {
+    final previous = state;
+    // Clear before publishing so the rebuild it triggers can't send A's creds to B.
+    if (_isDifferentHost(previous, value)) clearCredentialsForServerChange(ref);
+    super.update(value);
+  }
+}
+
+bool _isDifferentHost(String? a, String? b) {
+  if (a == null || b == null || a == b) return false;
+  final ua = Uri.tryParse(a);
+  final ub = Uri.tryParse(b);
+  if (ua == null || ub == null) return true;
+  return ua.scheme != ub.scheme || ua.host != ub.host || ua.port != ub.port;
+}
+
+/// Wipe credentials and bump the epoch on an endpoint change (URL, port, or
+/// port toggle) so the old server's creds can't reach the new one.
+void clearCredentialsForServerChange(Ref ref) {
+  ref.read(credentialsProvider.notifier).set(null);
+  ref.read(authCredentialsStoreProvider.notifier).clearAllForServerSwitch();
 }
 
 class ServerUrlTile extends ConsumerWidget {

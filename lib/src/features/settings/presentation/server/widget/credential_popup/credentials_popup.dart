@@ -12,6 +12,7 @@ import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../../../features/auth/data/basic_auth_migration.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
@@ -25,14 +26,25 @@ class Credentials extends _$Credentials {
   Future<String?> build() async =>
       ref.read(secureStorageProvider).read(key: kBasicCredentialsSecureKey);
 
-  Future<void> set(String? value) async {
-    state = AsyncData(value);
+  /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
+  /// meanwhile. Omit for a clear (set null).
+  Future<void> set(String? value, {int? forEpoch}) async {
     final storage = ref.read(secureStorageProvider);
     if (value == null) {
+      state = const AsyncData(null);
       await storage.delete(key: kBasicCredentialsSecureKey);
-    } else {
-      await storage.write(key: kBasicCredentialsSecureKey, value: value);
+      return;
     }
+    bool stale() =>
+        forEpoch != null &&
+        forEpoch != ref.read(authCredentialsStoreProvider.notifier).serverEpoch;
+    if (stale()) return;
+    await storage.write(key: kBasicCredentialsSecureKey, value: value);
+    if (stale()) {
+      await storage.delete(key: kBasicCredentialsSecureKey);
+      return;
+    }
+    state = AsyncData(value);
   }
 }
 
@@ -93,6 +105,8 @@ class CredentialsPopup extends HookConsumerWidget {
                       userName: username.text,
                       password: password.text,
                     ),
+                    forEpoch:
+                        ref.read(authCredentialsStoreProvider.notifier).serverEpoch,
                   );
               Navigator.pop(context);
             }
