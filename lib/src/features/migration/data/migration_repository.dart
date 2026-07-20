@@ -51,7 +51,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
       final sources = result.parsedData?.sources.nodes;
       if (sources == null) return null;
 
-      // Convert SourceDto to MigrationSource
       return sources
           .map((source) => MigrationSource(
                 id: source.id,
@@ -105,7 +104,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
       int fromMangaId, int toMangaId, MigrationOption options,
       [BuildContext? context]) async {
     try {
-      // Get source manga information
       final sourceMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
           variables: Variables$Query$GetManga(id: fromMangaId),
@@ -125,7 +123,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
         throw Exception(errorMessage);
       }
 
-      // Get target manga information
       final targetMangaResult = await client.query$GetManga(
         Options$Query$GetManga(
           variables: Variables$Query$GetManga(id: toMangaId),
@@ -148,6 +145,9 @@ class MigrationRepositoryImpl implements MigrationRepository {
       List<String> warnings = [];
       int migratedChapters = 0;
       int migratedCategories = 0;
+      // Set on any hard failure below; blocks deleting the source so a partial
+      // migration can't lose data (better a visible duplicate than gone).
+      bool hardFailure = false;
 
       // Step 1: Add target manga to library if source manga is in library
       if (sourceManga.inLibrary) {
@@ -162,16 +162,17 @@ class MigrationRepositoryImpl implements MigrationRepository {
           ),
         );
 
-        if (updateLibraryResult.hasException) {
+        if (updateLibraryResult.hasException ||
+            updateLibraryResult.parsedData?.updateManga == null) {
           warnings.add(
-              'Failed to add target manga to library: ${updateLibraryResult.exception}');
+              'Failed to add target manga to library: ${updateLibraryResult.exception ?? 'no data'}');
+          hardFailure = true;
         }
       }
 
       // Step 2: Migrate categories if enabled
       if (options.migrateCategories && sourceManga.inLibrary) {
         try {
-          // Get source manga categories
           final sourceCategoriesResult = await client.query$GetMangaCategories(
             Options$Query$GetMangaCategories(
               variables: Variables$Query$GetMangaCategories(id: fromMangaId),
@@ -186,7 +187,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
             if (categories.isNotEmpty) {
               List<int> categoryIds = categories.map((cat) => cat.id).toList();
 
-              // Apply the same categories to target manga
               final updateCategoriesResult =
                   await client.mutate$UpdateMangaCategories(
                 Options$Mutation$UpdateMangaCategories(
@@ -201,23 +201,32 @@ class MigrationRepositoryImpl implements MigrationRepository {
                 ),
               );
 
-              if (updateCategoriesResult.hasException) {
+              if (updateCategoriesResult.hasException ||
+                  updateCategoriesResult.parsedData?.updateMangaCategories ==
+                      null) {
                 warnings.add(
-                    'Failed to migrate categories: ${updateCategoriesResult.exception}');
+                    'Failed to migrate categories: ${updateCategoriesResult.exception ?? 'no data'}');
+                hardFailure = true;
               } else {
                 migratedCategories = categoryIds.length;
               }
             }
+          } else {
+            // The fetch itself failed — treat as a hard failure so we don't
+            // delete the source having migrated nothing.
+            warnings.add(
+                'Failed to read source categories: ${sourceCategoriesResult.exception ?? 'no data'}');
+            hardFailure = true;
           }
         } catch (e) {
           warnings.add('Category migration failed: $e');
+          hardFailure = true;
         }
       }
 
       // Step 3: Migrate reading progress if enabled
       if (options.migrateChapters) {
         try {
-          // Get source manga chapters using the correct API
           final sourceChaptersResult = await client.mutate$GetChaptersByMangaId(
             Options$Mutation$GetChaptersByMangaId(
               variables: Variables$Mutation$GetChaptersByMangaId(
@@ -226,7 +235,6 @@ class MigrationRepositoryImpl implements MigrationRepository {
             ),
           );
 
-          // Get target manga chapters using the correct API
           final targetChaptersResult = await client.mutate$GetChaptersByMangaId(
             Options$Mutation$GetChaptersByMangaId(
               variables: Variables$Mutation$GetChaptersByMangaId(
@@ -246,65 +254,106 @@ class MigrationRepositoryImpl implements MigrationRepository {
             final targetChapters =
                 targetChaptersResult.parsedData!.fetchChapters!.chapters;
 
-            // Create a list to batch update read chapters
             List<Input$UpdateChapterInput> chapterUpdates = [];
+            // Source chapters carrying state (read / bookmark / partial progress)
+            // that has no target match — that state can't migrate, so it must
+            // block deleting the source.
+            int unmatchedState = 0;
+            // Merge state per target id, seeded from the target's own state, so
+            // several source chapters matching one target (via the number
+            // tolerance or a name fallback) can't overwrite higher progress with
+            // lower: read/bookmark OR together, position takes the max.
+            final merged = <int, ({bool read, bool bookmark, int lastPage})>{};
 
-            // Try to match chapters by multiple criteria for better accuracy
             for (final sourceChapter in sourceChapters) {
-              if (sourceChapter.isRead) {
-                ChapterDto? matchingChapter;
+              // Migrate any chapter with state to carry over, not just read ones
+              // — a bookmarked or partially-read (unread) chapter counts too.
+              final hasState = sourceChapter.isRead ||
+                  sourceChapter.isBookmarked ||
+                  sourceChapter.lastPageRead > 0;
+              if (!hasState) continue;
 
-                // First, try exact chapter number match
+              ChapterDto? matchingChapter;
+
+              // First, try exact chapter number match
+              matchingChapter = targetChapters
+                  .where(
+                    (chapter) =>
+                        (chapter.chapterNumber - sourceChapter.chapterNumber)
+                            .abs() <
+                        0.01,
+                  )
+                  .firstOrNull;
+
+              // If no exact match, try name matching (case insensitive)
+              if (matchingChapter == null && sourceChapter.name.isNotEmpty) {
+                final sourceName = sourceChapter.name.toLowerCase().trim();
                 matchingChapter = targetChapters
                     .where(
                       (chapter) =>
-                          (chapter.chapterNumber - sourceChapter.chapterNumber)
-                              .abs() <
-                          0.01,
+                          chapter.name.toLowerCase().trim() == sourceName,
                     )
                     .firstOrNull;
+              }
 
-                // If no exact match, try name matching (case insensitive)
-                if (matchingChapter == null && sourceChapter.name.isNotEmpty) {
-                  final sourceName = sourceChapter.name.toLowerCase().trim();
-                  matchingChapter = targetChapters
-                      .where(
-                        (chapter) =>
-                            chapter.name.toLowerCase().trim() == sourceName,
-                      )
-                      .firstOrNull;
-                }
+              // If still no match, try partial name matching
+              if (matchingChapter == null && sourceChapter.name.isNotEmpty) {
+                final sourceName = sourceChapter.name.toLowerCase().trim();
+                matchingChapter = targetChapters.where(
+                  (chapter) {
+                    final targetName = chapter.name.toLowerCase().trim();
+                    return targetName.contains(sourceName) ||
+                        sourceName.contains(targetName);
+                  },
+                ).firstOrNull;
+              }
 
-                // If still no match, try partial name matching
-                if (matchingChapter == null && sourceChapter.name.isNotEmpty) {
-                  final sourceName = sourceChapter.name.toLowerCase().trim();
-                  matchingChapter = targetChapters.where(
-                    (chapter) {
-                      final targetName = chapter.name.toLowerCase().trim();
-                      return targetName.contains(sourceName) ||
-                          sourceName.contains(targetName);
-                    },
-                  ).firstOrNull;
-                }
+              if (matchingChapter == null) {
+                unmatchedState++;
+                continue;
+              }
 
-                // If we found a matching chapter and it's not already read
-                if (matchingChapter != null && !matchingChapter.isRead) {
-                  chapterUpdates.add(
-                    Input$UpdateChapterInput(
-                      id: matchingChapter.id,
-                      patch: Input$UpdateChapterPatchInput(
-                        isRead: true,
-                        lastPageRead: sourceChapter.lastPageRead,
-                        isBookmarked: sourceChapter
-                            .isBookmarked, // Also migrate bookmarks
-                      ),
-                    ),
+              final prev = merged[matchingChapter.id] ??
+                  (
+                    read: matchingChapter.isRead,
+                    bookmark: matchingChapter.isBookmarked,
+                    lastPage: matchingChapter.lastPageRead,
                   );
-                }
+              merged[matchingChapter.id] = (
+                read: prev.read || sourceChapter.isRead,
+                bookmark: prev.bookmark || sourceChapter.isBookmarked,
+                lastPage: sourceChapter.lastPageRead > prev.lastPage
+                    ? sourceChapter.lastPageRead
+                    : prev.lastPage,
+              );
+            }
+
+            // Emit an update per target only when the merged state ADDS something
+            // over the target's own state — never un-read, un-bookmark, or rewind.
+            for (final entry in merged.entries) {
+              final original =
+                  targetChapters.firstWhere((c) => c.id == entry.key);
+              final m = entry.value;
+              final setRead = m.read && !original.isRead;
+              final setBookmark = m.bookmark && !original.isBookmarked;
+              // Carry the furthest position independently of read state — a read
+              // chapter can still record where it was left off, and losing the
+              // merged max here would silently drop migrated progress.
+              final setPosition = m.lastPage > original.lastPageRead;
+              if (setRead || setBookmark || setPosition) {
+                chapterUpdates.add(
+                  Input$UpdateChapterInput(
+                    id: entry.key,
+                    patch: Input$UpdateChapterPatchInput(
+                      isRead: setRead ? true : null,
+                      isBookmarked: setBookmark ? true : null,
+                      lastPageRead: setPosition ? m.lastPage : null,
+                    ),
+                  ),
+                );
               }
             }
 
-            // Batch update chapters if we have any to update
             if (chapterUpdates.isNotEmpty) {
               // Update chapters one by one to avoid overwhelming the server
               for (final updateInput in chapterUpdates) {
@@ -315,27 +364,42 @@ class MigrationRepositoryImpl implements MigrationRepository {
                             input: updateInput)),
                   );
 
-                  if (!updateResult.hasException) {
+                  // A null payload (no exception, but the server applied
+                  // nothing) must not count as migrated, or the source could be
+                  // deleted with state unmoved.
+                  if (!updateResult.hasException &&
+                      updateResult.parsedData?.updateChapter != null) {
                     migratedChapters++;
                   } else {
                     warnings.add(
-                        'Failed to migrate chapter ${updateInput.id}: ${updateResult.exception}');
+                        'Failed to migrate chapter ${updateInput.id}: ${updateResult.exception ?? 'no data'}');
+                    hardFailure = true;
                   }
                 } catch (e) {
                   warnings
                       .add('Failed to migrate chapter ${updateInput.id}: $e');
+                  hardFailure = true;
                 }
               }
             }
 
-            if (migratedChapters == 0 &&
-                sourceChapters.any((ch) => ch.isRead)) {
+            // Any chapter with state and no target match means that state can't
+            // migrate — keep the source so that data isn't lost.
+            if (unmatchedState > 0) {
               warnings.add(
-                  'No matching chapters found for read status migration. This may be due to different chapter numbering between sources.');
+                  '$unmatchedState chapter(s) with read/bookmark/progress had no match on the target (likely different chapter numbering); kept the source so that data is not lost.');
+              hardFailure = true;
             }
+          } else {
+            // The fetch itself failed — treat as a hard failure so we don't
+            // delete the source having migrated no read progress.
+            warnings.add(
+                'Failed to read chapters for migration: ${sourceChaptersResult.exception ?? targetChaptersResult.exception ?? 'no data'}');
+            hardFailure = true;
           }
         } catch (e) {
           warnings.add('Chapter migration failed: $e');
+          hardFailure = true;
         }
       }
 
@@ -359,16 +423,30 @@ class MigrationRepositoryImpl implements MigrationRepository {
               } catch (e) {
                 warnings.add(
                     'Failed to migrate tracking record (tracker ${record.trackerId}): $e');
+                hardFailure = true;
               }
             }
+          } else {
+            // A null result (degraded/no data, no exception) means the tracking
+            // state was never read — treat as a hard failure so we don't delete
+            // a source whose tracking might not have migrated.
+            warnings.add('Failed to read source tracking records.');
+            hardFailure = true;
           }
         } catch (e) {
           warnings.add('Tracking migration failed: $e');
+          hardFailure = true;
         }
       }
 
-      // Step 5: Remove source manga from library if deleteSource is enabled
-      if (options.deleteSource && sourceManga.inLibrary) {
+      // Step 5: Remove the source from the library only if enabled AND nothing
+      // hard-failed above — otherwise deleting it would lose the data that
+      // didn't migrate. Leave the (visible) duplicate instead.
+      if (options.deleteSource && sourceManga.inLibrary && hardFailure) {
+        warnings.add(
+            'Kept the source in your library: parts of the migration failed, '
+            'so removing it would lose data.');
+      } else if (options.deleteSource && sourceManga.inLibrary) {
         final removeFromLibraryResult = await client.mutate$UpdateManga(
           Options$Mutation$UpdateManga(
             variables: Variables$Mutation$UpdateManga(
@@ -380,14 +458,17 @@ class MigrationRepositoryImpl implements MigrationRepository {
           ),
         );
 
-        if (removeFromLibraryResult.hasException) {
+        if (removeFromLibraryResult.hasException ||
+            removeFromLibraryResult.parsedData?.updateManga == null) {
           warnings.add(
-              'Failed to remove source manga from library: ${removeFromLibraryResult.exception}');
+              'Failed to remove source manga from library: ${removeFromLibraryResult.exception ?? 'no data'}');
+          hardFailure = true;
         }
       }
 
-      // Add completion message
-      warnings.add('Migration completed successfully! ✅');
+      warnings.add(hardFailure
+          ? 'Migration finished with some failures (see above).'
+          : 'Migration completed successfully! ✅');
       warnings.add('• Target manga: ${targetManga.title}');
       warnings.add('• Source: ${targetManga.sourceId}');
       if (migratedChapters > 0) {
@@ -401,7 +482,9 @@ class MigrationRepositoryImpl implements MigrationRepository {
       }
 
       return MigrationResult(
-        success: true,
+        // A hard failure means the migration didn't fully complete its intent
+        // (and the source was deliberately kept) — report that honestly.
+        success: !hardFailure,
         migratedChapters: migratedChapters,
         migratedCategories: migratedCategories,
         migratedTracking: migratedTracking,

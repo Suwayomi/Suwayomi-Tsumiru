@@ -83,19 +83,25 @@ class TrackerRepository {
     required int trackerId,
     required String remoteId,
     required bool private,
-  }) =>
-      client
-          .mutate$BindTrack(
-            Options$Mutation$BindTrack(
-              variables: Variables$Mutation$BindTrack(
-                mangaId: mangaId,
-                trackerId: trackerId,
-                remoteId: remoteId,
-                private: private,
-              ),
+  }) async {
+    final data = await client
+        .mutate$BindTrack(
+          Options$Mutation$BindTrack(
+            variables: Variables$Mutation$BindTrack(
+              mangaId: mangaId,
+              trackerId: trackerId,
+              remoteId: remoteId,
+              private: private,
             ),
-          )
-          .getData((d) => d);
+          ),
+        )
+        .getData((d) => d);
+    // A null payload (no exception, but nothing bound) must surface as an error
+    // so callers don't treat an unbound record as success.
+    if (data == null) {
+      throw Exception('Tracking bind returned no data');
+    }
+  }
 
   Future<void> update({
     required int recordId,
