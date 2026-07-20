@@ -137,6 +137,8 @@ class CategoryMangaList extends HookConsumerWidget {
           }
         }
       }
+      // refresh() only re-buckets cached DTOs; unreadCount needs a real refetch.
+      ref.invalidate(libraryMangaListProvider);
       refresh();
       if (!context.mounted) return;
       // A server failure with offline inactive means nothing was persisted, so
