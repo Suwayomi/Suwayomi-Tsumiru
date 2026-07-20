@@ -38,7 +38,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
   final int? categoryId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Providers as Class for this screen
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
     final chapterListProvider = mangaChapterListProvider(mangaId: mangaId);
     final chapterListFilteredProvider =
@@ -61,15 +60,21 @@ class MangaDetailsScreen extends HookConsumerWidget {
     useEffect(() => scrollPx.dispose, const []);
     final surface = context.theme.scaffoldBackgroundColor;
 
-    // Refresh manga
+    // Container (not the widget ref) so deferred invalidations below survive
+    // this screen being disposed mid-flight.
+    final providerContainer = ProviderScope.containerOf(context, listen: false);
+
     final mangaRefresh = useCallback(([bool onlineFetch = false]) async {
       await ref.read(mangaProvider.notifier).refresh();
       // Screen may be disposed during the refresh → don't invalidate a dead ref.
       if (!context.mounted) return;
-      ref.invalidate(categoryControllerProvider);
-    }, [mangaProvider]);
+      // Defer past the current frame — this resumes after an await and may land
+      // mid-build, which would trip the Riverpod-3 modify-during-build assert.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => providerContainer.invalidate(categoryControllerProvider),
+      );
+    }, [mangaProvider, providerContainer]);
 
-    // Refresh chapter list
     final chapterListRefresh = useCallback(
         ([bool onlineFetch = false]) async =>
             await ref.read(chapterListProvider.notifier).refresh(onlineFetch),
@@ -110,11 +115,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
       return;
     }, []);
 
-    // Migration function
     void startMigration(BuildContext context, int mangaId, dynamic manga) {
       if (manga == null) return;
 
-      // Navigate to migration source selection
       MigrationGlobalSearchRoute(
         $extra: MigrationRouteData(sourceManga: manga),
       ).push(context);
@@ -133,8 +136,12 @@ class MangaDetailsScreen extends HookConsumerWidget {
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop && categoryId != null) {
-          ref.invalidate(libraryMangaListProvider);
-          ref.invalidate(categoryMangaListProvider(categoryId!));
+          final id = categoryId!;
+          // Defer off the pop's build phase (Riverpod-3 modify-during-build).
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            providerContainer.invalidate(libraryMangaListProvider);
+            providerContainer.invalidate(categoryMangaListProvider(id));
+          });
         }
       },
       child: manga.showUiWhenData(

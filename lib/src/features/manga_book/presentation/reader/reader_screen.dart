@@ -133,7 +133,7 @@ class ReaderScreen extends HookConsumerWidget {
 
       // Persist locally first (survives offline + app restart), then push to
       // the server; if offline it stays pending and up-syncs on reconnect.
-      await recordReadingProgressWithDependencies(
+      final progressResult = await recordReadingProgressWithDependencies(
         offlineEnabled: offlineEnabled,
         offlineDatabase: offlineDatabase,
         repository: mangaBookRepository,
@@ -141,6 +141,11 @@ class ReaderScreen extends HookConsumerWidget {
         lastPageRead: isReadingCompleted ? 0 : currentPage,
         isRead: isReadingCompleted,
       );
+      // An online-only user has no pending row to retry, so a failed push would
+      // otherwise vanish. Surface it instead of saving progress into a void.
+      if (progressResult.hasError && context.mounted) {
+        toast?.showError(context.l10n.errorSomethingWentWrong);
+      }
 
       // Delete the on-device copy once read, if the user opted in.
       // On a new read, auto-delete behind the reader — both the on-device copy
@@ -159,8 +164,13 @@ class ReaderScreen extends HookConsumerWidget {
         ));
       }
 
-      // Invalidate history to refresh the reading progress
-      providerContainer.invalidate(readingHistoryProvider);
+      // Invalidate history to refresh the reading progress. Defer past the
+      // current frame: this callback can resume inside a build (an upstream
+      // await doesn't guarantee otherwise), and invalidating mid-build throws
+      // the Riverpod-3 modify-during-build assert.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => providerContainer.invalidate(readingHistoryProvider),
+      );
     }, [
       chapter.value,
       chapterPages.value,
@@ -316,15 +326,20 @@ class ReaderScreen extends HookConsumerWidget {
               await updateLastRead(latestPage.value);
             }
           } finally {
-            providerContainer.invalidate(chapterProviderWithIndex);
-            providerContainer
-                .invalidate(mangaChapterListProvider(mangaId: mangaId));
-            // Refresh the library's per-category lists so the unread badge updates
-            // even when the reader was opened directly (e.g. the continue-reading
-            // button), bypassing the manga-details screen that would otherwise do
-            // this on its own pop (#282).
-            providerContainer.invalidate(libraryMangaListProvider);
-            providerContainer.invalidate(categoryMangaListProvider);
+            // The write above lands first (awaited); defer the list refreshes
+            // past this frame — invalidating during the pop's build phase trips
+            // the Riverpod-3 modify-during-build assert.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              providerContainer.invalidate(chapterProviderWithIndex);
+              providerContainer
+                  .invalidate(mangaChapterListProvider(mangaId: mangaId));
+              // Refresh the library's per-category lists so the unread badge
+              // updates even when the reader was opened directly (e.g. the
+              // continue-reading button), bypassing the manga-details screen
+              // that would otherwise do this on its own pop (#282).
+              providerContainer.invalidate(libraryMangaListProvider);
+              providerContainer.invalidate(categoryMangaListProvider);
+            });
           }
         }
       },

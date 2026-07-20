@@ -33,7 +33,11 @@ import '../utils/network/timeout_http_client.dart';
 
 part 'global_providers.g.dart';
 
-@riverpod
+// keepAlive: the reader captures this client (and its ref) once and issues
+// progress writes through it. Under autoDispose the ref could die mid-write
+// during provider churn, throwing a disposed-ref StateError inside
+// SuwayomiAuthLink.getHeaders — the silent online-progress-loss root cause.
+@Riverpod(keepAlive: true)
 GraphQLClient graphQlClient(Ref ref) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider).value;
@@ -232,10 +236,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
 @riverpod
 ValueNotifier<GraphQLClient> graphQlClientHolder(Ref ref) {
   final notifier = ValueNotifier(ref.watch(graphQlClientProvider));
-  // Dispose of the notifier when the provider is destroyed
   ref.onDispose(notifier.dispose);
 
-  // Notify listeners of this provider whenever the ValueNotifier updates.
   notifier.addListener(ref.notifyListeners);
 
   return notifier;

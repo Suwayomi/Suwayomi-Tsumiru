@@ -66,75 +66,109 @@ class SuwayomiAuthLink extends Link {
 
   @override
   Stream<Response> request(Request request, [NextLink? forward]) async* {
-    final headers = await getHeaders();
-    final withHeaders = headers == null
+    final next = forward!;
+    final Map<String, String>? headers;
+    try {
+      headers = await getHeaders();
+    } catch (error) {
+      // Header fetch failed before the request left. A thrown HTTP 401/403
+      // still belongs on the refresh path; anything else (e.g. a disposed-ref
+      // StateError from provider churn) is not an auth failure — rethrow so it
+      // surfaces as a normal error instead of vanishing.
+      if (_isThrownAuthError(error)) {
+        yield* _handle401(request, next, originalError: error);
+        return;
+      }
+      rethrow;
+    }
+    // Local copy so it promotes to non-null inside the capturing closure below.
+    final resolvedHeaders = headers;
+    final withHeaders = resolvedHeaders == null
         ? request
         : request.updateContextEntry<HttpLinkHeaders>(
             (HttpLinkHeaders? entry) => HttpLinkHeaders(
               headers: <String, String>{
                 ...?entry?.headers,
-                ...headers,
+                ...resolvedHeaders,
               },
             ),
           );
 
     // Iterate the forwarded stream. We inspect only the FIRST event to
     // decide whether we have a 401 → retry case; every other event flows
-    // through unchanged. Using `await forward!(withHeaders).first` would
+    // through unchanged. Using `await next(withHeaders).first` would
     // cancel the subscription after one event, silently killing any
     // GraphQL subscription that doesn't immediately fail.
     Response? first401;
-    var sawFirst = false;
-    await for (final response in forward!(withHeaders)) {
-      if (!sawFirst) {
-        sawFirst = true;
-        if (_is401(response)) {
-          // Cache the 401 and break out to handle refresh/retry below.
-          // We're cancelling the upstream stream here — that's fine for
-          // queries/mutations (they only emit one response anyway) and
-          // for subscriptions a 401 means the server rejected the
-          // connection, so there's nothing useful to keep streaming.
-          first401 = response;
-          break;
+    try {
+      var sawFirst = false;
+      await for (final response in next(withHeaders)) {
+        if (!sawFirst) {
+          sawFirst = true;
+          if (_is401(response)) {
+            // Cache the 401 and break out to handle refresh/retry below.
+            // We're cancelling the upstream stream here — that's fine for
+            // queries/mutations (they only emit one response anyway) and
+            // for subscriptions a 401 means the server rejected the
+            // connection, so there's nothing useful to keep streaming.
+            first401 = response;
+            break;
+          }
         }
+        yield response;
       }
-      yield response;
+    } catch (error) {
+      // HttpLink THROWS on a non-200 (a real HTTP 401/403), so that auth
+      // failure never reaches `_is401` (which only sees 200-with-errors
+      // bodies). Route a thrown 401/403 into the same refresh path; let any
+      // transient error (socket/timeout/5xx) escape unchanged.
+      if (_isThrownAuthError(error)) {
+        yield* _handle401(request, next, originalError: error);
+        return;
+      }
+      rethrow;
     }
 
-    if (first401 == null) {
-      // Success path: stream already drained and yielded. Done.
-      return;
+    if (first401 != null) {
+      yield* _handle401(request, next, originalResponse: first401);
     }
+  }
 
-    // 401 path.
+  /// Runs the ui_login refresh + single-retry state machine after a 401,
+  /// regardless of how the 401 arrived: as a 200-with-errors [Response]
+  /// (`originalResponse`) or as a thrown HTTP 401/403 (`originalError`). On a
+  /// dead session it surfaces the original failure in whichever form it came.
+  Stream<Response> _handle401(
+    Request request,
+    NextLink forward, {
+    Response? originalResponse,
+    Object? originalError,
+  }) async* {
+    // simple_login / basic have no refresh path.
     if (authType() != AuthType.uiLogin) {
-      // simple_login has no refresh path.
       onNeedsReauth();
-      yield first401;
+      yield* _surfaceOriginal(originalResponse, originalError);
       return;
     }
 
-    // ui_login: delegate refresh to AuthCoordinator. The coordinator
-    // owns the single-flight Completer (R2-3) so concurrent 401s in the
-    // query and subscription clients share one refresh.
+    // ui_login: delegate refresh to AuthCoordinator. The coordinator owns the
+    // single-flight Completer (R2-3) so concurrent 401s in the query and
+    // subscription clients share one refresh.
     final outcome = await refreshAccessToken();
     switch (outcome) {
       case RefreshAuthFailure():
-        // Refresh token rejected. Tokens already cleared by the
-        // coordinator. Surface the original 401.
+        // Refresh token rejected; tokens already cleared by the coordinator.
         onNeedsReauth();
-        yield first401;
+        yield* _surfaceOriginal(originalResponse, originalError);
         return;
       case RefreshTransientFailure():
-        // Network / server error — DON'T mark session as dead. Surface
-        // the original 401 so the UI shows a normal error; the next
-        // request will trigger another refresh attempt.
-        yield first401;
+        // Network / server error — DON'T mark the session dead. Surface the
+        // original failure; the next request retries the refresh.
+        yield* _surfaceOriginal(originalResponse, originalError);
         return;
       case RefreshSuccess(:final newAccessToken):
         // Retry once with the fresh token. R2-4: re-check the retried
-        // response for a second 401. If it's still 401, the new token
-        // didn't work either — treat as auth failure.
+        // response for a second 401 (either form) and treat that as dead.
         final retried = request.updateContextEntry<HttpLinkHeaders>(
           (HttpLinkHeaders? entry) => HttpLinkHeaders(
             headers: <String, String>{
@@ -144,26 +178,54 @@ class SuwayomiAuthLink extends Link {
           ),
         );
         Response? retryFirst401;
-        var sawRetryFirst = false;
-        await for (final response in forward(retried)) {
-          if (!sawRetryFirst) {
-            sawRetryFirst = true;
-            if (_is401(response)) {
-              retryFirst401 = response;
-              break;
+        try {
+          var sawRetryFirst = false;
+          await for (final response in forward(retried)) {
+            if (!sawRetryFirst) {
+              sawRetryFirst = true;
+              if (_is401(response)) {
+                retryFirst401 = response;
+                break;
+              }
             }
+            yield response;
           }
-          yield response;
+        } catch (error) {
+          if (!_isThrownAuthError(error)) rethrow;
+          // Second auth failure after a fresh token = dead session.
+          onNeedsReauth();
+          rethrow;
         }
         if (retryFirst401 != null) {
-          // Second 401 after a fresh token = something's off (server
-          // rotated mid-flight, fresh token rejected, etc). Clear and
-          // require re-auth.
           onNeedsReauth();
           yield retryFirst401;
         }
         return;
     }
+  }
+
+  /// Re-emits the original 401 to the caller: as a yielded [Response] when it
+  /// arrived that way, otherwise by rethrowing the original exception.
+  Stream<Response> _surfaceOriginal(
+    Response? originalResponse,
+    Object? originalError,
+  ) async* {
+    if (originalResponse != null) {
+      yield originalResponse;
+    } else {
+      throw originalError!;
+    }
+  }
+
+  /// True only for a THROWN HTTP 401/403 (HttpLink throws on non-200). A
+  /// socket/timeout/5xx is not auth and must propagate unchanged.
+  bool _isThrownAuthError(Object error) {
+    final ex = error is OperationException ? error.linkException : error;
+    if (ex is HttpLinkServerException) {
+      final status = ex.response.statusCode;
+      return status == 401 || status == 403;
+    }
+    return false;
   }
 
   bool _is401(Response response) {

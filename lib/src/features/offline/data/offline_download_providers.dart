@@ -49,9 +49,8 @@ part 'offline_download_providers.g.dart';
 /// downloads (web-safe + correct in unit tests — see [isAndroidNative]).
 bool get _useBgService => isAndroidNative;
 
-/// THE single entry point that kicks off downloading after chapters have been
-/// queued into drift. EVERY download trigger must call this — on Android it
-/// starts the foreground-service worker, elsewhere it drains via the
+/// THE single entry point that kicks off downloading after chapters are
+/// queued into drift — starts the FGS worker on Android, else drains via the
 /// main-isolate pump. Centralised (and overridable in tests) so no trigger can
 /// ever again silently rely on the Android-disabled pump.
 final downloadStarterProvider = Provider<Future<void> Function()>((Ref ref) {
@@ -67,11 +66,10 @@ final downloadStarterProvider = Provider<Future<void> Function()>((Ref ref) {
   };
 });
 
-/// Pause or resume ALL on-device downloads. Persists the flag (so it survives a
-/// restart) and acts immediately on the active pipeline: the FGS worker on
-/// Android, the main-isolate pump elsewhere. The persisted flag is what the
-/// download starters gate on, so no enqueue/connectivity/launch path can restart
-/// downloads while paused.
+/// Pause or resume ALL on-device downloads. Persists the flag (survives a
+/// restart) and acts immediately on the active pipeline (FGS on Android,
+/// main-isolate pump elsewhere) — the persisted flag is what every download
+/// starter gates on, so no path can restart downloads while paused.
 Future<void> setOfflineDownloadsPaused(WidgetRef ref, bool paused) async {
   ref.read(offlineDownloadsPausedProvider.notifier).update(paused);
   if (isAndroidNative) {
@@ -105,9 +103,9 @@ Future<void> clearOfflineCatalog(WidgetRef ref) async {
       await coordinator?.awaitIdle();
     },
     clearDatabase: ref.read(offlineDatabaseProvider).clearAll,
-    // Best-effort: a file-delete failure (a locked file, permissions) must not
-    // abort the clear before the identity stamp is reset — the DB is already
-    // wiped, and leftover bytes are only dead weight, not stale content.
+    // Best-effort: a file-delete failure (locked file, permissions) must not
+    // abort the clear before the identity stamp resets — the DB is already
+    // wiped, so leftover bytes are just dead weight, not stale content.
     clearFiles: () async {
       try {
         await ref.read(offlinePageStoreProvider).clearAll();
@@ -134,9 +132,9 @@ Future<void> clearOfflineCatalogWithDependencies({
   required Future<void> Function() clearIdentity,
   required void Function() finish,
 }) async {
-  // stopBackground sets the restart-suppression flag; keep it INSIDE the try so
-  // finish() always clears it even if teardown throws — otherwise a leaked flag
-  // would silently drop every background-worker event for the rest of the session.
+  // stopBackground sets the restart-suppression flag; keep it inside the try
+  // so finish() always clears it, or a leaked flag would silently drop every
+  // background-worker event for the rest of the session.
   try {
     await stopBackground();
     await stopMainPump();
@@ -180,24 +178,20 @@ Stream<double?> offlineChapterProgress(Ref ref, int chapterId) {
     return Stream.value(null);
   }
   final repo = ref.watch(offlineRepositoryProvider);
-  // Re-read the page total on every downloaded-page tick (instead of once up
-  // front) so the arc flips from indeterminate to a real fraction the moment the
-  // total becomes known — webtoon chapters only learn their page count when the
-  // downloader resolves their pages mid-download.
+  // Re-read the page total on every tick (not once up front) so the arc flips
+  // from indeterminate to real the moment it's known — webtoon chapters only
+  // learn their count once the downloader resolves pages mid-download.
   return repo.watchChapterDownloadedPages(chapterId).asyncMap((done) async {
     final total = (await repo.db.chapterById(chapterId))?.pageCount ?? 0;
     return total <= 0 ? null : (done / total).clamp(0.0, 1.0);
   }).distinct();
 }
 
-/// Save a chapter's pages to the device. Looks up the synced catalog row and
-/// hands it to the download manager. No-op if offline is unavailable or the
-/// chapter hasn't been synced (browse it online once first).
-///
-/// Manual save is sticky (pinned). If the chapter is not yet server-downloaded,
-/// enqueues a server download first so Suwayomi fetches the source pages, then
-/// pulls them immediately with `force: true` so the device copy is available as
-/// soon as the server completes its own fetch.
+/// Save a chapter's pages to the device from the synced catalog row; no-op if
+/// offline is unavailable or the chapter hasn't been synced yet. Manual save
+/// is sticky (pinned) — if not yet server-downloaded, enqueues a server
+/// download first, then pulls immediately so the device copy is available as
+/// soon as the server's own fetch completes.
 Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
   final coordinator = ref.read(offlineDownloadCoordinatorProvider);
   if (coordinator == null) return;
@@ -206,11 +200,10 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
   if (chapter == null) return;
   // Manual save is sticky.
   await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, true);
-  // Ensure the SERVER also has the chapter (device ⊆ server). The cached
-  // `serverIsDownloaded` flag can be stale (e.g. it isn't reset when a chapter is
-  // deleted), so when it claims the server already has the chapter, verify
-  // against the server before skipping — otherwise the device keeps a copy the
-  // server never saved. A failed/offline check falls back to the cached value.
+  // Ensure the SERVER also has the chapter (device ⊆ server): the cached
+  // `serverIsDownloaded` flag can be stale (not reset on delete), so verify
+  // against the server before trusting it — a failed/offline check falls back
+  // to the cached value.
   var serverHasIt = chapter.serverIsDownloaded;
   if (serverHasIt) {
     final fresh = await AsyncValue.guard(() =>
@@ -235,14 +228,14 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
 /// FIRST (so it survives offline + app restart — the bug where progress was
 /// lost reading offline), then pushes to the server; on a successful push the
 /// dirty flag is cleared, otherwise it stays pending for the next online sync.
-Future<void> recordReadingProgress(
+Future<AsyncValue<void>> recordReadingProgress(
   WidgetRef ref, {
   required int chapterId,
   required int lastPageRead,
   required bool isRead,
 }) async {
   final offline = ref.read(offlineActiveProvider);
-  await recordReadingProgressWithDependencies(
+  return recordReadingProgressWithDependencies(
     offlineEnabled: offline,
     offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
     repository: ref.read(mangaBookRepositoryProvider),
@@ -252,7 +245,10 @@ Future<void> recordReadingProgress(
   );
 }
 
-Future<void> recordReadingProgressWithDependencies({
+/// Returns the server-push outcome so callers aren't blind to a failed write.
+/// For an online-only user there's no pending row to retry, so a swallowed
+/// error means the progress is lost silently — the reader surfaces this.
+Future<AsyncValue<void>> recordReadingProgressWithDependencies({
   required bool offlineEnabled,
   required OfflineDatabase? offlineDatabase,
   required MangaBookRepository repository,
@@ -289,12 +285,12 @@ Future<void> recordReadingProgressWithDependencies({
       await db.clearReadStateDirtyIfUnchanged(chapterId, isRead: markRead);
     }
   }
+  return result;
 }
 
 /// Toggle a chapter's bookmark, offline-aware. Writes it to the on-device
-/// catalog first (so it survives offline + restart) and marks it dirty, then
-/// pushes to the server; on a failed push it stays pending for the next online
-/// sync (#33). Best-effort — the local write is authoritative.
+/// catalog first (survives offline + restart) and marks it dirty, then pushes
+/// to the server — a failed push stays pending for the next sync (#33).
 Future<void> recordBookmark(
   WidgetRef ref, {
   required int chapterId,
@@ -307,8 +303,8 @@ Future<void> recordBookmark(
         .setChapterBookmark(chapterId, isBookmarked);
   }
   // Bookmark dirtiness is tracked separately from read progress, so push only
-  // the bookmark and clear only its flag — any pending offline read stays dirty
-  // and is flushed independently by pushPendingProgress.
+  // the bookmark and clear only its flag — any pending offline read stays
+  // dirty and flushes independently via pushPendingProgress.
   final result = await AsyncValue.guard(
     () => ref.read(mangaBookRepositoryProvider).putChapter(
           chapterId: chapterId,
@@ -322,14 +318,12 @@ Future<void> recordBookmark(
   }
 }
 
-/// Mark chapters read/unread, offline-aware. Writes the local row FIRST (so the
-/// change survives offline + restart and keeps Resume and the offline UI
-/// truthful — the root of the ch-99 loop was that list mark-read never touched
-/// the local row), then the server bulk write; on failure the change stays
-/// dirty and up-syncs on reconnect. [resetPosition] mirrors the mark-read
-/// action's `lastPageRead: 0` reset (recorded locally as a deliberate position
-/// write); mark-unread leaves position alone. Returns the server write's
-/// success, so callers keep firing trackers / delete-on-manual online only.
+/// Mark chapters read/unread, offline-aware. Writes the local row FIRST (the
+/// ch-99 loop's root cause was list mark-read never touching it), then the
+/// server bulk write; on failure the change stays dirty and up-syncs on
+/// reconnect. [resetPosition] mirrors the mark-read action's `lastPageRead: 0`
+/// reset; returns the server write's success so callers gate trackers/
+/// delete-on-manual on being online.
 Future<bool> recordReadStateWithDependencies({
   required bool offlineEnabled,
   required OfflineDatabase? offlineDatabase,
@@ -389,13 +383,12 @@ Future<bool> recordReadState(
 }
 
 // === Delete-on-read =========================================================
-// Two INDEPENDENT features, each with its own settings (see
-// delete_chapters_settings_repository): the on-device set (local prefs) deletes
-// THIS phone's copy; the server set (global meta, shared with the WebUI) deletes
-// the server's copy, which then cascades to the device (device ⊆ server). On a
-// read we fire both; each no-ops if its own setting is off. The N-behind target
-// only ever lands on a chapter already behind the reader, so the continuous
-// reader never loses pages it still needs.
+// Two INDEPENDENT features (see delete_chapters_settings_repository):
+// on-device (local prefs) deletes THIS phone's copy; server (shared with the
+// WebUI) deletes the server's copy, which cascades to the device (device ⊆
+// server). Each no-ops if its own setting is off, and the N-behind target only
+// ever lands on a chapter already behind the reader, so the continuous reader
+// never loses pages it still needs.
 
 /// Resolve the chapter to delete `slots` behind [readChapterId] in the manga's
 /// reading order (1 = the just-read chapter). Null if out of range or the list
@@ -449,10 +442,10 @@ Future<void> maybeDeleteOnManualLocal(
   await _deleteDeviceCopyIfDeletable(ref, chapterId, s.deleteWithBookmark);
 }
 
-/// Delete a chapter's device copy iff it's downloaded on the device and the
-/// bookmark gate allows it. A manually-saved (pinned) chapter IS deleted on a
-/// new read — and un-pinned (via [deleteChapterFromDevice]) so the reconciler
-/// doesn't simply re-download it. The server copy is untouched.
+/// Delete a chapter's device copy iff it's downloaded and the bookmark gate
+/// allows it. A manually-saved (pinned) chapter IS deleted on a new read and
+/// un-pinned (via [deleteChapterFromDevice]) so the reconciler doesn't just
+/// re-download it; the server copy is untouched.
 Future<void> _deleteDeviceCopyIfDeletable(
   WidgetRef ref,
   int chapterId,
@@ -502,13 +495,11 @@ Future<void> maybeDeleteOnManualServer(
       ref, mangaId, chapterId, s.deleteWithBookmark);
 }
 
-/// Delete a chapter's SERVER copy iff it's downloaded on the server and the
-/// bookmark gate allows it, then cascade to drop the device copy.
-///
-/// Gates off the UNFILTERED chapter list (id lookup — order is irrelevant), so
-/// an active "hide read" filter can't make this silently miss. The bookmark gate
-/// also honours a bookmark made offline that hasn't reached the server yet (the
-/// server DTO would still read false), via the on-device catalog.
+/// Delete a chapter's SERVER copy iff downloaded and the bookmark gate allows
+/// it, then cascade to drop the device copy. Gates off the UNFILTERED chapter
+/// list so an active "hide read" filter can't cause a silent miss, and the
+/// bookmark gate also honours a bookmark made offline that hasn't reached the
+/// server yet.
 Future<void> _deleteServerCopyIfDeletable(
   WidgetRef ref,
   int mangaId,
@@ -537,13 +528,10 @@ Future<void> _deleteServerCopyIfDeletable(
   }
 }
 
-/// Push any locally-recorded read progress that hasn't reached the server yet
-/// (e.g. read while offline). Run at launch + after a manga's chapters sync, so
-/// progress made offline syncs up once the connection returns.
-///
-/// After a successful server push, also nudges the manga's external trackers
-/// for any chapter that was marked read — so trackers stay in sync even when
-/// progress was recorded while the device was offline.
+/// Push any locally-recorded read progress that hasn't reached the server yet.
+/// Run at launch + after a manga's chapters sync; after a successful push also
+/// nudges the manga's external trackers for any chapter marked read, so
+/// trackers stay in sync too.
 Future<void> pushPendingProgress(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
   final db = container.read(offlineDatabaseProvider);
@@ -554,25 +542,60 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
   final syncedReadMangaIds = <int>{};
 
   for (final c in await db.dirtyChapters()) {
+    var pushProgress = c.progressDirty;
+    var pushReadState = c.readStateDirty;
+    // Never-regress: if another device already read further (or finished it),
+    // don't push our lesser offline position — drop the dirty flags and adopt
+    // the server's state on the next down-sync. Furthest read wins; bookmarks
+    // are independent and still sync.
+    if (pushProgress || pushReadState) {
+      final server =
+          (await AsyncValue.guard(() => repo.getChapter(chapterId: c.id)))
+              .asData
+              ?.value;
+      if (server != null) {
+        final serverRead = server.isRead.ifNull();
+        final serverAhead = serverRead
+            ? !c.isRead // server finished it; our push would un-finish it
+            : c.isRead
+                // We finished it; a server partial position never outranks a
+                // completion (marking read leaves lastPageRead low).
+                ? false
+                : server.lastPageRead.getValueOnNullOrNegative() >
+                    c.lastPageRead;
+        if (serverAhead) {
+          pushProgress = false;
+          pushReadState = false;
+          if (c.progressDirty) {
+            await db.clearProgressDirtyIfUnchanged(c.id,
+                lastPageRead: c.lastPageRead);
+          }
+          if (c.readStateDirty) {
+            await db.clearReadStateDirtyIfUnchanged(c.id, isRead: c.isRead);
+          }
+        }
+      }
+    }
+    if (!pushProgress && !pushReadState && !c.bookmarkDirty) continue;
     final result = await AsyncValue.guard(
       () => repo.putChapter(
         chapterId: c.id,
         patch: ChapterChange(
-          // Send only the locally-changed fields (null = omitted from the
-          // patch), each gated on its OWN dirty flag. isRead rides
-          // readStateDirty — NOT progressDirty — so a position-only write can
-          // never push a stale isRead (the ch-99 un-read loop), just as a
-          // bookmark sync never overwrites pending read progress (#13).
-          lastPageRead: c.progressDirty ? c.lastPageRead : null,
-          isRead: c.readStateDirty ? c.isRead : null,
+          // Send only locally-changed fields (null = omitted), each gated on
+          // its OWN dirty flag: isRead rides readStateDirty (not
+          // progressDirty) so a position-only write can't push a stale isRead
+          // (ch-99), just as a bookmark sync can't overwrite pending read
+          // progress (#13).
+          lastPageRead: pushProgress ? c.lastPageRead : null,
+          isRead: pushReadState ? c.isRead : null,
           isBookmarked: c.bookmarkDirty ? c.isBookmarked : null,
         ),
       ),
     );
     if (!result.hasError) {
       // Clear each flag only if the row still holds what we just pushed — a
-      // newer local write that arrived during the push keeps its flag and
-      // re-syncs on the next pass (no silent data loss).
+      // newer local write that arrived mid-push keeps its flag and re-syncs
+      // on the next pass.
       if (c.progressDirty) {
         await db.clearProgressDirtyIfUnchanged(c.id,
             lastPageRead: c.lastPageRead);
@@ -588,9 +611,9 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
     }
   }
 
-  // Push tracker progress for each manga that had read chapters synced.
-  // Gate on the "update after reading" toggle and whether the manga has any
-  // tracker bindings. A tracker failure must never break the progress sync.
+  // Push tracker progress for mangas with read chapters synced, gated on the
+  // "update after reading" toggle and tracker bindings — a tracker failure
+  // must never break the progress sync.
   if (syncedReadMangaIds.isEmpty) return;
   final enabledAfterReading =
       container.read(updateProgressAfterReadingProvider).ifNull();
@@ -639,31 +662,46 @@ Future<void> cascadeServerDeleteToDevice(
 Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
   final manager = ref.read(offlineDownloadManagerProvider);
   if (manager == null) return;
-  // If the FGS worker is mid-download of this chapter, stop it first so it can't
-  // resurrect files we're about to delete (the worker honours `remove` via the
-  // engine's per-chapter cancel).
+  // Stop any in-flight download first so it can't resurrect the files we're
+  // about to delete — Android routes through the FGS worker, elsewhere claim
+  // the main-isolate coordinator.
+  final coordinator =
+      _useBgService ? null : ref.read(offlineDownloadCoordinatorProvider);
+  // Bump the persistent download generation first so a re-queued download
+  // outranks any still-in-flight event from the deleted one (survives restart).
+  final newGen =
+      await ref.read(offlineDatabaseProvider).bumpChapterGeneration(chapterId);
   if (_useBgService) {
-    await ref.read(backgroundDownloadControllerProvider).onRemoved(chapterId);
+    final controller = ref.read(backgroundDownloadControllerProvider);
+    await controller.onRemoved(chapterId);
+    // Tombstone the completion log at the new generation so a stale terminal
+    // entry can't complete a later re-queued generation of this chapter.
+    await controller.recordChapterDeleted(chapterId, newGen);
+  } else {
+    await coordinator?.beginDelete(chapterId);
   }
-  final chapter =
-      await ref.read(offlineRepositoryProvider).chapterById(chapterId);
-  if (chapter != null) await manager.deleteChapter(chapter);
-  await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
+  try {
+    final chapter =
+        await ref.read(offlineRepositoryProvider).chapterById(chapterId);
+    if (chapter != null) await manager.deleteChapter(chapter);
+    await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
+  } finally {
+    coordinator?.endDelete(chapterId);
+  }
 }
 
 /// Remove a series from the library AND clean up its on-device downloads, so
-/// they aren't left orphaned (the offline catalog is library-scoped). Clears
-/// the keep-rule and deletes every device copy. The SERVER's own download is
-/// left alone — it isn't tied to library membership (see #34, #36).
+/// they aren't left orphaned. Clears the keep-rule and deletes every device
+/// copy; the SERVER's own download is left alone (see #34, #36).
 Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
   await ref.read(mangaBookRepositoryProvider).removeMangaFromLibrary(mangaId);
   if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
-  // Purge every chapter that has any on-device footprint — not just the fully
-  // downloaded ones. Queued / downloading / errored chapters must also be
-  // cancelled and cleaned up, or an in-flight download could finish (and leave
-  // files) after the series has already left the library.
+  // Purge every chapter with any on-device footprint, not just fully
+  // downloaded ones — queued/downloading/errored must also be cancelled, or an
+  // in-flight download could finish and leave files after the series left the
+  // library.
   for (final c in await db.chaptersForManga(mangaId)) {
     if (c.deviceState != OfflineDeviceState.none) {
       await deleteChapterFromDevice(ref, c.id);
@@ -672,9 +710,9 @@ Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
 }
 
 /// The offline download orchestrator, wired with real network dependencies:
-/// `fetchChapterPages` for the page URL list and an auth'd HTTP GET for each
-/// page's bytes. Null on web / when offline storage is unavailable, so callers
-/// can `ref.read(offlineDownloadManagerProvider)?.downloadChapter(c)`.
+/// `fetchChapterPages` for URLs and an auth'd HTTP GET for page bytes. Null on
+/// web / when offline storage is unavailable, so callers use
+/// `?.downloadChapter(c)`.
 @riverpod
 OfflineDownloadManager? offlineDownloadManager(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
@@ -689,12 +727,11 @@ OfflineDownloadManager? offlineDownloadManager(Ref ref) {
   );
 }
 
-/// Fetch one page image's bytes with the active auth, resolved at CALL time
-/// (never baked) — mirrors `ServerImage`'s request building: base API WITHOUT
-/// the `/api` suffix (page URLs already carry `/api/...`), ui_login token as a
-/// `?token=` query param, basic / simple_login via headers. Throws
-/// [PageAuthException] on 401 so the download engine refreshes the token and
-/// retries; any other non-200 is a plain (transient) exception.
+/// Fetch one page image's bytes with the active auth, resolved at call time
+/// (never baked) — mirrors `ServerImage`'s request building (base API without
+/// `/api`, ui_login `?token=`, basic/simple_login via headers). Throws
+/// [PageAuthException] on 401 so the engine refreshes and retries; any other
+/// non-200 is a plain transient exception.
 Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   final authType = ref.read(authTypeKeyProvider);
   final basicToken = ref.read(credentialsProvider).value;
@@ -733,9 +770,9 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   );
 }
 
-/// Manga ids that have at least one chapter downloaded on this device — used
-/// by the "On device" library filter. Returns an empty set when offline is
-/// unavailable so the filter is a no-op.
+/// Manga ids with at least one chapter downloaded on this device — used by
+/// the "On device" library filter. Empty set when offline is unavailable, so
+/// the filter is a no-op.
 @riverpod
 Future<Set<int>> offlineDeviceMangaIds(Ref ref) async {
   if (!ref.watch(offlineActiveProvider)) return const {};
@@ -798,11 +835,10 @@ Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
   }).distinct(); // only rebuild the button when the counts actually change
 }
 
-/// Every series with an offline footprint on this device — chapters present
-/// (downloaded / in-flight) OR an active keep-rule — with per-series counts,
-/// byte size, and the manga row (carrying the rule). The single source for the
-/// Downloads → On device tab, which both shows what's downloaded AND manages the
-/// keep-rules. Sorted active-first, then biggest, then strongest rule.
+/// Every series with an offline footprint — chapters present OR an active
+/// keep-rule — with per-series counts, bytes, and the manga row. Single source
+/// for the Downloads → On device tab (shows downloads AND manages keep-rules);
+/// sorted active-first, then biggest, then strongest rule.
 @riverpod
 Stream<List<OfflineSeriesEntry>> offlineSeries(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return Stream.value(const []);
@@ -825,18 +861,11 @@ Stream<List<OfflineSeriesEntry>> offlineSeries(Ref ref) {
   });
 }
 
-/// Stop auto-keeping [mangaId] offline but KEEP the chapters already fully
-/// downloaded on the device. Unfinished (queued / partially-downloaded)
-/// chapters are dropped — "keep what I already have", not "finish the rest".
-///
-/// Order is load-bearing (see the design's interleaving analysis):
-/// 1. Quiesce the series' pipeline (cancel its queued/downloading chapters) so
-///    the downloaded set can't grow underneath us.
-/// 2. Pin every still-downloaded chapter — pinned is immune to reconcile
-///    eviction. Done BEFORE clearing the rule, so any reconcile that interleaves
-///    while we pin still sees the rule active (and so evicts nothing).
-/// 3. Clear the rule (count is dormant while off; preserve it).
-/// 4. Reconcile — now eviction-safe: desired set = pinned = all downloaded.
+/// Stop auto-keeping [mangaId] offline but KEEP chapters already downloaded;
+/// unfinished ones are dropped ("keep what I have", not "finish the rest").
+/// Order matters: pin every still-downloaded chapter BEFORE clearing the rule,
+/// so a reconcile racing this can't evict anything before the pin lands —
+/// only then is it safe to reconcile.
 Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
   if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
@@ -848,13 +877,11 @@ Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
   }
   final cfg = await ref.read(offlineRepositoryProvider).keepConfigFor(mangaId);
   // Pin the downloaded set and clear the rule ATOMICALLY: the cancel above is
-  // async on Android (the FGS worker may finish a chapter slightly later), so
-  // re-read the downloaded set HERE and pin it inside the same transaction that
-  // flips the rule off. That guarantees that the instant the rule is off, every
-  // chapter the catalog shows as downloaded is already pinned (immune to
-  // eviction) — so neither this call's reconcile nor a concurrent one can evict
-  // a downloaded chapter. A chapter still finishing after this was in-flight at
-  // detach time and is intentionally dropped.
+  // async on Android, so re-read the downloaded set HERE inside the same
+  // transaction that flips the rule off — guaranteeing every downloaded
+  // chapter is already pinned the instant the rule clears, so no reconcile can
+  // evict it. A chapter still finishing after this was in-flight at detach
+  // time and is intentionally dropped.
   await db.transaction(() async {
     for (final c in await db.downloadedChaptersForManga(mangaId)) {
       await db.setChapterPinned(c.id, true);
@@ -913,15 +940,15 @@ Future<void> reconcileMangaCore({
   required SafetyNetConfig nets,
   required int mangaId,
   Future<void> Function(List<int> chapterIds)? enqueueServerDownload,
+  Future<void> Function(int chapterId)? removeFromWorker,
 }) {
   return OfflineReconciler(
     db: db,
     nets: nets,
     now: DateTime.now(),
-    // Only QUEUE chapters here (mark them in the persistent backlog). Starting
-    // the download is the caller's job (via downloadStarterProvider) — this core
-    // must NOT start anything itself, so the Ref-less launch path and tests stay
-    // in control. One failed queue-mark must NOT abort the rest.
+    // Only QUEUE chapters here; starting the download is the caller's job (via
+    // downloadStarterProvider) so the Ref-less launch path and tests stay in
+    // control. One failed queue-mark must not abort the rest.
     onDownload: (id) async {
       try {
         await coordinator.queueChapter(id);
@@ -931,10 +958,19 @@ Future<void> reconcileMangaCore({
     },
     onEvict: (id) async {
       try {
+        // Cancel the active downloader before removing files, or an in-flight
+        // download re-writes the chapter after the purge. beginDelete claims
+        // the desktop engine; removeFromWorker stops the Android FGS worker
+        // (null in the launch/test core, where the coordinator is the only
+        // downloader).
+        await coordinator.beginDelete(id);
+        if (removeFromWorker != null) await removeFromWorker(id);
         final c = await repo.chapterById(id);
         if (c != null) await manager.deleteChapter(c);
       } catch (e) {
         logger.e('Offline: reconcile evict skipped for chapter $id: $e');
+      } finally {
+        coordinator.endDelete(id);
       }
     },
     onServerDownload: enqueueServerDownload == null
@@ -966,6 +1002,13 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
+    removeFromWorker: (id) async {
+      final ctrl = ref.read(backgroundDownloadControllerProvider);
+      await ctrl.onRemoved(id);
+      final gen = await ref.read(offlineDatabaseProvider)
+          .bumpChapterGeneration(id);
+      await ctrl.recordChapterDeleted(id, gen);
+    },
   );
   // Keep-rule sync queued any missing chapters; now start downloading them.
   await ref.read(downloadStarterProvider)();
@@ -987,6 +1030,13 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
+    removeFromWorker: (id) async {
+      final ctrl = ref.read(backgroundDownloadControllerProvider);
+      await ctrl.onRemoved(id);
+      final gen = await ref.read(offlineDatabaseProvider)
+          .bumpChapterGeneration(id);
+      await ctrl.recordChapterDeleted(id, gen);
+    },
   );
   // Start downloading the freshly-queued chapters. THIS was the missing wire
   // that made "Download all / unread" silently do nothing on Android.
@@ -1012,7 +1062,15 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
         mangaId: m.id,
         enqueueServerDownload: (ids) => container
             .read(downloadsRepositoryProvider)
-            .addChaptersBatchToDownloadQueue(ids));
+            .addChaptersBatchToDownloadQueue(ids),
+        removeFromWorker: (id) async {
+          final ctrl = container.read(backgroundDownloadControllerProvider);
+          await ctrl.onRemoved(id);
+          final gen = await container
+              .read(offlineDatabaseProvider)
+              .bumpChapterGeneration(id);
+          await ctrl.recordChapterDeleted(id, gen);
+        });
   }
 }
 

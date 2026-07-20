@@ -279,6 +279,8 @@ class MangaBookRepository {
       .getData((data) => data.chapters.nodes);
 }
 
-@riverpod
+// keepAlive so a captured repository ref can't be disposed out from under an
+// in-flight progress write (pairs with the keepAlive graphQlClient).
+@Riverpod(keepAlive: true)
 MangaBookRepository mangaBookRepository(Ref ref) =>
     MangaBookRepository(ref.watch(graphQlClientProvider));
