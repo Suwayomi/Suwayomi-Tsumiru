@@ -52,7 +52,7 @@ dependencies:
   intl: ^0.20.2
   json_annotation: ^4.9.0
   logger: ^2.5.0
-  network_info_plus: ^6.0.0
+  network_info_plus: ^8.0.0
   package_info_plus: ^8.0.0
   path: ^1.8.3
   path_provider: ^2.0.11
