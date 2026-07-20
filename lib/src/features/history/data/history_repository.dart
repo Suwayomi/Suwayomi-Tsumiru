@@ -13,7 +13,6 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
-import '../../manga_book/domain/chapter_page/chapter_page_model.dart';
 import '../domain/history_item.dart';
 import 'graphql/__generated__/query.graphql.dart';
 
@@ -24,39 +23,33 @@ class HistoryRepository {
   final GraphQLClient client;
   final MangaBookRepository mangaBookRepository;
 
-  /// Fetch reading history with pagination and filtering
-  Future<ChapterPageWithMangaDto?> getReadingHistory({
-    int pageSize = 50,
-    int pageNo = 0,
+  /// Most-recently-read chapter per manga, newest first.
+  ///
+  /// Fetches one bounded window (not paginated) — per-manga dedup over a
+  /// chapter-ordered, live-mutable server result doesn't paginate cleanly.
+  Future<List<HistoryItemDto>> getReadingHistory({
+    int maxChapters = 2000,
     String? searchQuery,
     DateTime? fromDate,
     DateTime? toDate,
   }) async {
-    // Build filter for chapters with actual reading progress
     final filter = Input$ChapterFilterInput(
-      // Only get chapters from library manga
       inLibrary: Input$BooleanFilterInput(equalTo: true),
-      // Only get chapters that have been read (lastReadAt is not null/empty)
       lastReadAt: Input$LongFilterInput(
         isNull: false,
         greaterThan:
             "0", // Ensure lastReadAt is actually set to a real timestamp
       ),
-      // Only show chapters that have actual reading progress:
-      // Either fully read OR have made progress beyond the first page
+      // Chapters with actual reading progress: fully read, or past the first page.
       or: [
-        // Fully completed chapters
         Input$ChapterFilterInput(
           isRead: Input$BooleanFilterInput(equalTo: true),
         ),
-        // Chapters with meaningful reading progress (at least 1 page read)
         Input$ChapterFilterInput(
           lastPageRead: Input$IntFilterInput(greaterThan: 0),
         ),
       ],
-      // Additional filters
       and: [
-        // Add date range filtering if provided
         if (fromDate != null)
           Input$ChapterFilterInput(
             lastReadAt: Input$LongFilterInput(
@@ -69,11 +62,9 @@ class HistoryRepository {
               lessThanOrEqualTo: toDate.millisecondsSinceEpoch.toString(),
             ),
           ),
-        // Add search filtering if provided
         if (searchQuery.isNotBlank)
           Input$ChapterFilterInput(
             or: [
-              // Search in chapter name
               Input$ChapterFilterInput(
                 name: Input$StringFilterInput(
                   includesInsensitive: searchQuery,
@@ -86,25 +77,23 @@ class HistoryRepository {
       ],
     );
 
-    // Order by lastReadAt descending (most recent first)
     final order = [
       Input$ChapterOrderInput(
         by: Enum$ChapterOrderBy.LAST_READ_AT,
         byType: Enum$SortOrder.DESC,
       ),
-      // Secondary sort by source order for consistency
       Input$ChapterOrderInput(
         by: Enum$ChapterOrderBy.SOURCE_ORDER,
         byType: Enum$SortOrder.DESC,
       ),
     ];
 
-    final result = await client
+    final chapters = await client
         .query$GetReadingHistory(
           Options$Query$GetReadingHistory(
             variables: Variables$Query$GetReadingHistory(
-              first: pageSize * 10, // Get more results to filter duplicates
-              offset: pageNo * pageSize,
+              first: maxChapters,
+              offset: 0,
               filter: filter,
               order: order,
             ),
@@ -112,54 +101,15 @@ class HistoryRepository {
         )
         .getData((data) => data.chapters);
 
-    // Filter to only show the most recent chapter per manga
-    if (result?.nodes != null) {
-      // First, apply client-side filtering to ensure removed chapters are excluded
-      final validChapters = result!.nodes.where((chapter) {
-        // Only include chapters with actual reading progress:
-        // 1. Fully read chapters (isRead: true), OR
-        // 2. Chapters with meaningful progress (lastPageRead > 0)
-        // This excludes chapters that were removed from history (isRead: false AND lastPageRead: 0)
-        final isFullyRead = chapter.isRead;
-        final hasProgress = chapter.lastPageRead > 0;
-
-        return isFullyRead || hasProgress;
-      }).toList();
-
-      final Map<int, HistoryItemDto> latestChapterPerManga = {};
-
-      for (final chapter in validChapters) {
-        final mangaId = chapter.mangaId;
-
-        // Only keep the first (most recent) chapter for each manga
-        if (!latestChapterPerManga.containsKey(mangaId)) {
-          latestChapterPerManga[mangaId] = chapter;
-        }
-      }
-
-      // Take only the requested page size from the filtered results
-      final filteredChapters = latestChapterPerManga.values.toList()
-        ..sort((a, b) {
-          final aTime = a.readAt?.millisecondsSinceEpoch ?? 0;
-          final bTime = b.readAt?.millisecondsSinceEpoch ?? 0;
-          return bTime.compareTo(aTime); // Most recent first
-        });
-
-      final startIndex = pageNo * pageSize;
-      final endIndex =
-          (startIndex + pageSize).clamp(0, filteredChapters.length);
-      final pageChapters = startIndex < filteredChapters.length
-          ? filteredChapters.sublist(startIndex, endIndex)
-          : <HistoryItemDto>[];
-
-      return ChapterPageWithMangaDto(
-        nodes: pageChapters,
-        pageInfo: result.pageInfo,
-        totalCount: latestChapterPerManga.length,
-      );
+    final seen = <int>{};
+    final items = <HistoryItemDto>[];
+    for (final chapter in chapters?.nodes ?? const <HistoryItemDto>[]) {
+      // Skip no-progress rows left behind by "remove from history".
+      if (!chapter.isRead && chapter.lastPageRead <= 0) continue;
+      // First-seen per manga wins (server order is already newest-first).
+      if (seen.add(chapter.mangaId)) items.add(chapter);
     }
-
-    return result;
+    return items;
   }
 
   /// Get reading history for a specific manga
@@ -194,14 +144,13 @@ class HistoryRepository {
 
   /// Clear reading history for a specific chapter
   Future<void> removeChapterFromHistory(int chapterId) async {
-    // Mark the chapter as unread and reset progress
-    // This should remove it from history queries since our filter requires:
+    // This removes it from history queries since our filter requires:
     // either isRead: true OR lastPageRead > 0
     await mangaBookRepository.putChapter(
       chapterId: chapterId,
       patch: ChapterChange(
-        isRead: false, // Set to false (not fully read)
-        lastPageRead: 0, // Reset to 0 (no progress)
+        isRead: false,
+        lastPageRead: 0,
         // Note: lastReadAt cannot be cleared via this API
         // Some chapters may still appear until server is restarted
       ),
@@ -211,8 +160,6 @@ class HistoryRepository {
   /// Clear all reading history (mark all chapters as unread)
   /// This is a destructive operation and should be used with caution
   Future<void> clearAllHistory() async {
-    // This would require a server-side bulk operation
-    // For now, this is a placeholder that would need server support
     throw UnimplementedError(
       'Clearing all history requires server-side support. '
       'Please use individual chapter removal instead.',

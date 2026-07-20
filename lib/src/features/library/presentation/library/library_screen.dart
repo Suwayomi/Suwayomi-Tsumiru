@@ -220,6 +220,10 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
                         child: TabBarView(
                           children: data
                               .map((e) => CategoryMangaList(
+                                    // Keyed so element reuse can't leak one
+                                    // category's multi-select into another.
+                                    key: ValueKey(
+                                        e.id.getValueOnNullOrNegative()),
                                     categoryId:
                                         e.id.getValueOnNullOrNegative(),
                                   ))
@@ -350,8 +354,10 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
               Padding(
                 padding: KEdgeInsets.h8.size,
                 child: TabBarView(
-                  children:
-                      tabs.map((t) => _GroupedMangaList(tabId: t.id)).toList(),
+                  children: tabs
+                      .map((t) =>
+                          _GroupedMangaList(key: ValueKey(t.id), tabId: t.id))
+                      .toList(),
                 ),
               ),
             ),
@@ -399,7 +405,7 @@ class _CategoryTab extends ConsumerWidget {
 /// A manga grid/list for a non-default group tab (BY_SOURCE, BY_STATUS,
 /// UNGROUPED), fed from [groupedMangaListWithQueryAndFilterProvider].
 class _GroupedMangaList extends ConsumerWidget {
-  const _GroupedMangaList({required this.tabId});
+  const _GroupedMangaList({super.key, required this.tabId});
   final int tabId;
 
   @override

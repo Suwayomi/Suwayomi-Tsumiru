@@ -155,7 +155,7 @@ List<MangaDto> applyLibraryFilterSort(
     return true;
   }
 
-  int sort(MangaDto m1, MangaDto m2) {
+  int sortPrimary(MangaDto m1, MangaDto m2) {
     final sortDirToggle = (sortedDirection ? 1 : -1);
     // Random sort: direction is pinned (always ascending by key) so that the
     // direction toggle button doesn't fight the re-roll affordance.
@@ -217,6 +217,12 @@ List<MangaDto> applyLibraryFilterSort(
           MangaSort.trackerScore => 0,
         }) *
         sortDirToggle;
+  }
+
+  int sort(MangaDto m1, MangaDto m2) {
+    final p = sortPrimary(m1, m2);
+    // List.sort is unstable, so tie-break on id to stop equal keys shuffling on refresh.
+    return p != 0 ? p : m1.id.compareTo(m2.id);
   }
 
   return input.where(filter).toList()..sort(sort);

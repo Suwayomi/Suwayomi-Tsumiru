@@ -51,7 +51,10 @@ enum DBKeys {
   // (show the category picker), 0 = Default/uncategorized, >0 = a specific
   // category id. Mirrors Komikku's Default category preference.
   libraryDefaultCategory(-1),
-  l10n(Locale('en')),
+  // null = follow the device locale (MaterialApp resolves it against the
+  // supported set, falling back to English). A hardcoded default forced every
+  // fresh install to English regardless of the device language.
+  l10n(null),
   mangaFilterDownloaded(null),
   mangaFilterOffline(null),
   mangaFilterUnread(null),

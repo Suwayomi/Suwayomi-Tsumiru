@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../routes/router_config.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/hooks/debounced_hook.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
@@ -33,6 +34,13 @@ class MigrationSearchScreen extends HookConsumerWidget {
     final l10n = context.l10n;
     final searchController = useTextEditingController();
     final searchQuery = ref.watch(migrationSearchQueryProvider);
+    // Debounce the source fetch, not the UI: raw searchQuery still drives clear/empty state.
+    final debouncedQuery = useSettled(
+      searchQuery,
+      const Duration(milliseconds: 400),
+    );
+    // Grid still shows the previous query's results until this settles.
+    final searchPending = searchQuery != debouncedQuery;
 
     // Auto-search with source manga title on screen load
     useEffect(() {
@@ -40,25 +48,19 @@ class MigrationSearchScreen extends HookConsumerWidget {
       if (initialQuery.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           searchController.text = initialQuery;
+          // Just update the query; reading the provider here raced a second fetch.
           ref.read(migrationSearchQueryProvider.notifier).update(initialQuery);
-          ref.read(migrationSearchProvider(
-            sourceId: targetSource.id,
-            query: initialQuery,
-          ).future);
         });
       }
       return null;
     }, []);
 
-    final searchResultsAsync = ref.watch(migrationSearchProvider(
-      sourceId: targetSource.id,
-      query: searchQuery,
-    ));
+    final searchResultsAsync = ref.watch(
+      migrationSearchProvider(sourceId: targetSource.id, query: debouncedQuery),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Search in ${targetSource.displayName}'),
-      ),
+      appBar: AppBar(title: Text('Search in ${targetSource.displayName}')),
       body: Column(
         children: [
           // Search bar
@@ -82,11 +84,11 @@ class MigrationSearchScreen extends HookConsumerWidget {
                 ref.read(migrationSearchQueryProvider.notifier).update(query);
               },
               onSubmitted: (query) {
+                // Same as above: update, don't read, or it races a second fetch.
                 if (query.trim().isNotEmpty) {
-                  ref.read(migrationSearchProvider(
-                    sourceId: targetSource.id,
-                    query: query.trim(),
-                  ).future);
+                  ref
+                      .read(migrationSearchQueryProvider.notifier)
+                      .update(query.trim());
                 }
               },
             ),
@@ -123,125 +125,126 @@ class MigrationSearchScreen extends HookConsumerWidget {
 
           const SizedBox(height: 16),
 
-          // Search results
+          // Spinner while pending so a stale result can't be tapped.
           Expanded(
-            child: searchResultsAsync.when(
-              data: (results) {
-                if (searchQuery.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.searchForManga,
-                          style: context.theme.textTheme.titleMedium?.copyWith(
-                            color: Colors.grey.shade600,
+            child: searchPending
+                ? const Center(child: CircularProgressIndicator())
+                : searchResultsAsync.when(
+                    data: (results) {
+                      if (searchQuery.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                l10n.searchForManga,
+                                style: context.theme.textTheme.titleMedium
+                                    ?.copyWith(color: Colors.grey.shade600),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.enterSearchTerm,
+                                style: context.theme.textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey.shade500),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.enterSearchTerm,
-                          style: context.theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                        );
+                      }
 
-                if (results == null || results.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.noResultsFound,
-                          style: context.theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.tryDifferentSearch,
-                          style: context.theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade600,
+                      if (results == null || results.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                l10n.noResultsFound,
+                                style: context.theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.tryDifferentSearch,
+                                style: context.theme.textTheme.bodyMedium
+                                    ?.copyWith(color: Colors.grey.shade600),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                        );
+                      }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: results.length,
-                  itemBuilder: (context, index) {
-                    final manga = results[index];
-                    return _MangaSearchResultCard(
-                      manga: manga,
-                      onTap: () => _onMangaSelected(context, ref, manga),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stackTrace) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.red.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.searchError,
-                      style: context.theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: context.theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
+                      return GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.7,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                        itemCount: results.length,
+                        itemBuilder: (context, index) {
+                          final manga = results[index];
+                          return _MangaSearchResultCard(
+                            manga: manga,
+                            onTap: () => _onMangaSelected(context, ref, manga),
+                          );
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n.searchError,
+                            style: context.theme.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            error.toString(),
+                            style: context.theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (searchQuery.isNotEmpty) {
+                                ref.read(
+                                  migrationSearchProvider(
+                                    sourceId: targetSource.id,
+                                    query: searchQuery,
+                                  ).future,
+                                );
+                              }
+                            },
+                            child: Text(l10n.retry),
+                          ),
+                        ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (searchQuery.isNotEmpty) {
-                          ref.read(migrationSearchProvider(
-                            sourceId: targetSource.id,
-                            query: searchQuery,
-                          ).future);
-                        }
-                      },
-                      child: Text(l10n.retry),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           ),
         ],
       ),
@@ -253,10 +256,8 @@ class MigrationSearchScreen extends HookConsumerWidget {
     WidgetRef ref,
     Fragment$MangaDto targetManga,
   ) {
-    // Select the target manga
     ref.read(selectedTargetMangaProvider.notifier).select(targetManga);
 
-    // Navigate to migration preview screen with proper data class
     MigrationPreviewRoute(
       $extra: MigrationPreviewRouteData(
         sourceManga: sourceManga,
@@ -268,10 +269,7 @@ class MigrationSearchScreen extends HookConsumerWidget {
 }
 
 class _MangaSearchResultCard extends StatelessWidget {
-  const _MangaSearchResultCard({
-    required this.manga,
-    required this.onTap,
-  });
+  const _MangaSearchResultCard({required this.manga, required this.onTap});
 
   final Fragment$MangaDto manga;
   final VoidCallback onTap;
@@ -288,9 +286,7 @@ class _MangaSearchResultCard extends StatelessWidget {
             // Manga cover
             Expanded(
               flex: 3,
-              child: ServerImage(
-                imageUrl: manga.thumbnailUrl ?? '',
-              ),
+              child: ServerImage(imageUrl: manga.thumbnailUrl ?? ''),
             ),
 
             // Manga info
