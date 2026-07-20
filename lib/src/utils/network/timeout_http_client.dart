@@ -8,21 +8,19 @@ class TimeoutHttpClient extends http.BaseClient {
     this.timeout, {
     this.retries = 0,
     this.retryDelay = const Duration(seconds: 1),
-  });
+    http.Client? inner,
+  }) : _inner = inner ?? http.Client();
 
   /// The timeout duration for each request.
   final Duration timeout;
   final int retries;
   final Duration retryDelay;
 
-  final http.Client _inner = http.Client();
+  final http.Client _inner;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     int attempt = 0;
-
-    // Keep an immutable template to clone for each retry
-    final template = _cloneRequest(request);
     http.BaseRequest current = request;
 
     while (true) {
@@ -30,9 +28,12 @@ class TimeoutHttpClient extends http.BaseClient {
         return await _inner.send(current).timeout(timeout);
       } on TimeoutException {
         if (attempt >= retries) rethrow;
+        // Streamed/multipart bodies are single-use and can't be safely retried.
+        final retryClone = _cloneRequest(request);
+        if (retryClone == null) rethrow;
         attempt++;
         await Future.delayed(retryDelay);
-        current = _cloneRequest(template);
+        current = retryClone;
       }
     }
   }
@@ -43,8 +44,8 @@ class TimeoutHttpClient extends http.BaseClient {
     super.close();
   }
 
-  // Creates a fresh copy of an [http.BaseRequest] to reuse across retries.
-  http.BaseRequest _cloneRequest(http.BaseRequest original) {
+  // Clones a plain [http.Request] for retry; null for streamed/multipart bodies.
+  http.BaseRequest? _cloneRequest(http.BaseRequest original) {
     if (original is http.Request) {
       final clone = http.Request(original.method, original.url)
         ..headers.addAll(original.headers)
@@ -56,6 +57,6 @@ class TimeoutHttpClient extends http.BaseClient {
       }
       return clone;
     }
-    throw UnsupportedError('Unsupported request type for retry');
+    return null;
   }
 }

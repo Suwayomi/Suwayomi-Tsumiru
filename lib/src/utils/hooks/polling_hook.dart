@@ -10,12 +10,16 @@ T? usePolling<T>({
   final data = useState<T?>(null);
 
   useEffect(() {
+    bool cancelled = false;
+
     Future<void> poll() async {
-      while (true) {
+      while (!cancelled) {
         if (delayedStart) {
           await Future.delayed(pollingInterval);
         }
+        if (cancelled) return;
         final result = await pollFunction();
+        if (cancelled) return;
         data.value = result;
         if (!delayedStart) {
           await Future.delayed(pollingInterval);
@@ -25,10 +29,7 @@ T? usePolling<T>({
 
     poll();
 
-    // Cleanup function
-    return () {
-      // No cleanup needed for this simple example
-    };
+    return () => cancelled = true;
   }, []);
 
   return data.value;
