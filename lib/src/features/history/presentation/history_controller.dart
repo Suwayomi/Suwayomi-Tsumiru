@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../data/history_repository.dart';
@@ -21,12 +22,12 @@ part 'history_controller.g.dart';
 class ReadingHistory extends _$ReadingHistory {
   @override
   Future<List<HistoryItemDto>?> build() async {
-    final result =
+    final items =
         await ref.watch(historyRepositoryProvider).getReadingHistory();
     // Guard the post-await ref use: the provider may have been disposed during
     // the fetch, and keepAlive() on a dead ref throws UnmountedRefException.
     if (ref.mounted) ref.keepAlive();
-    return result?.nodes;
+    return items;
   }
 
   Future<void> refresh() async {
@@ -36,67 +37,38 @@ class ReadingHistory extends _$ReadingHistory {
     final result = await AsyncValue.guard(
       () => ref.read(historyRepositoryProvider).getReadingHistory(),
     );
-    if (ref.mounted) state = result.whenData((data) => data?.nodes);
+    if (!ref.mounted) return;
+    final items = result.asData?.value;
+    if (items != null) state = AsyncData(items);
+    // On error keep the current list (the pull spinner has dismissed).
   }
 
-  Future<void> loadMore() async {
-    final currentItems = state.value ?? [];
-    final pageNo = (currentItems.length / 50).floor() + 1;
-
+  /// Remove a chapter from reading history.
+  Future<void> removeFromHistory(int chapterId) async {
+    final current = state.value ?? const <HistoryItemDto>[];
+    HistoryItemDto? removed;
+    for (final item in current) {
+      if (item.id == chapterId) {
+        removed = item;
+        break;
+      }
+    }
     final result = await AsyncValue.guard(
       () =>
-          ref.read(historyRepositoryProvider).getReadingHistory(pageNo: pageNo),
+          ref.read(historyRepositoryProvider).removeChapterFromHistory(chapterId),
     );
-
-    state = result.when(
-      data: (data) {
-        if (data?.nodes != null) {
-          final newItems = data?.nodes ?? [];
-          final updatedItems = [...currentItems, ...newItems];
-          return AsyncData(updatedItems);
-        }
-        return state; // Keep current state if no new data
-      },
-      error: (error, stackTrace) => AsyncError(error, stackTrace),
-      loading: () => state, // Keep current state while loading more
-    );
-  }
-
-  /// Remove a chapter from reading history
-  Future<void> removeFromHistory(int chapterId) async {
-    state = await AsyncValue.guard(() async {
-      // First get the chapter to extract mangaId for cache invalidation
-      final currentItems = state.value ?? [];
-      HistoryItemDto? chapterToRemove;
-
-      try {
-        chapterToRemove =
-            currentItems.firstWhere((item) => item.id == chapterId);
-      } catch (e) {
-        // Chapter not found in current list, continue anyway
-      }
-
-      // Remove the chapter from history on the server
-      await ref
-          .read(historyRepositoryProvider)
-          .removeChapterFromHistory(chapterId);
-
-      // Invalidate all related caches to ensure fresh data
-      if (chapterToRemove != null) {
-        final mangaId = chapterToRemove.mangaId;
-        // Invalidate the specific manga's chapter list so it shows as unread immediately
-        ref.invalidate(mangaChapterListProvider(mangaId: mangaId));
-        ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-      }
-
-      // Also invalidate the history provider itself to force a fresh query
-      ref.invalidateSelf();
-
-      // Refresh the history data from server to get updated state
-      final result =
-          await ref.read(historyRepositoryProvider).getReadingHistory();
-      return result?.nodes;
-    });
+    if (!ref.mounted) return;
+    if (result.hasError) {
+      // Don't invalidate as though it succeeded — item would just reappear.
+      ref.read(toastProvider)?.showError(result.error.toString());
+      return;
+    }
+    if (removed != null) {
+      ref.invalidate(mangaChapterListProvider(mangaId: removed.mangaId));
+      ref.invalidate(mangaWithIdProvider(mangaId: removed.mangaId));
+    }
+    // Rebuild from the top so the removed chapter drops out.
+    ref.invalidateSelf();
   }
 }
 
@@ -125,7 +97,6 @@ List<HistoryGroup> historyGroupedByDate(Ref ref) {
 
   if (historyItems.isEmpty) return [];
 
-  // Group items by their read date using a simple key
   final Map<String, List<HistoryItemDto>> groupedItems = {};
 
   for (final item in historyItems) {
@@ -133,7 +104,6 @@ List<HistoryGroup> historyGroupedByDate(Ref ref) {
     groupedItems.putIfAbsent(groupKey, () => []).add(item);
   }
 
-  // Convert to HistoryGroup objects and sort by most recent
   final groups = groupedItems.entries.map((entry) {
     return HistoryGroup(
       title: entry.key,
@@ -141,7 +111,6 @@ List<HistoryGroup> historyGroupedByDate(Ref ref) {
     );
   }).toList();
 
-  // Sort groups by most recent read date
   groups.sort((a, b) {
     final aDate = a.mostRecentReadDate;
     final bDate = b.mostRecentReadDate;
@@ -163,7 +132,6 @@ List<HistoryGroup> filteredHistoryGroups(Ref ref) {
 
   if (searchQuery.isBlank) return groups;
 
-  // Filter each group and remove empty groups
   final filteredGroups = groups
       .map((group) => group.filterByQuery(searchQuery))
       .where((group) => group.isNotEmpty)

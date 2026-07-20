@@ -63,9 +63,9 @@ class HistoryScreen extends ConsumerWidget {
                   return const HistoryNoSearchResults();
                 }
 
+                final notifier = ref.read(readingHistoryProvider.notifier);
                 return RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(readingHistoryProvider.notifier).refresh(),
+                  onRefresh: notifier.refresh,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(8),
                     itemCount: historyGroups.length,
@@ -73,9 +73,8 @@ class HistoryScreen extends ConsumerWidget {
                       final group = historyGroups[index];
                       return HistoryGroupWidget(
                         group: group,
-                        onRemoveItem: (chapterId) => ref
-                            .read(readingHistoryProvider.notifier)
-                            .removeFromHistory(chapterId),
+                        onRemoveItem: (chapterId) =>
+                            notifier.removeFromHistory(chapterId),
                       );
                     },
                   ),
