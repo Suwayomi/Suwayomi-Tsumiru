@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../routes/router_config.dart';
+import '../../../../utils/crash/copy_crash_log.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -110,7 +111,7 @@ class _CopyCrashLogTile extends ConsumerWidget {
         },
       ),
       onTap: () async {
-        final log = readCrashLog(await initCrashLog());
+        final log = crashLogForClipboard(await initCrashLog());
         if (!context.mounted) return;
         final toast = ref.read(toastProvider);
         if (log == null) {

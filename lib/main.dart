@@ -39,6 +39,7 @@ import 'src/features/tracking/domain/tracker_oauth_helpers.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
+import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/platform/is_android_native.dart';
@@ -287,18 +288,20 @@ Future<void> _setUpCrashReporting() async {
     _logCrash(error, stack);
     return true;
   };
-  ErrorWidget.builder = (details) =>
-      AppErrorApp(message: details.exceptionAsString(), logPath: _crashLogPath);
+  ErrorWidget.builder = (details) => AppErrorApp(
+        message: redactTokens(details.exceptionAsString()),
+        logPath: _crashLogPath,
+      );
 }
 
 void _logCrash(Object error, StackTrace? stack) {
   // Include the runtime type — some exceptions (e.g. wrapped GraphQL ones) have
   // an empty toString(), which would otherwise log a blank line.
-  final line = '${error.runtimeType}: $error';
-  debugPrint('Tsumiru error: $line\n$stack');
+  final body = redactTokens('${error.runtimeType}: $error\n$stack');
+  debugPrint('Tsumiru error: $body');
   writeCrashLog(
     _crashLogPath,
-    '[${DateTime.now().toIso8601String()}] $line\n$stack\n\n',
+    '[${DateTime.now().toIso8601String()}] $body\n\n',
   );
 }
 
@@ -311,7 +314,8 @@ void _onFatalError(Object error, StackTrace stack) {
   // running app with a "couldn't start" screen.
   if (_appRendered) return;
   try {
-    runApp(AppErrorApp(message: error.toString(), logPath: _crashLogPath));
+    runApp(AppErrorApp(
+        message: redactTokens(error.toString()), logPath: _crashLogPath));
   } catch (_) {}
 }
 

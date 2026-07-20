@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../utils/crash/crash_log.dart';
+import '../utils/crash/copy_crash_log.dart';
 
 /// A self-contained fallback screen shown when the app fails to start —
 /// instead of a blank white window with no clue. Kept dependency-light (its own
@@ -51,10 +51,8 @@ class AppErrorApp extends StatelessWidget {
                     const SizedBox(height: 20),
                     FilledButton.icon(
                       onPressed: () async {
-                        // The log lives in the app's private files dir, which a
-                        // user can't browse — copy it so they can paste it into
-                        // a bug report. Fall back to the message if unreadable.
-                        final log = readCrashLog(logPath) ?? message;
+                        // Fall back to the message if the log is unreadable.
+                        final log = crashLogForClipboard(logPath) ?? message;
                         await Clipboard.setData(ClipboardData(text: log));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
