@@ -17,6 +17,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
@@ -239,7 +240,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           lc.chapter.lastPageRead.getValueOnNullOrNegative() >= rel) {
         return;
       }
-      await recordReadingProgress(
+      final progressResult = await recordReadingProgress(
         ref,
         chapterId: chapterId,
         lastPageRead: completed ? 0 : rel,
@@ -247,6 +248,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
       // Disposed during the await → the ref calls below would throw.
       if (!context.mounted) return;
+      // Online-only users have no dirty row to retry, so a failed push would
+      // vanish — surface it instead of losing progress silently.
+      if (progressResult.hasError) {
+        ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+      }
       if (completed && !completedChapterIds.value.contains(chapterId)) {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
         unawaited(maybeTrackProgressOnReadFetch(ref,
@@ -256,7 +262,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         unawaited(maybeDeleteOnReadServer(ref,
             mangaId: manga.id, readChapterId: chapterId));
       }
-      ref.invalidate(readingHistoryProvider);
+      // Fired off a scroll/visibility notification — defer past the frame or
+      // it trips the Riverpod-3 modify-during-build assert.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) ref.invalidate(readingHistoryProvider);
+      });
     }
 
     void scheduleVisibleProgress(int chapterId, int rel) {
@@ -276,7 +286,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
     }
 
+    // Skip the first run (on-mount restore, not a page turn) so opening a
+    // chapter already on its last page doesn't instantly fire delete-on-read/
+    // tracker. Matches the paged engine's guard.
+    final initialProgressConsumed = useRef<bool>(false);
     useEffect(() {
+      if (!initialProgressConsumed.value) {
+        initialProgressConsumed.value = true;
+        return null;
+      }
       scheduleVisibleProgress(
           currentVisibleChapter.value.id, currentChapterPageIndex.value);
       return null;
@@ -1156,8 +1174,12 @@ void _markChapterRead(
     chapterId: chapter.id,
     lastPageRead: 0,
     isRead: true,
-  ).then((_) {
+  ).then((progressResult) {
     if (!context.mounted) return;
+    // A failed boundary push has no dirty row to retry for online-only users.
+    if (progressResult.hasError) {
+      ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+    }
     // Push progress to external trackers (fire-and-forget).
     unawaited(maybeTrackProgressOnReadFetch(
       ref,
