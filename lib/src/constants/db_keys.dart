@@ -17,6 +17,9 @@ enum DBKeys {
   // migration seeds it true for installs that already have a server configured.
   onboardingComplete(false),
   sourceLanguageFilter(["all", "lastUsed", "en", "localsourcelang"]),
+  // Ordered target-source priority for bulk migration (source ids, most
+  // preferred first).
+  migrationTargetSources(<String>[]),
   extensionLanguageFilter(["installed", "update", "en", "all"]),
   sourceLastUsed(null),
   themeMode(ThemeMode.system),

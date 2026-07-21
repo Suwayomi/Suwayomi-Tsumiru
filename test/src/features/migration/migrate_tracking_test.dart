@@ -121,11 +121,6 @@ void main() {
     test('MigrationOption.migrateTracking defaults to false', () {
       expect(const MigrationOption().migrateTracking, isFalse);
     });
-
-    test('MigrationResult carries migratedTracking count', () {
-      const result = MigrationResult(success: true, migratedTracking: 3);
-      expect(result.migratedTracking, 3);
-    });
   });
 }
 
@@ -158,7 +153,7 @@ class _StubTrackerRepository extends TrackerRepository {
       records;
 
   @override
-  Future<void> bind({
+  Future<Fragment$TrackRecordDto> bind({
     required int mangaId,
     required int trackerId,
     required String remoteId,
@@ -170,5 +165,20 @@ class _StubTrackerRepository extends TrackerRepository {
       remoteId: remoteId,
       private: private,
     ));
+    return Fragment$TrackRecordDto(
+      id: 900 + bindCalls.length,
+      trackerId: trackerId,
+      remoteId: remoteId,
+      title: 'Test',
+      remoteUrl: 'https://example.com',
+      status: 1,
+      lastChapterRead: 0.0,
+      totalChapters: 10,
+      score: 0.0,
+      displayScore: '0',
+      startDate: '',
+      finishDate: '',
+      private: private,
+    );
   }
 }

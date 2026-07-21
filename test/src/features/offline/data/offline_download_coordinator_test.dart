@@ -43,6 +43,15 @@ class _FakeStore implements OfflinePageStore {
 
   @override
   Future<void> clearAll() async {}
+  @override
+  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
+    int fromMangaId,
+    int fromChapterId,
+    int toMangaId,
+    int toChapterId, {
+    required bool keepSource,
+  }) =>
+      throw UnimplementedError();
 }
 
 void main() {

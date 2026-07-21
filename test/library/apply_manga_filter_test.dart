@@ -23,7 +23,8 @@ Fragment$SourceDto _source({required bool isNsfw}) => Fragment$SourceDto(
       name: 'Test Source',
       supportsLatest: false,
       meta: const [],
-      $extension: Fragment$SourceDto$extension(pkgName: 'test.pkg'),
+      $extension:
+          Fragment$SourceDto$extension(pkgName: 'test.pkg', isObsolete: false),
     );
 
 Fragment$MangaDto$categories _cats(List<int> ids) =>

@@ -28,6 +28,7 @@ import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
+import '../../../migration/domain/migration_models.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../offline/presentation/keep_rule_picker.dart';
@@ -350,6 +351,14 @@ class CategoryMangaList extends HookConsumerWidget {
                       );
                       refresh();
                     },
+                    onMigrate: () {
+                      final ids = selection.value.toList();
+                      if (ids.isEmpty) return;
+                      selection.value = const {};
+                      MigrationBulkConfigRoute(
+                        $extra: MigrationBulkConfigData(mangaIds: ids),
+                      ).push(context);
+                    },
                   ),
                 ),
             ],
@@ -373,6 +382,7 @@ class _SelectionBar extends StatelessWidget {
     required this.onKeepOffline,
     required this.onDownloadToServer,
     required this.onEditCategories,
+    required this.onMigrate,
   });
 
   final int count;
@@ -383,6 +393,20 @@ class _SelectionBar extends StatelessWidget {
   final VoidCallback onKeepOffline;
   final VoidCallback onDownloadToServer;
   final VoidCallback onEditCategories;
+  final VoidCallback onMigrate;
+
+  PopupMenuItem<VoidCallback> _moreItem(
+          IconData icon, String label, VoidCallback onTap) =>
+      PopupMenuItem<VoidCallback>(
+        value: onTap,
+        child: Row(
+          children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Text(label),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -395,12 +419,9 @@ class _SelectionBar extends StatelessWidget {
         ),
         Text('$count', style: context.textTheme.titleMedium),
       ],
+      // Komikku LibraryBottomActionMenu shape: a few primary actions inline, the
+      // rest in a "More" (⋮) overflow — so the bar never clips on a phone.
       actions: [
-        IconButton(
-          tooltip: 'Select all',
-          icon: const Icon(Icons.select_all_rounded),
-          onPressed: onSelectAll,
-        ),
         IconButton(
           tooltip: 'Edit categories',
           icon: const Icon(Icons.label_outline_rounded),
@@ -417,14 +438,20 @@ class _SelectionBar extends StatelessWidget {
           onPressed: onMarkUnread,
         ),
         IconButton(
-          tooltip: 'Keep on device (sync)',
-          icon: const Icon(Icons.save_alt_rounded),
-          onPressed: onKeepOffline,
-        ),
-        IconButton(
           tooltip: 'Download to server',
           icon: const Icon(Icons.cloud_download_outlined),
           onPressed: onDownloadToServer,
+        ),
+        PopupMenuButton<VoidCallback>(
+          tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
+          icon: const Icon(Icons.more_vert),
+          onSelected: (action) => action(),
+          itemBuilder: (context) => [
+            _moreItem(Icons.select_all_rounded, 'Select all', onSelectAll),
+            _moreItem(Icons.save_alt_rounded, 'Keep on device', onKeepOffline),
+            _moreItem(
+                Icons.swap_horiz, context.l10n.bulkMigrationTitle, onMigrate),
+          ],
         ),
       ],
     );

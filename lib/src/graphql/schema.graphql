@@ -66,6 +66,17 @@ type BindTrackPayload {
   trackRecord: TrackRecordType!
 }
 
+input BindTrackRecordInput {
+  clientMutationId: String
+  mangaId: Int!
+  trackRecordId: Int!
+}
+
+type BindTrackRecordPayload {
+  clientMutationId: String
+  trackRecord: TrackRecordType!
+}
+
 input BooleanFilterInput {
   distinctFrom: Boolean
   distinctFromAll: [Boolean!]
@@ -1319,6 +1330,7 @@ type Mutation {
   setSourceMetas(input: SetSourceMetasInput!): SetSourceMetasPayload
   updateSourcePreference(input: UpdateSourcePreferenceInput!): UpdateSourcePreferencePayload
   bindTrack(input: BindTrackInput!): BindTrackPayload!
+  bindTrackRecord(input: BindTrackRecordInput!): BindTrackRecordPayload!
   fetchTrack(input: FetchTrackInput!): FetchTrackPayload!
   loginTrackerCredentials(input: LoginTrackerCredentialsInput!): LoginTrackerCredentialsPayload!
   loginTrackerOAuth(input: LoginTrackerOAuthInput!): LoginTrackerOAuthPayload!

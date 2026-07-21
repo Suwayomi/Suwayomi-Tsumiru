@@ -27,11 +27,10 @@ import '../features/manga_book/presentation/upcoming/upcoming_screen.dart';
 import '../features/manga_book/presentation/updates/updates_screen.dart';
 import '../features/manga_book/widgets/update_status_summary_sheet.dart';
 import '../features/migration/domain/migration_models.dart';
+import '../features/migration/presentation/screens/migration_bulk_config_screen.dart';
+import '../features/migration/presentation/screens/migration_bulk_run_screen.dart';
 import '../features/migration/presentation/screens/migration_global_search_screen.dart';
-import '../features/migration/presentation/screens/migration_preview_screen.dart';
-import '../features/migration/presentation/screens/migration_progress_screen.dart';
-import '../features/migration/presentation/screens/migration_search_screen.dart';
-import '../features/migration/presentation/screens/migration_source_selection_screen.dart';
+import '../features/migration/presentation/screens/migration_source_picker_screen.dart';
 import '../features/offline/presentation/offline_settings_screen.dart';
 import '../features/onboarding/data/onboarding_complete.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
@@ -117,10 +116,10 @@ abstract class Routes {
 
   // Migration
   static const migrationGlobalSearch = '/migration/global-search';
-  static const migrationSourceSelection = '/migration/source-selection';
-  static const migrationSearch = '/migration/search';
-  static const migrationPreview = '/migration/preview';
-  static const migrationProgress = '/migration/progress';
+  static const migrationBulkConfig = '/migration/bulk-config';
+  static const migrationBulkRun = '/migration/bulk-run';
+  static const migrationSourcePicker = '/migration/source-picker';
+  static const migrationSourceManga = '/migration/source-manga';
 }
 
 @riverpod
@@ -255,11 +254,11 @@ GoRouter routerConfig(Ref ref) {
     TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
     TypedGoRoute<MigrationGlobalSearchRoute>(
         path: Routes.migrationGlobalSearch),
-    TypedGoRoute<MigrationSourceSelectionRoute>(
-        path: Routes.migrationSourceSelection),
-    TypedGoRoute<MigrationSearchRoute>(path: Routes.migrationSearch),
-    TypedGoRoute<MigrationPreviewRoute>(path: Routes.migrationPreview),
-    TypedGoRoute<MigrationProgressRoute>(path: Routes.migrationProgress),
+    TypedGoRoute<MigrationBulkConfigRoute>(path: Routes.migrationBulkConfig),
+    TypedGoRoute<MigrationBulkRunRoute>(path: Routes.migrationBulkRun),
+    TypedGoRoute<MigrationSourcePickerRoute>(
+        path: Routes.migrationSourcePicker),
+    TypedGoRoute<MigrationSourceMangaRoute>(path: Routes.migrationSourceManga),
   ],
 )
 @immutable
