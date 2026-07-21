@@ -49,6 +49,57 @@ class IoOfflinePageStore implements OfflinePageStore {
   }
 
   @override
+  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
+    int fromMangaId,
+    int fromChapterId,
+    int toMangaId,
+    int toChapterId, {
+    required bool keepSource,
+  }) async {
+    final fromRel = paths.chapterDirRel(fromMangaId, fromChapterId);
+    final toRel = paths.chapterDirRel(toMangaId, toChapterId);
+    final fromDir = Directory(paths.absolute(fromRel));
+    final toDir = Directory(paths.absolute(toRel));
+    if (!await fromDir.exists()) {
+      throw const OfflineTransferException('source chapter has no files');
+    }
+
+    // Fast path — a move onto a not-yet-populated target: rename the whole dir.
+    if (!keepSource && !await toDir.exists()) {
+      await toDir.parent.create(recursive: true);
+      await fromDir.rename(toDir.path);
+    } else {
+      // Copy, or a move where the target dir already exists (recovery): per-file.
+      await toDir.create(recursive: true);
+      await for (final e in fromDir.list()) {
+        if (e is! File) continue;
+        final dest = p.join(toDir.path, p.basename(e.path));
+        await e.copy(dest);
+      }
+      if (!keepSource) await fromDir.delete(recursive: true);
+    }
+
+    final pages = <({int pageIndex, String relPath, int bytes})>[];
+    await for (final e in toDir.list()) {
+      if (e is! File) continue;
+      final name = p.basename(e.path);
+      // Page files are `<NNN>.<ext>` — index is the stem, ext preserved as-is.
+      final idx = int.tryParse(p.basenameWithoutExtension(name));
+      if (idx == null) continue;
+      pages.add((
+        pageIndex: idx,
+        relPath: '$toRel/$name',
+        bytes: await e.length(),
+      ));
+    }
+    pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
+    if (pages.isEmpty) {
+      throw const OfflineTransferException('no page files after transfer');
+    }
+    return pages;
+  }
+
+  @override
   Future<int> chapterBytes(int mangaId, int chapterId) async {
     final dir =
         Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));

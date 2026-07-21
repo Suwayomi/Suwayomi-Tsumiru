@@ -38,7 +38,8 @@ MangaDto offlineMangaToDto(
           isConfigurable: false,
           supportsLatest: false,
           meta: const <Fragment$SourceDto$meta>[],
-          $extension: Fragment$SourceDto$extension(pkgName: ''),
+          $extension:
+              Fragment$SourceDto$extension(pkgName: '', isObsolete: false),
         );
 
   // Restore status (stored as the enum name string)

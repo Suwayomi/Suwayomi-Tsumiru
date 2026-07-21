@@ -322,6 +322,12 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
                         onPressed: () => searchToggled.value = true,
                         icon: const Icon(Icons.search_rounded),
                       ),
+                      IconButton(
+                        tooltip: context.l10n.migrationPickSourceTitle,
+                        onPressed: () =>
+                            const MigrationSourcePickerRoute().push(context),
+                        icon: const Icon(Icons.swap_horiz_rounded),
+                      ),
                       Builder(
                         builder: (context) => IconButton(
                           onPressed: () {

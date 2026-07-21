@@ -24,6 +24,21 @@ abstract class OfflinePageStore {
   /// failed/partial download).
   Future<void> deleteChapter(int mangaId, int chapterId);
 
+  /// Transfer a chapter's page files from one manga/chapter to another (for
+  /// migration: reuse downloaded bytes on the target instead of re-fetching).
+  /// [keepSource] false MOVES the files (rename — instant, source left empty);
+  /// true COPIES them (source kept — the Copy-not-Migrate path). Returns the
+  /// moved page files as `(pageIndex, relPath, bytes)` so the catalog rows can be
+  /// rewritten in one transaction. Throws if the source chapter has no files.
+  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
+    int fromMangaId,
+    int fromChapterId,
+    int toMangaId,
+    int toChapterId, {
+    required bool keepSource,
+  }) =>
+      throw UnimplementedError();
+
   /// Total bytes of a chapter's stored page files (for the catalog's byte
   /// count after a background download completes). 0 if nothing is stored.
   Future<int> chapterBytes(int mangaId, int chapterId);
@@ -33,3 +48,13 @@ abstract class OfflinePageStore {
 
 /// Image bytes + file extension fetched for a single page.
 typedef PageBytes = ({List<int> bytes, String ext});
+
+/// A chapter's files couldn't be transferred to a migration target (missing
+/// source, or nothing on disk after the transfer) — the caller falls back to a
+/// server re-fetch of the target chapter.
+class OfflineTransferException implements Exception {
+  const OfflineTransferException(this.message);
+  final String message;
+  @override
+  String toString() => 'OfflineTransferException: $message';
+}

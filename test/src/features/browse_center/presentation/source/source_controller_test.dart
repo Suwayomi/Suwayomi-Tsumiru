@@ -43,6 +43,7 @@ SourceDto _src({
       'extension': {
         'pkgName': 'pkg',
         'repo': 'repo',
+        'isObsolete': false,
         '__typename': 'ExtensionType',
       },
     });

@@ -14,5 +14,6 @@ fragment SourceDto on SourceType {
   extension {
         pkgName
         repo
+        isObsolete
     }
 }

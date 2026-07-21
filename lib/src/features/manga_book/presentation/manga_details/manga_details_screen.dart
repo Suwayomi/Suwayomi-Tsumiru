@@ -118,8 +118,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
     void startMigration(BuildContext context, int mangaId, dynamic manga) {
       if (manga == null) return;
 
-      MigrationGlobalSearchRoute(
-        $extra: MigrationRouteData(sourceManga: manga),
+      // Single-manga migration goes through the same bulk path as the library
+      // multi-select — one consistent flow (source picker → list → migrate).
+      MigrationBulkConfigRoute(
+        $extra: MigrationBulkConfigData(mangaIds: [mangaId]),
       ).push(context);
     }
 

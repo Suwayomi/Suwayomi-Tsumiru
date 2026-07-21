@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:graphql/client.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../global_providers/global_providers.dart';
@@ -14,6 +13,11 @@ import '../../../utils/extensions/custom_extensions.dart';
 import 'graphql/__generated__/query.graphql.dart';
 
 part 'tracker_repository.g.dart';
+
+/// Per-client cache of the bindTrackRecord capability check, keyed by the
+/// GraphQLClient so it's computed once per session and re-checked after a server switch.
+final Expando<Future<bool>> _capabilityCache =
+    Expando<Future<bool>>('bindTrackRecordSupport');
 
 class TrackerRepository {
   const TrackerRepository(this.client);
@@ -78,7 +82,7 @@ class TrackerRepository {
           )
           .getData((data) => data.searchTracker.trackSearches);
 
-  Future<void> bind({
+  Future<Fragment$TrackRecordDto> bind({
     required int mangaId,
     required int trackerId,
     required String remoteId,
@@ -98,9 +102,106 @@ class TrackerRepository {
         .getData((d) => d);
     // A null payload (no exception, but nothing bound) must surface as an error
     // so callers don't treat an unbound record as success.
-    if (data == null) {
+    final record = data?.bindTrack.trackRecord;
+    if (record == null) {
       throw Exception('Tracking bind returned no data');
     }
+    return record;
+  }
+
+  /// Copies an existing track record onto [mangaId] in the server DB, making no
+  /// external tracker call. Only valid when [supportsBindTrackRecord] is true.
+  Future<Fragment$TrackRecordDto> bindRecord({
+    required int mangaId,
+    required int trackRecordId,
+  }) async {
+    final data = await client
+        .mutate$BindTrackRecord(
+          Options$Mutation$BindTrackRecord(
+            variables: Variables$Mutation$BindTrackRecord(
+              mangaId: mangaId,
+              trackRecordId: trackRecordId,
+            ),
+          ),
+        )
+        .getData((d) => d);
+    final record = data?.bindTrackRecord.trackRecord;
+    if (record == null) {
+      throw Exception('Track-record copy returned no data');
+    }
+    return record;
+  }
+
+  /// Whether the connected server exposes `bindTrackRecord`. Detected by schema
+  /// introspection and cached per client (via [_capabilityCache]) so a bulk run
+  /// introspects once, not once per pair. Fails closed to `false`.
+  Future<bool> supportsBindTrackRecord() =>
+      _capabilityCache[client] ??= _introspectBindTrackRecord();
+
+  Future<bool> _introspectBindTrackRecord() async {
+    try {
+      final result = await client.query(
+        QueryOptions(
+          document: gql(
+            'query { __type(name: "Mutation") { fields { name } } }',
+          ),
+          fetchPolicy: FetchPolicy.cacheFirst,
+        ),
+      );
+      if (result.hasException) return false;
+      final fields =
+          (result.data?['__type']?['fields'] as List?)?.cast<dynamic>() ??
+              const [];
+      return fields.any((f) => (f as Map)['name'] == 'bindTrackRecord');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Carries [record] onto [toMangaId], avoiding an external tracker call when
+  /// possible.
+  ///
+  /// - [useBindTrackRecord] true: pure local DB copy of the whole record.
+  /// - false (older server): `bindTrack` carries only tracker+remote id, so the
+  ///   rest is copied via a follow-up `update` and verified — throws on
+  ///   mismatch so the caller keeps the source rather than losing progress.
+  Future<Fragment$TrackRecordDto> copyRecord({
+    required int toMangaId,
+    required Fragment$TrackRecordDto record,
+    required bool useBindTrackRecord,
+  }) async {
+    if (useBindTrackRecord) {
+      return bindRecord(mangaId: toMangaId, trackRecordId: record.id);
+    }
+
+    final bound = await bind(
+      mangaId: toMangaId,
+      trackerId: record.trackerId,
+      remoteId: record.remoteId,
+      private: record.private,
+    );
+    await update(
+      recordId: bound.id,
+      status: record.status,
+      scoreString: record.displayScore.isNotEmpty ? record.displayScore : null,
+      lastChapterRead: record.lastChapterRead,
+      startDate: record.startDate.isNotEmpty ? record.startDate : null,
+      finishDate: record.finishDate.isNotEmpty ? record.finishDate : null,
+      private: record.private,
+    );
+
+    // Verify the copy carried the load-bearing fields; the caller keeps the
+    // source on mismatch.
+    final refreshed = (await getMangaTrackRecords(toMangaId))
+        ?.where((r) => r.trackerId == record.trackerId)
+        .firstOrNull;
+    if (refreshed == null ||
+        refreshed.status != record.status ||
+        (refreshed.lastChapterRead - record.lastChapterRead).abs() > 0.001) {
+      throw Exception(
+          'Track-record copy did not carry progress/status (tracker ${record.trackerId})');
+    }
+    return refreshed;
   }
 
   Future<void> update({

@@ -61,8 +61,8 @@ class UpdateStatusSummaryDialog extends ConsumerWidget {
                   mangas: data!.failedJobs.mangaList,
                   title: context.l10n.failed,
                   initiallyExpanded: true,
-                  onMigrate: (manga) => MigrationGlobalSearchRoute(
-                    $extra: MigrationRouteData(sourceManga: manga),
+                  onMigrate: (manga) => MigrationBulkConfigRoute(
+                    $extra: MigrationBulkConfigData(mangaIds: [manga.id]),
                   ).push(context),
                 ),
             ],

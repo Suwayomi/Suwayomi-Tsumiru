@@ -532,7 +532,10 @@ Future<void> _deleteServerCopyIfDeletable(
 /// Run at launch + after a manga's chapters sync; after a successful push also
 /// nudges the manga's external trackers for any chapter marked read, so
 /// trackers stay in sync too.
-Future<void> pushPendingProgress(ProviderContainer container) async {
+Future<void> pushPendingProgress(
+  ProviderContainer container, {
+  bool suppressTrackerNudge = false,
+}) async {
   if (!container.read(offlineActiveProvider)) return;
   final db = container.read(offlineDatabaseProvider);
   final repo = container.read(mangaBookRepositoryProvider);
@@ -613,8 +616,11 @@ Future<void> pushPendingProgress(ProviderContainer container) async {
 
   // Push tracker progress for mangas with read chapters synced, gated on the
   // "update after reading" toggle and tracker bindings — a tracker failure
-  // must never break the progress sync.
-  if (syncedReadMangaIds.isEmpty) return;
+  // must never break the progress sync. Migration's pre-copy flush suppresses
+  // this nudge (suppressTrackerNudge): it wants local progress written but must
+  // NOT touch the OLD entry's external trackers — tracking is carried exactly
+  // once by the chosen migration policy (bindTrackRecord / fallback).
+  if (suppressTrackerNudge || syncedReadMangaIds.isEmpty) return;
   final enabledAfterReading =
       container.read(updateProgressAfterReadingProvider).ifNull();
 

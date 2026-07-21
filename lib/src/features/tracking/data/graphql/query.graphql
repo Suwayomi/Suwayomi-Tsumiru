@@ -72,6 +72,15 @@ mutation BindTrack($mangaId: Int!, $trackerId: Int!, $remoteId: LongString!, $pr
   }
 }
 
+# Local-copy bind: duplicates an existing track record onto another manga
+# entirely in the server DB, with zero external tracker calls. Only present on
+# Suwayomi v2.3.224x+ — callers must gate on TrackerRepository.supportsBindTrackRecord.
+mutation BindTrackRecord($mangaId: Int!, $trackRecordId: Int!) {
+  bindTrackRecord(input: { mangaId: $mangaId, trackRecordId: $trackRecordId }) {
+    trackRecord { ...TrackRecordDto }
+  }
+}
+
 mutation UpdateTrack($input: UpdateTrackInput!) {
   updateTrack(input: $input) { trackRecord { ...TrackRecordDto } }
 }

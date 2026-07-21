@@ -74,7 +74,6 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
                     source: data[index].source,
                     mangaList: data[index].mangaList,
                     query: query.value,
-                    sourceManga: sourceManga,
                   );
                 },
                 itemCount: data.length,

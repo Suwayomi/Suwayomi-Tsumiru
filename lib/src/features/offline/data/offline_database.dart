@@ -393,6 +393,58 @@ class OfflineDatabase extends _$OfflineDatabase {
         ),
       );
 
+  /// Atomically record a chapter whose page files were transferred from a
+  /// migration source: rewrite the target's page rows and mark it downloaded in
+  /// ONE transaction, so a crash can't leave files-present-but-not-downloaded (or
+  /// vice versa). On a move ([clearSourceChapterId] set) the source row is reset
+  /// in the same tx so it's never double-counted.
+  Future<void> commitTransferredChapter({
+    required int toChapterId,
+    required List<({int pageIndex, String relPath, int bytes})> pages,
+    required DateTime downloadedAt,
+    required bool pinned,
+    int? clearSourceChapterId,
+  }) =>
+      transaction(() async {
+        await (delete(offlinePages)
+              ..where((t) => t.chapterId.equals(toChapterId)))
+            .go();
+        for (final pg in pages) {
+          await into(offlinePages).insertOnConflictUpdate(
+            OfflinePagesCompanion(
+              chapterId: Value(toChapterId),
+              pageIndex: Value(pg.pageIndex),
+              relativePath: Value(pg.relPath),
+            ),
+          );
+        }
+        await (update(offlineChapters)..where((t) => t.id.equals(toChapterId)))
+            .write(OfflineChaptersCompanion(
+          deviceState: const Value(OfflineDeviceState.downloaded),
+          bytes: Value(pages.fold<int>(0, (s, p) => s + p.bytes)),
+          pageCount: Value(pages.length),
+          downloadedAt: Value(downloadedAt),
+          pinned: Value(pinned),
+        ));
+        if (clearSourceChapterId != null) {
+          await (delete(offlinePages)
+                ..where((t) => t.chapterId.equals(clearSourceChapterId)))
+              .go();
+          await (update(offlineChapters)
+                ..where((t) => t.id.equals(clearSourceChapterId)))
+              .write(const OfflineChaptersCompanion(
+            deviceState: Value(OfflineDeviceState.none),
+            bytes: Value(0),
+          ));
+        }
+      });
+
+  /// Unpin every chapter of a manga — used on Migrate so the source's kept
+  /// chapters aren't held back from the post-removal purge reconcile.
+  Future<void> unpinChaptersForManga(int mangaId) =>
+      (update(offlineChapters)..where((t) => t.mangaId.equals(mangaId)))
+          .write(const OfflineChaptersCompanion(pinned: Value(false)));
+
   /// Bump a chapter's persistent download generation and return the new
   /// value — called on every delete so a re-queued download outranks any
   /// still-in-flight event, and persisted so it survives a restart.

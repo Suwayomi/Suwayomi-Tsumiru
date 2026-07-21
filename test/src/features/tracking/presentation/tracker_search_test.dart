@@ -58,13 +58,28 @@ class _StubTrackerRepository extends TrackerRepository {
   final bool bindShouldThrow;
 
   @override
-  Future<void> bind({
+  Future<Fragment$TrackRecordDto> bind({
     required int mangaId,
     required int trackerId,
     required String remoteId,
     required bool private,
   }) async {
     if (bindShouldThrow) throw Exception('network error');
+    return Fragment$TrackRecordDto(
+      id: 1,
+      trackerId: trackerId,
+      remoteId: remoteId,
+      title: 'Test',
+      remoteUrl: 'https://example.com',
+      status: 1,
+      lastChapterRead: 0.0,
+      totalChapters: 0,
+      score: 0.0,
+      displayScore: '0',
+      startDate: '',
+      finishDate: '',
+      private: private,
+    );
   }
 }
 

@@ -23,6 +23,7 @@ import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
+import 'src/features/migration/controller/bulk_migration_providers.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
@@ -238,6 +239,9 @@ Future<void> _startApp() async {
       } catch (_) {
         return;
       }
+      // Drain any bulk-migration journal left by a mid-batch crash. Independent
+      // of the offline feature, so it runs before that guard.
+      await recoverBulkMigrationsAtLaunch(container);
       if (!container.read(offlineActiveProvider)) return;
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
