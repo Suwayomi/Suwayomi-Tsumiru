@@ -1068,6 +1068,9 @@
     "@search": {
         "description": "Search field hint Text"
     },
+    "@searchLibraryHint": {
+        "description": "Placeholder text in the library search field"
+    },
     "@searchingForUpdates": {
         "description": "Toast Text for searching for updates of the App/Server"
     },
@@ -1708,6 +1711,14 @@
     "hideCategory": "Hide category",
     "showCategory": "Show category",
     "showUpdateProgressBanner": "Show update progress banner",
+    "libraryPersistentSearchBar": "Persistent search bar",
+    "@libraryPersistentSearchBar": {
+        "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
+    },
+    "libraryPersistentSearchBarSubtitle": "Always show the search bar below the app bar. It sticks to the top while scrolling",
+    "@libraryPersistentSearchBarSubtitle": {
+        "description": "Subtitle for the persistent search bar library setting"
+    },
     "incognitoMode": "Incognito mode",
     "incognitoModeDescription": "Pauses reading history",
     "emptyCategory": "Category name can't be Empty",
@@ -2214,6 +2225,7 @@
     "saveAsCBZArchive": "Save as CBZ archive",
     "scanlators": "Scanlators",
     "search": "Search",
+    "searchLibraryHint": "Search title, author, source...",
     "searchingForUpdates": "Searching for updates",
     "selectInBetween": "Select in between",
     "selectNext10": "Select next 10",

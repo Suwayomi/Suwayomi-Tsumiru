@@ -40,13 +40,16 @@ class FilterToWidget extends StatelessWidget {
         name: String? name,
         textState: String? state,
       ) =>
-        SearchField(
-          autofocus: false,
-          onChanged: (val) => onChanged([
-            FilterChange(textState: val, position: kPositionPlaceholder),
-          ]),
-          hintText: name,
-          initialText: firstCurrentChange?.textState ?? state,
+        Padding(
+          padding: KEdgeInsets.h16v4.size,
+          child: SearchField(
+            autofocus: false,
+            onChanged: (val) => onChanged([
+              FilterChange(textState: val, position: kPositionPlaceholder),
+            ]),
+            labelText: name,
+            initialText: firstCurrentChange?.textState ?? state,
+          ),
         ),
       FilterCheckBox(
         name: String? name,

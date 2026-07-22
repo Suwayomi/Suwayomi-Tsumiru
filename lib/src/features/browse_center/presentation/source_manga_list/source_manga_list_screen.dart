@@ -161,22 +161,30 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 if (showSearch.value)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: SearchField(
-                      initialText: query.value,
-                      onClose: () => showSearch.value = (false),
-                      onSubmitted: (val) {
-                        if (sourceType == SourceType.SEARCH) {
-                          query.value = (val);
-                          controller.refresh();
-                        } else {
-                          if (val == null) return;
-                          SourceTypeRoute(
-                            sourceId: sourceId,
-                            sourceType: SourceType.SEARCH,
-                            query: val,
-                          ).go(context);
-                        }
-                      },
+                    child: SizedBox(
+                      width: context.isLargeTablet
+                          ? context.widthScale(scale: .5)
+                          : null,
+                      child: Padding(
+                        padding: KEdgeInsets.h16v4.size,
+                        child: SearchField(
+                          initialText: query.value,
+                          onClose: () => showSearch.value = (false),
+                          onSubmitted: (val) {
+                            if (sourceType == SourceType.SEARCH) {
+                              query.value = (val);
+                              controller.refresh();
+                            } else {
+                              if (val == null) return;
+                              SourceTypeRoute(
+                                sourceId: sourceId,
+                                sourceType: SourceType.SEARCH,
+                                query: val,
+                              ).go(context);
+                            }
+                          },
+                        ),
+                      ),
                     ),
                   ),
               ],

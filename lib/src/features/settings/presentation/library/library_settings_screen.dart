@@ -23,6 +23,7 @@ import '../../../library/presentation/library/controller/library_controller.dart
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import 'data/library_settings_repository.dart';
+import 'widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
 import 'widgets/show_update_progress_banner/show_update_progress_banner.dart';
 import 'widgets/skip_updating_entries_popup.dart';
@@ -118,6 +119,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   ),
                   // HideEmptyCategoryTile(),
                   const RefreshChaptersFromSourceTile(),
+                  const PersistentSearchBarTile(),
                   SectionTitle(title: context.l10n.globalUpdate),
                   const ShowUpdateProgressBannerTile(),
                   SettingsPropTile(

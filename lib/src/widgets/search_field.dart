@@ -7,9 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-import '../constants/app_sizes.dart';
 import '../features/library/domain/library_search_query.dart';
 import '../utils/extensions/custom_extensions.dart';
+
+enum SearchFieldHintBehavior { auto, forceHint, forceLabel }
 
 class SearchField extends HookWidget {
   const SearchField({
@@ -18,11 +19,14 @@ class SearchField extends HookWidget {
     this.onClose,
     this.initialText,
     this.onSubmitted,
+    this.labelText,
     this.hintText,
     this.autofocus = true,
     this.actions,
     this.highlightDsl = false,
+    this.hintBehavior = SearchFieldHintBehavior.auto,
   });
+  final String? labelText;
   final String? hintText;
   final String? initialText;
   final ValueChanged<String?>? onChanged;
@@ -35,6 +39,8 @@ class SearchField extends HookWidget {
   /// the user types, so the search box reads as a query language, not free text.
   final bool highlightDsl;
 
+  final SearchFieldHintBehavior hintBehavior;
+
   @override
   Widget build(BuildContext context) {
     final controller = useMemoized(
@@ -45,38 +51,69 @@ class SearchField extends HookWidget {
     );
     useEffect(() => controller.dispose, [controller]);
 
+    final focusNode = useFocusNode();
+    useListenable(focusNode);
+
+    void closeAction() {
+      controller.clear();
+      onClose?.call();
+      onChanged?.call(null);
+      onSubmitted?.call(null);
+    }
+
+    void prefixAction() {
+      if (focusNode.hasFocus) {
+        focusNode.unfocus();
+        closeAction();
+      } else {
+        focusNode.requestFocus();
+      }
+    }
+
+    final unfocusedText = labelText ?? context.l10n.search;
+    final focusedText = hintText ?? unfocusedText;
+    final (String? decorationLabel, String? decorationHint) = switch (hintBehavior) {
+      SearchFieldHintBehavior.auto => (unfocusedText, hintText),
+      SearchFieldHintBehavior.forceHint => (
+          null,
+          focusNode.hasFocus ? focusedText : unfocusedText
+        ),
+      SearchFieldHintBehavior.forceLabel => (
+          focusNode.hasFocus ? focusedText : unfocusedText,
+          null
+        ),
+    };
+
     final closeIcon = onClose != null
         ? IconButton(
-            onPressed: () {
-              onClose?.call();
-              onChanged?.call(null);
-              onSubmitted?.call(null);
-            },
+            onPressed: closeAction,
             icon: const Icon(Icons.close_rounded),
           )
         : null;
 
-    return SizedBox(
-      width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
-      child: Padding(
-        padding: KEdgeInsets.h16v4.size,
-        child: TextField(
-          onChanged: onChanged,
-          autofocus: autofocus,
-          controller: controller,
-          onSubmitted: onSubmitted,
-          decoration: InputDecoration(
-            isDense: true,
-            border: const OutlineInputBorder(),
-            labelText: hintText ?? context.l10n.search,
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...?actions,
-                if (closeIcon != null) closeIcon,
-              ],
-            ),
-          ),
+    return TextField(
+      onChanged: onChanged,
+      autofocus: autofocus,
+      controller: controller,
+      focusNode: focusNode,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        isDense: true,
+        border: const OutlineInputBorder(),
+        labelText: decorationLabel,
+        hintText: decorationHint,
+        prefixIcon: IconButton(
+          icon: Icon(focusNode.hasFocus
+              ? Icons.arrow_back_rounded
+              : Icons.search_rounded),
+          onPressed: prefixAction,
+        ),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...?actions,
+            if (closeIcon != null) closeIcon,
+          ],
         ),
       ),
     );

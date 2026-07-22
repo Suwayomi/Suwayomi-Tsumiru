@@ -27,6 +27,7 @@ import '../../../manga_book/widgets/update_status_popup_menu.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
+import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../domain/category/category_model.dart';
 import '../../domain/library_group.dart';
 import '../category/controller/edit_category_controller.dart';
@@ -39,12 +40,12 @@ import 'widgets/library_manga_organizer.dart';
 /// Wraps a library Scaffold body so the offline server-mismatch banner sits
 /// below the app bar (inside the Scaffold), not floating over the status bar.
 Widget _libraryBody(Widget body) => Column(
-      children: [
-        const ServerUnreachableBanner(),
-        const OfflineServerMismatchBanner(),
-        Expanded(child: body),
-      ],
-    );
+  children: [
+    const ServerUnreachableBanner(),
+    const OfflineServerMismatchBanner(),
+    Expanded(child: body),
+  ],
+);
 
 class LibraryScreen extends HookConsumerWidget {
   const LibraryScreen({super.key, required this.categoryId});
@@ -76,10 +77,87 @@ class LibraryScreen extends HookConsumerWidget {
   }
 }
 
+// ─────────────────── shared pieces ───────────────────────────────────────────
+
+/// Filter/sort/display organizer button: end-drawer on tablets, bottom sheet
+/// on phones.
+Widget _organizerButton() => Builder(
+  builder: (context) => IconButton(
+    onPressed: () {
+      if (context.isTablet) {
+        Scaffold.of(context).openEndDrawer();
+      } else {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: KBorderRadius.rT16.radius,
+          ),
+          clipBehavior: Clip.hardEdge,
+          // The organizer sizes itself to the active tab's content
+          // (capped at 72% height), so no fixed-height wrapper.
+          builder: (_) => const LibraryMangaOrganizer(),
+        );
+      }
+    },
+    icon: const Icon(Icons.filter_list_rounded),
+  ),
+);
+
+/// Whether the inline search bar (located via [searchBarKey]) has scrolled out
+/// of the viewport, meaning the pinned app bar should host the search field
+/// instead.
+///
+/// Evaluated defensively:
+///  - a missing or zero-height bar (the library is still loading, so
+///    [_LibrarySearchBar] collapsed) is never "hidden" — reporting hidden then
+///    leaves the app-bar field up while the inline bar reappears at offset 0,
+///    showing both bars at once (the pull-to-refresh glitch);
+///  - re-evaluated after every build, not only on scroll events, because a
+///    refresh can change the header extent (clamping the offset) without
+///    emitting any further scroll notification.
+bool _useIsSearchBarHidden(
+  ScrollController controller,
+  GlobalKey searchBarKey,
+) {
+  final context = useContext();
+  final isHidden = useState(false);
+  final evaluate = useCallback(() {
+    final box = searchBarKey.currentContext?.findRenderObject() as RenderBox?;
+    final height = (box != null && box.hasSize) ? box.size.height : 0.0;
+    final offset = controller.hasClients ? controller.offset : 0.0;
+    isHidden.value = height > 0 && offset >= height - 4;
+  }, [controller, searchBarKey]);
+  useEffect(() {
+    controller.addListener(evaluate);
+    return () => controller.removeListener(evaluate);
+  }, [controller, evaluate]);
+  useEffect(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) evaluate();
+    });
+    return null;
+  });
+  return isHidden.value;
+}
+
 // ─────────────────── BY_DEFAULT (unchanged behaviour) ───────────────────────
 
-class _DefaultLibraryScreen extends HookConsumerWidget {
+class _DefaultLibraryScreen extends ConsumerWidget {
   const _DefaultLibraryScreen({required this.categoryId});
+  final int categoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(libraryPersistentSearchBarProvider).ifNull()
+      ? _DefaultLibraryStickySearch(categoryId: categoryId)
+      : _DefaultLibraryToggledSearch(categoryId: categoryId);
+}
+
+/// Default layout (setting off): the search field lives behind the app-bar
+/// search button, Mihon/Komikku style.
+class _DefaultLibraryToggledSearch extends HookConsumerWidget {
+  const _DefaultLibraryToggledSearch({required this.categoryId});
   final int categoryId;
 
   @override
@@ -119,75 +197,68 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
               appBar: AppBar(
                 title: !showSearch
                     ? Text(context.l10n.library)
-                    : SearchField(
-                        initialText: ref.read(libraryQueryProvider),
-                        highlightDsl: true,
-                        // Only grab focus when the user opened search; a tag-set
-                        // query shows results without popping the keyboard.
-                        autofocus: searchToggled.value,
-                        onChanged: (val) =>
-                            ref.read(libraryQueryProvider.notifier).update(val),
-                        onClose: () => searchToggled.value = false,
-                        actions: [
-                          IconButton(
-                            icon: const Icon(Icons.help_outline_rounded),
-                            tooltip: context.l10n.searchTips,
-                            onPressed: () => showSearchTips(context),
+                    // SearchField no longer pads itself; keep the pre-refactor
+                    // inset and large-tablet width cap here.
+                    : SizedBox(
+                        width: context.isLargeTablet
+                            ? context.widthScale(scale: .5)
+                            : null,
+                        child: Padding(
+                          padding: KEdgeInsets.h16v4.size,
+                          child: SearchField(
+                            initialText: ref.read(libraryQueryProvider),
+                            highlightDsl: true,
+                            // Only grab focus when the user opened search; a
+                            // tag-set query shows results without popping the
+                            // keyboard.
+                            autofocus: searchToggled.value,
+                            onChanged: (val) => ref
+                                .read(libraryQueryProvider.notifier)
+                                .update(val),
+                            onClose: () => searchToggled.value = false,
+                            actions: [
+                              IconButton(
+                                icon: const Icon(Icons.help_outline_rounded),
+                                tooltip: context.l10n.searchTips,
+                                onPressed: () => showSearchTips(context),
+                              ),
+                              Consumer(
+                                builder: (context, ref, child) => IconButton(
+                                  icon: const Icon(
+                                    Icons.travel_explore_rounded,
+                                  ),
+                                  tooltip: context.l10n.globalSearch,
+                                  onPressed:
+                                      ref.watch(libraryQueryProvider).isNotBlank
+                                      ? () => GlobalSearchRoute(
+                                          query: ref.read(libraryQueryProvider),
+                                        ).go(context)
+                                      : null,
+                                ),
+                              ),
+                            ],
                           ),
-                          Consumer(
-                            builder: (context, ref, child) => IconButton(
-                              icon: Icon(Icons.travel_explore_rounded),
-                              tooltip: context.l10n.globalSearch,
-                              onPressed: ref
-                                      .watch(libraryQueryProvider)
-                                      .isNotBlank
-                                  ? () => GlobalSearchRoute(
-                                        query: ref.read(libraryQueryProvider),
-                                      ).go(context)
-                                  : null,
-                            ),
-                          )
-                        ],
+                        ),
                       ),
-                bottom: data.length.isGreaterThan(1) &&
+                bottom:
+                    data.length.isGreaterThan(1) &&
                         ref.watch(categoryTabsProvider).ifNull(true)
                     ? TabBar(
                         isScrollable: true,
-                        tabs:
-                            data.map((e) => _CategoryTab(category: e)).toList(),
+                        tabs: data
+                            .map((e) => _CategoryTab(category: e))
+                            .toList(),
                         dividerColor: Colors.transparent,
                       )
                     : null,
                 actions: showSearch
-                    ? [SizedBox.shrink()]
+                    ? const [SizedBox.shrink()]
                     : [
                         IconButton(
                           onPressed: () => searchToggled.value = true,
                           icon: const Icon(Icons.search_rounded),
                         ),
-                        Builder(
-                          builder: (context) => IconButton(
-                            onPressed: () {
-                              if (context.isTablet) {
-                                Scaffold.of(context).openEndDrawer();
-                              } else {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: KBorderRadius.rT16.radius,
-                                  ),
-                                  clipBehavior: Clip.hardEdge,
-                                  // The organizer sizes itself to the active
-                                  // tab's content (capped at 72% height), so no
-                                  // fixed-height wrapper.
-                                  builder: (_) => const LibraryMangaOrganizer(),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.filter_list_rounded),
-                          ),
-                        ),
+                        _organizerButton(),
                         Builder(
                           builder: (context) {
                             return UpdateStatusPopupMenu(
@@ -206,30 +277,19 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
                 child: LibraryMangaOrganizer(),
               ),
               body: _libraryBody(
-                data.isBlank
-                    ? Emoticons(
-                        title: context.l10n.noCategoriesFound,
-                        button: TextButton(
-                          onPressed: () =>
-                              ref.refresh(categoryControllerProvider.future),
-                          child: Text(context.l10n.refresh),
-                        ),
-                      )
-                    : Padding(
-                        padding: KEdgeInsets.h8.size,
-                        child: TabBarView(
-                          children: data
-                              .map((e) => CategoryMangaList(
-                                    // Keyed so element reuse can't leak one
-                                    // category's multi-select into another.
-                                    key: ValueKey(
-                                        e.id.getValueOnNullOrNegative()),
-                                    categoryId:
-                                        e.id.getValueOnNullOrNegative(),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
+                Padding(
+                  padding: KEdgeInsets.h8.size,
+                  child: TabBarView(
+                    children: data
+                        .map(
+                          (e) => CategoryMangaList(
+                            key: ValueKey(e.id.getValueOnNullOrNegative()),
+                            categoryId: e.id.getValueOnNullOrNegative(),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
               ),
             ),
           );
@@ -237,9 +297,146 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
       },
       refresh: () => ref.refresh(categoryControllerProvider.future),
       wrapper: (body) => Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.library),
-        ),
+        appBar: AppBar(title: Text(context.l10n.library)),
+        body: _libraryBody(body),
+      ),
+    );
+  }
+}
+
+/// Opt-in layout (More → Settings → Library): the search bar is always visible
+/// under the app bar and sticks into it when scrolled away, Yokai/J2K style.
+class _DefaultLibraryStickySearch extends HookConsumerWidget {
+  const _DefaultLibraryStickySearch({required this.categoryId});
+  final int categoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final toast = ref.watch(toastProvider);
+    final categoryList = ref.watch(visibleCategoryListProvider);
+    final scrollController = useScrollController();
+    final searchBarKey = useMemoized(() => GlobalKey());
+    final isSearchBarHidden = _useIsSearchBarHidden(
+      scrollController,
+      searchBarKey,
+    );
+
+    useEffect(() {
+      categoryList.showToastOnError(toast, withMicrotask: true);
+      return;
+    }, [categoryList.value]);
+
+    return categoryList.showUiWhenData(
+      context,
+      (data) {
+        if (data.isBlank) {
+          return Scaffold(
+            appBar: AppBar(title: Text(context.l10n.library)),
+            body: Emoticons(
+              title: context.l10n.noCategoriesFound,
+              button: TextButton(
+                onPressed: () => ref.refresh(categoryControllerProvider.future),
+                child: Text(context.l10n.refresh),
+              ),
+            ),
+          );
+        }
+
+        final showTabs =
+            data!.length > 1 && ref.watch(categoryTabsProvider).ifNull(true);
+
+        return DefaultTabController(
+          length: data.length,
+          // The route param is a category ID (e.g. from quick-search), not a
+          // positional tab index — the visible list filters out empty/hidden
+          // categories, so id != index. Select the tab whose category matches
+          // the id, falling back to the first tab if it isn't visible (#284).
+          initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
+          child: Scaffold(
+            endDrawerEnableOpenDragGesture: false,
+            endDrawer: const Drawer(
+              width: kDrawerWidth,
+              shape: RoundedRectangleBorder(),
+              child: LibraryMangaOrganizer(),
+            ),
+            body: NestedScrollView(
+              controller: scrollController,
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: isSearchBarHidden
+                        ? const _LibrarySearchBar(inAppBar: true)
+                        : Text(context.l10n.library),
+                    actions: [
+                      _organizerButton(),
+                      Builder(
+                        builder: (context) {
+                          return UpdateStatusPopupMenu(
+                            getCategory: () => data.isNotBlank
+                                ? data[DefaultTabController.of(context).index]
+                                : null,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: searchBarKey,
+                      child: const _LibrarySearchBar(inAppBar: false),
+                    ),
+                  ),
+                  if (showTabs)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabBarDelegate(
+                        TabBar(
+                          isScrollable: true,
+                          tabs: data
+                              .map((e) => _CategoryTab(category: e))
+                              .toList(),
+                          dividerColor: Colors.transparent,
+                        ),
+                      ),
+                    ),
+                ];
+              },
+              // This Scaffold has no appBar (the header slivers replace it), so
+              // its body still carries the status-bar padding and the grids
+              // inside would re-apply it as list padding — a dead gap between
+              // the tab bar and the first row. The header slivers consume that
+              // inset; drop it for the body. The Builder matters: removePadding
+              // must start from the MediaQuery inside the Scaffold body slot.
+              body: Builder(
+                builder: (context) => MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _libraryBody(
+                    Padding(
+                      padding: KEdgeInsets.h8.size,
+                      child: TabBarView(
+                        children: data
+                            .map(
+                              (e) => CategoryMangaList(
+                                key: ValueKey(e.id.getValueOnNullOrNegative()),
+                                categoryId: e.id.getValueOnNullOrNegative(),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      refresh: () => ref.refresh(categoryControllerProvider.future),
+      wrapper: (body) => Scaffold(
+        appBar: AppBar(title: Text(context.l10n.library)),
         body: _libraryBody(body),
       ),
     );
@@ -248,8 +445,20 @@ class _DefaultLibraryScreen extends HookConsumerWidget {
 
 // ─────────────────── non-default group modes ────────────────────────────────
 
-class _GroupedLibraryScreen extends HookConsumerWidget {
+class _GroupedLibraryScreen extends ConsumerWidget {
   const _GroupedLibraryScreen({required this.groupType});
+  final int groupType;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      ref.watch(libraryPersistentSearchBarProvider).ifNull()
+      ? _GroupedLibraryStickySearch(groupType: groupType)
+      : _GroupedLibraryToggledSearch(groupType: groupType);
+}
+
+/// Default layout (setting off): search behind the app-bar toggle.
+class _GroupedLibraryToggledSearch extends HookConsumerWidget {
+  const _GroupedLibraryToggledSearch({required this.groupType});
   final int groupType;
 
   @override
@@ -293,20 +502,31 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
             appBar: AppBar(
               title: !showSearch
                   ? Text(context.l10n.library)
-                  : SearchField(
-                      initialText: ref.read(libraryQueryProvider),
-                      highlightDsl: true,
-                      autofocus: searchToggled.value,
-                      onChanged: (val) =>
-                          ref.read(libraryQueryProvider.notifier).update(val),
-                      onClose: () => searchToggled.value = false,
-                      actions: [
-                        IconButton(
-                          icon: const Icon(Icons.help_outline_rounded),
-                          tooltip: context.l10n.searchTips,
-                          onPressed: () => showSearchTips(context),
+                  // SearchField no longer pads itself; keep the pre-refactor
+                  // inset and large-tablet width cap here.
+                  : SizedBox(
+                      width: context.isLargeTablet
+                          ? context.widthScale(scale: .5)
+                          : null,
+                      child: Padding(
+                        padding: KEdgeInsets.h16v4.size,
+                        child: SearchField(
+                          initialText: ref.read(libraryQueryProvider),
+                          highlightDsl: true,
+                          autofocus: searchToggled.value,
+                          onChanged: (val) => ref
+                              .read(libraryQueryProvider.notifier)
+                              .update(val),
+                          onClose: () => searchToggled.value = false,
+                          actions: [
+                            IconButton(
+                              icon: const Icon(Icons.help_outline_rounded),
+                              tooltip: context.l10n.searchTips,
+                              onPressed: () => showSearchTips(context),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
               bottom: tabs.length > 1
                   ? TabBar(
@@ -316,7 +536,7 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
                     )
                   : null,
               actions: showSearch
-                  ? [SizedBox.shrink()]
+                  ? const [SizedBox.shrink()]
                   : [
                       IconButton(
                         onPressed: () => searchToggled.value = true,
@@ -328,26 +548,7 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
                             const MigrationSourcePickerRoute().push(context),
                         icon: const Icon(Icons.swap_horiz_rounded),
                       ),
-                      Builder(
-                        builder: (context) => IconButton(
-                          onPressed: () {
-                            if (context.isTablet) {
-                              Scaffold.of(context).openEndDrawer();
-                            } else {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: KBorderRadius.rT16.radius,
-                                ),
-                                clipBehavior: Clip.hardEdge,
-                                builder: (_) => const LibraryMangaOrganizer(),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.filter_list_rounded),
-                        ),
-                      ),
+                      _organizerButton(),
                     ],
             ),
             endDrawerEnableOpenDragGesture: false,
@@ -361,9 +562,129 @@ class _GroupedLibraryScreen extends HookConsumerWidget {
                 padding: KEdgeInsets.h8.size,
                 child: TabBarView(
                   children: tabs
-                      .map((t) =>
-                          _GroupedMangaList(key: ValueKey(t.id), tabId: t.id))
+                      .map(
+                        (t) =>
+                            _GroupedMangaList(key: ValueKey(t.id), tabId: t.id),
+                      )
                       .toList(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      refresh: () => ref.refresh(libraryGroupedTabsProvider.future),
+      wrapper: (body) => Scaffold(
+        appBar: AppBar(title: Text(context.l10n.library)),
+        body: _libraryBody(body),
+      ),
+    );
+  }
+}
+
+/// Opt-in layout: always-visible search bar that sticks into the app bar.
+class _GroupedLibraryStickySearch extends HookConsumerWidget {
+  const _GroupedLibraryStickySearch({required this.groupType});
+  final int groupType;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final toast = ref.watch(toastProvider);
+    final groupedTabsAsync = ref.watch(libraryGroupedTabsProvider);
+    final scrollController = useScrollController();
+    final searchBarKey = useMemoized(() => GlobalKey());
+    final isSearchBarHidden = _useIsSearchBarHidden(
+      scrollController,
+      searchBarKey,
+    );
+
+    useEffect(() {
+      groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
+      return;
+    }, [groupedTabsAsync.value]);
+
+    return groupedTabsAsync.showUiWhenData(
+      context,
+      (tabs) {
+        if (tabs.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(title: Text(context.l10n.library)),
+            body: Emoticons(
+              title: context.l10n.noCategoriesFound,
+              button: TextButton(
+                onPressed: () => ref.refresh(libraryGroupedTabsProvider.future),
+                child: Text(context.l10n.refresh),
+              ),
+            ),
+          );
+        }
+        return DefaultTabController(
+          // Key on the tab set so the controller fully rebuilds (resetting the
+          // selected index to 0) when the group mode changes the tab count.
+          // Without this, switching e.g. By Source (many tabs) → By Status
+          // (fewer) leaves the controller's index out of range and it churns
+          // into an infinite rebuild flicker.
+          key: ValueKey('group-$groupType-${tabs.length}'),
+          length: tabs.length,
+          child: Scaffold(
+            endDrawerEnableOpenDragGesture: false,
+            endDrawer: const Drawer(
+              width: kDrawerWidth,
+              shape: RoundedRectangleBorder(),
+              child: LibraryMangaOrganizer(),
+            ),
+            body: NestedScrollView(
+              controller: scrollController,
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    floating: false,
+                    title: isSearchBarHidden
+                        ? const _LibrarySearchBar(inAppBar: true)
+                        : Text(context.l10n.library),
+                    actions: [_organizerButton()],
+                  ),
+                  SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: searchBarKey,
+                      child: const _LibrarySearchBar(inAppBar: false),
+                    ),
+                  ),
+                  if (tabs.length > 1)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverTabBarDelegate(
+                        TabBar(
+                          isScrollable: true,
+                          tabs: tabs.map((t) => Tab(text: t.name)).toList(),
+                          dividerColor: Colors.transparent,
+                        ),
+                      ),
+                    ),
+                ];
+              },
+              // See _DefaultLibraryStickySearch: drop the status-bar padding
+              // the header slivers already consumed, from inside the body slot.
+              body: Builder(
+                builder: (context) => MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: _libraryBody(
+                    Padding(
+                      padding: KEdgeInsets.h8.size,
+                      child: TabBarView(
+                        children: tabs
+                            .map(
+                              (t) => _GroupedMangaList(
+                                key: ValueKey(t.id),
+                                tabId: t.id,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -398,9 +719,7 @@ class _CategoryTab extends ConsumerWidget {
       return Tab(text: category.name);
     }
     final mangaListAsync = ref.watch(
-      categoryMangaListWithQueryAndFilterProvider(
-        categoryId: category.id,
-      ),
+      categoryMangaListWithQueryAndFilterProvider(categoryId: category.id),
     );
     final count = mangaListAsync.value?.length;
     final label = count != null ? '${category.name} ($count)' : category.name;
@@ -436,98 +755,96 @@ class _GroupedMangaList extends ConsumerWidget {
           )
         : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 
-    return mangaListAsync.showUiWhenData(
-      context,
-      (data) {
-        if (data == null || data.isEmpty) {
-          return Emoticons(title: context.l10n.noCategoryMangaFound);
-        }
-        final items = data;
-        return RefreshIndicator(
-          // Grouped views (by source/status/ungrouped) have no single category
-          // to update, so pull triggers a whole-library source-check (matches
-          // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
-          // spinner only waits on the immediate server re-read.
-          onRefresh: () async {
-            ref.read(updateOptimisticProvider.notifier).arm();
-            unawaited(ref
+    return mangaListAsync.showUiWhenData(context, (data) {
+      if (data == null || data.isEmpty) {
+        return Emoticons(title: context.l10n.noCategoryMangaFound);
+      }
+      final items = data;
+      return RefreshIndicator(
+        // Grouped views (by source/status/ungrouped) have no single category
+        // to update, so pull triggers a whole-library source-check (matches
+        // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
+        // spinner only waits on the immediate server re-read.
+        onRefresh: () async {
+          ref.read(updateOptimisticProvider.notifier).arm();
+          unawaited(
+            ref
                 .read(updatesRepositoryProvider)
                 .fetchUpdates()
-                .catchError((Object _) {}));
-            ref.invalidate(libraryMangaListProvider);
-            await ref.read(libraryMangaListProvider.future);
-          },
-          child: switch (displayMode) {
-            DisplayMode.list || null => ListView.builder(
-                itemExtent: 96,
-                itemCount: items.length,
-                itemBuilder: (context, index) => MangaCoverListTile(
-                  manga: items[index],
-                  selected: false,
-                  onPressed: () =>
-                      MangaRoute(mangaId: items[index].id).push(context),
-                  onLongPress: () {},
-                  showCountBadges: true,
-                ),
-              ),
-            DisplayMode.grid => GridView.builder(
-                gridDelegate: gridDelegate(),
-                itemCount: items.length,
-                itemBuilder: (context, index) => MangaCoverGridTile(
-                  manga: items[index],
-                  selected: false,
-                  onLongPress: () {},
-                  onPressed: () =>
-                      MangaRoute(mangaId: items[index].id).push(context),
-                  showCountBadges: true,
-                  showDarkOverlay: false,
-                ),
-              ),
-            DisplayMode.comfortableGrid => GridView.builder(
-                gridDelegate: gridDelegate(titleBelow: true),
-                itemCount: items.length,
-                itemBuilder: (context, index) => MangaCoverGridTile(
-                  manga: items[index],
-                  selected: false,
-                  onLongPress: () {},
-                  onPressed: () =>
-                      MangaRoute(mangaId: items[index].id).push(context),
-                  showCountBadges: true,
-                  titleBelow: true,
-                  showDarkOverlay: false,
-                ),
-              ),
-            DisplayMode.descriptiveList => ListView.builder(
-                itemExtent: 176,
-                itemCount: items.length,
-                itemBuilder: (context, index) => MangaCoverDescriptiveListTile(
-                  manga: items[index],
-                  selected: false,
-                  onPressed: () =>
-                      MangaRoute(mangaId: items[index].id).push(context),
-                  onLongPress: () {},
-                  showBadges: true,
-                ),
-              ),
-            DisplayMode.coverOnly => GridView.builder(
-                gridDelegate: gridDelegate(),
-                itemCount: items.length,
-                itemBuilder: (context, index) => MangaCoverGridTile(
-                  manga: items[index],
-                  selected: false,
-                  onLongPress: () {},
-                  onPressed: () =>
-                      MangaRoute(mangaId: items[index].id).push(context),
-                  showCountBadges: true,
-                  showTitle: false,
-                  showDarkOverlay: false,
-                ),
-              ),
-          },
-        );
-      },
-      refresh: () => ref.refresh(libraryMangaListProvider),
-    );
+                .catchError((Object _) {}),
+          );
+          ref.invalidate(libraryMangaListProvider);
+          await ref.read(libraryMangaListProvider.future);
+        },
+        child: switch (displayMode) {
+          DisplayMode.list || null => ListView.builder(
+            itemExtent: 96,
+            itemCount: items.length,
+            itemBuilder: (context, index) => MangaCoverListTile(
+              manga: items[index],
+              selected: false,
+              onPressed: () =>
+                  MangaRoute(mangaId: items[index].id).push(context),
+              onLongPress: () {},
+              showCountBadges: true,
+            ),
+          ),
+          DisplayMode.grid => GridView.builder(
+            gridDelegate: gridDelegate(),
+            itemCount: items.length,
+            itemBuilder: (context, index) => MangaCoverGridTile(
+              manga: items[index],
+              selected: false,
+              onLongPress: () {},
+              onPressed: () =>
+                  MangaRoute(mangaId: items[index].id).push(context),
+              showCountBadges: true,
+              showDarkOverlay: false,
+            ),
+          ),
+          DisplayMode.comfortableGrid => GridView.builder(
+            gridDelegate: gridDelegate(titleBelow: true),
+            itemCount: items.length,
+            itemBuilder: (context, index) => MangaCoverGridTile(
+              manga: items[index],
+              selected: false,
+              onLongPress: () {},
+              onPressed: () =>
+                  MangaRoute(mangaId: items[index].id).push(context),
+              showCountBadges: true,
+              titleBelow: true,
+              showDarkOverlay: false,
+            ),
+          ),
+          DisplayMode.descriptiveList => ListView.builder(
+            itemExtent: 176,
+            itemCount: items.length,
+            itemBuilder: (context, index) => MangaCoverDescriptiveListTile(
+              manga: items[index],
+              selected: false,
+              onPressed: () =>
+                  MangaRoute(mangaId: items[index].id).push(context),
+              onLongPress: () {},
+              showBadges: true,
+            ),
+          ),
+          DisplayMode.coverOnly => GridView.builder(
+            gridDelegate: gridDelegate(),
+            itemCount: items.length,
+            itemBuilder: (context, index) => MangaCoverGridTile(
+              manga: items[index],
+              selected: false,
+              onLongPress: () {},
+              onPressed: () =>
+                  MangaRoute(mangaId: items[index].id).push(context),
+              showCountBadges: true,
+              showTitle: false,
+              showDarkOverlay: false,
+            ),
+          ),
+        },
+      );
+    }, refresh: () => ref.refresh(libraryMangaListProvider));
   }
 }
 
@@ -552,4 +869,78 @@ void showSearchTips(BuildContext context) {
       ],
     ),
   );
+}
+
+/// The persistent-mode search field. Rendered in two hosts: inline under the
+/// app bar ([inAppBar] false, with its own inset) and as the pinned app bar's
+/// title once the inline instance scrolls away ([inAppBar] true).
+class _LibrarySearchBar extends ConsumerWidget {
+  const _LibrarySearchBar({required this.inAppBar});
+  final bool inAppBar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mangaListLoaded = ref.watch(libraryMangaListProvider).value != null;
+    if (!mangaListLoaded) return const SizedBox.shrink();
+
+    final query = ref.watch(libraryQueryProvider) ?? '';
+    final field = SearchField(
+      initialText: query,
+      hintText: context.l10n.searchLibraryHint,
+      onChanged: (val) => ref.read(libraryQueryProvider.notifier).update(val),
+      onClose: () => ref.read(libraryQueryProvider.notifier).update(''),
+      autofocus: false,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.help_outline_rounded),
+          tooltip: context.l10n.searchTips,
+          onPressed: () => showSearchTips(context),
+        ),
+        if (query.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.travel_explore_rounded),
+            tooltip: context.l10n.globalSearch,
+            onPressed: () => GlobalSearchRoute(query: query).go(context),
+          ),
+      ],
+      highlightDsl: true,
+      hintBehavior: SearchFieldHintBehavior.forceHint,
+    );
+
+    return inAppBar
+        ? field
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(11, 0, 11, 4),
+            child: field,
+          );
+  }
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate(this.tabBar);
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: tabBar,
+    );
+  }
+
+  // The header builder recreates the TabBar whenever the screen rebuilds, so
+  // comparing instances keeps the pinned row current — returning false froze
+  // the first TabBar forever, so renamed/added categories never showed up.
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar;
 }

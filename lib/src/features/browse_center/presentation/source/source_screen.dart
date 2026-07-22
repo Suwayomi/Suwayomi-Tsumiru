@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_sizes.dart';
 import '../../../../constants/language_list.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -139,12 +140,20 @@ class SourceScreen extends HookConsumerWidget {
 
     return Column(
       children: [
-        SearchField(
-          autofocus: false,
-          hintText: context.l10n.searchForSources,
-          initialText: query,
-          onChanged: (val) =>
-              ref.read(sourceSearchQueryProvider.notifier).update(val),
+        SizedBox(
+          width: context.isLargeTablet
+              ? context.widthScale(scale: .5)
+              : null,
+          child: Padding(
+            padding: KEdgeInsets.h16v4.size,
+            child: SearchField(
+              autofocus: false,
+              labelText: context.l10n.searchForSources,
+              initialText: query,
+              onChanged: (val) =>
+                  ref.read(sourceSearchQueryProvider.notifier).update(val),
+            ),
+          ),
         ),
         Expanded(child: body),
       ],
