@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../constants/navigation_bar_data.dart';
 import '../../features/offline/data/offline_nav_status.dart';
+import 'animated_nav_icon.dart';
 
 class SmallScreenNavigationBar extends ConsumerWidget {
   const SmallScreenNavigationBar({
@@ -20,14 +21,13 @@ class SmallScreenNavigationBar extends ConsumerWidget {
   final int selectedIndex;
   final void Function(int) onDestinationSelected;
 
-  NavigationDestination getNavigationDestination(
-      BuildContext context, NavigationBarData data, bool downloadsPaused) {
+  NavigationDestination getNavigationDestination(BuildContext context,
+      NavigationBarData data, bool selected, bool downloadsPaused) {
     final badged = downloadsPaused && data.icon == Icons.download_outlined;
+    final icon = AnimatedNavIcon(vector: data.animatedIcon, selected: selected);
     return NavigationDestination(
-      icon: badged ? Badge(child: Icon(data.icon)) : Icon(data.icon),
+      icon: badged ? Badge(child: icon) : icon,
       label: data.label(context),
-      selectedIcon:
-          badged ? Badge(child: Icon(data.activeIcon)) : Icon(data.activeIcon),
       tooltip: data.label(context),
     );
   }
@@ -35,6 +35,7 @@ class SmallScreenNavigationBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
+    final navList = NavigationBarData.getNavList(context);
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         labelTextStyle: WidgetStateProperty.all(
@@ -44,11 +45,11 @@ class SmallScreenNavigationBar extends ConsumerWidget {
       child: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onDestinationSelected,
-        destinations: NavigationBarData.getNavList(context)
-            .map<NavigationDestination>(
-              (e) => getNavigationDestination(context, e, downloadsPaused),
-            )
-            .toList(),
+        destinations: [
+          for (var i = 0; i < navList.length; i++)
+            getNavigationDestination(
+                context, navList[i], i == selectedIndex, downloadsPaused),
+        ],
       ),
     );
   }
