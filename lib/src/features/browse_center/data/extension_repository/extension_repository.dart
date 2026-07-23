@@ -14,7 +14,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../domain/extension/extension_model.dart';
+import '../extension_store_repository/extension_store_repository.dart';
 import './graphql/__generated__/query.graphql.dart';
+import './graphql/__generated__/store_query.graphql.dart';
+import './store_extension_mapper.dart';
 
 part 'extension_repository.g.dart';
 
@@ -78,9 +81,19 @@ class ExtensionRepository {
       )
       .getData((data) => null);
 
-  Future<List<Extension>?> getExtensionListStream() => client
-      .mutate$FetchExtensionList()
-      .getData((data) => data.fetchExtensions?.extensions.toList());
+  Future<List<Extension>?> getExtensionListStream() async {
+    final storeCapable =
+        await ExtensionStoreRepository(client).supportsExtensionStores();
+    if (!storeCapable) {
+      return client
+          .mutate$FetchExtensionList()
+          .getData((data) => data.fetchExtensions?.extensions.toList());
+    }
+    return client.mutate$FetchExtensionListStore().getData((data) => data
+        .fetchExtensions?.extensions
+        .map(extensionFromStoreDto)
+        .toList());
+  }
 }
 
 @riverpod
