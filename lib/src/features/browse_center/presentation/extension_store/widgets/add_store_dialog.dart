@@ -42,6 +42,7 @@ class AddStoreDialog extends HookConsumerWidget {
           Navigator.pop(context);
         }
       } catch (e) {
+        if (!context.mounted) return;
         // The dialog stays open on failure — a raw server exception can carry
         // HTML/stack noise, so keep only the first line, clamped.
         final firstLine = e.toString().split('\n').first;
