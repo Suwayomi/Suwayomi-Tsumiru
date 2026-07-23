@@ -32,6 +32,7 @@ import '../features/migration/presentation/screens/migration_bulk_run_screen.dar
 import '../features/migration/presentation/screens/migration_global_search_screen.dart';
 import '../features/migration/presentation/screens/migration_source_picker_screen.dart';
 import '../features/offline/presentation/offline_settings_screen.dart';
+import '../features/settings/presentation/notifications/notifications_settings_screen.dart';
 import '../features/onboarding/data/onboarding_complete.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/quick_open/presentation/search_stack/search_stack_screen.dart';
@@ -102,6 +103,7 @@ abstract class Routes {
   static const serverSettings = 'server';
   static const downloadsSettings = 'downloads';
   static const offlineSettings = 'offline';
+  static const notificationsSettings = 'notifications';
   static const connection = 'connection';
   static const trackingSettings = 'tracking';
   static const hotkeysSettings = 'hotkeys';
@@ -233,6 +235,8 @@ GoRouter routerConfig(Ref ref) {
                         path: Routes.downloadsSettings),
                     TypedGoRoute<OfflineSettingsRoute>(
                         path: Routes.offlineSettings),
+                    TypedGoRoute<NotificationsSettingsRoute>(
+                        path: Routes.notificationsSettings),
                     TypedGoRoute<TrackingSettingsRoute>(
                         path: Routes.trackingSettings),
                     TypedGoRoute<HotkeysSettingsRoute>(

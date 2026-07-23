@@ -2145,6 +2145,81 @@
     "@migrationDoneCopied": {
         "placeholders": { "count": { "type": "int" } }
     },
+    "notificationNewChaptersTitle": "New chapters",
+    "notificationNewChaptersSummary": "Updates for {count} series",
+    "@notificationNewChaptersSummary": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notificationChaptersGeneric": "{count} new chapters",
+    "@notificationChaptersGeneric": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notificationChapterSingle": "Chapter {number}",
+    "@notificationChapterSingle": {
+        "placeholders": { "number": { "type": "String" } }
+    },
+    "notificationChapterSingleAndMore": "Chapter {number} and {count} more",
+    "@notificationChapterSingleAndMore": {
+        "placeholders": { "number": { "type": "String" }, "count": { "type": "int" } }
+    },
+    "notificationChaptersMultiple": "Chapters {numbers}",
+    "@notificationChaptersMultiple": {
+        "placeholders": { "numbers": { "type": "String" } }
+    },
+    "notificationChaptersMultipleAndMore": "Chapters {numbers} and {count} more",
+    "@notificationChaptersMultipleAndMore": {
+        "placeholders": { "numbers": { "type": "String" }, "count": { "type": "int" } }
+    },
+    "notificationLibraryErrorTitle": "Library update failed",
+    "notificationLibraryErrorBody": "{count} series failed to update",
+    "@notificationLibraryErrorBody": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notificationDownloadErrorTitle": "Download failed",
+    "notificationDownloadErrorBody": "{count} chapters failed to download",
+    "@notificationDownloadErrorBody": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notificationBackupCompleteTitle": "Backup complete",
+    "notificationRestoreCompleteTitle": "Restore complete",
+    "notificationBackupFailedTitle": "Backup failed",
+    "notificationRestoreFailedTitle": "Restore failed",
+    "notificationAppUpdateTitle": "Update available",
+    "notificationAppUpdateBody": "Tsumiru {version} is available",
+    "@notificationAppUpdateBody": {
+        "placeholders": { "version": { "type": "String" } }
+    },
+    "notificationExtensionUpdateTitle": "Extension updates",
+    "notificationExtensionUpdateBody": "{count} extensions have updates",
+    "@notificationExtensionUpdateBody": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notificationIncognitoTitle": "Incognito mode",
+    "notificationIncognitoBody": "History and progress updates are paused",
+    "notificationsErrors": "Error notifications",
+    "notificationsErrorsSubtitle": "Failed downloads and library updates",
+    "notificationsBackup": "Backup notifications",
+    "notificationsAppUpdates": "App update notifications",
+    "notificationsExtensionUpdates": "Extension update notifications",
+    "notificationActionMarkRead": "Mark as read",
+    "notificationActionView": "View chapters",
+    "notificationActionDownload": "Download",
+    "notificationDownloadsCompleteTitle": "Downloads complete",
+    "notificationDownloadsCompleteBody": "{count} chapters downloaded",
+    "@notificationDownloadsCompleteBody": {
+        "placeholders": { "count": { "type": "int" } }
+    },
+    "notifications": "Notifications",
+    "notificationsNewChapters": "New chapter notifications",
+    "notificationsNewChaptersSubtitle": "Notify when followed series get new chapters",
+    "notificationsDownloadsComplete": "Download notifications",
+    "notificationsCheckInterval": "Check interval",
+    "notificationsWifiOnly": "Only on Wi-Fi",
+    "notificationsChargingOnly": "Only while charging",
+    "notificationsHideContent": "Hide notification content",
+    "notificationsHideContentSubtitle": "Show only a count, not titles or covers",
+    "notificationsCheckNow": "Check now",
+    "notificationsReliabilityNote": "Checks run periodically, not instantly. Some devices restrict background updates.",
     "selectTargetSource": "Select Target Source",
     "noSourcesAvailable": "No sources available for migration",
     "checkSourceConfiguration": "Please check your source configuration",
