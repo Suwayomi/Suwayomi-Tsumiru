@@ -15,6 +15,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'src/constants/enum.dart';
 import 'src/constants/timeout_constants.dart';
@@ -24,6 +25,8 @@ import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
 import 'src/features/migration/controller/bulk_migration_providers.dart';
+import 'src/features/notifications/controller/notifications_controller.dart';
+import 'src/features/notifications/data/background/notification_background_entry.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
@@ -68,6 +71,12 @@ Future<void> _startApp() async {
   // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
   // any download service is started. Must run after the binding is ready.
   initForegroundTaskService();
+  // Register the background notification scheduler's isolate entry point
+  // (Android only). The periodic job itself is (re)scheduled from the launch
+  // sync below once settings are available.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    Workmanager().initialize(notificationCallbackDispatcher);
+  }
   final packageInfo = await PackageInfo.fromPlatform();
   final sharedPreferences = await SharedPreferences.getInstance();
   // Desktop: hide the OS title bar + restore saved window size before first
@@ -242,6 +251,11 @@ Future<void> _startApp() async {
       // Drain any bulk-migration journal left by a mid-batch crash. Independent
       // of the offline feature, so it runs before that guard.
       await recoverBulkMigrationsAtLaunch(container);
+      // Reconcile the notification schedule + write the worker's endpoint-bound
+      // config now that auth is ready. Best-effort — never blocks launch.
+      try {
+        await container.read(notificationsControllerProvider).sync();
+      } catch (_) {}
       if (!container.read(offlineActiveProvider)) return;
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);

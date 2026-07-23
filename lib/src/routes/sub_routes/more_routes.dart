@@ -101,6 +101,14 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
   Widget build(context, state) => const OfflineSettingsScreen();
 }
 
+class NotificationsSettingsRoute extends GoRouteData
+    with $NotificationsSettingsRoute {
+  const NotificationsSettingsRoute();
+
+  @override
+  Widget build(context, state) => const NotificationsSettingsScreen();
+}
+
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
   const ConnectionRoute();
 

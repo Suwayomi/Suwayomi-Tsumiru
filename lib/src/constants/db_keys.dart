@@ -131,6 +131,18 @@ enum DBKeys {
   offlineLastServerId(null),
   offlineLastServerAddress(null),
   offlineServerMismatchDismissedList(null),
+  // Notifications (background new-chapter + download-done checks). Interval is
+  // hours; WorkManager's real floor is ~15 min, so we never offer below 1h.
+  notificationsNewChaptersEnabled(false),
+  notificationsDownloadsEnabled(true),
+  notificationsCheckIntervalHours(6),
+  notificationsWifiOnly(true),
+  notificationsChargingOnly(false),
+  notificationsHideContent(false),
+  notificationsCategoriesInclude(null),
+  notificationsCategoriesExclude(null),
+  notificationsAppUpdatesEnabled(false),
+  notificationsExtensionUpdatesEnabled(false),
   // ON-DEVICE delete-on-read settings (frees device space; the server copy is
   // untouched). Independent of the server's "Delete chapters" settings.
   // whileReading: 0 = off, 1 = the just-read chapter, 2..5 = the Nth behind it.
