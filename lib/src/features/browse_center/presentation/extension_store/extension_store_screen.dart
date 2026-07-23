@@ -20,7 +20,7 @@ import '../../domain/extension_store/extension_store_model.dart';
 import 'widgets/add_store_dialog.dart';
 
 /// Guide page ships in a later task; linked from the empty-state Help button.
-const kStoreHelpUrl = 'https://tsumiru.app/guides/adding-sources/';
+const kStoreHelpUrl = 'https://tsumiru.app/docs/guides/adding-sources/';
 
 class ExtensionStoreScreen extends ConsumerWidget {
   const ExtensionStoreScreen({super.key});
