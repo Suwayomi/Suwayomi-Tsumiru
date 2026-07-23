@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/widgets/source_language_filter.dart';
@@ -45,6 +46,9 @@ class BrowseScreen extends HookConsumerWidget {
     }, [tabController.index]);
     useListenable(tabController);
 
+    final storeCapable =
+        ref.watch(extensionStoreSupportProvider).value ?? false;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.browse),
@@ -63,8 +67,12 @@ class BrowseScreen extends HookConsumerWidget {
           ],
           if (tabController.index == 1) ...[
             IconButton(
-              tooltip: context.l10n.extensionRepository,
-              onPressed: () => const ExtensionRepositoryRoute().push(context),
+              tooltip: storeCapable
+                  ? context.l10n.extensionStores
+                  : context.l10n.extensionRepository,
+              onPressed: () => storeCapable
+                  ? const ExtensionStoreRoute().push(context)
+                  : const ExtensionRepositoryRoute().push(context),
               icon: const Icon(Icons.dns_rounded),
             ),
             const InstallExtensionFile(),
