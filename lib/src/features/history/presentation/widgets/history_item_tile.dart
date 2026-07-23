@@ -22,12 +22,10 @@ class HistoryItemTile extends ConsumerWidget {
     super.key,
     required this.item,
     this.onTap,
-    required this.onRemove,
   });
 
   final HistoryItemDto item;
   final VoidCallback? onTap;
-  final VoidCallback onRemove;
 
   bool _isChapterCompleted() {
     final isFullyRead = item.isRead == true;
@@ -159,9 +157,6 @@ class HistoryItemTile extends ConsumerWidget {
                 ),
                 onSelected: (action) {
                   switch (action) {
-                    case HistoryMenuAction.removeFromHistory:
-                      _showRemoveDialog(context);
-                      break;
                     case HistoryMenuAction.viewManga:
                       _navigateToManga(context);
                       break;
@@ -189,28 +184,6 @@ class HistoryItemTile extends ConsumerWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.removeFromHistory),
-        content: Text(context.l10n.removeFromHistoryConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onRemove();
-            },
-            child: Text(context.l10n.remove),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Ensures all preference providers required for chapter filtering/sorting are initialized
   void _ensurePreferenceProvidersInitialized(WidgetRef ref) {

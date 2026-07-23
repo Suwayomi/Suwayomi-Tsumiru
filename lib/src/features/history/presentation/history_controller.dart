@@ -9,9 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
-import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../data/history_repository.dart';
 import '../domain/history_group.dart';
 import '../domain/history_item.dart';
@@ -43,33 +41,6 @@ class ReadingHistory extends _$ReadingHistory {
     // On error keep the current list (the pull spinner has dismissed).
   }
 
-  /// Remove a chapter from reading history.
-  Future<void> removeFromHistory(int chapterId) async {
-    final current = state.value ?? const <HistoryItemDto>[];
-    HistoryItemDto? removed;
-    for (final item in current) {
-      if (item.id == chapterId) {
-        removed = item;
-        break;
-      }
-    }
-    final result = await AsyncValue.guard(
-      () =>
-          ref.read(historyRepositoryProvider).removeChapterFromHistory(chapterId),
-    );
-    if (!ref.mounted) return;
-    if (result.hasError) {
-      // Don't invalidate as though it succeeded — item would just reappear.
-      ref.read(toastProvider)?.showError(result.error.toString());
-      return;
-    }
-    if (removed != null) {
-      ref.invalidate(mangaChapterListProvider(mangaId: removed.mangaId));
-      ref.invalidate(mangaWithIdProvider(mangaId: removed.mangaId));
-    }
-    // Rebuild from the top so the removed chapter drops out.
-    ref.invalidateSelf();
-  }
 }
 
 @riverpod
