@@ -10,6 +10,7 @@ import '../features/about/presentation/about/about_screen.dart';
 import '../features/browse_center/domain/source/source_model.dart';
 import '../features/browse_center/presentation/browse/browse_screen.dart';
 import '../features/browse_center/presentation/extension/extension_screen.dart';
+import '../features/browse_center/presentation/extension_store/extension_store_screen.dart';
 import '../features/browse_center/presentation/global_search/global_search_screen.dart';
 import '../features/browse_center/presentation/source/source_filter_screen.dart';
 import '../features/browse_center/presentation/source/source_screen.dart';
@@ -97,6 +98,7 @@ abstract class Routes {
   static const editCategories = 'edit-categories';
   static const browseSettings = 'browse';
   static const extensionRepositorySettings = 'repo';
+  static const extensionStoreSettings = 'extension-store';
   static const readerSettings = 'reader';
   static const appearanceSettings = 'appearance';
   static const generalSettings = 'general';
@@ -235,7 +237,9 @@ GoRouter routerConfig(Ref ref) {
                       path: Routes.browseSettings,
                       routes: [
                         TypedGoRoute<ExtensionRepositoryRoute>(
-                            path: Routes.extensionRepositorySettings)
+                            path: Routes.extensionRepositorySettings),
+                        TypedGoRoute<ExtensionStoreRoute>(
+                            path: Routes.extensionStoreSettings),
                       ],
                     ),
                     TypedGoRoute<BackupRoute>(path: Routes.backup),
