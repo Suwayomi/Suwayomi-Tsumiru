@@ -30,7 +30,7 @@ class OfflineSync {
       sourceId: manga.source?.id,
       sourceName: manga.source?.name,
       sourceLang: manga.source?.lang,
-      // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+      // #138: legacy field, kept until a min server version is enforced.
       // ignore: deprecated_member_use_from_same_package
       sourceIsNsfw: manga.source?.isNsfw ?? false,
       status: manga.status.name,

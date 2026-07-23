@@ -101,7 +101,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                     leading: const Icon(Icons.extension_rounded),
                     title: Text(context.l10n.extensionRepository),
                     subtitle: Text(
-                      // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+                      // #138: legacy field, kept until a min server version is enforced.
                       // ignore: deprecated_member_use_from_same_package
                       (browseSettings?.extensionRepos).isBlank
                           ? context.l10n.extensionRepositoryDescription
