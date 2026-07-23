@@ -45,6 +45,7 @@ Widget _browseHarness(List<Override> overrides) {
           children: const [
             Center(child: Text('sources')),
             Center(child: Text('extensions')),
+            Center(child: Text('migrate')),
           ],
         ),
       ),
