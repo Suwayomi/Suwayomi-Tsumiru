@@ -71,3 +71,4 @@ flatpak/bundle/
 
 # FVM local SDK symlink (version pinned in .fvmrc)
 .fvm/
+.superpowers/
