@@ -91,7 +91,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                     title: Text(context.l10n.extensionStores),
                     subtitle: Text(
                       storeCount == null
-                          ? context.l10n.extensionRepositoryDescription
+                          ? context.l10n.extensionStoresDescription
                           : context.l10n.nStores(storeCount),
                     ),
                     onTap: () => const ExtensionStoreRoute().go(context),
@@ -99,18 +99,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
                 else
                   ListTile(
                     leading: const Icon(Icons.extension_rounded),
-                    title: Text(context.l10n.extensionRepository),
-                    subtitle: Text(
-                      // #138: legacy field, kept until a min server version is enforced.
-                      // ignore: deprecated_member_use_from_same_package
-                      (browseSettings?.extensionRepos).isBlank
-                          ? context.l10n.extensionRepositoryDescription
-                          : context.l10n.nRepo(
-                              // ignore: deprecated_member_use_from_same_package
-                              (browseSettings?.extensionRepos.length)
-                                  .ifNull(0)),
-                    ),
-                    onTap: () => const ExtensionRepositoryRoute().go(context),
+                    title: Text(context.l10n.extensionStores),
+                    subtitle: Text(context.l10n.updateServerForExtensions),
+                    enabled: false,
                   ),
               ],
             ],

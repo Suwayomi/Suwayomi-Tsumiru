@@ -67,13 +67,6 @@ class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
   Widget build(context, state) => const BrowseSettingsScreen();
 }
 
-class ExtensionRepositoryRoute extends GoRouteData with $ExtensionRepositoryRoute {
-  const ExtensionRepositoryRoute();
-
-  @override
-  Widget build(context, state) => const ExtensionRepositoryScreen();
-}
-
 class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
   const ExtensionStoreRoute();
 
