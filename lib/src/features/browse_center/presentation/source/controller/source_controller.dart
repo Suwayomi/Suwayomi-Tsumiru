@@ -31,6 +31,8 @@ AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
   return ref.watch(sourceListProvider).copyWithData(
         (list) =>
+            // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+            // ignore: deprecated_member_use_from_same_package
             list == null || showNsfw ? list : [...list.where((e) => !e.isNsfw)],
       );
 }

@@ -57,6 +57,8 @@ class ExtensionListTile extends HookConsumerWidget {
                 text: "${extension.versionName} ",
                 style: const TextStyle(fontWeight: FontWeight.normal),
               ),
+            // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+            // ignore: deprecated_member_use_from_same_package
             if (extension.isNsfw.ifNull())
               TextSpan(
                 text: context.l10n.nsfw18,

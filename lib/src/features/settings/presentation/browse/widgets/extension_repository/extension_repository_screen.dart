@@ -18,6 +18,8 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final List<String> repoList = [
+      // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+      // ignore: deprecated_member_use_from_same_package
       ...?serverSettings.value?.extensionRepos
     ];
     onRefresh() => ref.refresh(settingsProvider.future);

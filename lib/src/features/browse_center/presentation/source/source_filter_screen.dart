@@ -224,6 +224,8 @@ class _SourceCheckItem extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          // Deliberate legacy-server path (#138): stays on deprecated fields until a minimum server version is set.
+          // ignore: deprecated_member_use_from_same_package
           if (source.isNsfw.ifNull()) ...[
             const SizedBox(width: 8),
             Text(
