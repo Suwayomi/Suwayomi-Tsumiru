@@ -156,6 +156,10 @@ enum DBKeys {
   showHiddenCategories(false),
   // When true, each tab label appends "(N)" where N is the filtered manga count.
   categoryNumberOfItems(false),
+  // When true, the library search bar is always visible under the app bar and
+  // sticks into it on scroll (Yokai/TachiyomiJ2K style). When false (default),
+  // search hides behind the app-bar search button (Mihon/Komikku style).
+  libraryPersistentSearchBar(false),
   // How the library tabs are grouped: 0=by category (default), 1=by source,
   // 2=by status, 3=by track status (reserved; filled in Task 8), 4=ungrouped.
   libraryGroupType(0),

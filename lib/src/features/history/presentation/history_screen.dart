@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/app_sizes.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
@@ -39,16 +40,24 @@ class HistoryScreen extends ConsumerWidget {
           // Search bar
           Padding(
             padding: const EdgeInsets.all(8),
-            child: SearchField(
-              initialText: searchQuery,
-              onChanged: (query) => ref
-                  .read(historySearchQueryProvider.notifier)
-                  .updateQuery(query ?? ''),
-              onSubmitted: (query) => ref
-                  .read(historySearchQueryProvider.notifier)
-                  .updateQuery(query ?? ''),
-              hintText: l10n.searchHistory,
-              autofocus: false,
+            child: SizedBox(
+              width: context.isLargeTablet
+                  ? context.widthScale(scale: .5)
+                  : null,
+              child: Padding(
+                padding: KEdgeInsets.h16v4.size,
+                child: SearchField(
+                  initialText: searchQuery,
+                  onChanged: (query) => ref
+                      .read(historySearchQueryProvider.notifier)
+                      .updateQuery(query ?? ''),
+                  onSubmitted: (query) => ref
+                      .read(historySearchQueryProvider.notifier)
+                      .updateQuery(query ?? ''),
+                  labelText: l10n.searchHistory,
+                  autofocus: false,
+                ),
+              ),
             ),
           ),
           // History content

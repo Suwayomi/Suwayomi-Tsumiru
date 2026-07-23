@@ -124,12 +124,18 @@ class NavigationShellScreen extends HookConsumerWidget {
     // While the update banner occupies the top (incl. the status-bar strip),
     // drop the redundant status-bar inset on the content below so the pushed-
     // down screen's own app bar doesn't reserve it a second time (dead gap).
+    // A Builder is required to get the context inside the Scaffold's body.
+    // There, resizeToAvoidBottomInset has already consumed the keyboard inset.
+    // Using the outer context passes unconsumed insets down, making nested
+    // Scaffolds apply the keyboard padding twice and overflow the layout.
     final bannerVisible = ref.watch(updateBannerVisibleProvider);
     final content = bannerVisible
-        ? MediaQuery.removePadding(
-            context: context,
-            removeTop: true,
-            child: child,
+        ? Builder(
+            builder: (context) => MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: child,
+            ),
           )
         : child;
 

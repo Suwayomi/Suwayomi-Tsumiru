@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/hooks/debounced_hook.dart';
 import '../../../../../utils/misc/toast/toast.dart';
@@ -94,13 +95,21 @@ class TrackerSearch extends HookConsumerWidget {
             ),
           ),
 
-          // Search field pre-filled with manga title.
-          SearchField(
-            initialText: mangaTitle,
-            hintText: context.l10n.search,
-            autofocus: false,
-            onSubmitted: onInput,
-            onChanged: onInput,
+          // Search field pre-filled with manga title (with tablet constraint & padding).
+          SizedBox(
+            width: context.isLargeTablet
+                ? context.widthScale(scale: .5)
+                : null,
+            child: Padding(
+              padding: KEdgeInsets.h16v4.size,
+              child: SearchField(
+                initialText: mangaTitle,
+                hintText: context.l10n.search,
+                autofocus: false,
+                onSubmitted: onInput,
+                onChanged: onInput,
+              ),
+            ),
           ),
 
           // Track / Track privately buttons (shown once a result is selected

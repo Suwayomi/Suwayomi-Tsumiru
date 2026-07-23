@@ -37,9 +37,17 @@ class GlobalSearchScreen extends HookConsumerWidget {
             children: [
               Align(
                 alignment: Alignment.centerRight,
-                child: SearchField(
-                  initialText: query.value,
-                  onSubmitted: (value) => query.value = value,
+                child: SizedBox(
+                  width: context.isLargeTablet
+                      ? context.widthScale(scale: .5)
+                      : null,
+                  child: Padding(
+                    padding: KEdgeInsets.h16v4.size,
+                    child: SearchField(
+                      initialText: query.value,
+                      onSubmitted: (value) => query.value = value,
+                    ),
+                  ),
                 ),
               ),
             ],
