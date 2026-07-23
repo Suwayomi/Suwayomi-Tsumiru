@@ -9,16 +9,13 @@ import 'package:flutter/material.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 
 enum HistoryMenuAction {
-  viewManga,
-  removeFromHistory;
+  viewManga;
 
   String toLocale(BuildContext context) => switch (this) {
         HistoryMenuAction.viewManga => context.l10n.viewManga,
-        HistoryMenuAction.removeFromHistory => context.l10n.removeFromHistory,
       };
 
   IconData get icon => switch (this) {
         HistoryMenuAction.viewManga => Icons.book,
-        HistoryMenuAction.removeFromHistory => Icons.delete_outline,
       };
 }

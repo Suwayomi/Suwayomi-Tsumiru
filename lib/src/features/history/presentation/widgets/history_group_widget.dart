@@ -15,11 +15,9 @@ class HistoryGroupWidget extends StatelessWidget {
   const HistoryGroupWidget({
     super.key,
     required this.group,
-    required this.onRemoveItem,
   });
 
   final HistoryGroup group;
-  final Function(int chapterId) onRemoveItem;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +65,6 @@ class HistoryGroupWidget extends StatelessWidget {
         // Group items
         ...group.items.map((HistoryItemDto item) => HistoryItemTile(
               item: item,
-              onRemove: () => onRemoveItem(item.id),
             )),
         const SizedBox(height: 16),
       ],

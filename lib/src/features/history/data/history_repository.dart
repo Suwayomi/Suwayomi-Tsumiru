@@ -11,17 +11,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../manga_book/data/manga_book/manga_book_repository.dart';
-import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../domain/history_item.dart';
 import 'graphql/__generated__/query.graphql.dart';
 
 part 'history_repository.g.dart';
 
 class HistoryRepository {
-  const HistoryRepository(this.client, this.mangaBookRepository);
+  const HistoryRepository(this.client);
   final GraphQLClient client;
-  final MangaBookRepository mangaBookRepository;
 
   /// Most-recently-read chapter per manga, newest first.
   ///
@@ -104,7 +101,7 @@ class HistoryRepository {
     final seen = <int>{};
     final items = <HistoryItemDto>[];
     for (final chapter in chapters?.nodes ?? const <HistoryItemDto>[]) {
-      // Skip no-progress rows left behind by "remove from history".
+      // A timestamp with no read progress isn't history worth showing.
       if (!chapter.isRead && chapter.lastPageRead <= 0) continue;
       // First-seen per manga wins (server order is already newest-first).
       if (seen.add(chapter.mangaId)) items.add(chapter);
@@ -142,21 +139,6 @@ class HistoryRepository {
         .getData((data) => data.chapters.nodes);
   }
 
-  /// Clear reading history for a specific chapter
-  Future<void> removeChapterFromHistory(int chapterId) async {
-    // This removes it from history queries since our filter requires:
-    // either isRead: true OR lastPageRead > 0
-    await mangaBookRepository.putChapter(
-      chapterId: chapterId,
-      patch: ChapterChange(
-        isRead: false,
-        lastPageRead: 0,
-        // Note: lastReadAt cannot be cleared via this API
-        // Some chapters may still appear until server is restarted
-      ),
-    );
-  }
-
   /// Clear all reading history (mark all chapters as unread)
   /// This is a destructive operation and should be used with caution
   Future<void> clearAllHistory() async {
@@ -168,5 +150,5 @@ class HistoryRepository {
 }
 
 @riverpod
-HistoryRepository historyRepository(Ref ref) => HistoryRepository(
-    ref.watch(graphQlClientProvider), ref.watch(mangaBookRepositoryProvider));
+HistoryRepository historyRepository(Ref ref) =>
+    HistoryRepository(ref.watch(graphQlClientProvider));

@@ -2416,8 +2416,6 @@
     "tryDifferentSearchTerm": "Try a different search term",
     "errorOccurred": "An error occurred",
     "viewManga": "View Manga",
-    "removeFromHistory": "Remove from History",
-    "removeFromHistoryConfirmation": "Are you sure you want to remove this chapter from your reading history?",
     "timeoutSettings": "Timeout Settings",
     "serverRequestTimeout": "Server Request Timeout",
     "@serverRequestTimeout": {

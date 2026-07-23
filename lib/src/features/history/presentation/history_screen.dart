@@ -82,8 +82,6 @@ class HistoryScreen extends ConsumerWidget {
                       final group = historyGroups[index];
                       return HistoryGroupWidget(
                         group: group,
-                        onRemoveItem: (chapterId) =>
-                            notifier.removeFromHistory(chapterId),
                       );
                     },
                   ),
