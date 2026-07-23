@@ -16,9 +16,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/logger/logger.dart';
 import '../../../auth/data/auth_credentials_store.dart';
+import '../../../notifications/controller/notification_settings_providers.dart';
+import '../../../notifications/data/local_notification_service.dart';
 import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -357,7 +360,49 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
     final pending = await _pendingChapters();
-    if (pending.isNotEmpty) await ensureServiceRunning();
+    if (pending.isNotEmpty) {
+      await ensureServiceRunning();
+      return;
+    }
+    await _notifyDownloadsComplete();
+  }
+
+  /// Chapters that finished / failed this download session — drive the
+  /// completion + error notifications once the queue truly drains.
+  int _sessionDownloaded = 0;
+  int _sessionFailed = 0;
+
+  /// Fire the completion + error notifications on drain (opt-in). Only covers a
+  /// download session THIS device ran — a server/WebUI download with the app
+  /// closed has no observer here.
+  Future<void> _notifyDownloadsComplete() async {
+    final done = _sessionDownloaded;
+    final failed = _sessionFailed;
+    _sessionDownloaded = 0;
+    _sessionFailed = 0;
+    if (done == 0 && failed == 0) return;
+    if (!_ref.read(notificationsDownloadsEnabledProvider).ifNull(true)) return;
+    try {
+      final locales = WidgetsBinding.instance.platformDispatcher.locales;
+      final l10n = lookupAppLocalizations(
+          locales.isNotEmpty ? locales.first : const Locale('en'));
+      final service = LocalNotificationService();
+      await service.init();
+      if (done > 0) {
+        await service.showDownloadsComplete(
+          title: l10n.notificationDownloadsCompleteTitle,
+          body: l10n.notificationDownloadsCompleteBody(done),
+        );
+      }
+      if (failed > 0) {
+        await service.showDownloadError(
+          l10n.notificationDownloadErrorTitle,
+          l10n.notificationDownloadErrorBody(failed),
+        );
+      }
+    } catch (_) {
+      // Best-effort — a missed toast is not data loss.
+    }
   }
 
   Future<void> _onChapterDone(Map data) async {
@@ -378,6 +423,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           status: status,
           bytes: bytes,
           eventGeneration: data['gen'] as int? ?? 0);
+      if (status == 'downloaded') _sessionDownloaded++;
+      if (status == 'error') _sessionFailed++;
     }
 
     // Drain handshake: if the worker just self-stopped, do post-stop

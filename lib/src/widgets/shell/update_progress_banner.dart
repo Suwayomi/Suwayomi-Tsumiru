@@ -6,13 +6,16 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../features/manga_book/data/updates/updates_repository.dart';
 import '../../features/manga_book/domain/update_status/update_status_model.dart';
+import '../../features/notifications/data/local_notification_service.dart';
 import '../../features/settings/presentation/library/widgets/show_update_progress_banner/show_update_progress_banner.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import 'update_banner_state.dart';
@@ -51,6 +54,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
     // stream errors, prefer a fresh one-shot read until it recovers.
     final effectiveRun = runSocket.hasError ? runFallback : runSocket;
 
+    final l10n = context.l10n;
     ref.listen(updateRunningSocketProvider, (previous, next) {
       if (next.hasError && !(previous?.hasError ?? false)) {
         ref.invalidate(updateRunningSummaryProvider);
@@ -59,6 +63,10 @@ class UpdateProgressBanner extends HookConsumerWidget {
       final running = next.value;
       if (running != null) {
         ref.read(updateOptimisticProvider.notifier).onRealRunning(running);
+      }
+      // Update just finished — notify if any series failed (Komikku parity).
+      if ((previous?.value ?? false) && running == false) {
+        _notifyUpdateErrors(ref, l10n);
       }
     });
     // Re-query the one-shot fallback on resume, so a running-state fetched
@@ -174,5 +182,24 @@ class UpdateProgressBanner extends HookConsumerWidget {
     final checked = status?.updateChecked ?? 0;
     final percent = (checked / total * 100).floor().clamp(0, 100);
     return context.l10n.updatingLibraryProgress(percent, checked, total);
+  }
+}
+
+/// Notifies when a just-finished library update left failures (Komikku parity).
+/// Best-effort + foreground-observed (our update runs server-side). Android only.
+Future<void> _notifyUpdateErrors(WidgetRef ref, AppLocalizations l10n) async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+  try {
+    final summary = await ref.read(updatesRepositoryProvider).summaryUpdates();
+    final failed = summary?.failedJobs.mangaList.length ?? 0;
+    if (failed == 0) return;
+    final service = LocalNotificationService();
+    await service.init();
+    await service.showLibraryUpdateError(
+      l10n.notificationLibraryErrorTitle,
+      l10n.notificationLibraryErrorBody(failed),
+    );
+  } catch (_) {
+    // Best-effort — a missed error toast is not data loss.
   }
 }
