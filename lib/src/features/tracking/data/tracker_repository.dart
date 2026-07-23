@@ -125,7 +125,7 @@ class TrackerRepository {
           ),
         )
         .getData((d) => d);
-    final record = data?.bindTrackRecord.trackRecord;
+    final record = data?.bindTrackRecord?.trackRecord;
     if (record == null) {
       throw Exception('Track-record copy returned no data');
     }

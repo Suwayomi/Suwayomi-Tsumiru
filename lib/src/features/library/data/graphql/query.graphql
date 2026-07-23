@@ -6,8 +6,7 @@ query AllCategories($condition: CategoryConditionInput, $filter: CategoryFilterI
     condition: $condition
     filter: $filter
     first: $first
-    orderBy: ORDER
-    orderByType: ASC
+    order: [{ by: ORDER, byType: ASC }]
     offset: $offset
   ) {
     nodes {
