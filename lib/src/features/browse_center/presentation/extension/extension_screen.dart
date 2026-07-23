@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
+import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/extension_model.dart';
 import 'controller/extension_controller.dart';
 import 'widgets/extension_list_tile.dart';
@@ -51,6 +52,18 @@ class ExtensionScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Extension management needs a store-capable server. On older servers,
+    // nudge to update rather than watching the list (its store-only query
+    // would error there). Pending probe shows a brief loader.
+    final storeCapable = ref.watch(extensionStoreSupportProvider).value;
+    if (storeCapable != true) {
+      return Center(
+        child: storeCapable == false
+            ? Emoticons(title: context.l10n.updateServerForExtensions)
+            : const CircularProgressIndicator(),
+      );
+    }
+
     final extensionMapData = ref.watch(extensionMapFilteredAndQueriedProvider);
 
     final extensionMap = {...?extensionMapData.value};

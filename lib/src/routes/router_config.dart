@@ -40,7 +40,6 @@ import '../features/quick_open/presentation/search_stack/search_stack_screen.dar
 import '../features/settings/presentation/appearance/appearance_screen.dart';
 import '../features/settings/presentation/backup/backup_screen.dart';
 import '../features/settings/presentation/browse/browse_settings_screen.dart';
-import '../features/settings/presentation/browse/widgets/extension_repository/extension_repository_screen.dart';
 import '../features/settings/presentation/connection/connection_screen.dart';
 import '../features/settings/presentation/downloads/downloads_settings_screen.dart';
 import '../features/settings/presentation/general/general_screen.dart';
@@ -97,7 +96,6 @@ abstract class Routes {
   static const librarySettings = 'library';
   static const editCategories = 'edit-categories';
   static const browseSettings = 'browse';
-  static const extensionRepositorySettings = 'repo';
   static const extensionStoreSettings = 'extension-store';
   static const readerSettings = 'reader';
   static const appearanceSettings = 'appearance';
@@ -236,8 +234,6 @@ GoRouter routerConfig(Ref ref) {
                     TypedGoRoute<BrowseSettingsRoute>(
                       path: Routes.browseSettings,
                       routes: [
-                        TypedGoRoute<ExtensionRepositoryRoute>(
-                            path: Routes.extensionRepositorySettings),
                         TypedGoRoute<ExtensionStoreRoute>(
                             path: Routes.extensionStoreSettings),
                       ],

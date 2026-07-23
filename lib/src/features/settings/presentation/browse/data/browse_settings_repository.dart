@@ -24,27 +24,6 @@ class BrowseSettingsRepository {
           )
           .getData((data) => data.setSettings.settings);
 
-  /// Legacy repo write. Servers >= v2.3.2223 removed `extensionRepos` from
-  /// PartialSettingsTypeInput, so this document can't live in codegen against
-  /// the current schema; it only ever runs against pre-store servers.
-  static const updateExtensionReposDocument = r'''
-    mutation UpdateExtensionRepos($extensionRepos: [String!]!) {
-      setSettings(input: {settings: {extensionRepos: $extensionRepos}}) {
-        clientMutationId
-      }
-    }
-  ''';
-
-  Future<void> updateExtensionRepos(Set<String> extensionRepos) async {
-    final result = await ferryClient.mutate(
-      MutationOptions(
-        document: gql(updateExtensionReposDocument),
-        variables: {'extensionRepos': extensionRepos.toList()},
-      ),
-    );
-    if (result.hasException) throw result.exception!;
-  }
-
   Future<SettingsDto?> updateLocalSourcePath(String value) => ferryClient
       .mutate$UpdateLocalSourcePath(
         Options$Mutation$UpdateLocalSourcePath(

@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_store_repository/extension_store_repository.dart';
 import 'package:tsumiru/src/features/browse_center/domain/extension_store/extension_store_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/browse/browse_screen.dart';
+import 'package:tsumiru/src/features/browse_center/presentation/extension/extension_screen.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension_store/extension_store_screen.dart';
 import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
 import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
@@ -24,8 +25,9 @@ import 'package:tsumiru/src/features/settings/presentation/browse/data/browse_se
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
-// Gate rule under test: pending/error render legacy, only a resolved `true`
-// swaps to the store affordance. Never completing == still pending.
+// Gate rule under test: only a resolved `true` shows store management; older
+// servers (resolved `false`) nudge to update, and a pending/errored probe
+// hides it. Never completing == still pending.
 final _neverResolves = Completer<bool>().future;
 final _storeListNeverResolves =
     Completer<({List<ExtensionStore> stores, int totalCount})?>().future;
@@ -143,29 +145,26 @@ void main() {
       expect(find.byType(ExtensionStoreScreen), findsOneWidget);
     });
 
-    testWidgets('not store-capable: tooltip stays Extension Repository',
-        (tester) async {
+    testWidgets('not store-capable: no extension affordance', (tester) async {
       await tester.pumpWidget(_browseHarness([
         extensionStoreSupportProvider.overrideWith((ref) async => false),
       ]));
       await tester.pump();
 
-      expect(find.byTooltip('Extension Repository'), findsOneWidget);
       expect(find.byTooltip('Extension stores'), findsNothing);
     });
 
-    testWidgets('gate pending: renders legacy, nothing flickers or crashes',
+    testWidgets('gate pending: no affordance, nothing flickers or crashes',
         (tester) async {
       await tester.pumpWidget(_browseHarness([
         extensionStoreSupportProvider.overrideWith((ref) => _neverResolves),
       ]));
       await tester.pump();
 
-      expect(find.byTooltip('Extension Repository'), findsOneWidget);
       expect(find.byTooltip('Extension stores'), findsNothing);
     });
 
-    testWidgets('gate errors: renders legacy, nothing flickers or crashes',
+    testWidgets('gate errors: no affordance, nothing flickers or crashes',
         (tester) async {
       await tester.pumpWidget(_browseHarness([
         extensionStoreSupportProvider
@@ -173,7 +172,6 @@ void main() {
       ]));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Extension Repository'), findsOneWidget);
       expect(find.byTooltip('Extension stores'), findsNothing);
     });
   });
@@ -194,7 +192,7 @@ void main() {
       expect(find.text('Extension Repository'), findsNothing);
     });
 
-    testWidgets('store-capable but count still loading: falls back to the repo description',
+    testWidgets('store-capable but count still loading: falls back to the store description',
         (tester) async {
       await tester.pumpWidget(await _settingsHarness([
         extensionStoreSupportProvider.overrideWith((ref) async => true),
@@ -205,33 +203,39 @@ void main() {
 
       expect(find.text('Extension stores'), findsOneWidget);
       expect(
-        find.text('Add repositories from which extensions can be installed'),
+        find.text('Add extension stores your server installs from'),
         findsOneWidget,
       );
     });
 
-    testWidgets('not store-capable: row stays the repo row', (tester) async {
+    testWidgets('not store-capable: row nudges to update the server',
+        (tester) async {
       await tester.pumpWidget(await _settingsHarness([
         extensionStoreSupportProvider.overrideWith((ref) async => false),
       ]));
       await tester.pumpAndSettle();
 
-      expect(find.text('Extension Repository'), findsOneWidget);
-      expect(find.text('Extension stores'), findsNothing);
+      expect(find.text('Extension stores'), findsOneWidget);
+      expect(
+        find.text('Update your Suwayomi server to manage extensions'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('gate pending: row stays the repo row, nothing flickers or crashes',
+    testWidgets('gate pending: nudge row, nothing flickers or crashes',
         (tester) async {
       await tester.pumpWidget(await _settingsHarness([
         extensionStoreSupportProvider.overrideWith((ref) => _neverResolves),
       ]));
       await tester.pumpAndSettle();
 
-      expect(find.text('Extension Repository'), findsOneWidget);
-      expect(find.text('Extension stores'), findsNothing);
+      expect(
+        find.text('Update your Suwayomi server to manage extensions'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('gate errors: row stays the repo row, nothing flickers or crashes',
+    testWidgets('gate errors: nudge row, nothing flickers or crashes',
         (tester) async {
       await tester.pumpWidget(await _settingsHarness([
         extensionStoreSupportProvider
@@ -239,8 +243,47 @@ void main() {
       ]));
       await tester.pumpAndSettle();
 
-      expect(find.text('Extension Repository'), findsOneWidget);
-      expect(find.text('Extension stores'), findsNothing);
+      expect(
+        find.text('Update your Suwayomi server to manage extensions'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('Extensions tab body', () {
+    Widget bodyHarness(List<Override> overrides) => ProviderScope(
+          overrides: overrides,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: ExtensionScreen()),
+          ),
+        );
+
+    testWidgets('not store-capable: shows the update-server nudge',
+        (tester) async {
+      await tester.pumpWidget(bodyHarness([
+        extensionStoreSupportProvider.overrideWith((ref) async => false),
+      ]));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Update your Suwayomi server to manage extensions'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('gate pending: shows a loader, not the nudge', (tester) async {
+      await tester.pumpWidget(bodyHarness([
+        extensionStoreSupportProvider.overrideWith((ref) => _neverResolves),
+      ]));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        find.text('Update your Suwayomi server to manage extensions'),
+        findsNothing,
+      );
     });
   });
 }

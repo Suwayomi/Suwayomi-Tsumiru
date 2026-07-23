@@ -19,12 +19,3 @@ mutation InstallExternalExtension($extensionFile: Upload!) {
     }
   }
 }
-
-mutation FetchExtensionList {
-  fetchExtensions(input: {}) {
-    clientMutationId
-    extensions {
-      ...ExtensionDto
-    }
-  }
-}

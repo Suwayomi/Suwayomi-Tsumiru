@@ -65,14 +65,10 @@ class BrowseScreen extends HookConsumerWidget {
               icon: const Icon(Icons.filter_list_rounded),
             ),
           ],
-          if (tabController.index == 1) ...[
+          if (tabController.index == 1 && storeCapable) ...[
             IconButton(
-              tooltip: storeCapable
-                  ? context.l10n.extensionStores
-                  : context.l10n.extensionRepository,
-              onPressed: () => storeCapable
-                  ? const ExtensionStoreRoute().push(context)
-                  : const ExtensionRepositoryRoute().push(context),
+              tooltip: context.l10n.extensionStores,
+              onPressed: () => const ExtensionStoreRoute().push(context),
               icon: const Icon(Icons.dns_rounded),
             ),
             const InstallExtensionFile(),

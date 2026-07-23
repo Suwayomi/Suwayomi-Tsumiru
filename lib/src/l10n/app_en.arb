@@ -2926,6 +2926,14 @@
     "@extensionStores": {
         "description": "Screen title for the Extension stores screen"
     },
+    "extensionStoresDescription": "Add extension stores your server installs from",
+    "@extensionStoresDescription": {
+        "description": "Subtitle for the Extension stores settings row when no stores are added yet"
+    },
+    "updateServerForExtensions": "Update your Suwayomi server to manage extensions",
+    "@updateServerForExtensions": {
+        "description": "Shown on older servers that predate the extension store system, in place of extension management"
+    },
     "addExtensionStore": "Add extension store",
     "@addExtensionStore": {
         "description": "Title of the dialog used to add an extension store"
