@@ -12,6 +12,7 @@ import '../../constants/navigation_bar_data.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import 'animated_nav_icon.dart';
 import 'sidebar_expanded.dart';
 
 class BigScreenNavigationBar extends ConsumerWidget {
@@ -28,20 +29,20 @@ class BigScreenNavigationBar extends ConsumerWidget {
   /// left-align (the rail's Column centers a narrower leading child).
   static const double _extendedWidth = 256;
 
-  NavigationRailDestination getNavigationRailDestination(
-      BuildContext context, NavigationBarData data, bool downloadsPaused) {
+  NavigationRailDestination getNavigationRailDestination(BuildContext context,
+      NavigationBarData data, bool selected, bool downloadsPaused) {
     final badged = downloadsPaused && data.icon == Icons.download_outlined;
+    final icon = AnimatedNavIcon(vector: data.animatedIcon, selected: selected);
     return NavigationRailDestination(
-      icon: badged ? Badge(child: Icon(data.icon)) : Icon(data.icon),
+      icon: badged ? Badge(child: icon) : icon,
       label: Text(data.label(context)),
-      selectedIcon:
-          badged ? Badge(child: Icon(data.activeIcon)) : Icon(data.activeIcon),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
+    final navList = NavigationBarData.getNavList(context);
     // The rail shows on any wide screen (width >= 600), which includes a phone
     // in landscape (short side < 600). There the height is tight, so drop the
     // app-icon header to make room for all destinations ("More" was falling off
@@ -128,10 +129,11 @@ class BigScreenNavigationBar extends ConsumerWidget {
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
       leading: isPhone ? null : leadingIcon,
-      destinations: NavigationBarData.getNavList(context)
-          .map<NavigationRailDestination>(
-              (e) => getNavigationRailDestination(context, e, downloadsPaused))
-          .toList(),
+      destinations: [
+        for (var i = 0; i < navList.length; i++)
+          getNavigationRailDestination(
+              context, navList[i], i == selectedIndex, downloadsPaused),
+      ],
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
             ),
