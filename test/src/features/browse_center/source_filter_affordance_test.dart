@@ -20,6 +20,7 @@ Widget _harness(int currentIndex) => ProviderScope(
           children: const [
             Center(child: Text('sources')),
             Center(child: Text('extensions')),
+            Center(child: Text('migrate')),
           ],
         ),
       ),
@@ -36,6 +37,13 @@ void main() {
   testWidgets('Filter sources affordance is absent on the Extensions tab',
       (tester) async {
     await tester.pumpWidget(_harness(1));
+    await tester.pump();
+    expect(find.byTooltip('Filter sources'), findsNothing);
+  });
+
+  testWidgets('Filter sources affordance is absent on the Migrate tab',
+      (tester) async {
+    await tester.pumpWidget(_harness(2));
     await tester.pump();
     expect(find.byTooltip('Filter sources'), findsNothing);
   });

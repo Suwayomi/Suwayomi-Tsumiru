@@ -23,8 +23,22 @@ enum _SortMode { alphabetical, total }
 /// Screen 1 — Migrate off a source (Komikku `MigrateSourceScreen`). Lists the
 /// library's sources with entry counts; an obsolete filter and sort mode/
 /// direction; tapping a source drills into its manga.
-class MigrationSourcePickerScreen extends HookConsumerWidget {
+///
+/// [MigrationSourcePickerBody] is the chrome-less body so the same screen hosts
+/// both the standalone route (this Scaffold wrapper) and the Browse → Migrate
+/// tab, which supplies its own app bar.
+class MigrationSourcePickerScreen extends StatelessWidget {
   const MigrationSourcePickerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(context.l10n.migrationPickSourceTitle)),
+        body: const MigrationSourcePickerBody(),
+      );
+}
+
+class MigrationSourcePickerBody extends HookConsumerWidget {
+  const MigrationSourcePickerBody({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,101 +52,105 @@ class MigrationSourcePickerScreen extends HookConsumerWidget {
     final sortMode = useState(_SortMode.alphabetical);
     final ascending = useState(true);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.migrationPickSourceTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.migrationFilterObsolete,
-            icon: const Icon(Icons.new_releases_outlined),
-            color: obsoleteOnly.value ? context.theme.colorScheme.error : null,
-            onPressed: () => obsoleteOnly.value = !obsoleteOnly.value,
-          ),
-          IconButton(
-            tooltip: l10n.migrationSortMode,
-            icon: Icon(sortMode.value == _SortMode.alphabetical
-                ? Icons.sort_by_alpha
-                : Icons.numbers),
-            onPressed: () => sortMode.value =
-                sortMode.value == _SortMode.alphabetical
-                    ? _SortMode.total
-                    : _SortMode.alphabetical,
-          ),
-          IconButton(
-            tooltip: l10n.migrationSortDirection,
-            icon: Icon(ascending.value
-                ? Icons.arrow_upward
-                : Icons.arrow_downward),
-            onPressed: () => ascending.value = !ascending.value,
-          ),
-        ],
-      ),
-      body: groupsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
-        data: (all) {
-          final q = query.value.trim().toLowerCase();
-          var groups = [
-            for (final g in all)
-              if ((!obsoleteOnly.value || g.isObsolete) &&
-                  (q.isEmpty || g.displayName.toLowerCase().contains(q)))
-                g,
-          ];
-          groups = [...groups]..sort((a, b) {
-              final c = sortMode.value == _SortMode.alphabetical
-                  ? a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase())
-                  : a.count.compareTo(b.count);
-              return ascending.value ? c : -c;
-            });
-          if (all.isEmpty) {
-            return Center(child: Text(l10n.migrationNoLibrarySources));
-          }
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: SearchField(
-                  autofocus: false,
-                  initialText: query.value,
-                  hintText: l10n.migrationSearchForSource,
-                  onChanged: (v) => query.value = v ?? '',
-                  onClose: () => query.value = '',
+    return groupsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (all) {
+        final q = query.value.trim().toLowerCase();
+        var groups = [
+          for (final g in all)
+            if ((!obsoleteOnly.value || g.isObsolete) &&
+                (q.isEmpty || g.displayName.toLowerCase().contains(q)))
+              g,
+        ];
+        groups = [...groups]..sort((a, b) {
+            final c = sortMode.value == _SortMode.alphabetical
+                ? a.displayName
+                    .toLowerCase()
+                    .compareTo(b.displayName.toLowerCase())
+                : a.count.compareTo(b.count);
+            return ascending.value ? c : -c;
+          });
+        if (all.isEmpty) {
+          return Center(child: Text(l10n.migrationNoLibrarySources));
+        }
+        return Column(
+          children: [
+            // Filter/sort controls sit inline: the Browse tab host owns the
+            // app bar, so they can't live in AppBar actions here.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: l10n.migrationFilterObsolete,
+                  icon: const Icon(Icons.new_releases_outlined),
+                  color: obsoleteOnly.value
+                      ? context.theme.colorScheme.error
+                      : null,
+                  onPressed: () => obsoleteOnly.value = !obsoleteOnly.value,
                 ),
+                IconButton(
+                  tooltip: l10n.migrationSortMode,
+                  icon: Icon(sortMode.value == _SortMode.alphabetical
+                      ? Icons.sort_by_alpha
+                      : Icons.numbers),
+                  onPressed: () => sortMode.value =
+                      sortMode.value == _SortMode.alphabetical
+                          ? _SortMode.total
+                          : _SortMode.alphabetical,
+                ),
+                IconButton(
+                  tooltip: l10n.migrationSortDirection,
+                  icon: Icon(ascending.value
+                      ? Icons.arrow_upward
+                      : Icons.arrow_downward),
+                  onPressed: () => ascending.value = !ascending.value,
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: SearchField(
+                autofocus: false,
+                initialText: query.value,
+                hintText: l10n.migrationSearchForSource,
+                onChanged: (v) => query.value = v ?? '',
+                onClose: () => query.value = '',
               ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: groups.length,
-                  itemBuilder: (context, i) {
-                    final g = groups[i];
-                    return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: KBorderRadius.r8.radius,
-                        child: ServerImage(
-                          imageUrl: iconById[g.sourceId] ?? '',
-                          size: const Size.square(40),
-                        ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: groups.length,
+                itemBuilder: (context, i) {
+                  final g = groups[i];
+                  return ListTile(
+                    leading: ClipRRect(
+                      borderRadius: KBorderRadius.r8.radius,
+                      child: ServerImage(
+                        imageUrl: iconById[g.sourceId] ?? '',
+                        size: const Size.square(40),
                       ),
-                      title: Text(g.displayName),
-                      subtitle: g.isObsolete
-                          ? Text(l10n.migrationObsoleteSource,
-                              style: TextStyle(
-                                  color: context.theme.colorScheme.error))
-                          : null,
-                      trailing: _CountBadge(g.count),
-                      onTap: () => MigrationSourceMangaRoute(
-                        $extra: MigrationSourceMangaData(
-                          sourceId: g.sourceId,
-                          sourceName: g.displayName,
-                        ),
-                      ).push(context),
-                    );
-                  },
-                ),
+                    ),
+                    title: Text(g.displayName),
+                    subtitle: g.isObsolete
+                        ? Text(l10n.migrationObsoleteSource,
+                            style: TextStyle(
+                                color: context.theme.colorScheme.error))
+                        : null,
+                    trailing: _CountBadge(g.count),
+                    onTap: () => MigrationSourceMangaRoute(
+                      $extra: MigrationSourceMangaData(
+                        sourceId: g.sourceId,
+                        sourceName: g.displayName,
+                      ),
+                    ).push(context),
+                  );
+                },
               ),
-            ],
-          );
-        },
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -83,6 +83,7 @@ abstract class Routes {
   static const history = 'history';
 
   static const extensionRoute = '/extension';
+  static const migrate = '/migrate';
   static const source = '/source';
   static const sourceFilter = '/source-filter';
   static const sourceManga = ':sourceId';
@@ -187,6 +188,13 @@ GoRouter routerConfig(Ref ref) {
                   routes: [
                     TypedGoRoute<BrowseExtensionRoute>(
                       path: Routes.extensionRoute,
+                    ),
+                  ],
+                ),
+                TypedStatefulShellBranch<BrowseMigrateBranch>(
+                  routes: [
+                    TypedGoRoute<BrowseMigrateRoute>(
+                      path: Routes.migrate,
                     ),
                   ],
                 ),
