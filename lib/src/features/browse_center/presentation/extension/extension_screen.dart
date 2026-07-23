@@ -60,7 +60,12 @@ class ExtensionScreen extends HookConsumerWidget {
     refresh() => ref.refresh(extensionProvider.future);
 
     useEffect(() {
-      if (extensionMapData.isNotLoading) refresh();
+      // Effect bodies run during build; invalidating a provider there throws.
+      if (extensionMapData.isNotLoading) {
+        Future.microtask(() {
+          if (context.mounted) refresh();
+        });
+      }
       return;
     }, []);
 

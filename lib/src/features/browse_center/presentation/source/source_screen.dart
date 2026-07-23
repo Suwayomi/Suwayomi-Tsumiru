@@ -35,7 +35,12 @@ class SourceScreen extends HookConsumerWidget {
 
     refresh() => ref.refresh(sourceListProvider.future);
     useEffect(() {
-      if (sourceMapData.isNotLoading) refresh();
+      // Effect bodies run during build; invalidating a provider there throws.
+      if (sourceMapData.isNotLoading) {
+        Future.microtask(() {
+          if (context.mounted) refresh();
+        });
+      }
       return;
     }, []);
 

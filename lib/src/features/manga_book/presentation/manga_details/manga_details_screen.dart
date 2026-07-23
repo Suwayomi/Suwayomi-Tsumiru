@@ -111,7 +111,12 @@ class MangaDetailsScreen extends HookConsumerWidget {
     }, [context, mangaRefresh, chapterListRefresh]);
 
     useEffect(() {
-      if (filteredChapterList.isNotLoading && manga.isNotLoading) refresh();
+      // Effect bodies run during build; invalidating a provider there throws.
+      if (filteredChapterList.isNotLoading && manga.isNotLoading) {
+        Future.microtask(() {
+          if (context.mounted) refresh();
+        });
+      }
       return;
     }, []);
 
