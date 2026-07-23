@@ -65,7 +65,12 @@ class CategoryMangaList extends HookConsumerWidget {
             : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
     useEffect(() {
-      if (mangaList.isNotLoading) refresh();
+      // Effect bodies run during build; invalidating a provider there throws.
+      if (mangaList.isNotLoading) {
+        Future.microtask(() {
+          if (context.mounted) refresh();
+        });
+      }
       return;
     }, []);
 
