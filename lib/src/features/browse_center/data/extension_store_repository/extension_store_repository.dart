@@ -10,7 +10,9 @@ part 'extension_store_repository.g.dart';
 
 /// Per-client cache of the extension-store capability, keyed by GraphQLClient
 /// so a server switch re-probes (same pattern as the tracker capability cache).
-final Expando<Future<bool>> _storeSupportCache = Expando('extensionStoreSupport');
+final Expando<Future<bool>> _storeSupportCache = Expando(
+  'extensionStoreSupport',
+);
 
 /// true = store-capable, false = pre-store server (both definitive),
 /// null = transient failure (network blip) — must not be memoized, or one bad
@@ -59,15 +61,16 @@ class ExtensionStoreRepository {
   }
 
   Future<({List<ExtensionStore> stores, int totalCount})?>
-      getExtensionStores() => client
-              .query$ExtensionStoreList(
-                Options$Query$ExtensionStoreList(
-                    fetchPolicy: FetchPolicy.networkOnly),
-              )
-              .getData((data) => (
-                    stores: data.extensionStores.nodes.toList(),
-                    totalCount: data.extensionStores.totalCount,
-                  ));
+  getExtensionStores() => client
+      .query$ExtensionStoreList(
+        Options$Query$ExtensionStoreList(fetchPolicy: FetchPolicy.networkOnly),
+      )
+      .getData(
+        (data) => (
+          stores: data.extensionStores.nodes.toList(),
+          totalCount: data.extensionStores.totalCount,
+        ),
+      );
 
   Future<void> addStore(String indexUrl) => client
       .mutate$AddExtensionStore(
@@ -80,8 +83,9 @@ class ExtensionStoreRepository {
   Future<void> removeStore(String indexUrl) => client
       .mutate$RemoveExtensionStore(
         Options$Mutation$RemoveExtensionStore(
-          variables:
-              Variables$Mutation$RemoveExtensionStore(indexUrl: indexUrl),
+          variables: Variables$Mutation$RemoveExtensionStore(
+            indexUrl: indexUrl,
+          ),
         ),
       )
       .getData((data) => null);
@@ -93,17 +97,20 @@ ExtensionStoreRepository extensionStoreRepository(Ref ref) =>
 
 @riverpod
 Future<bool> extensionStoreSupport(Ref ref) {
-  final result =
-      ref.watch(extensionStoreRepositoryProvider).supportsExtensionStores();
+  final result = ref
+      .watch(extensionStoreRepositoryProvider)
+      .supportsExtensionStores();
   ref.keepAlive();
   return result;
 }
 
 @riverpod
 Future<({List<ExtensionStore> stores, int totalCount})?> extensionStoreList(
-    Ref ref) {
-  final result =
-      ref.watch(extensionStoreRepositoryProvider).getExtensionStores();
+  Ref ref,
+) {
+  final result = ref
+      .watch(extensionStoreRepositoryProvider)
+      .getExtensionStores();
   ref.keepAlive();
   return result;
 }
