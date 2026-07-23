@@ -12,6 +12,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../browse_center/data/extension_store_repository/extension_store_repository.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import 'data/browse_settings_repository.dart';
@@ -26,6 +27,11 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final serverSettings = ref.watch(settingsProvider);
     final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
+    final storeCapable =
+        ref.watch(extensionStoreSupportProvider).value ?? false;
+    final storeCount = storeCapable
+        ? ref.watch(extensionStoreListProvider).value?.totalCount
+        : null;
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.browse)),
       body: RefreshIndicator(
@@ -79,17 +85,33 @@ class BrowseSettingsScreen extends ConsumerWidget {
                   description: context.l10n.localSourceLocationDescription,
                   subtitle: browseSettings?.localSourcePath,
                 ),
-                ListTile(
-                  leading: const Icon(Icons.extension_rounded),
-                  title: Text(context.l10n.extensionRepository),
-                  subtitle: Text(
-                    (browseSettings?.extensionRepos).isBlank
-                        ? context.l10n.extensionRepositoryDescription
-                        : context.l10n.nRepo(
-                            (browseSettings?.extensionRepos.length).ifNull(0)),
+                if (storeCapable)
+                  ListTile(
+                    leading: const Icon(Icons.extension_rounded),
+                    title: Text(context.l10n.extensionStores),
+                    subtitle: Text(
+                      storeCount == null
+                          ? context.l10n.extensionRepositoryDescription
+                          : context.l10n.nStores(storeCount),
+                    ),
+                    onTap: () => const ExtensionStoreRoute().go(context),
+                  )
+                else
+                  ListTile(
+                    leading: const Icon(Icons.extension_rounded),
+                    title: Text(context.l10n.extensionRepository),
+                    subtitle: Text(
+                      // #138: legacy field, kept until a min server version is enforced.
+                      // ignore: deprecated_member_use_from_same_package
+                      (browseSettings?.extensionRepos).isBlank
+                          ? context.l10n.extensionRepositoryDescription
+                          : context.l10n.nRepo(
+                              // ignore: deprecated_member_use_from_same_package
+                              (browseSettings?.extensionRepos.length)
+                                  .ifNull(0)),
+                    ),
+                    onTap: () => const ExtensionRepositoryRoute().go(context),
                   ),
-                  onTap: () => const ExtensionRepositoryRoute().go(context),
-                ),
               ],
             ],
           ),

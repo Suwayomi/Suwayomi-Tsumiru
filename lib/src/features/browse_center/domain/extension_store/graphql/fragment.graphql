@@ -1,0 +1,6 @@
+fragment ExtensionStoreDto on ExtensionStoreType {
+  indexUrl
+  name
+  contactWebsite
+  contactDiscord
+}

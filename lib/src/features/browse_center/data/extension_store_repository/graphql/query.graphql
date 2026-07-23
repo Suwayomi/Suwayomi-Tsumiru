@@ -1,0 +1,24 @@
+query ExtensionStoreList {
+  extensionStores {
+    nodes {
+      ...ExtensionStoreDto
+    }
+    totalCount
+  }
+}
+
+mutation AddExtensionStore($indexUrl: String!) {
+  addExtensionStore(input: {indexUrl: $indexUrl}) {
+    extensionStore {
+      ...ExtensionStoreDto
+    }
+  }
+}
+
+mutation RemoveExtensionStore($indexUrl: String!) {
+  removeExtensionStore(input: {indexUrl: $indexUrl}) {
+    extensionStore {
+      ...ExtensionStoreDto
+    }
+  }
+}

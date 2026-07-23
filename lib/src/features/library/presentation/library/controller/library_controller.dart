@@ -103,6 +103,8 @@ List<MangaDto> applyLibraryFilterSort(
       return false;
     }
     if (mangaFilterLewd != null &&
+        // #138: legacy field, kept until a min server version is enforced.
+        // ignore: deprecated_member_use_from_same_package
         (mangaFilterLewd ^ (manga.source?.isNsfw ?? false))) {
       return false;
     }

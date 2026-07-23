@@ -2921,5 +2921,58 @@
     "hotkeyReaderToggleMenu": "Toggle menu",
     "@hotkeyReaderToggleMenu": {
         "description": "Reader hotkey action"
+    },
+    "extensionStores": "Extension stores",
+    "@extensionStores": {
+        "description": "Screen title for the Extension stores screen"
+    },
+    "addExtensionStore": "Add extension store",
+    "@addExtensionStore": {
+        "description": "Title of the dialog used to add an extension store"
+    },
+    "storeIndexUrl": "Store index URL",
+    "@storeIndexUrl": {
+        "description": "Label for the index URL field in the Add extension store dialog"
+    },
+    "extensionStoreAlreadyExists": "This extension store already exists",
+    "@extensionStoreAlreadyExists": {
+        "description": "Validation error shown when the entered store URL is already in the list"
+    },
+    "processing": "Processing…",
+    "@processing": {
+        "description": "Button label shown while an extension store is being added"
+    },
+    "removeExtensionStore": "Remove extension store",
+    "@removeExtensionStore": {
+        "description": "Title of the confirmation dialog for removing an extension store"
+    },
+    "removeExtensionStoreBody": "Do you wish to remove the extension store \"{name}\" ({url})?",
+    "@removeExtensionStoreBody": {
+        "description": "Body of the confirmation dialog for removing an extension store",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            },
+            "url": {
+                "type": "String"
+            }
+        }
+    },
+    "extensionStoresEmpty": "You haven't added an extension store yet",
+    "@extensionStoresEmpty": {
+        "description": "Empty state text on the Extension stores screen"
+    },
+    "nStores": "{count, plural, =1{1 store} other{{count} stores}}",
+    "@nStores": {
+        "description": "Text to show n extension stores as subtitle",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "add": "Add",
+    "@add": {
+        "description": "Generic button text for Add"
     }
 }

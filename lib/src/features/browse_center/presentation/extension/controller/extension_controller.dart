@@ -32,6 +32,8 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   final extensionList = [...?extensionListData.value];
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
   for (final e in extensionList) {
+    // #138: legacy field, kept until a min server version is enforced.
+    // ignore: deprecated_member_use_from_same_package
     if (!showNsfw && (e.isNsfw.ifNull())) continue;
     if (e.isInstalled.ifNull()) {
       if (e.hasUpdate.ifNull()) {

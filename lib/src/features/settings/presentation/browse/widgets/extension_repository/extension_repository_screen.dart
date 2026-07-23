@@ -18,6 +18,8 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final List<String> repoList = [
+      // #138: legacy field, kept until a min server version is enforced.
+      // ignore: deprecated_member_use_from_same_package
       ...?serverSettings.value?.extensionRepos
     ];
     onRefresh() => ref.refresh(settingsProvider.future);
@@ -34,13 +36,14 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
             ),
           );
           if (newUrl.isNotBlank && newUrl.isUrl) {
-            final result = await AppUtils.guard(
-              () => repository.updateExtensionRepos({...repoList, newUrl!}),
+            await AppUtils.guard(
+              () async {
+                await repository.updateExtensionRepos({...repoList, newUrl!});
+                // ignore: unused_result
+                ref.refresh(settingsProvider.future);
+              },
               ref.read(toastProvider),
             );
-            if (result != null && context.mounted) {
-              ref.read(settingsProvider.notifier).updateState(result);
-            }
           } else if (context.mounted) {
             ref.read(toastProvider)?.showError(
                 context.l10n.invalidProp(context.l10n.extensionRepository));
@@ -83,15 +86,15 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
                             icon: const Icon(Icons.delete_rounded),
                             onPressed: () async {
                               final newList = {...repoList}..remove(repo);
-                              final result = await AppUtils.guard(
-                                  () =>
-                                      repository.updateExtensionRepos(newList),
-                                  ref.read(toastProvider));
-                              if (result != null && context.mounted) {
-                                ref
-                                    .read(settingsProvider.notifier)
-                                    .updateState(result);
-                              }
+                              await AppUtils.guard(
+                                () async {
+                                  await repository
+                                      .updateExtensionRepos(newList);
+                                  // ignore: unused_result
+                                  ref.refresh(settingsProvider.future);
+                                },
+                                ref.read(toastProvider),
+                              );
                             },
                           ),
                         ],

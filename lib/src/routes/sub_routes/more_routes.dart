@@ -74,6 +74,13 @@ class ExtensionRepositoryRoute extends GoRouteData with $ExtensionRepositoryRout
   Widget build(context, state) => const ExtensionRepositoryScreen();
 }
 
+class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
+  const ExtensionStoreRoute();
+
+  @override
+  Widget build(context, state) => const ExtensionStoreScreen();
+}
+
 class BackupRoute extends GoRouteData with $BackupRoute {
   const BackupRoute();
   @override

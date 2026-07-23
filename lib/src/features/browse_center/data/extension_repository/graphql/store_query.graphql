@@ -1,0 +1,9 @@
+
+mutation FetchExtensionListStore {
+  fetchExtensions(input: {}) {
+    clientMutationId
+    extensions {
+      ...StoreExtensionDto
+    }
+  }
+}

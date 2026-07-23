@@ -15,11 +15,3 @@ mutation UpdateLocalSourcePath($localSourcePath: String!) {
     }
   }
 }
-
-mutation UpdateExtensionRepos($extensionRepos: [String!]!) {
-  setSettings(input: {settings: {extensionRepos: $extensionRepos}}) {
-    settings {
-      ...SettingsDto
-    }
-  }
-}

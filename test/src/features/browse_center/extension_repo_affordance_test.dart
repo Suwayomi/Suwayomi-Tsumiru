@@ -7,10 +7,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:tsumiru/src/features/browse_center/data/extension_store_repository/extension_store_repository.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/browse/browse_screen.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
+// This test covers the gate-off case; the gated states live in
+// extension_store_gate_test.dart.
 Widget _harness(int currentIndex) => ProviderScope(
+      overrides: [
+        extensionStoreSupportProvider.overrideWith((ref) async => false),
+      ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
