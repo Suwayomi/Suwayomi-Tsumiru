@@ -28,7 +28,7 @@ class BrowseScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tabController =
-        useTabController(initialLength: 2, initialIndex: currentIndex);
+        useTabController(initialLength: 3, initialIndex: currentIndex);
 
     useEffect(() {
       if (currentIndex != tabController.index) {
@@ -69,15 +69,17 @@ class BrowseScreen extends HookConsumerWidget {
             ),
             const InstallExtensionFile(),
           ],
-          IconButton(
-            onPressed: () => showDialog(
-              context: context,
-              builder: (context) => tabController.index == 0
-                  ? const SourceLanguageFilter()
-                  : const ExtensionLanguageFilterDialog(),
+          // Language filter applies to Sources/Extensions only, not Migrate.
+          if (tabController.index != 2)
+            IconButton(
+              onPressed: () => showDialog(
+                context: context,
+                builder: (context) => tabController.index == 0
+                    ? const SourceLanguageFilter()
+                    : const ExtensionLanguageFilterDialog(),
+              ),
+              icon: const Icon(Icons.translate_rounded),
             ),
-            icon: const Icon(Icons.translate_rounded),
-          ),
         ],
         bottom: TabBar(
           dividerColor: Colors.transparent,
@@ -86,6 +88,7 @@ class BrowseScreen extends HookConsumerWidget {
           tabs: [
             Tab(text: context.l10n.sources),
             Tab(text: context.l10n.extensions),
+            Tab(text: context.l10n.migrate),
           ],
         ),
       ),

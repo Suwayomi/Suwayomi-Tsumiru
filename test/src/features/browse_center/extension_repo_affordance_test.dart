@@ -20,6 +20,7 @@ Widget _harness(int currentIndex) => ProviderScope(
           children: const [
             Center(child: Text('sources')),
             Center(child: Text('extensions')),
+            Center(child: Text('migrate')),
           ],
         ),
       ),
@@ -36,5 +37,13 @@ void main() {
     await tester.pumpWidget(_harness(0));
     await tester.pump();
     expect(find.byTooltip('Extension Repository'), findsNothing);
+  });
+
+  testWidgets('Migrate tab shows neither repo nor language affordance',
+      (tester) async {
+    await tester.pumpWidget(_harness(2));
+    await tester.pump();
+    expect(find.byTooltip('Extension Repository'), findsNothing);
+    expect(find.byIcon(Icons.translate_rounded), findsNothing);
   });
 }

@@ -53,6 +53,18 @@ class BrowseSourceRoute extends GoRouteData with $BrowseSourceRoute {
   Widget build(context, state) => const SourceScreen();
 }
 
+class BrowseMigrateBranch extends StatefulShellBranchData {
+  const BrowseMigrateBranch();
+  static final $initialLocation = const BrowseMigrateRoute().location;
+}
+
+class BrowseMigrateRoute extends GoRouteData with $BrowseMigrateRoute {
+  const BrowseMigrateRoute();
+
+  @override
+  Widget build(context, state) => const MigrationSourcePickerBody();
+}
+
 class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
   const SourceTypeRoute({
     required this.sourceId,
