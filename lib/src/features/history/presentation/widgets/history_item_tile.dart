@@ -192,7 +192,7 @@ class HistoryItemTile extends ConsumerWidget {
     ref.read(mangaChapterFilterUnreadProvider);
     ref.read(mangaChapterFilterDownloadedProvider);
     ref.read(mangaChapterFilterBookmarkedProvider);
-    ref.read(mangaChapterFilterScanlatorProvider(mangaId: item.mangaId));
+    ref.read(mangaPreferredScanlatorsProvider(mangaId: item.mangaId));
   }
 
   void _navigateToReader(BuildContext context, WidgetRef ref) {

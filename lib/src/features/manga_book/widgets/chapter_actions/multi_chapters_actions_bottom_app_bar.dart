@@ -18,6 +18,7 @@ import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
+import '../../presentation/manga_details/controller/scanlator_propagation.dart';
 import 'multi_chapters_action_icon.dart';
 
 class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
@@ -76,7 +77,8 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
         MultiChaptersActionIcon(
           iconData: Icons.remove_done_rounded,
           chapters: selectedChapterDtos,
-          change: ChapterChange(isRead: false),
+          // Stale progress on "unread" would still count as in-progress.
+          change: ChapterChange(isRead: false, lastPageRead: 0),
           refresh: refresh,
         ),
         IconButton(
@@ -149,16 +151,31 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   false;
               if (!ok) return;
             }
+            // Delete expands to every scanlator duplicate, grouped per manga.
+            final deleteIds = <int>[
+              for (final entry
+                  in {for (final c in selectedChapterDtos) c.mangaId: true}
+                      .keys)
+                ...expandIdsAcrossScanlators(
+                  ref,
+                  mangaId: entry,
+                  chapterIds: [
+                    for (final c in selectedChapterDtos)
+                      if (c.mangaId == entry) c.id,
+                  ],
+                ),
+            ];
             final result = await AsyncValue.guard(
               () => ref
                   .read(mangaBookRepositoryProvider)
-                  .deleteChapters(selectedChapterList),
+                  .deleteChapters(deleteIds),
             );
             if (context.mounted) {
               result.showToastOnError(ref.read(toastProvider));
             }
             if (!result.hasError) {
-              await cascadeServerDeleteToDevice(ref, selectedChapterList);
+              // Same expanded set (device ⊆ server).
+              await cascadeServerDeleteToDevice(ref, deleteIds);
             }
             await refresh(true);
           },

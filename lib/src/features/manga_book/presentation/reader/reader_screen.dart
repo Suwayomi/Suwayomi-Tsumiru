@@ -20,7 +20,6 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../offline/data/offline_download_providers.dart';
-import '../../../offline/data/offline_repository.dart';
 import '../../../settings/presentation/general/widgets/force_portrait_tile.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
@@ -30,7 +29,6 @@ import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
-import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import 'controller/auto_webtoon.dart';
@@ -64,10 +62,6 @@ class ReaderScreen extends HookConsumerWidget {
     final ignoreSafeArea = ref.watch(readerIgnoreSafeAreaProvider).ifNull();
     final providerContainer = ProviderScope.containerOf(context, listen: false);
     final incognitoMode = ref.watch(incognitoModeProvider);
-    final offlineEnabled = ref.watch(offlineEnabledProvider);
-    final offlineDatabase =
-        offlineEnabled ? ref.watch(offlineDatabaseProvider) : null;
-    final mangaBookRepository = ref.watch(mangaBookRepositoryProvider);
 
     // Auto reading mode: a Default-mode long-strip series (manhwa/manhua/
     // webtoon) opens in webtoon scroll THIS session; never written to meta.
@@ -133,10 +127,9 @@ class ReaderScreen extends HookConsumerWidget {
 
       // Persist locally first (survives offline + app restart), then push to
       // the server; if offline it stays pending and up-syncs on reconnect.
-      final progressResult = await recordReadingProgressWithDependencies(
-        offlineEnabled: offlineEnabled,
-        offlineDatabase: offlineDatabase,
-        repository: mangaBookRepository,
+      final progressResult = await recordReadingProgress(
+        ref,
+        mangaId: mangaId,
         chapterId: chapterValue.id,
         lastPageRead: isReadingCompleted ? 0 : currentPage,
         isRead: isReadingCompleted,
@@ -175,9 +168,6 @@ class ReaderScreen extends HookConsumerWidget {
       chapter.value,
       chapterPages.value,
       incognitoMode,
-      offlineEnabled,
-      offlineDatabase,
-      mangaBookRepository,
       providerContainer,
     ]);
 

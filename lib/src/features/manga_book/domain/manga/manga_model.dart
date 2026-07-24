@@ -85,6 +85,11 @@ abstract class MangaMeta with _$MangaMeta {
     int? rating,
     @JsonKey(name: "flutter_tags", fromJson: MangaMeta.fromJsonToStringList)
     List<String>? userTags,
+    @JsonKey(
+      name: "flutter_preferredScanlators",
+      fromJson: MangaMeta.fromJsonToStringList,
+    )
+    List<String>? preferredScanlators,
   }) = _MangaMeta;
 
   static bool? fromJsonToBool(dynamic val) => val != null && val is String
@@ -126,6 +131,7 @@ enum MangaMetaKeys {
   chapterListMode("flutter_chapterListMode"),
   rating("flutter_rating"),
   tags("flutter_tags"),
+  preferredScanlators("flutter_preferredScanlators"),
   ;
 
   const MangaMetaKeys(this.key);

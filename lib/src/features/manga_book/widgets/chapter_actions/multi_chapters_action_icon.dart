@@ -18,6 +18,7 @@ import '../../../tracking/domain/track_progress_gate.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
+import '../../presentation/manga_details/controller/scanlator_propagation.dart';
 
 class MultiChaptersActionIcon extends ConsumerWidget {
   const MultiChaptersActionIcon({
@@ -45,6 +46,23 @@ class MultiChaptersActionIcon extends ConsumerWidget {
       icon: icon ?? Icon(iconData),
       onPressed: () async {
         final ids = [for (final c in chapters) c.id];
+        // Read/unread expands to every scanlator duplicate; other patches
+        // stay per-copy.
+        final expandedByManga = <int, List<int>>{
+          if (change.isRead != null)
+            for (final mangaId in {for (final c in chapters) c.mangaId})
+              mangaId: expandIdsAcrossScanlators(
+                ref,
+                mangaId: mangaId,
+                chapterIds: [
+                  for (final c in chapters)
+                    if (c.mangaId == mangaId) c.id,
+                ],
+              ),
+        };
+        final idsForWrite = change.isRead == null
+            ? ids
+            : [for (final l in expandedByManga.values) ...l];
         final bool ok;
         if (change.isRead != null) {
           // Read/unread goes through the offline-aware write-through path: the
@@ -54,9 +72,11 @@ class MultiChaptersActionIcon extends ConsumerWidget {
           // no local fallback.
           ok = await recordReadState(
             ref,
-            chapterIds: ids,
+            chapterIds: idsForWrite,
             isRead: change.isRead!,
-            resetPosition: change.lastPageRead == 0 && change.isRead == true,
+            // Also true on mark-unread — stale progress there still reads
+            // as in-progress.
+            resetPosition: change.lastPageRead == 0,
           );
           if (!ok && context.mounted && !ref.read(offlineActiveProvider)) {
             ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
@@ -64,7 +84,7 @@ class MultiChaptersActionIcon extends ConsumerWidget {
         } else {
           final result = await AsyncValue.guard(
             () => ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
-                  ChapterBatch(ids: ids, patch: change),
+                  ChapterBatch(ids: idsForWrite, patch: change),
                 ),
           );
           if (context.mounted) {
@@ -85,10 +105,13 @@ class MultiChaptersActionIcon extends ConsumerWidget {
               manual: true,
             ));
           }
-          for (final c in chapters) {
-            unawaited(maybeDeleteOnManualLocal(ref, chapterId: c.id));
-            unawaited(maybeDeleteOnManualServer(ref,
-                mangaId: c.mangaId, chapterId: c.id));
+          // Expanded set: hidden duplicates get delete-on-manual-read too.
+          for (final entry in expandedByManga.entries) {
+            for (final id in entry.value) {
+              unawaited(maybeDeleteOnManualLocal(ref, chapterId: id));
+              unawaited(maybeDeleteOnManualServer(ref,
+                  mangaId: entry.key, chapterId: id));
+            }
           }
         }
         await refresh(true);

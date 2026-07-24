@@ -242,6 +242,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       }
       final progressResult = await recordReadingProgress(
         ref,
+        mangaId: manga.id,
         chapterId: chapterId,
         lastPageRead: completed ? 0 : rel,
         isRead: completed,
@@ -1171,6 +1172,7 @@ void _markChapterRead(
   // silently lost.
   unawaited(recordReadingProgress(
     ref,
+    mangaId: mangaId,
     chapterId: chapter.id,
     lastPageRead: 0,
     isRead: true,
