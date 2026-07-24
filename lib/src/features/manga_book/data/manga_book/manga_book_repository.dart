@@ -259,6 +259,23 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchChapters?.chapters);
 
+  /// Scrapes the source for metadata + chapters together; on Tachiyomix 1.6+
+  /// servers the chapters-only fetch stopped populating metadata as a side
+  /// effect.
+  Future<List<ChapterDto>?> getMangaAndChapterList(int mangaId) async => client
+      .mutate$GetMangaAndChaptersByMangaId(
+        Options$Mutation$GetMangaAndChaptersByMangaId(
+          variables: Variables$Mutation$GetMangaAndChaptersByMangaId(
+            input: Input$FetchMangaAndChaptersInput(
+              id: mangaId,
+              fetchManga: true,
+              fetchChapters: true,
+            ),
+          ),
+        ),
+      )
+      .getData((data) => data.fetchMangaAndChapters?.chapters);
+
   /// Reads the chapters the server already has STORED for this entry, without
   /// touching the source. Works whenever the server is reachable, even if the
   /// source is down — this is what the WebUI shows.

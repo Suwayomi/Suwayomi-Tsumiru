@@ -120,6 +120,14 @@ mutation GetChaptersByMangaId($input: FetchChaptersInput!) {
   }
 }
 
+mutation GetMangaAndChaptersByMangaId($input: FetchMangaAndChaptersInput!) {
+  fetchMangaAndChapters(input: $input) {
+    chapters {
+      ...ChapterDto
+    }
+  }
+}
+
 query GetMangaCategories($id: Int!) {
   manga(id: $id) {
     categories {

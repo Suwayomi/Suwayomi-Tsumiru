@@ -62,9 +62,8 @@ class MangaChapterList extends _$MangaChapterList {
     final repo = ref.watch(mangaBookRepositoryProvider);
     final refreshFromSource =
         ref.watch(refreshChaptersFromSourceProvider).ifNull();
-    // Tracks whether we actually scraped the source on this open. A source
-    // scrape (getChapterList) also populates the manga's description/metadata
-    // server-side, so afterwards we refresh MangaWithId to pick it up (#363).
+    // getMangaAndChapterList also refreshes metadata server-side; track it so
+    // we know to refresh MangaWithId too (#363).
     var didSourceFetch = false;
     // Read before the await: touching ref after the async gap throws if this
     // provider was disposed mid-build.
@@ -79,7 +78,7 @@ class MangaChapterList extends _$MangaChapterList {
           return stored;
         }
         try {
-          final fetched = await repo.getChapterList(mangaId);
+          final fetched = await repo.getMangaAndChapterList(mangaId);
           if (fetched != null && fetched.isNotEmpty) {
             didSourceFetch = true;
             return fetched;
@@ -100,12 +99,9 @@ class MangaChapterList extends _$MangaChapterList {
           .then((_) => reconcileManga(ref, mangaId)));
     }
     if (didSourceFetch) {
-      // The source scrape above also populated this manga's description and
-      // metadata server-side, but MangaWithId loaded BEFORE that with an empty
-      // description (the client never calls fetchManga). Refresh it so the
-      // details screen shows the metadata on first open instead of only after a
-      // manual refresh (#363). Deferred past this build so we don't invalidate a
-      // provider mid-build.
+      // MangaWithId loaded before the scrape refreshed metadata; refresh it so
+      // the synopsis shows on first open (#363). Deferred to avoid invalidating
+      // mid-build.
       Future.microtask(() {
         if (ref.mounted) ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
       });
@@ -125,6 +121,7 @@ class MangaChapterList extends _$MangaChapterList {
         onlineFetch || ref.read(refreshChaptersFromSourceProvider).ifNull();
     // offlineDatabaseProvider throws on web; only touch it when offline is on.
     final offlineDb = ref.read(offlineReadDatabaseProvider);
+    var didSourceFetch = false;
     // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
     // refresh while the device is offline serves the on-device catalog instead
     // of erroring/clearing the list.
@@ -135,8 +132,11 @@ class MangaChapterList extends _$MangaChapterList {
               return stored;
             }
             try {
-              final fetched = await repo.getChapterList(mangaId);
-              if (fetched != null && fetched.isNotEmpty) return fetched;
+              final fetched = await repo.getMangaAndChapterList(mangaId);
+              if (fetched != null && fetched.isNotEmpty) {
+                didSourceFetch = true;
+                return fetched;
+              }
             } catch (_) {
               // Source down / gone — fall back to stored instead of clearing.
             }
@@ -147,6 +147,11 @@ class MangaChapterList extends _$MangaChapterList {
           mangaId: mangaId,
         ));
     if (ref.mounted) ref.keepAlive();
+    // The scrape refreshes metadata too; pick it up so pull-to-refresh
+    // updates the synopsis, not just the chapter list.
+    if (didSourceFetch && ref.mounted) {
+      ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    }
     // On a refresh failure keep the current chapters visible instead of
     // overwriting the list with an errored state (drops the internal
     // copyWithPrevious API the analyzer flagged).
