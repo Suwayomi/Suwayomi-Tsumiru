@@ -77,7 +77,8 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
         MultiChaptersActionIcon(
           iconData: Icons.remove_done_rounded,
           chapters: selectedChapterDtos,
-          change: ChapterChange(isRead: false),
+          // Stale progress on "unread" would still count as in-progress.
+          change: ChapterChange(isRead: false, lastPageRead: 0),
           refresh: refresh,
         ),
         IconButton(

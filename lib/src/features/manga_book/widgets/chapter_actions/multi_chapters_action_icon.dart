@@ -74,7 +74,9 @@ class MultiChaptersActionIcon extends ConsumerWidget {
             ref,
             chapterIds: idsForWrite,
             isRead: change.isRead!,
-            resetPosition: change.lastPageRead == 0 && change.isRead == true,
+            // Also true on mark-unread — stale progress there still reads
+            // as in-progress.
+            resetPosition: change.lastPageRead == 0,
           );
           if (!ok && context.mounted && !ref.read(offlineActiveProvider)) {
             ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
