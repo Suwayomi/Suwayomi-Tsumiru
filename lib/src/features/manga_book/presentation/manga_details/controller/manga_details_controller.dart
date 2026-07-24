@@ -62,9 +62,8 @@ class MangaChapterList extends _$MangaChapterList {
     final repo = ref.watch(mangaBookRepositoryProvider);
     final refreshFromSource =
         ref.watch(refreshChaptersFromSourceProvider).ifNull();
-    // Tracks whether we actually scraped the source on this open. The scrape
-    // (getMangaAndChapterList) also populates the manga's description/metadata
-    // server-side, so afterwards we refresh MangaWithId to pick it up (#363).
+    // getMangaAndChapterList also refreshes metadata server-side; track it so
+    // we know to refresh MangaWithId too (#363).
     var didSourceFetch = false;
     // Read before the await: touching ref after the async gap throws if this
     // provider was disposed mid-build.
@@ -100,12 +99,9 @@ class MangaChapterList extends _$MangaChapterList {
           .then((_) => reconcileManga(ref, mangaId)));
     }
     if (didSourceFetch) {
-      // The source scrape above also populated this manga's description and
-      // metadata server-side, but MangaWithId loaded BEFORE that with an empty
-      // description (the client never calls fetchManga). Refresh it so the
-      // details screen shows the metadata on first open instead of only after a
-      // manual refresh (#363). Deferred past this build so we don't invalidate a
-      // provider mid-build.
+      // MangaWithId loaded before the scrape refreshed metadata; refresh it so
+      // the synopsis shows on first open (#363). Deferred to avoid invalidating
+      // mid-build.
       Future.microtask(() {
         if (ref.mounted) ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
       });
@@ -151,8 +147,8 @@ class MangaChapterList extends _$MangaChapterList {
           mangaId: mangaId,
         ));
     if (ref.mounted) ref.keepAlive();
-    // The scrape refreshed metadata server-side too; pick it up so pull-to-
-    // refresh updates the synopsis, not just the chapter list.
+    // The scrape refreshes metadata too; pick it up so pull-to-refresh
+    // updates the synopsis, not just the chapter list.
     if (didSourceFetch && ref.mounted) {
       ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
     }
