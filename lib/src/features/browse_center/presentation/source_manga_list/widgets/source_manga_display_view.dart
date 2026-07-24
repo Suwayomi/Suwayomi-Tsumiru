@@ -13,6 +13,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/selection_action_bar.dart';
+import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -69,11 +70,11 @@ class SourceMangaDisplayView extends HookConsumerWidget {
         }
       }
       controller.itemList = items;
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Added ${ids.length} to library'),
-        ));
-      }
+      if (!context.mounted) return;
+      ref.invalidate(libraryMangaListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Added ${ids.length} to library'),
+      ));
     }
 
     final display = switch (displayMode) {
