@@ -49,7 +49,7 @@ fragment MangaDto on MangaType {
   }
   trackRecords {
     totalCount
-    nodes { id trackerId status score }
+    nodes { id trackerId remoteId status score }
   }
   unreadCount
   updateStrategy
