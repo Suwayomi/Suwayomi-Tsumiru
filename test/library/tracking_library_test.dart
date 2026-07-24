@@ -27,6 +27,7 @@ Fragment$MangaDto$trackRecords$nodes _trackNode({
       trackerId: trackerId,
       status: status,
       score: score,
+      remoteId: '',
     );
 
 Fragment$MangaDto$trackRecords _trks(

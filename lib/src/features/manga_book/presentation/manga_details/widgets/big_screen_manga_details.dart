@@ -20,6 +20,7 @@ import 'chapter_grid_tile.dart';
 import 'chapter_list_mode_toggle.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
+import 'recommends_row.dart';
 
 class BigScreenMangaDetails extends ConsumerWidget {
   const BigScreenMangaDetails({
@@ -49,13 +50,20 @@ class BigScreenMangaDetails extends ConsumerWidget {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: MangaDescription(
-                manga: manga,
-                removeMangaFromLibrary: (() =>
-                    removeMangaFromLibraryAndPurge(ref, mangaId)),
-                addMangaToLibrary: (() =>
-                    addMangaToLibraryWithCategory(ref, context, mangaId)),
-                refresh: () => onDescriptionRefresh(false),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MangaDescription(
+                    manga: manga,
+                    removeMangaFromLibrary: (() =>
+                        removeMangaFromLibraryAndPurge(ref, mangaId)),
+                    addMangaToLibrary: (() =>
+                        addMangaToLibraryWithCategory(ref, context, mangaId)),
+                    refresh: () => onDescriptionRefresh(false),
+                  ),
+                  if (manga.title.isNotBlank)
+                    RecommendsRow(mangaId: mangaId, mangaTitle: manga.title),
+                ],
               ),
             ),
           ),

@@ -11,46 +11,74 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../controller/manga_details_controller.dart';
 import 'tag_actions_menu.dart';
 
-/// The user's own tags for a manga: deletable chips (styled distinctly from the
-/// source genre chips) plus an "add tag" affordance.
+Future<void> _showAddTagDialog(
+    BuildContext context, WidgetRef ref, int mangaId) async {
+  final controller = TextEditingController();
+  final tag = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(context.l10n.addTag),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(hintText: context.l10n.addTag),
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, controller.text),
+          child: Text(context.l10n.ok),
+        ),
+      ],
+    ),
+  );
+  if (tag != null && tag.trim().isNotEmpty) {
+    await ref.read(mangaUserTagsProvider(mangaId: mangaId).notifier).add(tag);
+  }
+}
+
+/// A compact "+" chip that opens the add-tag dialog. Sits at the front of the
+/// genre chips so adding a tag reads as part of the tag list, not a stray button.
+class AddUserTagChip extends ConsumerWidget {
+  const AddUserTagChip({super.key, required this.mangaId});
+
+  final int mangaId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = context.theme.colorScheme;
+    return GestureDetector(
+      onTap: () => _showAddTagDialog(context, ref, mangaId),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: cs.primary.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: cs.primary.withValues(alpha: 0.45)),
+        ),
+        child: Icon(Icons.add_rounded, size: 16, color: cs.primary),
+      ),
+    );
+  }
+}
+
+/// The user's own tags for a manga: deletable chips styled distinctly from the
+/// source genre chips. Hidden entirely when there are none — the add affordance
+/// lives inline with the genre chips as [AddUserTagChip].
 class MangaUserTagsRow extends ConsumerWidget {
   const MangaUserTagsRow({super.key, required this.mangaId});
 
   final int mangaId;
 
-  Future<void> _addTag(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final tag = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.addTag),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(hintText: context.l10n.addTag),
-          onSubmitted: (value) => Navigator.pop(context, value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(context.l10n.ok),
-          ),
-        ],
-      ),
-    );
-    if (tag != null && tag.trim().isNotEmpty) {
-      await ref.read(mangaUserTagsProvider(mangaId: mangaId).notifier).add(tag);
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tags = ref.watch(mangaUserTagsProvider(mangaId: mangaId));
+    if (tags.isEmpty) return const SizedBox.shrink();
     final notifier = ref.read(mangaUserTagsProvider(mangaId: mangaId).notifier);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -75,13 +103,6 @@ class MangaUserTagsRow extends ConsumerWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
-          ActionChip(
-            avatar: const Icon(Icons.add_rounded, size: 16),
-            label: Text(context.l10n.addTag),
-            onPressed: () => _addTag(context, ref),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
         ],
       ),
     );

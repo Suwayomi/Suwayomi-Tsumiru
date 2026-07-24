@@ -15,6 +15,7 @@ import 'widgets/app_theme_selector/app_theme_providers.dart';
 import 'widgets/app_theme_selector/app_theme_selector.dart';
 import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import 'widgets/is_true_black/is_true_black_tile.dart';
+import 'widgets/show_recommendations/show_recommendations_tile.dart';
 
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
@@ -39,6 +40,8 @@ class AppearanceScreen extends ConsumerWidget {
             },
           ),
           const GridCoverWidthSlider(),
+          const ShowRecommendationsTile(),
+          const RecommendsInOverflowTile(),
         ],
       ),
     );

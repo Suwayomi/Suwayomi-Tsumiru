@@ -11,6 +11,26 @@ class MangaRoute extends GoRouteData with $MangaRoute {
       MangaDetailsScreen(mangaId: mangaId, categoryId: categoryId);
 }
 
+class RecommendsRoute extends GoRouteData with $RecommendsRoute {
+  const RecommendsRoute({required this.mangaId, this.mangaTitle});
+  final int mangaId;
+  final String? mangaTitle;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      RecommendsScreen(mangaId: mangaId, mangaTitle: mangaTitle);
+}
+
+class RecommendsBrowseRoute extends GoRouteData with $RecommendsBrowseRoute {
+  const RecommendsBrowseRoute({required this.mangaId, required this.providerName});
+  final int mangaId;
+  final String providerName;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      RecommendsBrowseScreen(mangaId: mangaId, providerName: providerName);
+}
+
 class UpdateStatusRoute extends GoRouteData with $UpdateStatusRoute {
   const UpdateStatusRoute();
   @override

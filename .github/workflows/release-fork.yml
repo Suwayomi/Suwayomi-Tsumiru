@@ -128,6 +128,14 @@ jobs:
             echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
           } > key.properties
 
+      # Patch the empty MAL client-id default with the repo secret before any
+      # build so every platform (incl. fastforge/flatpak, which call flutter
+      # build internally) compiles it in — no per-tool --dart-define needed.
+      - name: Inject MyAnimeList client id
+        run: |
+          sed -i "s|defaultValue: '',|defaultValue: '${{ secrets.MAL_CLIENT_ID }}',|" \
+            lib/src/features/manga_book/data/recommendations/providers/myanimelist_provider.dart
+
       # ---- builds ----
       - name: Build Android
         if: matrix.target == 'android'
