@@ -20,6 +20,7 @@ import '../data/manga_book/manga_book_repository.dart';
 import '../domain/chapter/chapter_model.dart';
 import '../domain/downloads/downloads_model.dart';
 import '../presentation/downloads/controller/downloads_controller.dart';
+import '../presentation/manga_details/controller/scanlator_propagation.dart';
 
 class DownloadStatusIcon extends HookConsumerWidget {
   const DownloadStatusIcon({
@@ -110,14 +111,17 @@ class DownloadStatusIcon extends HookConsumerWidget {
             // Cloud = the SERVER copy; solid indigo = "you have it".
             icon: brandGradientIcon(context, Icons.cloud_done_rounded),
             onPressed: () async {
+              final deleteIds = expandIdsAcrossScanlators(ref,
+                  mangaId: chapter.mangaId, chapterIds: [chapter.id]);
               final result = await AsyncValue.guard(
                 () => ref
                     .read(mangaBookRepositoryProvider)
-                    .deleteChapters([chapter.id]),
+                    .deleteChapters(deleteIds),
               );
               result.showToastOnError(toast);
               if (!result.hasError) {
-                await cascadeServerDeleteToDevice(ref, [chapter.id]);
+                // Same expanded set (device ⊆ server).
+                await cascadeServerDeleteToDevice(ref, deleteIds);
               }
               await newUpdatePair(ref, (value) => isLoading.value = value);
             },

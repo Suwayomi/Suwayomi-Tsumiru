@@ -9,8 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/custom_checkbox_list_tile.dart';
-import '../../../domain/manga/manga_model.dart';
 import '../controller/manga_details_controller.dart';
+import '../controller/scanlator_dedup.dart';
+import 'scanlator_preference_dialog.dart';
 
 class MangaChapterFilter extends ConsumerWidget {
   const MangaChapterFilter({super.key, required this.mangaId});
@@ -19,8 +20,10 @@ class MangaChapterFilter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scanlatorList =
         ref.watch(mangaScanlatorListProvider(mangaId: mangaId));
-    final selectedScanlator =
-        ref.watch(mangaChapterFilterScanlatorProvider(mangaId: mangaId));
+    final preferred =
+        ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+    final showAll =
+        ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
     return ListView(
       children: [
         CustomCheckboxListTile(
@@ -40,7 +43,9 @@ class MangaChapterFilter extends ConsumerWidget {
           onChanged:
               ref.read(mangaChapterFilterDownloadedProvider.notifier).update,
         ),
-        if (scanlatorList.isNotBlank && scanlatorList.length > 1) ...[
+        // Unknown-inclusive: a series with one named group plus blanks still
+        // needs the section, since Unknown must be rankable too.
+        if (scanlatorList.length > 1) ...[
           ListTile(
             title: Text(
               context.l10n.scanlators,
@@ -48,25 +53,35 @@ class MangaChapterFilter extends ConsumerWidget {
             ),
             dense: true,
           ),
-          RadioListTile(
-            title: Text(context.l10n.allScanlators),
-            value: MangaMetaKeys.scanlator.key,
-            groupValue: selectedScanlator,
-            onChanged: (val) => ref
-                .read(mangaChapterFilterScanlatorProvider(mangaId: mangaId)
-                    .notifier)
-                .update(val),
-          ),
-          for (final scanlator in scanlatorList)
-            RadioListTile(
-              title: Text(scanlator),
-              value: scanlator,
-              groupValue: selectedScanlator,
-              onChanged: (val) => ref
-                  .read(mangaChapterFilterScanlatorProvider(mangaId: mangaId)
-                      .notifier)
-                  .update(val),
+          ListTile(
+            title: Text(context.l10n.preferredScanlationGroups),
+            subtitle: Text(
+              preferred.isEmpty
+                  ? context.l10n.noGroupPreference
+                  : preferred
+                      .map((g) => g == kUnknownScanlatorGroup
+                          ? context.l10n.unknownScanlator
+                          : g)
+                      .join(', '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) => ScanlatorPreferenceDialog(mangaId: mangaId),
+            ),
+          ),
+          SwitchListTile(
+            title: Text(context.l10n.showAllChapterVersions),
+            value: showAll,
+            onChanged: preferred.isEmpty
+                ? null
+                : ref
+                    .read(mangaShowAllScanlatorVersionsProvider(
+                            mangaId: mangaId)
+                        .notifier)
+                    .update,
+          ),
         ],
       ],
     );

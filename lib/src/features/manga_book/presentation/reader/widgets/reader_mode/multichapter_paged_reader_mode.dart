@@ -229,6 +229,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       }
       final progressResult = await recordReadingProgress(
         ref,
+        mangaId: manga.id,
         chapterId: chapterId,
         lastPageRead: completed ? 0 : rel,
         isRead: completed,
@@ -303,12 +304,9 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         final lc = loadedById(p.chapterId);
         final pageCount = lc?.pages.pages.length ?? 0;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
-        // Flush through the offline-safe path — the on-device catalog when
-        // downloaded, otherwise the server repository — so leaving mid-chapter
-        // saves the spot even with offline disabled (the single-chapter reader
-        // did this via its PopScope flush; the offline-DB-only flush dropped it).
-        // Fire-and-forget teardown flush; ignore() swallows any local-write
-        // throw (the server push is already guarded internally).
+        // Fire-and-forget so leaving mid-chapter still saves the spot; no
+        // scanlator-duplicate expansion here since this only persists a
+        // position, not a completion.
         recordReadingProgressWithDependencies(
           offlineEnabled: offlineEnabledForFlush,
           offlineDatabase: offlineDbForFlush,
@@ -741,6 +739,7 @@ void _markChapterRead(
   completedChapterIds.value = {...completedChapterIds.value, chapter.id};
   unawaited(recordReadingProgress(
     ref,
+    mangaId: mangaId,
     chapterId: chapter.id,
     lastPageRead: 0,
     isRead: true,

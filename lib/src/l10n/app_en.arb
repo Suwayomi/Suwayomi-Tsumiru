@@ -2980,5 +2980,25 @@
     "add": "Add",
     "@add": {
         "description": "Generic button text for Add"
+    },
+    "preferredScanlationGroups": "Preferred groups",
+    "@preferredScanlationGroups": {
+        "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
+    },
+    "preferredGroupsHint": "Checked groups are preferred in order; chapters they don't cover fall back to other groups.",
+    "@preferredGroupsHint": {
+        "description": "Hint text explaining the preferred scanlation groups ranking dialog"
+    },
+    "noGroupPreference": "No preference",
+    "@noGroupPreference": {
+        "description": "Subtitle shown when no preferred scanlation groups are set"
+    },
+    "showAllChapterVersions": "Show all versions",
+    "@showAllChapterVersions": {
+        "description": "Switch title to show every scanlator's copy of each chapter instead of the deduped preferred version"
+    },
+    "unknownScanlator": "Unknown",
+    "@unknownScanlator": {
+        "description": "Label for chapters with no scanlator group, shown in the preferred scanlation groups dialog"
     }
 }

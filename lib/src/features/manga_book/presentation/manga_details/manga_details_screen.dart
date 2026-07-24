@@ -44,8 +44,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
         mangaChapterListWithFilterProvider(mangaId: mangaId);
 
     final manga = ref.watch(mangaProvider);
-    final chapterList = ref.watch(chapterListProvider);
     final filteredChapterList = ref.watch(chapterListFilteredProvider);
+    final bulkActionsChapterList = ref.watch(
+      mangaChapterListForBulkActionsProvider(mangaId: mangaId),
+    );
     final firstUnreadChapter = ref.watch(
       firstUnreadInFilteredChapterListProvider(mangaId: mangaId),
     );
@@ -273,7 +275,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                             )
                           ],
                           ChapterDownloadPresetsButton(
-                            chapterList: chapterList,
+                            chapterList: bulkActionsChapterList,
                             refresh: refresh,
                           ),
                           Builder(

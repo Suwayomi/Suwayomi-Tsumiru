@@ -266,8 +266,13 @@ Future<void> _showChapterPicker({
             ),
             child: Consumer(
               builder: (context, ref, _) {
+                // keepChapterId: keeps the open chapter visible even if dedup
+                // would otherwise hide it.
                 final chapters = ref.watch(
-                  mangaChapterListWithFilterProvider(mangaId: mangaId),
+                  mangaChapterListWithFilterProvider(
+                    mangaId: mangaId,
+                    keepChapterId: currentChapterId,
+                  ),
                 );
                 return chapters.showUiWhenData(
                   context,

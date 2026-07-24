@@ -23,6 +23,8 @@ import '../../../../library/presentation/library/controller/library_manga_list.d
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import 'scanlator_dedup.dart';
+import 'scanlator_propagation.dart';
 
 part 'manga_details_controller.g.dart';
 
@@ -188,34 +190,75 @@ Set<String> mangaScanlatorList(Ref ref, {required int mangaId}) {
   chapterList.whenData((data) {
     if (data == null) return;
     for (final chapter in data) {
-      if (chapter.scanlator.isNotBlank) {
-        scanlatorList.add(chapter.scanlator!);
-      }
+      scanlatorList.add(scanlatorGroupOf(chapter));
     }
   });
   return scanlatorList;
 }
 
+/// Effective per-series preferred scanlation groups (issue #141).
+/// Read path: new JSON-list key, else the legacy single-scanlator key as a
+/// one-item list (never written back from here — no writes on read paths).
 @riverpod
-class MangaChapterFilterScanlator extends _$MangaChapterFilterScanlator {
+class MangaPreferredScanlators extends _$MangaPreferredScanlators {
   @override
-  String build({required int mangaId}) {
-    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
-    return manga.value?.metaData.scanlator ?? MangaMetaKeys.scanlator.key;
+  List<String> build({required int mangaId}) {
+    final meta =
+        ref.watch(mangaWithIdProvider(mangaId: mangaId)).value?.metaData;
+    final stored = meta?.preferredScanlators;
+    if (stored != null) return stored;
+    final legacy = meta?.scanlator;
+    // The legacy key's own name doubles as its "no filter" sentinel value.
+    if (legacy == null || legacy == MangaMetaKeys.scanlator.key) {
+      return const [];
+    }
+    return [legacy];
   }
 
-  void update(String? scanlator) async {
-    await AsyncValue.guard(
-      () => ref.read(mangaBookRepositoryProvider).patchMangaMeta(
-            mangaId: mangaId,
-            key: MangaMetaKeys.scanlator.key,
-            value: scanlator ?? MangaMetaKeys.scanlator.key,
-          ),
-    );
-    if (!ref.mounted) return;
-    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-    state = scanlator ?? MangaMetaKeys.scanlator.key;
+  /// Returns whether the server writes succeeded, so the dialog can surface
+  /// a failure instead of closing over silently-unsaved state.
+  Future<bool> setPreference(List<String> groups) async {
+    final repo = ref.read(mangaBookRepositoryProvider);
+    final result = await AsyncValue.guard(() async {
+      await repo.patchMangaMeta(
+        mangaId: mangaId,
+        key: MangaMetaKeys.preferredScanlators.key,
+        value: jsonEncode(groups),
+      );
+      // Mirror rank-1 into the legacy key so older installs keep a sane filter.
+      await repo.patchMangaMeta(
+        mangaId: mangaId,
+        key: MangaMetaKeys.scanlator.key,
+        value: groups.isNotEmpty ? groups.first : MangaMetaKeys.scanlator.key,
+      );
+    });
+    if (result.hasError) return false;
+    // Write succeeded; treat the refresh below as best-effort.
+    try {
+      if (ref.mounted) {
+        state = groups;
+        ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+        if (groups.isEmpty) {
+          // Stale ON would silently resume show-all on the next preference.
+          ref.invalidate(
+              mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+        } else {
+          unawaited(AsyncValue.guard(
+              () => reconcileReadAcrossScanlators(ref, mangaId: mangaId)));
+        }
+      }
+    } catch (_) {}
+    return true;
   }
+}
+
+/// Session-scoped "Show all versions" escape hatch. autoDispose: resets once
+/// the series screen and any reader on it stop watching.
+@riverpod
+class MangaShowAllScanlatorVersions extends _$MangaShowAllScanlatorVersions {
+  @override
+  bool build({required int mangaId}) => false;
+  void update(bool value) => state = value;
 }
 
 /// List vs grid presentation for the chapter list, per-series in the manga
@@ -312,6 +355,7 @@ class MangaUserTags extends _$MangaUserTags {
 AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   Ref ref, {
   required int mangaId,
+  int? keepChapterId,
 }) {
   final chapterList = ref.watch(mangaChapterListProvider(mangaId: mangaId));
   final chapterFilterUnread = ref.watch(mangaChapterFilterUnreadProvider);
@@ -323,8 +367,13 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   final sortedDirection =
       ref.watch(mangaChapterSortDirectionProvider).ifNull(true);
 
-  final chapterFilterScanlator =
-      ref.watch(mangaChapterFilterScanlatorProvider(mangaId: mangaId));
+  final preferredScanlators =
+      ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+  final showAllVersions =
+      ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+  // No offline gate: catalog rows have unique fabricated numbers, so dedup
+  // can't collapse them anyway.
+  final dedupActive = preferredScanlators.isNotEmpty && !showAllVersions;
 
   bool applyChapterFilter(ChapterDto chapter) {
     if (chapterFilterUnread != null &&
@@ -342,10 +391,6 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
       return false;
     }
 
-    if (chapterFilterScanlator != MangaMetaKeys.scanlator.key &&
-        chapter.scanlator != chapterFilterScanlator) {
-      return false;
-    }
     return true;
   }
 
@@ -368,9 +413,35 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
     return result != 0 ? result : m1.index.compareTo(m2.index);
   }
 
+  return chapterList.copyWithData((data) {
+    var list = data ?? const <ChapterDto>[];
+    if (dedupActive) {
+      // Dedup BEFORE filters: filters must see aggregate row state, or an
+      // unread filter would strip a read copy and silently swap the winner.
+      list = applyPreferredScanlators(list, preferredScanlators,
+          keepChapterId: keepChapterId);
+    }
+    return [...list.where(applyChapterFilter)]..sort(applyChapterSort);
+  });
+}
+
+/// Deduped-but-unfiltered list for bulk actions (download presets): presets
+/// must count chapters, not duplicate copies.
+@riverpod
+AsyncValue<List<ChapterDto>?> mangaChapterListForBulkActions(
+  Ref ref, {
+  required int mangaId,
+}) {
+  final chapterList = ref.watch(mangaChapterListProvider(mangaId: mangaId));
+  final preferred =
+      ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+  final showAll =
+      ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+  // No offline gate — see mangaChapterListWithFilter: catalog rows can't
+  // collapse (unique fabricated numbers).
+  if (preferred.isEmpty || showAll) return chapterList;
   return chapterList.copyWithData(
-    (data) => [...?data?.where(applyChapterFilter)]..sort(applyChapterSort),
-  );
+      (data) => data == null ? null : applyPreferredScanlators(data, preferred));
 }
 
 @riverpod
@@ -406,7 +477,8 @@ ChapterDto? firstUnreadInFilteredChapterList(
   final isAscSorted = ref.watch(mangaChapterSortDirectionProvider) ??
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
-      .watch(mangaChapterListWithFilterProvider(mangaId: mangaId))
+      .watch(mangaChapterListWithFilterProvider(
+          mangaId: mangaId, keepChapterId: chapterId))
       .value;
   if (filteredList == null) {
     return null;

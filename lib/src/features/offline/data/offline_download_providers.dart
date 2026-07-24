@@ -21,6 +21,7 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -230,12 +231,13 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
 /// dirty flag is cleared, otherwise it stays pending for the next online sync.
 Future<AsyncValue<void>> recordReadingProgress(
   WidgetRef ref, {
+  required int mangaId,
   required int chapterId,
   required int lastPageRead,
   required bool isRead,
 }) async {
   final offline = ref.read(offlineActiveProvider);
-  return recordReadingProgressWithDependencies(
+  final result = await recordReadingProgressWithDependencies(
     offlineEnabled: offline,
     offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
     repository: ref.read(mangaBookRepositoryProvider),
@@ -243,6 +245,33 @@ Future<AsyncValue<void>> recordReadingProgress(
     lastPageRead: lastPageRead,
     isRead: isRead,
   );
+  // Completing a chapter also marks its hidden scanlator duplicates read, or
+  // they'd corrupt counts and resume on other clients.
+  if (isRead && !result.hasError) {
+    final siblings = expandIdsAcrossScanlators(ref,
+        mangaId: mangaId, chapterIds: [chapterId])
+      ..remove(chapterId);
+    if (siblings.isNotEmpty) {
+      final siblingsOk = await recordReadStateWithDependencies(
+        offlineEnabled: offline,
+        offlineDatabase: offline ? ref.read(offlineDatabaseProvider) : null,
+        repository: ref.read(mangaBookRepositoryProvider),
+        chapterIds: siblings,
+        isRead: true,
+        // Match the bulk mark-read action: siblings drop stale progress too.
+        resetPosition: true,
+      );
+      // No retry state for a failed sibling write — surface it rather than
+      // reporting the read as fully recorded.
+      if (!siblingsOk) {
+        return AsyncValue.error(
+          Exception('marking duplicate copies read failed'),
+          StackTrace.current,
+        );
+      }
+    }
+  }
+  return result;
 }
 
 /// Returns the server-push outcome so callers aren't blind to a failed write.
