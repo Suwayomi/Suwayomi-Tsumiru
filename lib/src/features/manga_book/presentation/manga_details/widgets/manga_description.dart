@@ -189,10 +189,11 @@ class MangaDescription extends HookConsumerWidget {
               ),
             ),
             Padding(
-              // Clear the transparent app bar (status bar + toolbar) so the
-              // cover/title sit below the icons while the backdrop fills behind.
+              // Clear only the status bar; the transparent app-bar icons float
+              // over the top of the hero so the cover rides up into the backdrop
+              // instead of leaving a dead toolbar-height band above it.
               padding: EdgeInsets.only(
-                top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+                top: MediaQuery.paddingOf(context).top + 8,
               ),
               child: MangaCoverDescriptiveListTile(
                 manga: manga,
@@ -273,11 +274,13 @@ class MangaDescription extends HookConsumerWidget {
           ),
         if (isExpanded.value)
           Padding(
-            padding: KEdgeInsets.h16.size,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                AddUserTagChip(mangaId: manga.id),
                 ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
                       (e) => Builder(
                         builder: (chipContext) => BrandChip(
@@ -292,11 +295,16 @@ class MangaDescription extends HookConsumerWidget {
           )
         else
           Padding(
-            padding: KEdgeInsets.h16.size,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Padding(
+                    padding: KEdgeInsets.h4.size,
+                    child: AddUserTagChip(mangaId: manga.id),
+                  ),
                   ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
                         (e) => Padding(
                           padding: KEdgeInsets.h4.size,
