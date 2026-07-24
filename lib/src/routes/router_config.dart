@@ -23,6 +23,8 @@ import '../features/library/presentation/category/edit_category_screen.dart';
 import '../features/library/presentation/library/library_screen.dart';
 import '../features/manga_book/presentation/downloads/downloads_screen.dart';
 import '../features/manga_book/presentation/manga_details/manga_details_screen.dart';
+import '../features/manga_book/presentation/recommends/recommends_browse_screen.dart';
+import '../features/manga_book/presentation/recommends/recommends_screen.dart';
 import '../features/manga_book/presentation/reader/reader_screen.dart';
 import '../features/manga_book/presentation/upcoming/upcoming_screen.dart';
 import '../features/manga_book/presentation/updates/updates_screen.dart';
@@ -115,6 +117,8 @@ abstract class Routes {
   static const updateStatus = "/update-status";
   static const about = 'about';
   static const globalSearch = '/global-search';
+  static const recommends = '/recommends/:mangaId';
+  static const recommendsBrowse = '/recommends/:mangaId/:providerName';
   static const onboarding = '/onboarding';
 
   // Migration
@@ -263,6 +267,8 @@ GoRouter routerConfig(Ref ref) {
     ),
     TypedGoRoute<UpdateStatusRoute>(path: Routes.updateStatus),
     TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
+    TypedGoRoute<RecommendsRoute>(path: Routes.recommends),
+    TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),
     TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
     TypedGoRoute<MigrationGlobalSearchRoute>(
         path: Routes.migrationGlobalSearch),

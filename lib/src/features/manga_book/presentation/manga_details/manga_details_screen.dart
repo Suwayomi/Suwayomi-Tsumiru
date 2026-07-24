@@ -20,6 +20,7 @@ import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
+import '../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../migration/domain/migration_models.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -303,6 +304,20 @@ class MangaDetailsScreen extends HookConsumerWidget {
                               ),
                               icon: const Icon(Icons.more_vert_rounded),
                               itemBuilder: (context) => [
+                                if (ref
+                                        .watch(showRecommendationsProvider)
+                                        .ifNull(true) &&
+                                    ref
+                                        .watch(recommendsInOverflowProvider)
+                                        .ifNull(false))
+                                  PopupMenuItem(
+                                    onTap: () => RecommendsRoute(
+                                      mangaId: mangaId,
+                                      mangaTitle: data?.title,
+                                    ).push(context),
+                                    child:
+                                        Text(context.l10n.seeRecommendations),
+                                  ),
                                 PopupMenuItem(
                                   onTap: () => Future.microtask(
                                     () {

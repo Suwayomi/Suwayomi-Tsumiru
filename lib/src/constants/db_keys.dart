@@ -38,6 +38,8 @@ enum DBKeys {
   infinityScrollingMode(true),
   scrollAnimation(true),
   showNSFW(true),
+  showRecommendations(true),
+  recommendsInOverflow(false),
   downloadedBadge(false),
   // On by default: the badge shipped always-on, so off would change behavior.
   onDeviceBadge(true),

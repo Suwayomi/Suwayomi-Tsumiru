@@ -1933,6 +1933,40 @@
     "noDownloads": "No Downloads",
     "noMangaFound": "No Mangas Found",
     "noOfChapters": "{count} Chapters",
+    "seeRecommendations": "See Recommendations",
+    "@seeRecommendations": {
+        "description": "Button on the manga details page opening the recommendations screen"
+    },
+    "recommendations": "Recommendations",
+    "@recommendations": {
+        "description": "Title of the recommendations screen"
+    },
+    "noRecommendationsForTitle": "No recommendations for this title right now",
+    "@noRecommendationsForTitle": {
+        "description": "Empty state on the recommendations screen when no provider returned results"
+    },
+    "similarTo": "Similar to {title}",
+    "@similarTo": {
+        "description": "Recommendations screen title for a single manga",
+        "placeholders": { "title": { "type": "String" } }
+    },
+    "httpErrorCheckWebView": "HTTP {statusCode}, check website in WebView",
+    "@httpErrorCheckWebView": {
+        "description": "Per-provider error on the recommendations screen when its API returns a non-200",
+        "placeholders": { "statusCode": { "type": "int" } }
+    },
+    "suggestions": "Suggestions",
+    "@suggestions": {
+        "description": "Header for the inline suggestions row on the manga details page"
+    },
+    "showRecommendations": "Show recommendations",
+    "@showRecommendations": {
+        "description": "Appearance setting toggling the suggestions row on manga details"
+    },
+    "showRecommendationsSubtitle": "Show a row of similar titles on the manga details page",
+    "@showRecommendationsSubtitle": {
+        "description": "Subtitle for the show recommendations setting"
+    },
     "noPropFound": "No {prop} Found",
     "noResultFound": "No results found",
     "noServerFound": "No Server found in your local network",
@@ -2927,6 +2961,14 @@
     "extensionStoresDescription": "Add extension stores your server installs from",
     "@extensionStoresDescription": {
         "description": "Subtitle for the Extension stores settings row when no stores are added yet"
+    },
+    "recommendsInOverflow": "Recommendations in overflow",
+    "@recommendsInOverflow": {
+        "description": "Setting to move the recommendations button into the overflow menu"
+    },
+    "recommendsInOverflowSubtitle": "Move recommendations to the overflow menu instead of showing the row on the manga page",
+    "@recommendsInOverflowSubtitle": {
+        "description": "Subtitle for the recommendations-in-overflow setting"
     },
     "updateServerForExtensions": "Update your Suwayomi server to manage extensions",
     "@updateServerForExtensions": {
