@@ -62,8 +62,8 @@ class MangaChapterList extends _$MangaChapterList {
     final repo = ref.watch(mangaBookRepositoryProvider);
     final refreshFromSource =
         ref.watch(refreshChaptersFromSourceProvider).ifNull();
-    // Tracks whether we actually scraped the source on this open. A source
-    // scrape (getChapterList) also populates the manga's description/metadata
+    // Tracks whether we actually scraped the source on this open. The scrape
+    // (getMangaAndChapterList) also populates the manga's description/metadata
     // server-side, so afterwards we refresh MangaWithId to pick it up (#363).
     var didSourceFetch = false;
     // Read before the await: touching ref after the async gap throws if this
@@ -79,7 +79,7 @@ class MangaChapterList extends _$MangaChapterList {
           return stored;
         }
         try {
-          final fetched = await repo.getChapterList(mangaId);
+          final fetched = await repo.getMangaAndChapterList(mangaId);
           if (fetched != null && fetched.isNotEmpty) {
             didSourceFetch = true;
             return fetched;
@@ -125,6 +125,7 @@ class MangaChapterList extends _$MangaChapterList {
         onlineFetch || ref.read(refreshChaptersFromSourceProvider).ifNull();
     // offlineDatabaseProvider throws on web; only touch it when offline is on.
     final offlineDb = ref.read(offlineReadDatabaseProvider);
+    var didSourceFetch = false;
     // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
     // refresh while the device is offline serves the on-device catalog instead
     // of erroring/clearing the list.
@@ -135,8 +136,11 @@ class MangaChapterList extends _$MangaChapterList {
               return stored;
             }
             try {
-              final fetched = await repo.getChapterList(mangaId);
-              if (fetched != null && fetched.isNotEmpty) return fetched;
+              final fetched = await repo.getMangaAndChapterList(mangaId);
+              if (fetched != null && fetched.isNotEmpty) {
+                didSourceFetch = true;
+                return fetched;
+              }
             } catch (_) {
               // Source down / gone — fall back to stored instead of clearing.
             }
@@ -147,6 +151,11 @@ class MangaChapterList extends _$MangaChapterList {
           mangaId: mangaId,
         ));
     if (ref.mounted) ref.keepAlive();
+    // The scrape refreshed metadata server-side too; pick it up so pull-to-
+    // refresh updates the synopsis, not just the chapter list.
+    if (didSourceFetch && ref.mounted) {
+      ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    }
     // On a refresh failure keep the current chapters visible instead of
     // overwriting the list with an errored state (drops the internal
     // copyWithPrevious API the analyzer flagged).

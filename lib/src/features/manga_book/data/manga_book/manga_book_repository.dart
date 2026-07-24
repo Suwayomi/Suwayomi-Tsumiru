@@ -259,6 +259,25 @@ class MangaBookRepository {
       )
       .getData((data) => data.fetchChapters?.chapters);
 
+  /// Scrapes the source for both the manga's metadata (description, author,
+  /// status, genres) AND its chapter list in one call. Needed on detail open:
+  /// the deprecated chapters-only fetch no longer populates metadata as a side
+  /// effect on Tachiyomix 1.6+ servers, so a browse-opened entry showed
+  /// chapters but a blank synopsis until it was added to the library.
+  Future<List<ChapterDto>?> getMangaAndChapterList(int mangaId) async => client
+      .mutate$GetMangaAndChaptersByMangaId(
+        Options$Mutation$GetMangaAndChaptersByMangaId(
+          variables: Variables$Mutation$GetMangaAndChaptersByMangaId(
+            input: Input$FetchMangaAndChaptersInput(
+              id: mangaId,
+              fetchManga: true,
+              fetchChapters: true,
+            ),
+          ),
+        ),
+      )
+      .getData((data) => data.fetchMangaAndChapters?.chapters);
+
   /// Reads the chapters the server already has STORED for this entry, without
   /// touching the source. Works whenever the server is reachable, even if the
   /// source is down — this is what the WebUI shows.
