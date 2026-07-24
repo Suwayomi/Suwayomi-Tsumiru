@@ -55,6 +55,10 @@ class OfflineChapters extends Table {
   // The server's per-manga ordinal (sourceOrder). Stored for display/order only;
   // never used as a stable key.
   IntColumn get chapterIndex => integer()();
+  // Real chapter number + scanlator, synced so the offline list can group
+  // scanlator duplicates (#141). Null until the row's next down-sync.
+  RealColumn get chapterNumber => real().nullable()();
+  TextColumn get scanlator => text().nullable()();
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
   IntColumn get lastPageRead => integer().withDefault(const Constant(0))();
   BoolColumn get isBookmarked => boolean().withDefault(const Constant(false))();
@@ -143,7 +147,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -212,6 +216,12 @@ class OfflineDatabase extends _$OfflineDatabase {
           if (from < 8) {
             await _addColumnIfMissing(
                 m, offlineChapters, offlineChapters.downloadGeneration);
+          }
+          if (from < 9) {
+            await _addColumnIfMissing(
+                m, offlineChapters, offlineChapters.chapterNumber);
+            await _addColumnIfMissing(
+                m, offlineChapters, offlineChapters.scanlator);
           }
         },
       );
@@ -285,6 +295,8 @@ class OfflineDatabase extends _$OfflineDatabase {
     required int pageCount,
     required DateTime updatedAt,
     String? lastReadAt,
+    double? chapterNumber,
+    String? scanlator,
   }) =>
       into(offlineChapters).insertOnConflictUpdate(
         OfflineChaptersCompanion(
@@ -292,6 +304,8 @@ class OfflineDatabase extends _$OfflineDatabase {
           mangaId: Value(mangaId),
           name: Value(name),
           chapterIndex: Value(chapterIndex),
+          chapterNumber: Value(chapterNumber),
+          scanlator: Value(scanlator),
           isRead: Value(isRead),
           lastPageRead: Value(lastPageRead),
           isBookmarked: Value(isBookmarked),

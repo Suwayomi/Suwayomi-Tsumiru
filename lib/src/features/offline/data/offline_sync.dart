@@ -73,6 +73,8 @@ class OfflineSync {
         mangaId: c.mangaId,
         name: c.name,
         chapterIndex: c.sourceOrder,
+        chapterNumber: c.chapterNumber,
+        scanlator: c.scanlator,
         isRead: keepReadState ? local!.isRead : c.isRead,
         lastPageRead: keepPosition ? local!.lastPageRead : c.lastPageRead,
         isBookmarked: keepBookmark ? local!.isBookmarked : c.isBookmarked,

@@ -153,7 +153,9 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
       id: c.id,
       mangaId: c.mangaId,
       name: c.name,
-      chapterNumber: c.chapterIndex.toDouble(),
+      // Real number when synced (lets dedup group duplicates offline, #141);
+      // index fallback for pre-v9 rows keeps numbers unique = no collapse.
+      chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
       sourceOrder: c.chapterIndex,
       isRead: c.isRead,
       isBookmarked: c.isBookmarked,
@@ -164,6 +166,7 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
       uploadDate: '0',
       lastReadAt: '0',
       url: '',
+      scanlator: c.scanlator,
       meta: const <Fragment$ChapterDto$meta>[],
     );
 
