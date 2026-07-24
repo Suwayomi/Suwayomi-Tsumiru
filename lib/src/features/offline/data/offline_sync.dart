@@ -54,38 +54,41 @@ class OfflineSync {
     // Preserve read progress that was updated locally but not yet pushed to the
     // server — otherwise a down-sync would overwrite it with the stale server
     // value (the up-sync pushes it; this just stops it being lost in the gap).
-    final dirty = {
-      for (final c in await _db.dirtyChapters()) c.id: c,
-    };
-    for (final c in chapters) {
-      final local = dirty[c.id];
-      // Keep a locally-changed value only while its OWN flag is still dirty;
-      // otherwise take the server's. Position, read-state, and bookmark each
-      // have their own flag, so a server change to one still lands locally
-      // while another is pending up-sync — instead of the old code pinning
-      // isRead to the stale local value whenever position was dirty (the ch-99
-      // un-read loop), and vice versa (#13).
-      final keepPosition = local?.progressDirty ?? false;
-      final keepReadState = local?.readStateDirty ?? false;
-      final keepBookmark = local?.bookmarkDirty ?? false;
-      await _db.upsertChapterMetadata(
-        id: c.id,
-        mangaId: c.mangaId,
-        name: c.name,
-        chapterIndex: c.sourceOrder,
-        chapterNumber: c.chapterNumber,
-        scanlator: c.scanlator,
-        isRead: keepReadState ? local!.isRead : c.isRead,
-        lastPageRead: keepPosition ? local!.lastPageRead : c.lastPageRead,
-        isBookmarked: keepBookmark ? local!.isBookmarked : c.isBookmarked,
-        serverIsDownloaded: c.isDownloaded,
-        pageCount: c.pageCount,
-        updatedAt: now,
-        // Server-managed: always the server's value (drives the offline
-        // "Last Read" sort). Never preserve the local one, unlike read progress.
-        lastReadAt: c.lastReadAt,
-      );
-    }
+    final dirty = {for (final c in await _db.dirtyChapters()) c.id: c};
+    // One transaction per list: an interrupted sync must not leave a manga
+    // with a mix of real and index-fallback chapter numbers — a legacy row at
+    // index N would falsely dedup-merge with a real chapter N.
+    await _db.transaction(() async {
+      for (final c in chapters) {
+        final local = dirty[c.id];
+        // Keep a locally-changed value only while its OWN flag is still dirty;
+        // otherwise take the server's. Position, read-state, and bookmark each
+        // have their own flag, so a server change to one still lands locally
+        // while another is pending up-sync — instead of the old code pinning
+        // isRead to the stale local value whenever position was dirty (the ch-99
+        // un-read loop), and vice versa (#13).
+        final keepPosition = local?.progressDirty ?? false;
+        final keepReadState = local?.readStateDirty ?? false;
+        final keepBookmark = local?.bookmarkDirty ?? false;
+        await _db.upsertChapterMetadata(
+          id: c.id,
+          mangaId: c.mangaId,
+          name: c.name,
+          chapterIndex: c.sourceOrder,
+          chapterNumber: c.chapterNumber,
+          scanlator: c.scanlator,
+          isRead: keepReadState ? local!.isRead : c.isRead,
+          lastPageRead: keepPosition ? local!.lastPageRead : c.lastPageRead,
+          isBookmarked: keepBookmark ? local!.isBookmarked : c.isBookmarked,
+          serverIsDownloaded: c.isDownloaded,
+          pageCount: c.pageCount,
+          updatedAt: now,
+          // Server-managed: always the server's value (drives the offline
+          // "Last Read" sort). Never preserve the local one, unlike read progress.
+          lastReadAt: c.lastReadAt,
+        );
+      }
+    });
 
     // Device ⊆ server: a chapter the server no longer lists (deleted there) must
     // lose its on-device copy too. Mark any FULLY-DOWNLOADED local chapter
