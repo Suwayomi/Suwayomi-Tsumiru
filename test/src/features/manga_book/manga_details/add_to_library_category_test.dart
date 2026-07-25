@@ -14,10 +14,13 @@ import 'package:tsumiru/src/features/library/presentation/category/controller/ed
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/add_to_library_category.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+
+import '../reader/reader_test_fixtures.dart';
 
 CategoryDto _cat({required int id, required String name, bool isDefault = false}) =>
     Fragment$CategoryDto(
@@ -75,12 +78,13 @@ ProviderContainer _container(_RecordingRepo repo, int defaultCategory) {
     mangaBookRepositoryProvider.overrideWithValue(repo),
     categoryControllerProvider.overrideWith(() => _FixedCategories()),
     libraryDefaultCategoryProvider.overrideWith(() => _FixedDefault(defaultCategory)),
+    // Empty library: the duplicate gate finds no hits and the add proceeds.
     libraryMangaListProvider.overrideWith((ref) async => const <MangaDto>[]),
   ]);
   return c;
 }
 
-Widget _harness(ProviderContainer c, int mangaId) => UncontrolledProviderScope(
+Widget _harness(ProviderContainer c, MangaDto manga) => UncontrolledProviderScope(
       container: c,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -90,7 +94,7 @@ Widget _harness(ProviderContainer c, int mangaId) => UncontrolledProviderScope(
             body: Center(
               child: ElevatedButton(
                 onPressed: () =>
-                    addMangaToLibraryWithCategory(ref, context, mangaId),
+                    addMangaToLibraryWithCategory(ref, context, manga),
                 child: const Text('add'),
               ),
             ),
@@ -99,13 +103,15 @@ Widget _harness(ProviderContainer c, int mangaId) => UncontrolledProviderScope(
       ),
     );
 
+MangaDto _manga(int id) => testManga().copyWith.call(id: id, title: 'Manga $id');
+
 void main() {
   testWidgets('a specific default category is assigned silently, no prompt',
       (tester) async {
     final repo = _RecordingRepo();
     final c = _container(repo, 1); // Complete
     addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, 76));
+    await tester.pumpWidget(_harness(c, _manga(76)));
     await tester.tap(find.text('add'));
     await tester.pumpAndSettle();
 
@@ -119,7 +125,7 @@ void main() {
     final repo = _RecordingRepo();
     final c = _container(repo, 0);
     addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, 76));
+    await tester.pumpWidget(_harness(c, _manga(76)));
     await tester.tap(find.text('add'));
     await tester.pumpAndSettle();
 
@@ -133,7 +139,7 @@ void main() {
     final repo = _RecordingRepo();
     final c = _container(repo, -1);
     addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, 76));
+    await tester.pumpWidget(_harness(c, _manga(76)));
     await tester.tap(find.text('add'));
     await tester.pumpAndSettle();
 
@@ -158,7 +164,7 @@ void main() {
     final repo = _RecordingRepo();
     final c = _container(repo, 9);
     addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, 76));
+    await tester.pumpWidget(_harness(c, _manga(76)));
     await tester.tap(find.text('add'));
     await tester.pumpAndSettle();
 
@@ -170,7 +176,7 @@ void main() {
     final repo = _RecordingRepo();
     final c = _container(repo, -1);
     addTearDown(c.dispose);
-    await tester.pumpWidget(_harness(c, 76));
+    await tester.pumpWidget(_harness(c, _manga(76)));
     await tester.tap(find.text('add'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));

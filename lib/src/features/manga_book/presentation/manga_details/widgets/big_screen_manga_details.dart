@@ -58,7 +58,7 @@ class BigScreenMangaDetails extends ConsumerWidget {
                     removeMangaFromLibrary: (() =>
                         removeMangaFromLibraryAndPurge(ref, mangaId)),
                     addMangaToLibrary: (() =>
-                        addMangaToLibraryWithCategory(ref, context, mangaId)),
+                        addMangaToLibraryWithCategory(ref, context, manga)),
                     refresh: () => onDescriptionRefresh(false),
                   ),
                   if (manga.title.isNotBlank)
