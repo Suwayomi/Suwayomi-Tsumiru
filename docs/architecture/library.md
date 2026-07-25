@@ -132,6 +132,35 @@ per-tracker filter map, category include/exclude lists, tag include/exclude list
 `libraryGroupType` (0 = BY_DEFAULT), `gridMangaCoverWidth` (192.0).
 Search query is session-only (no persistence).
 
+## Duplicate detection
+
+`domain/duplicate_matcher.dart` is the shared matcher (pure Dart, no Flutter) used
+by both the library-wide scan below and browse's add-to-library flow:
+
+- Titles match via NFKC-normalized exact equality (`normalizeTitle`), not
+  Komikku's substring LIKE — deliberately stricter (design 2026-07-24).
+- Tracker matches are certain: a shared `(trackerId, remoteId)` pair.
+- An optional description-substring pass (title text found inside another
+  entry's description, word-boundary padded) is off by default and gated on
+  a minimum title length to avoid generic false hits.
+- Grouping is two-stage: title/tracker edges are true equivalences and union
+  transitively (one pass, `_UnionFind`); description hits are NOT transitive
+  and only ever attach a free entry to an existing cluster or pair two free
+  entries — never merge two real clusters.
+
+`domain/duplicate_entry_mapper.dart` snapshots a `MangaDto` into the matcher's
+plain-Dart `DupEntry` shape.
+
+**Library-wide scan** (`presentation/duplicates/`, #117) — `LibraryDuplicatesScreen`
++ `LibraryDuplicatesController`. Runs off the main thread via `compute()` (web has
+no isolates, so it self-yields via a chunked pass instead). Reads the library once
+per scan — a routine library invalidation elsewhere never re-triggers the O(n²)
+scan; refresh is only via the explicit rescan button. Entry points: the library
+overflow menu (`update_status_popup_menu.dart`) and Library settings. Multi-select
+removes flagged entries via `removeMangaFromLibraryAndPurge`, confirmed first,
+filtering the already-scanned groups in memory rather than rescanning. Offline
+degrades to title-only matching (no fresh tracker/description data to trust).
+
 ## Gotchas
 
 - **`lastRead` sort is internally reversed** — the comparator swaps m1/m2 arguments.
