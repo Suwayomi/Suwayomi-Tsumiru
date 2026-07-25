@@ -9,7 +9,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
@@ -351,7 +351,7 @@ class MangaDescriptionBody extends StatelessWidget {
       padding: EdgeInsets.only(bottom: overlayHeight),
       child: MarkdownBody(
         data: description,
-        onTapLink: (_, href, __) {
+        onTapLink: (_, href, _) {
           if (href.isNotBlank) onOpenLink?.call(href!);
         },
         styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
