@@ -55,10 +55,10 @@ class SmallScreenMangaDetails extends ConsumerWidget {
               child: MangaDescription(
                 manga: manga,
                 refresh: () => onDescriptionRefresh(false),
-                removeMangaFromLibrary: () =>
-                    removeMangaFromLibraryAndPurge(ref, mangaId),
+                removeMangaFromLibrary: () => removeMangaFromLibraryAndPurge(
+                    ProviderScope.containerOf(context, listen: false), mangaId),
                 addMangaToLibrary: () =>
-                    addMangaToLibraryWithCategory(ref, context, mangaId),
+                    addMangaToLibraryWithCategory(ref, context, manga),
               ),
             ),
           ),

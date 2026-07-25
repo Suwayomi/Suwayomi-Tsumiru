@@ -17,6 +17,7 @@ import '../../../utils/logger/logger.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
@@ -693,33 +694,68 @@ Future<void> cascadeServerDeleteToDevice(
   }
 }
 
-/// Remove a chapter's device copy.
+/// Remove a chapter's device copy (widget entry).
 Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
   final manager = ref.read(offlineDownloadManagerProvider);
   if (manager == null) return;
-  // Stop any in-flight download first so it can't resurrect the files we're
-  // about to delete — Android routes through the FGS worker, elsewhere claim
-  // the main-isolate coordinator.
-  final coordinator =
-      _useBgService ? null : ref.read(offlineDownloadCoordinatorProvider);
+  await _deleteChapterFromDeviceCore(
+    manager: manager,
+    db: ref.read(offlineDatabaseProvider),
+    repo: ref.read(offlineRepositoryProvider),
+    coordinator:
+        _useBgService ? null : ref.read(offlineDownloadCoordinatorProvider),
+    bgController:
+        _useBgService ? ref.read(backgroundDownloadControllerProvider) : null,
+    chapterId: chapterId,
+  );
+}
+
+/// Same delete driven by a [ProviderContainer] so it survives the caller's
+/// widget being disposed mid-purge (see [removeMangaFromLibraryAndPurge]).
+Future<void> _deleteChapterFromDeviceContainer(
+    ProviderContainer container, int chapterId) async {
+  final manager = container.read(offlineDownloadManagerProvider);
+  if (manager == null) return;
+  await _deleteChapterFromDeviceCore(
+    manager: manager,
+    db: container.read(offlineDatabaseProvider),
+    repo: container.read(offlineRepositoryProvider),
+    coordinator: _useBgService
+        ? null
+        : container.read(offlineDownloadCoordinatorProvider),
+    bgController: _useBgService
+        ? container.read(backgroundDownloadControllerProvider)
+        : null,
+    chapterId: chapterId,
+  );
+}
+
+/// Concrete-deps core so both entries share one delete path.
+Future<void> _deleteChapterFromDeviceCore({
+  required OfflineDownloadManager manager,
+  required OfflineDatabase db,
+  required OfflineRepository repo,
+  required OfflineDownloadCoordinator? coordinator,
+  required BackgroundDownloadController? bgController,
+  required int chapterId,
+}) async {
   // Bump the persistent download generation first so a re-queued download
   // outranks any still-in-flight event from the deleted one (survives restart).
-  final newGen =
-      await ref.read(offlineDatabaseProvider).bumpChapterGeneration(chapterId);
-  if (_useBgService) {
-    final controller = ref.read(backgroundDownloadControllerProvider);
-    await controller.onRemoved(chapterId);
+  final newGen = await db.bumpChapterGeneration(chapterId);
+  // Stop any in-flight download so it can't resurrect the files — Android via
+  // the FGS worker, elsewhere the main-isolate coordinator.
+  if (bgController != null) {
+    await bgController.onRemoved(chapterId);
     // Tombstone the completion log at the new generation so a stale terminal
     // entry can't complete a later re-queued generation of this chapter.
-    await controller.recordChapterDeleted(chapterId, newGen);
+    await bgController.recordChapterDeleted(chapterId, newGen);
   } else {
     await coordinator?.beginDelete(chapterId);
   }
   try {
-    final chapter =
-        await ref.read(offlineRepositoryProvider).chapterById(chapterId);
+    final chapter = await repo.chapterById(chapterId);
     if (chapter != null) await manager.deleteChapter(chapter);
-    await ref.read(offlineDatabaseProvider).setChapterPinned(chapterId, false);
+    await db.setChapterPinned(chapterId, false);
   } finally {
     coordinator?.endDelete(chapterId);
   }
@@ -727,11 +763,18 @@ Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
 
 /// Remove a series from the library AND clean up its on-device downloads, so
 /// they aren't left orphaned. Clears the keep-rule and deletes every device
-/// copy; the SERVER's own download is left alone (see #34, #36).
-Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
-  await ref.read(mangaBookRepositoryProvider).removeMangaFromLibrary(mangaId);
-  if (!ref.read(offlineActiveProvider)) return;
-  final db = ref.read(offlineDatabaseProvider);
+/// copy; the SERVER's own download is left alone (see #34, #36). Runs on a
+/// [ProviderContainer] so a mid-purge navigation can't abort the cleanup.
+Future<void> removeMangaFromLibraryAndPurge(
+    ProviderContainer container, int mangaId) async {
+  await container
+      .read(mangaBookRepositoryProvider)
+      .removeMangaFromLibrary(mangaId);
+  // The add path invalidates this list; the remove path must too, or cached
+  // consumers (library, duplicate scan) keep serving the removed entry.
+  container.invalidate(libraryMangaListProvider);
+  if (!container.read(offlineActiveProvider)) return;
+  final db = container.read(offlineDatabaseProvider);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
   // Purge every chapter with any on-device footprint, not just fully
   // downloaded ones — queued/downloading/errored must also be cancelled, or an
@@ -739,7 +782,7 @@ Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
   // library.
   for (final c in await db.chaptersForManga(mangaId)) {
     if (c.deviceState != OfflineDeviceState.none) {
-      await deleteChapterFromDevice(ref, c.id);
+      await _deleteChapterFromDeviceContainer(container, c.id);
     }
   }
 }
@@ -1076,6 +1119,37 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
   // Start downloading the freshly-queued chapters. THIS was the missing wire
   // that made "Download all / unread" silently do nothing on Android.
   await ref.read(downloadStarterProvider)();
+}
+
+/// Container entry — same as [reconcileMangaWidget] but survives the caller's
+/// widget being disposed, so a migrate/bulk-migrate reconcile still lands after
+/// the user navigates away.
+Future<void> reconcileMangaContainer(
+    ProviderContainer container, int mangaId) async {
+  if (!container.read(offlineActiveProvider)) return;
+  final manager = container.read(offlineDownloadManagerProvider);
+  final coordinator = container.read(offlineDownloadCoordinatorProvider);
+  if (manager == null || coordinator == null) return;
+  await reconcileMangaCore(
+    db: container.read(offlineDatabaseProvider),
+    repo: container.read(offlineRepositoryProvider),
+    manager: manager,
+    coordinator: coordinator,
+    nets: container.read(safetyNetConfigProvider),
+    mangaId: mangaId,
+    enqueueServerDownload: (ids) => container
+        .read(downloadsRepositoryProvider)
+        .addChaptersBatchToDownloadQueue(ids),
+    removeFromWorker: (id) async {
+      final ctrl = container.read(backgroundDownloadControllerProvider);
+      await ctrl.onRemoved(id);
+      final gen = await container
+          .read(offlineDatabaseProvider)
+          .bumpChapterGeneration(id);
+      await ctrl.recordChapterDeleted(id, gen);
+    },
+  );
+  await container.read(downloadStarterProvider)();
 }
 
 /// Launch entry point (main.dart holds a ProviderContainer, not a Ref).

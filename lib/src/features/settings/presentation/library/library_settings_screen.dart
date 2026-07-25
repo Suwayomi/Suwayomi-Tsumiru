@@ -185,6 +185,11 @@ class LibrarySettingsScreen extends ConsumerWidget {
                       builder: (_) => const UpdateCategoriesDialog(),
                     ),
                   ),
+                  ListTile(
+                    title: Text(context.l10n.duplicatedEntries),
+                    subtitle: Text(context.l10n.duplicatedEntriesSubtitle),
+                    onTap: () => const LibraryDuplicatesRoute().push(context),
+                  ),
                   // SectionTitle(title: context.l10n.advanced),
                 ],
               );

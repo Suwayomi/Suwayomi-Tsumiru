@@ -188,6 +188,9 @@ enum DBKeys {
   filterTagsExclude(<String>[]),
   // Seed for the Random library sort. Incrementing this re-rolls the order.
   librarySortRandomSeed(0),
+  // Library-wide duplicate scan (#117): also match on description substring,
+  // not just title/tracker. Off by default — it's the expensive O(n²) pass.
+  libraryDuplicatesCheckDescription(false),
   // Reader seekbar layout. When false (default), webtoon uses
   // the vertical side seekbar. When true, a horizontal bottom
   // seekbar is shown in all modes (including webtoon).
@@ -268,8 +271,7 @@ enum DBKeys {
   colorFilterValue(0),
   colorFilterBlendMode(ColorFilterBlendMode.defaultBlend),
   grayscale(false),
-  invertedColors(false),
-  ;
+  invertedColors(false);
 
   const DBKeys(this.initial);
 

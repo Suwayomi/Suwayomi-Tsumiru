@@ -20,6 +20,7 @@ import '../features/history/presentation/history_screen.dart';
 import '../features/hotkeys/presentation/global_shortcut_host.dart';
 import '../features/hotkeys/presentation/hotkeys_settings_screen.dart';
 import '../features/library/presentation/category/edit_category_screen.dart';
+import '../features/library/presentation/duplicates/library_duplicates_screen.dart';
 import '../features/library/presentation/library/library_screen.dart';
 import '../features/manga_book/presentation/downloads/downloads_screen.dart';
 import '../features/manga_book/presentation/manga_details/manga_details_screen.dart';
@@ -75,6 +76,7 @@ final _browseNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'browse');
 
 abstract class Routes {
   static const library = '/library/:categoryId';
+  static const libraryDuplicates = '/library-duplicates';
 
   static const updates = '/updates';
 
@@ -267,6 +269,7 @@ GoRouter routerConfig(Ref ref) {
     ),
     TypedGoRoute<UpdateStatusRoute>(path: Routes.updateStatus),
     TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
+    TypedGoRoute<LibraryDuplicatesRoute>(path: Routes.libraryDuplicates),
     TypedGoRoute<RecommendsRoute>(path: Routes.recommends),
     TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),
     TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),

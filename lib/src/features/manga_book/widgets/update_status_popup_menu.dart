@@ -19,9 +19,11 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
     super.key,
     this.getCategory,
     this.showSummaryButton = true,
+    this.showDuplicatesButton = false,
   });
   final CategoryDto? Function()? getCategory;
   final bool showSummaryButton;
+  final bool showDuplicatesButton;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton(
@@ -53,6 +55,11 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
               child: Text(
                 context.l10n.updatesSummary,
               ),
+            ),
+          if (showDuplicatesButton)
+            PopupMenuItem(
+              onTap: () => const LibraryDuplicatesRoute().push(context),
+              child: Text(context.l10n.scanForDuplicates),
             ),
         ];
       },

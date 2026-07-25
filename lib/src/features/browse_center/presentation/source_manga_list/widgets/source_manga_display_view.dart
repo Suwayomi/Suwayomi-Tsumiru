@@ -11,13 +11,18 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
+import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/selection_action_bar.dart';
+import '../../../../library/presentation/library/controller/library_controller.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/duplicate_manga_dialog.dart';
+import '../../../../manga_book/presentation/manga_details/widgets/migrate_duplicate.dart';
 import '../../../domain/source/source_model.dart';
+import '../controller/bulk_duplicate_flow.dart';
 import '../controller/source_manga_controller.dart';
 import 'source_manga_grid_view.dart';
 import 'source_manga_list_view.dart';
@@ -47,33 +52,135 @@ class SourceMangaDisplayView extends HookConsumerWidget {
     final selection = useState<Set<int>>(const {});
     final selecting = selection.value.isNotEmpty;
 
+    // The run screen's pattern: loop-side reads go through the container so an
+    // await never touches a disposed `ref`; every dialog await is followed by a
+    // mounted guard.
+    final container = ProviderScope.containerOf(context, listen: false);
+
     void toggleSelection(int id) {
       final next = {...selection.value};
       next.contains(id) ? next.remove(id) : next.add(id);
       selection.value = next;
     }
 
-    Future<void> addSelectionToLibrary() async {
-      final ids = selection.value.toList();
-      if (ids.isEmpty) return;
-      selection.value = const {};
+    // Adds [ids] to the library, flips the loaded covers, refetches the library
+    // list, and returns the server-confirmed count (a partial apply adds fewer
+    // than requested).
+    Future<int> addAndReflect(List<int> ids) async {
+      if (ids.isEmpty) return 0;
       final result = await AsyncValue.guard(
-        () => ref.read(mangaBookRepositoryProvider).addMangasToLibrary(ids),
+        () => container.read(mangaBookRepositoryProvider).addMangasToLibrary(ids),
       );
-      if (result is AsyncError) return;
-      // Reflect the new library membership on the already-loaded covers.
+      if (result is! AsyncData<List<int>>) return 0;
+      final addedIds = result.value;
       final items = [...?controller.itemList];
-      final idSet = ids.toSet();
+      final idSet = addedIds.toSet();
       for (var i = 0; i < items.length; i++) {
         if (idSet.contains(items[i].id)) {
           items[i] = items[i].copyWith(inLibrary: true);
         }
       }
       controller.itemList = items;
+      container.invalidate(libraryMangaListProvider);
+      return addedIds.length;
+    }
+
+    Future<void> addSelectionToLibrary() async {
+      final ids = selection.value.toList();
+      if (ids.isEmpty) return;
+      final selected = [
+        for (final m in controller.itemList ?? const <MangaDto>[])
+          if (ids.contains(m.id)) m,
+      ];
+      selection.value = const {};
+
+      // Fail open: a library-list error must never block the add.
+      List<MangaDto>? library;
+      try {
+        library = await container.read(libraryMangaListProvider.future);
+      } catch (_) {
+        library = null;
+      }
       if (!context.mounted) return;
-      ref.invalidate(libraryMangaListProvider);
+
+      final split = splitSelectionForDuplicates(
+        selection: selected,
+        library: library,
+      );
+
+      var added = await addAndReflect(split.cleanIds);
+      var skipped = 0;
+      if (!context.mounted) return;
+
+      // Hits may reference an earlier selection member, not just the library —
+      // resolve card DTOs from the union so intra-selection hits still render.
+      final cardPool = [...?library, ...selected];
+      final trackerNames = container.read(libraryTrackerNamesProvider);
+
+      final queue = split.flagged;
+      for (var i = 0; i < queue.length; i++) {
+        final manga = queue[i];
+        final hitIds = split.hitIdsByManga[manga.id] ?? const {};
+        final duplicates = [
+          for (final m in cardPool)
+            if (hitIds.contains(m.id)) m,
+        ];
+
+        MangaDto? toOpen;
+        final result = await showDialog<DuplicateDialogResult>(
+          context: context,
+          barrierDismissible: true, // barrier ⇒ null ⇒ cancel the queue
+          builder: (_) => DuplicateMangaDialog(
+            candidate: manga,
+            duplicates: duplicates,
+            certainIds: split.certainIdsByManga[manga.id] ?? const {},
+            trackerNameOf: (id) => trackerNames[id],
+            bulk: true,
+            onMigrate: (dup) => migrateDuplicateIntoCandidate(
+              ref,
+              context,
+              from: dup,
+              to: manga,
+            ),
+            onOpenEntry: (m) => toOpen = m,
+          ),
+        );
+        if (!context.mounted) return;
+
+        var stop = false;
+        switch (classifyDuplicateResult(result)) {
+          case BulkDupAction.addThis:
+            added += await addAndReflect([manga.id]);
+          case BulkDupAction.addRest:
+            added += await addAndReflect([
+              for (var j = i; j < queue.length; j++) queue[j].id,
+            ]);
+            stop = true;
+          case BulkDupAction.skipThis:
+            skipped += 1;
+          case BulkDupAction.skipRest:
+            skipped += queue.length - i;
+            stop = true;
+          case BulkDupAction.handled:
+            break; // migrate added the candidate + removed the source
+          case BulkDupAction.openStop:
+            final target = toOpen;
+            if (target != null) MangaRoute(mangaId: target.id).push(context);
+            stop = true;
+          case BulkDupAction.cancelStop:
+            stop = true;
+        }
+        if (!context.mounted) return;
+        if (stop) break;
+      }
+
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Added ${ids.length} to library'),
+        content: Text(
+          skipped > 0
+              ? context.l10n.bulkAddedSkipped(added, skipped)
+              : context.l10n.bulkAdded(added),
+        ),
       ));
     }
 
