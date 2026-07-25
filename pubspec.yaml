@@ -34,7 +34,7 @@ dependencies:
   flutter_hooks: ^0.21.0
   flutter_localizations:
     sdk: flutter
-  flutter_markdown: ^0.7.1
+  flutter_markdown_plus: ^1.0.12
   flutter_secure_storage: ^10.3.1
   fluttertoast: ^9.1.0
   font_awesome_flutter: ^11.0.0
