@@ -132,7 +132,7 @@ class OfflineRepository {
   Future<int> totalDownloadedBytes() => db.totalDownloadedBytes();
 }
 
-// These are overridden at app startup (like hiveStoreProvider) with the
+// These are overridden at app startup with the
 // runtime database + base dir resolved via path_provider on native platforms.
 // They are NOT read on web (offline is disabled there), so the throwing default
 // is never hit in that configuration.

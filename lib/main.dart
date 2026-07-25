@@ -11,7 +11,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +44,7 @@ import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
+import 'src/utils/hive/graphql_cache_guard.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/platform/is_android_native.dart';
 import 'src/widgets/app_error_app.dart';
@@ -78,11 +78,18 @@ Future<void> _startApp() async {
     Workmanager().initialize(notificationCallbackDispatcher);
   }
   final packageInfo = await PackageInfo.fromPlatform();
+  _logBoot('start v${packageInfo.version}+${packageInfo.buildNumber} '
+      '(${defaultTargetPlatform.name})');
   final sharedPreferences = await SharedPreferences.getInstance();
   // Desktop: hide the OS title bar + restore saved window size before first
   // frame. No-op on web/mobile.
   await initDesktopWindow(sharedPreferences);
-  await initHiveForFlutter();
+  // The GraphQL cache is in-memory now; reclaim the legacy on-disk box, whose
+  // unbounded growth OOM-crashed startup when Hive loaded it whole.
+  final legacyBoxBytes = await deleteLegacyGraphqlCacheBox();
+  if (legacyBoxBytes != null) {
+    _logBoot('deleted legacy graphql cache box: $legacyBoxBytes bytes');
+  }
 
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
@@ -94,9 +101,11 @@ Future<void> _startApp() async {
       return await initOfflineStorage();
     } catch (e, st) {
       debugPrint('offline storage init failed: $e\n$st');
+      _logBoot('offline storage init FAILED: ${redactTokens('$e')}');
       return null;
     }
   }();
+  _logBoot(offlineStorage != null ? 'offline storage ready' : 'offline off');
 
   // Build a ProviderContainer so we can run migration and preload auth
   // providers before the first frame. Using UncontrolledProviderScope below
@@ -105,7 +114,6 @@ Future<void> _startApp() async {
     overrides: [
       packageInfoProvider.overrideWithValue(packageInfo),
       sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      hiveStoreProvider.overrideWithValue(HiveStore()),
       if (offlineStorage != null) ...[
         offlineDatabaseProvider.overrideWithValue(offlineStorage.db),
         offlinePathsProvider.overrideWithValue(offlineStorage.paths),
@@ -281,6 +289,7 @@ Future<void> _startApp() async {
     }));
   }
 
+  _logBoot('runApp');
   runApp(
     UncontrolledProviderScope(
       container: container,
@@ -290,7 +299,20 @@ Future<void> _startApp() async {
   // Mark the app as up once it has painted a frame. After this, a stray
   // uncaught async error is recoverable and must NOT replace the whole UI with
   // the fatal screen (see [_onFatalError]).
-  WidgetsBinding.instance.addPostFrameCallback((_) => _appRendered = true);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _appRendered = true;
+    _logBoot('first frame');
+  });
+}
+
+/// Startup breadcrumbs in the crash log: a boot that dies pre-frame leaves the
+/// last completed stage next to the error, instead of a bare stack with no
+/// context (the startup-OOM class was undiagnosable without this).
+void _logBoot(String stage) {
+  writeCrashLog(
+    _crashLogPath,
+    '[${DateTime.now().toIso8601String()}] boot: $stage\n',
+  );
 }
 
 /// Install the framework + async error handlers and resolve the crash-log file.

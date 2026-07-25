@@ -50,7 +50,8 @@ class GeneralScreen extends ConsumerWidget {
             leading: const Icon(Icons.cleaning_services_rounded),
             title: Text(context.l10n.clearCache),
             onTap: () async {
-              await ref.read(hiveStoreProvider).reset();
+              // The GraphQL cache is in-memory (and bypassed by noCache), so
+              // "clear cache" now means the image cache.
               await DefaultCacheManager().emptyCache();
               if (context.mounted) {
                 ref.read(toastProvider)?.show(context.l10n.cacheCleared);

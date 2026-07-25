@@ -14,9 +14,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/db_keys.dart';
-import '../constants/timeout_constants.dart';
 import '../constants/endpoints.dart';
 import '../constants/enum.dart';
+import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
 import '../features/auth/data/auth_state.dart';
@@ -143,7 +143,10 @@ GraphQLClient graphQlClient(Ref ref) {
     queryRequestTimeout: Duration(
         milliseconds:
             timeoutMs * (retryCount + 1) + retryDelayMs * retryCount + 2000),
-    cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
+    // In-memory only: the default fetch policy is noCache, so a persisted
+    // store is write-only bloat (its Hive box grew ~100 MB/week and its
+    // whole-file load OOM-crashed startup).
+    cache: GraphQLCache(store: InMemoryStore()),
   );
 }
 
@@ -225,7 +228,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     ),
     // Same package-level timeout as the query client (default is a hard 5s).
     queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
-    cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
+    // In-memory only, matching the query client.
+    cache: GraphQLCache(store: InMemoryStore()),
   );
 }
 
@@ -278,9 +282,6 @@ class L10n extends _$L10n with SharedPreferenceClientMixin<Locale> {
 
 @riverpod
 SharedPreferences sharedPreferences(Ref ref) => throw UnimplementedError();
-
-@riverpod
-HiveStore hiveStore(Ref ref) => throw UnimplementedError();
 
 @riverpod
 Queue rateLimitQueue(Ref ref, [String? query]) {
