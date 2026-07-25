@@ -3042,5 +3042,121 @@
     "unknownScanlator": "Unknown",
     "@unknownScanlator": {
         "description": "Label for chapters with no scanlator group, shown in the preferred scanlation groups dialog"
+    },
+    "possibleDuplicatesTitle": "Possible duplicates",
+    "@possibleDuplicatesTitle": {
+        "description": "Title of the dialog shown when a manga being added may already be in the library"
+    },
+    "possibleDuplicatesBody": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway.",
+    "@possibleDuplicatesBody": {
+        "description": "Body text of the possible-duplicates dialog shown before adding a manga to the library"
+    },
+    "actionAddAnyway": "Add anyway",
+    "@actionAddAnyway": {
+        "description": "Button text to add a manga to the library despite a possible duplicate"
+    },
+    "duplicateSameTrackerEntry": "Same {tracker} entry",
+    "@duplicateSameTrackerEntry": {
+        "description": "Label on a duplicate candidate that shares a tracker binding, naming the tracker",
+        "placeholders": {
+            "tracker": {
+                "type": "String"
+            }
+        }
+    },
+    "duplicateSameTrackerEntryGeneric": "Same tracker entry",
+    "@duplicateSameTrackerEntryGeneric": {
+        "description": "Label on a duplicate candidate that shares a tracker binding when the tracker's name isn't known"
+    },
+    "duplicateAllowAll": "Allow all",
+    "@duplicateAllowAll": {
+        "description": "Button text to add every remaining duplicate candidate during a bulk add"
+    },
+    "duplicateSkipIt": "Skip it",
+    "@duplicateSkipIt": {
+        "description": "Button text to skip a single duplicate candidate during a bulk add"
+    },
+    "duplicateSkipAll": "Skip all",
+    "@duplicateSkipAll": {
+        "description": "Button text to skip every remaining duplicate candidate during a bulk add"
+    },
+    "actionShowEntry": "Show entry",
+    "@actionShowEntry": {
+        "description": "Button text to open the existing library entry from a duplicate candidate"
+    },
+    "bulkAddedSkipped": "Added {added}, skipped {skipped}",
+    "@bulkAddedSkipped": {
+        "description": "Summary toast after a bulk add where some entries were skipped as duplicates",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            },
+            "skipped": {
+                "type": "int"
+            }
+        }
+    },
+    "bulkAdded": "Added {added} to library",
+    "@bulkAdded": {
+        "description": "Summary toast after a bulk add where no entries were skipped",
+        "placeholders": {
+            "added": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatedEntries": "Duplicated entries",
+    "@duplicatedEntries": {
+        "description": "Title of the library settings row that opens the library-wide duplicate scan"
+    },
+    "duplicatedEntriesSubtitle": "Show all duplicated entries in your library",
+    "@duplicatedEntriesSubtitle": {
+        "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
+    },
+    "scanForDuplicates": "Scan for duplicates",
+    "@scanForDuplicates": {
+        "description": "Button text to run the library-wide duplicate scan"
+    },
+    "checkDescription": "Check description",
+    "@checkDescription": {
+        "description": "Switch title to include description-substring matching in the duplicate scan"
+    },
+    "duplicatesOfflineTitleOnly": "Offline: matching by title only",
+    "@duplicatesOfflineTitleOnly": {
+        "description": "Notice shown during the duplicate scan while offline, since tracker and description matching need server data"
+    },
+    "duplicatesRemoveConfirm": "{count, plural, =1{Remove 1 entry from your library?} other{Remove {count} entries from your library?}} This also deletes downloaded chapters on this device.",
+    "@duplicatesRemoveConfirm": {
+        "description": "Confirmation dialog body for removing entries found by the duplicate scan",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemoveOfflineTooltip": "Reconnect to your server to remove entries",
+    "@duplicatesRemoveOfflineTooltip": {
+        "description": "Tooltip on the disabled remove action in the duplicate scan while offline"
+    },
+    "duplicatesRemoved": "Removed {count} from library",
+    "@duplicatesRemoved": {
+        "description": "Toast after removing entries from the duplicate scan when all removals succeeded",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "duplicatesRemovedPartial": "Removed {removed} of {total}. The rest couldn't be removed.",
+    "@duplicatesRemovedPartial": {
+        "description": "Toast after removing entries from the duplicate scan when a removal failed partway, so fewer were removed than requested",
+        "placeholders": {
+            "removed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
     }
 }
