@@ -17,6 +17,7 @@ import '../../../utils/logger/logger.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import '../../library/presentation/library/controller/library_manga_list.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
@@ -730,6 +731,9 @@ Future<void> deleteChapterFromDevice(WidgetRef ref, int chapterId) async {
 /// copy; the SERVER's own download is left alone (see #34, #36).
 Future<void> removeMangaFromLibraryAndPurge(WidgetRef ref, int mangaId) async {
   await ref.read(mangaBookRepositoryProvider).removeMangaFromLibrary(mangaId);
+  // The add path invalidates this list; the remove path must too, or cached
+  // consumers (library, duplicate scan) keep serving the removed entry.
+  ref.invalidate(libraryMangaListProvider);
   if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   await db.setKeepRule(mangaId, OfflineKeepRule.off, 3);
