@@ -265,6 +265,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               getCategory: () => data.isNotBlank
                                   ? data[DefaultTabController.of(context).index]
                                   : null,
+                              showDuplicatesButton: true,
                             );
                           },
                         ),
@@ -377,6 +378,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                             getCategory: () => data.isNotBlank
                                 ? data[DefaultTabController.of(context).index]
                                 : null,
+                            showDuplicatesButton: true,
                           );
                         },
                       ),
