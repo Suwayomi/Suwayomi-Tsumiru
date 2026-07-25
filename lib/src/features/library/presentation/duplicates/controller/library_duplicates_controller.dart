@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/foundation.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
@@ -22,7 +21,7 @@ part 'library_duplicates_controller.g.dart';
 /// provider so the removal flow can be exercised (including the partial-failure
 /// path) without a live server or offline stack.
 typedef DuplicateEntryRemover = Future<void> Function(
-    WidgetRef ref, int mangaId);
+    ProviderContainer container, int mangaId);
 
 @riverpod
 DuplicateEntryRemover duplicateEntryRemover(Ref ref) =>

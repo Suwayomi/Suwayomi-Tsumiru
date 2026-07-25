@@ -40,11 +40,15 @@ Future<void> addMangaToLibraryWithCategory(
   @visibleForTesting
   void Function(BuildContext context, MangaDto manga)? openEntry,
 }) async {
-  final repo = ref.read(mangaBookRepositoryProvider);
+  // The container outlives this widget, so the server writes + the final list
+  // invalidation still land if the details page is popped mid-add.
+  final container = ProviderScope.containerOf(context, listen: false);
+  final repo = container.read(mangaBookRepositoryProvider);
   final mangaId = manga.id;
 
   if (!await _passesDuplicateGate(
     ref,
+    container,
     context,
     manga,
     migrateDuplicate: migrateDuplicate,
@@ -54,10 +58,10 @@ Future<void> addMangaToLibraryWithCategory(
   }
   if (!context.mounted) return;
 
-  final pref = ref.read(libraryDefaultCategoryProvider) ??
+  final pref = container.read(libraryDefaultCategoryProvider) ??
       DBKeys.libraryDefaultCategory.initial as int;
   final categories =
-      (await ref.read(categoryControllerProvider.future) ?? const [])
+      (await container.read(categoryControllerProvider.future) ?? const [])
           // Default/uncategorized (id 0) is not a real assignable target.
           .where((c) => c.id != 0)
           .toList();
@@ -82,7 +86,7 @@ Future<void> addMangaToLibraryWithCategory(
       await repo.addMangaToCategory(mangaId, id);
     }
   }
-  ref.invalidate(libraryMangaListProvider);
+  container.invalidate(libraryMangaListProvider);
 }
 
 /// Runs the possible-duplicates check (#118) before the add. Returns true when
@@ -92,6 +96,7 @@ Future<void> addMangaToLibraryWithCategory(
 /// errors must never block adding.
 Future<bool> _passesDuplicateGate(
   WidgetRef ref,
+  ProviderContainer container,
   BuildContext context,
   MangaDto manga, {
   Future<bool> Function(MangaDto from, MangaDto to)? migrateDuplicate,
@@ -99,7 +104,7 @@ Future<bool> _passesDuplicateGate(
 }) async {
   List<MangaDto>? libraryOrNull;
   try {
-    libraryOrNull = await ref.read(libraryMangaListProvider.future);
+    libraryOrNull = await container.read(libraryMangaListProvider.future);
   } catch (_) {
     libraryOrNull = null;
   }
@@ -125,7 +130,7 @@ Future<bool> _passesDuplicateGate(
   };
   if (hitIds.isEmpty) return true;
 
-  final trackerNames = ref.read(libraryTrackerNamesProvider);
+  final trackerNames = container.read(libraryTrackerNamesProvider);
   final migrate = migrateDuplicate ??
       (MangaDto from, MangaDto to) =>
           migrateDuplicateIntoCandidate(ref, context, from: from, to: to);

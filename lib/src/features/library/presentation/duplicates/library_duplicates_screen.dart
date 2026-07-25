@@ -82,9 +82,10 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       final remover = container.read(duplicateEntryRemoverProvider);
       final removed = <int>[];
       for (final id in ids) {
-        if (!context.mounted) break;
         try {
-          await remover(ref, id);
+          // The container backs the removal, so an unmount mid-await still
+          // completes the purge instead of surfacing as a removal failure.
+          await remover(container, id);
           removed.add(id);
         } catch (_) {
           // Stop on the first failure so a broken removal is never hidden — the

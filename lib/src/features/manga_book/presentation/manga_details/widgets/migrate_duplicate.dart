@@ -47,7 +47,9 @@ Future<bool> migrateDuplicateIntoCandidate(
     ],
     targetSourceIds: [to.sourceId],
     options: const MigrationOption(migrateTracking: true),
-    onSourceRemoved: (id) => reconcileMangaWidget(ref, id),
+    // Route through the container so the device reconcile still lands if this
+    // dialog's widget is disposed before the migrate finishes.
+    onSourceRemoved: (id) => reconcileMangaContainer(container, id),
   );
   runner.overrideTarget(from.id, to.id, to.title);
 

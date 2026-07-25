@@ -68,7 +68,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
         targetSourceIds: data.targetSourceIds,
         options: data.options,
         extraSearchQuery: data.extraSearchQuery,
-        onSourceRemoved: (id) => reconcileMangaWidget(ref, id),
+        onSourceRemoved: (id) => reconcileMangaContainer(container, id),
       );
       runner.value = r;
       final repo = ref.read(mangaBookRepositoryProvider);
