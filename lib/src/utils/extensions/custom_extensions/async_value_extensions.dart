@@ -39,6 +39,11 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     Widget Function(Widget)? wrapper,
     bool showGenericError = false,
     bool addScaffoldWrapper = false,
+    // A dependency change routes `when()` through `loading()` for one frame,
+    // swapping the `data` Scaffold for the `wrapper` one and back — which closes
+    // anything the user had open (e.g. the library organizer's endDrawer). Pass
+    // true to keep the previous data on screen.
+    bool skipLoadingOnReload = false,
   }) {
     if (addScaffoldWrapper) {
       wrapper = (body) => Scaffold(appBar: AppBar(), body: body);
@@ -46,6 +51,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     return when(
       data: data,
       skipError: true,
+      skipLoadingOnReload: skipLoadingOnReload,
       error: (error, trace) {
         // A genuine "can't reach the server" failure gets a dedicated view
         // that points at Connection settings, instead of a blank/opaque error

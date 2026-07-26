@@ -10,33 +10,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/app_sizes.dart';
-import '../../../../constants/enum.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/emoticons.dart';
-import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
-import '../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
-import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
-import '../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/downloads/downloads_repository.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
-import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../migration/domain/migration_models.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../offline/presentation/keep_rule_picker.dart';
-import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_manga_list.dart';
 import 'widgets/edit_mangas_category_dialog.dart';
+import 'widgets/library_manga_grid_view.dart';
 
 class CategoryMangaList extends HookConsumerWidget {
   const CategoryMangaList({super.key, required this.categoryId});
@@ -46,23 +39,6 @@ class CategoryMangaList extends HookConsumerWidget {
     final provider =
         categoryMangaListWithQueryAndFilterProvider(categoryId: categoryId);
     final mangaList = ref.watch(provider);
-    final displayMode = ref.watch(libraryDisplayModeProvider);
-    final gridWidth = ref.watch(gridMinWidthProvider);
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-    final portraitCols = ref.watch(libraryPortraitColumnsProvider) ?? 0;
-    final landscapeCols = ref.watch(libraryLandscapeColumnsProvider) ?? 0;
-    final fixedCols = isLandscape ? landscapeCols : portraitCols;
-    // gridDelegate: fixed count when the user set cols > 0, else Auto (width-based).
-    SliverGridDelegate libraryGridDelegate({bool titleBelow = false}) =>
-        fixedCols > 0
-            ? SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: fixedCols,
-                crossAxisSpacing: 2.0,
-                mainAxisSpacing: 2.0,
-                childAspectRatio: titleBelow ? 0.62 : 0.75,
-              )
-            : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
     useEffect(() {
       // Effect bodies run during build; invalidating a provider there throws.
@@ -90,29 +66,6 @@ class CategoryMangaList extends HookConsumerWidget {
       } else {
         MangaRoute(mangaId: manga.id, categoryId: categoryId).push(context);
       }
-    }
-
-    // Continue-reading button: opt-in display toggle. Shown only when the server
-    // (or offline catalog) reports a next-unread chapter, and never while
-    // multi-selecting (taps belong to selection then). Opens that chapter
-    // straight in the reader, bypassing the details page.
-    final showContinueReading =
-        ref.watch(showContinueReadingButtonProvider).ifNull(false);
-    VoidCallback? continueReadingFor(MangaDto manga) {
-      if (!showContinueReading || selecting) return null;
-      final chapter = manga.firstUnreadChapter;
-      if (chapter == null) return null;
-      return () {
-        unawaited(() async {
-          await AsyncValue.guard(
-            () => ref.read(
-              mangaChapterListProvider(mangaId: manga.id).future,
-            ),
-          );
-          if (!context.mounted) return;
-          ReaderRoute(mangaId: manga.id, chapterId: chapter.id).push(context);
-        }());
-      };
     }
 
     // Mark every chapter of the selected series read / unread, via the bulk
@@ -176,73 +129,12 @@ class CategoryMangaList extends HookConsumerWidget {
           );
         }
         final items = data!;
-        final Widget grid = switch (displayMode) {
-          DisplayMode.list || null => ListView.builder(
-              itemExtent: 96,
-              itemCount: items.length,
-              itemBuilder: (context, index) => MangaCoverListTile(
-                manga: items[index],
-                selected: selection.value.contains(items[index].id),
-                onPressed: () => open(items[index]),
-                onLongPress: () => toggle(items[index].id),
-                onContinueReading: continueReadingFor(items[index]),
-                showCountBadges: true,
-              ),
-            ),
-          DisplayMode.grid => GridView.builder(
-              gridDelegate: libraryGridDelegate(),
-              itemCount: items.length,
-              itemBuilder: (context, index) => MangaCoverGridTile(
-                manga: items[index],
-                selected: selection.value.contains(items[index].id),
-                onLongPress: () => toggle(items[index].id),
-                onPressed: () => open(items[index]),
-                onContinueReading: continueReadingFor(items[index]),
-                showCountBadges: true,
-                showDarkOverlay: false,
-              ),
-            ),
-          DisplayMode.comfortableGrid => GridView.builder(
-              gridDelegate: libraryGridDelegate(titleBelow: true),
-              itemCount: items.length,
-              itemBuilder: (context, index) => MangaCoverGridTile(
-                manga: items[index],
-                selected: selection.value.contains(items[index].id),
-                onLongPress: () => toggle(items[index].id),
-                onPressed: () => open(items[index]),
-                onContinueReading: continueReadingFor(items[index]),
-                showCountBadges: true,
-                titleBelow: true,
-                showDarkOverlay: false,
-              ),
-            ),
-          DisplayMode.descriptiveList => ListView.builder(
-              itemExtent: 176,
-              itemCount: items.length,
-              itemBuilder: (context, index) => MangaCoverDescriptiveListTile(
-                manga: items[index],
-                selected: selection.value.contains(items[index].id),
-                onPressed: () => open(items[index]),
-                onLongPress: () => toggle(items[index].id),
-                onContinueReading: continueReadingFor(items[index]),
-                showBadges: true,
-              ),
-            ),
-          DisplayMode.coverOnly => GridView.builder(
-              gridDelegate: libraryGridDelegate(),
-              itemCount: items.length,
-              itemBuilder: (context, index) => MangaCoverGridTile(
-                manga: items[index],
-                selected: selection.value.contains(items[index].id),
-                onLongPress: () => toggle(items[index].id),
-                onPressed: () => open(items[index]),
-                onContinueReading: continueReadingFor(items[index]),
-                showCountBadges: true,
-                showTitle: false,
-                showDarkOverlay: false,
-              ),
-            ),
-        };
+        final Widget grid = LibraryMangaGridView(
+          items: items,
+          selection: selection.value,
+          onOpen: open,
+          onLongPress: (manga) => toggle(manga.id),
+        );
 
         final list = RefreshIndicator(
           // Pull = "check this category for new chapters, and pull down the

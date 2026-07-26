@@ -9,11 +9,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../tracking/data/tracker_repository.dart';
+import 'library_manga_badges.dart';
 import 'library_manga_display.dart';
 import 'library_manga_filter.dart';
 import 'library_manga_group.dart';
 import 'library_manga_sort_tile.dart';
-import '../../../../tracking/data/tracker_repository.dart';
 
 /// Sort-key display order. Kept separate from the
 /// `MangaSort` enum declaration because that is persisted by index.
@@ -39,7 +40,7 @@ class LibraryMangaOrganizer extends ConsumerWidget {
     final hasTrackers =
         ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: _OrganizerBody(hasTrackers: hasTrackers),
     );
   }
@@ -71,6 +72,7 @@ class _OrganizerBody extends StatelessWidget {
         ],
       ),
       const LibraryMangaDisplay(),
+      const LibraryMangaBadges(),
       const LibraryMangaGroup(),
     ];
     return SafeArea(
@@ -87,6 +89,7 @@ class _OrganizerBody extends StatelessWidget {
               Tab(text: context.l10n.filter),
               Tab(text: context.l10n.sort),
               Tab(text: context.l10n.display),
+              Tab(text: context.l10n.badges),
               Tab(text: context.l10n.group),
             ],
           ),

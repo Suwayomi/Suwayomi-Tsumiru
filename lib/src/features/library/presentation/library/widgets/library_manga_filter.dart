@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../widgets/custom_checkbox_list_tile.dart';
+import '../../../../../widgets/organizer_heading.dart';
+import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../category/controller/edit_category_controller.dart';
 import '../controller/library_controller.dart';
@@ -24,46 +25,60 @@ class LibraryMangaFilter extends ConsumerWidget {
     return ListView(
       shrinkWrap: true,
       children: [
-        CustomCheckboxListTile(
-          title: context.l10n.downloaded,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderDownloadStatus,
           provider: libraryMangaFilterDownloadedProvider,
           onChanged:
               ref.read(libraryMangaFilterDownloadedProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionDownloaded,
+          excludedLabel: context.l10n.filterOptionNotDownloaded,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.onDevice,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderStorage,
           provider: libraryMangaFilterOfflineProvider,
           onChanged:
               ref.read(libraryMangaFilterOfflineProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionOnDevice,
+          excludedLabel: context.l10n.filterOptionRemote,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.unread,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderReadStatus,
           provider: libraryMangaFilterUnreadProvider,
           onChanged: ref.read(libraryMangaFilterUnreadProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionUnread,
+          excludedLabel: context.l10n.filterOptionRead,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.started,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderProgress,
           provider: libraryMangaFilterStartedProvider,
           onChanged:
               ref.read(libraryMangaFilterStartedProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionStarted,
+          excludedLabel: context.l10n.filterOptionNotStarted,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.bookmarked,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderBookmarks,
           provider: libraryMangaFilterBookmarkedProvider,
           onChanged:
               ref.read(libraryMangaFilterBookmarkedProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionBookmarked,
+          excludedLabel: context.l10n.filterOptionNotBookmarked,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.completed,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderPublicationStatus,
           provider: libraryMangaFilterCompletedProvider,
           onChanged:
               ref.read(libraryMangaFilterCompletedProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionCompleted,
+          excludedLabel: context.l10n.filterOptionNotCompleted,
         ),
-        CustomCheckboxListTile(
-          title: context.l10n.lewd,
+        TriStateFilterTile(
+          header: context.l10n.filterHeaderContentRating,
           provider: libraryMangaFilterLewdProvider,
           onChanged:
               ref.read(libraryMangaFilterLewdProvider.notifier).update,
+          includedLabel: context.l10n.filterOptionLewd,
+          excludedLabel: context.l10n.filterOptionNotLewd,
         ),
         _RatingFilterRow(),
         _CategoryFilterRow(),
@@ -132,15 +147,7 @@ class _TrackerFilterSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-          child: Text(
-            context.l10n.filterTracked,
-            style: context.theme.textTheme.labelLarge?.copyWith(
-              color: context.theme.colorScheme.primary,
-            ),
-          ),
-        ),
+        OrganizerHeading(context.l10n.filterTracked),
         for (final tracker in loggedIn)
           _TrackerFilterTile(tracker: tracker),
       ],

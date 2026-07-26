@@ -849,11 +849,15 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
 }
 
 /// Manga ids with at least one chapter downloaded on this device — used by
-/// the "On device" library filter. Empty set when offline is unavailable, so
-/// the filter is a no-op.
+/// the "On device" library filter and the on-device cover badge.
+///
+/// Gated on [offlineEnabledProvider], not [offlineActiveProvider]: what sits on
+/// this device's disk is a purely local fact, so it must survive an unreachable
+/// server and the cold start before `serverInstanceId` resolves. Empty set on
+/// web / when init failed, so both callers no-op.
 @riverpod
 Future<Set<int>> offlineDeviceMangaIds(Ref ref) async {
-  if (!ref.watch(offlineActiveProvider)) return const {};
+  if (!ref.watch(offlineEnabledProvider)) return const {};
   return ref.watch(offlineRepositoryProvider).deviceDownloadedMangaIds();
 }
 

@@ -12,6 +12,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/custom_checkbox_list_tile.dart';
 import '../../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
+import '../../../../../widgets/organizer_heading.dart';
 import '../controller/library_controller.dart';
 
 class LibraryMangaDisplay extends ConsumerWidget {
@@ -23,21 +24,24 @@ class LibraryMangaDisplay extends ConsumerWidget {
     final isLandscape =
         MediaQuery.orientationOf(context) == Orientation.landscape;
 
-    // Whether the current display mode uses a grid (slider is relevant).
-    final isGridMode = displayMode == DisplayMode.grid ||
-        displayMode == DisplayMode.coverOnly;
+    final selectedMode =
+        displayMode ?? DBKeys.libraryDisplayMode.initial as DisplayMode;
+    final isGridMode = selectedMode.isGrid;
 
     final currentCols = (isLandscape
             ? ref.watch(libraryLandscapeColumnsProvider)
             : ref.watch(libraryPortraitColumnsProvider)) ??
         0;
 
-    final selectedMode = displayMode ?? DBKeys.libraryDisplayMode.initial;
+    final gridStyle =
+        ref.watch(libraryGridStyleKeyProvider) ?? LibraryGridStyle.uniform;
+    final listScale = ref.watch(libraryListScaleProvider) ??
+        DBKeys.listScale.initial as double;
 
     return ListView(
       shrinkWrap: true,
       children: [
-        _Heading(context.l10n.displayMode),
+        OrganizerHeading(context.l10n.displayMode),
         // A chip row for display mode, not a tall radio list — keeps
         // the sheet compact.
         Padding(
@@ -50,7 +54,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
                 FilterChip(
                   selected: selectedMode == mode,
                   showCheckmark: false,
-                  label: Text(mode.toLocale(context)),
+                  label: Text(mode.toLibraryLocale(context)),
                   onSelected: (_) => ref
                       .read(libraryDisplayModeProvider.notifier)
                       .update(mode),
@@ -59,7 +63,7 @@ class LibraryMangaDisplay extends ConsumerWidget {
           ),
         ),
         if (isGridMode) ...[
-          _Heading(isLandscape
+          OrganizerHeading(isLandscape
               ? context.l10n.libraryColumnsLandscape
               : context.l10n.libraryColumnsPortrait),
           Padding(
@@ -94,104 +98,75 @@ class LibraryMangaDisplay extends ConsumerWidget {
               ],
             ),
           ),
+          OrganizerHeading(context.l10n.gridStyle),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final style in LibraryGridStyle.values)
+                  FilterChip(
+                    selected: gridStyle == style,
+                    showCheckmark: false,
+                    avatar: Icon(style.icon, size: 18),
+                    label: Text(style.toLocale(context)),
+                    onSelected: (_) => ref
+                        .read(libraryGridStyleKeyProvider.notifier)
+                        .update(style),
+                  ),
+              ],
+            ),
+          ),
         ],
-        _Heading(context.l10n.badges),
-        CustomCheckboxListTile(
-          title: context.l10n.downloaded,
-          provider: downloadedBadgeProvider,
-          onChanged: ref.read(downloadedBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.onDevice,
-          provider: onDeviceBadgeProvider,
-          onChanged: ref.read(onDeviceBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.unread,
-          provider: unreadBadgeProvider,
-          onChanged: ref.read(unreadBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.readProgressBar,
-          provider: readProgressBarProvider,
-          onChanged: ref.read(readProgressBarProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.continueReadingButton,
-          provider: showContinueReadingButtonProvider,
-          onChanged:
-              ref.read(showContinueReadingButtonProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.languageBadge,
-          provider: languageBadgeProvider,
-          onChanged: ref.read(languageBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        if (ref.watch(languageBadgeProvider).ifNull(false))
+        if (!isGridMode) ...[
+          OrganizerHeading(context.l10n.listSize),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Row(
+              children: [
+                const Icon(Icons.format_size_rounded, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Slider(
+                    value: listScale,
+                    min: 0.7,
+                    max: 1.6,
+                    divisions: 18,
+                    label: '${(listScale * 100).round()}%',
+                    onChanged: (val) => ref
+                        .read(libraryListScaleProvider.notifier)
+                        .update(double.parse(val.toStringAsFixed(2))),
+                  ),
+                ),
+                SizedBox(
+                  width: 48,
+                  child: Text(
+                    '${(listScale * 100).round()}%',
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // Only modes that draw the title on the theme surface, where an
+        // uncapped title can push its own row taller. The compact grid is out:
+        // its title sits on the art, so growing it would swallow the cover.
+        if (selectedMode == DisplayMode.comfortableGrid ||
+            selectedMode == DisplayMode.list ||
+            selectedMode == DisplayMode.descriptiveList)
           CustomCheckboxListTile(
-            title: context.l10n.useLangIcon,
-            provider: useLangIconProvider,
-            onChanged: ref.read(useLangIconProvider.notifier).update,
-            tristate: false,
+            title: context.l10n.limitTitleLines,
+            provider: limitTitleLinesProvider,
+            onChanged: ref.read(limitTitleLinesProvider.notifier).update,
           ),
         CustomCheckboxListTile(
-          title: context.l10n.localBadge,
-          provider: localBadgeProvider,
-          onChanged: ref.read(localBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.sourceBadge,
-          provider: sourceBadgeProvider,
-          onChanged: ref.read(sourceBadgeProvider.notifier).update,
-          tristate: false,
-        ),
-        _Heading(context.l10n.tabs),
-        CustomCheckboxListTile(
-          title: context.l10n.categoryTabs,
-          provider: categoryTabsProvider,
-          onChanged: ref.read(categoryTabsProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.showHiddenCategories,
-          provider: showHiddenCategoriesProvider,
-          onChanged: ref.read(showHiddenCategoriesProvider.notifier).update,
-          tristate: false,
-        ),
-        CustomCheckboxListTile(
-          title: context.l10n.categoryNumberOfItems,
-          provider: categoryNumberOfItemsProvider,
-          onChanged: ref.read(categoryNumberOfItemsProvider.notifier).update,
-          tristate: false,
+          title: context.l10n.outlineOnCovers,
+          provider: outlineOnCoversProvider,
+          onChanged: ref.read(outlineOnCoversProvider.notifier).update,
         ),
       ],
-    );
-  }
-}
-
-/// Compact section header (24dp/tight padding, primary-tinted label),
-/// consistent with the filter tab's "Tracked" heading.
-class _Heading extends StatelessWidget {
-  const _Heading(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-      child: Text(
-        text,
-        style: context.theme.textTheme.labelLarge?.copyWith(
-          color: context.theme.colorScheme.primary,
-        ),
-      ),
     );
   }
 }

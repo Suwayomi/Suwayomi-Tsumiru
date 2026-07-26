@@ -398,15 +398,21 @@ enum DisplayMode {
   /// Menu order for the library display tab (differs from declaration order,
   /// which is frozen by persisted indexes).
   static const List<DisplayMode> libraryDisplayList = [
-    DisplayMode.grid,
-    DisplayMode.comfortableGrid,
     DisplayMode.list,
     DisplayMode.descriptiveList,
+    DisplayMode.grid,
+    DisplayMode.comfortableGrid,
     DisplayMode.coverOnly,
   ];
 
   final IconData icon;
   const DisplayMode(this.icon);
+
+  /// Gates the column slider and the grid-style selector in the Display tab.
+  bool get isGrid =>
+      this == DisplayMode.grid ||
+      this == DisplayMode.comfortableGrid ||
+      this == DisplayMode.coverOnly;
 
   String toLocale(BuildContext context) => switch (this) {
         DisplayMode.grid => context.l10n.displayModeGrid,
@@ -414,6 +420,103 @@ enum DisplayMode {
         DisplayMode.descriptiveList => context.l10n.displayModeDescriptiveList,
         DisplayMode.coverOnly => context.l10n.displayModeCoverOnly,
         DisplayMode.comfortableGrid => context.l10n.displayModeComfortableGrid,
+      };
+
+  /// The library offers three grid variants, so plain [grid] reads as
+  /// "Compact grid" there; Browse only has grid/list and keeps [toLocale].
+  String toLibraryLocale(BuildContext context) => this == DisplayMode.grid
+      ? context.l10n.displayModeCompactGrid
+      : toLocale(context);
+}
+
+/// Unread badge presentation. Persisted by index, so the order is frozen.
+enum UnreadBadgeMode {
+  count,
+  dot,
+  hidden;
+
+  bool get isVisible => this != UnreadBadgeMode.hidden;
+
+  String toLocale(BuildContext context) => switch (this) {
+        UnreadBadgeMode.count => context.l10n.unreadBadgeModeCount,
+        UnreadBadgeMode.dot => context.l10n.unreadBadgeModeDot,
+        UnreadBadgeMode.hidden => context.l10n.unreadBadgeModeHidden,
+      };
+}
+
+/// Which corner of a cover a badge clusters into.
+enum BadgeSide { left, right }
+
+/// Every badge that can be drawn on a library cover, in shipped drag-order.
+///
+/// [id] is what gets persisted in `badgeOrder` / `badgeRightSide` — never the
+/// enum index — so inserting a badge here can't repoint a saved layout.
+enum LibraryBadge {
+  unread('unread'),
+  downloaded('downloaded'),
+  onDevice('onDevice'),
+  language('language'),
+  source('source');
+
+  const LibraryBadge(this.id);
+  final String id;
+
+  static LibraryBadge? fromId(String id) {
+    for (final b in LibraryBadge.values) {
+      if (b.id == id) return b;
+    }
+    return null;
+  }
+
+  String toLocale(BuildContext context) => switch (this) {
+        LibraryBadge.unread => context.l10n.unread,
+        LibraryBadge.downloaded => context.l10n.downloaded,
+        LibraryBadge.onDevice => context.l10n.onDevice,
+        LibraryBadge.language => context.l10n.languageBadge,
+        LibraryBadge.source => context.l10n.sourceBadge,
+      };
+}
+
+/// Which widget renders a grouped library. Persisted by index.
+///
+/// Orthogonal to `categoryTabs` / `sectionHeadersShowAllCategories`, which
+/// modify whichever style is active — see `_groupedBody` in library_screen.
+enum LibraryGroupStyle {
+  /// One page per group, behind a swipeable `TabBarView`.
+  tabs,
+
+  /// A single continuous scroll, each group under a sticky header.
+  headers;
+
+  String toLocale(BuildContext context) => switch (this) {
+        LibraryGroupStyle.tabs => context.l10n.groupStyleTabs,
+        LibraryGroupStyle.headers => context.l10n.groupStyleHeaders,
+      };
+}
+
+/// Cover geometry for the library's grid modes. Persisted by index.
+enum LibraryGridStyle {
+  /// Every cover is cropped into the same fixed 2:3 cell.
+  uniform(Icons.grid_view_rounded),
+
+  /// Fixed cell width, cover height follows the art (capped). Rows align to
+  /// their tallest cover.
+  nonUniform(Icons.grid_goldenratio_rounded),
+
+  /// Masonry: each column packs independently.
+  staggered(Icons.dashboard_rounded);
+
+  const LibraryGridStyle(this.icon);
+  final IconData icon;
+
+  /// True when tiles size themselves from the cover art instead of filling a
+  /// fixed cell.
+  bool get isFreeform => this != LibraryGridStyle.uniform;
+
+  String toLocale(BuildContext context) => switch (this) {
+        LibraryGridStyle.uniform => context.l10n.gridStyleUniform,
+        LibraryGridStyle.nonUniform => context.l10n.gridStyleNonUniform,
+        LibraryGridStyle.staggered => context.l10n.gridStyleStaggered,
       };
 }
 

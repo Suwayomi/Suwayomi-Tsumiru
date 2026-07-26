@@ -1465,7 +1465,11 @@
     },
     "categoryTabs": "Show category tabs",
     "@categoryTabs": {
-        "description": "Library Display > Tabs: checkbox to show or hide the category tab bar"
+        "description": "Library Group checkbox to show or hide the category tab bar in Tabs mode"
+    },
+    "sectionHeadersShowAllCategories": "Show all categories",
+    "@sectionHeadersShowAllCategories": {
+        "description": "Library Group checkbox to scroll all sections together in Section headers mode"
     },
     "showHiddenCategories": "Show hidden categories",
     "@showHiddenCategories": {
@@ -1511,9 +1515,7 @@
     },
     "continueReadingButton": "Continue reading button",
     "languageBadge": "Language",
-    "localBadge": "Local source",
     "sourceBadge": "Source icon",
-    "useLangIcon": "Use source icon for language",
     "browse": "Browse",
     "buildTime": "Build time",
     "cacheCleared": "Cache Cleared",
@@ -1674,10 +1676,190 @@
     "display": "Display",
     "displayMode": "Display Mode",
     "displayModeComfortableGrid": "Comfortable grid",
+    "displayModeCompactGrid": "Compact grid",
+    "@displayModeCompactGrid": {
+        "description": "Library-only label for display mode Grid, whose title sits on the cover"
+    },
     "displayModeCoverOnly": "Cover-only grid",
     "displayModeDescriptiveList": "Descriptive List",
     "displayModeGrid": "Grid",
     "displayModeList": "List",
+    "gridStyle": "Grid style",
+    "@gridStyle": {
+        "description": "Library Display section label for the grid cover-geometry chip row"
+    },
+    "gridStyleUniform": "Uniform",
+    "@gridStyleUniform": {
+        "description": "Grid style chip: every cover cropped into the same fixed cell"
+    },
+    "gridStyleNonUniform": "Non-uniform",
+    "@gridStyleNonUniform": {
+        "description": "Grid style chip: covers keep their aspect ratio, rows still align"
+    },
+    "gridStyleStaggered": "Staggered",
+    "@gridStyleStaggered": {
+        "description": "Grid style chip: masonry layout where columns pack independently"
+    },
+    "outlineOnCovers": "Outline on covers",
+    "@outlineOnCovers": {
+        "description": "Library Display checkbox to draw a thin outline around every cover"
+    },
+    "filterStateAny": "Any",
+    "@filterStateAny": {
+        "description": "Tri-state filter chip to not filter on this at all"
+    },
+    "filterStateIncluded": "Included",
+    "@filterStateIncluded": {
+        "description": "Generic tri-state filter chip to show only entries that match"
+    },
+    "filterStateExcluded": "Excluded",
+    "@filterStateExcluded": {
+        "description": "Generic tri-state filter chip to hide entries that match"
+    },
+    "filterHeaderDownloadStatus": "Download Status",
+    "@filterHeaderDownloadStatus": {
+        "description": "Section label for the downloaded filter chip row"
+    },
+    "filterOptionDownloaded": "Downloaded",
+    "@filterOptionDownloaded": {
+        "description": "Download-status filter chip: only downloaded entries"
+    },
+    "filterOptionNotDownloaded": "Not Downloaded",
+    "@filterOptionNotDownloaded": {
+        "description": "Download-status filter chip: only entries with nothing downloaded"
+    },
+    "filterHeaderStorage": "Storage",
+    "@filterHeaderStorage": {
+        "description": "Section label for the on-device filter chip row"
+    },
+    "filterOptionOnDevice": "On Device",
+    "@filterOptionOnDevice": {
+        "description": "Storage filter chip: only entries kept on this device"
+    },
+    "filterOptionRemote": "Remote",
+    "@filterOptionRemote": {
+        "description": "Storage filter chip: only entries with nothing kept on this device"
+    },
+    "filterHeaderReadStatus": "Read Status",
+    "@filterHeaderReadStatus": {
+        "description": "Section label for the unread filter chip row"
+    },
+    "filterOptionUnread": "Unread",
+    "@filterOptionUnread": {
+        "description": "Read-status filter chip: only entries with unread chapters"
+    },
+    "filterOptionRead": "Read",
+    "@filterOptionRead": {
+        "description": "Read-status filter chip: only fully read entries"
+    },
+    "filterHeaderProgress": "Progress",
+    "@filterHeaderProgress": {
+        "description": "Section label for the started filter chip row"
+    },
+    "filterOptionStarted": "Started",
+    "@filterOptionStarted": {
+        "description": "Progress filter chip: only entries with at least one chapter read"
+    },
+    "filterOptionNotStarted": "Not Started",
+    "@filterOptionNotStarted": {
+        "description": "Progress filter chip: only entries with no chapters read yet"
+    },
+    "filterHeaderBookmarks": "Bookmarks",
+    "@filterHeaderBookmarks": {
+        "description": "Section label for the bookmarked filter chip row"
+    },
+    "filterOptionBookmarked": "Bookmarked",
+    "@filterOptionBookmarked": {
+        "description": "Bookmarks filter chip: only entries with a bookmarked chapter"
+    },
+    "filterOptionNotBookmarked": "Not Bookmarked",
+    "@filterOptionNotBookmarked": {
+        "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
+    },
+    "filterHeaderPublicationStatus": "Publication Status",
+    "@filterHeaderPublicationStatus": {
+        "description": "Section label for the completed filter chip row"
+    },
+    "filterOptionCompleted": "Completed",
+    "@filterOptionCompleted": {
+        "description": "Publication-status filter chip: only entries the source marked completed"
+    },
+    "filterOptionNotCompleted": "Not Completed",
+    "@filterOptionNotCompleted": {
+        "description": "Publication-status filter chip: only entries not marked completed"
+    },
+    "filterHeaderContentRating": "Content Rating",
+    "@filterHeaderContentRating": {
+        "description": "Section label for the lewd filter chip row"
+    },
+    "filterOptionLewd": "Lewd",
+    "@filterOptionLewd": {
+        "description": "Content-rating filter chip: only entries the source marked NSFW"
+    },
+    "filterOptionNotLewd": "Not Lewd",
+    "@filterOptionNotLewd": {
+        "description": "Content-rating filter chip: only entries not marked NSFW"
+    },
+    "limitTitleLines": "Limit titles to 2 lines",
+    "@limitTitleLines": {
+        "description": "Library Display checkbox to cap titles at two ellipsized lines"
+    },
+    "listSize": "List size",
+    "@listSize": {
+        "description": "Library Display section label for the List and Descriptive List scale slider"
+    },
+    "unreadBadgeMode": "Unread badge",
+    "@unreadBadgeMode": {
+        "description": "Library Badges section label for the unread badge chip row"
+    },
+    "unreadBadgeModeCount": "Show count",
+    "@unreadBadgeModeCount": {
+        "description": "Unread badge chip: show the number of unread chapters"
+    },
+    "unreadBadgeModeDot": "Show plain badge",
+    "@unreadBadgeModeDot": {
+        "description": "Unread badge chip: show a plain accent chip with no number"
+    },
+    "unreadBadgeModeHidden": "Hide",
+    "@unreadBadgeModeHidden": {
+        "description": "Unread badge chip: do not draw the badge at all"
+    },
+    "badgeLayout": "Badge layout",
+    "@badgeLayout": {
+        "description": "Library Badges section label for the drag-to-reorder badge list"
+    },
+    "badgeLayoutHint": "Drag to reorder. Tap the arrow to move a badge to the other corner.",
+    "@badgeLayoutHint": {
+        "description": "Helper text under Badge layout explaining the drag handle and side toggle"
+    },
+    "badgeMoveToLeft": "Move to left corner",
+    "@badgeMoveToLeft": {
+        "description": "Tooltip on the badge side toggle when the badge is on the right"
+    },
+    "badgeMoveToRight": "Move to right corner",
+    "@badgeMoveToRight": {
+        "description": "Tooltip on the badge side toggle when the badge is on the left"
+    },
+    "groupStyle": "Group display",
+    "@groupStyle": {
+        "description": "Library Group section label for the group presentation chip row"
+    },
+    "groupStyleTabs": "Tabs",
+    "@groupStyleTabs": {
+        "description": "Group display chip: one page per group, behind a swipeable tab bar"
+    },
+    "groupStyleHeaders": "Section headers",
+    "@groupStyleHeaders": {
+        "description": "Group display chip: one continuous scroll with a sticky header per group"
+    },
+    "groupByTag": "By tag",
+    "@groupByTag": {
+        "description": "Group mode: one tab per source genre and user tag"
+    },
+    "groupByLanguage": "By language",
+    "@groupByLanguage": {
+        "description": "Group mode: one tab per source language"
+    },
     "downloadAllChapters": "All",
     "@downloadAllChapters": {
         "description": "Bulk-download menu item: queue every not-yet-downloaded chapter."

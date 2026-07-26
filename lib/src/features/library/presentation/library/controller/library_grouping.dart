@@ -8,7 +8,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
+import '../../../../../constants/enum.dart';
+import '../../../../../utils/misc/language_flag.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../domain/category/category_model.dart';
 import '../../../domain/library_group.dart';
@@ -33,6 +36,10 @@ typedef MangaProxy = ({
   /// Track status integers from all bound track records.
   /// Empty for untracked manga.
   List<int> trackStatuses,
+
+  /// Source genres + the user's own tags, as stored (original casing).
+  /// Empty for untagged manga.
+  List<String> tags,
 });
 
 /// Duck-typed projection of [CategoryDto] fields needed for grouping.
@@ -49,6 +56,9 @@ MangaProxy mangaToProxy(MangaDto m) => (
       status: m.status.name,
       categoryIds: m.categories.nodes.map((c) => c.id).toList(),
       trackStatuses: m.trackRecords.nodes.map((n) => n.status).toList(),
+      // Same definition the tags FILTER uses, so buckets and `tag:` searches
+      // never disagree.
+      tags: [...m.genre, ...(m.metaData.userTags ?? const <String>[])],
     );
 
 CategoryProxy categoryToProxy(CategoryDto c) => (id: c.id, name: c.name);
@@ -84,6 +94,12 @@ List<GroupedTab> groupLibrary(
 
     case LibraryGroup.byTrackStatus:
       return _groupByTrackStatus(all);
+
+    case LibraryGroup.byTag:
+      return _groupByTag(all);
+
+    case LibraryGroup.byLanguage:
+      return _groupByLanguage(all);
 
     case LibraryGroup.ungrouped:
       return [
@@ -140,12 +156,23 @@ List<GroupedTab> _groupByDefault(
 }
 
 List<GroupedTab> _groupBySource(List<MangaProxy> all) {
-  final Map<String, ({String name, List<int> mangaIds})> buckets = {};
+  final Map<String, ({String name, String lang, List<int> mangaIds})>
+      buckets = {};
   for (final m in all) {
     final sid = m.sourceId;
-    final name = m.sourceLang == 'localsourcelang' ? 'Local source' : m.sourceName;
-    final entry = buckets.putIfAbsent(sid, () => (name: name, mangaIds: []));
+    final name =
+        m.sourceLang == kLocalSourceLang ? 'Local source' : m.sourceName;
+    final entry = buckets.putIfAbsent(
+      sid,
+      () => (name: name, lang: m.sourceLang, mangaIds: []),
+    );
     entry.mangaIds.add(m.id);
+  }
+  // A source installed once per locale (two MangaDex ids, say) shares its name
+  // across buckets, so those get their language code appended below.
+  final nameCounts = <String, int>{};
+  for (final b in buckets.values) {
+    nameCounts[b.name] = (nameCounts[b.name] ?? 0) + 1;
   }
   // Sort source tabs case-insensitively by name.
   final sorted = buckets.entries.toList()
@@ -154,11 +181,17 @@ List<GroupedTab> _groupBySource(List<MangaProxy> all) {
   // Each tab needs a UNIQUE id (the grouped-list provider is keyed by tab id).
   // Source ids are numeric strings; fall back to the string hash if not.
   return sorted
-      .map((e) => (
-            id: int.tryParse(e.key) ?? e.key.hashCode,
-            name: e.value.name,
-            mangaIds: e.value.mangaIds,
-          ))
+      .map((e) {
+        final isDuplicateName = (nameCounts[e.value.name] ?? 0) > 1;
+        final label = isDuplicateName && e.value.lang != kLocalSourceLang
+            ? '${e.value.name} (${e.value.lang.toUpperCase()})'
+            : e.value.name;
+        return (
+          id: int.tryParse(e.key) ?? e.key.hashCode,
+          name: label,
+          mangaIds: e.value.mangaIds,
+        );
+      })
       .toList();
 }
 
@@ -191,6 +224,87 @@ String _statusLabel(String status) => switch (status) {
       'CANCELLED' => 'Cancelled',
       _ => 'Unknown',
     };
+
+/// Tab id for a bucket keyed by name rather than a server id — a positional
+/// index would shift as soon as a new tag or language appeared. The prefix
+/// separates the namespaces.
+int _nameId(String prefix, String name) => Object.hash(prefix, name);
+
+/// Sentinel ids for the trailing "no value" buckets. Negative, so they can
+/// never collide with a real category / status / track-status id.
+const int _kNoTagId = -101;
+const int _kNoLanguageId = -102;
+
+List<GroupedTab> _groupByTag(List<MangaProxy> all) {
+  // Fan-out: a manga with N distinct tags appears in all N buckets. Matched
+  // case-insensitively (like the `tag:` filter), displayed as first seen.
+  final Map<String, ({String display, List<int> mangaIds})> buckets = {};
+  final List<int> untagged = [];
+
+  for (final m in all) {
+    final seen = <String>{};
+    for (final raw in m.tags) {
+      final tag = raw.trim();
+      if (tag.isEmpty) continue;
+      final key = tag.toLowerCase();
+      // De-dup within one manga: a genre that's also a user tag is one bucket.
+      if (!seen.add(key)) continue;
+      buckets.putIfAbsent(key, () => (display: tag, mangaIds: [])).mangaIds
+          .add(m.id);
+    }
+    if (seen.isEmpty) untagged.add(m.id);
+  }
+
+  final sorted = buckets.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+
+  return [
+    for (final e in sorted)
+      (
+        id: _nameId('tag', e.key),
+        name: e.value.display,
+        mangaIds: e.value.mangaIds,
+      ),
+    // Trailing, like BY_TRACK_STATUS's "Other".
+    if (untagged.isNotEmpty)
+      (id: _kNoTagId, name: 'Untagged', mangaIds: untagged),
+  ];
+}
+
+List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
+  // Local-source entries have no real language, so they get their own trailing
+  // bucket rather than a bogus flag.
+  final Map<String, List<int>> buckets = {};
+  final List<int> unknown = [];
+
+  for (final m in all) {
+    final lang = m.sourceLang.trim().toLowerCase();
+    if (lang.isEmpty || lang == kLocalSourceLang) {
+      unknown.add(m.id);
+    } else {
+      buckets.putIfAbsent(lang, () => []).add(m.id);
+    }
+  }
+
+  // Sort by DISPLAY name, not ISO code: "German" before "Japanese", not de/ja.
+  final sorted = buckets.entries.toList()
+    ..sort((a, b) => languageDisplayName(a.key)
+        .toLowerCase()
+        .compareTo(languageDisplayName(b.key).toLowerCase()));
+
+  return [
+    for (final e in sorted)
+      (
+        id: _nameId('lang', e.key),
+        name: [languageFlagEmoji(e.key), languageDisplayName(e.key)]
+            .whereType<String>()
+            .join(' '),
+        mangaIds: e.value,
+      ),
+    if (unknown.isNotEmpty)
+      (id: _kNoLanguageId, name: 'Local source', mangaIds: unknown),
+  ];
+}
 
 List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
   // Fan-out: a manga with N distinct track statuses appears in all N tabs.
@@ -231,6 +345,24 @@ class LibraryGroupType extends _$LibraryGroupType
     with SharedPreferenceClientMixin<int> {
   @override
   int? build() => initialize(DBKeys.libraryGroupType);
+}
+
+@riverpod
+class LibraryGroupStyleKey extends _$LibraryGroupStyleKey
+    with SharedPreferenceEnumClientMixin<LibraryGroupStyle> {
+  @override
+  LibraryGroupStyle? build() =>
+      initialize(DBKeys.libraryGroupStyle, enumList: LibraryGroupStyle.values);
+}
+
+/// The section at the top of the viewport in Section-Headers mode, so the app
+/// bar can name it. Not persisted — a live scroll readout, written only by
+/// [LibrarySectionsView] and never read back to move the scroll position.
+@riverpod
+class LibraryVisibleSection extends _$LibraryVisibleSection
+    with StateProviderMixin<int?> {
+  @override
+  int? build() => null;
 }
 
 /// The full grouped tab list, combining the library manga list + group type +

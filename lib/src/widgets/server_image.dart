@@ -29,6 +29,62 @@ import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
 import 'custom_circular_progress_indicator.dart';
 
+final _trailingSlashes = RegExp(r'/+$');
+final _leadingSlashes = RegExp(r'^/+');
+
+/// Absolute URL for a server-relative image or page [path].
+///
+/// Suwayomi hands these out root-relative and already carrying the `/api/v1`
+/// prefix, so [appendApiToUrl] only applies when the path has none. A doubled
+/// prefix or slash misses the route and falls through to the WebUI SPA, which
+/// answers 200 with index.html — a bad join shows up as a broken image rather
+/// than an HTTP error.
+///
+/// Returns `''` for a blank [path]; callers must skip the request instead of
+/// passing the result on.
+String serverFileUrl({
+  required String path,
+  required String? baseUrl,
+  required int? port,
+  required bool addPort,
+  required bool appendApiToUrl,
+}) {
+  if (path.isEmpty) return '';
+  // Already absolute: a downloaded page (`file://`) or a fully-qualified URL.
+  if (path.startsWith('http://') ||
+      path.startsWith('https://') ||
+      path.startsWith('file://')) {
+    return path;
+  }
+
+  // Only let the caller's `appendApiToUrl` add the prefix when the server did
+  // not already put one on the path.
+  final hasApiPrefix = path.startsWith('/api/') || path.startsWith('api/');
+  final origin = Endpoints.baseApi(
+    baseUrl: baseUrl,
+    port: port,
+    addPort: addPort,
+    appendApiToUrl: appendApiToUrl && !hasApiPrefix,
+  );
+
+  final root = origin.replaceAll(_trailingSlashes, '');
+  final relative = path.replaceAll(_leadingSlashes, '');
+  return '$root/$relative';
+}
+
+/// Appends the ui_login access token to [url] as a query parameter.
+///
+/// `cached_network_image` cannot reliably inject an `Authorization` header
+/// across platforms, and the server accepts `?token=` as a fallback. The
+/// delimiter comes from the parsed URI, since page URLs can already carry a
+/// query string.
+String appendUiLoginToken(String url, String? token) {
+  if (url.isEmpty || token == null || token.isEmpty) return url;
+  final hasQuery = Uri.tryParse(url)?.hasQuery ?? url.contains('?');
+  final separator = hasQuery ? '&' : '?';
+  return '$url${separator}token=${Uri.encodeQueryComponent(token)}';
+}
+
 class ServerImage extends HookConsumerWidget {
   const ServerImage({
     super.key,
@@ -162,6 +218,16 @@ class ServerImage extends HookConsumerWidget {
       );
     }
 
+    // Callers pass "" for entries with no image (a source restored from the
+    // offline catalog, a null thumbnailUrl). Fetching it would hit the bare
+    // origin, which answers with the WebUI's index.html.
+    if (imageUrl.isEmpty) {
+      return AppUtils.wrapOn(
+        wrapper,
+        const Icon(Icons.broken_image_rounded, color: Colors.grey),
+      );
+    }
+
     // Providers
     final authType = ref.watch(authTypeKeyProvider);
     final basicToken = ref.watch(credentialsProvider).value;
@@ -185,13 +251,13 @@ class ServerImage extends HookConsumerWidget {
         .value
         ?.uiAccessToken;
 
-    final baseApi = "${Endpoints.baseApi(
+    final baseApi = serverFileUrl(
+      path: imageUrl,
       baseUrl: ref.watch(serverUrlProvider),
       port: ref.watch(serverPortProvider),
       addPort: ref.watch(serverPortToggleProvider).ifNull(),
       appendApiToUrl: appendApiToUrl,
-    )}"
-        "$imageUrl";
+    );
 
     Map<String, String>? httpHeaders;
     if (authType == AuthType.basic && basicToken != null) {
@@ -211,14 +277,10 @@ class ServerImage extends HookConsumerWidget {
     // snapshot is virtually always within the server's grace window;
     // worst case the request 401s once and the next widget rebuild
     // picks up the new token.
-    var fetchUrl = baseApi;
-    if (authType == AuthType.uiLogin &&
-        uiAccessTokenSnapshot != null &&
-        uiAccessTokenSnapshot.isNotEmpty) {
-      final sep = fetchUrl.contains('?') ? '&' : '?';
-      fetchUrl =
-          '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiAccessTokenSnapshot)}';
-    }
+    final fetchUrl = appendUiLoginToken(
+      baseApi,
+      authType == AuthType.uiLogin ? uiAccessTokenSnapshot : null,
+    );
 
     final ImageRenderMethodForWeb renderMethod;
     if (httpHeaders != null) {
@@ -396,12 +458,13 @@ class ServerImageWithCpi extends StatelessWidget {
   final basicToken = ref.read(credentialsProvider).value;
   final creds = ref.read(authCredentialsStoreProvider).value;
 
-  final cacheKey = "${Endpoints.baseApi(
+  final cacheKey = serverFileUrl(
+    path: imageUrl,
     baseUrl: ref.read(serverUrlProvider),
     port: ref.read(serverPortProvider),
     addPort: ref.read(serverPortToggleProvider).ifNull(),
     appendApiToUrl: appendApiToUrl,
-  )}$imageUrl";
+  );
 
   Map<String, String>? headers;
   if (authType == AuthType.basic && basicToken != null) {
@@ -410,12 +473,10 @@ class ServerImageWithCpi extends StatelessWidget {
     headers = creds?.simpleLoginCookieHeader;
   }
 
-  var fetchUrl = cacheKey;
-  final uiToken = creds?.uiAccessToken;
-  if (authType == AuthType.uiLogin && uiToken != null && uiToken.isNotEmpty) {
-    final sep = fetchUrl.contains('?') ? '&' : '?';
-    fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiToken)}';
-  }
+  final fetchUrl = appendUiLoginToken(
+    cacheKey,
+    authType == AuthType.uiLogin ? creds?.uiAccessToken : null,
+  );
   return (fetchUrl: fetchUrl, cacheKey: cacheKey, headers: headers, localPath: null);
 }
 
@@ -439,12 +500,13 @@ ImageProvider serverPageImageProvider(
   final basicToken = ref.read(credentialsProvider).value;
   final creds = ref.read(authCredentialsStoreProvider).value;
 
-  final baseApi = "${Endpoints.baseApi(
+  final baseApi = serverFileUrl(
+    path: imageUrl,
     baseUrl: ref.read(serverUrlProvider),
     port: ref.read(serverPortProvider),
     addPort: ref.read(serverPortToggleProvider).ifNull(),
     appendApiToUrl: appendApiToUrl,
-  )}$imageUrl";
+  );
 
   Map<String, String>? httpHeaders;
   if (authType == AuthType.basic && basicToken != null) {
@@ -453,12 +515,10 @@ ImageProvider serverPageImageProvider(
     httpHeaders = creds?.simpleLoginCookieHeader;
   }
 
-  var fetchUrl = baseApi;
-  final uiToken = creds?.uiAccessToken;
-  if (authType == AuthType.uiLogin && uiToken != null && uiToken.isNotEmpty) {
-    final sep = fetchUrl.contains('?') ? '&' : '?';
-    fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(uiToken)}';
-  }
+  final fetchUrl = appendUiLoginToken(
+    baseApi,
+    authType == AuthType.uiLogin ? creds?.uiAccessToken : null,
+  );
 
   return CachedNetworkImageProvider(
     fetchUrl,

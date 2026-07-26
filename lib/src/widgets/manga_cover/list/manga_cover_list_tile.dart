@@ -23,6 +23,8 @@ class MangaCoverListTile extends StatelessWidget {
     this.showBadges = true,
     this.showCountBadges = false,
     this.selected = false,
+    this.scale = 1.0,
+    this.limitTitleLines = true,
   });
 
   final MangaDto manga;
@@ -37,6 +39,15 @@ class MangaCoverListTile extends StatelessWidget {
   final bool showCountBadges;
   final bool showBadges;
   final bool selected;
+
+  /// Library list-size multiplier. Scales the cover box; the caller scales the
+  /// text through a [MediaQuery] textScaler so the row grows as one unit.
+  final double scale;
+
+  /// Cap the title at three ellipsized lines. Off lets it wrap in full, which
+  /// only shows if the caller also lets the row grow.
+  final bool limitTitleLines;
+
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
@@ -54,17 +65,22 @@ class MangaCoverListTile extends StatelessWidget {
               borderRadius: KBorderRadius.r8.radius,
               child: ServerImage(
                 imageUrl: manga.thumbnailUrl ?? "",
-                size: const Size(60, 80),
+                size: Size(60 * scale, 80 * scale),
               ),
             ),
           ),
           Expanded(
             child: Padding(
               padding: KEdgeInsets.h8.size,
+              // Skia collapses an uncapped ellipsis to one line, so uncapped
+              // text has to clip instead.
               child: Text(
                 manga.title,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 3,
+                softWrap: true,
+                overflow: limitTitleLines
+                    ? TextOverflow.ellipsis
+                    : TextOverflow.clip,
+                maxLines: limitTitleLines ? 3 : null,
               ),
             ),
           ),
