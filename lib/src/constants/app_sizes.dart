@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'app_constants.dart';
 import 'db_keys.dart';
@@ -95,15 +96,115 @@ enum KRadius {
   final Radius radius;
 }
 
-/// [titleBelow] (comfortable grid) stretches the cell to leave room for the
-/// two-line title block under the cover.
-SliverGridDelegateWithMaxCrossAxisExtent mangaCoverGridDelegate(
+/// Manga covers are 2:3, matching Komikku's `MangaCover.Book`.
+const kMangaCoverAspectRatio = 2 / 3;
+
+/// Height reserved for the two-line title under a comfortable-grid cover.
+const kGridTitleExtent = 44.0;
+
+/// Row height comes from the resolved column width, so the cover keeps its 2:3
+/// shape at every column count. Deriving it the other way round — a fixed cell
+/// ratio, cover takes what's left — cropped the art, and in the comfortable
+/// grid the error grew as columns got narrower.
+SliverGridRegularTileLayout _coverTileLayout(
+  SliverConstraints constraints, {
+  required int crossAxisCount,
+  required double crossAxisSpacing,
+  required double mainAxisSpacing,
+  required double titleExtent,
+}) {
+  final usableCrossAxisExtent = max(
+    0.0,
+    constraints.crossAxisExtent - crossAxisSpacing * (crossAxisCount - 1),
+  );
+  final childCrossAxisExtent = usableCrossAxisExtent / crossAxisCount;
+  final childMainAxisExtent =
+      childCrossAxisExtent / kMangaCoverAspectRatio + titleExtent;
+  return SliverGridRegularTileLayout(
+    crossAxisCount: crossAxisCount,
+    mainAxisStride: childMainAxisExtent + mainAxisSpacing,
+    crossAxisStride: childCrossAxisExtent + crossAxisSpacing,
+    childMainAxisExtent: childMainAxisExtent,
+    childCrossAxisExtent: childCrossAxisExtent,
+    reverseCrossAxis: axisDirectionIsReversed(constraints.crossAxisDirection),
+  );
+}
+
+/// Width-driven columns (the "auto" library layout).
+class MangaCoverGridDelegate extends SliverGridDelegate {
+  const MangaCoverGridDelegate({
+    required this.maxCrossAxisExtent,
+    this.mainAxisSpacing = 0.0,
+    this.crossAxisSpacing = 0.0,
+    this.titleExtent = 0.0,
+  });
+
+  final double maxCrossAxisExtent;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  final double titleExtent;
+
+  @override
+  SliverGridLayout getLayout(SliverConstraints constraints) => _coverTileLayout(
+        constraints,
+        crossAxisCount: max(
+          1,
+          (constraints.crossAxisExtent /
+                  (maxCrossAxisExtent + crossAxisSpacing))
+              .ceil(),
+        ),
+        crossAxisSpacing: crossAxisSpacing,
+        mainAxisSpacing: mainAxisSpacing,
+        titleExtent: titleExtent,
+      );
+
+  @override
+  bool shouldRelayout(MangaCoverGridDelegate oldDelegate) =>
+      oldDelegate.maxCrossAxisExtent != maxCrossAxisExtent ||
+      oldDelegate.mainAxisSpacing != mainAxisSpacing ||
+      oldDelegate.crossAxisSpacing != crossAxisSpacing ||
+      oldDelegate.titleExtent != titleExtent;
+}
+
+/// Fixed column count (the user set one in library settings).
+class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
+  const MangaCoverFixedCountGridDelegate({
+    required this.crossAxisCount,
+    this.mainAxisSpacing = 0.0,
+    this.crossAxisSpacing = 0.0,
+    this.titleExtent = 0.0,
+  }) : assert(crossAxisCount > 0);
+
+  final int crossAxisCount;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  final double titleExtent;
+
+  @override
+  SliverGridLayout getLayout(SliverConstraints constraints) => _coverTileLayout(
+        constraints,
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: crossAxisSpacing,
+        mainAxisSpacing: mainAxisSpacing,
+        titleExtent: titleExtent,
+      );
+
+  @override
+  bool shouldRelayout(MangaCoverFixedCountGridDelegate oldDelegate) =>
+      oldDelegate.crossAxisCount != crossAxisCount ||
+      oldDelegate.mainAxisSpacing != mainAxisSpacing ||
+      oldDelegate.crossAxisSpacing != crossAxisSpacing ||
+      oldDelegate.titleExtent != titleExtent;
+}
+
+/// [titleBelow] (comfortable grid) adds the title block under the cover.
+SliverGridDelegate mangaCoverGridDelegate(
   double? size, {
   bool titleBelow = false,
 }) =>
-    SliverGridDelegateWithMaxCrossAxisExtent(
+    MangaCoverGridDelegate(
       maxCrossAxisExtent: size ?? DBKeys.gridMangaCoverWidth.initial,
       crossAxisSpacing: 2.0,
       mainAxisSpacing: 2.0,
-      childAspectRatio: titleBelow ? 0.62 : 0.75,
+      titleExtent: titleBelow ? kGridTitleExtent : 0.0,
     );

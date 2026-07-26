@@ -749,11 +749,11 @@ class _GroupedMangaList extends ConsumerWidget {
     final fixedCols = isLandscape ? landscapeCols : portraitCols;
 
     SliverGridDelegate gridDelegate({bool titleBelow = false}) => fixedCols > 0
-        ? SliverGridDelegateWithFixedCrossAxisCount(
+        ? MangaCoverFixedCountGridDelegate(
             crossAxisCount: fixedCols,
             crossAxisSpacing: 2.0,
             mainAxisSpacing: 2.0,
-            childAspectRatio: titleBelow ? 0.62 : 0.75,
+            titleExtent: titleBelow ? kGridTitleExtent : 0.0,
           )
         : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 

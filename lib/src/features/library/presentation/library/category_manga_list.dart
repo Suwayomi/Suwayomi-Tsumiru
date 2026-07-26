@@ -56,11 +56,11 @@ class CategoryMangaList extends HookConsumerWidget {
     // gridDelegate: fixed count when the user set cols > 0, else Auto (width-based).
     SliverGridDelegate libraryGridDelegate({bool titleBelow = false}) =>
         fixedCols > 0
-            ? SliverGridDelegateWithFixedCrossAxisCount(
+            ? MangaCoverFixedCountGridDelegate(
                 crossAxisCount: fixedCols,
                 crossAxisSpacing: 2.0,
                 mainAxisSpacing: 2.0,
-                childAspectRatio: titleBelow ? 0.62 : 0.75,
+                titleExtent: titleBelow ? kGridTitleExtent : 0.0,
               )
             : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
