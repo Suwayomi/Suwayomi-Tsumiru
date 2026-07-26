@@ -137,14 +137,15 @@ class LibraryMangaSliver extends ConsumerWidget {
             maxCrossAxisExtent: gridWidth,
           );
 
-    // Lets the sliver delegates follow an item that MOVED instead of rebuilding
-    // whatever now sits at its old slot — without it the masonry re-packs its
-    // columns mid-scroll.
+    // Preserves element state across re-orders for slivers that recalculate layout offsets.
     int? findChildIndex(Key key) {
       final id = (key as ValueKey<int>).value;
       final index = items.indexWhere((m) => m.id == id);
       return index < 0 ? null : index;
     }
+
+    // Re-keys masonry on item order changes to prevent crashes from nulled child offsets.
+    Key masonryOrderKey() => ValueKey(Object.hashAll(items.map((m) => m.id)));
 
     Widget grid({bool titleBelow = false, bool showTitle = true}) {
       Widget tile(BuildContext context, int index) {
@@ -175,8 +176,7 @@ class LibraryMangaSliver extends ConsumerWidget {
               findChildIndexCallback: findChildIndex,
             ),
           ),
-        // Rows are as tall as their tallest cover and tiles bottom-align inside
-        // them — the flush baseline that separates non-uniform from staggered.
+        // Rows are as tall as their tallest cover and tiles bottom-align inside them.
         LibraryGridStyle.nonUniform => SliverAlignedGrid(
             gridDelegate: freeformDelegate(),
             itemCount: items.length,
@@ -184,13 +184,13 @@ class LibraryMangaSliver extends ConsumerWidget {
             mainAxisSpacing: 2.0,
             crossAxisSpacing: 2.0,
           ),
-        // Masonry: no row alignment at all — every column packs independently.
+        // Masonry: independent column packing. Re-keyed on item order instead of moving children.
         LibraryGridStyle.staggered => SliverMasonryGrid(
+            key: masonryOrderKey(),
             gridDelegate: freeformDelegate(),
             delegate: SliverChildBuilderDelegate(
               tile,
               childCount: items.length,
-              findChildIndexCallback: findChildIndex,
             ),
             mainAxisSpacing: 2.0,
             crossAxisSpacing: 2.0,
