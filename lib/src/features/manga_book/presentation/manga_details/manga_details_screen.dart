@@ -337,13 +337,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 PopupMenuItem(
                                   onTap: () =>
                                       startMigration(context, mangaId, data),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.swap_horiz_rounded),
-                                      const SizedBox(width: 8),
-                                      Text(context.l10n.migrate),
-                                    ],
-                                  ),
+                                  child: Text(context.l10n.migrate),
                                 ),
                                 PopupMenuItem(
                                   onTap: () => refresh(true),
