@@ -523,3 +523,37 @@ class _SourceIcon extends StatelessWidget {
     );
   }
 }
+
+class MangaBadge extends StatelessWidget {
+  const MangaBadge({
+    super.key,
+    this.text,
+    this.icon,
+    required this.color,
+    required this.textColor,
+    this.side = BadgeSide.left,
+  }) : assert(text != null || icon != null);
+
+  final String? text;
+  final IconData? icon;
+  final Color color;
+  final Color textColor;
+
+  /// Which corner the badge sits in. A lone badge looks the same either way;
+  /// it's here so callers describe placement as [MangaBadgesRow] does.
+  final BadgeSide side;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = _stripHeight(context);
+    return _BadgeStrip(
+      height: height,
+      side: side,
+      segments: [
+        text.isNotBlank
+            ? _textSegment(text!, color, textColor)
+            : _iconSegment(icon!, color, textColor, height),
+      ],
+    );
+  }
+}

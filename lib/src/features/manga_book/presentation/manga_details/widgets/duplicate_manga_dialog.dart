@@ -263,6 +263,7 @@ class _DuplicateCard extends StatelessWidget {
                       text: '${duplicate.unreadCount}',
                       color: context.theme.colorScheme.primary,
                       textColor: context.theme.colorScheme.onPrimary,
+                      side: BadgeSide.right,
                     ),
                   ),
               ],
