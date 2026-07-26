@@ -366,6 +366,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     },
                   ),
                 ),
+          // Edge-drag would open this on phones, where the organizer is a
+          // bottom sheet instead — and it eats the system back gesture.
+          endDrawerEnableOpenDragGesture: false,
           endDrawer: Drawer(
             shape: const RoundedRectangleBorder(),
             width: kDrawerWidth,
