@@ -2037,6 +2037,10 @@
     "quickSearch": "Quick Search",
     "reader": "Reader",
     "readerMagnifierSize": "Magnifier Size",
+    "readerMouseScrollSpeed": "Mouse wheel scroll speed",
+    "@readerMouseScrollSpeed": {
+        "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+    },
     "readerMode": "Reading mode",
     "readerModeChipDefault": "Default",
     "readerModeChipLegacyContinuous": "Continuous horizontal (legacy)",

@@ -17,7 +17,9 @@ import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import 'widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import 'widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
+import '../../../../utils/platform/platform_runtime.dart';
 import 'widgets/reader_general_prefs/reader_general_prefs.dart';
+import 'widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import 'widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import 'widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import 'widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
@@ -318,6 +320,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
             onChanged:
                 ref.read(longStripDisableZoomOutProvider.notifier).update,
           ),
+          if (isKeyboardRuntime) const ReaderMouseScrollSpeedSlider(),
 
           // ── Navigation ──
           if (!kIsWeb && Platform.isAndroid) ...[

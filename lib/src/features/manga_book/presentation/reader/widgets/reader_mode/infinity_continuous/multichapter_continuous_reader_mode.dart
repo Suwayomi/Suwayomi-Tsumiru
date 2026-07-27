@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -20,6 +21,8 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
+import '../../../../../../../utils/platform/platform_runtime.dart';
+import '../../mouse_wheel_speed.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../../history/presentation/history_controller.dart';
@@ -28,6 +31,7 @@ import '../../../../../../offline/data/offline_repository.dart';
 import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
@@ -1175,6 +1179,18 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       child: autoScrollAwareList,
     );
 
+    final mouseScrollSpeed = ref.watch(readerMouseScrollSpeedKeyProvider) ??
+        DBKeys.readerMouseScrollSpeed.initial;
+    final wheelAware = isKeyboardRuntime
+        ? MouseWheelSpeed(
+            speed: mouseScrollSpeed,
+            axis: scrollDirection,
+            reverse: reverse,
+            positionOf: () => scrollOffsetController.position,
+            child: edgeAwareList,
+          )
+        : edgeAwareList;
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
@@ -1190,7 +1206,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               child: child,
             )
           : null,
-      edgeAwareList,
+      wheelAware,
     );
 
     return ReaderWrapper(
