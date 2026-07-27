@@ -570,6 +570,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
     if (_multiTouchActive) {
       if (_pointers.isEmpty) {
+        _settleAfterGesture(releaseVelocity);
         _resetGesture();
       } else if (_pointers.length == 1) {
         // Dropped back to one finger — resume single-touch from it. With 2+
@@ -598,8 +599,19 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   void _onPointerCancel(PointerCancelEvent event) {
     _pointers.remove(event.pointer);
     _finishLongPress(cancelled: true);
-    if (!_multiTouchActive && _dragOwner == _DragOwner.pager) _settleDrag();
+    if (_dragOwner == _DragOwner.pager || _dragOffset != 0) _settleDrag();
     _resetGesture();
+  }
+
+  /// Lands whatever the gesture left mid-move. A pinch that resolves into a
+  /// one-finger drag still carries the pager, and letting go has to settle it
+  /// or it stays parked between two pages for good.
+  void _settleAfterGesture(Offset releaseVelocity) {
+    if (_dragOwner == _DragOwner.page) {
+      _settlePagePan(releaseVelocity);
+    } else if (_dragOwner == _DragOwner.pager || _dragOffset != 0) {
+      _settleDrag(releaseVelocity: _mainAxisDelta(releaseVelocity));
+    }
   }
 
   void _resetGesture() {

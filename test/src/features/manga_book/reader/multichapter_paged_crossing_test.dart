@@ -434,4 +434,89 @@ void main() {
     expect(reported.last.raw, 5,
         reason: 'the in-flight turn overrode the jump; reported=$reported');
   });
+
+  testWidgets('a drag that follows a pinch still settles when you let go',
+      (tester) async {
+    final controller = PagedReaderController();
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ReaderInputScope(
+          callbacks: _callbacks(),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 1,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (_, __) {},
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+    final a = box.center - const Offset(30, 0);
+    final b = box.center + const Offset(30, 0);
+
+    // Pinch, drop to one finger, then drag that finger to turn the page.
+    final p1 = await tester.startGesture(a, pointer: 1);
+    final p2 = await tester.startGesture(b, pointer: 2);
+    await tester.pump();
+    // Both fingers together: engages multi-touch without changing the scale,
+    // so the assertion below measures position rather than zoom.
+    await p1.moveTo(a + const Offset(10, 0));
+    await p2.moveTo(b + const Offset(10, 0));
+    await tester.pump();
+    await p2.up(); // back to one finger, still "multi-touch" internally
+    await tester.pump();
+
+    for (var i = 0; i < 6; i++) {
+      await p1.moveBy(const Offset(-25, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await p1.up();
+    await tester.pumpAndSettle();
+
+    // Releasing must land on a page. Left unsettled the pager stays frozen
+    // wherever the finger stopped, showing two pages at once.
+    final left = tester.getRect(find.byType(PagedReaderViewport));
+    final pages = find.byType(DoublePageView);
+    expect(pages, findsWidgets);
+    for (var i = 0; i < tester.widgetList(pages).length; i++) {
+      final dx = tester.getTopLeft(pages.at(i)).dx - left.left;
+      final steps = dx / left.width;
+      final offBy = (steps - steps.roundToDouble()).abs() * left.width;
+      expect(offBy, lessThan(1.0),
+          reason: 'pager left parked between pages: page $i at dx=$dx');
+    }
+  });
 }
