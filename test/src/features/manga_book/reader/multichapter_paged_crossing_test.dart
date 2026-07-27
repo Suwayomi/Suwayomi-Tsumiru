@@ -365,4 +365,73 @@ void main() {
     expect(reported.last.chapterId, 2,
         reason: 'landed outside the chapter being read; reported=$reported');
   });
+
+  testWidgets('jumping while a page turn is still settling lands on the jump',
+      (tester) async {
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ReaderInputScope(
+          callbacks: _callbacks(),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 0,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (chapterId, raw) =>
+                    reported.add((chapterId: chapterId, raw: raw)),
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Turn a page, then jump the seekbar elsewhere before the turn settles.
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-90, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pump(const Duration(milliseconds: 30));
+
+    reported.clear();
+    controller.jumpToRaw(5);
+    await tester.pumpAndSettle();
+
+    // The abandoned turn must not commit page 1 on top of the jump.
+    expect(reported.isNotEmpty, isTrue);
+    expect(reported.last.raw, 5,
+        reason: 'the in-flight turn overrode the jump; reported=$reported');
+  });
 }

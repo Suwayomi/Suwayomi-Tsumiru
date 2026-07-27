@@ -159,9 +159,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   Animation<Offset>? _panTween;
   double _dragOffset = 0;
 
-  /// Bumped on every re-anchor, so a page settle that was aimed at the previous
-  /// window can't commit its target after the window changed under it.
-  int _anchorGeneration = 0;
+  /// Bumped whenever a turn in flight is abandoned, so its completion can't
+  /// commit a target that no longer matches where the pager ended up.
+  int _motionGeneration = 0;
   Size _viewportSize = Size.zero;
   final Map<int, Offset> _pointers = {};
   // Keyed by (chapterId, page identity), not display index — a late wide page
@@ -279,20 +279,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _reanchor(PagedDisplayWindow oldWindow) {
-    // Every in-flight animation is aimed at the OLD window. Left running, a
-    // page settle keeps writing its tween over the reset below — parking the
-    // pager between two pages — and then commits an index from the old window.
-    // Bump the generation FIRST so those stale completions are ignored.
-    _anchorGeneration++;
-    _pageAnimation.stop();
-    _pageTween = null;
-    _panAnimation.stop();
-    _panTween = null;
-    _panAnimationTarget = null;
-    _zoomAnimation.stop();
-    _zoomScaleTween = null;
-    _zoomOffsetTween = null;
-    _zoomAnimationTarget = null;
+    // Everything in flight is aimed at the OLD window; left running it writes
+    // its old position over the reset below and then commits a stale index.
+    _abandonMotion();
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
         ? oldWindow.items[_displayIndex]
@@ -323,8 +312,20 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     });
   }
 
-  void jumpToRaw(int rawIndex) {
+  /// Abandons whatever is still moving — a turn, a pan fling, a zoom. A turn
+  /// left running writes its old position over wherever we land next, then
+  /// finishes by committing the page IT was aiming at; a zoom left running
+  /// keeps scaling a page that is no longer the one on screen.
+  void _abandonMotion() {
+    _motionGeneration++;
+    _pageAnimation.stop();
+    _pageTween = null;
     _stopPanAnimation();
+    _stopZoomAnimation();
+  }
+
+  void jumpToRaw(int rawIndex) {
+    _abandonMotion();
     final chapterId = _currentChapterId();
     final target = chapterId == null
         ? -1
@@ -342,7 +343,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void moveByCommand(int delta) {
     if (delta == 0 || _pageAnimation.isAnimating) return;
-    _stopPanAnimation();
+    _abandonMotion();
     if (widget.navigateToPan && _panCurrentPage(_commandPanDirection(delta))) {
       return;
     }
@@ -893,7 +894,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _animateOffsetTo(double target, {VoidCallback? onComplete}) {
-    final generation = _anchorGeneration;
+    // Starting a turn retires the previous one: stopping it below fires its
+    // completion, which would otherwise commit the page it was aiming at.
+    _motionGeneration++;
+    final generation = _motionGeneration;
     final duration = _settleDuration(target);
     if (duration == Duration.zero || _axisExtent <= 0) {
       setState(() => _dragOffset = target == 0 ? 0 : target);
@@ -912,7 +916,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       end: target,
     ).animate(CurvedAnimation(parent: _pageAnimation, curve: _settleCurve));
     _pageAnimation.forward().whenCompleteOrCancel(() {
-      if (!mounted || generation != _anchorGeneration) return;
+      if (!mounted || generation != _motionGeneration) return;
       onComplete?.call();
       if (target == 0) {
         setState(() => _dragOffset = 0);
