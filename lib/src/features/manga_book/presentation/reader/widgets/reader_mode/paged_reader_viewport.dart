@@ -9,6 +9,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../../constants/enum.dart';
@@ -1099,6 +1100,16 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// the page's real extent instead of an assumed full-viewport size.
   void _recordNaturalSize(
       int index, SpreadDisplay spread, int raw, Size natural) {
+    // An already-decoded page reports during build (the image stream fires its
+    // listener synchronously on a cache hit); notifying the zoom then would
+    // rebuild mid-build. Publish after the frame instead.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _recordNaturalSize(index, spread, raw, natural);
+      });
+      return;
+    }
     if (natural.isEmpty || _viewportSize.isEmpty) return;
     final key = (chapterId: spread.chapterId, unit: spread.entry.first);
     final naturals = _naturalSizes.putIfAbsent(key, () => {});
