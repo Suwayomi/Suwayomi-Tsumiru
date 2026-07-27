@@ -191,6 +191,8 @@ class ReaderSettingsScreen extends ConsumerWidget {
           const ReaderScrollAnimationTile(),
           const ReaderFeedbackToastsTile(),
 
+          if (isKeyboardRuntime) const ReaderMouseScrollSpeedSlider(),
+
           // ── Paged ──
           _Header(context.l10n.readerGroupPagerViewer),
           const ReaderNavigationLayoutTile(longStrip: false),
@@ -320,7 +322,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
             onChanged:
                 ref.read(longStripDisableZoomOutProvider.notifier).update,
           ),
-          if (isKeyboardRuntime) const ReaderMouseScrollSpeedSlider(),
 
           // ── Navigation ──
           if (!kIsWeb && Platform.isAndroid) ...[

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
@@ -96,6 +97,7 @@ Widget _viewport({
               pageFit: BoxFit.contain,
               pageSize: null,
               pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
               centerMargin: CenterMarginType.none,
               rotateWide: false,
               rotateWideInvert: false,
@@ -154,6 +156,7 @@ void main() {
               pageFit: BoxFit.contain,
               pageSize: null,
               pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
               centerMargin: CenterMarginType.none,
               rotateWide: false,
               rotateWideInvert: false,
@@ -218,6 +221,7 @@ void main() {
           pageFit: BoxFit.contain,
           pageSize: null,
           pagesAtNaturalSize: false,
+          mouseScrollSpeed: 1.7,
           centerMargin: CenterMarginType.none,
           rotateWide: false,
           rotateWideInvert: false,
@@ -281,6 +285,7 @@ void main() {
           pageFit: BoxFit.contain,
           pageSize: null,
           pagesAtNaturalSize: false,
+          mouseScrollSpeed: 1.7,
           centerMargin: CenterMarginType.none,
           rotateWide: false,
           rotateWideInvert: false,
@@ -369,6 +374,7 @@ void main() {
                 pageFit: BoxFit.contain,
                 pageSize: null,
                 pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
                 centerMargin: CenterMarginType.none,
                 rotateWide: false,
                 rotateWideInvert: false,
@@ -590,6 +596,7 @@ void main() {
                 pageFit: BoxFit.contain,
                 pageSize: null,
                 pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
                 centerMargin: CenterMarginType.none,
                 rotateWide: false,
                 rotateWideInvert: false,
@@ -626,5 +633,78 @@ void main() {
 
     expect(taps, 0, reason: 'a cancelled gesture fired a tap');
     _expectPagesAligned(tester);
+  });
+
+  testWidgets('the wheel pans a zoomed page before turning it', (tester) async {
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
+    await tester.pump();
+
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+    // Zoom in so the page has somewhere to pan to.
+    await tester.tapAt(box.center);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tapAt(box.center);
+    await tester.pumpAndSettle();
+
+    double scaleOffset() {
+      for (final t in tester.widgetList<Transform>(find.byType(Transform))) {
+        final m = t.transform.storage;
+        if ((m[0] - 1).abs() < 0.001 && m[13].abs() > 0.001) return m[13];
+      }
+      return 0;
+    }
+
+    final before = scaleOffset();
+    reported.clear();
+
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    pointer.hover(box.center);
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 53)));
+    await tester.pumpAndSettle();
+
+    expect(scaleOffset(), isNot(closeTo(before, 0.001)),
+        reason: 'the wheel did not pan the zoomed page');
+    expect(reported, isEmpty,
+        reason: 'the wheel turned the page while it still had room to pan');
+  });
+
+  testWidgets('the wheel turns a page that has nowhere to pan', (tester) async {
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
+    await tester.pump();
+    reported.clear();
+
+    // Not zoomed: a fitted page has no room, so the notch turns it.
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    pointer.hover(box.center);
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 53)));
+    await tester.pumpAndSettle();
+
+    expect(reported.map((r) => r.raw), contains(1),
+        reason: 'the wheel did not turn a page it could not pan');
   });
 }

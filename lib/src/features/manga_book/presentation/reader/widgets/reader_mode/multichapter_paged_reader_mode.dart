@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -696,6 +697,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         pageFit: pageFit,
         pageSize: pageSize,
         pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
+        mouseScrollSpeed: ref.watch(readerMouseScrollSpeedKeyProvider) ??
+            DBKeys.readerMouseScrollSpeed.initial,
         centerMargin: settings.centerMarginType,
         rotateWide: settings.rotateWidePages,
         rotateWideInvert: settings.rotateWideInvert,

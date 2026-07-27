@@ -66,6 +66,7 @@ class PagedReaderViewport extends StatefulWidget {
     required this.pageFit,
     required this.pageSize,
     required this.pagesAtNaturalSize,
+    required this.mouseScrollSpeed,
     required this.centerMargin,
     required this.rotateWide,
     required this.rotateWideInvert,
@@ -96,6 +97,9 @@ class PagedReaderViewport extends StatefulWidget {
   /// Original size — pages rest at 1:1 with their source pixels and pan, rather
   /// than being fitted to the screen.
   final bool pagesAtNaturalSize;
+
+  /// How far a mouse wheel notch pans a page that overflows the screen.
+  final double mouseScrollSpeed;
 
   final CenterMarginType centerMargin;
   final bool rotateWide;
@@ -609,6 +613,23 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _resetGesture();
   }
 
+  /// Wheel pans the page while it has room, then turns once it runs out. A
+  /// page fitted to the screen has no room, so a notch turns it straight away —
+  /// the WebUI can get away with scroll-only because the browser gives it a
+  /// scrollable viewer; here that would leave the wheel doing nothing.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (event.kind != PointerDeviceKind.mouse) return;
+    final dx = event.scrollDelta.dx;
+    final dy = event.scrollDelta.dy;
+    final raw = dy != 0 ? dy : dx;
+    if (raw == 0) return;
+    final zoom = _currentZoomOrNull;
+    final pan = Offset(-dx, -dy) * widget.mouseScrollSpeed;
+    if (zoom != null && pan != Offset.zero && zoom.panBy(pan)) return;
+    moveByCommand(raw > 0 ? 1 : -1);
+  }
+
   void _onPointerCancel(PointerCancelEvent event) {
     _pointers.remove(event.pointer);
     _finishLongPress(cancelled: true);
@@ -1030,6 +1051,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
             onPointerMove: _onPointerMove,
             onPointerUp: _onPointerUp,
             onPointerCancel: _onPointerCancel,
+            onPointerSignal: _onPointerSignal,
             child: ClipRect(
               child: Stack(
                 fit: StackFit.expand,
