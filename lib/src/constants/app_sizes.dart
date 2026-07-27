@@ -114,6 +114,9 @@ const kDescriptiveCoverWidth = 120.0;
 /// Cover width in the horizontal result strips (global search, migration).
 const kShortSearchCoverWidth = 144.0;
 
+/// Gap plus the two-line bodySmall title under a recommendation cover.
+const kRecommendsTitleExtent = 36.0;
+
 /// Height a fixed-width cover box needs for its artwork to land on 2:3, card
 /// margin included. Use this instead of hard-coding a height next to a width.
 double mangaCoverBoxHeight(double width) =>
@@ -130,17 +133,16 @@ SliverGridRegularTileLayout _coverTileLayout(
   required double crossAxisSpacing,
   required double mainAxisSpacing,
   required double titleExtent,
+  required double coverInset,
 }) {
   final usableCrossAxisExtent = max(
     0.0,
     constraints.crossAxisExtent - crossAxisSpacing * (crossAxisCount - 1),
   );
   final childCrossAxisExtent = usableCrossAxisExtent / crossAxisCount;
-  final coverWidth =
-      max(0.0, childCrossAxisExtent - kMangaCoverCardInset);
-  final childMainAxisExtent = coverWidth / kMangaCoverAspectRatio +
-      kMangaCoverCardInset +
-      titleExtent;
+  final coverWidth = max(0.0, childCrossAxisExtent - coverInset);
+  final childMainAxisExtent =
+      coverWidth / kMangaCoverAspectRatio + coverInset + titleExtent;
   return SliverGridRegularTileLayout(
     crossAxisCount: crossAxisCount,
     mainAxisStride: childMainAxisExtent + mainAxisSpacing,
@@ -158,12 +160,17 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
     this.mainAxisSpacing = 0.0,
     this.crossAxisSpacing = 0.0,
     this.titleExtent = 0.0,
+    this.coverInset = kMangaCoverCardInset,
   }) : assert(maxCrossAxisExtent > 0);
 
   final double maxCrossAxisExtent;
   final double mainAxisSpacing;
   final double crossAxisSpacing;
   final double titleExtent;
+
+  /// Zero for grids that draw the cover directly instead of wrapping it in the
+  /// tile's Card, which is what eats the default margin.
+  final double coverInset;
 
   @override
   SliverGridLayout getLayout(SliverConstraints constraints) => _coverTileLayout(
@@ -177,6 +184,7 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
         crossAxisSpacing: crossAxisSpacing,
         mainAxisSpacing: mainAxisSpacing,
         titleExtent: titleExtent,
+        coverInset: coverInset,
       );
 
   @override
@@ -184,7 +192,8 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
       oldDelegate.maxCrossAxisExtent != maxCrossAxisExtent ||
       oldDelegate.mainAxisSpacing != mainAxisSpacing ||
       oldDelegate.crossAxisSpacing != crossAxisSpacing ||
-      oldDelegate.titleExtent != titleExtent;
+      oldDelegate.titleExtent != titleExtent ||
+      oldDelegate.coverInset != coverInset;
 }
 
 /// Fixed column count (the user set one in library settings).
@@ -208,6 +217,7 @@ class MangaCoverFixedCountGridDelegate extends SliverGridDelegate {
         crossAxisSpacing: crossAxisSpacing,
         mainAxisSpacing: mainAxisSpacing,
         titleExtent: titleExtent,
+        coverInset: kMangaCoverCardInset,
       );
 
   @override

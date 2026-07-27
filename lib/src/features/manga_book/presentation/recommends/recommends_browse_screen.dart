@@ -51,10 +51,12 @@ class RecommendsBrowseScreen extends ConsumerWidget {
             ? Emoticons(title: context.l10n.noResultFound)
             : GridView.builder(
                 padding: KEdgeInsets.a8.size,
-                gridDelegate:
-                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                // The cover is drawn straight into the cell here, no Card, so
+                // there is no margin to compensate for.
+                gridDelegate: const MangaCoverGridDelegate(
                   maxCrossAxisExtent: 120,
-                  childAspectRatio: 0.6,
+                  titleExtent: kRecommendsTitleExtent,
+                  coverInset: 0,
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                 ),
