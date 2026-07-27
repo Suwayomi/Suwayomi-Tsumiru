@@ -205,6 +205,16 @@ enum DBKeys {
   disableZoomOut(false),
   // Paged "Disable zoom in": turns off the paged viewer's zoom wrapper.
   disableZoomIn(false),
+  // Per-viewer zoom toggles. Paged and long strip each had their own switch in
+  // the reader sheet while sharing one stored value, so changing one changed
+  // the other. The three keys above are kept as the migration source: a viewer
+  // key that has never been written falls back to the old global value.
+  pagedDoubleTapToZoom(true),
+  pagedPinchToZoom(true),
+  pagedDisableZoomOut(false),
+  longStripDoubleTapToZoom(true),
+  longStripPinchToZoom(true),
+  longStripDisableZoomOut(false),
   // Auto Webtoon Mode: series whose tags/source say
   // long-strip read in webtoon mode when their per-series mode is Default.
   autoWebtoonMode(true),

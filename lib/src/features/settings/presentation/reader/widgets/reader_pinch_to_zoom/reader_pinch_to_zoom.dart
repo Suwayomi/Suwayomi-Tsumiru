@@ -19,6 +19,29 @@ class PinchToZoom extends _$PinchToZoom with SharedPreferenceClientMixin<bool> {
   bool? build() => initialize(DBKeys.pinchToZoom);
 }
 
+// Per-viewer pinch, seeded from the global pref above. See the note in
+// reader_zoom_toggles.dart.
+
+@riverpod
+class PagedPinchToZoom extends _$PagedPinchToZoom
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.pagedPinchToZoom,
+        initial: ref.read(pinchToZoomProvider),
+      );
+}
+
+@riverpod
+class LongStripPinchToZoom extends _$LongStripPinchToZoom
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.longStripPinchToZoom,
+        initial: ref.read(pinchToZoomProvider),
+      );
+}
+
 class ReaderPinchToZoom extends HookConsumerWidget {
   const ReaderPinchToZoom({super.key});
   @override

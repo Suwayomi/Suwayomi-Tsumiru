@@ -295,20 +295,30 @@ class _PagedSection extends ConsumerWidget {
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
-          value: settings.doubleTapToZoom,
-          onChanged: model.setDoubleTapToZoom,
+          value: settings.pagedDoubleTapToZoom,
+          // Zooming in is off entirely, so a double-tap has nothing to do.
+          onChanged: settings.disableZoomIn
+              ? null
+              : model.setPagedDoubleTapToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
-          value: settings.pinchToZoom,
-          onChanged: model.setPinchToZoom,
+          value: settings.pagedPinchToZoom,
+          onChanged:
+              settings.disableZoomIn ? null : model.setPagedPinchToZoom,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.disableZoomIn),
+          value: settings.disableZoomIn,
+          onChanged: model.setDisableZoomIn,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
-          value: settings.disableZoomOut,
-          onChanged: model.setDisableZoomOut,
+          value: settings.pagedDisableZoomOut,
+          onChanged: model.setPagedDisableZoomOut,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
@@ -400,20 +410,20 @@ class _LongStripSection extends ConsumerWidget {
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
-          value: settings.doubleTapToZoom,
-          onChanged: model.setDoubleTapToZoom,
+          value: settings.longStripDoubleTapToZoom,
+          onChanged: model.setLongStripDoubleTapToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
-          value: settings.pinchToZoom,
-          onChanged: model.setPinchToZoom,
+          value: settings.longStripPinchToZoom,
+          onChanged: model.setLongStripPinchToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
-          value: settings.disableZoomOut,
-          onChanged: model.setDisableZoomOut,
+          value: settings.longStripDisableZoomOut,
+          onChanged: model.setLongStripDisableZoomOut,
         ),
         // Webtoon split-wide hidden: splitting one strip page into two entries
         // needs a page-list remap in the frozen webtoon engine; see reader.md.

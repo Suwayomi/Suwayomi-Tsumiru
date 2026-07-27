@@ -171,6 +171,21 @@
     "@readerForThisSeries": {
         "description": "Group heading for the per-manga override settings in the reader sheet"
     },
+    "@readerGroupActions": {
+        "description": "Reader settings group heading for long-tap actions"
+    },
+    "@readerGroupDisplay": {
+        "description": "Reader settings group heading for display options"
+    },
+    "@readerGroupEInk": {
+        "description": "Reader settings group heading for E-Ink screen options"
+    },
+    "@readerGroupNavigation": {
+        "description": "Reader settings group heading for volume-key navigation"
+    },
+    "@readerGroupReading": {
+        "description": "Reader settings group heading for chapter-to-chapter reading options"
+    },
     "@readerGroupPagerViewer": {
         "description": "Group heading for the global paged-viewer defaults in the reader sheet"
     },
@@ -1398,8 +1413,13 @@
     "pageLayoutDoublePages": "Double pages",
     "pageLayoutSinglePage": "Single page",
     "readerForThisSeries": "For this series",
-    "readerGroupPagerViewer": "Pager viewer defaults",
-    "readerGroupWebtoonViewer": "Long strip viewer defaults",
+    "readerGroupActions": "Actions",
+    "readerGroupDisplay": "Display",
+    "readerGroupEInk": "E-Ink",
+    "readerGroupNavigation": "Navigation",
+    "readerGroupPagerViewer": "Paged",
+    "readerGroupReading": "Reading",
+    "readerGroupWebtoonViewer": "Long strip",
     "readerSectionPaged": "Paged",
     "readerSectionReadingMode": "Reading mode",
     "readerSectionRotation": "Rotation",
