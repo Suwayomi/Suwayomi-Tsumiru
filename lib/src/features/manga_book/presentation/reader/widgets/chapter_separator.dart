@@ -13,9 +13,11 @@ import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
+import '../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
+import '../utils/reader_mode_kind.dart';
 
 class ChapterSeparator extends ConsumerWidget {
   const ChapterSeparator({
@@ -23,11 +25,17 @@ class ChapterSeparator extends ConsumerWidget {
     required this.manga,
     required this.chapter,
     required this.isPreviousChapterSeparator,
+    required this.readerMode,
     this.alwaysShow = true,
   });
   final MangaDto manga;
   final ChapterDto chapter;
   final bool isPreviousChapterSeparator;
+
+  /// The mode actually in use, from the reader that built this. Deriving it
+  /// from metadata here would miss auto-selected modes and could check the
+  /// paged tap-zone setting while the reader is running long strip.
+  final ReaderMode readerMode;
 
   /// "Always show chapter transition": OFF collapses the prev/next
   /// transition to a slim label so chapters flow with less interruption.
@@ -52,13 +60,14 @@ class ChapterSeparator extends ConsumerWidget {
       getNextAndPreviousChaptersProvider(
           mangaId: manga.id, chapterId: chapter.id),
     );
-    final navigationLayout = ref.watch(readerNavigationLayoutKeyProvider);
-    final showPrevNextButtons = manga.metaData.readerNavigationLayout ==
-            ReaderNavigationLayout.disabled ||
-        ((manga.metaData.readerNavigationLayout == null ||
-                manga.metaData.readerNavigationLayout ==
-                    ReaderNavigationLayout.defaultNavigation) &&
-            navigationLayout == ReaderNavigationLayout.disabled);
+    // Same resolver the reader uses: these buttons exist for people with no
+    // tap zones, so "disabled" has to mean the same thing in both places.
+    final showPrevNextButtons = effectiveNavigationLayout(
+          ref,
+          mode: readerMode,
+          seriesOverride: manga.metaData.readerNavigationLayout,
+        ) ==
+        ReaderNavigationLayout.disabled;
     return Center(
       child: SingleChildScrollView(
         child: Column(

@@ -45,15 +45,18 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
     final prevColorTween = ColorTween(
       begin: showReaderLayoutAnimation ? Colors.blue : Colors.transparent,
     ).animate(animationController).value;
-    useEffect(() {
-      animationController.forward();
-      return;
-    }, []);
+    // Callers resolve this (see effectiveNavigationLayout); an unresolved
+    // value just draws nothing rather than falling back here and risking
+    // disagreement with the reader.
+    final layout = navigationLayout;
 
-    final layout = navigationLayout == null ||
-            navigationLayout == ReaderNavigationLayout.defaultNavigation
-        ? ref.watch(readerNavigationLayoutKeyProvider)
-        : navigationLayout;
+    // Replays on every layout change, not just the first build, so picking a
+    // different one flashes the zones for it too (Komikku's
+    // navigationModeChanged).
+    useEffect(() {
+      animationController.forward(from: 0);
+      return;
+    }, [layout]);
     // Axis-wise inversion: horizontal swaps the
     // left/right zones, vertical swaps the L-shaped top/bottom rows.
     final TapInvert invert =

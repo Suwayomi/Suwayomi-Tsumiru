@@ -21,7 +21,6 @@ import 'widgets/reader_general_prefs/reader_general_prefs.dart';
 import 'widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import 'widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import 'widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
-import 'widgets/reader_invert_tap_tile/reader_invert_tap_tile.dart';
 import 'widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import 'widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
 import 'widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.dart';
@@ -33,6 +32,7 @@ import 'widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import 'widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import 'widgets/reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
+import 'widgets/tap_zones_overlay/tap_zones_overlay.dart';
 import 'widgets/reader_volume_tap_invert_tile/reader_volume_tap_invert_tile.dart';
 import 'widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import 'widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
@@ -67,8 +67,10 @@ class ReaderSettingsScreen extends ConsumerWidget {
           // first, then Display, E-Ink, Reading, Paged, Long strip,
           // Navigation, Actions.
           const ReaderModeTile(),
-          const ReaderNavigationLayoutTile(),
-          const ReaderInvertTapTile(),
+          // Tap zones and their inversion are per viewer, so they live in the
+          // Paged and Long strip groups below — same as Komikku. Only the
+          // overlay and the zone size are shared.
+          const ShowTapZonesOverlayTile(),
           _BoolTile(
             title: context.l10n.smallerTapZones,
             value: ref.watch(smallerTapZonesProvider).ifNull(false),
@@ -191,6 +193,8 @@ class ReaderSettingsScreen extends ConsumerWidget {
 
           // ── Paged ──
           _Header(context.l10n.readerGroupPagerViewer),
+          const ReaderNavigationLayoutTile(longStrip: false),
+          const ReaderTapInvertTile(longStrip: false),
           _EnumChips<ImageScaleType>(
             label: context.l10n.imageScaleType,
             values: ImageScaleType.values,
@@ -284,6 +288,8 @@ class ReaderSettingsScreen extends ConsumerWidget {
 
           // ── Long strip ──
           _Header(context.l10n.readerGroupWebtoonViewer),
+          const ReaderNavigationLayoutTile(longStrip: true),
+          const ReaderTapInvertTile(longStrip: true),
           _EnumChips<WebtoonScaleType>(
             label: context.l10n.webtoonScaleType,
             values: WebtoonScaleType.values,
