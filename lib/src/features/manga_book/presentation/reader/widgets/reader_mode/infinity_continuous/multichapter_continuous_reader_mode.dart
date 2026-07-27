@@ -27,6 +27,7 @@ import '../../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../../offline/data/offline_repository.dart';
 import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
@@ -392,6 +393,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // below, which still reserves placeholderHeight and measures the cropped
     // strip — the scroll/height math is untouched.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final bool alwaysShowTransition =
+        ref.watch(alwaysShowChapterTransitionProvider).ifNull(true);
+    // Smart scale caps the strip width on wide screens. Render-only, and the
+    // decode size follows it so a capped strip isn't decoded at full width.
+    final WebtoonScaleType scaleType =
+        ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
+    final double maxContentWidth =
+        scaleType.maxContentWidth(context.width, context.height);
     final ReaderScrollAmount scrollAmount =
         ref.watch(readerScrollAmountKeyProvider) ??
         DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
@@ -968,6 +977,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
+    // Smart scale centres a narrower strip on wide screens.
+    Widget capWidth(Widget page) => maxContentWidth >= context.width
+        ? page
+        : Center(child: SizedBox(width: maxContentWidth, child: page));
+
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
       if (loc == null) {
@@ -1001,7 +1015,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         appendApiToUrl: false,
         cropBorders: cropBorders,
         // Decode at on-screen width, not the ~800×15000 source (#196 GPU cost).
-        memCacheWidth: (context.width * MediaQuery.devicePixelRatioOf(context))
+        memCacheWidth: (maxContentWidth * MediaQuery.devicePixelRatioOf(context))
             .round()
             .clamp(1, 1 << 20),
         imageUrl: loc.imageUrl,
@@ -1054,7 +1068,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
-    // "Long strip with gaps" is this mode plus a gap between pages.
+    // continuousVertical is the "Long strip with gaps" mode in settings.
     final pageGap = effectiveReaderMode == ReaderMode.continuousVertical
         ? const Gap(kLongStripPageGap)
         : const SizedBox.shrink();
@@ -1075,6 +1089,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       return InfinityContinuousChapterSeparator(
         chapterName: info.chapterName,
         isChapterStart: info.isChapterStart,
+        alwaysShow: alwaysShowTransition,
       );
     }
 
@@ -1088,7 +1103,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       itemCount: total,
       minCacheExtent:
           context.height * InfinityContinuousConfig.verticalCacheMultiplier,
-      itemBuilder: buildItem,
+      itemBuilder: (context, index) => capWidth(buildItem(context, index)),
       separatorBuilder: buildSeparator,
     );
 
