@@ -21,11 +21,13 @@ SliverConstraints _constraints(double crossAxisExtent) => SliverConstraints(
       cacheOrigin: 0,
     );
 
-/// Ratio of the cover itself, with the title block (if any) taken back off.
+/// Ratio of the artwork as it actually renders: the cell minus the title block
+/// and minus the card margin that insets the image inside the cell. Measuring
+/// the cell alone would pass while every cover on screen was still wrong.
 double _coverRatio(SliverGridLayout layout, {double titleExtent = 0}) {
   final tile = layout as SliverGridRegularTileLayout;
-  return tile.childCrossAxisExtent /
-      (tile.childMainAxisExtent - titleExtent);
+  return (tile.childCrossAxisExtent - kMangaCoverCardInset) /
+      (tile.childMainAxisExtent - titleExtent - kMangaCoverCardInset);
 }
 
 void main() {

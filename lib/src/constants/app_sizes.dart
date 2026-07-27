@@ -102,6 +102,11 @@ const kMangaCoverAspectRatio = 2 / 3;
 /// Height reserved for the two-line title under a comfortable-grid cover.
 const kGridTitleExtent = 44.0;
 
+/// Total inset the tile's Card takes out of each axis — Flutter's default card
+/// margin of 4 on all four sides. The cell is grown by this so the artwork
+/// inside the card, not the cell, is what ends up at 2:3.
+const kMangaCoverCardInset = 8.0;
+
 /// Row height comes from the resolved column width, so the cover keeps its 2:3
 /// shape at every column count. Deriving it the other way round — a fixed cell
 /// ratio, cover takes what's left — cropped the art, and in the comfortable
@@ -118,8 +123,11 @@ SliverGridRegularTileLayout _coverTileLayout(
     constraints.crossAxisExtent - crossAxisSpacing * (crossAxisCount - 1),
   );
   final childCrossAxisExtent = usableCrossAxisExtent / crossAxisCount;
-  final childMainAxisExtent =
-      childCrossAxisExtent / kMangaCoverAspectRatio + titleExtent;
+  final coverWidth =
+      max(0.0, childCrossAxisExtent - kMangaCoverCardInset);
+  final childMainAxisExtent = coverWidth / kMangaCoverAspectRatio +
+      kMangaCoverCardInset +
+      titleExtent;
   return SliverGridRegularTileLayout(
     crossAxisCount: crossAxisCount,
     mainAxisStride: childMainAxisExtent + mainAxisSpacing,
