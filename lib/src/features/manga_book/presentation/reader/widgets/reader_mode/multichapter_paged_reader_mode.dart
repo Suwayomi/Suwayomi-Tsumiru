@@ -695,6 +695,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         animateTransitions: settings.animatePageTransitions,
         pageFit: pageFit,
         pageSize: pageSize,
+        pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
         centerMargin: settings.centerMarginType,
         rotateWide: settings.rotateWidePages,
         rotateWideInvert: settings.rotateWideInvert,

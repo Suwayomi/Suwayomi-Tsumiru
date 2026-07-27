@@ -17,8 +17,20 @@ void main() {
     expect(ImageScaleType.stretch.pagedFit(w, h).$1, BoxFit.fill);
     expect(ImageScaleType.fitWidth.pagedFit(w, h).$1, BoxFit.fitWidth);
     expect(ImageScaleType.fitHeight.pagedFit(w, h).$1, BoxFit.fitHeight);
-    expect(ImageScaleType.originalSize.pagedFit(w, h).$1, BoxFit.none);
+    // Original size lays out contained and gets its 1:1 scale from the reader's
+    // zoom. BoxFit.none would paint a crop the reader could never pan out of.
+    expect(ImageScaleType.originalSize.pagedFit(w, h).$1, BoxFit.contain);
     expect(ImageScaleType.smartFit.pagedFit(w, h).$1, BoxFit.fitWidth);
+  });
+
+  test('only original size opts out of fitting the page to the screen', () {
+    for (final type in ImageScaleType.values) {
+      expect(
+        type.pagesAtNaturalSize,
+        type == ImageScaleType.originalSize,
+        reason: '$type',
+      );
+    }
   });
 
   test('pagedFit size hints match the fit axis', () {

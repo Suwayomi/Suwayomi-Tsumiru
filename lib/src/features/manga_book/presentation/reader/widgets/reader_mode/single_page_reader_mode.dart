@@ -190,6 +190,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
         animateTransitions: settings.animatePageTransitions,
         pageFit: pageFit,
         pageSize: pageSize,
+        pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
         centerMargin: centerMargin,
         rotateWide: settings.rotateWidePages,
         rotateWideInvert: settings.rotateWideInvert,

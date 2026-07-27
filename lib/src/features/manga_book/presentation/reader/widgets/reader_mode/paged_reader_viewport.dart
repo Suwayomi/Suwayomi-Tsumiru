@@ -63,6 +63,7 @@ class PagedReaderViewport extends StatefulWidget {
     required this.animateTransitions,
     required this.pageFit,
     required this.pageSize,
+    required this.pagesAtNaturalSize,
     required this.centerMargin,
     required this.rotateWide,
     required this.rotateWideInvert,
@@ -89,6 +90,11 @@ class PagedReaderViewport extends StatefulWidget {
   final bool animateTransitions;
   final BoxFit pageFit;
   final Size? pageSize;
+
+  /// Original size — pages rest at 1:1 with their source pixels and pan, rather
+  /// than being fitted to the screen.
+  final bool pagesAtNaturalSize;
+
   final CenterMarginType centerMargin;
   final bool rotateWide;
   final bool rotateWideInvert;
@@ -160,6 +166,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   // can share a raw index, so the chapter disambiguates equal raws.
   final Map<({int chapterId, PageUnit unit}), _PageZoomController>
       _zoomControllers = {};
+
+  /// Decoded pixel sizes per page, under the same key as [_zoomControllers] and
+  /// for the same reason.
+  final Map<({int chapterId, PageUnit unit}), Map<int, Size>> _naturalSizes = {};
 
   Offset? _lastSinglePosition;
   Offset _totalDrag = Offset.zero;
@@ -372,16 +382,19 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   void _syncZoomBounds() {
     for (final controller in _zoomControllers.values) {
       controller.configure(
-        minScale: _minScale,
-        maxScale: _maxScale,
+        minMultiplier: _minMultiplier,
+        maxMultiplier: _maxMultiplier,
         viewport: _viewportSize,
       );
     }
   }
 
-  double get _minScale => widget.disableZoomOut ? _neutralScale : 0.5;
+  /// Original size can't zoom out past 1:1 — that's what the setting means,
+  /// and it's Mihon's rule too (SCALE_TYPE_ORIGINAL_SIZE pins minimum zoom).
+  double get _minMultiplier =>
+      widget.disableZoomOut || widget.pagesAtNaturalSize ? 1 : 0.5;
 
-  double get _maxScale => widget.disableZoomIn ? 1 : 5;
+  double get _maxMultiplier => widget.disableZoomIn ? 1 : 5;
 
   int get _axisSign =>
       widget.axis == Axis.horizontal && widget.reverse ? -1 : 1;
@@ -394,8 +407,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (_isTransitionSlot(_displayIndex)) return null;
     return _zoomControllerFor(_displayIndex)
       ..configure(
-        minScale: _minScale,
-        maxScale: _maxScale,
+        minMultiplier: _minMultiplier,
+        maxMultiplier: _maxMultiplier,
         viewport: _viewportSize,
       );
   }
@@ -405,8 +418,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     return _zoomControllers.putIfAbsent(
       (chapterId: item.chapterId, unit: item.entry.first),
       () => _PageZoomController(
-        minScale: _minScale,
-        maxScale: _maxScale,
+        minMultiplier: _minMultiplier,
+        maxMultiplier: _maxMultiplier,
       ),
     );
   }
@@ -487,7 +500,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
 
     if (_dragOwner == null && _totalDrag.distance > _touchSlop) {
-      if (_currentZoomOrNull?.isActive ?? false) {
+      // The page claims the drag only if this drag would actually move it.
+      // Asking "is it zoomed" instead would let a page with nothing but
+      // vertical overflow swallow horizontal swipes that should turn the page.
+      if (_currentZoomOrNull?.canPanBy(_totalDrag) ?? false) {
         _dragOwner = _DragOwner.page;
       } else {
         if (!_isMainAxisDrag(_totalDrag)) return;
@@ -628,7 +644,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final distance = (points[0] - points[1]).distance;
     final focal = Offset.lerp(points[0], points[1], 0.5)!;
     final scale = (_pinchStartScale * distance / startDistance)
-        .clamp(_minScale, _maxScale)
+        .clamp(zoom.minScale, zoom.maxScale)
         .toDouble();
     zoom
       ..offset = _pinchStartOffset + (focal - startFocal)
@@ -678,9 +694,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       _handleSingleTap(position);
       return;
     }
-    final target = zoom.scale > _neutralScale + 0.05
-        ? _neutralScale
-        : math.min(2.0, _maxScale);
+    final target = zoom.scale > zoom.baseScale + 0.05
+        ? zoom.baseScale
+        : math.min(zoom.baseScale * 2, zoom.maxScale);
     _animateZoomTo(zoom, zoom.scaleAroundTarget(target, position));
   }
 
@@ -971,26 +987,65 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       return widget.transitionBuilder(item);
     }
     final spread = item as SpreadDisplay;
-    return _ZoomedDisplayEntry(
-      controller: _zoomControllerFor(index),
-      // Only the focused page applies its zoom/pan transform. A neighbor still
-      // carries whatever zoom/pan it was left with; applying that off-screen
-      // drags it partly back into view, overlapping the current page.
-      active: active,
-      child: DoublePageView(
-        entry: spread.entry,
-        pages: widget.window.pagesAt(index)!,
-        pageFit: widget.pageFit,
-        pageSize: widget.pageSize,
-        centerMargin: widget.centerMargin,
-        rotateWide: widget.rotateWide,
-        rotateWideInvert: widget.rotateWideInvert,
-        reversePair: widget.reversePair,
-        onPageWide: (raw, wide) =>
-            widget.onPageWide(spread.chapterId, raw, wide),
-        cropBorders: widget.cropBorders,
+    // Clipped to its own slot: a page rendered larger than the screen (Original
+    // size) must not paint over the pages either side of it.
+    return ClipRect(
+      child: _ZoomedDisplayEntry(
+        controller: _zoomControllerFor(index),
+        // Only the focused page applies its zoom/pan transform. A neighbor still
+        // carries whatever zoom/pan it was left with; applying that off-screen
+        // drags it partly back into view, overlapping the current page.
+        active: active,
+        child: DoublePageView(
+          entry: spread.entry,
+          pages: widget.window.pagesAt(index)!,
+          pageFit: widget.pageFit,
+          pageSize: widget.pageSize,
+          centerMargin: widget.centerMargin,
+          rotateWide: widget.rotateWide,
+          rotateWideInvert: widget.rotateWideInvert,
+          reversePair: widget.reversePair,
+          onPageWide: (raw, wide) =>
+              widget.onPageWide(spread.chapterId, raw, wide),
+          onNaturalSize: (raw, natural) =>
+              _recordNaturalSize(index, spread, raw, natural),
+          naturalSize: widget.pagesAtNaturalSize,
+          cropBorders: widget.cropBorders,
+        ),
       ),
     );
+  }
+
+  /// Measures a decoded page against the slot it was laid out in, and hands the
+  /// result to that page's zoom so panning knows the page's real extent — and
+  /// so Original size can rest at 1:1 with the source pixels.
+  void _recordNaturalSize(
+      int index, SpreadDisplay spread, int raw, Size natural) {
+    if (natural.isEmpty || _viewportSize.isEmpty) return;
+    final key = (chapterId: spread.chapterId, unit: spread.entry.first);
+    final naturals = _naturalSizes.putIfAbsent(key, () => {});
+    if (naturals[raw] == natural) return;
+    naturals[raw] = natural;
+
+    final slots = spread.entry.isPair ? 2 : 1;
+    final slot = Size(_viewportSize.width / slots, _viewportSize.height);
+
+    var width = 0.0;
+    var height = 0.0;
+    for (final size in naturals.values) {
+      // Original size draws each page at its own pixel size; every other scale
+      // type fits it to the slot first.
+      final laidOut = widget.pagesAtNaturalSize
+          ? size
+          : applyBoxFit(BoxFit.contain, size, slot).destination;
+      if (laidOut.isEmpty) continue;
+      width += laidOut.width;
+      height = math.max(height, laidOut.height);
+    }
+    if (width <= 0 || height <= 0) return;
+
+    _zoomControllerFor(index)
+        .setPageMetrics(content: Size(width, height), baseScale: 1);
   }
 }
 
@@ -1048,21 +1103,43 @@ class _ZoomedDisplayEntry extends StatelessWidget {
 
 class _PageZoomController extends ChangeNotifier {
   _PageZoomController({
-    required this.minScale,
-    required this.maxScale,
-  }) : _scale = 1.0.clamp(minScale, maxScale).toDouble();
+    required this.minMultiplier,
+    required this.maxMultiplier,
+  }) : _scale = 1;
 
-  double minScale;
-  double maxScale;
+  /// Zoom bounds as multiples of [baseScale]. Every scale type but Original
+  /// size rests at the fitted page, where baseScale is 1 and these are the
+  /// literal bounds.
+  double minMultiplier;
+  double maxMultiplier;
+
   Size _viewport = Size.zero;
+
+  /// The page's laid-out size at rest. Null until the image decodes, until when
+  /// the page is assumed to fill the viewport.
+  Size? _content;
+
+  /// Resting scale. Original size rests at 1:1 with the source pixels, which is
+  /// usually larger than the fitted page — so the page opens pannable.
+  double _baseScale = 1;
+
   double _scale;
   Offset _offset = Offset.zero;
 
   double get scale => _scale;
 
+  double get baseScale => _baseScale;
+
+  double get minScale => _baseScale * minMultiplier;
+
+  double get maxScale => _baseScale * maxMultiplier;
+
   Offset get offset => _offset;
 
-  bool get isActive => _scale > 1.01;
+  /// Whether the page has anywhere left to pan — which is what decides if a
+  /// drag belongs to the page or turns it. Original size pans at rest, so this
+  /// can't be "zoomed past rest".
+  bool get isActive => _maxPan != Offset.zero;
 
   set offset(Offset value) {
     _offset = _clampOffset(value);
@@ -1070,28 +1147,42 @@ class _PageZoomController extends ChangeNotifier {
   }
 
   void configure({
-    required double minScale,
-    required double maxScale,
+    required double minMultiplier,
+    required double maxMultiplier,
     required Size viewport,
   }) {
     final oldScale = _scale;
     final oldOffset = _offset;
-    final oldMinScale = this.minScale;
-    final oldMaxScale = this.maxScale;
+    final oldMin = this.minMultiplier;
+    final oldMax = this.maxMultiplier;
     final oldViewport = _viewport;
 
-    this.minScale = minScale;
-    this.maxScale = maxScale;
+    this.minMultiplier = minMultiplier;
+    this.maxMultiplier = maxMultiplier;
     _viewport = viewport;
     _scale = _scale.clamp(minScale, maxScale).toDouble();
-    _offset = _scale <= 1.001 ? Offset.zero : _clampOffset(_offset);
+    _offset = _clampOffset(_offset);
     if (oldScale == _scale &&
         oldOffset == _offset &&
-        oldMinScale == minScale &&
-        oldMaxScale == maxScale &&
+        oldMin == minMultiplier &&
+        oldMax == maxMultiplier &&
         oldViewport == viewport) {
       return;
     }
+    notifyListeners();
+  }
+
+  /// Feeds in the page's measured layout once its image decodes. A page still
+  /// sitting at rest follows the new resting scale; one the reader has already
+  /// zoomed keeps where they put it.
+  void setPageMetrics({required Size content, required double baseScale}) {
+    if (_content == content && _baseScale == baseScale) return;
+    final wasAtRest = (_scale - _baseScale).abs() < 0.001;
+    _content = content;
+    _baseScale = baseScale;
+    if (wasAtRest) _scale = baseScale;
+    _scale = _scale.clamp(minScale, maxScale).toDouble();
+    _offset = _clampOffset(_offset);
     notifyListeners();
   }
 
@@ -1105,19 +1196,23 @@ class _PageZoomController extends ChangeNotifier {
   ({double scale, Offset offset}) scaleAroundTarget(
       double targetScale, Offset focal) {
     final nextScale = targetScale.clamp(minScale, maxScale).toDouble();
-    if (nextScale <= 1.001) return (scale: nextScale, offset: Offset.zero);
     final scaleRatio = nextScale / _scale;
     final viewportCenter = Offset(_viewport.width / 2, _viewport.height / 2);
     final focalFromCenter = focal - viewportCenter - _offset;
     return (
       scale: nextScale,
-      offset: _clampOffset(_offset - focalFromCenter * (scaleRatio - 1)),
+      // Clamped against where we're going, not where we are — panning room
+      // shrinks as you zoom out, and the old scale would allow too much.
+      offset: _clampOffsetAt(
+        _offset - focalFromCenter * (scaleRatio - 1),
+        nextScale,
+      ),
     );
   }
 
   void setScaleOffset(double scale, Offset offset) {
     _scale = scale.clamp(minScale, maxScale).toDouble();
-    _offset = _scale <= 1.001 ? Offset.zero : _clampOffset(offset);
+    _offset = _clampOffset(offset);
     notifyListeners();
   }
 
@@ -1131,13 +1226,11 @@ class _PageZoomController extends ChangeNotifier {
   Offset clampOffset(Offset value) => _clampOffset(value);
 
   bool canPanBy(Offset delta) {
-    if (_scale <= 1.01) return false;
     final next = _offset + delta;
     return _clampOffset(next) != _offset;
   }
 
   bool canPan(_PanDirection direction) {
-    if (_scale <= 1.01) return false;
     return switch (direction) {
       _PanDirection.left => _offset.dx < _maxPan.dx - 1,
       _PanDirection.right => _offset.dx > -_maxPan.dx + 1,
@@ -1156,16 +1249,23 @@ class _PageZoomController extends ChangeNotifier {
     return panBy(amount);
   }
 
-  Offset get _maxPan {
-    if (_scale <= 1) return Offset.zero;
+  Offset get _maxPan => _maxPanAt(_scale);
+
+  /// How far the page can travel before its edge would come inside the screen.
+  /// Measured from the page's own box, so a letterboxed page can't be dragged
+  /// out into the empty margin beside it.
+  Offset _maxPanAt(double scale) {
+    final content = _content ?? _viewport;
     return Offset(
-      _viewport.width * (_scale - 1) / 2,
-      _viewport.height * (_scale - 1) / 2,
+      math.max(0, (content.width * scale - _viewport.width) / 2),
+      math.max(0, (content.height * scale - _viewport.height) / 2),
     );
   }
 
-  Offset _clampOffset(Offset value) {
-    final maxPan = _maxPan;
+  Offset _clampOffset(Offset value) => _clampOffsetAt(value, _scale);
+
+  Offset _clampOffsetAt(Offset value, double scale) {
+    final maxPan = _maxPanAt(scale);
     return Offset(
       value.dx.clamp(-maxPan.dx, maxPan.dx).toDouble(),
       value.dy.clamp(-maxPan.dy, maxPan.dy).toDouble(),

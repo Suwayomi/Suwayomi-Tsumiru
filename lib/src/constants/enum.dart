@@ -171,9 +171,16 @@ enum ImageScaleType {
         ImageScaleType.stretch => (BoxFit.fill, Size(width, height)),
         ImageScaleType.fitWidth => (BoxFit.fitWidth, Size.fromWidth(width)),
         ImageScaleType.fitHeight => (BoxFit.fitHeight, Size.fromHeight(height)),
-        ImageScaleType.originalSize => (BoxFit.none, null),
+        ImageScaleType.originalSize => (BoxFit.contain, null),
         ImageScaleType.smartFit => (BoxFit.fitWidth, Size.fromWidth(width)),
       };
+
+  /// Original size shows source pixels 1:1 and pans to the rest of the page,
+  /// rather than fitting it to the screen. The layout above still fits the page
+  /// into its slot so it can't paint over its neighbours — the reader's zoom
+  /// supplies the 1:1 resting scale, matching how Mihon treats this as a
+  /// minimum zoom level rather than a fit mode.
+  bool get pagesAtNaturalSize => this == ImageScaleType.originalSize;
 }
 
 /// Paged zoom start position (default automatic).
