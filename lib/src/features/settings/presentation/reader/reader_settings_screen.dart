@@ -19,7 +19,6 @@ import 'widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import 'widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import 'widgets/reader_general_prefs/reader_general_prefs.dart';
 import 'widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
-import 'widgets/reader_infinity_scrolling_mode_tile/reader_infinity_scrolling_mode_tile.dart';
 import 'widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
 import 'widgets/reader_keep_screen_on_tile/reader_keep_screen_on_tile.dart';
 import 'widgets/reader_last_page_swipe_tile/reader_last_page_swipe_tile.dart';
@@ -187,7 +186,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
           ),
           const SwipeChapterToggleTile(),
           const ReaderLastPageSwipeTile(),
-          const ReaderInfinityScrollingModeTile(),
           const ReaderScrollAnimationTile(),
           const ReaderFeedbackToastsTile(),
 

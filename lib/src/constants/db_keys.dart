@@ -38,7 +38,6 @@ enum DBKeys {
   quickSearchToggle(true),
   swipeToggle(true),
   lastPageSwipeEnabled(false),
-  infinityScrollingMode(true),
   scrollAnimation(true),
   showNSFW(true),
   showRecommendations(true),
