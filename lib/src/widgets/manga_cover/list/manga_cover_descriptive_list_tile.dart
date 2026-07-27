@@ -29,6 +29,7 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
     this.showCountBadges = true,
     this.selected = false,
     this.belowStatus,
+    this.titleMaxLines = 2,
   });
   final MangaDto manga;
   final bool showBadges;
@@ -44,6 +45,10 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
   /// Optional widget rendered below the status/source line (details screen only).
   /// When null — the default for library/browse callers — nothing is rendered.
   final Widget? belowStatus;
+
+  /// Null lets the title wrap to its full length, which is what the details
+  /// screen wants (Mihon caps it nowhere). List rows keep 2 so they stay even.
+  final int? titleMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -85,8 +90,10 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                       child: Text(
                         manga.title,
                         style: context.textTheme.titleLarge,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
+                        overflow: titleMaxLines == null
+                            ? TextOverflow.clip
+                            : TextOverflow.ellipsis,
+                        maxLines: titleMaxLines,
                         semanticsLabel: manga.title,
                       ),
                     ),
