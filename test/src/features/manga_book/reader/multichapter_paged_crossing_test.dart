@@ -519,4 +519,88 @@ void main() {
           reason: 'pager left parked between pages: page $i at dx=$dx');
     }
   });
+
+  testWidgets('a second finger mid-turn cannot hijack the turn into a zoom',
+      (tester) async {
+    final controller = PagedReaderController();
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ReaderInputScope(
+          callbacks: _callbacks(),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 1,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (_, __) {},
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+
+    // Begin a page turn with one finger...
+    final p1 = await tester.startGesture(box.center, pointer: 1);
+    for (var i = 0; i < 4; i++) {
+      await p1.moveBy(const Offset(-20, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    // ...then drop a second finger and spread, as if pinching to zoom.
+    final p2 = await tester.startGesture(box.center + const Offset(40, 0),
+        pointer: 2);
+    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await p2.moveBy(const Offset(25, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    // Komikku doesn't zoom while a page is turning, and neither do we.
+    expect(_largestScale(tester), closeTo(1.0, 0.01),
+        reason: 'the pinch hijacked a turn in progress');
+
+    await p2.up();
+    await p1.up();
+    await tester.pumpAndSettle();
+
+    // And the turn still lands on a page.
+    final pages = find.byType(DoublePageView);
+    for (var i = 0; i < tester.widgetList(pages).length; i++) {
+      final dx = tester.getTopLeft(pages.at(i)).dx - box.left;
+      final steps = dx / box.width;
+      final offBy = (steps - steps.roundToDouble()).abs() * box.width;
+      expect(offBy, lessThan(1.0), reason: 'left parked: page $i at dx=$dx');
+    }
+  });
 }

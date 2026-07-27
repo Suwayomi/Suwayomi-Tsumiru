@@ -474,6 +474,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _velocityPointer = null;
     _velocityTracker = null;
     if (_pointers.length == 2) {
+      // A gesture is either a turn or a zoom, decided once. A second finger
+      // landing mid-turn must not seize it — that abandons the turn partway and
+      // leaves the pager between two pages.
+      if (_dragOwner == _DragOwner.pager || _dragOffset != 0) return;
       final points = _pointers.values.toList();
       final zoom = _currentZoomOrNull;
       if (zoom == null) return;
@@ -664,6 +668,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _handlePinch() {
     if (!widget.pinchEnabled || widget.disableZoomIn) return;
+    // The turn owns this gesture; extra fingers ride along without zooming.
+    if (_dragOwner == _DragOwner.pager) return;
     final zoom = _currentZoomOrNull;
     if (zoom == null) return;
     final startDistance = _pinchStartDistance;
