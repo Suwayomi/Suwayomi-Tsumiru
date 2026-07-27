@@ -353,7 +353,9 @@ class _GroupTile extends StatelessWidget {
 
 const double _kCardWidth = 120;
 
-/// Title + source lines and their gaps under each cover in the strip.
+/// Room under each cover for the source line and its gap. That needs about 20
+/// at the default text scale; the rest is headroom so a larger scale grows the
+/// line instead of clipping it against the strip's fixed height.
 const double _kMemberCardTextExtent = 40;
 
 class _MemberCard extends StatelessWidget {

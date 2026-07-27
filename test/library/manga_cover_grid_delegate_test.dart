@@ -24,10 +24,14 @@ SliverConstraints _constraints(double crossAxisExtent) => SliverConstraints(
 /// Ratio of the artwork as it actually renders: the cell minus the title block
 /// and minus the card margin that insets the image inside the cell. Measuring
 /// the cell alone would pass while every cover on screen was still wrong.
-double _coverRatio(SliverGridLayout layout, {double titleExtent = 0}) {
+double _coverRatio(
+  SliverGridLayout layout, {
+  double titleExtent = 0,
+  double coverInset = kMangaCoverCardInset,
+}) {
   final tile = layout as SliverGridRegularTileLayout;
-  return (tile.childCrossAxisExtent - kMangaCoverCardInset) /
-      (tile.childMainAxisExtent - titleExtent - kMangaCoverCardInset);
+  return (tile.childCrossAxisExtent - coverInset) /
+      (tile.childMainAxisExtent - titleExtent - coverInset);
 }
 
 void main() {
@@ -60,6 +64,27 @@ void main() {
           _coverRatio(layout),
           closeTo(kMangaCoverAspectRatio, 0.0001),
           reason: '$columns columns',
+        );
+      }
+    });
+  });
+
+  group('card-less grid (recommendations)', () {
+    test('cover is 2:3 with a title below and no card to compensate for', () {
+      for (final width in [320.0, 411.0, 800.0]) {
+        const delegate = MangaCoverGridDelegate(
+          maxCrossAxisExtent: 120,
+          titleExtent: kRecommendsTitleExtent,
+          coverInset: 0,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        );
+        final layout = delegate.getLayout(_constraints(width));
+        expect(
+          _coverRatio(layout,
+              titleExtent: kRecommendsTitleExtent, coverInset: 0),
+          closeTo(kMangaCoverAspectRatio, 0.0001),
+          reason: 'viewport ${width}px',
         );
       }
     });
