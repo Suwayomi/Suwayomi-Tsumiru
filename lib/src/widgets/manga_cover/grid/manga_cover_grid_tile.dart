@@ -93,11 +93,10 @@ class MangaCoverGridTile extends StatelessWidget {
                 Expanded(child: _card(context)),
                 // Komikku's comfortable-grid title: 4dp padding, 12sp over an
                 // 18px line, two lines ellipsized, on the theme surface. The
-                // block height is FIXED (two lines reserved, minLines-style)
-                // so one-line titles don't let their covers grow taller than
-                // the rest of the row.
+                // height is fixed and shared with the grid delegate, which
+                // adds exactly this much on top of the 2:3 cover.
                 SizedBox(
-                  height: 44,
+                  height: kGridTitleExtent,
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Text(

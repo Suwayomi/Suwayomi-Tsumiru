@@ -201,6 +201,7 @@ class MangaDescription extends HookConsumerWidget {
                 onTitleClicked: (query) =>
                     GlobalSearchRoute(query: query).push(context),
                 belowStatus: soonWidget,
+                titleMaxLines: null,
               ),
             ),
           ],

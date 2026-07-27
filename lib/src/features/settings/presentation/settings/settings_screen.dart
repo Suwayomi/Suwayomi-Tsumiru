@@ -29,61 +29,61 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             title: Text(context.l10n.general),
             leading: const Icon(Icons.tune_rounded),
-            onTap: () => const GeneralSettingsRoute().go(context),
+            onTap: () => const GeneralSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.appearance),
             leading: const Icon(Icons.color_lens_rounded),
-            onTap: () => const AppearanceSettingsRoute().go(context),
+            onTap: () => const AppearanceSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.library),
             leading: const Icon(Icons.collections_bookmark_rounded),
-            onTap: () => const LibrarySettingsRoute().go(context),
+            onTap: () => const LibrarySettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.downloads),
             leading: const Icon(Icons.download_rounded),
             // On-device (offline) downloads are now the "On-device" tab inside
             // this screen, so there's no separate "Offline" entry.
-            onTap: () => const DownloadsSettingsRoute().go(context),
+            onTap: () => const DownloadsSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.notifications),
             leading: const Icon(Icons.notifications_rounded),
-            onTap: () => const NotificationsSettingsRoute().go(context),
+            onTap: () => const NotificationsSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.reader),
             leading: const Icon(Icons.chrome_reader_mode_rounded),
-            onTap: () => const ReaderSettingsRoute().go(context),
+            onTap: () => const ReaderSettingsRoute().push(context),
           ),
           if (isKeyboardRuntime)
             ListTile(
               title: Text(context.l10n.keyboardShortcuts),
               leading: const Icon(Icons.keyboard_rounded),
-              onTap: () => const HotkeysSettingsRoute().go(context),
+              onTap: () => const HotkeysSettingsRoute().push(context),
             ),
           ListTile(
             title: Text(context.l10n.browse),
             leading: const Icon(Icons.explore_rounded),
-            onTap: () => const BrowseSettingsRoute().go(context),
+            onTap: () => const BrowseSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.backup),
             leading: const Icon(Icons.settings_backup_restore_rounded),
-            onTap: () => const BackupRoute().go(context),
+            onTap: () => const BackupRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.tracking),
             leading: const Icon(Icons.sync_rounded),
-            onTap: () => const TrackingSettingsRoute().go(context),
+            onTap: () => const TrackingSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.server),
             subtitle: Text(context.l10n.serverSettingsSubtitle),
             leading: const Icon(Icons.computer_rounded),
-            onTap: () => const ServerSettingsRoute().go(context),
+            onTap: () => const ServerSettingsRoute().push(context),
           ),
           const _CopyCrashLogTile(),
         ],

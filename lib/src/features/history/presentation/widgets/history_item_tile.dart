@@ -166,13 +166,7 @@ class HistoryItemTile extends ConsumerWidget {
                     .map(
                       (action) => PopupMenuItem(
                         value: action,
-                        child: Row(
-                          children: [
-                            Icon(action.icon),
-                            const SizedBox(width: 8),
-                            Text(action.toLocale(context)),
-                          ],
-                        ),
+                        child: Text(action.toLocale(context)),
                       ),
                     )
                     .toList(),

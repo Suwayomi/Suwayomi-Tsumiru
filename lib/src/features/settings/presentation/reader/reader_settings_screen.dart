@@ -53,6 +53,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
     final flash = ref.watch(flashOnPageChangeProvider).ifNull(false);
     final splitPaged = ref.watch(dualPageSplitPagedProvider).ifNull(false);
     final rotateWide = ref.watch(rotateWidePagesProvider).ifNull(false);
+    final disableZoomIn = ref.watch(disableZoomInProvider).ifNull(false);
 
     T? enumOf<T>(ProviderListenable<T?> p) => ref.watch(p);
     void Function(T?) setEnum<T>(Refreshable<dynamic> notifier) =>
@@ -62,34 +63,17 @@ class ReaderSettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(context.l10n.reader)),
       body: ListView(
         children: [
-          // ── General ──
+          // Group order follows Komikku's reader settings: ungrouped basics
+          // first, then Display, E-Ink, Reading, Paged, Long strip,
+          // Navigation, Actions.
           const ReaderModeTile(),
           const ReaderNavigationLayoutTile(),
           const ReaderInvertTapTile(),
-          _EnumChips<ReaderBackgroundColor>(
-            label: context.l10n.readerBackgroundColor,
-            values: const [
-              ReaderBackgroundColor.black,
-              ReaderBackgroundColor.gray,
-              ReaderBackgroundColor.white,
-              ReaderBackgroundColor.automatic,
-            ],
-            selected: enumOf(readerBackgroundColorKeyProvider) ??
-                ReaderBackgroundColor.black,
-            labelOf: (v) => v.toLocale(context),
-            onSelected: setEnum(readerBackgroundColorKeyProvider.notifier),
-          ),
           _BoolTile(
-            title: context.l10n.showPageNumber,
-            value: ref.watch(showPageNumberProvider).ifNull(true),
-            onChanged: ref.read(showPageNumberProvider.notifier).update,
+            title: context.l10n.smallerTapZones,
+            value: ref.watch(smallerTapZonesProvider).ifNull(false),
+            onChanged: ref.read(smallerTapZonesProvider.notifier).update,
           ),
-          const ReaderInitialOverlayTile(),
-          const SwipeChapterToggleTile(),
-          const ReaderLastPageSwipeTile(),
-          const ReaderInfinityScrollingModeTile(),
-          const ReaderScrollAnimationTile(),
-          const ReaderFeedbackToastsTile(),
           _BoolTile(
             title: context.l10n.forceHorizontalSeekbar,
             value: forceHorizontal,
@@ -113,6 +97,22 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ref.read(leftHandedVerticalSeekbarProvider.notifier).update,
             ),
           ],
+
+          // ── Display ──
+          _Header(context.l10n.readerGroupDisplay),
+          _EnumChips<ReaderBackgroundColor>(
+            label: context.l10n.readerBackgroundColor,
+            values: const [
+              ReaderBackgroundColor.black,
+              ReaderBackgroundColor.gray,
+              ReaderBackgroundColor.white,
+              ReaderBackgroundColor.automatic,
+            ],
+            selected: enumOf(readerBackgroundColorKeyProvider) ??
+                ReaderBackgroundColor.black,
+            labelOf: (v) => v.toLocale(context),
+            onSelected: setEnum(readerBackgroundColorKeyProvider.notifier),
+          ),
           _BoolTile(
             title: context.l10n.readerFullscreen,
             value: fullscreen,
@@ -126,16 +126,22 @@ class ReaderSettingsScreen extends ConsumerWidget {
               onChanged: ref.read(drawUnderCutoutProvider.notifier).update,
             ),
           _BoolTile(
-            title: context.l10n.showActionsOnLongTap,
-            value: ref.watch(readWithLongTapProvider).ifNull(true),
-            onChanged: ref.read(readWithLongTapProvider.notifier).update,
+            title: context.l10n.showPageNumber,
+            value: ref.watch(showPageNumberProvider).ifNull(true),
+            onChanged: ref.read(showPageNumberProvider.notifier).update,
           ),
-          _BoolTile(
-            title: context.l10n.alwaysShowChapterTransition,
-            value: ref.watch(alwaysShowChapterTransitionProvider).ifNull(true),
-            onChanged:
-                ref.read(alwaysShowChapterTransitionProvider.notifier).update,
-          ),
+          const ReaderInitialOverlayTile(),
+          // Not long-strip only: reader_wrapper pads whichever axis you are
+          // not scrolling, so paged reading uses it too.
+          const ReaderPaddingSlider(),
+          const ReaderMagnifierSizeSlider(),
+          if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) ...[
+            const ReaderKeepScreenOnTile(),
+            const ReaderIgnoreSafeAreaTile(),
+          ],
+
+          // ── E-Ink ──
+          _Header(context.l10n.readerGroupEInk),
           _BoolTile(
             title: context.l10n.flashOnPageChange,
             value: flash,
@@ -168,20 +174,22 @@ class ReaderSettingsScreen extends ConsumerWidget {
               onSelected: setEnum(flashColorKeyProvider.notifier),
             ),
           ],
-          const ReaderPaddingSlider(),
-          const ReaderMagnifierSizeSlider(),
-          if (!kIsWeb) ...[
-            if (Platform.isAndroid || Platform.isIOS) ...[
-              const ReaderKeepScreenOnTile(),
-              const ReaderIgnoreSafeAreaTile(),
-            ],
-            if (Platform.isAndroid) ...[
-              const ReaderVolumeTapTile(),
-              if (isVolumeTapEnabled) const ReaderVolumeTapInvertTile(),
-            ],
-          ],
 
-          // ── Pager viewer defaults ──
+          // ── Reading ──
+          _Header(context.l10n.readerGroupReading),
+          _BoolTile(
+            title: context.l10n.alwaysShowChapterTransition,
+            value: ref.watch(alwaysShowChapterTransitionProvider).ifNull(true),
+            onChanged:
+                ref.read(alwaysShowChapterTransitionProvider.notifier).update,
+          ),
+          const SwipeChapterToggleTile(),
+          const ReaderLastPageSwipeTile(),
+          const ReaderInfinityScrollingModeTile(),
+          const ReaderScrollAnimationTile(),
+          const ReaderFeedbackToastsTile(),
+
+          // ── Paged ──
           _Header(context.l10n.readerGroupPagerViewer),
           _EnumChips<ImageScaleType>(
             label: context.l10n.imageScaleType,
@@ -205,11 +213,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
                 enumOf(centerMarginTypeKeyProvider) ?? CenterMarginType.none,
             labelOf: (v) => v.toLocale(context),
             onSelected: setEnum(centerMarginTypeKeyProvider.notifier),
-          ),
-          _BoolTile(
-            title: context.l10n.smallerTapZones,
-            value: ref.watch(smallerTapZonesProvider).ifNull(false),
-            onChanged: ref.read(smallerTapZonesProvider.notifier).update,
           ),
           _BoolTile(
             title: context.l10n.cropBorders,
@@ -256,18 +259,30 @@ class ReaderSettingsScreen extends ConsumerWidget {
             onChanged: ref.read(trueDualPageSpreadProvider.notifier).update,
           ),
           _BoolTile(
-            title: context.l10n.doubleTapToZoom,
-            value: ref.watch(doubleTapToZoomProvider).ifNull(true),
-            onChanged: ref.read(doubleTapToZoomProvider.notifier).update,
+            title: context.l10n.disableZoomIn,
+            value: disableZoomIn,
+            onChanged: ref.read(disableZoomInProvider.notifier).update,
           ),
-          const ReaderPinchToZoom(),
+          // Both stay editable while zoom-in is off. The viewport already
+          // ignores them in that state, and greying them out would strand
+          // whatever value they were left on.
+          _BoolTile(
+            title: context.l10n.doubleTapToZoom,
+            value: ref.watch(pagedDoubleTapToZoomProvider).ifNull(true),
+            onChanged: ref.read(pagedDoubleTapToZoomProvider.notifier).update,
+          ),
+          _BoolTile(
+            title: context.l10n.pinchToZoom,
+            value: ref.watch(pagedPinchToZoomProvider).ifNull(true),
+            onChanged: ref.read(pagedPinchToZoomProvider.notifier).update,
+          ),
           _BoolTile(
             title: context.l10n.disableZoomOut,
-            value: ref.watch(disableZoomOutProvider).ifNull(false),
-            onChanged: ref.read(disableZoomOutProvider.notifier).update,
+            value: ref.watch(pagedDisableZoomOutProvider).ifNull(false),
+            onChanged: ref.read(pagedDisableZoomOutProvider.notifier).update,
           ),
 
-          // ── Long strip viewer defaults ──
+          // ── Long strip ──
           _Header(context.l10n.readerGroupWebtoonViewer),
           _EnumChips<WebtoonScaleType>(
             label: context.l10n.webtoonScaleType,
@@ -281,6 +296,38 @@ class ReaderSettingsScreen extends ConsumerWidget {
             title: context.l10n.cropBorders,
             value: ref.watch(cropBordersWebtoonProvider).ifNull(false),
             onChanged: ref.read(cropBordersWebtoonProvider.notifier).update,
+          ),
+          _BoolTile(
+            title: context.l10n.doubleTapToZoom,
+            value: ref.watch(longStripDoubleTapToZoomProvider).ifNull(true),
+            onChanged:
+                ref.read(longStripDoubleTapToZoomProvider.notifier).update,
+          ),
+          _BoolTile(
+            title: context.l10n.pinchToZoom,
+            value: ref.watch(longStripPinchToZoomProvider).ifNull(true),
+            onChanged: ref.read(longStripPinchToZoomProvider.notifier).update,
+          ),
+          _BoolTile(
+            title: context.l10n.disableZoomOut,
+            value: ref.watch(longStripDisableZoomOutProvider).ifNull(false),
+            onChanged:
+                ref.read(longStripDisableZoomOutProvider.notifier).update,
+          ),
+
+          // ── Navigation ──
+          if (!kIsWeb && Platform.isAndroid) ...[
+            _Header(context.l10n.readerGroupNavigation),
+            const ReaderVolumeTapTile(),
+            if (isVolumeTapEnabled) const ReaderVolumeTapInvertTile(),
+          ],
+
+          // ── Actions ──
+          _Header(context.l10n.readerGroupActions),
+          _BoolTile(
+            title: context.l10n.showActionsOnLongTap,
+            value: ref.watch(readWithLongTapProvider).ifNull(true),
+            onChanged: ref.read(readWithLongTapProvider.notifier).update,
           ),
 
           const Gap(128),

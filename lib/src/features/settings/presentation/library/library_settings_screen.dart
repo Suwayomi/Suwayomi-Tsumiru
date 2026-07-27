@@ -91,7 +91,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   ListTile(
                     title: Text(context.l10n.categories),
                     leading: const Icon(Icons.label_rounded),
-                    onTap: () => const EditCategoriesRoute().go(context),
+                    onTap: () => const EditCategoriesRoute().push(context),
                   ),
                   ListTile(
                     title: Text(context.l10n.defaultCategoryOnAdd),

@@ -749,11 +749,11 @@ class _GroupedMangaList extends ConsumerWidget {
     final fixedCols = isLandscape ? landscapeCols : portraitCols;
 
     SliverGridDelegate gridDelegate({bool titleBelow = false}) => fixedCols > 0
-        ? SliverGridDelegateWithFixedCrossAxisCount(
+        ? MangaCoverFixedCountGridDelegate(
             crossAxisCount: fixedCols,
             crossAxisSpacing: 2.0,
             mainAxisSpacing: 2.0,
-            childAspectRatio: titleBelow ? 0.62 : 0.75,
+            titleExtent: titleBelow ? kGridTitleExtent : 0.0,
           )
         : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 
@@ -780,7 +780,7 @@ class _GroupedMangaList extends ConsumerWidget {
         },
         child: switch (displayMode) {
           DisplayMode.list || null => ListView.builder(
-            itemExtent: 96,
+            itemExtent: kCompactTileExtent,
             itemCount: items.length,
             itemBuilder: (context, index) => MangaCoverListTile(
               manga: items[index],
@@ -819,7 +819,7 @@ class _GroupedMangaList extends ConsumerWidget {
             ),
           ),
           DisplayMode.descriptiveList => ListView.builder(
-            itemExtent: 176,
+            itemExtent: kDescriptiveTileExtent,
             itemCount: items.length,
             itemBuilder: (context, index) => MangaCoverDescriptiveListTile(
               manga: items[index],

@@ -34,3 +34,47 @@ class DisableZoomIn extends _$DisableZoomIn
   @override
   bool? build() => initialize(DBKeys.disableZoomIn);
 }
+
+// Per-viewer zoom toggles. Each seeds from the matching global pref above, so
+// upgrading keeps whatever the reader was already doing; once a viewer's own
+// switch is touched it owns its value and the two stop moving together.
+
+@riverpod
+class PagedDoubleTapToZoom extends _$PagedDoubleTapToZoom
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.pagedDoubleTapToZoom,
+        initial: ref.read(doubleTapToZoomProvider),
+      );
+}
+
+@riverpod
+class LongStripDoubleTapToZoom extends _$LongStripDoubleTapToZoom
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.longStripDoubleTapToZoom,
+        initial: ref.read(doubleTapToZoomProvider),
+      );
+}
+
+@riverpod
+class PagedDisableZoomOut extends _$PagedDisableZoomOut
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.pagedDisableZoomOut,
+        initial: ref.read(disableZoomOutProvider),
+      );
+}
+
+@riverpod
+class LongStripDisableZoomOut extends _$LongStripDisableZoomOut
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(
+        DBKeys.longStripDisableZoomOut,
+        initial: ref.read(disableZoomOutProvider),
+      );
+}

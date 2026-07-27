@@ -70,7 +70,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: () => const AboutRoute().go(context),
+                    onPressed: () => const AboutRoute().push(context),
                     icon: logoIcon,
                     label: Text(
                       context.l10n.appTitle,
@@ -104,7 +104,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
     } else {
       // Tablet / landscape phone: compact logo (no collapse — already an icon rail).
       leadingIcon = IconButton(
-        onPressed: () => const AboutRoute().go(context),
+        onPressed: () => const AboutRoute().push(context),
         icon: logoIcon,
       );
     }

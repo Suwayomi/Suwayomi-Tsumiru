@@ -48,38 +48,38 @@ List<GoToTarget> appGoToTargets({required bool includeHotkeys}) => [
       GoToTarget(
         label: (l) => l.general,
         icon: Icons.tune_rounded,
-        navigate: (c) => const GeneralSettingsRoute().go(c),
+        navigate: (c) => const GeneralSettingsRoute().push(c),
       ),
       GoToTarget(
         label: (l) => l.appearance,
         icon: Icons.color_lens_rounded,
-        navigate: (c) => const AppearanceSettingsRoute().go(c),
+        navigate: (c) => const AppearanceSettingsRoute().push(c),
       ),
       GoToTarget(
         label: (l) => l.reader,
         icon: Icons.chrome_reader_mode_rounded,
-        navigate: (c) => const ReaderSettingsRoute().go(c),
+        navigate: (c) => const ReaderSettingsRoute().push(c),
       ),
       if (includeHotkeys)
         GoToTarget(
           label: (l) => l.keyboardShortcuts,
           icon: Icons.keyboard_rounded,
-          navigate: (c) => const HotkeysSettingsRoute().go(c),
+          navigate: (c) => const HotkeysSettingsRoute().push(c),
         ),
       GoToTarget(
         label: (l) => l.backup,
         icon: Icons.settings_backup_restore_rounded,
-        navigate: (c) => const BackupRoute().go(c),
+        navigate: (c) => const BackupRoute().push(c),
       ),
       GoToTarget(
         label: (l) => l.tracking,
         icon: Icons.sync_rounded,
-        navigate: (c) => const TrackingSettingsRoute().go(c),
+        navigate: (c) => const TrackingSettingsRoute().push(c),
       ),
       GoToTarget(
         label: (l) => l.server,
         icon: Icons.computer_rounded,
-        navigate: (c) => const ServerSettingsRoute().go(c),
+        navigate: (c) => const ServerSettingsRoute().push(c),
       ),
     ];
 

@@ -34,7 +34,7 @@ class ServerUnreachableView extends StatelessWidget {
         spacing: 8,
         children: [
           FilledButton.tonalIcon(
-            onPressed: () => const ConnectionRoute().go(context),
+            onPressed: () => const ConnectionRoute().push(context),
             icon: const Icon(Icons.settings_ethernet_rounded),
             label: Text(context.l10n.serverUnreachableAction),
           ),

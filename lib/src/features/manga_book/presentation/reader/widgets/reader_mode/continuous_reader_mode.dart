@@ -169,10 +169,11 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final bool isAnimationEnabled =
         ref.watch(animatePageTransitionsProvider).ifNull(true);
     final bool isPinchToZoomEnabled =
-        ref.watch(pinchToZoomProvider).ifNull(true);
+        ref.watch(longStripPinchToZoomProvider).ifNull(true);
     final bool isDoubleTapZoomEnabled =
-        ref.watch(doubleTapToZoomProvider).ifNull(true);
-    final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
+        ref.watch(longStripDoubleTapToZoomProvider).ifNull(true);
+    final bool isZoomOutDisabled =
+        ref.watch(longStripDisableZoomOutProvider).ifNull();
 
     // "Always show chapter transition": ON keeps the full prev/next
     // transition separator; OFF minimizes it.
