@@ -296,17 +296,13 @@ class _PagedSection extends ConsumerWidget {
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
           value: settings.pagedDoubleTapToZoom,
-          // Zooming in is off entirely, so a double-tap has nothing to do.
-          onChanged: settings.disableZoomIn
-              ? null
-              : model.setPagedDoubleTapToZoom,
+          onChanged: model.setPagedDoubleTapToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
           value: settings.pagedPinchToZoom,
-          onChanged:
-              settings.disableZoomIn ? null : model.setPagedPinchToZoom,
+          onChanged: model.setPagedPinchToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,

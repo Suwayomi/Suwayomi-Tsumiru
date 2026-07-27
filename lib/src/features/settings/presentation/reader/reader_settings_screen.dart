@@ -260,20 +260,18 @@ class ReaderSettingsScreen extends ConsumerWidget {
             value: disableZoomIn,
             onChanged: ref.read(disableZoomInProvider.notifier).update,
           ),
+          // Both stay editable while zoom-in is off. The viewport already
+          // ignores them in that state, and greying them out would strand
+          // whatever value they were left on.
           _BoolTile(
             title: context.l10n.doubleTapToZoom,
             value: ref.watch(pagedDoubleTapToZoomProvider).ifNull(true),
-            // Nothing to zoom into while zoom-in is off.
-            onChanged: disableZoomIn
-                ? null
-                : ref.read(pagedDoubleTapToZoomProvider.notifier).update,
+            onChanged: ref.read(pagedDoubleTapToZoomProvider.notifier).update,
           ),
           _BoolTile(
             title: context.l10n.pinchToZoom,
             value: ref.watch(pagedPinchToZoomProvider).ifNull(true),
-            onChanged: disableZoomIn
-                ? null
-                : ref.read(pagedPinchToZoomProvider.notifier).update,
+            onChanged: ref.read(pagedPinchToZoomProvider.notifier).update,
           ),
           _BoolTile(
             title: context.l10n.disableZoomOut,
