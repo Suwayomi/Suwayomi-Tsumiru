@@ -114,7 +114,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       children: [
         if (offline)
           _OfflineBanner(
-            onReconnect: () => const ConnectionRoute().go(context),
+            onReconnect: () => const ConnectionRoute().push(context),
           ),
         SwitchListTile(
           title: Text(context.l10n.checkDescription),

@@ -89,7 +89,7 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
                 builder: (_) => LoginCredentialsPopup(authType: authType),
               );
             } else {
-              const ConnectionRoute().go(context);
+              const ConnectionRoute().push(context);
             }
           },
           child: Text(context.l10n.authReauthenticate),

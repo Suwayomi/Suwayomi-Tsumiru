@@ -121,7 +121,7 @@ class TrackSheetContent extends ConsumerWidget {
             title: Text(context.l10n.manageTrackers),
             onTap: () {
               Navigator.of(context).pop();
-              const TrackingSettingsRoute().go(context);
+              const TrackingSettingsRoute().push(context);
             },
           ),
           const Divider(height: 1),
@@ -185,7 +185,7 @@ class _EmptyLoginState extends StatelessWidget {
           FilledButton.tonal(
             onPressed: () {
               Navigator.of(context).pop();
-              const TrackingSettingsRoute().go(context);
+              const TrackingSettingsRoute().push(context);
             },
             child: Text(context.l10n.manageTrackers),
           ),
@@ -350,7 +350,7 @@ class _LoggedOutBoundCard extends StatelessWidget {
                 OutlinedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    const TrackingSettingsRoute().go(context);
+                    const TrackingSettingsRoute().push(context);
                   },
                   child: Text(context.l10n.logInToEdit),
                 ),
