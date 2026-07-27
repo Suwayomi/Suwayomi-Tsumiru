@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -180,12 +181,20 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   bool _multiTouchActive = false;
   bool _gestureHadMultiplePointers = false;
   bool _interruptedByAnimation = false;
+
+  /// Set when a pointer is cancelled with others still down, so the rest of
+  /// that gesture can't be mistaken for a tap.
+  bool _suppressTap = false;
   bool _longPressActive = false;
   Timer? _longPressTimer;
   Timer? _singleTapTimer;
   DateTime? _lastTapAt;
   Offset? _lastTapPosition;
   double? _pinchStartDistance;
+
+  /// Which two fingers the pinch baseline was measured from. Swapping a finger
+  /// mid-pinch changes the pair, and the old baseline would jump the zoom.
+  Set<int>? _pinchPointers;
   double _pinchStartScale = 1;
   Offset _pinchStartOffset = Offset.zero;
   Offset? _pinchStartFocal;
@@ -447,8 +456,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     // so the ensuing tap is swallowed (the in-flight turn still commits on
     // cancel, so we must not also fire a second tap action on top of it).
     if (_pointers.isEmpty) {
-      _interruptedByAnimation =
-          _pageAnimation.isAnimating || _panAnimation.isAnimating;
+      _interruptedByAnimation = _pageAnimation.isAnimating ||
+          _panAnimation.isAnimating ||
+          _zoomAnimation.isAnimating;
     }
     _pageAnimation.stop();
     _stopPanAnimation();
@@ -480,10 +490,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       final points = _pointers.values.toList();
       final zoom = _currentZoomOrNull;
       if (zoom == null) return;
-      _pinchStartDistance = (points[0] - points[1]).distance;
-      _pinchStartFocal = Offset.lerp(points[0], points[1], 0.5);
-      _pinchStartScale = zoom.scale;
-      _pinchStartOffset = zoom.offset;
+      _capturePinchBaseline(zoom);
       _dragOwner = _DragOwner.page;
     }
   }
@@ -593,7 +600,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     } else if (_dragOwner == _DragOwner.page) {
       _settlePagePan(releaseVelocity);
     } else if (_totalDrag.distance <= _tapSlop) {
-      if (!_interruptedByAnimation) _handleTap(event.localPosition);
+      if (!_interruptedByAnimation && !_suppressTap) {
+        _handleTap(event.localPosition);
+      }
     }
 
     _resetGesture();
@@ -603,6 +612,15 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _pointers.remove(event.pointer);
     _finishLongPress(cancelled: true);
     if (_dragOwner == _DragOwner.pager || _dragOffset != 0) _settleDrag();
+    if (_pointers.isNotEmpty) {
+      // Fingers are still down. Wiping them here would make the next release
+      // look like a fresh tap and turn the page.
+      _suppressTap = true;
+      _dragOwner = null;
+      _totalDrag = Offset.zero;
+      _lastSinglePosition = _pointers.values.first;
+      return;
+    }
     _resetGesture();
   }
 
@@ -625,7 +643,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _multiTouchActive = false;
     _gestureHadMultiplePointers = false;
     _interruptedByAnimation = false;
+    _suppressTap = false;
     _pinchStartDistance = null;
+    _pinchPointers = null;
     _pinchStartFocal = null;
     _velocityPointer = null;
     _velocityTracker = null;
@@ -665,12 +685,28 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _claimLongPressArena() {}
 
+  /// Re-bases the pinch on the fingers currently down, so scale and pan are
+  /// measured from where they are now rather than a pair that has since changed.
+  void _capturePinchBaseline(_PageZoomController zoom) {
+    final points = _pointers.values.toList();
+    if (points.length < 2) return;
+    _pinchPointers = _pointers.keys.toSet();
+    _pinchStartDistance = (points[0] - points[1]).distance;
+    _pinchStartFocal = Offset.lerp(points[0], points[1], 0.5);
+    _pinchStartScale = zoom.scale;
+    _pinchStartOffset = zoom.offset;
+  }
+
   void _handlePinch() {
     if (!widget.pinchEnabled || widget.disableZoomIn) return;
     // The turn owns this gesture; extra fingers ride along without zooming.
     if (_dragOwner == _DragOwner.pager) return;
     final zoom = _currentZoomOrNull;
     if (zoom == null) return;
+    if (_pointers.length == 2 &&
+        !setEquals(_pinchPointers, _pointers.keys.toSet())) {
+      _capturePinchBaseline(zoom);
+    }
     final startDistance = _pinchStartDistance;
     final startFocal = _pinchStartFocal;
     if (startDistance == null || startDistance == 0 || startFocal == null) {
@@ -976,11 +1012,14 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        _viewportSize = Size(
+        final nextViewport = Size(
           constraints.maxWidth,
           constraints.maxHeight,
         );
+        final resized = nextViewport != _viewportSize;
+        _viewportSize = nextViewport;
         _syncZoomBounds();
+        if (resized) _republishVisibleMetrics();
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onLongPress: _claimLongPressArena,
@@ -1074,6 +1113,17 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (naturals[raw] == natural && stale.isEmpty) return;
     naturals[raw] = natural;
 
+    _publishPageMetrics(index, spread);
+  }
+
+  /// Recomputes a page's laid-out size from what has decoded so far. Depends on
+  /// the viewport, so it has to run again after a rotation or resize — the
+  /// image doesn't decode a second time to trigger it.
+  void _publishPageMetrics(int index, SpreadDisplay spread) {
+    final naturals =
+        _naturalSizes[(chapterId: spread.chapterId, unit: spread.entry.first)];
+    if (naturals == null || naturals.isEmpty || _viewportSize.isEmpty) return;
+
     final slot = _slotSize(spread);
     var width = 0.0;
     var height = 0.0;
@@ -1089,6 +1139,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
     _zoomControllerFor(index)
         .setPageMetrics(content: Size(width, height), baseScale: 1);
+  }
+
+  void _republishVisibleMetrics() {
+    for (final index in _visibleDisplayIndexes()) {
+      final item = widget.window.items[index];
+      if (item is SpreadDisplay) _publishPageMetrics(index, item);
+    }
   }
 
   /// The box one page is laid out in — half the screen for a pair, less the

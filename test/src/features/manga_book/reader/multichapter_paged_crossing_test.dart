@@ -549,4 +549,82 @@ void main() {
     // And the turn still lands on a page.
     _expectPagesAligned(tester);
   });
+
+  testWidgets('a cancelled finger does not leave a tap behind', (tester) async {
+    var taps = 0;
+    final controller = PagedReaderController();
+    final window = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 6)],
+      forceTransition: false,
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ReaderInputScope(
+          callbacks: ReaderInputCallbacks(
+            onTap: () => taps++,
+            onLongPressStart: (_) {},
+            onLongPressMoveUpdate: (_) {},
+            onLongPressEnd: () {},
+            onLongPressCancel: () {},
+            onNext: () {},
+            onPrevious: () {},
+            onNextBoundary: () => false,
+            onPreviousBoundary: () => false,
+            navigationLayout: ReaderNavigationLayout.disabled,
+            tapInvert: TapInvert.none,
+            smallerTapZones: false,
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 1,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (_, __) {},
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+
+    // Two fingers down, one cancelled, then the other lifts without moving.
+    // The survivor must not be read as a fresh tap.
+    final p1 = await tester.startGesture(box.center, pointer: 1);
+    final p2 = await tester.startGesture(box.center + const Offset(40, 0),
+        pointer: 2);
+    await tester.pump();
+    await p2.cancel();
+    await tester.pump();
+    await p1.up();
+    await tester.pumpAndSettle(const Duration(milliseconds: 400));
+
+    expect(taps, 0, reason: 'a cancelled gesture fired a tap');
+    _expectPagesAligned(tester);
+  });
 }
