@@ -39,8 +39,9 @@ class UpdatesScreen extends HookConsumerWidget {
           try {
             if (recentChaptersPage != null) {
               if (recentChaptersPage.pageInfo.hasNextPage) {
-                controller
-                    .appendPage([...recentChaptersPage.nodes], pageKey + 1);
+                controller.appendPage([
+                  ...recentChaptersPage.nodes,
+                ], pageKey + 1);
               } else {
                 controller.appendLastPage([...recentChaptersPage.nodes]);
               }
@@ -56,21 +57,19 @@ class UpdatesScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller =
-        usePagingController<int, ChapterWithMangaDto>(firstPageKey: 0);
+    final controller = usePagingController<int, ChapterWithMangaDto>(
+      firstPageKey: 0,
+    );
     final updatesRepository = ref.watch(updatesRepositoryProvider);
     final isUpdatesChecking = ref
-        .watch(updatesSocketProvider
-            .select((value) => value.value?.isRunning))
+        .watch(updatesSocketProvider.select((value) => value.value?.isRunning))
         .ifNull();
     final lastUpdated = ref.watch(libraryLastUpdatedProvider).value;
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     useEffect(() {
-      controller.addPageRequestListener((pageKey) => _fetchPage(
-            updatesRepository,
-            controller,
-            pageKey,
-          ));
+      controller.addPageRequestListener(
+        (pageKey) => _fetchPage(updatesRepository, controller, pageKey),
+      );
       return;
     }, []);
     useEffect(() {
@@ -85,8 +84,9 @@ class UpdatesScreen extends HookConsumerWidget {
       return null;
     }, [isUpdatesChecking]);
     return Scaffold(
-      floatingActionButton:
-          selectedChapters.value.isEmpty ? const UpdateStatusFab() : null,
+      floatingActionButton: selectedChapters.value.isEmpty
+          ? const UpdateStatusFab()
+          : null,
       appBar: selectedChapters.value.isNotEmpty
           ? AppBar(
               leading: IconButton(
@@ -98,25 +98,11 @@ class UpdatesScreen extends HookConsumerWidget {
               ),
             )
           : AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(context.l10n.updates),
-                  if (lastUpdated != null &&
-                      (int.tryParse(lastUpdated) ?? 0) > 0) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      context.l10n.libraryLastUpdated(
-                          int.parse(lastUpdated).toTimeAgo(context)),
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.theme.colorScheme.onSurfaceVariant,
-                        height: 1.1,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+              // Single-line, like every other tab. Stacking the last-updated
+              // line in here made this the only header whose title sat at a
+              // different height; it lives at the top of the list instead,
+              // which is where Mihon keeps it.
+              title: Text(context.l10n.updates),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.calendar_month_rounded),
@@ -137,80 +123,107 @@ class UpdatesScreen extends HookConsumerWidget {
           selectedChapters.value = ({});
           controller.refresh();
         },
-        child: PagedListView(
-          pagingController: controller,
-          builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
-            firstPageProgressIndicatorBuilder: (context) =>
-                const CenterSorayomiShimmerIndicator(),
-            firstPageErrorIndicatorBuilder: (context) => Emoticons(
-              title: controller.error.toString(),
-              button: TextButton(
-                onPressed: () => controller.refresh(),
-                child: Text(context.l10n.retry),
-              ),
-            ),
-            noItemsFoundIndicatorBuilder: (context) => Emoticons(
-              title: context.l10n.noUpdatesFound,
-              button: TextButton(
-                onPressed: () => controller.refresh(),
-                child: Text(context.l10n.refresh),
-              ),
-            ),
-            itemBuilder: (context, item, index) {
-              int? previousDate;
-              try {
-                previousDate = int.tryParse(
-                    controller.itemList?[index - 1].fetchedAt ?? "");
-              } catch (e) {
-                previousDate = null;
-              }
-              final chapterTile = ChapterMangaListTile(
-                chapterWithMangaDto: item,
-                updatePair: () async {
-                  final chapter = await ref
-                      .refresh(chapterProvider(chapterId: item.id).future);
-                  // Locate the row by id, not the captured build-time index —
-                  // the list may have changed (paging/refresh) while the reader
-                  // was open, so an index-based patch could hit the wrong row.
-                  final list = [...?controller.itemList];
-                  final i = list.indexWhere((e) => e.id == item.id);
-                  if (i < 0) return;
-                  list[i] = list[i].copyWith(
-                    // Upgrade-only: reading never un-reads, so a stale/slow
-                    // refetch that still reports unread must not flip an
-                    // already-read row back. Only ever grey it out.
-                    isRead: (chapter?.isRead ?? false) || list[i].isRead,
-                    isDownloaded: chapter?.isDownloaded,
-                    lastPageRead: chapter?.lastPageRead,
-                  );
-                  controller.itemList = list;
-                },
-                isSelected: selectedChapters.value.containsKey(item.id),
-                canTapSelect: selectedChapters.value.isNotEmpty,
-                toggleSelect: (ChapterDto val) {
-                  if ((val.id).isNull) return;
-                  selectedChapters.value =
-                      (selectedChapters.value.toggleKey(val.id, val));
-                },
-              );
-              if ((int.tryParse(item.fetchedAt)).isSameDayAs(previousDate)) {
-                return chapterTile;
-              } else {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      title: Text(
-                        int.tryParse(item.fetchedAt)
-                            .toDaysAgoFromSeconds(context),
-                      ),
+        child: CustomScrollView(
+          slivers: [
+            if (lastUpdated != null && (int.tryParse(lastUpdated) ?? 0) > 0)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    context.l10n.libraryLastUpdated(
+                      int.parse(lastUpdated).toTimeAgo(context),
                     ),
-                    chapterTile,
-                  ],
-                );
-              }
-            },
-          ),
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            PagedSliverList(
+              pagingController: controller,
+              builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
+                firstPageProgressIndicatorBuilder: (context) =>
+                    const CenterSorayomiShimmerIndicator(),
+                firstPageErrorIndicatorBuilder: (context) => Emoticons(
+                  title: controller.error.toString(),
+                  button: TextButton(
+                    onPressed: () => controller.refresh(),
+                    child: Text(context.l10n.retry),
+                  ),
+                ),
+                noItemsFoundIndicatorBuilder: (context) => Emoticons(
+                  title: context.l10n.noUpdatesFound,
+                  button: TextButton(
+                    onPressed: () => controller.refresh(),
+                    child: Text(context.l10n.refresh),
+                  ),
+                ),
+                itemBuilder: (context, item, index) {
+                  int? previousDate;
+                  try {
+                    previousDate = int.tryParse(
+                      controller.itemList?[index - 1].fetchedAt ?? "",
+                    );
+                  } catch (e) {
+                    previousDate = null;
+                  }
+                  final chapterTile = ChapterMangaListTile(
+                    chapterWithMangaDto: item,
+                    updatePair: () async {
+                      final chapter = await ref.refresh(
+                        chapterProvider(chapterId: item.id).future,
+                      );
+                      // Locate the row by id, not the captured build-time index —
+                      // the list may have changed (paging/refresh) while the reader
+                      // was open, so an index-based patch could hit the wrong row.
+                      final list = [...?controller.itemList];
+                      final i = list.indexWhere((e) => e.id == item.id);
+                      if (i < 0) return;
+                      list[i] = list[i].copyWith(
+                        // Upgrade-only: reading never un-reads, so a stale/slow
+                        // refetch that still reports unread must not flip an
+                        // already-read row back. Only ever grey it out.
+                        isRead: (chapter?.isRead ?? false) || list[i].isRead,
+                        isDownloaded: chapter?.isDownloaded,
+                        lastPageRead: chapter?.lastPageRead,
+                      );
+                      controller.itemList = list;
+                    },
+                    isSelected: selectedChapters.value.containsKey(item.id),
+                    canTapSelect: selectedChapters.value.isNotEmpty,
+                    toggleSelect: (ChapterDto val) {
+                      if ((val.id).isNull) return;
+                      selectedChapters.value = (selectedChapters.value
+                          .toggleKey(val.id, val));
+                    },
+                  );
+                  if ((int.tryParse(
+                    item.fetchedAt,
+                  )).isSameDayAs(previousDate)) {
+                    return chapterTile;
+                  } else {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: Text(
+                            int.tryParse(
+                              item.fetchedAt,
+                            ).toDaysAgoFromSeconds(context),
+                          ),
+                        ),
+                        chapterTile,
+                      ],
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
