@@ -66,6 +66,32 @@ void main() {
   });
 
   group('fixed-size cover boxes', () {
+    test('card-less boxes are 2:3 with no inset to compensate for', () {
+      for (final width in [kCompactCoverWidth, 96.0, 144.0]) {
+        final boxHeight = mangaCoverBoxHeight(width, coverInset: 0);
+        expect(width / boxHeight, closeTo(kMangaCoverAspectRatio, 0.0001),
+            reason: '${width}px wide box');
+      }
+    });
+
+    test('list rows are the cover plus the tile padding', () {
+      expect(
+        kDescriptiveTileExtent,
+        closeTo(
+          mangaCoverBoxHeight(kDescriptiveCoverWidth) + kListTilePadding * 2,
+          0.0001,
+        ),
+      );
+      expect(
+        kCompactTileExtent,
+        closeTo(
+          mangaCoverBoxHeight(kCompactCoverWidth, coverInset: 0) +
+              kListTilePadding * 2,
+          0.0001,
+        ),
+      );
+    });
+
     test('artwork inside the box is 2:3 at every width we use', () {
       for (final width in [
         kDescriptiveCoverWidth,

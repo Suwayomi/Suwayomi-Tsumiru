@@ -117,11 +117,28 @@ const kShortSearchCoverWidth = 144.0;
 /// Gap plus the two-line bodySmall title under a recommendation cover.
 const kRecommendsTitleExtent = 36.0;
 
-/// Height a fixed-width cover box needs for its artwork to land on 2:3, card
-/// margin included. Use this instead of hard-coding a height next to a width.
-double mangaCoverBoxHeight(double width) =>
-    max(0.0, width - kMangaCoverCardInset) / kMangaCoverAspectRatio +
-    kMangaCoverCardInset;
+/// Cover width in the compact list tile, which draws the image directly.
+const kCompactCoverWidth = 60.0;
+
+/// Padding around a list tile's cover.
+const kListTilePadding = 8.0;
+
+/// Height a fixed-width cover box needs for its artwork to land on 2:3. Pass
+/// `coverInset: 0` where the cover is drawn directly rather than inside the
+/// tile's Card. Use this instead of hard-coding a height next to a width.
+double mangaCoverBoxHeight(
+  double width, {
+  double coverInset = kMangaCoverCardInset,
+}) =>
+    max(0.0, width - coverInset) / kMangaCoverAspectRatio + coverInset;
+
+/// Row heights for the two list views. Derived, because the covers grew when
+/// they were corrected to 2:3 and a stale literal here clips the tile.
+final kDescriptiveTileExtent =
+    mangaCoverBoxHeight(kDescriptiveCoverWidth) + kListTilePadding * 2;
+final kCompactTileExtent =
+    mangaCoverBoxHeight(kCompactCoverWidth, coverInset: 0) +
+        kListTilePadding * 2;
 
 /// Row height comes from the resolved column width, so the cover keeps its 2:3
 /// shape at every column count. Deriving it the other way round — a fixed cell

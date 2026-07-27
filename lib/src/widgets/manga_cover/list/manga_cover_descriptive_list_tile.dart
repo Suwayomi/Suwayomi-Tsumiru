@@ -60,7 +60,7 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
         onTap: onPressed,
         onLongPress: onLongPress,
         child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(kListTilePadding),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

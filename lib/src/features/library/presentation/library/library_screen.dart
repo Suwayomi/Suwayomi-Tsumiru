@@ -780,7 +780,7 @@ class _GroupedMangaList extends ConsumerWidget {
         },
         child: switch (displayMode) {
           DisplayMode.list || null => ListView.builder(
-            itemExtent: 96,
+            itemExtent: kCompactTileExtent,
             itemCount: items.length,
             itemBuilder: (context, index) => MangaCoverListTile(
               manga: items[index],
@@ -819,7 +819,7 @@ class _GroupedMangaList extends ConsumerWidget {
             ),
           ),
           DisplayMode.descriptiveList => ListView.builder(
-            itemExtent: 176,
+            itemExtent: kDescriptiveTileExtent,
             itemCount: items.length,
             itemBuilder: (context, index) => MangaCoverDescriptiveListTile(
               manga: items[index],
