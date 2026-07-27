@@ -75,9 +75,10 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final infinityScrollingEnabled =
         ref.watch(infinityScrollingModeEnabledProvider).ifNull(true);
 
-    if (infinityScrollingEnabled &&
-        scrollDirection == Axis.vertical &&
-        !showSeparator) {
+    // Long strip with gaps used to be excluded here, which left it on the
+    // pre-infinity reader — a whole engine behind on every fix the main path
+    // got. The gap is a 16px separator, which that engine can draw.
+    if (infinityScrollingEnabled && scrollDirection == Axis.vertical) {
       return InfinityContinuousReaderMode(
         manga: manga,
         chapter: chapter,
@@ -86,7 +87,8 @@ class ContinuousReaderMode extends HookConsumerWidget {
         scrollDirection: scrollDirection,
         reverse: reverse,
         showReaderLayoutAnimation: showReaderLayoutAnimation,
-        effectiveReaderMode: effectiveReaderMode ?? ReaderMode.webtoon,
+        effectiveReaderMode: effectiveReaderMode ??
+            (showSeparator ? ReaderMode.continuousVertical : ReaderMode.webtoon),
         openAtEnd: openAtEnd,
       );
     }
