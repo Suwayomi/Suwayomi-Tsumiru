@@ -59,7 +59,7 @@ class MoreScreen extends ConsumerWidget {
                 leading: const Icon(Icons.dns_rounded),
                 title: Text(context.l10n.connection),
                 subtitle: Text(subtitle),
-                onTap: () => const ConnectionRoute().go(context),
+                onTap: () => const ConnectionRoute().push(context),
               );
             },
           ),
@@ -84,7 +84,7 @@ class MoreScreen extends ConsumerWidget {
           ListTile(
             title: Text(context.l10n.appearance),
             leading: const Icon(Icons.color_lens_rounded),
-            onTap: () => const AppearanceSettingsRoute().go(context),
+            onTap: () => const AppearanceSettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.backup),
@@ -95,12 +95,12 @@ class MoreScreen extends ConsumerWidget {
           ListTile(
             title: Text(context.l10n.settings),
             leading: const Icon(Icons.settings_rounded),
-            onTap: () => const SettingsRoute().go(context),
+            onTap: () => const SettingsRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.about),
             leading: const Icon(Icons.info_rounded),
-            onTap: () => const AboutRoute().go(context),
+            onTap: () => const AboutRoute().push(context),
           ),
           ListTile(
             title: Text(context.l10n.help),
