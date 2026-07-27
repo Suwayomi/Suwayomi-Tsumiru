@@ -191,6 +191,9 @@ class SourceMangaListScreen extends HookConsumerWidget {
             ),
           ),
         ),
+        // Edge-drag would fight the system back gesture; the filter button is
+        // the way in.
+        endDrawerEnableOpenDragGesture: false,
         endDrawer: filterList.isNotBlank
             ? Drawer(
                 width: kDrawerWidth,
