@@ -187,10 +187,10 @@
         "description": "Reader settings group heading for chapter-to-chapter reading options"
     },
     "@readerGroupPagerViewer": {
-        "description": "Group heading for the global paged-viewer defaults in the reader sheet"
+        "description": "Group heading for the paged-reader settings, in both the reader sheet and Reader settings"
     },
     "@readerGroupWebtoonViewer": {
-        "description": "Group heading for the global long-strip-viewer defaults in the reader sheet"
+        "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
     },
     "@readerSectionPaged": {
         "description": "Heading for the paged-only reader settings section"

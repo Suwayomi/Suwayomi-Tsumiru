@@ -83,7 +83,9 @@ abstract final class ReaderSettings {
     fallback: TapInvert.none,
   );
 
-  // Zoom toggles are global reader prefs — no per-series meta.
+  // Migration source only. No reader reads these three any more — each viewer
+  // has its own below. They survive so an upgrade can seed the new keys; wire
+  // a new switch to the paged*/longStrip* pair, never to these.
   static final pinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: pinchToZoomProvider,

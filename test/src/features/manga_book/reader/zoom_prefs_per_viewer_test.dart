@@ -7,19 +7,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-const _legacyProviders = [
-  'pinchToZoomProvider',
-  'doubleTapToZoomProvider',
-  'disableZoomOutProvider',
+/// Word-anchored so `longStripDisableZoomOutProvider` is not mistaken for the
+/// legacy `disableZoomOutProvider` it contains.
+final _legacyProviders = [
+  RegExp(r'(?<![A-Za-z])pinchToZoomProvider\b'),
+  RegExp(r'(?<![A-Za-z])doubleTapToZoomProvider\b'),
+  RegExp(r'(?<![A-Za-z])disableZoomOutProvider\b'),
 ];
-
-/// Files allowed to mention the legacy providers: they are the migration
-/// source, so the seeds and the settings-model entries still name them.
-const _allowed = {
-  'reader_zoom_toggles.dart',
-  'reader_pinch_to_zoom.dart',
-  'reader_settings_model.dart',
-};
 
 void main() {
   test('no reader engine reads the pre-split global zoom prefs', () {
@@ -32,12 +26,12 @@ void main() {
     final offenders = <String>[];
     for (final entity in readerModes.listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
-      if (_allowed.contains(entity.uri.pathSegments.last)) continue;
 
       final source = entity.readAsStringSync();
       for (final provider in _legacyProviders) {
-        if (source.contains(provider)) {
-          offenders.add('${entity.path} -> $provider');
+        final hit = provider.firstMatch(source);
+        if (hit != null) {
+          offenders.add('${entity.path} -> ${hit.group(0)}');
         }
       }
     }

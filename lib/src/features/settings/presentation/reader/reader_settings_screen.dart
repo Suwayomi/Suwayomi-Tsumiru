@@ -131,6 +131,9 @@ class ReaderSettingsScreen extends ConsumerWidget {
             onChanged: ref.read(showPageNumberProvider.notifier).update,
           ),
           const ReaderInitialOverlayTile(),
+          // Not long-strip only: reader_wrapper pads whichever axis you are
+          // not scrolling, so paged reading uses it too.
+          const ReaderPaddingSlider(),
           const ReaderMagnifierSizeSlider(),
           if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) ...[
             const ReaderKeepScreenOnTile(),
@@ -294,7 +297,6 @@ class ReaderSettingsScreen extends ConsumerWidget {
             value: ref.watch(cropBordersWebtoonProvider).ifNull(false),
             onChanged: ref.read(cropBordersWebtoonProvider.notifier).update,
           ),
-          const ReaderPaddingSlider(),
           _BoolTile(
             title: context.l10n.doubleTapToZoom,
             value: ref.watch(longStripDoubleTapToZoomProvider).ifNull(true),
@@ -372,9 +374,7 @@ class _BoolTile extends StatelessWidget {
 
   final String title;
   final bool value;
-
-  /// Null greys the row out — used where another setting makes this one moot.
-  final ValueChanged<bool>? onChanged;
+  final ValueChanged<bool> onChanged;
   final bool indent;
 
   @override

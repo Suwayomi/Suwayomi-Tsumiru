@@ -137,7 +137,7 @@ class MangaCoverGridDelegate extends SliverGridDelegate {
     this.mainAxisSpacing = 0.0,
     this.crossAxisSpacing = 0.0,
     this.titleExtent = 0.0,
-  });
+  }) : assert(maxCrossAxisExtent > 0);
 
   final double maxCrossAxisExtent;
   final double mainAxisSpacing;
