@@ -902,7 +902,7 @@ class _LibrarySearchBar extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.travel_explore_rounded),
             tooltip: context.l10n.globalSearch,
-            onPressed: () => GlobalSearchRoute(query: query).go(context),
+            onPressed: () => GlobalSearchRoute(query: query).push(context),
           ),
       ],
       highlightDsl: true,
