@@ -62,9 +62,8 @@ class DoublePageView extends StatelessWidget {
   /// page at its own size (Original size) and to bound panning.
   final void Function(int raw, Size natural) onNaturalSize;
 
-  /// Lay each page out at its decoded pixel size rather than fitting it to the
-  /// slot (Original size). Scaling a fitted page up to 1:1 instead would just
-  /// magnify a small raster and come out blurry.
+  /// Original size: lay out at decoded pixel size — scaling a fitted image up
+  /// to 1:1 would just magnify and blur it.
   final bool naturalSize;
 
   /// Auto-crop solid borders — threaded to each slot's [ServerImage].
@@ -208,10 +207,11 @@ class _SpreadImageState extends State<_SpreadImage> {
 
   void _onImage(ImageInfo info, bool synchronousCall) {
     final wide = info.image.width > info.image.height;
-    final natural = Size(
-      info.image.width.toDouble(),
-      info.image.height.toDouble(),
-    );
+    final w = info.image.width.toDouble();
+    final h = info.image.height.toDouble();
+    // Rotating a wide page swaps its axes, so report the size as drawn.
+    final natural =
+        widget.rotateWide && wide ? Size(h, w) : Size(w, h);
     info.dispose();
     // Only full-page slots drive wide-detection; a half is already known wide.
     if (widget.half == PageHalf.full) {
@@ -251,9 +251,8 @@ class _SpreadImageState extends State<_SpreadImage> {
       );
     }
 
-    // Original size draws the page at its own pixel size, which usually
-    // overflows the slot — the viewport clips each page to its own bounds, and
-    // its zoom pans across the overflow.
+    // Original size overflows the slot on purpose; the viewport clips per-page
+    // and its zoom pans the overflow.
     final Widget image = widget.naturalSize
         ? OverflowBox(
             minWidth: 0,

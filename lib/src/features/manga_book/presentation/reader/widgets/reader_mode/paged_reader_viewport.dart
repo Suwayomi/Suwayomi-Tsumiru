@@ -141,7 +141,6 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const double _pageTurnVelocity = 650;
   static const double _panFlingVelocity = 700;
   static const double _panFlingDistanceFactor = 0.2;
-  static const double _neutralScale = 1;
   static const Duration _tapDelay = Duration(milliseconds: 220);
   // Must stay shorter than _tapDelay: a double-tap has to be recognised before
   // the single-tap timer fires, or a slow double-tap runs both actions.
@@ -500,10 +499,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
 
     if (_dragOwner == null && _totalDrag.distance > _touchSlop) {
-      // The page claims the drag only if this drag would actually move it.
-      // Asking "is it zoomed" instead would let a page with nothing but
-      // vertical overflow swallow horizontal swipes that should turn the page.
-      if (_currentZoomOrNull?.canPanBy(_totalDrag) ?? false) {
+      // Claim the drag only if the page can pan along the axis being swiped —
+      // otherwise a bit of vertical drift lets a page with only vertical
+      // overflow swallow a swipe meant to turn it.
+      if (_currentZoomOrNull?.canPanAlong(_totalDrag) ?? false) {
         _dragOwner = _DragOwner.page;
       } else {
         if (!_isMainAxisDrag(_totalDrag)) return;
@@ -1016,28 +1015,31 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     );
   }
 
-  /// Measures a decoded page against the slot it was laid out in, and hands the
-  /// result to that page's zoom so panning knows the page's real extent — and
-  /// so Original size can rest at 1:1 with the source pixels.
+  /// Feeds the decoded page size to its zoom controller, so pan bounds match
+  /// the page's real extent instead of an assumed full-viewport size.
   void _recordNaturalSize(
       int index, SpreadDisplay spread, int raw, Size natural) {
     if (natural.isEmpty || _viewportSize.isEmpty) return;
     final key = (chapterId: spread.chapterId, unit: spread.entry.first);
     final naturals = _naturalSizes.putIfAbsent(key, () => {});
-    if (naturals[raw] == natural) return;
+    // A re-chunk can turn a pair into a solo page under the same key; keeping
+    // the dropped page's size would leave the survivor with pair-sized bounds.
+    final belongs = {
+      spread.entry.first.raw,
+      if (spread.entry.second != null) spread.entry.second!.raw,
+    };
+    final stale = naturals.keys.where((r) => !belongs.contains(r)).toList();
+    naturals.removeWhere((r, _) => !belongs.contains(r));
+    if (naturals[raw] == natural && stale.isEmpty) return;
     naturals[raw] = natural;
 
-    final slots = spread.entry.isPair ? 2 : 1;
-    final slot = Size(_viewportSize.width / slots, _viewportSize.height);
-
+    final slot = _slotSize(spread);
     var width = 0.0;
     var height = 0.0;
     for (final size in naturals.values) {
-      // Original size draws each page at its own pixel size; every other scale
-      // type fits it to the slot first.
       final laidOut = widget.pagesAtNaturalSize
           ? size
-          : applyBoxFit(BoxFit.contain, size, slot).destination;
+          : applyBoxFit(widget.pageFit, size, slot).destination;
       if (laidOut.isEmpty) continue;
       width += laidOut.width;
       height = math.max(height, laidOut.height);
@@ -1046,6 +1048,22 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
     _zoomControllerFor(index)
         .setPageMetrics(content: Size(width, height), baseScale: 1);
+  }
+
+  /// The box one page is laid out in — half the screen for a pair, less the
+  /// center margin that [DoublePageView] puts between them.
+  Size _slotSize(SpreadDisplay spread) {
+    if (!spread.entry.isPair) {
+      return Size(_viewportSize.width, _viewportSize.height);
+    }
+    final margin = widget.centerMargin == CenterMarginType.doublePage ||
+            widget.centerMargin == CenterMarginType.doubleAndWide
+        ? kCenterMargin
+        : 0.0;
+    return Size(
+      math.max(0, _viewportSize.width - margin) / 2,
+      _viewportSize.height,
+    );
   }
 }
 
@@ -1107,9 +1125,7 @@ class _PageZoomController extends ChangeNotifier {
     required this.maxMultiplier,
   }) : _scale = 1;
 
-  /// Zoom bounds as multiples of [baseScale]. Every scale type but Original
-  /// size rests at the fitted page, where baseScale is 1 and these are the
-  /// literal bounds.
+  /// Zoom bounds as multiples of [baseScale] (1 except under Original size).
   double minMultiplier;
   double maxMultiplier;
 
@@ -1136,9 +1152,8 @@ class _PageZoomController extends ChangeNotifier {
 
   Offset get offset => _offset;
 
-  /// Whether the page has anywhere left to pan — which is what decides if a
-  /// drag belongs to the page or turns it. Original size pans at rest, so this
-  /// can't be "zoomed past rest".
+  /// Whether the page has room left to pan — decides if a drag belongs to it
+  /// or turns the page. Original size pans at rest, so it isn't "zoomed past 1".
   bool get isActive => _maxPan != Offset.zero;
 
   set offset(Offset value) {
@@ -1172,9 +1187,8 @@ class _PageZoomController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Feeds in the page's measured layout once its image decodes. A page still
-  /// sitting at rest follows the new resting scale; one the reader has already
-  /// zoomed keeps where they put it.
+  /// Feeds in the page's measured layout on decode. A page still at rest
+  /// follows the new resting scale; a zoomed page keeps where the reader put it.
   void setPageMetrics({required Size content, required double baseScale}) {
     if (_content == content && _baseScale == baseScale) return;
     final wasAtRest = (_scale - _baseScale).abs() < 0.001;
@@ -1230,6 +1244,13 @@ class _PageZoomController extends ChangeNotifier {
     return _clampOffset(next) != _offset;
   }
 
+  /// Whether [drag]'s dominant axis is one the page can still travel along.
+  bool canPanAlong(Offset drag) => canPanBy(
+        drag.dx.abs() >= drag.dy.abs()
+            ? Offset(drag.dx, 0)
+            : Offset(0, drag.dy),
+      );
+
   bool canPan(_PanDirection direction) {
     return switch (direction) {
       _PanDirection.left => _offset.dx < _maxPan.dx - 1,
@@ -1251,9 +1272,8 @@ class _PageZoomController extends ChangeNotifier {
 
   Offset get _maxPan => _maxPanAt(_scale);
 
-  /// How far the page can travel before its edge would come inside the screen.
-  /// Measured from the page's own box, so a letterboxed page can't be dragged
-  /// out into the empty margin beside it.
+  /// Max pan distance, measured from the page's own box (not the viewport) so
+  /// a letterboxed page can't be dragged into its own margin.
   Offset _maxPanAt(double scale) {
     final content = _content ?? _viewport;
     return Offset(
