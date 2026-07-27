@@ -65,6 +65,23 @@ void main() {
     });
   });
 
+  group('fixed-size cover boxes', () {
+    test('artwork inside the box is 2:3 at every width we use', () {
+      for (final width in [
+        kDescriptiveCoverWidth,
+        kShortSearchCoverWidth,
+        96.0,
+        200.0,
+      ]) {
+        final boxHeight = mangaCoverBoxHeight(width);
+        final artRatio = (width - kMangaCoverCardInset) /
+            (boxHeight - kMangaCoverCardInset);
+        expect(artRatio, closeTo(kMangaCoverAspectRatio, 0.0001),
+            reason: '${width}px wide box');
+      }
+    });
+  });
+
   group('comfortable grid (title below)', () {
     test('title block is added on top of a 2:3 cover, not taken out of it', () {
       for (final columns in [2, 3, 4, 6]) {

@@ -53,8 +53,8 @@ class MigrationSourceShortSearch extends StatelessWidget {
                     children: [
                       for (final manga in data)
                         SizedBox(
-                          width: 144,
-                          height: 192,
+                          width: kShortSearchCoverWidth,
+                          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
                           child: MangaCoverGridTile(
                             manga: manga,
                             showDarkOverlay: manga.inLibrary.ifNull(),

@@ -107,6 +107,19 @@ const kGridTitleExtent = 44.0;
 /// inside the card, not the cell, is what ends up at 2:3.
 const kMangaCoverCardInset = 8.0;
 
+/// Cover width in the descriptive list tile — manga details header and the
+/// library's list view.
+const kDescriptiveCoverWidth = 120.0;
+
+/// Cover width in the horizontal result strips (global search, migration).
+const kShortSearchCoverWidth = 144.0;
+
+/// Height a fixed-width cover box needs for its artwork to land on 2:3, card
+/// margin included. Use this instead of hard-coding a height next to a width.
+double mangaCoverBoxHeight(double width) =>
+    max(0.0, width - kMangaCoverCardInset) / kMangaCoverAspectRatio +
+    kMangaCoverCardInset;
+
 /// Row height comes from the resolved column width, so the cover keeps its 2:3
 /// shape at every column count. Deriving it the other way round — a fixed cell
 /// ratio, cover takes what's left — cropped the art, and in the comfortable

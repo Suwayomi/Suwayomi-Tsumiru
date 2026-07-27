@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
@@ -329,7 +330,9 @@ class _GroupTile extends StatelessWidget {
         ),
         const Gap(8),
         SizedBox(
-          height: 190,
+          // Derived, not a literal: the cover grew when it was corrected to
+          // 2:3, and a fixed strip height clipped the title under it.
+          height: mangaCoverBoxHeight(_kCardWidth) + _kMemberCardTextExtent,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -349,6 +352,9 @@ class _GroupTile extends StatelessWidget {
 }
 
 const double _kCardWidth = 120;
+
+/// Title + source lines and their gaps under each cover in the strip.
+const double _kMemberCardTextExtent = 40;
 
 class _MemberCard extends StatelessWidget {
   const _MemberCard({
@@ -377,7 +383,7 @@ class _MemberCard extends StatelessWidget {
         children: [
           SizedBox(
             width: _kCardWidth,
-            height: 150,
+            height: mangaCoverBoxHeight(_kCardWidth),
             child: MangaCoverGridTile(
               manga: manga,
               selected: selected,

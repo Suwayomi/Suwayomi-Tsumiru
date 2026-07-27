@@ -65,8 +65,8 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: 120,
-              height: 160,
+              width: kDescriptiveCoverWidth,
+              height: mangaCoverBoxHeight(kDescriptiveCoverWidth),
               child: MangaCoverGridTile(
                 manga: manga,
                 showBadges: false,
