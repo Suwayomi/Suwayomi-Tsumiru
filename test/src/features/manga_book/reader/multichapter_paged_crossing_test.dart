@@ -70,6 +70,66 @@ double _largestScale(WidgetTester tester) {
   return best;
 }
 
+/// The viewport the newer cases share. They differ only in their window, where
+/// they start, and what they report.
+Widget _viewport({
+  required PagedReaderController controller,
+  required PagedDisplayWindow window,
+  int initialDisplayIndex = 0,
+  void Function(int chapterId, int raw)? onChapterPageChanged,
+}) =>
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: ReaderInputScope(
+        callbacks: _callbacks(),
+        child: Center(
+          child: SizedBox(
+            width: 300,
+            height: 500,
+            child: PagedReaderViewport(
+              controller: controller,
+              window: window,
+              initialDisplayIndex: initialDisplayIndex,
+              axis: Axis.horizontal,
+              reverse: false,
+              animateTransitions: true,
+              pageFit: BoxFit.contain,
+              pageSize: null,
+              pagesAtNaturalSize: false,
+              centerMargin: CenterMarginType.none,
+              rotateWide: false,
+              rotateWideInvert: false,
+              reversePair: false,
+              cropBorders: false,
+              onPageWide: (_, __, ___) {},
+              onChapterPageChanged: onChapterPageChanged ?? (_, __) {},
+              transitionBuilder: (_) => const SizedBox.shrink(),
+              pinchEnabled: true,
+              doubleTapToZoom: true,
+              disableZoomIn: false,
+              disableZoomOut: false,
+              navigateToPan: true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+/// Pages must sit a whole screen apart; a leftover offset parks the pager
+/// between two, showing half of each.
+void _expectPagesAligned(WidgetTester tester) {
+  final box = tester.getRect(find.byType(PagedReaderViewport));
+  final pages = find.byType(DoublePageView);
+  expect(pages, findsWidgets);
+  for (var i = 0; i < tester.widgetList(pages).length; i++) {
+    final dx = tester.getTopLeft(pages.at(i)).dx - box.left;
+    final steps = dx / box.width;
+    final offBy = (steps - steps.roundToDouble()).abs() * box.width;
+    expect(offBy, lessThan(1.0),
+        reason: 'page $i parked between pages at dx=$dx');
+  }
+}
+
 void main() {
   testWidgets('double-tap zoom animates instead of snapping', (tester) async {
     final window = buildPagedDisplayWindow(
@@ -376,45 +436,12 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: ReaderInputScope(
-          callbacks: _callbacks(),
-          child: Center(
-            child: SizedBox(
-              width: 300,
-              height: 500,
-              child: PagedReaderViewport(
-                controller: controller,
-                window: window,
-                initialDisplayIndex: 0,
-                axis: Axis.horizontal,
-                reverse: false,
-                animateTransitions: true,
-                pageFit: BoxFit.contain,
-                pageSize: null,
-                pagesAtNaturalSize: false,
-                centerMargin: CenterMarginType.none,
-                rotateWide: false,
-                rotateWideInvert: false,
-                reversePair: false,
-                cropBorders: false,
-                onPageWide: (_, __, ___) {},
-                onChapterPageChanged: (chapterId, raw) =>
-                    reported.add((chapterId: chapterId, raw: raw)),
-                transitionBuilder: (_) => const SizedBox.shrink(),
-                pinchEnabled: true,
-                doubleTapToZoom: true,
-                disableZoomIn: false,
-                disableZoomOut: false,
-                navigateToPan: true,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
     await tester.pump();
 
     // Turn a page, then jump the seekbar elsewhere before the turn settles.
@@ -443,44 +470,11 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: ReaderInputScope(
-          callbacks: _callbacks(),
-          child: Center(
-            child: SizedBox(
-              width: 300,
-              height: 500,
-              child: PagedReaderViewport(
-                controller: controller,
-                window: window,
-                initialDisplayIndex: 1,
-                axis: Axis.horizontal,
-                reverse: false,
-                animateTransitions: true,
-                pageFit: BoxFit.contain,
-                pageSize: null,
-                pagesAtNaturalSize: false,
-                centerMargin: CenterMarginType.none,
-                rotateWide: false,
-                rotateWideInvert: false,
-                reversePair: false,
-                cropBorders: false,
-                onPageWide: (_, __, ___) {},
-                onChapterPageChanged: (_, __) {},
-                transitionBuilder: (_) => const SizedBox.shrink(),
-                pinchEnabled: true,
-                doubleTapToZoom: true,
-                disableZoomIn: false,
-                disableZoomOut: false,
-                navigateToPan: true,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      initialDisplayIndex: 1,
+    ));
     await tester.pump();
 
     final box = tester.getRect(find.byType(PagedReaderViewport));
@@ -506,18 +500,9 @@ void main() {
     await p1.up();
     await tester.pumpAndSettle();
 
-    // Releasing must land on a page. Left unsettled the pager stays frozen
-    // wherever the finger stopped, showing two pages at once.
-    final left = tester.getRect(find.byType(PagedReaderViewport));
-    final pages = find.byType(DoublePageView);
-    expect(pages, findsWidgets);
-    for (var i = 0; i < tester.widgetList(pages).length; i++) {
-      final dx = tester.getTopLeft(pages.at(i)).dx - left.left;
-      final steps = dx / left.width;
-      final offBy = (steps - steps.roundToDouble()).abs() * left.width;
-      expect(offBy, lessThan(1.0),
-          reason: 'pager left parked between pages: page $i at dx=$dx');
-    }
+    // Releasing must land on a page; unsettled it stays frozen where the
+    // finger stopped, showing two pages at once.
+    _expectPagesAligned(tester);
   });
 
   testWidgets('a second finger mid-turn cannot hijack the turn into a zoom',
@@ -528,44 +513,11 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: ReaderInputScope(
-          callbacks: _callbacks(),
-          child: Center(
-            child: SizedBox(
-              width: 300,
-              height: 500,
-              child: PagedReaderViewport(
-                controller: controller,
-                window: window,
-                initialDisplayIndex: 1,
-                axis: Axis.horizontal,
-                reverse: false,
-                animateTransitions: true,
-                pageFit: BoxFit.contain,
-                pageSize: null,
-                pagesAtNaturalSize: false,
-                centerMargin: CenterMarginType.none,
-                rotateWide: false,
-                rotateWideInvert: false,
-                reversePair: false,
-                cropBorders: false,
-                onPageWide: (_, __, ___) {},
-                onChapterPageChanged: (_, __) {},
-                transitionBuilder: (_) => const SizedBox.shrink(),
-                pinchEnabled: true,
-                doubleTapToZoom: true,
-                disableZoomIn: false,
-                disableZoomOut: false,
-                navigateToPan: true,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      initialDisplayIndex: 1,
+    ));
     await tester.pump();
 
     final box = tester.getRect(find.byType(PagedReaderViewport));
@@ -595,12 +547,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // And the turn still lands on a page.
-    final pages = find.byType(DoublePageView);
-    for (var i = 0; i < tester.widgetList(pages).length; i++) {
-      final dx = tester.getTopLeft(pages.at(i)).dx - box.left;
-      final steps = dx / box.width;
-      final offBy = (steps - steps.roundToDouble()).abs() * box.width;
-      expect(offBy, lessThan(1.0), reason: 'left parked: page $i at dx=$dx');
-    }
+    _expectPagesAligned(tester);
   });
 }

@@ -279,8 +279,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _reanchor(PagedDisplayWindow oldWindow) {
-    // Everything in flight is aimed at the OLD window; left running it writes
-    // its old position over the reset below and then commits a stale index.
+    // In-flight motion still targets the OLD window.
     _abandonMotion();
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
@@ -1173,7 +1172,7 @@ class _PageZoomController extends ChangeNotifier {
 
   Size _viewport = Size.zero;
 
-  /// The page's laid-out size at rest. Null until the image decodes, until when
+  /// The page's laid-out size at rest. Null until the image decodes; until then
   /// the page is assumed to fill the viewport.
   Size? _content;
 

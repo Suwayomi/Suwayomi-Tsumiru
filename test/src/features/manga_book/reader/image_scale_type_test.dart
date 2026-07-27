@@ -17,8 +17,7 @@ void main() {
     expect(ImageScaleType.stretch.pagedFit(w, h).$1, BoxFit.fill);
     expect(ImageScaleType.fitWidth.pagedFit(w, h).$1, BoxFit.fitWidth);
     expect(ImageScaleType.fitHeight.pagedFit(w, h).$1, BoxFit.fitHeight);
-    // Original size lays out contained and gets its 1:1 scale from the reader's
-    // zoom. BoxFit.none would paint a crop the reader could never pan out of.
+    // BoxFit.none would crop the page; the reader's zoom supplies the real 1:1.
     expect(ImageScaleType.originalSize.pagedFit(w, h).$1, BoxFit.contain);
     expect(ImageScaleType.smartFit.pagedFit(w, h).$1, BoxFit.fitWidth);
   });
