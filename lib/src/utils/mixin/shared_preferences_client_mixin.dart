@@ -118,10 +118,13 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
     void Function(Object error, StackTrace stackTrace)? onError,
   });
 
-  T? initialize(DBKeys key, {required List<T> enumList}) {
+  /// [initial] overrides the key's own default — used when a new key inherits
+  /// whatever the pref it was split out of already held, so an upgrade keeps
+  /// the reader behaving the way it did.
+  T? initialize(DBKeys key, {required List<T> enumList, T? initial}) {
     _client = ref.watch(sharedPreferencesProvider);
     _key = key.name;
-    _initial = key.initial;
+    _initial = initial ?? key.initial;
     _enumList = enumList;
     _persistenceRefreshLogic();
     return _get;

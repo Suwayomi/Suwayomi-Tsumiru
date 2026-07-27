@@ -838,6 +838,10 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     );
   }
 
+  /// The sheet only ever writes per-series. The global branch still targets the
+  /// pre-split key, which no reader consults — wire any future "apply to all"
+  /// control to the paged/long-strip keys instead, or it will silently do
+  /// nothing.
   Future<void> setNavigationLayout(
     ReaderNavigationLayout layout, {
     bool perSeries = true,

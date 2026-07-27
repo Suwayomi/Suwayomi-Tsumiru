@@ -21,7 +21,8 @@ enum _DragOwner { page, pager }
 
 enum _PanDirection { left, right, up, down }
 
-enum _TapAction { previous, next, menu }
+/// Public so the zone geometry can be tested against the overlay.
+enum TapAction { previous, next, menu }
 
 class PagedReaderController {
   _PagedReaderViewportState? _state;
@@ -710,75 +711,30 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final callbacks = ReaderInputScope.maybeOf(context);
     if (callbacks == null) return;
     switch (_tapActionFor(position, _viewportSize, callbacks)) {
-      case _TapAction.previous:
+      case TapAction.previous:
         callbacks.onPrevious();
         break;
-      case _TapAction.next:
+      case TapAction.next:
         callbacks.onNext();
         break;
-      case _TapAction.menu:
+      case TapAction.menu:
         callbacks.onTap();
         break;
     }
   }
 
-  _TapAction _tapActionFor(
+  TapAction _tapActionFor(
     Offset position,
     Size size,
     ReaderInputCallbacks callbacks,
-  ) {
-    final layout = callbacks.navigationLayout;
-    if (layout == ReaderNavigationLayout.disabled ||
-        layout == ReaderNavigationLayout.defaultNavigation) {
-      return _TapAction.menu;
-    }
-
-    final leftAction = callbacks.tapInvert.invertsHorizontal
-        ? _TapAction.next
-        : _TapAction.previous;
-    final rightAction = callbacks.tapInvert.invertsHorizontal
-        ? _TapAction.previous
-        : _TapAction.next;
-    final topAction = callbacks.tapInvert.invertsVertical
-        ? _TapAction.next
-        : _TapAction.previous;
-    final bottomAction = callbacks.tapInvert.invertsVertical
-        ? _TapAction.previous
-        : _TapAction.next;
-    final edgeWidth = size.width * (callbacks.smallerTapZones ? 0.25 : 1 / 3);
-    final edgeHeight = size.height * (callbacks.smallerTapZones ? 0.25 : 1 / 3);
-
-    return switch (layout) {
-      ReaderNavigationLayout.rightAndLeft => position.dx < edgeWidth
-          ? leftAction
-          : position.dx > size.width - edgeWidth
-              ? rightAction
-              : _TapAction.menu,
-      ReaderNavigationLayout.edge =>
-        position.dx < edgeWidth || position.dx > size.width - edgeWidth
-            ? rightAction
-            : position.dy > size.height - edgeHeight
-                ? leftAction
-                : _TapAction.menu,
-      ReaderNavigationLayout.kindlish => position.dy < size.height - edgeHeight
-          ? _TapAction.menu
-          : position.dx < edgeWidth
-              ? leftAction
-              : rightAction,
-      ReaderNavigationLayout.lShaped => position.dy < edgeHeight
-          ? topAction
-          : position.dy > size.height - edgeHeight
-              ? bottomAction
-              : position.dx < edgeWidth
-                  ? leftAction
-                  : position.dx > size.width - edgeWidth
-                      ? rightAction
-                      : _TapAction.menu,
-      ReaderNavigationLayout.defaultNavigation ||
-      ReaderNavigationLayout.disabled =>
-        _TapAction.menu,
-    };
-  }
+  ) =>
+      tapActionForZone(
+        position: position,
+        size: size,
+        layout: callbacks.navigationLayout,
+        tapInvert: callbacks.tapInvert,
+        smallerTapZones: callbacks.smallerTapZones,
+      );
 
   Offset _releaseVelocity(PointerUpEvent event) {
     if (_velocityPointer != event.pointer) return Offset.zero;
@@ -1215,4 +1171,58 @@ class _PageZoomController extends ChangeNotifier {
       value.dy.clamp(-maxPan.dy, maxPan.dy).toDouble(),
     );
   }
+}
+
+/// Which action a tap at [position] lands on. Pure, so the zone geometry can
+/// be tested against the overlay that draws it.
+@visibleForTesting
+TapAction tapActionForZone({
+  required Offset position,
+  required Size size,
+  required ReaderNavigationLayout layout,
+  required TapInvert tapInvert,
+  required bool smallerTapZones,
+}) {
+  final leftAction =
+      tapInvert.invertsHorizontal ? TapAction.next : TapAction.previous;
+  final rightAction =
+      tapInvert.invertsHorizontal ? TapAction.previous : TapAction.next;
+  final topAction =
+      tapInvert.invertsVertical ? TapAction.next : TapAction.previous;
+  final bottomAction =
+      tapInvert.invertsVertical ? TapAction.previous : TapAction.next;
+  final edgeWidth = size.width * (smallerTapZones ? 0.25 : 1 / 3);
+  final edgeHeight = size.height * (smallerTapZones ? 0.25 : 1 / 3);
+
+  return switch (layout) {
+    ReaderNavigationLayout.rightAndLeft => position.dx < edgeWidth
+        ? leftAction
+        : position.dx >= size.width - edgeWidth
+            ? rightAction
+            : TapAction.menu,
+    ReaderNavigationLayout.edge =>
+      position.dx < edgeWidth || position.dx >= size.width - edgeWidth
+          ? rightAction
+          : position.dy >= size.height - edgeHeight
+              ? leftAction
+              : TapAction.menu,
+    // Komikku's kindlish layout: menu across the top, left/right below it.
+    ReaderNavigationLayout.kindlish => position.dy < edgeHeight
+        ? TapAction.menu
+        : position.dx < edgeWidth
+            ? leftAction
+            : rightAction,
+    ReaderNavigationLayout.lShaped => position.dy < edgeHeight
+        ? topAction
+        : position.dy >= size.height - edgeHeight
+            ? bottomAction
+            : position.dx < edgeWidth
+                ? leftAction
+                : position.dx >= size.width - edgeWidth
+                    ? rightAction
+                    : TapAction.menu,
+    ReaderNavigationLayout.defaultNavigation ||
+    ReaderNavigationLayout.disabled =>
+      TapAction.menu,
+  };
 }

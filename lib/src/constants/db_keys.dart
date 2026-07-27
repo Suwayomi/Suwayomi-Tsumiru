@@ -30,7 +30,10 @@ enum DBKeys {
   readerMode(ReaderMode.singleHorizontalRTL),
   readerPadding(0.0),
   readerMagnifierSize(1.0),
-  readerNavigationLayout(ReaderNavigationLayout.disabled),
+  // Migration source for the per-viewer keys below only; nothing reads this
+  // directly. Default changed from disabled to defaultNavigation to match
+  // Komikku's tap zones on by default.
+  readerNavigationLayout(ReaderNavigationLayout.defaultNavigation),
   invertTap(false),
   quickSearchToggle(true),
   swipeToggle(true),
@@ -235,6 +238,16 @@ enum DBKeys {
   cropBorders(false),
   // Shared by the paged and long-strip sections.
   smallerTapZones(false),
+  // Per-viewer tap zones, seeded from the single keys above on upgrade.
+  pagedNavigationLayout(ReaderNavigationLayout.defaultNavigation),
+  longStripNavigationLayout(ReaderNavigationLayout.defaultNavigation),
+  pagedTapInvert(TapInvert.none),
+  longStripTapInvert(TapInvert.none),
+  // Off by default, matching Komikku.
+  showTapZonesOverlay(false),
+  // One free look for someone who has never seen the zones (Komikku's
+  // showNavigationOverlayNewUser), then it turns itself off.
+  tapZonesOverlayUnseen(true),
   animatePageTransitions(true),
   // Wide-page handling. Split needs
   // page-list remapping, so it persists here and the engine wires it later;

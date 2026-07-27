@@ -339,6 +339,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
                   manga: manga,
                   chapter: chapter,
                   isPreviousChapterSeparator: (index == 0),
+                  readerMode: wrapperReaderMode,
                   alwaysShow: alwaysShowTransition,
                 ),
               );

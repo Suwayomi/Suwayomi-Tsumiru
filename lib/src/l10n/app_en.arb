@@ -171,6 +171,12 @@
     "@readerForThisSeries": {
         "description": "Group heading for the per-manga override settings in the reader sheet"
     },
+    "@showTapZonesOverlay": {
+        "description": "Reader setting: flash the tap zones when a chapter opens"
+    },
+    "@showTapZonesOverlaySubtitle": {
+        "description": "Subtitle for the tap zones overlay setting"
+    },
     "@readerGroupActions": {
         "description": "Reader settings group heading for long-tap actions"
     },
@@ -1414,6 +1420,8 @@
     "pageLayoutSinglePage": "Single page",
     "readerForThisSeries": "For this series",
     "readerGroupActions": "Actions",
+    "showTapZonesOverlay": "Show tap zones overlay",
+    "showTapZonesOverlaySubtitle": "Briefly show when reader is opened",
     "readerGroupDisplay": "Display",
     "readerGroupEInk": "E-Ink",
     "readerGroupNavigation": "Navigation",
@@ -2051,11 +2059,11 @@
     "readerModeSingleHorizontalRTL": "Paged (right to left)",
     "readerModeSingleVertical": "Paged (vertical)",
     "readerModeWebtoon": "Long strip",
-    "readerNavigationLayout": "Navigation layout",
+    "readerNavigationLayout": "Tap zones",
     "readerNavigationLayoutDefault": "Default",
     "readerNavigationLayoutDisabled": "Disabled",
     "readerNavigationLayoutEdge": "Edge",
-    "readerNavigationLayoutInvert": "Invert tapping",
+    "readerNavigationLayoutInvert": "Invert tap zones",
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "readerNavigationLayoutLShaped": "L Shaped",
     "readerNavigationLayoutRightAndLeft": "Right And Left",

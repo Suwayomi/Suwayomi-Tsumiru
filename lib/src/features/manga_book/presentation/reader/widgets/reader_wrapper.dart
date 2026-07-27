@@ -32,6 +32,7 @@ import '../../../../settings/presentation/reader/widgets/reader_padding_slider/r
 import '../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../settings/presentation/reader/widgets/reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
+import '../../../../settings/presentation/reader/widgets/tap_zones_overlay/tap_zones_overlay.dart';
 import '../../../../settings/presentation/reader/widgets/reader_volume_tap_invert_tile/reader_volume_tap_invert_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
@@ -194,22 +195,6 @@ class ReaderWrapper extends HookConsumerWidget {
       case ReaderMode.continuousHorizontalRTL:
         return false;
 
-      case ReaderMode.defaultReader:
-        return false;
-    }
-  }
-
-  bool _isRTLReaderMode(ReaderMode readerMode) {
-    switch (readerMode) {
-      case ReaderMode.singleHorizontalRTL:
-      case ReaderMode.continuousHorizontalRTL:
-        return true;
-
-      case ReaderMode.singleHorizontalLTR:
-      case ReaderMode.continuousHorizontalLTR:
-      case ReaderMode.singleVertical:
-      case ReaderMode.continuousVertical:
-      case ReaderMode.webtoon:
       case ReaderMode.defaultReader:
         return false;
     }
@@ -423,7 +408,7 @@ class ReaderWrapper extends HookConsumerWidget {
     bool pushNextChapter() {
       if (nextPrevChapterPair?.first == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
-      final toPrev = _isRTLReaderMode(resolvedReaderMode);
+      final toPrev = isRTLReaderMode(resolvedReaderMode);
       ReaderRoute(
         mangaId: manga.id,
         chapterId: nextPrevChapterPair!.first!.id,
@@ -436,7 +421,7 @@ class ReaderWrapper extends HookConsumerWidget {
     bool pushPreviousChapter() {
       if (nextPrevChapterPair?.second == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
-      final toPrev = !_isRTLReaderMode(resolvedReaderMode);
+      final toPrev = !isRTLReaderMode(resolvedReaderMode);
       ReaderRoute(
         mangaId: manga.id,
         chapterId: nextPrevChapterPair!.second!.id,
@@ -550,7 +535,7 @@ class ReaderWrapper extends HookConsumerWidget {
             Positioned.fill(
               child: Shortcuts.manager(
                 manager: readerShortcutManager(scrollDirection,
-                    isRtl: _isRTLReaderMode(resolvedReaderMode),
+                    isRtl: isRTLReaderMode(resolvedReaderMode),
                     autoScrollSupported: onToggleAutoScroll != null),
                 child: Actions(
                   actions: {
@@ -705,7 +690,7 @@ class ReaderWrapper extends HookConsumerWidget {
                 nextPrevChapterPair: nextPrevChapterPair,
                 resolvedReaderMode: resolvedReaderMode,
                 autoScrollSupported: onToggleAutoScroll != null,
-                reverseSeekBar: _isRTLReaderMode(resolvedReaderMode),
+                reverseSeekBar: isRTLReaderMode(resolvedReaderMode),
                 onChanged: onChanged,
                 onOpenSettings: () async {
                   await showReaderSettingsSheet(
@@ -1060,15 +1045,47 @@ class ReaderView extends HookConsumerWidget {
       showMagnification.value = false;
     }
 
+    final resolvedNavigationLayout = effectiveNavigationLayout(
+      ref,
+      mode: resolvedReaderMode,
+      seriesOverride: mangaReaderNavigationLayout,
+    );
+
+    // Komikku's showNavigationOverlayOnStart plus its new-user one-shot.
+    // Read once and held, not watched: watching would clear the flag and
+    // take the flash away in the same frame it was granted.
+    final overlayAlways = ref.watch(showTapZonesOverlayProvider).ifNull();
+    final unseenAtOpen = useRef<bool?>(null);
+    unseenAtOpen.value ??= ref.read(tapZonesOverlayUnseenProvider).ifNull(true);
+    // No point spending the one-shot on a layout that draws nothing.
+    final zonesAreVisible =
+        resolvedNavigationLayout != ReaderNavigationLayout.disabled;
+    final showZonesOnOpen = showReaderLayoutAnimation &&
+        zonesAreVisible &&
+        (overlayAlways || unseenAtOpen.value!);
+    useEffect(() {
+      if (!showZonesOnOpen || !unseenAtOpen.value!) return null;
+      // Guard context.mounted: a reader popped in the same turn would write
+      // through a disposed ref.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        // Latch too, or turning the hint off and on again replays the one look.
+        unseenAtOpen.value = false;
+        ref.read(tapZonesOverlayUnseenProvider.notifier).update(false);
+      });
+      return null;
+    }, [showZonesOnOpen]);
+
+    final resolvedTapInvert = effectiveTapInvert(
+      ref,
+      mode: resolvedReaderMode,
+      layout: resolvedNavigationLayout,
+      seriesOverride: mangaTapInvert,
+    );
+
     if (childHandlesGestures) {
-      final layout = mangaReaderNavigationLayout ==
-              ReaderNavigationLayout.defaultNavigation
-          ? ref.watch(readerNavigationLayoutKeyProvider) ??
-              ReaderNavigationLayout.defaultNavigation
-          : mangaReaderNavigationLayout;
-      final tapInvert = mangaTapInvert ??
-          ref.watch(readerTapInvertKeyProvider) ??
-          TapInvert.fromLegacyInvert(ref.watch(invertTapProvider));
+      final layout = resolvedNavigationLayout;
+      final tapInvert = resolvedTapInvert;
       final smallerTapZones = ref.watch(smallerTapZonesProvider) ?? false;
       content = ReaderInputScope(
         callbacks: ReaderInputCallbacks(
@@ -1115,14 +1132,18 @@ class ReaderView extends HookConsumerWidget {
     return Stack(
       children: [
         content,
-        if (!childHandlesGestures)
-          ReaderNavigationLayoutWidget(
+        // Paged routes taps through ReaderInputScope, so this overlay is
+        // display-only there.
+        IgnorePointer(
+          ignoring: childHandlesGestures,
+          child: ReaderNavigationLayoutWidget(
             onNext: onNext,
             onPrevious: onPrevious,
-            navigationLayout: mangaReaderNavigationLayout,
-            tapInvert: mangaTapInvert,
-            showReaderLayoutAnimation: showReaderLayoutAnimation,
+            navigationLayout: resolvedNavigationLayout,
+            tapInvert: resolvedTapInvert,
+            showReaderLayoutAnimation: showZonesOnOpen,
           ),
+        ),
         if (showMagnification.value)
           Positioned(
             left: positionOffset.dx,

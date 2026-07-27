@@ -30,3 +30,28 @@ class ReaderTapInvertKey extends _$ReaderTapInvertKey
 TapInvert readerTapInvertCompat(Ref ref) =>
     ref.watch(readerTapInvertKeyProvider) ??
     TapInvert.fromLegacyInvert(ref.watch(invertTapProvider));
+
+// Per-viewer, like Komikku's pagerNavInverted / webtoonNavInverted. Both seed
+// from whatever the single key resolved to, so upgrading changes nothing.
+
+@riverpod
+class PagedTapInvertKey extends _$PagedTapInvertKey
+    with SharedPreferenceEnumClientMixin<TapInvert> {
+  @override
+  TapInvert? build() => initialize(
+        DBKeys.pagedTapInvert,
+        enumList: TapInvert.values,
+        initial: ref.read(readerTapInvertCompatProvider),
+      );
+}
+
+@riverpod
+class LongStripTapInvertKey extends _$LongStripTapInvertKey
+    with SharedPreferenceEnumClientMixin<TapInvert> {
+  @override
+  TapInvert? build() => initialize(
+        DBKeys.longStripTapInvert,
+        enumList: TapInvert.values,
+        initial: ref.read(readerTapInvertCompatProvider),
+      );
+}
