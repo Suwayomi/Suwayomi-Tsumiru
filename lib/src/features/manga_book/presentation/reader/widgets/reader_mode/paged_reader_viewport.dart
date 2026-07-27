@@ -158,6 +158,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   Animation<double>? _pageTween;
   Animation<Offset>? _panTween;
   double _dragOffset = 0;
+
+  /// Bumped on every re-anchor, so a page settle that was aimed at the previous
+  /// window can't commit its target after the window changed under it.
+  int _anchorGeneration = 0;
   Size _viewportSize = Size.zero;
   final Map<int, Offset> _pointers = {};
   // Keyed by (chapterId, page identity), not display index — a late wide page
@@ -275,6 +279,21 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _reanchor(PagedDisplayWindow oldWindow) {
+    // Every in-flight animation is aimed at the OLD window. Left running, a
+    // page settle keeps writing its tween over the reset below — parking the
+    // pager between two pages — and then commits an index from the old window.
+    // Bump the generation FIRST so those stale completions are ignored.
+    _anchorGeneration++;
+    _pageAnimation.stop();
+    _pageTween = null;
+    _panAnimation.stop();
+    _panTween = null;
+    _panAnimationTarget = null;
+    _zoomAnimation.stop();
+    _zoomScaleTween = null;
+    _zoomOffsetTween = null;
+    _zoomAnimationTarget = null;
+
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
         ? oldWindow.items[_displayIndex]
         : null;
@@ -874,6 +893,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void _animateOffsetTo(double target, {VoidCallback? onComplete}) {
+    final generation = _anchorGeneration;
     final duration = _settleDuration(target);
     if (duration == Duration.zero || _axisExtent <= 0) {
       setState(() => _dragOffset = target == 0 ? 0 : target);
@@ -892,7 +912,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       end: target,
     ).animate(CurvedAnimation(parent: _pageAnimation, curve: _settleCurve));
     _pageAnimation.forward().whenCompleteOrCancel(() {
-      if (!mounted) return;
+      if (!mounted || generation != _anchorGeneration) return;
       onComplete?.call();
       if (target == 0) {
         setState(() => _dragOffset = 0);

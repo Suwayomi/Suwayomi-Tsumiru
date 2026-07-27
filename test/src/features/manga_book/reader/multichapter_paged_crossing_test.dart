@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/double_page_view.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_display_window.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_spread_mapping.dart';
@@ -32,32 +33,32 @@ List<String> _localPages(int count, String tag) {
 }
 
 WindowChapter _chapter(int id, int pageCount) => WindowChapter(
-      chapterId: id,
-      chapterName: 'Chapter $id',
-      mapping: buildSpreadMapping(
-        pageCount: pageCount,
-        doublePages: false,
-        splitWide: false,
-        splitInvert: false,
-        isWide: (_) => false,
-      ),
-      pages: _localPages(pageCount, 'c$id'),
-    );
+  chapterId: id,
+  chapterName: 'Chapter $id',
+  mapping: buildSpreadMapping(
+    pageCount: pageCount,
+    doublePages: false,
+    splitWide: false,
+    splitInvert: false,
+    isWide: (_) => false,
+  ),
+  pages: _localPages(pageCount, 'c$id'),
+);
 
 ReaderInputCallbacks _callbacks() => ReaderInputCallbacks(
-      onTap: () {},
-      onLongPressStart: (_) {},
-      onLongPressMoveUpdate: (_) {},
-      onLongPressEnd: () {},
-      onLongPressCancel: () {},
-      onNext: () {},
-      onPrevious: () {},
-      onNextBoundary: () => false,
-      onPreviousBoundary: () => false,
-      navigationLayout: ReaderNavigationLayout.disabled,
-      tapInvert: TapInvert.none,
-      smallerTapZones: false,
-    );
+  onTap: () {},
+  onLongPressStart: (_) {},
+  onLongPressMoveUpdate: (_) {},
+  onLongPressEnd: () {},
+  onLongPressCancel: () {},
+  onNext: () {},
+  onPrevious: () {},
+  onNextBoundary: () => false,
+  onPreviousBoundary: () => false,
+  navigationLayout: ReaderNavigationLayout.disabled,
+  tapInvert: TapInvert.none,
+  smallerTapZones: false,
+);
 
 double _largestScale(WidgetTester tester) {
   var best = 1.0;
@@ -128,8 +129,9 @@ void main() {
     expect(_largestScale(tester), closeTo(2.0, 0.05));
   });
 
-  testWidgets('paging crosses from chapter 1 into chapter 2 in one window',
-      (tester) async {
+  testWidgets('paging crosses from chapter 1 into chapter 2 in one window', (
+    tester,
+  ) async {
     // Both chapters already loaded, seamless (no transition between them).
     final window = buildPagedDisplayWindow(
       chapters: [_chapter(1, 3), _chapter(2, 3)],
@@ -189,49 +191,53 @@ void main() {
     }
 
     // We must have crossed into chapter 2.
-    expect(reported.any((e) => e.chapterId == 2), isTrue,
-        reason: 'paging never crossed into chapter 2; reported=$reported');
+    expect(
+      reported.any((e) => e.chapterId == 2),
+      isTrue,
+      reason: 'paging never crossed into chapter 2; reported=$reported',
+    );
     // And landed on chapter 2's last page.
     expect(reported.last, (chapterId: 2, raw: 2));
   });
 
-  testWidgets('a window swap while on a boundary card does not jump to start',
-      (tester) async {
+  testWidgets('a window swap while on a boundary card does not jump to start', (
+    tester,
+  ) async {
     final reported = <({int chapterId, int raw})>[];
     final controller = PagedReaderController();
 
     Widget viewportWith(PagedDisplayWindow window) => ReaderInputScope(
-          callbacks: _callbacks(),
-          child: SizedBox(
-            width: 300,
-            height: 500,
-            child: PagedReaderViewport(
-              controller: controller,
-              window: window,
-              initialDisplayIndex: 0,
-              axis: Axis.horizontal,
-              reverse: false,
-              animateTransitions: false,
-              pageFit: BoxFit.contain,
-              pageSize: null,
-              pagesAtNaturalSize: false,
-              centerMargin: CenterMarginType.none,
-              rotateWide: false,
-              rotateWideInvert: false,
-              reversePair: false,
-              cropBorders: false,
-              onPageWide: (_, __, ___) {},
-              onChapterPageChanged: (chapterId, raw) =>
-                  reported.add((chapterId: chapterId, raw: raw)),
-              transitionBuilder: (_) => const SizedBox.shrink(),
-              pinchEnabled: true,
-              doubleTapToZoom: true,
-              disableZoomIn: false,
-              disableZoomOut: false,
-              navigateToPan: true,
-            ),
-          ),
-        );
+      callbacks: _callbacks(),
+      child: SizedBox(
+        width: 300,
+        height: 500,
+        child: PagedReaderViewport(
+          controller: controller,
+          window: window,
+          initialDisplayIndex: 0,
+          axis: Axis.horizontal,
+          reverse: false,
+          animateTransitions: false,
+          pageFit: BoxFit.contain,
+          pageSize: null,
+          pagesAtNaturalSize: false,
+          centerMargin: CenterMarginType.none,
+          rotateWide: false,
+          rotateWideInvert: false,
+          reversePair: false,
+          cropBorders: false,
+          onPageWide: (_, __, ___) {},
+          onChapterPageChanged: (chapterId, raw) =>
+              reported.add((chapterId: chapterId, raw: raw)),
+          transitionBuilder: (_) => const SizedBox.shrink(),
+          pinchEnabled: true,
+          doubleTapToZoom: true,
+          disableZoomIn: false,
+          disableZoomOut: false,
+          navigateToPan: true,
+        ),
+      ),
+    );
 
     // Only chapter 1 loaded, with a trailing "next chapter" card at the edge.
     final window1 = buildPagedDisplayWindow(
@@ -241,7 +247,10 @@ void main() {
     );
     // items: c1:0 c1:1 T(end)  (3 slots)
     await tester.pumpWidget(
-      Directionality(textDirection: TextDirection.ltr, child: viewportWith(window1)),
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: viewportWith(window1),
+      ),
     );
     await tester.pump();
 
@@ -262,14 +271,98 @@ void main() {
     );
     reported.clear();
     await tester.pumpWidget(
-      Directionality(textDirection: TextDirection.ltr, child: viewportWith(window2)),
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: viewportWith(window2),
+      ),
     );
     await tester.pumpAndSettle();
 
     // The re-anchor must keep us at the boundary (end of ch1 / start of ch2),
     // NOT throw us back to chapter 1 page 0.
     expect(reported.isNotEmpty, isTrue);
-    expect(reported.last, isNot((chapterId: 1, raw: 0)),
-        reason: 're-anchor jumped to the start; reported=$reported');
+    expect(
+      reported.last,
+      isNot((chapterId: 1, raw: 0)),
+      reason: 're-anchor jumped to the start; reported=$reported',
+    );
+  });
+
+  testWidgets('a chapter loading mid page-turn keeps the page you were on',
+      (tester) async {
+    final reported = <({int chapterId, int raw})>[];
+    final controller = PagedReaderController();
+
+    Widget viewportWith(PagedDisplayWindow window) => ReaderInputScope(
+          callbacks: _callbacks(),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 0,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (chapterId, raw) =>
+                    reported.add((chapterId: chapterId, raw: raw)),
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
+          ),
+        );
+
+    // Reading chapter 2 alone; chapter 1 loads in behind us, which shifts every
+    // display index by a chapter.
+    final window1 = buildPagedDisplayWindow(
+      chapters: [_chapter(2, 3)],
+      forceTransition: false,
+    );
+    await tester.pumpWidget(
+      Directionality(
+          textDirection: TextDirection.ltr, child: viewportWith(window1)),
+    );
+    await tester.pump();
+
+    // Turn a page and swap the window while that turn is still settling.
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-90, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pump(const Duration(milliseconds: 30));
+
+    reported.clear();
+    final window2 = buildPagedDisplayWindow(
+      chapters: [_chapter(1, 3), _chapter(2, 3)],
+      forceTransition: false,
+    );
+    await tester.pumpWidget(
+      Directionality(
+          textDirection: TextDirection.ltr, child: viewportWith(window2)),
+    );
+    await tester.pumpAndSettle();
+
+    // The in-flight turn was aimed at the old window; committing it now would
+    // land on whatever chapter 1 page happens to share that index.
+    expect(reported.isNotEmpty, isTrue);
+    expect(reported.last.chapterId, 2,
+        reason: 'landed outside the chapter being read; reported=$reported');
   });
 }
