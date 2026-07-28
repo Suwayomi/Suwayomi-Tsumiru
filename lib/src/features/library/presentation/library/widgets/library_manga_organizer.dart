@@ -94,15 +94,22 @@ class _OrganizerBody extends StatelessWidget {
             ],
           ),
           // Rebuild + animate the height whenever the active tab changes.
-          AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) => AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: tabs[controller.index],
+          // Flexible, not a bare child: the 72% cap is measured against the
+          // whole screen, but the space actually handed to the sheet shrinks
+          // when something above it appears — the "Updating library" strip is
+          // a sibling of the page content. Without this the column overflows
+          // by whatever that strip costs.
+          Flexible(
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) => AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: tabs[controller.index],
+                ),
               ),
             ),
           ),
