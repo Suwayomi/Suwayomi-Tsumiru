@@ -29,10 +29,15 @@ class HistoryRepository {
     String? searchQuery,
     DateTime? fromDate,
     DateTime? toDate,
+    bool? inLibrary,
   }) async {
-    // No inLibrary gate: history covers anything you've read, and the
-    // "Library" filter decides whether non-library entries are shown.
+    // Library membership is pushed to the server rather than filtered on the
+    // result: this fetch is one bounded window, so spending it on rows that are
+    // about to be discarded would cut how far back the history reaches.
     final filter = Input$ChapterFilterInput(
+      inLibrary: inLibrary == null
+          ? null
+          : Input$BooleanFilterInput(equalTo: inLibrary),
       lastReadAt: Input$LongFilterInput(
         isNull: false,
         greaterThan:

@@ -20,8 +20,10 @@ part 'history_controller.g.dart';
 class ReadingHistory extends _$ReadingHistory {
   @override
   Future<List<HistoryItemDto>?> build() async {
-    final items =
-        await ref.watch(historyRepositoryProvider).getReadingHistory();
+    final inLibrary = ref.watch(historyFilterInLibraryProvider);
+    final items = await ref
+        .watch(historyRepositoryProvider)
+        .getReadingHistory(inLibrary: inLibrary);
     // Guard the post-await ref use: the provider may have been disposed during
     // the fetch, and keepAlive() on a dead ref throws UnmountedRefException.
     if (ref.mounted) ref.keepAlive();
@@ -32,8 +34,11 @@ class ReadingHistory extends _$ReadingHistory {
     // Don't reset to AsyncLoading — that blanks the list to a full-screen
     // spinner on pull-to-refresh. Keep the current items visible until fresh
     // data lands (the RefreshIndicator already shows the pull spinner).
+    final inLibrary = ref.read(historyFilterInLibraryProvider);
     final result = await AsyncValue.guard(
-      () => ref.read(historyRepositoryProvider).getReadingHistory(),
+      () => ref
+          .read(historyRepositoryProvider)
+          .getReadingHistory(inLibrary: inLibrary),
     );
     if (!ref.mounted) return;
     final items = result.asData?.value;
