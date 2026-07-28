@@ -13,9 +13,37 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
 import '../../domain/update_status/update_status_model.dart';
+import '../../domain/updates/updates_filter.dart';
 import './graphql/__generated__/query.graphql.dart';
 
 part 'updates_repository.g.dart';
+
+/// Rows per page. The offset step must match, or pages overlap and the list
+/// repeats rows.
+const int updatesPageSize = 50;
+
+Input$BooleanFilterInput? _equals(bool? value) =>
+    value == null ? null : Input$BooleanFilterInput(equalTo: value);
+
+Input$ChapterFilterInput updatesFilterInput(UpdatesFilter filter) =>
+    Input$ChapterFilterInput(
+      inLibrary: Input$BooleanFilterInput(equalTo: true),
+      isDownloaded: _equals(filter.downloaded),
+      isRead: filter.unread == null ? null : _equals(!filter.unread!),
+      isBookmarked: _equals(filter.bookmarked),
+      // Komikku treats a finished chapter as neither started nor not-started, so
+      // both sides of this filter also require unread (updatesView.sq).
+      and: filter.started == null
+          ? null
+          : [
+              Input$ChapterFilterInput(isRead: _equals(false)),
+              Input$ChapterFilterInput(
+                lastPageRead: filter.started!
+                    ? Input$IntFilterInput(greaterThan: 0)
+                    : Input$IntFilterInput(equalTo: 0),
+              ),
+            ],
+    );
 
 class UpdatesRepository {
   const UpdatesRepository(this.client, this.subscriptionClient);
@@ -27,16 +55,15 @@ class UpdatesRepository {
   // Updates
   Future<ChapterPageWithMangaDto?> getRecentChaptersPage({
     int pageNo = 0,
+    UpdatesFilter filter = kNoUpdatesFilter,
   }) =>
       client
           .query$GetChapterWithMangaPage(
             Options$Query$GetChapterWithMangaPage(
               variables: Variables$Query$GetChapterWithMangaPage(
-                filter: Input$ChapterFilterInput(
-                  inLibrary: Input$BooleanFilterInput(equalTo: true),
-                ),
-                first: 50,
-                offset: pageNo * 30,
+                filter: updatesFilterInput(filter),
+                first: updatesPageSize,
+                offset: pageNo * updatesPageSize,
                 order: [
                   Input$ChapterOrderInput(
                     by: Enum$ChapterOrderBy.FETCHED_AT,

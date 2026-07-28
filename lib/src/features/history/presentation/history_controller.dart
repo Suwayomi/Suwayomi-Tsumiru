@@ -20,8 +20,10 @@ part 'history_controller.g.dart';
 class ReadingHistory extends _$ReadingHistory {
   @override
   Future<List<HistoryItemDto>?> build() async {
-    final items =
-        await ref.watch(historyRepositoryProvider).getReadingHistory();
+    final inLibrary = ref.watch(historyFilterInLibraryProvider);
+    final items = await ref
+        .watch(historyRepositoryProvider)
+        .getReadingHistory(inLibrary: inLibrary);
     // Guard the post-await ref use: the provider may have been disposed during
     // the fetch, and keepAlive() on a dead ref throws UnmountedRefException.
     if (ref.mounted) ref.keepAlive();
@@ -32,8 +34,11 @@ class ReadingHistory extends _$ReadingHistory {
     // Don't reset to AsyncLoading — that blanks the list to a full-screen
     // spinner on pull-to-refresh. Keep the current items visible until fresh
     // data lands (the RefreshIndicator already shows the pull spinner).
+    final inLibrary = ref.read(historyFilterInLibraryProvider);
     final result = await AsyncValue.guard(
-      () => ref.read(historyRepositoryProvider).getReadingHistory(),
+      () => ref
+          .read(historyRepositoryProvider)
+          .getReadingHistory(inLibrary: inLibrary),
     );
     if (!ref.mounted) return;
     final items = result.asData?.value;
@@ -62,9 +67,75 @@ class MangaReadingHistory extends _$MangaReadingHistory {
   }
 }
 
+/// The History list filters, as one value; a record so equality is structural.
+typedef HistoryFilter = ({
+  bool? unfinishedSeries,
+  bool? unread,
+  bool? inLibrary,
+});
+
+const HistoryFilter kNoHistoryFilter = (
+  unfinishedSeries: null,
+  unread: null,
+  inLibrary: null,
+);
+
+@riverpod
+class HistoryFilterUnfinishedSeries extends _$HistoryFilterUnfinishedSeries
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterUnfinishedSeries);
+}
+
+@riverpod
+class HistoryFilterUnread extends _$HistoryFilterUnread
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterUnread);
+}
+
+@riverpod
+class HistoryFilterInLibrary extends _$HistoryFilterInLibrary
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterInLibrary);
+}
+
+@riverpod
+HistoryFilter historyFilter(Ref ref) => (
+      unfinishedSeries: ref.watch(historyFilterUnfinishedSeriesProvider),
+      unread: ref.watch(historyFilterUnreadProvider),
+      inLibrary: ref.watch(historyFilterInLibraryProvider),
+    );
+
+@riverpod
+bool historyHasActiveFilters(Ref ref) =>
+    ref.watch(historyFilterProvider) != kNoHistoryFilter;
+
+/// Applies [filter] to one row. Each filter is tri-state: null passes
+/// everything, true keeps matches, false keeps non-matches.
+bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
+  final unfinishedSeries = filter.unfinishedSeries;
+  if (unfinishedSeries != null &&
+      unfinishedSeries != (item.manga.unreadCount > 0)) {
+    return false;
+  }
+  final unread = filter.unread;
+  if (unread != null && unread != !item.isRead) return false;
+  final inLibrary = filter.inLibrary;
+  if (inLibrary != null && inLibrary != item.manga.inLibrary) return false;
+  return true;
+}
+
 @riverpod
 List<HistoryGroup> historyGroupedByDate(Ref ref) {
-  final historyItems = ref.watch(readingHistoryProvider).value ?? [];
+  final allItems = ref.watch(readingHistoryProvider).value ?? [];
+  final filter = ref.watch(historyFilterProvider);
+  final historyItems = filter == kNoHistoryFilter
+      ? allItems
+      : allItems
+          .where((item) => historyItemMatchesFilter(item, filter))
+          .toList();
 
   if (historyItems.isEmpty) return [];
 

@@ -195,72 +195,78 @@ class OfflineFilesView extends HookConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      // Scroll-controlled and scrollable: a default sheet is capped at 9/16
+      // of the space it is given, and the "Updating library" strip is a
+      // sibling of the page content, so it shrinks that space from under it.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final n in _bufferSizes)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final n in _bufferSizes)
+                ListTile(
+                  leading: const Icon(Icons.bookmark_add_outlined),
+                  title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
+                  trailing: (manga.keepRule == OfflineKeepRule.nUnread &&
+                          manga.keepUnreadCount == n)
+                      ? const Icon(Icons.check_rounded)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    changeKeepRule(ref, manga.id, OfflineKeepRule.nUnread, n);
+                  },
+                ),
               ListTile(
-                leading: const Icon(Icons.bookmark_add_outlined),
-                title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                trailing: (manga.keepRule == OfflineKeepRule.nUnread &&
-                        manga.keepUnreadCount == n)
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(sheetContext.l10n.keepOfflineAllUnread),
+                trailing: manga.keepRule == OfflineKeepRule.allUnread
                     ? const Icon(Icons.check_rounded)
                     : null,
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  changeKeepRule(ref, manga.id, OfflineKeepRule.nUnread, n);
+                  changeKeepRule(ref, manga.id, OfflineKeepRule.allUnread,
+                      manga.keepUnreadCount);
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAllUnread),
-              trailing: manga.keepRule == OfflineKeepRule.allUnread
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () {
-                Navigator.pop(sheetContext);
-                changeKeepRule(ref, manga.id, OfflineKeepRule.allUnread,
-                    manga.keepUnreadCount);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_books_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAll),
-              trailing: manga.keepRule == OfflineKeepRule.all
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () {
-                Navigator.pop(sheetContext);
-                changeKeepRule(
-                    ref, manga.id, OfflineKeepRule.all, manga.keepUnreadCount);
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.bookmark_remove_outlined),
-              title: Text(sheetContext.l10n.manageDownloadsStopKeep),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                detachKeepRule(ref, manga.id);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline_rounded,
-                  color: sheetContext.theme.colorScheme.error),
-              title: Text(sheetContext.l10n.manageDownloadsStopDelete,
-                  style:
-                      TextStyle(color: sheetContext.theme.colorScheme.error)),
-              onTap: () async {
-                final ok = await _confirm(sheetContext,
-                    sheetContext.l10n.manageDownloadsDeleteConfirm(1));
-                if (!sheetContext.mounted) return;
-                Navigator.pop(sheetContext);
-                if (ok) await removeKeepRuleAndDelete(ref, manga.id);
-              },
-            ),
-          ],
+              ListTile(
+                leading: const Icon(Icons.library_books_outlined),
+                title: Text(sheetContext.l10n.keepOfflineAll),
+                trailing: manga.keepRule == OfflineKeepRule.all
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  changeKeepRule(
+                      ref, manga.id, OfflineKeepRule.all, manga.keepUnreadCount);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.bookmark_remove_outlined),
+                title: Text(sheetContext.l10n.manageDownloadsStopKeep),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  detachKeepRule(ref, manga.id);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded,
+                    color: sheetContext.theme.colorScheme.error),
+                title: Text(sheetContext.l10n.manageDownloadsStopDelete,
+                    style:
+                        TextStyle(color: sheetContext.theme.colorScheme.error)),
+                onTap: () async {
+                  final ok = await _confirm(sheetContext,
+                      sheetContext.l10n.manageDownloadsDeleteConfirm(1));
+                  if (!sheetContext.mounted) return;
+                  Navigator.pop(sheetContext);
+                  if (ok) await removeKeepRuleAndDelete(ref, manga.id);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
