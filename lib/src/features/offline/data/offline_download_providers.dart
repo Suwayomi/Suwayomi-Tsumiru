@@ -425,13 +425,17 @@ Future<bool> recordReadState(
 /// isn't loaded.
 int? _whileReadingTarget(
     WidgetRef ref, int mangaId, int readChapterId, int slots) {
-  final chapters = ref
-      .read(mangaChapterListWithFilterProvider(mangaId: mangaId))
-      .value;
+  // Deliberately NOT the on-screen list: an unread filter drops the chapter the
+  // moment it is read, and any filter makes "N back" count gaps instead of
+  // chapters. Source order is the reading order regardless of how the list is
+  // displayed.
+  final chapters =
+      ref.read(mangaChapterListForBulkActionsProvider(mangaId: mangaId)).value;
   if (chapters == null) return null;
-  final isAsc = ref.read(mangaChapterSortDirectionProvider) ??
-      (DBKeys.chapterSortDirection.initial as bool);
-  return chapterIdToDeleteWhileReading(chapters, isAsc, readChapterId, slots);
+  final inReadingOrder = [...chapters]
+    ..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
+  return chapterIdToDeleteWhileReading(
+      inReadingOrder, true, readChapterId, slots);
 }
 
 /// The server delete settings, loaded from the server (null offline / on error,
