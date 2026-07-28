@@ -106,7 +106,16 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
-final _readerChromeSessionVisibilityProvider =
+/// Whether the touch that is currently down landed while the strip was still
+/// coasting from the reader's own fling. Such a tap arrests the scroll and
+/// nothing else — the next one opens the chrome. The long strip snapshots this
+/// on pointer-down, mirroring Komikku's `tapDuringManualScroll`
+/// (`WebtoonRecyclerView.kt:72-75`, consumed at `:244-248`).
+final readerTapArrestsFlingProvider = StateProvider<bool>((ref) => false);
+
+/// Whether the reader chrome is on screen. Public so the long strip can hold
+/// auto-scroll while it is up.
+final readerChromeVisibleProvider =
     StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
@@ -245,7 +254,7 @@ class ReaderWrapper extends HookConsumerWidget {
         ref.watch(readerMagnifierSizeKeyProvider) ??
             DBKeys.readerMagnifierSize.initial;
 
-    final sessionVisibility = ref.watch(_readerChromeSessionVisibilityProvider);
+    final sessionVisibility = ref.watch(readerChromeVisibleProvider);
     final visibility = useState(
       sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
     );
@@ -309,7 +318,7 @@ class ReaderWrapper extends HookConsumerWidget {
       void syncVisibility() {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (disposed) return;
-          ref.read(_readerChromeSessionVisibilityProvider.notifier).state =
+          ref.read(readerChromeVisibleProvider.notifier).state =
               visibility.value;
         });
       }
@@ -624,8 +633,17 @@ class ReaderWrapper extends HookConsumerWidget {
                     child: Listener(
                       child: RepaintBoundary(
                         child: ReaderView(
-                          toggleVisibility: () =>
-                              visibility.value = !visibility.value,
+                          toggleVisibility: () {
+                            final gate =
+                                ref.read(readerTapArrestsFlingProvider.notifier);
+                            // Cleared on use: only the long strip arms it, so a
+                            // stale true would swallow taps in the paged reader.
+                            if (gate.state) {
+                              gate.state = false;
+                              return;
+                            }
+                            visibility.value = !visibility.value;
+                          },
                           scrollDirection: scrollDirection,
                           mangaId: manga.id,
                           mangaReaderPadding: mangaReaderPadding.value,

@@ -65,6 +65,16 @@ double autoScrollDelta({
   return pxPerMs * dtMs;
 }
 
+/// Next interval boundary after [elapsed]. Komikku sleeps a full interval
+/// between glides, so a drag costs at most the remainder of one.
+Duration autoScrollResumeAt(Duration elapsed, int intervalSeconds) {
+  if (intervalSeconds <= 0) return elapsed;
+  final periodMs = intervalSeconds * 1000;
+  return Duration(
+    milliseconds: ((elapsed.inMilliseconds ~/ periodMs) + 1) * periodMs,
+  );
+}
+
 typedef _LoadedChapter = ({
   ChapterPagesDto pages,
   ChapterDto chapter,
@@ -417,10 +427,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ref.watch(autoScrollIntervalSecondsProvider) ??
         DBKeys.autoScrollIntervalSeconds.initial as int;
     // Set around every auto-scroll-driven jump so the manual-scroll listener
-    // (below) doesn't mistake the engine's own motion for the user grabbing
-    // the strip and stop itself.
+    // below doesn't mistake the engine's own motion for a user drag.
     final programmaticScroll = useRef<bool>(false);
     final lastAutoScrollTick = useRef<Duration>(Duration.zero);
+    final autoScrollPausedUntil = useRef<Duration>(Duration.zero);
+    // Tracked between ScrollStart/ScrollEnd so a touch landing mid-coast can be
+    // told from one landing on a still page.
+    final stripInMotion = useRef<bool>(false);
+    final bool chromeVisible = ref.watch(readerChromeVisibleProvider) ?? false;
 
     // Decode a page's image off-screen AND record its true rendered height from
     // the decoded aspect ratio. Caching the height
@@ -881,9 +895,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     //
     // Smooth mode drives per-frame pixel deltas straight on the
     // ScrollPosition; jump mode reuses handlePageNavigation on a periodic
-    // timer (Komikku's scrollDown() analog). Both stop themselves at the end
-    // of the last loaded chapter, and are stopped externally by the manual-
-    // scroll listener and the app-lifecycle listener below.
+    // timer (Komikku's scrollDown() analog). Both hold while the chrome is up
+    // and yield to a user drag until the next interval boundary, so only the
+    // toggle switches auto-scroll off — plus reaching the end of the last
+    // loaded chapter, and the app-lifecycle listener below.
 
     bool atLastLoadedPage() =>
         hasReachedEnd.value &&
@@ -895,6 +910,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final dtMs = (elapsed - lastAutoScrollTick.value).inMilliseconds;
       lastAutoScrollTick.value = elapsed;
       if (dtMs <= 0) return;
+      if (elapsed < autoScrollPausedUntil.value) return;
       try {
         final pos = scrollOffsetController.position;
         final interval =
@@ -912,9 +928,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
         programmaticScroll.value = true;
         pos.jumpTo(target.clamp(pos.minScrollExtent, pos.maxScrollExtent));
-        programmaticScroll.value = false;
       } catch (_) {
         // Attached but not laid out yet (no ScrollPosition) — skip this tick.
+      } finally {
+        // A throw mid-jump would otherwise latch the guard on and every later
+        // drag would read as the engine's own motion.
+        programmaticScroll.value = false;
       }
     }
 
@@ -929,34 +948,44 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     );
 
     useEffect(() {
-      if (autoScrollActive && smoothAutoScroll) {
+      if (autoScrollActive && smoothAutoScroll && !chromeVisible) {
         lastAutoScrollTick.value = Duration.zero;
+        autoScrollPausedUntil.value = Duration.zero;
         if (!autoScrollTicker.isActive) autoScrollTicker.start();
       } else if (autoScrollTicker.isActive) {
         autoScrollTicker.stop();
       }
       return null;
-    }, [autoScrollActive, smoothAutoScroll]);
+    }, [autoScrollActive, smoothAutoScroll, chromeVisible]);
 
     // Jump mode (smoothAutoScroll off): periodic page-advance instead of a
     // per-frame glide.
     useEffect(() {
       Timer? timer;
-      if (autoScrollActive && !smoothAutoScroll) {
+      if (autoScrollActive && !smoothAutoScroll && !chromeVisible) {
         timer = Timer.periodic(Duration(seconds: autoScrollIntervalSeconds), (
           _,
         ) {
+          if (stripInMotion.value) return;
           if (atLastLoadedPage()) {
             ref.read(autoScrollActiveProvider.notifier).stop();
             return;
           }
           programmaticScroll.value = true;
-          handlePageNavigation(isNext: true);
-          programmaticScroll.value = false;
+          try {
+            handlePageNavigation(isNext: true);
+          } finally {
+            programmaticScroll.value = false;
+          }
         });
       }
       return () => timer?.cancel();
-    }, [autoScrollActive, smoothAutoScroll, autoScrollIntervalSeconds]);
+    }, [
+      autoScrollActive,
+      smoothAutoScroll,
+      autoScrollIntervalSeconds,
+      chromeVisible,
+    ]);
 
     // The ticker outlives both effects above (it's created once); stop and
     // dispose it only on the widget's own teardown.
@@ -1111,18 +1140,35 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       separatorBuilder: buildSeparator,
     );
 
-    // A real user drag/fling stops auto-scroll immediately; the engine's own
-    // jumps are excluded via the programmaticScroll guard set around them.
+    // A real user drag/fling yields the strip until the next interval boundary
+    // instead of ending auto-scroll, so the reader can nudge the page without
+    // re-arming the toggle. The engine's own jumps are excluded via the
+    // programmaticScroll guard set around them.
     final autoScrollAwareList = NotificationListener<UserScrollNotification>(
       onNotification: (notification) {
         if (!programmaticScroll.value &&
             notification.direction != ScrollDirection.idle &&
             ref.read(autoScrollActiveProvider)) {
-          ref.read(autoScrollActiveProvider.notifier).stop();
+          autoScrollPausedUntil.value = autoScrollResumeAt(
+            lastAutoScrollTick.value,
+            autoScrollIntervalSeconds,
+          );
         }
         return false;
       },
-      child: positionedList,
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (_) {
+          stripInMotion.value = false;
+          return false;
+        },
+        child: NotificationListener<ScrollStartNotification>(
+          onNotification: (_) {
+            if (!programmaticScroll.value) stripInMotion.value = true;
+            return false;
+          },
+          child: positionedList,
+        ),
+      ),
     );
 
     // Pinned at the scroll clamp a drag moves nothing, so the position
@@ -1191,6 +1237,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           )
         : edgeAwareList;
 
+    // Pointer-down is the last moment the fling is still live before the drag
+    // cancels it, so the arrest decision is snapshotted here.
+    final flingAwareChild = Listener(
+      onPointerDown: (_) {
+        final arrests = stripInMotion.value && !programmaticScroll.value;
+        final gate = ref.read(readerTapArrestsFlingProvider.notifier);
+        if (gate.state != arrests) gate.state = arrests;
+      },
+      child: wheelAware,
+    );
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
@@ -1206,7 +1263,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               child: child,
             )
           : null,
-      wheelAware,
+      flingAwareChild,
     );
 
     return ReaderWrapper(
