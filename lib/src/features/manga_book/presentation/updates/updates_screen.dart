@@ -34,12 +34,18 @@ class UpdatesScreen extends HookConsumerWidget {
     PagingController<int, ChapterWithMangaDto> controller,
     int pageKey,
     UpdatesFilter filter,
+    int generation,
+    ValueGetter<int> currentGeneration,
   ) async {
     AsyncValue.guard(
       () => repository.getRecentChaptersPage(pageNo: pageKey, filter: filter),
     ).then(
       (value) => value.whenOrNull(
         data: (recentChaptersPage) {
+          // A refresh or filter change while this request was in flight leaves
+          // it describing a list that no longer exists; appending its rows would
+          // interleave two different result sets and skew the next page key.
+          if (generation != currentGeneration()) return;
           try {
             if (recentChaptersPage != null) {
               if (recentChaptersPage.pageInfo.hasNextPage) {
@@ -54,7 +60,10 @@ class UpdatesScreen extends HookConsumerWidget {
             //
           }
         },
-        error: (error, stackTrace) => controller.error = error,
+        error: (error, stackTrace) {
+          if (generation != currentGeneration()) return;
+          controller.error = error;
+        },
       ),
     );
   }
@@ -76,6 +85,14 @@ class UpdatesScreen extends HookConsumerWidget {
     // it reads the latest value through this holder instead.
     final latestFilter = useRef(filter);
     latestFilter.value = filter;
+    // Bumped by every reset of the list, so replies from the previous one can be
+    // recognised as stale and dropped.
+    final generation = useRef(0);
+    final resetList = useCallback(() {
+      generation.value++;
+      selectedChapters.value = ({});
+      controller.refresh();
+    }, []);
     useEffect(() {
       controller.addPageRequestListener(
         (pageKey) => _fetchPage(
@@ -83,6 +100,8 @@ class UpdatesScreen extends HookConsumerWidget {
           controller,
           pageKey,
           latestFilter.value,
+          generation.value,
+          () => generation.value,
         ),
       );
       return;
@@ -95,15 +114,13 @@ class UpdatesScreen extends HookConsumerWidget {
         isFilterMount.value = false;
         return null;
       }
-      selectedChapters.value = ({});
-      controller.refresh();
+      resetList();
       return null;
     }, [filter]);
     useEffect(() {
       if (!isUpdatesChecking) {
         try {
-          selectedChapters.value = ({});
-          controller.refresh();
+          resetList();
         } catch (e) {
           //
         }
@@ -161,14 +178,11 @@ class UpdatesScreen extends HookConsumerWidget {
       bottomSheet: selectedChapters.value.isNotEmpty
           ? MultiChaptersActionsBottomAppBar(
               selectedChapters: selectedChapters,
-              afterOptionSelected: () async => controller.refresh(),
+              afterOptionSelected: () async => resetList(),
             )
           : null,
       body: RefreshIndicator(
-        onRefresh: () async {
-          selectedChapters.value = ({});
-          controller.refresh();
-        },
+        onRefresh: () async => resetList(),
         child: CustomScrollView(
           slivers: [
             if (lastUpdated != null && (int.tryParse(lastUpdated) ?? 0) > 0)
@@ -197,14 +211,14 @@ class UpdatesScreen extends HookConsumerWidget {
                 firstPageErrorIndicatorBuilder: (context) => Emoticons(
                   title: controller.error.toString(),
                   button: TextButton(
-                    onPressed: () => controller.refresh(),
+                    onPressed: () => resetList(),
                     child: Text(context.l10n.retry),
                   ),
                 ),
                 noItemsFoundIndicatorBuilder: (context) => Emoticons(
                   title: context.l10n.noUpdatesFound,
                   button: TextButton(
-                    onPressed: () => controller.refresh(),
+                    onPressed: () => resetList(),
                     child: Text(context.l10n.refresh),
                   ),
                 ),
