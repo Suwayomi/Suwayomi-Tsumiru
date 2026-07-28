@@ -12,6 +12,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import 'history_controller.dart';
+import 'widgets/history_filter.dart';
 import 'widgets/history_group_widget.dart';
 
 class HistoryScreen extends ConsumerWidget {
@@ -23,11 +24,28 @@ class HistoryScreen extends ConsumerWidget {
     final historyGroups = ref.watch(filteredHistoryGroupsProvider);
     final historyState = ref.watch(readingHistoryProvider);
     final searchQuery = ref.watch(historySearchQueryProvider);
+    final hasActiveFilters = ref.watch(historyHasActiveFiltersProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.history),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list_rounded),
+            tooltip: l10n.filter,
+            // Tinted while filtered, so a short list reads as "filtered" rather
+            // than "nothing read". Komikku uses amber; ours comes from the theme.
+            color: hasActiveFilters ? context.theme.colorScheme.primary : null,
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: KBorderRadius.rT16.radius,
+              ),
+              clipBehavior: Clip.hardEdge,
+              builder: (_) => const HistoryFilterSheet(),
+            ),
+          ),
           IconButton(
             onPressed: () =>
                 ref.read(readingHistoryProvider.notifier).refresh(),
@@ -68,7 +86,10 @@ class HistoryScreen extends ConsumerWidget {
                   return const HistoryEmptyState();
                 }
 
-                if (historyGroups.isEmpty && searchQuery.isNotBlank) {
+                // Filters can empty the list just as a search can; without this
+                // the builder below renders a blank page with no explanation.
+                if (historyGroups.isEmpty &&
+                    (searchQuery.isNotBlank || hasActiveFilters)) {
                   return const HistoryNoSearchResults();
                 }
 

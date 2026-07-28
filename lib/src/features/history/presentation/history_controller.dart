@@ -62,9 +62,75 @@ class MangaReadingHistory extends _$MangaReadingHistory {
   }
 }
 
+/// The History list filters, as one value; a record so equality is structural.
+typedef HistoryFilter = ({
+  bool? unfinishedSeries,
+  bool? unread,
+  bool? inLibrary,
+});
+
+const HistoryFilter kNoHistoryFilter = (
+  unfinishedSeries: null,
+  unread: null,
+  inLibrary: null,
+);
+
+@riverpod
+class HistoryFilterUnfinishedSeries extends _$HistoryFilterUnfinishedSeries
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterUnfinishedSeries);
+}
+
+@riverpod
+class HistoryFilterUnread extends _$HistoryFilterUnread
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterUnread);
+}
+
+@riverpod
+class HistoryFilterInLibrary extends _$HistoryFilterInLibrary
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.historyFilterInLibrary);
+}
+
+@riverpod
+HistoryFilter historyFilter(Ref ref) => (
+      unfinishedSeries: ref.watch(historyFilterUnfinishedSeriesProvider),
+      unread: ref.watch(historyFilterUnreadProvider),
+      inLibrary: ref.watch(historyFilterInLibraryProvider),
+    );
+
+@riverpod
+bool historyHasActiveFilters(Ref ref) =>
+    ref.watch(historyFilterProvider) != kNoHistoryFilter;
+
+/// Applies [filter] to one row. Each filter is tri-state: null passes
+/// everything, true keeps matches, false keeps non-matches.
+bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
+  final unfinishedSeries = filter.unfinishedSeries;
+  if (unfinishedSeries != null &&
+      unfinishedSeries != (item.manga.unreadCount > 0)) {
+    return false;
+  }
+  final unread = filter.unread;
+  if (unread != null && unread != !item.isRead) return false;
+  final inLibrary = filter.inLibrary;
+  if (inLibrary != null && inLibrary != item.manga.inLibrary) return false;
+  return true;
+}
+
 @riverpod
 List<HistoryGroup> historyGroupedByDate(Ref ref) {
-  final historyItems = ref.watch(readingHistoryProvider).value ?? [];
+  final allItems = ref.watch(readingHistoryProvider).value ?? [];
+  final filter = ref.watch(historyFilterProvider);
+  final historyItems = filter == kNoHistoryFilter
+      ? allItems
+      : allItems
+          .where((item) => historyItemMatchesFilter(item, filter))
+          .toList();
 
   if (historyItems.isEmpty) return [];
 

@@ -30,8 +30,9 @@ class HistoryRepository {
     DateTime? fromDate,
     DateTime? toDate,
   }) async {
+    // No inLibrary gate: history covers anything you've read, and the
+    // "Library" filter decides whether non-library entries are shown.
     final filter = Input$ChapterFilterInput(
-      inLibrary: Input$BooleanFilterInput(equalTo: true),
       lastReadAt: Input$LongFilterInput(
         isNull: false,
         greaterThan:
