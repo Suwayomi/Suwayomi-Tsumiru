@@ -68,7 +68,9 @@ Future<void> _pumpBadges(
   Map<String, Object> prefs = const {},
   Fragment$MangaDto? manga,
   bool onDevice = true,
+  TextDirection textDirection = TextDirection.ltr,
   bool migrate = false,
+  bool showCountBadges = true,
 }) async {
   SharedPreferences.setMockInitialValues({
     'onDeviceBadge': true,
@@ -90,14 +92,17 @@ Future<void> _pumpBadges(
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 160,
-            child: MangaBadgesRow(
-              manga: manga ?? _manga(),
-              showCountBadges: true,
+      home: Directionality(
+        textDirection: textDirection,
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 160,
+              child: MangaBadgesRow(
+                manga: manga ?? _manga(),
+                showCountBadges: showCountBadges,
+              ),
             ),
           ),
         ),
@@ -213,6 +218,42 @@ void main() {
       expect(find.byIcon(Icons.offline_pin_rounded), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the left cluster stays on the left in an RTL locale',
+        (tester) async {
+      // The corners the layout editor offers are physical, so an RTL locale
+      // must not mirror them. Unread sits left by default, language right.
+      await _pumpBadges(tester, textDirection: TextDirection.rtl);
+      expect(
+        tester.getCenter(find.text('4')).dx,
+        lessThan(tester.getCenter(find.text('🇯🇵')).dx),
+      );
+    });
+
+    testWidgets('an RTL locale still reaches both physical corners',
+        (tester) async {
+      await _pumpBadges(tester, textDirection: TextDirection.rtl);
+      final row = tester.getRect(find.byType(MangaBadgesRow));
+      // Each cluster hugs its own corner, inside the row's 8px padding.
+      expect(tester.getTopLeft(find.text('4')).dx, lessThan(row.center.dx));
+      expect(
+        tester.getTopRight(find.text('🇯🇵')).dx,
+        greaterThan(row.center.dx),
+      );
+    });
+
+    testWidgets('the Browse in-library marker stays left in an RTL locale',
+        (tester) async {
+      // Browse and global-search covers take their own path through the row.
+      await _pumpBadges(
+        tester,
+        showCountBadges: false,
+        textDirection: TextDirection.rtl,
+      );
+      final row = tester.getRect(find.byType(MangaBadgesRow));
+      final marker = find.byIcon(Icons.collections_bookmark_rounded);
+      expect(tester.getCenter(marker).dx, lessThan(row.center.dx));
     });
 
     testWidgets('an upgrade keeps the badges the user had set', (tester) async {
