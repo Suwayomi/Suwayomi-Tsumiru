@@ -459,9 +459,10 @@ Future<int?> whileReadingDeleteTarget(
     return chapterIdToDeleteWhileReading(
         inReadingOrder, true, readChapterId, slots);
   } catch (e) {
-    // Expected when leaving the reader mid-await; anything else is a real
-    // failure that would otherwise look exactly like the bug this fixes.
-    logger.e('Offline: resolving the delete-while-reading target failed: $e');
+    // Leaving the reader mid-await lands here too, so this is a warning rather
+    // than an error — but it must be recorded, or a real failure looks exactly
+    // like the bug this fixes.
+    logger.w('Offline: resolving the delete-while-reading target failed: $e');
     return null;
   }
 }
@@ -490,10 +491,10 @@ Future<void> maybeDeleteOnReadLocal(
   final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
-  // Re-read: the wait above is unbounded, and the setting may have been turned
-  // off while it ran.
+  // The wait above is unbounded: a setting changed while it ran would leave
+  // targetId computed from a slot count that no longer applies.
   final now = ref.read(localDeleteSettingsProvider);
-  if (now.deleteWhileReading <= 0) return;
+  if (now.deleteWhileReading != s.deleteWhileReading) return;
   await _deleteDeviceCopyIfDeletable(ref, targetId, now.deleteWithBookmark);
 }
 
@@ -544,10 +545,11 @@ Future<void> maybeDeleteOnReadServer(
   final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
-  // Both waits above are unbounded; a stale snapshot must not delete a server
-  // copy the setting no longer covers.
-  final now = ref.read(deleteChaptersSettingsControllerProvider).value;
-  if (now == null || now.deleteWhileReading <= 0) return;
+  // Both waits above are unbounded, so re-resolve rather than reading .value —
+  // this controller autoDisposes and would come back as loading, reading null
+  // and cancelling a delete the setting still calls for.
+  final now = await _serverDeleteSettings(ref);
+  if (now == null || now.deleteWhileReading != s.deleteWhileReading) return;
   await _deleteServerCopyIfDeletable(
       ref, mangaId, targetId, now.deleteWithBookmark);
 }
