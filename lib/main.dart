@@ -23,6 +23,7 @@ import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
+import 'src/features/library/data/badge_preference_migration.dart';
 import 'src/features/migration/controller/bulk_migration_providers.dart';
 import 'src/features/notifications/controller/notifications_controller.dart';
 import 'src/features/notifications/data/background/notification_background_entry.dart';
@@ -202,6 +203,14 @@ Future<void> _startApp() async {
     }
   } catch (e, st) {
     debugPrint('request timeout migration failed: $e\n$st');
+  }
+
+  // 3.7) One-time: the badge revamp replaced three preference keys. Seed the
+  //    new ones from the old so an upgrade keeps the badges the user picked.
+  try {
+    await migrateBadgePreferences(sharedPreferences);
+  } catch (e, st) {
+    debugPrint('badge preference migration failed: $e\n$st');
   }
 
   // 4) Preload both auth providers BEFORE the first frame so synchronous reads

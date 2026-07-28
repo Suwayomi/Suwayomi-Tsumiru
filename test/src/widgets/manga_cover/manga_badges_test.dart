@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/data/badge_preference_migration.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -67,6 +68,7 @@ Future<void> _pumpBadges(
   Map<String, Object> prefs = const {},
   Fragment$MangaDto? manga,
   bool onDevice = true,
+  bool migrate = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     'onDeviceBadge': true,
@@ -77,6 +79,9 @@ Future<void> _pumpBadges(
     ...prefs,
   });
   final sp = await SharedPreferences.getInstance();
+  // Stand in for the boot-time upgrade path, so a test can seed the pre-revamp
+  // keys and assert on what the user ends up seeing.
+  if (migrate) await migrateBadgePreferences(sp);
   await tester.pumpWidget(ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(sp),
@@ -208,6 +213,25 @@ void main() {
       expect(find.byIcon(Icons.offline_pin_rounded), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('an upgrade keeps the badges the user had set', (tester) async {
+      // The point of the migration: what it writes is what the renderer reads.
+      // Pre-revamp keys in, the same cover out.
+      await _pumpBadges(
+        tester,
+        prefs: {
+          'unreadBadge': false,
+          'localBadge': true,
+          'sourceBadge': false,
+        },
+        migrate: true,
+        manga: _manga(lang: 'localsourcelang'),
+      );
+
+      expect(find.text('4'), findsNothing, reason: 'unread badge stayed off');
+      expect(find.byIcon(Icons.folder_rounded), findsOneWidget,
+          reason: 'the Local Source badge survived as the source badge');
     });
 
     testWidgets('nothing enabled renders nothing at all', (tester) async {
