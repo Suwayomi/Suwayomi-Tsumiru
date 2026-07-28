@@ -23,6 +23,10 @@ extension MangaExtensions on MangaDto {
   MangaMeta get metaData => MangaMeta.fromJson(
       {for (final metaItem in meta) metaItem.key: metaItem.value});
 
+  /// Chapters finished. The server reports the total and the unread count, not
+  /// this, so it has to be derived.
+  int get readChapterCount => chapters.totalCount - unreadCount;
+
   /// Whether this manga matches [query] under the library search DSL. Used by
   /// quick-search; the library list parses the query once instead (see
   /// applyLibraryFilterSort).
