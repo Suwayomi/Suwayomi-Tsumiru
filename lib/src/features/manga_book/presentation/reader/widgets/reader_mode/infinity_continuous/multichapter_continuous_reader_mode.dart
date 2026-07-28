@@ -434,6 +434,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final programmaticScroll = useRef<bool>(false);
     final lastAutoScrollTick = useRef<Duration>(Duration.zero);
     final autoScrollPausedUntil = useRef<Duration>(Duration.zero);
+    // True from the moment the strip starts moving under the reader until it
+    // comes to rest, so a touch landing mid-coast can be told from one landing
+    // on a still page. Start/end fire once per gesture, never per frame.
+    final stripInMotion = useRef<bool>(false);
     // Auto-scroll holds while the chrome is up and carries on when it goes,
     // rather than switching itself off; only the toggle ends it.
     final bool chromeVisible = ref.watch(readerChromeVisibleProvider) ?? false;
@@ -1151,7 +1155,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
         return false;
       },
-      child: positionedList,
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: (_) {
+          stripInMotion.value = false;
+          return false;
+        },
+        child: NotificationListener<ScrollStartNotification>(
+          onNotification: (_) {
+            if (!programmaticScroll.value) stripInMotion.value = true;
+            return false;
+          },
+          child: positionedList,
+        ),
+      ),
     );
 
     // Pinned at the scroll clamp a drag moves nothing, so the position
@@ -1220,6 +1236,20 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           )
         : edgeAwareList;
 
+    // A touch that lands while the strip is still coasting from the reader's
+    // own fling arrests it and nothing more; the chrome waits for the next tap.
+    // Pointer-down is the only moment the ballistic activity is still live —
+    // the drag that follows cancels it — so the answer is snapshotted here and
+    // read at tap time rather than watched throughout the scroll.
+    final flingAwareChild = Listener(
+      onPointerDown: (_) {
+        final arrests = stripInMotion.value && !programmaticScroll.value;
+        final gate = ref.read(readerTapArrestsFlingProvider.notifier);
+        if (gate.state != arrests) gate.state = arrests;
+      },
+      child: wheelAware,
+    );
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
@@ -1235,7 +1265,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               child: child,
             )
           : null,
-      wheelAware,
+      flingAwareChild,
     );
 
     return ReaderWrapper(

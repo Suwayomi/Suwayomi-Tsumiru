@@ -106,6 +106,13 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
+/// Whether the touch that is currently down landed while the strip was still
+/// coasting from the reader's own fling. Such a tap arrests the scroll and
+/// nothing else — the next one opens the chrome. The long strip snapshots this
+/// on pointer-down, mirroring Komikku's `tapDuringManualScroll`
+/// (`WebtoonRecyclerView.kt:72-75`, consumed at `:244-248`).
+final readerTapArrestsFlingProvider = StateProvider<bool>((ref) => false);
+
 /// Whether the reader chrome is on screen. Public so the long strip can hold
 /// auto-scroll while it is up.
 final readerChromeVisibleProvider =
@@ -626,8 +633,10 @@ class ReaderWrapper extends HookConsumerWidget {
                     child: Listener(
                       child: RepaintBoundary(
                         child: ReaderView(
-                          toggleVisibility: () =>
-                              visibility.value = !visibility.value,
+                          toggleVisibility: () {
+                            if (ref.read(readerTapArrestsFlingProvider)) return;
+                            visibility.value = !visibility.value;
+                          },
                           scrollDirection: scrollDirection,
                           mangaId: manga.id,
                           mangaReaderPadding: mangaReaderPadding.value,
