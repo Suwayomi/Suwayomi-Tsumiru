@@ -4,79 +4,113 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 
-ChapterDto _ch(int id, {bool isRead = false}) => Fragment$ChapterDto(
+ChapterDto _ch(
+  int id, {
+  required double number,
+  required int sourceOrder,
+  String? scanlator,
+  bool isRead = false,
+  bool isDownloaded = true,
+}) => Fragment$ChapterDto(
   id: id,
   mangaId: 1,
-  name: 'c$id',
-  chapterNumber: id.toDouble(),
-  sourceOrder: id,
+  name: 'c$number',
+  chapterNumber: number,
+  sourceOrder: sourceOrder,
+  scanlator: scanlator,
   isRead: isRead,
   isBookmarked: false,
-  isDownloaded: true,
+  isDownloaded: isDownloaded,
   lastPageRead: 0,
   pageCount: 10,
-  fetchedAt: '$id',
-  uploadDate: '$id',
+  fetchedAt: '0',
+  uploadDate: '0',
   lastReadAt: '0',
   url: '',
   meta: const <Fragment$ChapterDto$meta>[],
 );
 
-List<ChapterDto> _readingOrder(List<ChapterDto> chapters) =>
-    [...chapters]..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
+class _PreferAlpha extends MangaPreferredScanlators {
+  @override
+  List<String> build({required int mangaId}) => const ['Alpha'];
+}
+
+class _SlowChapterList extends MangaChapterList {
+  final gate = Completer<List<ChapterDto>?>();
+
+  @override
+  Future<List<ChapterDto>?> build({required int mangaId}) => gate.future;
+}
 
 void main() {
-  group('delete-while-reading targets reading order, not the visible list', () {
-    final library = [
-      _ch(1, isRead: true),
-      _ch(2, isRead: true),
-      _ch(3, isRead: true),
-      _ch(4),
-      _ch(5),
-    ];
+  testWidgets(
+    'the delete target is the chapter 2 back in reading order, whatever the '
+    'screen is showing and whichever scanlator was read',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      final slow = _SlowChapterList();
 
-    test('slot N targets N-1 chapters behind the one just read', () {
-      final order = _readingOrder(library);
-      expect(chapterIdToDeleteWhileReading(order, true, 3, 1), 3);
-      expect(chapterIdToDeleteWhileReading(order, true, 3, 2), 2);
-      expect(chapterIdToDeleteWhileReading(order, true, 3, 3), 1);
-    });
+      // Chapter 3 exists twice. The reader is on Bravo's copy, but Alpha is the
+      // preferred group, so dedup would drop id 33 unless it is pinned.
+      // Newest first, as the details screen would show it.
+      final chapters = [
+        _ch(4, number: 4, sourceOrder: 5, scanlator: 'Alpha'),
+        _ch(3, number: 3, sourceOrder: 4, scanlator: 'Alpha'),
+        _ch(
+          33,
+          number: 3,
+          sourceOrder: 3,
+          scanlator: 'Bravo',
+          isRead: true,
+          isDownloaded: false,
+        ),
+        _ch(2, number: 2, sourceOrder: 2, scanlator: 'Alpha', isRead: true),
+        _ch(1, number: 1, sourceOrder: 1, scanlator: 'Alpha', isRead: true),
+      ];
 
-    test('a newest-first screen makes no difference', () {
-      final asDisplayed = library.reversed.toList(growable: false);
+      late WidgetRef captured;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            mangaChapterListProvider(mangaId: 1).overrideWith(() => slow),
+            mangaPreferredScanlatorsProvider(
+              mangaId: 1,
+            ).overrideWith(() => _PreferAlpha()),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              captured = ref;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+
+      final pending = whileReadingDeleteTarget(captured, 1, 33, 2);
+      slow.gate.complete(chapters);
+      await tester.pump();
+
       expect(
-        chapterIdToDeleteWhileReading(_readingOrder(asDisplayed), true, 3, 2),
+        await pending,
         2,
-      );
-    });
-
-    test('read chapters stay in range, so every slot still resolves', () {
-      final order = _readingOrder(library);
-      for (var slots = 1; slots <= 3; slots++) {
-        expect(
-          chapterIdToDeleteWhileReading(order, true, 3, slots),
-          isNotNull,
-          reason: 'slot $slots must still find chapter 3 once it is read',
-        );
-      }
-    });
-
-    test('slots count chapters, never gaps left by a filtered-out chapter', () {
-      final everything = _readingOrder(library);
-      final asIfFiltered = [_ch(1, isRead: true), _ch(3, isRead: true), _ch(5)];
-      expect(chapterIdToDeleteWhileReading(everything, true, 3, 2), 2);
-      expect(
-        chapterIdToDeleteWhileReading(asIfFiltered, true, 3, 2),
-        1,
         reason:
-            'the old path counted positions in the visible list, which '
-            'skipped chapter 2 entirely',
+            'two slots back from chapter 3 is chapter 2, found even though '
+            'the list arrived late and dedup prefers the other group',
       );
-    });
-  });
+    },
+  );
 }

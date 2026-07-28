@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -424,7 +425,8 @@ Future<bool> recordReadState(
 /// Resolve the chapter to delete `slots` behind [readChapterId] in the manga's
 /// reading order (1 = the just-read chapter). Null if out of range or the list
 /// isn't loaded.
-Future<int?> _whileReadingTarget(
+@visibleForTesting
+Future<int?> whileReadingDeleteTarget(
     WidgetRef ref, int mangaId, int readChapterId, int slots) async {
   try {
     // Not the filtered/on-screen list: a filter can drop the just-read chapter
@@ -478,7 +480,7 @@ Future<void> maybeDeleteOnReadLocal(
   if (!ref.read(offlineActiveProvider)) return;
   final s = ref.read(localDeleteSettingsProvider);
   if (s.deleteWhileReading <= 0) return;
-  final targetId = await _whileReadingTarget(
+  final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
   await _deleteDeviceCopyIfDeletable(ref, targetId, s.deleteWithBookmark);
@@ -528,7 +530,7 @@ Future<void> maybeDeleteOnReadServer(
 }) async {
   final s = await _serverDeleteSettings(ref);
   if (s == null || s.deleteWhileReading <= 0) return;
-  final targetId = await _whileReadingTarget(
+  final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
   await _deleteServerCopyIfDeletable(
