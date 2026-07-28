@@ -60,3 +60,6 @@ class InfinityContinuousConfig {
   /// Interactive viewer max scale for pinch to zoom
   static const double maxZoomScale = 5.0;
 }
+
+/// Gap between pages in "Long strip with gaps".
+const double kLongStripPageGap = 16;

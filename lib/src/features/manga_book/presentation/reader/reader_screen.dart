@@ -36,7 +36,7 @@ import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
 import 'utils/flush_progress_on_lifecycle.dart';
 import 'widgets/chrome/reader_chrome.dart';
-import 'widgets/reader_mode/continuous_reader_mode.dart';
+import 'widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
 import 'widgets/reader_mode/multichapter_paged_reader_mode.dart';
 
 class ReaderScreen extends HookConsumerWidget {
@@ -388,17 +388,17 @@ class ReaderScreen extends HookConsumerWidget {
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.continuousVertical => ContinuousReaderMode(
+                        ReaderMode.continuousVertical => MultiChapterContinuousReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
-                            showSeparator: true,
+                            effectiveReaderMode: ReaderMode.continuousVertical,
                             showReaderLayoutAnimation:
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.webtoon => ContinuousReaderMode(
+                        ReaderMode.webtoon => MultiChapterContinuousReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
@@ -441,17 +441,18 @@ class ReaderScreen extends HookConsumerWidget {
                                 openAtEnd: openAtEnd,
                               ),
                             ReaderMode.continuousVertical =>
-                              ContinuousReaderMode(
+                              MultiChapterContinuousReaderMode(
                                 chapter: chapterData,
                                 manga: data,
                                 onPageChanged: onPageChanged,
-                                showSeparator: true,
+                                effectiveReaderMode:
+                                    ReaderMode.continuousVertical,
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
                               ),
-                            ReaderMode.webtoon || _ => ContinuousReaderMode(
+                            ReaderMode.webtoon || _ => MultiChapterContinuousReaderMode(
                                 chapter: chapterData,
                                 manga: data,
                                 onPageChanged: onPageChanged,

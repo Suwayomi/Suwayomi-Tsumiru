@@ -52,6 +52,8 @@ Future<void> _pumpDoublePage(
             rotateWideInvert: false,
             reversePair: reversePair,
             onPageWide: (_, __) {},
+            onNaturalSize: (_, __) {},
+            naturalSize: false,
           ),
         ),
       ),

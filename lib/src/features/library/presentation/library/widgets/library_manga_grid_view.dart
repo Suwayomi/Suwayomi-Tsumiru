@@ -119,11 +119,11 @@ class LibraryMangaSliver extends ConsumerWidget {
     // every tile. The user's column count, or Auto (width-based).
     SliverGridDelegate uniformDelegate({bool titleBelow = false}) =>
         fixedCols > 0
-            ? SliverGridDelegateWithFixedCrossAxisCount(
+            ? MangaCoverFixedCountGridDelegate(
                 crossAxisCount: fixedCols,
                 crossAxisSpacing: 2.0,
                 mainAxisSpacing: 2.0,
-                childAspectRatio: titleBelow ? 0.62 : 0.75,
+                titleExtent: titleBelow ? kGridTitleExtent : 0.0,
               )
             : mangaCoverGridDelegate(gridWidth, titleBelow: titleBelow);
 
@@ -260,7 +260,7 @@ class LibraryMangaSliver extends ConsumerWidget {
             showBadges: true,
             outlineOnCovers: outlineOnCovers,
             scale: listScale,
-            limitTitleLines: limitTitleLines,
+            titleMaxLines: limitTitleLines ? 2 : null,
           )),
         ),
       DisplayMode.grid => grid(),

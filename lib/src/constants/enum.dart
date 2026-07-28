@@ -52,12 +52,25 @@ enum ReaderMode {
 }
 
 enum ReaderNavigationLayout {
+  // Declaration order is the stored value — these persist by index, so this
+  // list is append-only. Use [displayOrder] for anything user-facing.
   defaultNavigation,
   lShaped,
   rightAndLeft,
   edge,
   kindlish,
   disabled;
+
+  /// Komikku's order (`ReaderPreferences.TapZones`), which differs from the
+  /// declaration order above.
+  static const List<ReaderNavigationLayout> displayOrder = [
+    ReaderNavigationLayout.defaultNavigation,
+    ReaderNavigationLayout.lShaped,
+    ReaderNavigationLayout.kindlish,
+    ReaderNavigationLayout.edge,
+    ReaderNavigationLayout.rightAndLeft,
+    ReaderNavigationLayout.disabled,
+  ];
 
   String toLocale(BuildContext context) => switch (this) {
         ReaderNavigationLayout.defaultNavigation =>
@@ -116,6 +129,15 @@ enum TapInvert {
   bool get invertsVertical =>
       this == TapInvert.vertical || this == TapInvert.both;
 
+  /// Swaps the left/right zones. Right-and-Left is a spatial layout, so a
+  /// right-to-left series has to mirror it: tapping the right edge goes back.
+  TapInvert get horizontallyFlipped => switch (this) {
+        TapInvert.none => TapInvert.horizontal,
+        TapInvert.horizontal => TapInvert.none,
+        TapInvert.vertical => TapInvert.both,
+        TapInvert.both => TapInvert.vertical,
+      };
+
   String toLocale(BuildContext context) => switch (this) {
         TapInvert.none => context.l10n.readerTapInvertNone,
         TapInvert.horizontal => context.l10n.readerTapInvertHorizontal,
@@ -149,9 +171,13 @@ enum ImageScaleType {
         ImageScaleType.stretch => (BoxFit.fill, Size(width, height)),
         ImageScaleType.fitWidth => (BoxFit.fitWidth, Size.fromWidth(width)),
         ImageScaleType.fitHeight => (BoxFit.fitHeight, Size.fromHeight(height)),
-        ImageScaleType.originalSize => (BoxFit.none, null),
+        ImageScaleType.originalSize => (BoxFit.contain, null),
         ImageScaleType.smartFit => (BoxFit.fitWidth, Size.fromWidth(width)),
       };
+
+  /// pagedFit above still returns BoxFit.contain; the zoom controller applies
+  /// the real 1:1 scale (Mihon: a minimum zoom level, not a fit mode).
+  bool get pagesAtNaturalSize => this == ImageScaleType.originalSize;
 }
 
 /// Paged zoom start position (default automatic).

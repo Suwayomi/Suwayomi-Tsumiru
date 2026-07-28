@@ -171,11 +171,32 @@
     "@readerForThisSeries": {
         "description": "Group heading for the per-manga override settings in the reader sheet"
     },
+    "@showTapZonesOverlay": {
+        "description": "Reader setting: flash the tap zones when a chapter opens"
+    },
+    "@showTapZonesOverlaySubtitle": {
+        "description": "Subtitle for the tap zones overlay setting"
+    },
+    "@readerGroupActions": {
+        "description": "Reader settings group heading for long-tap actions"
+    },
+    "@readerGroupDisplay": {
+        "description": "Reader settings group heading for display options"
+    },
+    "@readerGroupEInk": {
+        "description": "Reader settings group heading for E-Ink screen options"
+    },
+    "@readerGroupNavigation": {
+        "description": "Reader settings group heading for volume-key navigation"
+    },
+    "@readerGroupReading": {
+        "description": "Reader settings group heading for chapter-to-chapter reading options"
+    },
     "@readerGroupPagerViewer": {
-        "description": "Group heading for the global paged-viewer defaults in the reader sheet"
+        "description": "Group heading for the paged-reader settings, in both the reader sheet and Reader settings"
     },
     "@readerGroupWebtoonViewer": {
-        "description": "Group heading for the global long-strip-viewer defaults in the reader sheet"
+        "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
     },
     "@readerSectionPaged": {
         "description": "Heading for the paged-only reader settings section"
@@ -975,12 +996,6 @@
     "@readerLastPageSwipeToggleDescription": {
         "description": "Swipe to next chapter only at last page"
     },
-    "@readerInfinityScrollingMode": {
-        "description": "Switch title to toggle infinity scrolling mode in webtoon mode"
-    },
-    "@readerInfinityScrollingModeDescription": {
-        "description": "Switch tile description for infinity scrolling mode in webtoon mode"
-    },
     "@readerTapInvertBoth": {
         "description": "Tap-invert option - both axes"
     },
@@ -1398,8 +1413,15 @@
     "pageLayoutDoublePages": "Double pages",
     "pageLayoutSinglePage": "Single page",
     "readerForThisSeries": "For this series",
-    "readerGroupPagerViewer": "Pager viewer defaults",
-    "readerGroupWebtoonViewer": "Long strip viewer defaults",
+    "readerGroupActions": "Actions",
+    "showTapZonesOverlay": "Show tap zones overlay",
+    "showTapZonesOverlaySubtitle": "Briefly show when reader is opened",
+    "readerGroupDisplay": "Display",
+    "readerGroupEInk": "E-Ink",
+    "readerGroupNavigation": "Navigation",
+    "readerGroupPagerViewer": "Paged",
+    "readerGroupReading": "Reading",
+    "readerGroupWebtoonViewer": "Long strip",
     "readerSectionPaged": "Paged",
     "readerSectionReadingMode": "Reading mode",
     "readerSectionRotation": "Rotation",
@@ -2197,7 +2219,11 @@
     "quickSearch": "Quick Search",
     "reader": "Reader",
     "readerMagnifierSize": "Magnifier Size",
-    "readerMode": "Reading Mode",
+    "readerMouseScrollSpeed": "Mouse wheel scroll speed",
+    "@readerMouseScrollSpeed": {
+        "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+    },
+    "readerMode": "Reading mode",
     "readerModeChipDefault": "Default",
     "readerModeChipLegacyContinuous": "Continuous horizontal (legacy)",
     "readerModeChipLongStrip": "Long strip",
@@ -2205,19 +2231,19 @@
     "readerModeChipPagedLtr": "Paged (left to right)",
     "readerModeChipPagedRtl": "Paged (right to left)",
     "readerModeChipPagedVertical": "Paged (vertical)",
-    "readerModeContinuousHorizontalLTR": "Continuous Horizontal (LTR)",
-    "readerModeContinuousHorizontalRTL": "Continuous Horizontal (RTL)",
-    "readerModeContinuousVertical": "Continuous Vertical",
+    "readerModeContinuousHorizontalLTR": "Continuous horizontal (LTR, legacy)",
+    "readerModeContinuousHorizontalRTL": "Continuous horizontal (RTL, legacy)",
+    "readerModeContinuousVertical": "Long strip with gaps",
     "readerModeDefaultReader": "Default",
-    "readerModeSingleHorizontalLTR": "Single Horizontal (LTR)",
-    "readerModeSingleHorizontalRTL": "Single Horizontal (RTL)",
-    "readerModeSingleVertical": "Single Vertical",
-    "readerModeWebtoon": "Webtoon",
-    "readerNavigationLayout": "Navigation layout",
+    "readerModeSingleHorizontalLTR": "Paged (left to right)",
+    "readerModeSingleHorizontalRTL": "Paged (right to left)",
+    "readerModeSingleVertical": "Paged (vertical)",
+    "readerModeWebtoon": "Long strip",
+    "readerNavigationLayout": "Tap zones",
     "readerNavigationLayoutDefault": "Default",
     "readerNavigationLayoutDisabled": "Disabled",
     "readerNavigationLayoutEdge": "Edge",
-    "readerNavigationLayoutInvert": "Invert tapping",
+    "readerNavigationLayoutInvert": "Invert tap zones",
     "readerNavigationLayoutKindlish": "Kindle-ish",
     "readerNavigationLayoutLShaped": "L Shaped",
     "readerNavigationLayoutRightAndLeft": "Right And Left",
@@ -2238,8 +2264,6 @@
     "readerSwipeChapterToggleDescription": "Swipe to change chapter in reader",
     "readerLastPageSwipeToggle": "Last page swipe",
     "readerLastPageSwipeToggleDescription": "Swipe to next chapter only at last page",
-    "readerInfinityScrollingMode": "Infinity Scrolling Mode",
-    "readerInfinityScrollingModeDescription": "Automatically load the next or previous chapter when scrolling reaches the end of a chapter.",
     "chapterSeparator": "Chapter separator",
     "lastChapterNotification": "This is the last chapter",
     "firstChapterNotification": "This is the first chapter",

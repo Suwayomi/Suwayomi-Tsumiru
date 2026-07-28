@@ -199,7 +199,7 @@ class SetCategoriesOnAddDialog extends HookWidget {
         TextButton(
           onPressed: () {
             Navigator.pop(context);
-            const EditCategoriesRoute().go(context);
+            const EditCategoriesRoute().push(context);
           },
           child: Text(context.l10n.edit),
         ),

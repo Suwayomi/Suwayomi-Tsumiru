@@ -14,8 +14,4 @@ enum HistoryMenuAction {
   String toLocale(BuildContext context) => switch (this) {
         HistoryMenuAction.viewManga => context.l10n.viewManga,
       };
-
-  IconData get icon => switch (this) {
-        HistoryMenuAction.viewManga => Icons.book,
-      };
 }

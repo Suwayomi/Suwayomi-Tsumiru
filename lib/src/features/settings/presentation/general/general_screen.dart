@@ -13,6 +13,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
@@ -58,7 +59,10 @@ class GeneralScreen extends ConsumerWidget {
               }
             },
           ),
-          const QuickSearchToggleTile(),
+          // A keyboard shortcut is the only way to open quick search, so on a
+          // touch device this switch turned on something unreachable. Same
+          // gate the Keyboard shortcuts entry already uses.
+          if (isKeyboardRuntime) const QuickSearchToggleTile(),
           const ForcePortraitTile(),
           const TimeoutSettingsSection(),
         ],

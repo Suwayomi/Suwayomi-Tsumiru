@@ -14,6 +14,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/
 import '../../../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../controller/reader_mode_adapter.dart';
+import '../../../utils/reader_mode_kind.dart';
 import '../../../controller/reader_settings_model.dart';
 import 'int_slider_tile.dart';
 
@@ -54,11 +55,13 @@ class ReadingModeTab extends ConsumerWidget {
     // The stored mode's chip; null for the legacy continuous-horizontal
     // orphans, which get their own honest extra chip (§2.5).
     final storedChip = ReaderModeAdapter.toChip(settings.readerMode);
-    final resolvedNav =
-        settings.navigationLayout == ReaderNavigationLayout.defaultNavigation
-            ? (ref.watch(readerNavigationLayoutKeyProvider) ??
-                ReaderNavigationLayout.defaultNavigation)
-            : settings.navigationLayout;
+    // Through the shared resolver, so the sheet can't disagree with the reader
+    // about whether zones are on for this mode.
+    final resolvedNav = effectiveNavigationLayout(
+      ref,
+      mode: resolvedMode,
+      seriesOverride: settings.navigationLayout,
+    );
 
     // I7: own scroll view; never the sheet's controller.
     return ListView(
@@ -108,7 +111,7 @@ class ReadingModeTab extends ConsumerWidget {
         _SectionLabel(context.l10n.readerSectionTapZones),
         _ChipRow(
           children: [
-            for (final layout in ReaderNavigationLayout.values)
+            for (final layout in ReaderNavigationLayout.displayOrder)
               FilterChip(
                 selected: settings.navigationLayout == layout,
                 showCheckmark: false,
@@ -295,20 +298,26 @@ class _PagedSection extends ConsumerWidget {
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
-          value: settings.doubleTapToZoom,
-          onChanged: model.setDoubleTapToZoom,
+          value: settings.pagedDoubleTapToZoom,
+          onChanged: model.setPagedDoubleTapToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
-          value: settings.pinchToZoom,
-          onChanged: model.setPinchToZoom,
+          value: settings.pagedPinchToZoom,
+          onChanged: model.setPagedPinchToZoom,
+        ),
+        SwitchListTile(
+          controlAffinity: ListTileControlAffinity.trailing,
+          title: Text(context.l10n.disableZoomIn),
+          value: settings.disableZoomIn,
+          onChanged: model.setDisableZoomIn,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
-          value: settings.disableZoomOut,
-          onChanged: model.setDisableZoomOut,
+          value: settings.pagedDisableZoomOut,
+          onChanged: model.setPagedDisableZoomOut,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
@@ -400,20 +409,20 @@ class _LongStripSection extends ConsumerWidget {
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),
-          value: settings.doubleTapToZoom,
-          onChanged: model.setDoubleTapToZoom,
+          value: settings.longStripDoubleTapToZoom,
+          onChanged: model.setLongStripDoubleTapToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.pinchToZoom),
-          value: settings.pinchToZoom,
-          onChanged: model.setPinchToZoom,
+          value: settings.longStripPinchToZoom,
+          onChanged: model.setLongStripPinchToZoom,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.disableZoomOut),
-          value: settings.disableZoomOut,
-          onChanged: model.setDisableZoomOut,
+          value: settings.longStripDisableZoomOut,
+          onChanged: model.setLongStripDisableZoomOut,
         ),
         // Webtoon split-wide hidden: splitting one strip page into two entries
         // needs a page-list remap in the frozen webtoon engine; see reader.md.

@@ -30,7 +30,7 @@ class ServerUnreachableBanner extends ConsumerWidget {
       leading: const Icon(Icons.cloud_off_rounded),
       actions: [
         TextButton(
-          onPressed: () => const ConnectionRoute().go(context),
+          onPressed: () => const ConnectionRoute().push(context),
           child: Text(context.l10n.serverUnreachableAction),
         ),
       ],

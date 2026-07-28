@@ -149,8 +149,10 @@ void main() {
   testWidgets(
       'zoom toggles: webtoon-resolved mode shows the 3 long-strip switches',
       (tester) async {
-    // No meta: stored mode is Default, which dereferences to webtoon.
-    await pumpHost(tester);
+    // Ask for webtoon explicitly. Leaving this to the stored default used to
+    // work when that default was webtoon; it is RTL now, so no-meta lands on
+    // the paged section and this silently stopped testing long strip.
+    await pumpHost(tester, meta: {'flutter_readerMode': 'webtoon'});
     await openSheet(tester);
 
     await tester.scrollUntilVisible(
@@ -165,7 +167,7 @@ void main() {
     expect(find.text('Disable zoom in'), findsNothing);
   });
 
-  testWidgets('zoom toggles: paged mode shows the same zoom trio',
+  testWidgets('zoom toggles: paged mode adds the zoom-in cap to the trio',
       (tester) async {
     await pumpHost(tester, meta: {'flutter_readerMode': 'singleHorizontalRTL'});
     await openSheet(tester);
@@ -179,7 +181,7 @@ void main() {
     expect(find.text('Double tap to zoom'), findsOneWidget);
     expect(find.text('Pinch to Zoom'), findsOneWidget);
     expect(find.text('Disable zoom out'), findsOneWidget);
-    expect(find.text('Disable zoom in'), findsNothing);
+    expect(find.text('Disable zoom in'), findsOneWidget);
   });
 
   testWidgets(

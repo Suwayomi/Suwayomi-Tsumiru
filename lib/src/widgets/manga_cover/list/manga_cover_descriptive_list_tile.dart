@@ -31,7 +31,7 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
     this.belowStatus,
     this.outlineOnCovers = false,
     this.scale = 1.0,
-    this.limitTitleLines = true,
+    this.titleMaxLines = 2,
   });
   final MangaDto manga;
   final bool showBadges;
@@ -55,9 +55,9 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
   /// text through a [MediaQuery] textScaler so the row grows as one unit.
   final double scale;
 
-  /// Cap the title at two ellipsized lines. Off lets it wrap in full, which
-  /// only shows if the caller also lets the row grow.
-  final bool limitTitleLines;
+  /// Null lets the title wrap to its full length, which is what the details
+  /// screen wants (Mihon caps it nowhere). List rows keep 2 so they stay even.
+  final int? titleMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -69,13 +69,13 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
         onTap: onPressed,
         onLongPress: onLongPress,
         child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(kListTilePadding),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: 120 * scale,
-              height: 160 * scale,
+              width: kDescriptiveCoverWidth * scale,
+              height: mangaCoverBoxHeight(kDescriptiveCoverWidth * scale),
               child: MangaCoverGridTile(
                 manga: manga,
                 showBadges: false,
@@ -103,10 +103,10 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                         manga.title,
                         style: context.textTheme.titleLarge,
                         softWrap: true,
-                        overflow: limitTitleLines
-                            ? TextOverflow.ellipsis
-                            : TextOverflow.clip,
-                        maxLines: limitTitleLines ? 2 : null,
+                        overflow: titleMaxLines == null
+                            ? TextOverflow.clip
+                            : TextOverflow.ellipsis,
+                        maxLines: titleMaxLines,
                         semanticsLabel: manga.title,
                       ),
                     ),

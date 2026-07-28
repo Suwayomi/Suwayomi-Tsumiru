@@ -30,12 +30,17 @@ enum DBKeys {
   readerMode(ReaderMode.singleHorizontalRTL),
   readerPadding(0.0),
   readerMagnifierSize(1.0),
-  readerNavigationLayout(ReaderNavigationLayout.disabled),
+  // Desktop mouse wheel. Flutter's Linux embedder moves 53px per notch, which
+  // reads slower than the browser WebUI runs in; 1.7 lines them up.
+  readerMouseScrollSpeed(1.7),
+  // Migration source for the per-viewer keys below only; nothing reads this
+  // directly. Default changed from disabled to defaultNavigation to match
+  // Komikku's tap zones on by default.
+  readerNavigationLayout(ReaderNavigationLayout.defaultNavigation),
   invertTap(false),
   quickSearchToggle(true),
   swipeToggle(true),
   lastPageSwipeEnabled(false),
-  infinityScrollingMode(true),
   scrollAnimation(true),
   showNSFW(true),
   showRecommendations(true),
@@ -217,6 +222,16 @@ enum DBKeys {
   disableZoomOut(false),
   // Paged "Disable zoom in": turns off the paged viewer's zoom wrapper.
   disableZoomIn(false),
+  // Per-viewer zoom toggles. Paged and long strip each had their own switch in
+  // the reader sheet while sharing one stored value, so changing one changed
+  // the other. The three keys above are kept as the migration source: a viewer
+  // key that has never been written falls back to the old global value.
+  pagedDoubleTapToZoom(true),
+  pagedPinchToZoom(true),
+  pagedDisableZoomOut(false),
+  longStripDoubleTapToZoom(true),
+  longStripPinchToZoom(true),
+  longStripDisableZoomOut(false),
   // Auto Webtoon Mode: series whose tags/source say
   // long-strip read in webtoon mode when their per-series mode is Default.
   autoWebtoonMode(true),
@@ -237,6 +252,16 @@ enum DBKeys {
   cropBorders(false),
   // Shared by the paged and long-strip sections.
   smallerTapZones(false),
+  // Per-viewer tap zones, seeded from the single keys above on upgrade.
+  pagedNavigationLayout(ReaderNavigationLayout.defaultNavigation),
+  longStripNavigationLayout(ReaderNavigationLayout.defaultNavigation),
+  pagedTapInvert(TapInvert.none),
+  longStripTapInvert(TapInvert.none),
+  // Off by default, matching Komikku.
+  showTapZonesOverlay(false),
+  // One free look for someone who has never seen the zones (Komikku's
+  // showNavigationOverlayNewUser), then it turns itself off.
+  tapZonesOverlayUnseen(true),
   animatePageTransitions(true),
   // Wide-page handling. Split needs
   // page-list remapping, so it persists here and the engine wires it later;

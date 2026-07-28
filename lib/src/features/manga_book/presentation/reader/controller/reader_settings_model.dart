@@ -83,7 +83,9 @@ abstract final class ReaderSettings {
     fallback: TapInvert.none,
   );
 
-  // Zoom toggles are global reader prefs — no per-series meta.
+  // Migration source only. No reader reads these three any more — each viewer
+  // has its own below. They survive so an upgrade can seed the new keys; wire
+  // a new switch to the paged*/longStrip* pair, never to these.
   static final pinchToZoom = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: pinchToZoomProvider,
@@ -106,6 +108,43 @@ abstract final class ReaderSettings {
     scope: ReaderSettingScope.global,
     global: disableZoomInProvider,
     fallback: DBKeys.disableZoomIn.initial as bool,
+  );
+
+  // Per-viewer zoom toggles: paged and long strip each own their value.
+  static final pagedPinchToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: pagedPinchToZoomProvider,
+    fallback: DBKeys.pagedPinchToZoom.initial as bool,
+  );
+
+  static final pagedDoubleTapToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: pagedDoubleTapToZoomProvider,
+    fallback: DBKeys.pagedDoubleTapToZoom.initial as bool,
+  );
+
+  static final pagedDisableZoomOut = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: pagedDisableZoomOutProvider,
+    fallback: DBKeys.pagedDisableZoomOut.initial as bool,
+  );
+
+  static final longStripPinchToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: longStripPinchToZoomProvider,
+    fallback: DBKeys.longStripPinchToZoom.initial as bool,
+  );
+
+  static final longStripDoubleTapToZoom = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: longStripDoubleTapToZoomProvider,
+    fallback: DBKeys.longStripDoubleTapToZoom.initial as bool,
+  );
+
+  static final longStripDisableZoomOut = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: longStripDisableZoomOutProvider,
+    fallback: DBKeys.longStripDisableZoomOut.initial as bool,
   );
 
   // Paged parity prefs — all global.
@@ -381,6 +420,12 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required bool doubleTapToZoom,
     required bool disableZoomOut,
     required bool disableZoomIn,
+    required bool pagedPinchToZoom,
+    required bool pagedDoubleTapToZoom,
+    required bool pagedDisableZoomOut,
+    required bool longStripPinchToZoom,
+    required bool longStripDoubleTapToZoom,
+    required bool longStripDisableZoomOut,
     required ImageScaleType imageScaleType,
     required ZoomStart zoomStart,
     required PageLayout pageLayout,
@@ -436,6 +481,12 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late DoubleTapToZoom _doubleTapToZoom;
   late DisableZoomOut _disableZoomOut;
   late DisableZoomIn _disableZoomIn;
+  late PagedPinchToZoom _pagedPinchToZoom;
+  late PagedDoubleTapToZoom _pagedDoubleTapToZoom;
+  late PagedDisableZoomOut _pagedDisableZoomOut;
+  late LongStripPinchToZoom _longStripPinchToZoom;
+  late LongStripDoubleTapToZoom _longStripDoubleTapToZoom;
+  late LongStripDisableZoomOut _longStripDisableZoomOut;
   late ImageScaleTypeKey _imageScaleType;
   late ZoomStartKey _zoomStart;
   late PageLayoutKey _pageLayout;
@@ -492,6 +543,14 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _doubleTapToZoom = ref.read(doubleTapToZoomProvider.notifier);
     _disableZoomOut = ref.read(disableZoomOutProvider.notifier);
     _disableZoomIn = ref.read(disableZoomInProvider.notifier);
+    _pagedPinchToZoom = ref.read(pagedPinchToZoomProvider.notifier);
+    _pagedDoubleTapToZoom = ref.read(pagedDoubleTapToZoomProvider.notifier);
+    _pagedDisableZoomOut = ref.read(pagedDisableZoomOutProvider.notifier);
+    _longStripPinchToZoom = ref.read(longStripPinchToZoomProvider.notifier);
+    _longStripDoubleTapToZoom =
+        ref.read(longStripDoubleTapToZoomProvider.notifier);
+    _longStripDisableZoomOut =
+        ref.read(longStripDisableZoomOutProvider.notifier);
     _imageScaleType = ref.read(imageScaleTypeKeyProvider.notifier);
     _zoomStart = ref.read(zoomStartKeyProvider.notifier);
     _pageLayout = ref.read(pageLayoutKeyProvider.notifier);
@@ -563,6 +622,18 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       doubleTapToZoom: ReaderSettings.doubleTapToZoom.resolveWith(ref, null),
       disableZoomOut: ReaderSettings.disableZoomOut.resolveWith(ref, null),
       disableZoomIn: ReaderSettings.disableZoomIn.resolveWith(ref, null),
+      pagedPinchToZoom:
+          ReaderSettings.pagedPinchToZoom.resolveWith(ref, null),
+      pagedDoubleTapToZoom:
+          ReaderSettings.pagedDoubleTapToZoom.resolveWith(ref, null),
+      pagedDisableZoomOut:
+          ReaderSettings.pagedDisableZoomOut.resolveWith(ref, null),
+      longStripPinchToZoom:
+          ReaderSettings.longStripPinchToZoom.resolveWith(ref, null),
+      longStripDoubleTapToZoom:
+          ReaderSettings.longStripDoubleTapToZoom.resolveWith(ref, null),
+      longStripDisableZoomOut:
+          ReaderSettings.longStripDisableZoomOut.resolveWith(ref, null),
       imageScaleType: ReaderSettings.imageScaleType.resolveWith(ref, null),
       zoomStart: ReaderSettings.zoomStart.resolveWith(ref, null),
       pageLayout: ReaderSettings.pageLayout.resolveWith(ref, null),
@@ -634,6 +705,23 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   void setDisableZoomOut(bool value) => _disableZoomOut.update(value);
 
   void setDisableZoomIn(bool value) => _disableZoomIn.update(value);
+
+  void setPagedPinchToZoom(bool value) => _pagedPinchToZoom.update(value);
+
+  void setPagedDoubleTapToZoom(bool value) =>
+      _pagedDoubleTapToZoom.update(value);
+
+  void setPagedDisableZoomOut(bool value) =>
+      _pagedDisableZoomOut.update(value);
+
+  void setLongStripPinchToZoom(bool value) =>
+      _longStripPinchToZoom.update(value);
+
+  void setLongStripDoubleTapToZoom(bool value) =>
+      _longStripDoubleTapToZoom.update(value);
+
+  void setLongStripDisableZoomOut(bool value) =>
+      _longStripDisableZoomOut.update(value);
 
   // Parity prefs are global too.
   void setImageScaleType(ImageScaleType value) => _imageScaleType.update(value);
@@ -750,6 +838,10 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     );
   }
 
+  /// The sheet only ever writes per-series. The global branch still targets the
+  /// pre-split key, which no reader consults — wire any future "apply to all"
+  /// control to the paged/long-strip keys instead, or it will silently do
+  /// nothing.
   Future<void> setNavigationLayout(
     ReaderNavigationLayout layout, {
     bool perSeries = true,

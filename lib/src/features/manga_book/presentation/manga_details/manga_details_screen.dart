@@ -337,13 +337,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 PopupMenuItem(
                                   onTap: () =>
                                       startMigration(context, mangaId, data),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.swap_horiz_rounded),
-                                      const SizedBox(width: 8),
-                                      Text(context.l10n.migrate),
-                                    ],
-                                  ),
+                                  child: Text(context.l10n.migrate),
                                 ),
                                 PopupMenuItem(
                                   onTap: () => refresh(true),
@@ -366,6 +360,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     },
                   ),
                 ),
+          // Edge-drag would open this on phones, where the organizer is a
+          // bottom sheet instead — and it eats the system back gesture.
+          endDrawerEnableOpenDragGesture: false,
           endDrawer: Drawer(
             shape: const RoundedRectangleBorder(),
             width: kDrawerWidth,

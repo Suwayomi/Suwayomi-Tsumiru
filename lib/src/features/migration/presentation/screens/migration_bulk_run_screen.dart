@@ -386,7 +386,7 @@ class _ResultCard extends StatelessWidget {
       case BulkEntryPhase.queued:
       case BulkEntryPhase.searching:
         return const AspectRatio(
-          aspectRatio: 0.7,
+          aspectRatio: kMangaCoverAspectRatio,
           child: Center(child: CircularProgressIndicator()),
         );
       case BulkEntryPhase.noMatch:
@@ -394,7 +394,7 @@ class _ResultCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 0.7,
+              aspectRatio: kMangaCoverAspectRatio,
               child: Container(
                 decoration: BoxDecoration(
                   color: context.theme.colorScheme.surfaceContainerHighest,
@@ -450,7 +450,7 @@ class _MangaCard extends StatelessWidget {
           child: Stack(
             children: [
               AspectRatio(
-                aspectRatio: 0.7,
+                aspectRatio: kMangaCoverAspectRatio,
                 child: SizedBox.expand(
                   child: ServerImage(
                     imageUrl: thumbnailUrl ?? '',

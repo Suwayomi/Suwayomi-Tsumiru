@@ -65,7 +65,11 @@ class MangaCoverListTile extends StatelessWidget {
               borderRadius: KBorderRadius.r8.radius,
               child: ServerImage(
                 imageUrl: manga.thumbnailUrl ?? "",
-                size: Size(60 * scale, 80 * scale),
+                size: Size(
+                  kCompactCoverWidth * scale,
+                  mangaCoverBoxHeight(kCompactCoverWidth * scale,
+                      coverInset: 0),
+                ),
               ),
             ),
           ),

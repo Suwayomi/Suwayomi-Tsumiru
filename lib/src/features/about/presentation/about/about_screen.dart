@@ -117,9 +117,9 @@ class AboutScreen extends HookConsumerWidget {
     final toast = ref.watch(toastProvider);
     final aboutAsync = ref.watch(aboutProvider);
     final about = aboutAsync.value;
-    final serverVer = about?.buildType == "Stable"
-        ? about?.version
-        : "${about?.version}-${about?.revision}";
+    // revision is deprecated server-side: the version already carries it as the
+    // patch number, so appending it printed the build number twice.
+    final serverVer = about?.version;
     final packageInfo = ref.watch(packageInfoProvider);
 
     useEffect(() {

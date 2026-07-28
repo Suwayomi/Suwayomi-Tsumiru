@@ -214,7 +214,8 @@ void main() {
     expect(find.text('Double tap to zoom'), findsOneWidget);
     expect(find.text('Pinch to Zoom'), findsOneWidget);
     expect(find.text('Disable zoom out'), findsOneWidget);
-    expect(find.text('Disable zoom in'), findsNothing);
+    // Paged-only: long strip has no zoom-in cap.
+    expect(find.text('Disable zoom in'), findsOneWidget);
     expect(find.text('Smart scale on wide screen'), findsNothing);
     expect(find.text('Smooth Auto Scroll'), findsNothing);
   });

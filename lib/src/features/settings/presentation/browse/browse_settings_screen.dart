@@ -94,7 +94,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           ? context.l10n.extensionStoresDescription
                           : context.l10n.nStores(storeCount),
                     ),
-                    onTap: () => const ExtensionStoreRoute().go(context),
+                    onTap: () => const ExtensionStoreRoute().push(context),
                   )
                 else
                   ListTile(

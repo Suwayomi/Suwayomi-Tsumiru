@@ -8,7 +8,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -19,6 +21,8 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
+import '../../../../../../../utils/platform/platform_runtime.dart';
+import '../../mouse_wheel_speed.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
 import '../../../../../../history/presentation/history_controller.dart';
@@ -26,6 +30,8 @@ import '../../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../../offline/data/offline_repository.dart';
 import '../../../../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
@@ -118,12 +124,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // live so toggling the setting applies without reopening the reader.
     bool readerToastsEnabled() =>
         ref.read(readerFeedbackToastsProvider).ifNull(true);
-    final ItemScrollController itemScrollController =
-        useMemoized(() => ItemScrollController());
-    final ItemPositionsListener positionsListener =
-        useMemoized(() => ItemPositionsListener.create());
-    final ScrollOffsetController scrollOffsetController =
-        useMemoized(() => ScrollOffsetController());
+    final ItemScrollController itemScrollController = useMemoized(
+      () => ItemScrollController(),
+    );
+    final ItemPositionsListener positionsListener = useMemoized(
+      () => ItemPositionsListener.create(),
+    );
+    final ScrollOffsetController scrollOffsetController = useMemoized(
+      () => ScrollOffsetController(),
+    );
     final ScrollController zoomScrollController = useMemoized(
       () => ScrollOffsetToScrollController(
         scrollOffsetController: scrollOffsetController,
@@ -252,16 +261,34 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       // Online-only users have no dirty row to retry, so a failed push would
       // vanish — surface it instead of losing progress silently.
       if (progressResult.hasError) {
-        ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+        ref
+            .read(toastProvider)
+            ?.showError(context.l10n.errorSomethingWentWrong);
       }
       if (completed && !completedChapterIds.value.contains(chapterId)) {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
-        unawaited(maybeTrackProgressOnReadFetch(ref,
-            mangaId: manga.id, isRead: true, manual: false));
-        unawaited(maybeDeleteOnReadLocal(ref,
-            mangaId: manga.id, readChapterId: chapterId));
-        unawaited(maybeDeleteOnReadServer(ref,
-            mangaId: manga.id, readChapterId: chapterId));
+        unawaited(
+          maybeTrackProgressOnReadFetch(
+            ref,
+            mangaId: manga.id,
+            isRead: true,
+            manual: false,
+          ),
+        );
+        unawaited(
+          maybeDeleteOnReadLocal(
+            ref,
+            mangaId: manga.id,
+            readChapterId: chapterId,
+          ),
+        );
+        unawaited(
+          maybeDeleteOnReadServer(
+            ref,
+            mangaId: manga.id,
+            readChapterId: chapterId,
+          ),
+        );
       }
       // Fired off a scroll/visibility notification — defer past the frame or
       // it trips the Riverpod-3 modify-during-build assert.
@@ -297,7 +324,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         return null;
       }
       scheduleVisibleProgress(
-          currentVisibleChapter.value.id, currentChapterPageIndex.value);
+        currentVisibleChapter.value.id,
+        currentChapterPageIndex.value,
+      );
       return null;
     }, [currentChapterPageIndex.value, currentVisibleChapter.value.id]);
 
@@ -308,8 +337,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // catalog (left dirty, so it up-syncs on reconnect) instead of the
     // ref-dependent recordReadingProgress path.
     final offlineEnabledForFlush = ref.read(offlineEnabledProvider);
-    final offlineDbForFlush =
-        offlineEnabledForFlush ? ref.read(offlineDatabaseProvider) : null;
+    final offlineDbForFlush = offlineEnabledForFlush
+        ? ref.read(offlineDatabaseProvider)
+        : null;
     final incognitoForFlush = ref.read(incognitoModeProvider);
     useEffect(() {
       return () {
@@ -326,12 +356,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         final lc = loadedById(p.chapterId);
         final pageCount = lc?.pages.pages.length ?? 0;
         final isCompletion = pageCount > 0 && p.rel >= pageCount - 1;
-        unawaited(offlineDbForFlush
-            .setChapterProgress(p.chapterId,
+        unawaited(
+          offlineDbForFlush
+              .setChapterProgress(
+                p.chapterId,
                 lastPageRead: isCompletion ? 0 : p.rel,
                 // Never un-read on a teardown flush: only a completion marks read.
-                isRead: isCompletion ? true : null)
-            .catchError((_) {}));
+                isRead: isCompletion ? true : null,
+              )
+              .catchError((_) {}),
+        );
       };
     }, const []);
 
@@ -346,28 +380,42 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       await writeVisibleProgress(p.chapterId, p.rel);
     });
 
-    final bool isAnimationEnabled =
-        ref.watch(readerScrollAnimationProvider).ifNull(true);
-    final bool isPinchToZoomEnabled =
-        ref.watch(pinchToZoomProvider).ifNull(true);
-    final bool isDoubleTapZoomEnabled =
-        ref.watch(doubleTapToZoomProvider).ifNull(true);
-    final bool isZoomOutDisabled = ref.watch(disableZoomOutProvider).ifNull();
+    final bool isAnimationEnabled = ref
+        .watch(readerScrollAnimationProvider)
+        .ifNull(true);
+    final bool isPinchToZoomEnabled = ref
+        .watch(longStripPinchToZoomProvider)
+        .ifNull(true);
+    final bool isDoubleTapZoomEnabled = ref
+        .watch(longStripDoubleTapToZoomProvider)
+        .ifNull(true);
+    final bool isZoomOutDisabled = ref
+        .watch(longStripDisableZoomOutProvider)
+        .ifNull();
     // Auto-crop borders. Render-only: the crop
     // provider's async decode is handled by the imageBuilder's frameBuilder
     // below, which still reserves placeholderHeight and measures the cropped
     // strip — the scroll/height math is untouched.
     final bool cropBorders = ref.watch(cropBordersWebtoonProvider).ifNull();
+    final bool alwaysShowTransition =
+        ref.watch(alwaysShowChapterTransitionProvider).ifNull(true);
+    // Smart scale caps the strip width on wide screens. Render-only, and the
+    // decode size follows it so a capped strip isn't decoded at full width.
+    final WebtoonScaleType scaleType =
+        ref.watch(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen;
+    final double maxContentWidth =
+        scaleType.maxContentWidth(context.width, context.height);
     final ReaderScrollAmount scrollAmount =
         ref.watch(readerScrollAmountKeyProvider) ??
-            DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
+        DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
 
     final bool autoScrollActive = ref.watch(autoScrollActiveProvider);
-    final bool smoothAutoScroll = ref.watch(smoothAutoScrollProvider) ??
+    final bool smoothAutoScroll =
+        ref.watch(smoothAutoScrollProvider) ??
         DBKeys.smoothAutoScroll.initial as bool;
     final int autoScrollIntervalSeconds =
         ref.watch(autoScrollIntervalSecondsProvider) ??
-            DBKeys.autoScrollIntervalSeconds.initial as int;
+        DBKeys.autoScrollIntervalSeconds.initial as int;
     // Set around every auto-scroll-driven jump so the manual-scroll listener
     // (below) doesn't mistake the engine's own motion for the user grabbing
     // the strip and stop itself.
@@ -385,13 +433,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final stream = provider.resolve(ImageConfiguration.empty);
       final completer = Completer<ImageInfo>();
       late final ImageStreamListener listener;
-      listener = ImageStreamListener((info, _) {
-        if (!completer.isCompleted) completer.complete(info);
-        stream.removeListener(listener);
-      }, onError: (e, st) {
-        if (!completer.isCompleted) completer.completeError(e);
-        stream.removeListener(listener);
-      });
+      listener = ImageStreamListener(
+        (info, _) {
+          if (!completer.isCompleted) completer.complete(info);
+          stream.removeListener(listener);
+        },
+        onError: (e, st) {
+          if (!completer.isCompleted) completer.completeError(e);
+          stream.removeListener(listener);
+        },
+      );
       stream.addListener(listener);
       final info = await completer.future;
       final w = info.image.width;
@@ -478,7 +529,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       try {
         if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showLoadingNextChapterFeedback(
-              context, next.name);
+            context,
+            next.name,
+          );
         }
         // Hold a subscription for the whole fetch: chapterPages is autoDispose
         // and nothing else listens to the NEIGHBOUR chapter's instance, so
@@ -487,9 +540,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // timeout releases the loading guard; the held fetch finishes and
         // caches for the next attempt.
         final sub = ref.listenManual(
-            chapterPagesProvider(chapterId: next.id), (_, __) {});
-        final fetch =
-            ref.read(chapterPagesProvider(chapterId: next.id).future);
+          chapterPagesProvider(chapterId: next.id),
+          (_, __) {},
+        );
+        final fetch = ref.read(chapterPagesProvider(chapterId: next.id).future);
         // Release the hold when the FETCH ends, not when the timeout fires —
         // a late result must still land in the cache for the next attempt.
         fetch.whenComplete(sub.close).ignore();
@@ -513,7 +567,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         prefetchPagesFrom(currentGlobalIndex());
         if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showNextChapterLoadedFeedback(
-              context, next.name);
+            context,
+            next.name,
+          );
         }
       } catch (_) {
         // Transient failure — leave unlatched and refetchable so the next
@@ -531,13 +587,16 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       try {
         if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showLoadingPreviousChapterFeedback(
-              context, prev.name);
+            context,
+            prev.name,
+          );
         }
         // Same held-subscription + timeout treatment as loadNextChapter above.
         final sub = ref.listenManual(
-            chapterPagesProvider(chapterId: prev.id), (_, __) {});
-        final fetch =
-            ref.read(chapterPagesProvider(chapterId: prev.id).future);
+          chapterPagesProvider(chapterId: prev.id),
+          (_, __) {},
+        );
+        final fetch = ref.read(chapterPagesProvider(chapterId: prev.id).future);
         fetch.whenComplete(sub.close).ignore();
         final ChapterPagesDto? pages;
         try {
@@ -592,7 +651,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
         if (context.mounted && readerToastsEnabled()) {
           InfinityContinuousFeedback.showPreviousChapterLoadedFeedback(
-              context, prev.name);
+            context,
+            prev.name,
+          );
         }
       } catch (_) {
         // Transient failure — leave unlatched and refetchable so the next
@@ -638,8 +699,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             if (currentVisibleChapter.value.id != ch.chapter.id) {
               final prevId = lastVisibleChapterId.value;
               final prevPos = loaded.indexWhere((e) => e.chapterId == prevId);
-              final newPos =
-                  loaded.indexWhere((e) => e.chapterId == ch.chapter.id);
+              final newPos = loaded.indexWhere(
+                (e) => e.chapterId == ch.chapter.id,
+              );
               currentVisibleChapter.value = ch.chapter;
               lastVisibleChapterId.value = ch.chapter.id;
               // Forward boundary crossing: the chapter we just left is
@@ -647,7 +709,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               if (prevPos >= 0 && newPos > prevPos) {
                 final left = loaded[prevPos].chapter;
                 _markChapterRead(
-                    ref, manga.id, left, completedChapterIds, context);
+                  ref,
+                  manga.id,
+                  left,
+                  completedChapterIds,
+                  context,
+                );
               }
             }
             break;
@@ -669,10 +736,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // opening a chapter (at page 0, or a short chapter) never auto-
         // loads a neighbour. A neighbour loads only when the user is
         // actively scrolling toward that edge.
-        final minIdx =
-            positions.map((p) => p.index).reduce((a, b) => a < b ? a : b);
-        final maxIdx =
-            positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+        final minIdx = positions
+            .map((p) => p.index)
+            .reduce((a, b) => a < b ? a : b);
+        final maxIdx = positions
+            .map((p) => p.index)
+            .reduce((a, b) => a > b ? a : b);
 
         final top = positions.reduce((a, b) => a.index <= b.index ? a : b);
         final prevTop = lastTop.value;
@@ -714,7 +783,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
                 lastPage.isNotEmpty && lastPage.first.itemTrailingEdge <= 1.0;
             if (atBottom && readerToastsEnabled()) {
               InfinityContinuousFeedback.showEndOfMangaFeedback(
-                  context, lastEndFeedbackTime);
+                context,
+                lastEndFeedbackTime,
+              );
             }
           }
         }
@@ -727,7 +798,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             hasReachedStart.value = true;
             if (readerToastsEnabled()) {
               InfinityContinuousFeedback.showStartOfMangaFeedback(
-                  context, lastStartFeedbackTime);
+                context,
+                lastStartFeedbackTime,
+              );
             }
           }
         }
@@ -743,10 +816,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void jumpToChapterRelative(int chapterIdx) {
       final globalIndex =
           InfinityContinuousUtils.convertChapterIndexToGlobalIndex(
-        chapterIdx,
-        loadedChapters.value,
-        currentVisibleChapter.value.id,
-      );
+            chapterIdx,
+            loadedChapters.value,
+            currentVisibleChapter.value.id,
+          );
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
       currentChapterPageIndex.value = chapterIdx;
@@ -769,10 +842,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     void handlePageNavigation({required bool isNext}) {
       final globalIndex =
           InfinityContinuousUtils.convertChapterIndexToGlobalIndex(
-        currentChapterPageIndex.value + (isNext ? 1 : -1),
-        loadedChapters.value,
-        currentVisibleChapter.value.id,
-      );
+            currentChapterPageIndex.value + (isNext ? 1 : -1),
+            loadedChapters.value,
+            currentVisibleChapter.value.id,
+          );
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
       if (isAnimationEnabled) {
@@ -824,7 +897,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       if (dtMs <= 0) return;
       try {
         final pos = scrollOffsetController.position;
-        final interval = ref.read(autoScrollIntervalSecondsProvider) ??
+        final interval =
+            ref.read(autoScrollIntervalSecondsProvider) ??
             DBKeys.autoScrollIntervalSeconds.initial as int;
         final delta = autoScrollDelta(
           viewport: pos.viewportDimension,
@@ -869,18 +943,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     useEffect(() {
       Timer? timer;
       if (autoScrollActive && !smoothAutoScroll) {
-        timer = Timer.periodic(
-          Duration(seconds: autoScrollIntervalSeconds),
-          (_) {
-            if (atLastLoadedPage()) {
-              ref.read(autoScrollActiveProvider.notifier).stop();
-              return;
-            }
-            programmaticScroll.value = true;
-            handlePageNavigation(isNext: true);
-            programmaticScroll.value = false;
-          },
-        );
+        timer = Timer.periodic(Duration(seconds: autoScrollIntervalSeconds), (
+          _,
+        ) {
+          if (atLastLoadedPage()) {
+            ref.read(autoScrollActiveProvider.notifier).stop();
+            return;
+          }
+          programmaticScroll.value = true;
+          handlePageNavigation(isNext: true);
+          programmaticScroll.value = false;
+        });
       }
       return () => timer?.cancel();
     }, [autoScrollActive, smoothAutoScroll, autoScrollIntervalSeconds]);
@@ -908,6 +981,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
+    // Smart scale centres a narrower strip on wide screens.
+    Widget capWidth(Widget page) => maxContentWidth >= context.width
+        ? page
+        : Center(child: SizedBox(width: maxContentWidth, child: page));
+
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
       if (loc == null) {
@@ -931,7 +1009,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       final double? avgHeight = measured.isEmpty
           ? null
           : measured.values.reduce((a, b) => a + b) / measured.length;
-      final placeholderHeight = measured[loc.imageUrl] ??
+      final placeholderHeight =
+          measured[loc.imageUrl] ??
           avgHeight ??
           context.height * InfinityContinuousConfig.verticalPageHeightRatio;
       return ServerImage(
@@ -940,7 +1019,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         appendApiToUrl: false,
         cropBorders: cropBorders,
         // Decode at on-screen width, not the ~800×15000 source (#196 GPU cost).
-        memCacheWidth: (context.width * MediaQuery.devicePixelRatioOf(context))
+        memCacheWidth: (maxContentWidth * MediaQuery.devicePixelRatioOf(context))
             .round()
             .clamp(1, 1 << 20),
         imageUrl: loc.imageUrl,
@@ -975,7 +1054,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
             if (frame == null && !wasSynchronouslyLoaded) {
               return SizedBox(
-                  height: placeholderHeight, width: double.infinity);
+                height: placeholderHeight,
+                width: double.infinity,
+              );
             }
             // Only measure the REAL decoded image — never the placeholder — so a
             // strip re-entering the viewport reserves its true height.
@@ -991,18 +1072,28 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
+    // continuousVertical is the "Long strip with gaps" mode in settings.
+    final pageGap = effectiveReaderMode == ReaderMode.continuousVertical
+        ? const Gap(kLongStripPageGap)
+        : const SizedBox.shrink();
+
     Widget buildSeparator(BuildContext context, int index) {
-      if (loadedChapters.value.length <= 1) return const SizedBox.shrink();
+      if (loadedChapters.value.length <= 1) return pageGap;
       if (!InfinityContinuousUtils.isChapterBoundary(
-          index, loadedChapters.value)) {
-        return const SizedBox.shrink();
+        index,
+        loadedChapters.value,
+      )) {
+        return pageGap;
       }
       final info = InfinityContinuousChapterSeparator.getSeparatorInfo(
-          index, loadedChapters.value);
-      if (info == null) return const SizedBox.shrink();
+        index,
+        loadedChapters.value,
+      );
+      if (info == null) return pageGap;
       return InfinityContinuousChapterSeparator(
         chapterName: info.chapterName,
         isChapterStart: info.isChapterStart,
+        alwaysShow: alwaysShowTransition,
       );
     }
 
@@ -1016,7 +1107,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       itemCount: total,
       minCacheExtent:
           context.height * InfinityContinuousConfig.verticalCacheMultiplier,
-      itemBuilder: buildItem,
+      itemBuilder: (context, index) => capWidth(buildItem(context, index)),
       separatorBuilder: buildSeparator,
     );
 
@@ -1088,28 +1179,43 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       child: autoScrollAwareList,
     );
 
+    final mouseScrollSpeed = ref.watch(readerMouseScrollSpeedKeyProvider) ??
+        DBKeys.readerMouseScrollSpeed.initial;
+    final wheelAware = isKeyboardRuntime
+        ? MouseWheelSpeed(
+            speed: mouseScrollSpeed,
+            axis: scrollDirection,
+            reverse: reverse,
+            positionOf: () => scrollOffsetController.position,
+            child: edgeAwareList,
+          )
+        : edgeAwareList;
+
     final child = AppUtils.wrapOn(
       !kIsWeb &&
               (Platform.isAndroid || Platform.isIOS) &&
               (isPinchToZoomEnabled || isDoubleTapZoomEnabled)
           ? (Widget child) => ReaderZoomView(
-                controller: zoomScrollController,
-                scrollAxis: scrollDirection,
-                maxScale: InfinityContinuousConfig.maxZoomScale,
-                // Webtoon min zoom-out rate is 0.5 unless disabled.
-                minScale: isZoomOutDisabled ? 1 : 0.5,
-                pinchEnabled: isPinchToZoomEnabled,
-                doubleTapToZoom: isDoubleTapZoomEnabled,
-                child: child,
-              )
+              controller: zoomScrollController,
+              scrollAxis: scrollDirection,
+              maxScale: InfinityContinuousConfig.maxZoomScale,
+              // Webtoon min zoom-out rate is 0.5 unless disabled.
+              minScale: isZoomOutDisabled ? 1 : 0.5,
+              pinchEnabled: isPinchToZoomEnabled,
+              doubleTapToZoom: isDoubleTapZoomEnabled,
+              child: child,
+            )
           : null,
-      edgeAwareList,
+      wheelAware,
     );
 
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapterPages: InfinityContinuousUtils.createChapterPagesDto(
-          loadedChapters.value, currentVisibleChapter.value, chapterPages),
+        loadedChapters.value,
+        currentVisibleChapter.value,
+        chapterPages,
+      ),
       chapter: currentVisibleChapter.value,
       manga: manga,
       showReaderLayoutAnimation: showReaderLayoutAnimation,
@@ -1125,20 +1231,23 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       // rather than calling itemScrollController.jumpTo directly.
       onJumpToFirst: () => jumpToChapterRelative(0),
       onJumpToLast: () => jumpToChapterRelative(
-          (loadedById(currentVisibleChapter.value.id)?.pages.pages.length ??
-                  chapterPages.pages.length) -
-              1),
+        (loadedById(currentVisibleChapter.value.id)?.pages.pages.length ??
+                chapterPages.pages.length) -
+            1,
+      ),
       onToggleAutoScroll: () =>
           ref.read(autoScrollActiveProvider.notifier).toggle(),
       onAutoScrollFaster: () {
-        final cur = ref.read(autoScrollIntervalSecondsProvider) ??
+        final cur =
+            ref.read(autoScrollIntervalSecondsProvider) ??
             DBKeys.autoScrollIntervalSeconds.initial as int;
         ref
             .read(autoScrollIntervalSecondsProvider.notifier)
             .update((cur - 1).clamp(1, 30));
       },
       onAutoScrollSlower: () {
-        final cur = ref.read(autoScrollIntervalSecondsProvider) ??
+        final cur =
+            ref.read(autoScrollIntervalSecondsProvider) ??
             DBKeys.autoScrollIntervalSeconds.initial as int;
         ref
             .read(autoScrollIntervalSecondsProvider.notifier)
@@ -1170,39 +1279,49 @@ void _markChapterRead(
   // on reconnect. Previously this used a raw putChapter mutation, so a chapter
   // finished at a boundary while offline was never queued and the read was
   // silently lost.
-  unawaited(recordReadingProgress(
-    ref,
-    mangaId: mangaId,
-    chapterId: chapter.id,
-    lastPageRead: 0,
-    isRead: true,
-  ).then((progressResult) {
-    if (!context.mounted) return;
-    // A failed boundary push has no dirty row to retry for online-only users.
-    if (progressResult.hasError) {
-      ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
-    }
-    // Push progress to external trackers (fire-and-forget).
-    unawaited(maybeTrackProgressOnReadFetch(
+  unawaited(
+    recordReadingProgress(
       ref,
       mangaId: mangaId,
+      chapterId: chapter.id,
+      lastPageRead: 0,
       isRead: true,
-      manual: false,
-    ));
-    // The chapter just crossed is behind the reader now → auto-delete it (both
-    // the on-device copy and, per the server settings, the server copy). Each
-    // no-ops if its own setting is off.
-    unawaited(maybeDeleteOnReadLocal(
-      ref,
-      mangaId: mangaId,
-      readChapterId: chapter.id,
-    ));
-    unawaited(maybeDeleteOnReadServer(
-      ref,
-      mangaId: mangaId,
-      readChapterId: chapter.id,
-    ));
-  }));
+    ).then((progressResult) {
+      if (!context.mounted) return;
+      // A failed boundary push has no dirty row to retry for online-only users.
+      if (progressResult.hasError) {
+        ref
+            .read(toastProvider)
+            ?.showError(context.l10n.errorSomethingWentWrong);
+      }
+      // Push progress to external trackers (fire-and-forget).
+      unawaited(
+        maybeTrackProgressOnReadFetch(
+          ref,
+          mangaId: mangaId,
+          isRead: true,
+          manual: false,
+        ),
+      );
+      // The chapter just crossed is behind the reader now → auto-delete it (both
+      // the on-device copy and, per the server settings, the server copy). Each
+      // no-ops if its own setting is off.
+      unawaited(
+        maybeDeleteOnReadLocal(
+          ref,
+          mangaId: mangaId,
+          readChapterId: chapter.id,
+        ),
+      );
+      unawaited(
+        maybeDeleteOnReadServer(
+          ref,
+          mangaId: mangaId,
+          readChapterId: chapter.id,
+        ),
+      );
+    }),
+  );
   // NOTE: deliberately do NOT invalidate chapterProvider / mangaChapterList
   // here. Doing so while reading rebuilds ReaderScreen through an async reload,
   // which remounts this list and re-applies initialScrollIndex (now 0 from the
