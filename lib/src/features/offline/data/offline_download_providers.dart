@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -22,6 +23,7 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -423,15 +425,46 @@ Future<bool> recordReadState(
 /// Resolve the chapter to delete `slots` behind [readChapterId] in the manga's
 /// reading order (1 = the just-read chapter). Null if out of range or the list
 /// isn't loaded.
-int? _whileReadingTarget(
-    WidgetRef ref, int mangaId, int readChapterId, int slots) {
-  final chapters = ref
-      .read(mangaChapterListWithFilterProvider(mangaId: mangaId))
-      .value;
-  if (chapters == null) return null;
-  final isAsc = ref.read(mangaChapterSortDirectionProvider) ??
-      (DBKeys.chapterSortDirection.initial as bool);
-  return chapterIdToDeleteWhileReading(chapters, isAsc, readChapterId, slots);
+@visibleForTesting
+Future<int?> whileReadingDeleteTarget(
+    WidgetRef ref, int mangaId, int readChapterId, int slots) async {
+  try {
+    // Not the filtered/on-screen list: a filter can drop the just-read chapter
+    // or turn "N back" into counting gaps instead of chapters.
+    final listProvider = mangaChapterListProvider(mangaId: mangaId);
+    var chapters = ref.read(listProvider).value;
+    // A chapter finished before the list resolves would otherwise be skipped
+    // with no second chance.
+    chapters ??= await ref.read(listProvider.future);
+    if (chapters == null) return null;
+
+    final preferred =
+        ref.read(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+    final showAll =
+        ref.read(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+    // Pinned to the chapter actually being read: without it dedup can keep a
+    // different group's copy of that number and drop this id from the list.
+    final deduped = preferred.isEmpty || showAll
+        ? chapters
+        : applyPreferredScanlators(chapters, preferred,
+            keepChapterId: readChapterId);
+
+    // Tie-broken by id: List.sort is unstable, so duplicate source orders would
+    // otherwise let the Nth-back target move between reads.
+    final inReadingOrder = [...deduped]
+      ..sort((a, b) {
+        final byOrder = a.sourceOrder.compareTo(b.sourceOrder);
+        return byOrder != 0 ? byOrder : a.id.compareTo(b.id);
+      });
+    return chapterIdToDeleteWhileReading(
+        inReadingOrder, true, readChapterId, slots);
+  } catch (e) {
+    // Leaving the reader mid-await lands here too, so this is a warning rather
+    // than an error — but it must be recorded, or a real failure looks exactly
+    // like the bug this fixes.
+    logger.w('Offline: resolving the delete-while-reading target failed: $e');
+    return null;
+  }
 }
 
 /// The server delete settings, loaded from the server (null offline / on error,
@@ -455,10 +488,14 @@ Future<void> maybeDeleteOnReadLocal(
   if (!ref.read(offlineActiveProvider)) return;
   final s = ref.read(localDeleteSettingsProvider);
   if (s.deleteWhileReading <= 0) return;
-  final targetId =
-      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  final targetId = await whileReadingDeleteTarget(
+      ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
-  await _deleteDeviceCopyIfDeletable(ref, targetId, s.deleteWithBookmark);
+  // The wait above is unbounded: a setting changed while it ran would leave
+  // targetId computed from a slot count that no longer applies.
+  final now = ref.read(localDeleteSettingsProvider);
+  if (now.deleteWhileReading != s.deleteWhileReading) return;
+  await _deleteDeviceCopyIfDeletable(ref, targetId, now.deleteWithBookmark);
 }
 
 /// Delete THIS phone's copy when a chapter is manually marked read.
@@ -505,11 +542,16 @@ Future<void> maybeDeleteOnReadServer(
 }) async {
   final s = await _serverDeleteSettings(ref);
   if (s == null || s.deleteWhileReading <= 0) return;
-  final targetId =
-      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  final targetId = await whileReadingDeleteTarget(
+      ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
+  // Both waits above are unbounded, so re-resolve rather than reading .value —
+  // this controller autoDisposes and would come back as loading, reading null
+  // and cancelling a delete the setting still calls for.
+  final now = await _serverDeleteSettings(ref);
+  if (now == null || now.deleteWhileReading != s.deleteWhileReading) return;
   await _deleteServerCopyIfDeletable(
-      ref, mangaId, targetId, s.deleteWithBookmark);
+      ref, mangaId, targetId, now.deleteWithBookmark);
 }
 
 /// Tell the SERVER to delete its copy when a chapter is manually marked read.
