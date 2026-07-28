@@ -69,6 +69,18 @@ void main() {
       expect(prefs.getBool('languageBadge'), isFalse);
     });
 
+    test('the source icon is not left drawn twice', () async {
+      // This combination drew the same icon in both slots before the revamp.
+      // Collapsing it to one is the intent, not a dropped badge.
+      final prefs = await _migrated({
+        'languageBadge': true,
+        'useLangIcon': true,
+        'sourceBadge': true,
+      });
+      expect(prefs.getBool('sourceBadge'), isTrue);
+      expect(prefs.getBool('languageBadge'), isFalse);
+    });
+
     test('a plain language badge keeps drawing a language badge', () async {
       final prefs = await _migrated({
         'languageBadge': true,

@@ -323,6 +323,42 @@ void main() {
       expect(find.text('4'), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
     });
+
+    testWidgets('the unbounded path keeps its cluster order in RTL',
+        (tester) async {
+      // The list tiles take the min-width branch, which orders the two clusters
+      // itself rather than pinning them to corners — RTL would swap them.
+      SharedPreferences.setMockInitialValues({
+        'onDeviceBadge': true,
+        'downloadedBadge': true,
+        'languageBadge': true,
+      });
+      final sp = await SharedPreferences.getInstance();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: Row(
+                children: [
+                  MangaBadgesRow(manga: _manga(), showCountBadges: true),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      expect(
+        tester.getCenter(find.text('4')).dx,
+        lessThan(tester.getCenter(find.text('🇯🇵')).dx),
+      );
+    });
   });
 
   group('badge height', () {
