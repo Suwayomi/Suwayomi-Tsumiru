@@ -1798,6 +1798,30 @@
     "@filterOptionNotBookmarked": {
         "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
     },
+    "filterHeaderSeries": "Series",
+    "@filterHeaderSeries": {
+        "description": "Section label for the series-progress filter chip row"
+    },
+    "filterOptionUnfinished": "Unfinished",
+    "@filterOptionUnfinished": {
+        "description": "Series filter chip: only series with chapters left to read"
+    },
+    "filterOptionFinished": "Finished",
+    "@filterOptionFinished": {
+        "description": "Series filter chip: only series with every chapter read"
+    },
+    "filterHeaderLibrary": "Library",
+    "@filterHeaderLibrary": {
+        "description": "Section label for the library-membership filter chip row"
+    },
+    "filterOptionInLibrary": "In library",
+    "@filterOptionInLibrary": {
+        "description": "Library filter chip: only entries saved to the library"
+    },
+    "filterOptionNotInLibrary": "Not in library",
+    "@filterOptionNotInLibrary": {
+        "description": "Library filter chip: only entries not saved to the library"
+    },
     "filterHeaderPublicationStatus": "Publication Status",
     "@filterHeaderPublicationStatus": {
         "description": "Section label for the completed filter chip row"

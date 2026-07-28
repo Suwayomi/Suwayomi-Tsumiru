@@ -84,6 +84,13 @@ enum DBKeys {
   chapterFilterDownloaded(null),
   chapterFilterUnread(null),
   chapterFilterBookmarked(null),
+  updatesFilterDownloaded(null),
+  updatesFilterUnread(null),
+  updatesFilterStarted(null),
+  updatesFilterBookmarked(null),
+  historyFilterUnfinishedSeries(null),
+  historyFilterUnread(null),
+  historyFilterInLibrary(null),
   mangaSort(MangaSort.lastRead),
   // Default descending so the default Last-Read sort opens newest-read first
   // (last-read-descending). asc=true, dsc=false.

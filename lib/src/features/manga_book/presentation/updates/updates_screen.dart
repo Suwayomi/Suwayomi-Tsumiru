@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
@@ -21,7 +22,9 @@ import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart
 import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
 import '../reader/controller/reader_controller.dart';
+import 'controller/updates_filter_controller.dart';
 import 'widgets/chapter_manga_list_tile.dart';
+import 'widgets/updates_filter.dart';
 
 class UpdatesScreen extends HookConsumerWidget {
   const UpdatesScreen({super.key});
@@ -30,9 +33,10 @@ class UpdatesScreen extends HookConsumerWidget {
     UpdatesRepository repository,
     PagingController<int, ChapterWithMangaDto> controller,
     int pageKey,
+    UpdatesFilter filter,
   ) async {
     AsyncValue.guard(
-      () => repository.getRecentChaptersPage(pageNo: pageKey),
+      () => repository.getRecentChaptersPage(pageNo: pageKey, filter: filter),
     ).then(
       (value) => value.whenOrNull(
         data: (recentChaptersPage) {
@@ -66,12 +70,35 @@ class UpdatesScreen extends HookConsumerWidget {
         .ifNull();
     final lastUpdated = ref.watch(libraryLastUpdatedProvider).value;
     final selectedChapters = useState<Map<int, ChapterDto>>({});
+    final filter = ref.watch(updatesFilterProvider);
+    final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
+    // The page listener is registered once, so it can't close over `filter` —
+    // it reads the latest value through this holder instead.
+    final latestFilter = useRef(filter);
+    latestFilter.value = filter;
     useEffect(() {
       controller.addPageRequestListener(
-        (pageKey) => _fetchPage(updatesRepository, controller, pageKey),
+        (pageKey) => _fetchPage(
+          updatesRepository,
+          controller,
+          pageKey,
+          latestFilter.value,
+        ),
       );
       return;
     }, []);
+    // Filtering happens server-side, so a changed filter invalidates every page
+    // already loaded. Skip the mount run or page 0 would be fetched twice.
+    final isFilterMount = useRef(true);
+    useEffect(() {
+      if (isFilterMount.value) {
+        isFilterMount.value = false;
+        return null;
+      }
+      selectedChapters.value = ({});
+      controller.refresh();
+      return null;
+    }, [filter]);
     useEffect(() {
       if (!isUpdatesChecking) {
         try {
@@ -104,6 +131,25 @@ class UpdatesScreen extends HookConsumerWidget {
               // which is where Mihon keeps it.
               title: Text(context.l10n.updates),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.filter_list_rounded),
+                  tooltip: context.l10n.filter,
+                  // Tinted while filtered, so a short list reads as "filtered"
+                  // rather than "nothing new". Komikku uses amber here; ours
+                  // comes from the theme.
+                  color: hasActiveFilters
+                      ? context.theme.colorScheme.primary
+                      : null,
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: KBorderRadius.rT16.radius,
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    builder: (_) => const UpdatesFilterSheet(),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.calendar_month_rounded),
                   tooltip: context.l10n.upcoming,
