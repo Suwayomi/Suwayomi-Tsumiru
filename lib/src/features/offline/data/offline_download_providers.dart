@@ -449,12 +449,19 @@ Future<int?> whileReadingDeleteTarget(
         : applyPreferredScanlators(chapters, preferred,
             keepChapterId: readChapterId);
 
+    // Tie-broken by id: List.sort is unstable, so duplicate source orders would
+    // otherwise let the Nth-back target move between reads.
     final inReadingOrder = [...deduped]
-      ..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
+      ..sort((a, b) {
+        final byOrder = a.sourceOrder.compareTo(b.sourceOrder);
+        return byOrder != 0 ? byOrder : a.id.compareTo(b.id);
+      });
     return chapterIdToDeleteWhileReading(
         inReadingOrder, true, readChapterId, slots);
-  } catch (_) {
-    // Leaving the reader mid-await disposes the ref; never surface that.
+  } catch (e) {
+    // Expected when leaving the reader mid-await; anything else is a real
+    // failure that would otherwise look exactly like the bug this fixes.
+    logger.e('Offline: resolving the delete-while-reading target failed: $e');
     return null;
   }
 }
@@ -483,7 +490,11 @@ Future<void> maybeDeleteOnReadLocal(
   final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
-  await _deleteDeviceCopyIfDeletable(ref, targetId, s.deleteWithBookmark);
+  // Re-read: the wait above is unbounded, and the setting may have been turned
+  // off while it ran.
+  final now = ref.read(localDeleteSettingsProvider);
+  if (now.deleteWhileReading <= 0) return;
+  await _deleteDeviceCopyIfDeletable(ref, targetId, now.deleteWithBookmark);
 }
 
 /// Delete THIS phone's copy when a chapter is manually marked read.
@@ -533,8 +544,12 @@ Future<void> maybeDeleteOnReadServer(
   final targetId = await whileReadingDeleteTarget(
       ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
+  // Both waits above are unbounded; a stale snapshot must not delete a server
+  // copy the setting no longer covers.
+  final now = ref.read(deleteChaptersSettingsControllerProvider).value;
+  if (now == null || now.deleteWhileReading <= 0) return;
   await _deleteServerCopyIfDeletable(
-      ref, mangaId, targetId, s.deleteWithBookmark);
+      ref, mangaId, targetId, now.deleteWithBookmark);
 }
 
 /// Tell the SERVER to delete its copy when a chapter is manually marked read.
