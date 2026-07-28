@@ -74,80 +74,86 @@ class SeriesOfflineButton extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      // Scroll-controlled and scrollable: a default sheet is capped at 9/16
+      // of the space it is given, and the "Updating library" strip is a
+      // sibling of the page content, so it shrinks that space from under it.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Explain what this sheet does — offline (device) copies, distinct
-            // from the server download up top.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    sheetContext.l10n.offlineSheetTitle,
-                    style: sheetContext.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    sheetContext.l10n.offlineSheetSubtitle,
-                    style: TextStyle(
-                      color: sheetContext.theme.colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                      height: 1.3,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Explain what this sheet does — offline (device) copies, distinct
+              // from the server download up top.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sheetContext.l10n.offlineSheetTitle,
+                      style: sheetContext.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      sheetContext.l10n.offlineSheetSubtitle,
+                      style: TextStyle(
+                        color: sheetContext.theme.colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            // Rolling forward buffer: keep the next N unread downloaded, topped
-            // up as you read. Distinct buffer sizes.
-            for (final n in const [5, 10, 25])
+              const Divider(height: 1),
+              // Rolling forward buffer: keep the next N unread downloaded, topped
+              // up as you read. Distinct buffer sizes.
+              for (final n in const [5, 10, 25])
+                ListTile(
+                  leading: const Icon(Icons.bookmark_add_outlined),
+                  title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
+                  trailing: (rule == OfflineKeepRule.nUnread && config.count == n)
+                      ? const Icon(Icons.check_rounded)
+                      : null,
+                  onTap: () =>
+                      _apply(sheetContext, ref, OfflineKeepRule.nUnread, n),
+                ),
               ListTile(
-                leading: const Icon(Icons.bookmark_add_outlined),
-                title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                trailing: (rule == OfflineKeepRule.nUnread && config.count == n)
+                leading: const Icon(Icons.menu_book_outlined),
+                title: Text(sheetContext.l10n.keepOfflineAllUnread),
+                trailing: rule == OfflineKeepRule.allUnread
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () => _apply(
+                    sheetContext, ref, OfflineKeepRule.allUnread, config.count),
+              ),
+              ListTile(
+                leading: const Icon(Icons.library_books_outlined),
+                title: Text(sheetContext.l10n.keepOfflineAll),
+                trailing: rule == OfflineKeepRule.all
                     ? const Icon(Icons.check_rounded)
                     : null,
                 onTap: () =>
-                    _apply(sheetContext, ref, OfflineKeepRule.nUnread, n),
+                    _apply(sheetContext, ref, OfflineKeepRule.all, config.count),
               ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAllUnread),
-              trailing: rule == OfflineKeepRule.allUnread
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () => _apply(
-                  sheetContext, ref, OfflineKeepRule.allUnread, config.count),
-            ),
-            ListTile(
-              leading: const Icon(Icons.library_books_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAll),
-              trailing: rule == OfflineKeepRule.all
-                  ? const Icon(Icons.check_rounded)
-                  : null,
-              onTap: () =>
-                  _apply(sheetContext, ref, OfflineKeepRule.all, config.count),
-            ),
-            if (onDevice || rule != OfflineKeepRule.off) ...[
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(Icons.delete_outline_rounded,
-                    color: sheetContext.theme.colorScheme.error),
-                title: Text(
-                  sheetContext.l10n.offlineRemoveSeries,
-                  style: TextStyle(
+              if (onDevice || rule != OfflineKeepRule.off) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.delete_outline_rounded,
                       color: sheetContext.theme.colorScheme.error),
+                  title: Text(
+                    sheetContext.l10n.offlineRemoveSeries,
+                    style: TextStyle(
+                        color: sheetContext.theme.colorScheme.error),
+                  ),
+                  onTap: () => _removeAll(sheetContext, ref),
                 ),
-                onTap: () => _removeAll(sheetContext, ref),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
