@@ -15,6 +15,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
+import '../../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../../domain/category/category_model.dart';
@@ -90,8 +91,12 @@ List<MangaDto> applyLibraryFilterSort(
         (mangaFilterCompleted ^ (manga.status.name == "COMPLETED"))) {
       return false;
     }
+    // The server sends a lastReadChapter for everything, unread included — it
+    // just has no progress on it. Testing the object for null matched every
+    // manga and made this filter a no-op both ways round.
     if (mangaFilterStarted != null &&
-        (mangaFilterStarted ^ (manga.lastReadChapter != null))) {
+        (mangaFilterStarted ^
+            (manga.lastReadChapter?.hasReadingProgress ?? false))) {
       return false;
     }
     if (mangaFilterBookmarked != null &&
