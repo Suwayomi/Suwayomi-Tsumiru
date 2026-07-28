@@ -29,6 +29,8 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
     this.showCountBadges = true,
     this.selected = false,
     this.belowStatus,
+    this.outlineOnCovers = false,
+    this.scale = 1.0,
     this.titleMaxLines = 2,
   });
   final MangaDto manga;
@@ -45,6 +47,13 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
   /// Optional widget rendered below the status/source line (details screen only).
   /// When null — the default for library/browse callers — nothing is rendered.
   final Widget? belowStatus;
+
+  /// Forwarded to the cover tile.
+  final bool outlineOnCovers;
+
+  /// Library list-size multiplier. Scales the cover box; the caller scales the
+  /// text through a [MediaQuery] textScaler so the row grows as one unit.
+  final double scale;
 
   /// Null lets the title wrap to its full length, which is what the details
   /// screen wants (Mihon caps it nowhere). List rows keep 2 so they stay even.
@@ -65,14 +74,15 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: kDescriptiveCoverWidth,
-              height: mangaCoverBoxHeight(kDescriptiveCoverWidth),
+              width: kDescriptiveCoverWidth * scale,
+              height: mangaCoverBoxHeight(kDescriptiveCoverWidth * scale),
               child: MangaCoverGridTile(
                 manga: manga,
                 showBadges: false,
                 showTitle: false,
                 showDarkOverlay: false,
                 onContinueReading: onContinueReading,
+                outlineOnCovers: outlineOnCovers,
               ),
             ),
             Expanded(
@@ -87,9 +97,12 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                       onTap: onTitleClicked != null
                           ? () => onTitleClicked!(manga.title)
                           : null,
+                      // Skia collapses an uncapped ellipsis to one line, so
+                      // uncapped text has to clip instead.
                       child: Text(
                         manga.title,
                         style: context.textTheme.titleLarge,
+                        softWrap: true,
                         overflow: titleMaxLines == null
                             ? TextOverflow.clip
                             : TextOverflow.ellipsis,

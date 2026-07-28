@@ -48,12 +48,22 @@ enum DBKeys {
   downloadedBadge(false),
   // On by default: the badge shipped always-on, so off would change behavior.
   onDeviceBadge(true),
-  unreadBadge(true),
+  // Supersedes the `unreadBadge` bool.
+  unreadBadgeMode(UnreadBadgeMode.count),
   readProgressBar(false),
   languageBadge(false),
-  localBadge(false),
+  // Also covers Local Source (a folder glyph), retiring the `localBadge` key.
   sourceBadge(false),
-  useLangIcon(false),
+  libraryGridStyle(LibraryGridStyle.uniform),
+  outlineOnCovers(true),
+  // Badge layout, as LibraryBadge ids: `badgeRightSide` holds the ids pinned
+  // to a cover's top-RIGHT corner, everything else clusters top-LEFT.
+  badgeOrder(<String>[]),
+  badgeRightSide(<String>['onDevice', 'language', 'source']),
+  limitTitleLines(true),
+  // Uniform scale for the List / Descriptive List modes. 1.0 = shipped size.
+  listScale(1.0),
+  libraryGroupStyle(LibraryGroupStyle.tabs),
   // Library display: overlay a play button on covers that jumps straight into
   // the next unread chapter. Off by default, matching Suwayomi-WebUI.
   showContinueReadingButton(false),
@@ -168,9 +178,11 @@ enum DBKeys {
   // to the width-based delegate using gridMangaCoverWidth as the target size).
   libraryPortraitColumns(0),
   libraryLandscapeColumns(0),
-  // Library Tabs section (Display sheet).
-  // When false, the category tab bar is hidden even if >1 category exists.
+  // Tabs mode only: hides the tab-bar strip (pages stay swipeable either way).
   categoryTabs(true),
+  // Section-Headers mode only: one continuous sticky-header scroll (on) vs one
+  // page per section with its own inline header (off).
+  sectionHeadersShowAllCategories(false),
   // When true, categories marked as hidden are still shown as tabs.
   showHiddenCategories(false),
   // When true, each tab label appends "(N)" where N is the filtered manga count.

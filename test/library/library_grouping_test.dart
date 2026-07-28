@@ -15,6 +15,7 @@ class _Manga {
   final String sourceLang;
   final String status;
   final List<int> categoryIds;
+  final List<String> tags;
 
   const _Manga({
     required this.id,
@@ -23,6 +24,7 @@ class _Manga {
     this.sourceLang = 'en',
     this.status = 'ONGOING',
     this.categoryIds = const [],
+    this.tags = const [],
   });
 }
 
@@ -47,6 +49,7 @@ MangaProxy _proxy(_Manga m) => (
       status: m.status,
       categoryIds: m.categoryIds,
       trackStatuses: const [],
+      tags: m.tags,
     );
 
 CategoryProxy _catProxy(_Category c) => (id: c.id, name: c.name);
@@ -91,6 +94,40 @@ void main() {
       ];
       final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
       expect(tabs.single.name, 'Local source');
+    });
+
+    test('a source shared across languages is tagged with its language code',
+        () {
+      final mangas = [
+        _proxy(_Manga(
+          id: 1,
+          sourceId: 'md-en',
+          sourceName: 'MangaDex',
+          sourceLang: 'en',
+        )),
+        _proxy(_Manga(
+          id: 2,
+          sourceId: 'md-es',
+          sourceName: 'MangaDex',
+          sourceLang: 'es',
+        )),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
+      // Same name, so relative order between the two isn't guaranteed — only
+      // that both are present and disambiguated by language.
+      expect(
+        tabs.map((t) => t.name).toSet(),
+        {'MangaDex (EN)', 'MangaDex (ES)'},
+      );
+    });
+
+    test('a source with only one language keeps its plain name', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, sourceId: 'a', sourceName: 'Alpha')),
+        _proxy(_Manga(id: 2, sourceId: 'b', sourceName: 'Zebra')),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
+      expect(tabs.map((t) => t.name).toList(), ['Alpha', 'Zebra']);
     });
   });
 
@@ -156,6 +193,112 @@ void main() {
       final tabs = groupLibrary(mangas, LibraryGroup.ungrouped, []);
       expect(tabs.length, 1);
       expect(tabs.single.mangaIds..sort(), [1, 2, 3]);
+    });
+  });
+
+  group('groupLibrary — BY_TAG', () {
+    test('fans a manga out across every tag it carries', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, tags: ['Action', 'Romance'])),
+        _proxy(_Manga(id: 2, tags: ['Action'])),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      final byName = {for (final t in tabs) t.name: t.mangaIds};
+      expect(byName['Action']!..sort(), [1, 2]);
+      expect(byName['Romance'], [1]);
+    });
+
+    test('matches tags case-insensitively, keeping the first-seen casing', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, tags: ['Action'])),
+        _proxy(_Manga(id: 2, tags: ['action'])),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      expect(tabs.where((t) => t.name != 'Untagged').length, 1);
+      expect(tabs.first.name, 'Action');
+      expect(tabs.first.mangaIds..sort(), [1, 2]);
+    });
+
+    test('a tag repeated on one manga still buckets it once', () {
+      // A source genre that is ALSO a user tag must not double-count.
+      final mangas = [_proxy(_Manga(id: 1, tags: ['Action', 'action']))];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      expect(tabs.single.mangaIds, [1]);
+    });
+
+    test('sorts tags alphabetically with untagged trailing', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, tags: ['Zombies'])),
+        _proxy(_Manga(id: 2, tags: ['Action'])),
+        _proxy(_Manga(id: 3)),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      expect(tabs.map((t) => t.name).toList(), [
+        'Action',
+        'Zombies',
+        'Untagged',
+      ]);
+      expect(tabs.last.mangaIds, [3]);
+    });
+
+    test('omits the untagged bucket when every manga has a tag', () {
+      final mangas = [_proxy(_Manga(id: 1, tags: ['Action']))];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      expect(tabs.map((t) => t.name), ['Action']);
+    });
+
+    test('gives every bucket a distinct id', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, tags: ['Action'])),
+        _proxy(_Manga(id: 2, tags: ['Romance'])),
+        _proxy(_Manga(id: 3)),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
+      expect(tabs.map((t) => t.id).toSet().length, tabs.length);
+    });
+  });
+
+  group('groupLibrary — BY_LANGUAGE', () {
+    test('buckets by source language, labelled with flag + name', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, sourceLang: 'ja')),
+        _proxy(_Manga(id: 2, sourceLang: 'en')),
+        _proxy(_Manga(id: 3, sourceLang: 'ja')),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byLanguage, []);
+      // Sorted by DISPLAY name: English before Japanese (not en/ja by code).
+      expect(tabs.map((t) => t.name).toList(), [
+        '🇺🇸 English',
+        '🇯🇵 Japanese',
+      ]);
+      expect(tabs.first.mangaIds, [2]);
+      expect(tabs.last.mangaIds..sort(), [1, 3]);
+    });
+
+    test('local-source entries get their own trailing bucket', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, sourceLang: 'en')),
+        _proxy(_Manga(id: 2, sourceLang: 'localsourcelang')),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byLanguage, []);
+      expect(tabs.last.name, 'Local source');
+      expect(tabs.last.mangaIds, [2]);
+    });
+
+    test('a blank language falls into the local-source bucket', () {
+      final mangas = [_proxy(_Manga(id: 1, sourceLang: ''))];
+      final tabs = groupLibrary(mangas, LibraryGroup.byLanguage, []);
+      expect(tabs.single.name, 'Local source');
+    });
+
+    test('gives every bucket a distinct id', () {
+      final mangas = [
+        _proxy(_Manga(id: 1, sourceLang: 'ja')),
+        _proxy(_Manga(id: 2, sourceLang: 'en')),
+        _proxy(_Manga(id: 3, sourceLang: 'localsourcelang')),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.byLanguage, []);
+      expect(tabs.map((t) => t.id).toSet().length, 3);
     });
   });
 }

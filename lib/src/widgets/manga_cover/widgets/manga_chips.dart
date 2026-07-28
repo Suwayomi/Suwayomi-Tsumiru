@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
+import '../../../constants/enum.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../providers/manga_cover_providers.dart';
@@ -23,7 +24,10 @@ class MangaChipsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadedBadge = ref.watch(downloadedBadgeProvider).ifNull(true);
-    final unreadBadge = ref.watch(unreadBadgeProvider).ifNull(true);
+    // Chips only have room for a count, so "plain" and "count" both mean shown.
+    final unreadBadge =
+        (ref.watch(unreadBadgeStyleProvider) ?? UnreadBadgeMode.count)
+            .isVisible;
     // final languageBadge = ref.watch(languageBadgeProvider) .ifNull()));
     return Padding(
       padding: KEdgeInsets.v8.size,

@@ -581,11 +581,27 @@ class LibraryLandscapeColumns extends _$LibraryLandscapeColumns
   int? build() => initialize(DBKeys.libraryLandscapeColumns);
 }
 
+/// Uniform scale for the List / Descriptive List modes: the list-mode
+/// counterpart of the grid column slider.
+@riverpod
+class LibraryListScale extends _$LibraryListScale
+    with SharedPreferenceClientMixin<double> {
+  @override
+  double? build() => initialize(DBKeys.listScale);
+}
+
 @riverpod
 class CategoryTabs extends _$CategoryTabs
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.categoryTabs);
+}
+
+@riverpod
+class SectionHeadersShowAllCategories extends _$SectionHeadersShowAllCategories
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.sectionHeadersShowAllCategories);
 }
 
 @riverpod

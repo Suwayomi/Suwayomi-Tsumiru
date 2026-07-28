@@ -5,12 +5,34 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 /// Library grouping modes.
+///
+/// Persisted as `DBKeys.libraryGroupType`, so these numbers are frozen — new
+/// modes are appended.
 class LibraryGroup {
   static const byDefault = 0;
   static const bySource = 1;
   static const byStatus = 2;
   static const byTrackStatus = 3;
   static const ungrouped = 4;
+
+  /// Source genres + the user's own tags, fanned out.
+  static const byTag = 5;
+  static const byLanguage = 6;
+
+  /// Modes offered in the Group tab, in display order.
+  static const all = <int>[
+    byDefault,
+    byTag,
+    bySource,
+    byStatus,
+    byTrackStatus,
+    byLanguage,
+    ungrouped,
+  ];
+
+  /// False only for [ungrouped], where per-group affordances have nothing to
+  /// decorate.
+  static bool isGrouped(int type) => type != ungrouped;
 }
 
 /// Maps Suwayomi status strings → display order. Lower = shown first.
