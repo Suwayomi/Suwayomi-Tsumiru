@@ -634,7 +634,14 @@ class ReaderWrapper extends HookConsumerWidget {
                       child: RepaintBoundary(
                         child: ReaderView(
                           toggleVisibility: () {
-                            if (ref.read(readerTapArrestsFlingProvider)) return;
+                            final gate =
+                                ref.read(readerTapArrestsFlingProvider.notifier);
+                            // Cleared on use: only the long strip arms it, so a
+                            // stale true would swallow taps in the paged reader.
+                            if (gate.state) {
+                              gate.state = false;
+                              return;
+                            }
                             visibility.value = !visibility.value;
                           },
                           scrollDirection: scrollDirection,

@@ -65,10 +65,8 @@ double autoScrollDelta({
   return pxPerMs * dtMs;
 }
 
-/// When auto-scroll picks up again after the user grabs the strip: the next
-/// interval boundary on the ticker's clock. Komikku sleeps a whole interval
-/// between glides, so a drag costs the remainder of the current one and no
-/// more — that is the brief hesitation before it carries on.
+/// Next interval boundary after [elapsed]. Komikku sleeps a full interval
+/// between glides, so a drag costs at most the remainder of one.
 Duration autoScrollResumeAt(Duration elapsed, int intervalSeconds) {
   if (intervalSeconds <= 0) return elapsed;
   final periodMs = intervalSeconds * 1000;
@@ -429,17 +427,13 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ref.watch(autoScrollIntervalSecondsProvider) ??
         DBKeys.autoScrollIntervalSeconds.initial as int;
     // Set around every auto-scroll-driven jump so the manual-scroll listener
-    // (below) doesn't mistake the engine's own motion for the user grabbing
-    // the strip and yield to it.
+    // below doesn't mistake the engine's own motion for a user drag.
     final programmaticScroll = useRef<bool>(false);
     final lastAutoScrollTick = useRef<Duration>(Duration.zero);
     final autoScrollPausedUntil = useRef<Duration>(Duration.zero);
-    // True from the moment the strip starts moving under the reader until it
-    // comes to rest, so a touch landing mid-coast can be told from one landing
-    // on a still page. Start/end fire once per gesture, never per frame.
+    // Tracked between ScrollStart/ScrollEnd so a touch landing mid-coast can be
+    // told from one landing on a still page.
     final stripInMotion = useRef<bool>(false);
-    // Auto-scroll holds while the chrome is up and carries on when it goes,
-    // rather than switching itself off; only the toggle ends it.
     final bool chromeVisible = ref.watch(readerChromeVisibleProvider) ?? false;
 
     // Decode a page's image off-screen AND record its true rendered height from
@@ -934,9 +928,12 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
         programmaticScroll.value = true;
         pos.jumpTo(target.clamp(pos.minScrollExtent, pos.maxScrollExtent));
-        programmaticScroll.value = false;
       } catch (_) {
         // Attached but not laid out yet (no ScrollPosition) — skip this tick.
+      } finally {
+        // A throw mid-jump would otherwise latch the guard on and every later
+        // drag would read as the engine's own motion.
+        programmaticScroll.value = false;
       }
     }
 
@@ -969,13 +966,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         timer = Timer.periodic(Duration(seconds: autoScrollIntervalSeconds), (
           _,
         ) {
+          if (stripInMotion.value) return;
           if (atLastLoadedPage()) {
             ref.read(autoScrollActiveProvider.notifier).stop();
             return;
           }
           programmaticScroll.value = true;
-          handlePageNavigation(isNext: true);
-          programmaticScroll.value = false;
+          try {
+            handlePageNavigation(isNext: true);
+          } finally {
+            programmaticScroll.value = false;
+          }
         });
       }
       return () => timer?.cancel();
@@ -1236,11 +1237,8 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           )
         : edgeAwareList;
 
-    // A touch that lands while the strip is still coasting from the reader's
-    // own fling arrests it and nothing more; the chrome waits for the next tap.
-    // Pointer-down is the only moment the ballistic activity is still live —
-    // the drag that follows cancels it — so the answer is snapshotted here and
-    // read at tap time rather than watched throughout the scroll.
+    // Pointer-down is the last moment the fling is still live before the drag
+    // cancels it, so the arrest decision is snapshotted here.
     final flingAwareChild = Listener(
       onPointerDown: (_) {
         final arrests = stripInMotion.value && !programmaticScroll.value;

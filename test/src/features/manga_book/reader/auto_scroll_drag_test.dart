@@ -4,10 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Auto-scroll yields to the reader instead of switching itself off: a drag
-// hands the strip over until the next interval boundary, the chrome holds it
-// while it is up, and only the toggle ends it.
-
 import 'dart:convert';
 import 'dart:io';
 
