@@ -42,6 +42,11 @@ double _stripHeight(BuildContext context) {
 /// padding, no slant inset) — for artwork that should bleed to the diagonal.
 typedef _Segment = ({Decoration decoration, Widget child, bool fill});
 
+/// Badge corners are physical: the layout editor offers "top-left" and
+/// "top-right", not "start" and "end". Every row that places a cluster pins
+/// this, or an RTL locale mirrors the clusters onto the wrong corners.
+const _kPhysical = TextDirection.ltr;
+
 class MangaBadgesRow extends ConsumerWidget {
   const MangaBadgesRow({
     super.key,
@@ -67,6 +72,7 @@ class MangaBadgesRow extends ConsumerWidget {
         padding: padding ?? KEdgeInsets.a8.size,
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          textDirection: _kPhysical,
           children: [
             _BadgeStrip(
               height: height,
@@ -212,6 +218,7 @@ class MangaBadgesRow extends ConsumerWidget {
           if (!constraints.hasBoundedWidth) {
             return Row(
               mainAxisSize: MainAxisSize.min,
+              textDirection: _kPhysical,
               children: [
                 if (left.isNotEmpty) leftStrip,
                 if (left.isNotEmpty && right.isNotEmpty)
@@ -225,6 +232,7 @@ class MangaBadgesRow extends ConsumerWidget {
           // Capping each at half the width lets its own clip shave the excess.
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            textDirection: _kPhysical,
             children: [
               Flexible(
                 child: left.isEmpty ? const SizedBox.shrink() : leftStrip,

@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/data/badge_preference_migration.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -67,6 +68,9 @@ Future<void> _pumpBadges(
   Map<String, Object> prefs = const {},
   Fragment$MangaDto? manga,
   bool onDevice = true,
+  TextDirection textDirection = TextDirection.ltr,
+  bool migrate = false,
+  bool showCountBadges = true,
 }) async {
   SharedPreferences.setMockInitialValues({
     'onDeviceBadge': true,
@@ -77,6 +81,9 @@ Future<void> _pumpBadges(
     ...prefs,
   });
   final sp = await SharedPreferences.getInstance();
+  // Stand in for the boot-time upgrade path, so a test can seed the pre-revamp
+  // keys and assert on what the user ends up seeing.
+  if (migrate) await migrateBadgePreferences(sp);
   await tester.pumpWidget(ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(sp),
@@ -85,14 +92,17 @@ Future<void> _pumpBadges(
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 160,
-            child: MangaBadgesRow(
-              manga: manga ?? _manga(),
-              showCountBadges: true,
+      home: Directionality(
+        textDirection: textDirection,
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 160,
+              child: MangaBadgesRow(
+                manga: manga ?? _manga(),
+                showCountBadges: showCountBadges,
+              ),
             ),
           ),
         ),
@@ -210,6 +220,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the left cluster stays on the left in an RTL locale',
+        (tester) async {
+      // The corners the layout editor offers are physical, so an RTL locale
+      // must not mirror them. Unread sits left by default, language right.
+      await _pumpBadges(tester, textDirection: TextDirection.rtl);
+      expect(
+        tester.getCenter(find.text('4')).dx,
+        lessThan(tester.getCenter(find.text('🇯🇵')).dx),
+      );
+    });
+
+    testWidgets('an RTL locale still reaches both physical corners',
+        (tester) async {
+      await _pumpBadges(tester, textDirection: TextDirection.rtl);
+      final row = tester.getRect(find.byType(MangaBadgesRow));
+      // Each cluster hugs its own corner, inside the row's 8px padding.
+      expect(tester.getTopLeft(find.text('4')).dx, lessThan(row.center.dx));
+      expect(
+        tester.getTopRight(find.text('🇯🇵')).dx,
+        greaterThan(row.center.dx),
+      );
+    });
+
+    testWidgets('the Browse in-library marker stays left in an RTL locale',
+        (tester) async {
+      // Browse and global-search covers take their own path through the row.
+      await _pumpBadges(
+        tester,
+        showCountBadges: false,
+        textDirection: TextDirection.rtl,
+      );
+      final row = tester.getRect(find.byType(MangaBadgesRow));
+      final marker = find.byIcon(Icons.collections_bookmark_rounded);
+      expect(tester.getCenter(marker).dx, lessThan(row.center.dx));
+    });
+
+    testWidgets('an upgrade keeps the badges the user had set', (tester) async {
+      // The point of the migration: what it writes is what the renderer reads.
+      // Pre-revamp keys in, the same cover out.
+      await _pumpBadges(
+        tester,
+        prefs: {
+          'unreadBadge': false,
+          'localBadge': true,
+          'sourceBadge': false,
+        },
+        migrate: true,
+        manga: _manga(lang: 'localsourcelang'),
+      );
+
+      expect(find.text('4'), findsNothing, reason: 'unread badge stayed off');
+      expect(find.byIcon(Icons.folder_rounded), findsOneWidget,
+          reason: 'the Local Source badge survived as the source badge');
+    });
+
     testWidgets('nothing enabled renders nothing at all', (tester) async {
       await _pumpBadges(
         tester,
@@ -257,6 +322,42 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('4'), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
+    });
+
+    testWidgets('the unbounded path keeps its cluster order in RTL',
+        (tester) async {
+      // The list tiles take the min-width branch, which orders the two clusters
+      // itself rather than pinning them to corners — RTL would swap them.
+      SharedPreferences.setMockInitialValues({
+        'onDeviceBadge': true,
+        'downloadedBadge': true,
+        'languageBadge': true,
+      });
+      final sp = await SharedPreferences.getInstance();
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: Row(
+                children: [
+                  MangaBadgesRow(manga: _manga(), showCountBadges: true),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      expect(
+        tester.getCenter(find.text('4')).dx,
+        lessThan(tester.getCenter(find.text('🇯🇵')).dx),
+      );
     });
   });
 
