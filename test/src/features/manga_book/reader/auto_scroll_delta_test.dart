@@ -48,4 +48,50 @@ void main() {
       );
     });
   });
+
+  group('autoScrollResumeAt', () {
+    test('resumes at the next interval boundary', () {
+      expect(
+        autoScrollResumeAt(const Duration(milliseconds: 1500), 5),
+        const Duration(seconds: 5),
+      );
+      expect(
+        autoScrollResumeAt(const Duration(milliseconds: 12000), 5),
+        const Duration(seconds: 15),
+      );
+    });
+
+    test('a drag landing on a boundary waits the next full interval', () {
+      expect(
+        autoScrollResumeAt(const Duration(seconds: 10), 5),
+        const Duration(seconds: 15),
+      );
+    });
+
+    test('a later drag never resumes earlier than an earlier one', () {
+      final early = autoScrollResumeAt(const Duration(milliseconds: 200), 5);
+      final late = autoScrollResumeAt(const Duration(milliseconds: 4800), 5);
+      expect(late, greaterThanOrEqualTo(early));
+    });
+
+    test('the pause never outlasts one interval', () {
+      for (var ms = 0; ms < 5000; ms += 250) {
+        final elapsed = Duration(milliseconds: ms);
+        final wait = autoScrollResumeAt(elapsed, 5) - elapsed;
+        expect(wait, lessThanOrEqualTo(const Duration(seconds: 5)));
+        expect(wait, greaterThan(Duration.zero));
+      }
+    });
+
+    test('zero or negative interval resumes immediately', () {
+      expect(
+        autoScrollResumeAt(const Duration(seconds: 3), 0),
+        const Duration(seconds: 3),
+      );
+      expect(
+        autoScrollResumeAt(const Duration(seconds: 3), -1),
+        const Duration(seconds: 3),
+      );
+    });
+  });
 }

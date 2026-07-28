@@ -106,7 +106,9 @@ class ReaderInputScope extends InheritedWidget {
 
 bool _noBoundaryNavigation() => false;
 
-final _readerChromeSessionVisibilityProvider =
+/// Whether the reader chrome is on screen. Public so the long strip can hold
+/// auto-scroll while it is up.
+final readerChromeVisibleProvider =
     StateProvider.autoDispose<bool?>((Ref ref) {
   final link = ref.keepAlive();
   Timer? timer;
@@ -245,7 +247,7 @@ class ReaderWrapper extends HookConsumerWidget {
         ref.watch(readerMagnifierSizeKeyProvider) ??
             DBKeys.readerMagnifierSize.initial;
 
-    final sessionVisibility = ref.watch(_readerChromeSessionVisibilityProvider);
+    final sessionVisibility = ref.watch(readerChromeVisibleProvider);
     final visibility = useState(
       sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
     );
@@ -309,7 +311,7 @@ class ReaderWrapper extends HookConsumerWidget {
       void syncVisibility() {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (disposed) return;
-          ref.read(_readerChromeSessionVisibilityProvider.notifier).state =
+          ref.read(readerChromeVisibleProvider.notifier).state =
               visibility.value;
         });
       }
