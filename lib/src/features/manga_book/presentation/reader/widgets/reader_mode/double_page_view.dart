@@ -32,6 +32,8 @@ class DoublePageView extends StatelessWidget {
     required this.rotateWideInvert,
     required this.reversePair,
     required this.onPageWide,
+    required this.onNaturalSize,
+    this.naturalSize = false,
     this.cropBorders = false,
   });
 
@@ -55,6 +57,14 @@ class DoublePageView extends StatelessWidget {
   /// Reports a page's wide/portrait aspect once its image resolves, so the
   /// mapping can isolate/split it. Fires only for full-page slots.
   final void Function(int raw, bool isWide) onPageWide;
+
+  /// Reports a page's decoded pixel size, which the viewport needs to place a
+  /// page at its own size (Original size) and to bound panning.
+  final void Function(int raw, Size natural) onNaturalSize;
+
+  /// Original size: lay out at decoded pixel size — scaling a fitted image up
+  /// to 1:1 would just magnify and blur it.
+  final bool naturalSize;
 
   /// Auto-crop solid borders — threaded to each slot's [ServerImage].
   final bool cropBorders;
@@ -127,6 +137,8 @@ class DoublePageView extends StatelessWidget {
         fit: pageFit ?? BoxFit.contain,
         alignment: alignment,
         onPageWide: onPageWide,
+        onNaturalSize: onNaturalSize,
+        naturalSize: naturalSize,
       ),
       progressIndicatorBuilder: (context, url, downloadProgress) =>
           CenterSorayomiShimmerIndicator(value: downloadProgress.progress),
@@ -149,6 +161,8 @@ class _SpreadImage extends StatefulWidget {
     required this.fit,
     required this.alignment,
     required this.onPageWide,
+    required this.onNaturalSize,
+    required this.naturalSize,
   });
 
   final ImageProvider imageProvider;
@@ -159,6 +173,8 @@ class _SpreadImage extends StatefulWidget {
   final BoxFit fit;
   final Alignment alignment;
   final void Function(int raw, bool isWide) onPageWide;
+  final void Function(int raw, Size natural) onNaturalSize;
+  final bool naturalSize;
 
   @override
   State<_SpreadImage> createState() => _SpreadImageState();
@@ -191,10 +207,16 @@ class _SpreadImageState extends State<_SpreadImage> {
 
   void _onImage(ImageInfo info, bool synchronousCall) {
     final wide = info.image.width > info.image.height;
+    final w = info.image.width.toDouble();
+    final h = info.image.height.toDouble();
+    // Rotating a wide page swaps its axes, so report the size as drawn.
+    final natural =
+        widget.rotateWide && wide ? Size(h, w) : Size(w, h);
     info.dispose();
     // Only full-page slots drive wide-detection; a half is already known wide.
     if (widget.half == PageHalf.full) {
       widget.onPageWide(widget.raw, wide);
+      widget.onNaturalSize(widget.raw, natural);
     }
     if (wide == _isWide) return;
     if (synchronousCall) {
@@ -229,11 +251,22 @@ class _SpreadImageState extends State<_SpreadImage> {
       );
     }
 
-    final image = Image(
-      image: widget.imageProvider,
-      fit: widget.fit,
-      alignment: widget.alignment,
-    );
+    // Original size overflows the slot on purpose; the viewport clips per-page
+    // and its zoom pans the overflow.
+    final Widget image = widget.naturalSize
+        ? OverflowBox(
+            minWidth: 0,
+            minHeight: 0,
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            alignment: widget.alignment,
+            child: Image(image: widget.imageProvider),
+          )
+        : Image(
+            image: widget.imageProvider,
+            fit: widget.fit,
+            alignment: widget.alignment,
+          );
     if (widget.rotateWide && _isWide) {
       return RotatedBox(
         quarterTurns: widget.rotateWideInvert ? -1 : 1,

@@ -30,6 +30,9 @@ enum DBKeys {
   readerMode(ReaderMode.singleHorizontalRTL),
   readerPadding(0.0),
   readerMagnifierSize(1.0),
+  // Desktop mouse wheel. Flutter's Linux embedder moves 53px per notch, which
+  // reads slower than the browser WebUI runs in; 1.7 lines them up.
+  readerMouseScrollSpeed(1.7),
   // Migration source for the per-viewer keys below only; nothing reads this
   // directly. Default changed from disabled to defaultNavigation to match
   // Komikku's tap zones on by default.
@@ -38,7 +41,6 @@ enum DBKeys {
   quickSearchToggle(true),
   swipeToggle(true),
   lastPageSwipeEnabled(false),
-  infinityScrollingMode(true),
   scrollAnimation(true),
   showNSFW(true),
   showRecommendations(true),

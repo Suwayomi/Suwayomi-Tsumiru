@@ -311,13 +311,31 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
     super.key,
     required this.chapterName,
     required this.isChapterStart,
+    this.alwaysShow = true,
   });
 
   final String chapterName;
   final bool isChapterStart;
 
+  /// "Always show chapter transition": off collapses this to a slim label so
+  /// chapters run together with less interruption.
+  final bool alwaysShow;
+
   @override
   Widget build(BuildContext context) {
+    if (!alwaysShow) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          chapterName,
+          textAlign: TextAlign.center,
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
     return Column(
       children: [
         const Gap(32),

@@ -19,12 +19,10 @@ The reader is central (Tsumiru is webtoon/manhwa-first). It renders pages from t
 | `.../reader/controller/reader_setting.dart` | `ReaderSetting<T>` descriptor: scope + per-series key + global provider + fallback |
 | `.../reader/controller/reader_mode_adapter.dart` | `ReaderModeAdapter` — maps the frozen 8-value `ReaderMode` ↔ Mihon-parity chips |
 | `.../reader/controller/reader_preview_channel.dart` | Ephemeral `ValueNotifier` draft channels for live filter preview |
-| `.../reader_mode/continuous_reader_mode.dart` | Non-infinity continuous (webtoon, continuousVertical, continuousHorizontal*) via `ScrollablePositionedList` |
 | `.../reader_mode/single_page_reader_mode.dart` | Paged reader host: resolves effective settings, builds spread mapping, prefetches ±2 |
 | `.../reader_mode/paged_reader_viewport.dart` | Custom paged viewport: pointer input, page snapping, per-display zoom/pan, tap zones, boundary chapter navigation |
 | `.../reader_mode/{paged_spread_mapping,double_page_view}.dart` | Raw-page ↔ display-entry mapping plus single/double/split-wide rendering |
-| `.../reader_mode/infinity_continuous_reader_mode.dart` | Router: infinity+vertical → `MultiChapterContinuousReaderMode`; else single-chapter SPL fallback |
-| `.../infinity_continuous/multichapter_continuous_reader_mode.dart` | The real webtoon-infinity reader: dynamic adjacent-chapter loading, page-height measurement, prepend re-anchor |
+| `.../infinity_continuous/multichapter_continuous_reader_mode.dart` | The only long-strip reader: dynamic adjacent-chapter loading, page-height measurement, prepend re-anchor, 16px gaps for `continuousVertical` |
 | `.../infinity_continuous/measure_size.dart` | `MeasureSize` — reports rendered size to cache true page heights (prevents scroll-snap) |
 | `.../infinity_continuous/infinity_continuous_{config,utils,navigation,feedback}.dart` | Constants, helpers, navigation, chapter-load snackbars + separator |
 | `.../reader/widgets/directional_swipe_gesture_handler.dart` | Swipe-to-chapter-nav / simple boundary-swipe recognizers |
@@ -40,7 +38,7 @@ The reader is central (Tsumiru is webtoon/manhwa-first). It renders pages from t
 | Mode | Widget | Mechanism |
 |---|---|---|
 | `webtoon` | `ContinuousReaderMode` (no separator) → may delegate to `MultiChapterContinuousReaderMode` | SPL vertical, no gaps |
-| `continuousVertical` | `ContinuousReaderMode` (separator, never infinity) | SPL, 16px gaps |
+| `continuousVertical` | `MultiChapterContinuousReaderMode` | SPL, 16px gaps between pages |
 | `continuousHorizontal*` | `ContinuousReaderMode` (horizontal ± reverse) | SPL horizontal |
 | `single*` | `SinglePageReaderMode` | Custom `PagedReaderViewport` |
 
@@ -92,7 +90,7 @@ Slider drags in the Custom-filter tab must not rebuild the viewer or the tab. `r
 
 `ReaderColorOverlays` uses **`BackdropFilter(ColorFilter)`** (not a leaf `ColorFiltered`) — a leaf only filters its own child, never the viewer pixels beneath it. Grayscale/invert compose as 4×5 color matrices (Komikku `getCombinedPaint`, grayscale-first); the blended color rect uses `ColorFilter.mode(color, blendMode)`; negative brightness is a black `ColoredBox` at `abs(value)/100`.
 
-Reader DBKeys: `readerMode` (webtoon), `readerPadding` (0.0), `readerMagnifierSize` (1.0), `readerNavigationLayout` (disabled), `swipeToggle` (true), `lastPageSwipeEnabled` (false), `infinityScrollingMode` (false), `readerOverlay` (true), `pinchToZoom` (true), `readerIgnoreSafeArea` (false). Per-manga overrides via `MangaMetaKeys` take precedence. Many more zoom/filter/general keys added this branch (see below); most are settings-complete but engine-inert.
+Reader DBKeys: `readerMode` (webtoon), `readerPadding` (0.0), `readerMagnifierSize` (1.0), `readerNavigationLayout` (disabled), `swipeToggle` (true), `lastPageSwipeEnabled` (false), `readerOverlay` (true), `pinchToZoom` (true), `readerIgnoreSafeArea` (false). Per-manga overrides via `MangaMetaKeys` take precedence. Many more zoom/filter/general keys added this branch (see below); most are settings-complete but engine-inert.
 
 ## Settings wiring status
 
@@ -111,7 +109,7 @@ each with a concrete architectural blocker below.
 non-default "Long strip with gaps" mode; its own key isn't read by an engine
 (the wired crop uses `cropBorders` / `cropBordersWebtoon`).
 
-**Wired this branch:** custom paged viewport · image scale type · double-page / wide-split / true-dual-spread / center-margin (paged) · paged zoom-start / automatic landscape zoom / navigate-to-pan · webtoon smart-scale (non-infinity) · **auto-crop borders** (decoder-level `CroppedImageProvider` → pure-Dart isolate edge-scan, applied across single/double/split/webtoon engines) · always-show-chapter-transition · smaller tap zones · page-number indicator · animate page transitions · positive custom brightness (`screen_brightness`) · **long-tap page actions** (copy link / open in web / share image / save to gallery) · **draw-under-cutout** (native `MethodChannel` → `layoutInDisplayCutoutMode`) · plus the earlier zoom toggles (double-tap / pinch / disable zoom-out→min 0.5 / disable zoom-in) · rotate-wide (+invert) · background color · seekbar chain + landscape/left-handed · fullscreen · page-change flash · keep-screen-on · auto-webtoon · orientation · tap-invert (4-value) · tap-zone layouts · all custom-filter overlays (grayscale / invert / negative brightness / blended color).
+**Wired this branch:** custom paged viewport · image scale type · double-page / wide-split / true-dual-spread / center-margin (paged) · paged zoom-start / automatic landscape zoom / navigate-to-pan · webtoon smart-scale · **auto-crop borders** (decoder-level `CroppedImageProvider` → pure-Dart isolate edge-scan, applied across single/double/split/webtoon engines) · always-show-chapter-transition · smaller tap zones · page-number indicator · animate page transitions · positive custom brightness (`screen_brightness`) · **long-tap page actions** (copy link / open in web / share image / save to gallery) · **draw-under-cutout** (native `MethodChannel` → `layoutInDisplayCutoutMode`) · plus the earlier zoom toggles (double-tap / pinch / disable zoom-out→min 0.5 / disable zoom-in) · rotate-wide (+invert) · background color · seekbar chain + landscape/left-handed · fullscreen · page-change flash · keep-screen-on · auto-webtoon · orientation · tap-invert (4-value) · tap-zone layouts · all custom-filter overlays (grayscale / invert / negative brightness / blended color).
 
 **Crop-borders render path:** `ServerImage(cropBorders: true)` swaps in `CroppedImageProvider` (`reader/crop/`), which fetches the page's encoded bytes through the SAME cache entry (shared `cacheKey` + auth headers via `serverImageRequest`), runs `findContentRect` in a `compute()` isolate (`image` pkg decode → per-edge threshold scan, corner-reference, ≥10%-area guard), and yields the cropped frame via `ui.decodeImageFromPixels`. Because it's an `ImageProvider`, crop composes with rotate/split/double through the existing `imageBuilder`. In the multichapter engine the crop frame decodes under the imageBuilder's own `frameBuilder`, so the reserved-height / `MeasureSize` scroll-anchor contract is untouched.
 
@@ -121,12 +119,10 @@ Page-progress: `onPageChanged` debounces 2s then `putChapter` (`lastPageRead`); 
 
 ## Gotchas / tech debt
 
-- **Three near-identical continuous implementations** (`ContinuousReaderMode`, the infinity-off fallback, `MultiChapterContinuousReaderMode`) — scroll fixes must be applied to all or they diverge again.
 - **800ms `programmaticNavigationDelay`** blocks programmatic nav (incl. slider) while scrolling; slider uses `forceNavigation: true` + a 300ms reset that can race.
 - **Prepend re-anchor is one-frame deferred** — on a slow device SPL may not register the new `itemCount` in that frame → viewport snaps to wrong content.
 - **`_PageViewEnhancer._checkBoundarySwipe` is dead code** (`return;`).
 - **Overscroll chapter nav can fire on momentum** (300ms window can expire before animation settles).
-- **`infinityScrollingMode` toggle only shows when the global default is `webtoon`** — hidden if global is `continuousVertical` but per-manga is `webtoon`.
 - **`minVisibleAreaThreshold = 0.4` is duplicated** in `_ScrollConfig` and `InfinityContinuousConfig` (not shared).
 - **Requires the pinned `scrollable_positioned_list` fork** (exposes `ScrollOffsetController.position`) — won't compile against pub.dev.
 - **FROZEN reader-engine boundary (narrowed):** only the **scroll / position / index math** in `multichapter_continuous_reader_mode.dart` + `reader_chapter_logic.dart` is frozen. Render-only, parametric changes to `ServerImage` in the viewers are allowed (precedent: the multichapter zoom `minScale`/`doubleTapDrag` args, and this branch's `cropBorders:` arg — a render-only decode swap that the imageBuilder's own `frameBuilder` absorbs, leaving the height-reservation math untouched). Anything needing a **webtoon page-list remap** still stays out — see "Settings wiring status".

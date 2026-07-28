@@ -171,9 +171,13 @@ enum ImageScaleType {
         ImageScaleType.stretch => (BoxFit.fill, Size(width, height)),
         ImageScaleType.fitWidth => (BoxFit.fitWidth, Size.fromWidth(width)),
         ImageScaleType.fitHeight => (BoxFit.fitHeight, Size.fromHeight(height)),
-        ImageScaleType.originalSize => (BoxFit.none, null),
+        ImageScaleType.originalSize => (BoxFit.contain, null),
         ImageScaleType.smartFit => (BoxFit.fitWidth, Size.fromWidth(width)),
       };
+
+  /// pagedFit above still returns BoxFit.contain; the zoom controller applies
+  /// the real 1:1 scale (Mihon: a minimum zoom level, not a fit mode).
+  bool get pagesAtNaturalSize => this == ImageScaleType.originalSize;
 }
 
 /// Paged zoom start position (default automatic).

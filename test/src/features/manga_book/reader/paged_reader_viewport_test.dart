@@ -110,6 +110,8 @@ Future<void> _pumpViewport(
         animateTransitions: animateTransitions,
         pageFit: BoxFit.contain,
         pageSize: null,
+        pagesAtNaturalSize: false,
+        mouseScrollSpeed: 1.7,
         centerMargin: CenterMarginType.none,
         rotateWide: false,
         rotateWideInvert: false,
