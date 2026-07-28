@@ -22,6 +22,7 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import '../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -423,19 +424,37 @@ Future<bool> recordReadState(
 /// Resolve the chapter to delete `slots` behind [readChapterId] in the manga's
 /// reading order (1 = the just-read chapter). Null if out of range or the list
 /// isn't loaded.
-int? _whileReadingTarget(
-    WidgetRef ref, int mangaId, int readChapterId, int slots) {
-  // Deliberately NOT the on-screen list: an unread filter drops the chapter the
-  // moment it is read, and any filter makes "N back" count gaps instead of
-  // chapters. Source order is the reading order regardless of how the list is
-  // displayed.
-  final chapters =
-      ref.read(mangaChapterListForBulkActionsProvider(mangaId: mangaId)).value;
-  if (chapters == null) return null;
-  final inReadingOrder = [...chapters]
-    ..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
-  return chapterIdToDeleteWhileReading(
-      inReadingOrder, true, readChapterId, slots);
+Future<int?> _whileReadingTarget(
+    WidgetRef ref, int mangaId, int readChapterId, int slots) async {
+  try {
+    // Not the filtered/on-screen list: a filter can drop the just-read chapter
+    // or turn "N back" into counting gaps instead of chapters.
+    final listProvider = mangaChapterListProvider(mangaId: mangaId);
+    var chapters = ref.read(listProvider).value;
+    // A chapter finished before the list resolves would otherwise be skipped
+    // with no second chance.
+    chapters ??= await ref.read(listProvider.future);
+    if (chapters == null) return null;
+
+    final preferred =
+        ref.read(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+    final showAll =
+        ref.read(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
+    // Pinned to the chapter actually being read: without it dedup can keep a
+    // different group's copy of that number and drop this id from the list.
+    final deduped = preferred.isEmpty || showAll
+        ? chapters
+        : applyPreferredScanlators(chapters, preferred,
+            keepChapterId: readChapterId);
+
+    final inReadingOrder = [...deduped]
+      ..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
+    return chapterIdToDeleteWhileReading(
+        inReadingOrder, true, readChapterId, slots);
+  } catch (_) {
+    // Leaving the reader mid-await disposes the ref; never surface that.
+    return null;
+  }
 }
 
 /// The server delete settings, loaded from the server (null offline / on error,
@@ -459,8 +478,8 @@ Future<void> maybeDeleteOnReadLocal(
   if (!ref.read(offlineActiveProvider)) return;
   final s = ref.read(localDeleteSettingsProvider);
   if (s.deleteWhileReading <= 0) return;
-  final targetId =
-      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  final targetId = await _whileReadingTarget(
+      ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
   await _deleteDeviceCopyIfDeletable(ref, targetId, s.deleteWithBookmark);
 }
@@ -509,8 +528,8 @@ Future<void> maybeDeleteOnReadServer(
 }) async {
   final s = await _serverDeleteSettings(ref);
   if (s == null || s.deleteWhileReading <= 0) return;
-  final targetId =
-      _whileReadingTarget(ref, mangaId, readChapterId, s.deleteWhileReading);
+  final targetId = await _whileReadingTarget(
+      ref, mangaId, readChapterId, s.deleteWhileReading);
   if (targetId == null) return;
   await _deleteServerCopyIfDeletable(
       ref, mangaId, targetId, s.deleteWithBookmark);

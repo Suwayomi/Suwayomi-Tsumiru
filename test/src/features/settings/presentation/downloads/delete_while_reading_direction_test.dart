@@ -27,8 +27,6 @@ ChapterDto _ch(int id, {bool isRead = false}) => Fragment$ChapterDto(
   meta: const <Fragment$ChapterDto$meta>[],
 );
 
-/// What `_whileReadingTarget` now hands the shared calculation: every chapter,
-/// in source order, whatever the details screen happens to be showing.
 List<ChapterDto> _readingOrder(List<ChapterDto> chapters) =>
     [...chapters]..sort((a, b) => a.sourceOrder.compareTo(b.sourceOrder));
 
