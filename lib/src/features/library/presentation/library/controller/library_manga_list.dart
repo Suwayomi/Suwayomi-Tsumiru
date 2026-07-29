@@ -25,8 +25,18 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   // provider was disposed mid-build. The keepAlive notifier outlives it.
   final reachability = ref.read(serverUnreachableProvider.notifier);
   final sync = ref.read(offlineSyncProvider);
+  // Ordered against push acks: captured before the fetch goes out.
+  final fetchGen = sync?.syncGeneration ?? 0;
+  // Mirror only genuine server responses. Fallback DTOs already carry the
+  // unread correction, so writing them back as server counts would apply it
+  // twice — and compound on every failed refresh.
+  var fromServer = false;
   final list = await libraryWithOfflineFallback(
-    fetch: () => categoryRepository.getAllLibraryMangas(),
+    fetch: () async {
+      final r = await categoryRepository.getAllLibraryMangas();
+      fromServer = true;
+      return r;
+    },
     // Only read the native-only DB when offline is available (never on web).
     db: offlineDb,
     offlineEnabled: offlineDb != null,
@@ -39,9 +49,9 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
       } catch (_) {}
     }),
   );
-  if (sync != null && list != null) {
+  if (sync != null && list != null && fromServer) {
     for (final manga in list) {
-      unawaited(sync.syncManga(manga));
+      unawaited(sync.syncManga(manga, fetchedAtGen: fetchGen));
     }
   }
   return list;

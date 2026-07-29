@@ -91,6 +91,29 @@ class OfflineChapters extends Table {
   BoolColumn get readStateDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// The read state already reflected in the manga row's stored [OfflineMangas
+  /// .unreadCount] — NOT simply "what the server last said". Invariant the
+  /// offline view depends on: shown unread = stored count − Σ(isRead −
+  /// syncedIsRead). Three legal writers, each tied to the count it corrects:
+  ///
+  ///  1. a chapter down-sync writes it alongside isRead when the row has no
+  ///     unsettled local change — first mirrors and changes from another
+  ///     device (preserving it there would invent a correction for a change
+  ///     this device never made);
+  ///  2. [alignSyncedReadBaseline] moves it when an aggregate lands, for rows
+  ///     whose acks predate that aggregate's fetch;
+  ///  3. [adoptServerReadState] settles it when a local change is abandoned.
+  ///
+  /// Preserved while a READ change is unsettled — readStateDirty, or the row
+  /// still carries a live correction (isRead ≠ baseline) the server is merely
+  /// confirming — read off the persisted row so it survives a restart between
+  /// an ack and its aggregate. Other dirty flags don't protect it. A push ack
+  /// alone must NOT move it: the server knows the change, but the stored
+  /// count still predates it, so retiring the correction early re-shows the
+  /// old number. Every prior bug here was a writer moving one side of the
+  /// invariant without the other — check any new writer against it.
+  BoolColumn get syncedIsRead => boolean().withDefault(const Constant(false))();
+
   /// The server's last-read timestamp (epoch millis as a string) synced down
   /// so the offline library can sort by "Last Read" — server is the source of
   /// truth, never the device clock.
@@ -149,7 +172,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -262,6 +285,20 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.scanlator,
         );
       }
+      if (from < 10) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.syncedIsRead,
+        );
+        // Assume existing rows agree with the server: the correction then
+        // starts at zero and behaves exactly as it did before this column,
+        // until the next down-sync records real baselines. Guessing the other
+        // way would invent corrections for chapters nobody has touched.
+        await customStatement(
+          'UPDATE offline_chapters SET synced_is_read = is_read',
+        );
+      }
     },
   );
 
@@ -339,12 +376,18 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? lastReadAt,
     double? chapterNumber,
     String? scanlator,
+    // The server's own value, recorded even when [isRead] carries a preserved
+    // local change, so the two can be compared later.
+    bool? syncedIsRead,
   }) => into(offlineChapters).insertOnConflictUpdate(
     OfflineChaptersCompanion(
       id: Value(id),
       mangaId: Value(mangaId),
       name: Value(name),
       chapterIndex: Value(chapterIndex),
+      syncedIsRead: syncedIsRead == null
+          ? const Value.absent()
+          : Value(syncedIsRead),
       // Absent when omitted (like lastReadAt): a caller that doesn't carry
       // these must not null-clobber values a full sync already wrote.
       chapterNumber: chapterNumber == null
@@ -549,6 +592,27 @@ class OfflineDatabase extends _$OfflineDatabase {
         ),
       );
 
+  /// Read-state changes this device has made that the manga's server-side
+  /// `unreadCount` does not know about yet, as `newly read - newly unread`.
+  ///
+  /// Measured against [OfflineChapters.syncedIsRead], the last value the
+  /// server reported, so it is exact in both directions and for any subset of
+  /// chapters: re-reading something already read counts zero, un-reading
+  /// raises the count, and a partial mirror corrects the chapters it holds
+  /// without having to reason about the ones it does not.
+  Future<Map<int, int>> unsyncedReadDeltaByManga() async {
+    // Only mismatched rows contribute, so filter in SQL — the read rows of a
+    // whole library are thousands; the pending changes are a handful.
+    final rows = await (select(
+      offlineChapters,
+    )..where((t) => t.isRead.equalsExp(t.syncedIsRead).not())).get();
+    final delta = <int, int>{};
+    for (final r in rows) {
+      delta[r.mangaId] = (delta[r.mangaId] ?? 0) + (r.isRead ? 1 : -1);
+    }
+    return delta;
+  }
+
   /// Clear the progress dirty flag after the progress was pushed to the server.
   Future<void> clearProgressDirty(int chapterId) =>
       (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
@@ -573,16 +637,139 @@ class OfflineDatabase extends _$OfflineDatabase {
           ))
           .write(const OfflineChaptersCompanion(progressDirty: Value(false)));
 
+  /// Orders push acknowledgements against refresh fetches, so the baseline
+  /// alignment can tell which acked changes a fetched aggregate can possibly
+  /// contain. In-memory on purpose: the ordering only matters within one
+  /// session (a push and a refresh can only race while both are in flight),
+  /// and an ack from a previous run is by definition older than any fetch in
+  /// this one — which is exactly what an absent entry means.
+  int _pushGen = 0;
+  final Map<int, int> _ackGen = {};
+
+  /// Capture BEFORE issuing the network fetch whose result will be handed to
+  /// the sync layer. Captured too late, and the alignment trusts an aggregate
+  /// with changes it cannot have seen — the premature-retire bug.
+  int get syncGeneration => _pushGen;
+
   /// Clear readStateDirty only if the row's isRead still matches what was
   /// pushed — the same race guard as [clearProgressDirtyIfUnchanged], mirroring
   /// [clearBookmarkDirtyIfUnchanged].
   Future<void> clearReadStateDirtyIfUnchanged(
     int chapterId, {
     required bool isRead,
+  }) async {
+    final matched =
+        await (update(offlineChapters)
+              ..where((t) => t.id.equals(chapterId) & t.isRead.equals(isRead)))
+            .write(
+              // Deliberately does NOT move syncedIsRead. The push is known to
+              // the server but the manga's stored unreadCount still is not, so
+              // the correction has to survive until that aggregate is
+              // refreshed — see alignSyncedReadBaseline, which retires it.
+              const OfflineChaptersCompanion(readStateDirty: Value(false)),
+            );
+    // Stamp the ack only if the clear applied — a mid-push local write keeps
+    // its flag, stays out of alignment via the dirty check, and re-acks on the
+    // next pass with a fresh stamp.
+    if (matched > 0) _ackGen[chapterId] = ++_pushGen;
+  }
+
+  /// Retire corrections whose change the refreshed aggregate already counts.
+  ///
+  /// Called when a manga's server-side counts are written; [upToGen] is the
+  /// sync generation captured before that aggregate's fetch went out. Two
+  /// kinds of row keep their baseline, and so keep correcting:
+  ///
+  ///  - rows still dirty (the push has not happened), and
+  ///  - rows whose push was acknowledged only after the fetch started — the
+  ///    server committed the change after (or while) it served this
+  ///    aggregate, so the count in hand cannot be assumed to include it.
+  ///
+  /// Everything else is the server's own value as of a fetch that started
+  /// after its ack, so the refreshed count provably contains it and the
+  /// correction retires.
+  /// Returns how many of this manga's live corrections were left in place
+  /// because their acks postdate the aggregate's fetch — the caller can then
+  /// refetch with a later generation to settle them promptly.
+  Future<int> alignSyncedReadBaseline(
+    int mangaId, {
+    required int upToGen,
+  }) async {
+    final lateAcks = [
+      for (final e in _ackGen.entries)
+        if (e.value > upToGen) e.key,
+    ];
+    var skipped = 0;
+    if (lateAcks.isNotEmpty) {
+      skipped =
+          (await (select(offlineChapters)..where(
+                    (t) =>
+                        t.mangaId.equals(mangaId) &
+                        t.readStateDirty.equals(false) &
+                        t.id.isIn(lateAcks) &
+                        t.isRead.equalsExp(t.syncedIsRead).not(),
+                  ))
+                  .get())
+              .length;
+    }
+    final placeholders = List.filled(lateAcks.length, '?').join(', ');
+    await customStatement(
+      'UPDATE offline_chapters SET synced_is_read = is_read '
+      'WHERE manga_id = ? AND read_state_dirty = 0'
+      '${lateAcks.isEmpty ? '' : ' AND id NOT IN ($placeholders)'}',
+      [mangaId, ...lateAcks],
+    );
+    return skipped;
+  }
+
+  /// Full rows for [ids], keyed by id. Chunked: chapter lists can exceed
+  /// SQLite's bound-variable limit.
+  Future<Map<int, OfflineChapter>> chaptersByIds(List<int> ids) async {
+    final found = <int, OfflineChapter>{};
+    for (var i = 0; i < ids.length; i += 500) {
+      final chunk = ids.sublist(i, i + 500 > ids.length ? ids.length : i + 500);
+      final rows = await (select(
+        offlineChapters,
+      )..where((t) => t.id.isIn(chunk))).get();
+      for (final r in rows) {
+        found[r.id] = r;
+      }
+    }
+    return found;
+  }
+
+  /// Settle a row whose local change LOST — the never-regress policy found the
+  /// server ahead and dropped the push. A one-row down-sync of the state we
+  /// just fetched: live value, position, and baseline all become the server's,
+  /// so the correction retires with the change instead of arguing for it
+  /// forever. Clearing the dirty flag alone is not enough — that freezes
+  /// isRead != syncedIsRead with nothing left that would ever reconcile them.
+  ///
+  /// Guarded on the values the sync pass examined, like the IfUnchanged
+  /// clears: a newer local write mid-pass keeps its flag and re-resolves on
+  /// the next pass instead of being silently overwritten.
+  Future<void> adoptServerReadState(
+    int chapterId, {
+    required bool expectedIsRead,
+    required int expectedLastPageRead,
+    required bool serverIsRead,
+    required int serverLastPageRead,
   }) =>
-      (update(offlineChapters)
-            ..where((t) => t.id.equals(chapterId) & t.isRead.equals(isRead)))
-          .write(const OfflineChaptersCompanion(readStateDirty: Value(false)));
+      (update(offlineChapters)..where(
+            (t) =>
+                t.id.equals(chapterId) &
+                t.isRead.equals(expectedIsRead) &
+                t.lastPageRead.equals(expectedLastPageRead),
+          ))
+          .write(
+            OfflineChaptersCompanion(
+              isRead: Value(serverIsRead),
+              lastPageRead: Value(serverLastPageRead),
+              syncedIsRead: Value(serverIsRead),
+              progressDirty: const Value(false),
+              readStateDirty: const Value(false),
+            ),
+          );
 
   /// Clear bookmarkDirty only if the bookmark still matches what was pushed —
   /// same race guard as [clearProgressDirtyIfUnchanged].

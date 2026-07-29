@@ -42,6 +42,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     if (rows.isEmpty) rethrow;
     final lastReadByManga = await db.lastReadAtByManga();
     final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
+    final readDelta = await db.unsyncedReadDeltaByManga();
     // Load all category memberships in one pass keyed by mangaId
     final categoryMap = <int, List<OfflineCategory>>{};
     for (final m in rows) {
@@ -54,6 +55,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
           lastReadAt: lastReadByManga[m.id],
           firstUnread: firstUnreadByManga[m.id],
           offlineCategories: categoryMap[m.id] ?? [],
+          unsyncedReadDelta: readDelta[m.id] ?? 0,
         ),
     ];
   }
@@ -73,7 +75,13 @@ Future<MangaDto?> mangaWithOfflineFallback({
     if (m == null) rethrow;
     final count = (await db.chaptersForManga(mangaId)).length;
     final cats = await db.categoriesForManga(mangaId);
-    return offlineMangaToDto(m, chapterCount: count, offlineCategories: cats);
+    final delta = (await db.unsyncedReadDeltaByManga())[mangaId] ?? 0;
+    return offlineMangaToDto(
+      m,
+      chapterCount: count,
+      offlineCategories: cats,
+      unsyncedReadDelta: delta,
+    );
   }
 }
 

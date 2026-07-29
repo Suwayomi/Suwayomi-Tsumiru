@@ -35,9 +35,19 @@ class MangaWithId extends _$MangaWithId {
     // Read before the await: touching ref after the async gap throws if this
     // provider was disposed mid-build.
     final sync = ref.read(offlineSyncProvider);
+    // Ordered against push acks: captured before the fetch goes out.
+    final fetchGen = sync?.syncGeneration ?? 0;
+    // Mirror only genuine server responses — fallback DTOs already carry the
+    // unread correction and must not round-trip back as server counts.
+    var fromServer = false;
     final manga = await mangaWithOfflineFallback(
-      fetch: () =>
-          ref.watch(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
+      fetch: () async {
+        final r = await ref
+            .watch(mangaBookRepositoryProvider)
+            .getManga(mangaId: mangaId);
+        fromServer = true;
+        return r;
+      },
       db: ref.watch(offlineReadDatabaseProvider),
       offlineEnabled: ref.watch(offlineActiveProvider),
       mangaId: mangaId,
@@ -46,8 +56,9 @@ class MangaWithId extends _$MangaWithId {
     // doesn't refetch. Guarded: keepAlive on a disposed ref throws.
     if (ref.mounted) ref.keepAlive();
     // Don't mirror browsed (non-library) manga into the offline catalog.
-    if (manga != null && manga.inLibrary) {
-      unawaited(sync?.syncManga(manga) ?? Future.value());
+    if (manga != null && manga.inLibrary && fromServer) {
+      unawaited(sync?.syncManga(manga, fetchedAtGen: fetchGen) ??
+          Future.value());
     }
     return manga;
   }
@@ -70,10 +81,14 @@ class MangaChapterList extends _$MangaChapterList {
     // Read before the await: touching ref after the async gap throws if this
     // provider was disposed mid-build.
     final sync = ref.read(offlineSyncProvider);
+    // Mirror only genuine server responses — fallback chapter DTOs carry
+    // stub fields (lastReadAt '0') that would clobber real mirrored data.
+    var fromServer = false;
     final result = await chaptersWithOfflineFallback(
       fetch: () async {
         // Read the chapters the server already has stored (like the WebUI).
         final stored = await repo.getStoredChapterList(mangaId);
+        fromServer = true;
         // Show them as-is unless the source has never been fetched (no chapters
         // yet) or the user opted into refreshing from the source on open.
         if (!refreshFromSource && stored != null && stored.isNotEmpty) {
@@ -96,7 +111,7 @@ class MangaChapterList extends _$MangaChapterList {
       mangaId: mangaId,
     );
     if (ref.mounted) ref.keepAlive();
-    if (result != null) {
+    if (result != null && fromServer) {
       unawaited((sync?.syncChapters(result) ?? Future.value())
           .then((_) => reconcileManga(ref, mangaId)));
     }
@@ -127,9 +142,12 @@ class MangaChapterList extends _$MangaChapterList {
     // Wrap in chaptersWithOfflineFallback like build() does, so an explicit
     // refresh while the device is offline serves the on-device catalog instead
     // of erroring/clearing the list.
+    // Mirror only genuine server responses (see build()).
+    var fromServer = false;
     final result = await AsyncValue.guard(() => chaptersWithOfflineFallback(
           fetch: () async {
             final stored = await repo.getStoredChapterList(mangaId);
+            fromServer = true;
             if (!refreshFromSource && stored != null && stored.isNotEmpty) {
               return stored;
             }
@@ -160,7 +178,7 @@ class MangaChapterList extends _$MangaChapterList {
     if (result.hasError) return;
     state = result;
     final chapters = result.value;
-    if (chapters != null) {
+    if (chapters != null && fromServer) {
       // Mirror build(): down-sync the fresh list (which orphans chapters the
       // server no longer lists) then reconcile to evict them — so a
       // server-side delete discovered via pull-to-refresh is cleaned up too,
