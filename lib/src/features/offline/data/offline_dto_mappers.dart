@@ -47,8 +47,11 @@ MangaDto offlineMangaToDto(
           id: m.sourceId!,
           name: m.sourceName ?? '',
           lang: m.sourceLang ?? '',
+          // MIXED, not SAFE, when the rating was never mirrored: MIXED is the
+          // value that defers to the series' own tags, so an adult-tagged row
+          // from a pre-rating sync still filters as adult instead of leaking.
           contentWarning: m.sourceContentWarning == null
-              ? Enum$ContentWarning.SAFE
+              ? Enum$ContentWarning.MIXED
               : fromJson$Enum$ContentWarning(m.sourceContentWarning!),
           displayName: m.sourceName ?? '',
           iconUrl: '',

@@ -55,5 +55,12 @@ void main() {
       expect(isAdultManga(null, ['Smut']), true);
       expect(isAdultManga(null, ['Action']), false);
     });
+
+    // Komikku's `any {}` over an empty tag list is false, so an uninitialised
+    // series on a mixed source shows. Pinned because it looks like a leak and
+    // is actually the reference's behaviour.
+    test('MIXED source with no tags yet is not adult', () {
+      expect(isAdultManga(Enum$ContentWarning.MIXED, const []), false);
+    });
   });
 }

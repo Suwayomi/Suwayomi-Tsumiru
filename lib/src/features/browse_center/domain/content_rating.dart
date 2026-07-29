@@ -46,8 +46,11 @@ bool hasAdultTag(Iterable<String> genre) {
 /// off the source alone would either hide every clean series on a mixed source
 /// or leave the adult ones showing.
 ///
-/// A series whose tags have not been fetched yet has nothing to test, so it
-/// falls back to its source's rating. Komikku has the same blind spot.
+/// A MIXED source with no tags to test resolves to *not* adult, matching
+/// Komikku (`genre.orEmpty().any { ... }` is false on an empty list). So an
+/// uninitialised series on a mixed source shows until its metadata arrives.
+/// That is the reference's behaviour, not an oversight — but it is the reason
+/// an unfetched library is not a safe place to judge this filter.
 bool isAdultManga(Enum$ContentWarning? warning, Iterable<String> genre) =>
     switch (warning) {
       Enum$ContentWarning.SAFE => false,
