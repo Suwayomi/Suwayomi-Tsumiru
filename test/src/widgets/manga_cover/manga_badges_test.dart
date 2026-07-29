@@ -44,7 +44,7 @@ Fragment$MangaDto _manga({
         displayName: 'Test Source',
         lang: lang,
         iconUrl: '/icon.png',
-        isNsfw: false,
+        contentWarning: Enum$ContentWarning.SAFE,
         isConfigurable: false,
         supportsLatest: true,
         meta: const [],

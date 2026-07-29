@@ -15,6 +15,7 @@ import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../data/extension_repository/extension_repository.dart';
+import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../../source/controller/source_controller.dart';
 
@@ -57,9 +58,7 @@ class ExtensionListTile extends HookConsumerWidget {
                 text: "${extension.versionName} ",
                 style: const TextStyle(fontWeight: FontWeight.normal),
               ),
-            // #138: legacy field, kept until a min server version is enforced.
-            // ignore: deprecated_member_use_from_same_package
-            if (extension.isNsfw.ifNull())
+            if (isNsfwFromWarning(extension.contentWarning))
               TextSpan(
                 text: context.l10n.nsfw18,
                 style: const TextStyle(

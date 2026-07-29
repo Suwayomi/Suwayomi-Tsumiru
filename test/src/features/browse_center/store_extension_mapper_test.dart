@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/features/browse_center/data/extension_repository/store_extension_mapper.dart';
+import 'package:tsumiru/src/features/browse_center/domain/content_rating.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 void main() {

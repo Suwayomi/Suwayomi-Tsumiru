@@ -11,6 +11,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../domain/track_status.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../features/offline/data/offline_download_providers.dart';
+import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../global_providers/global_providers.dart';
@@ -108,9 +109,8 @@ List<MangaDto> applyLibraryFilterSort(
       return false;
     }
     if (mangaFilterLewd != null &&
-        // #138: legacy field, kept until a min server version is enforced.
-        // ignore: deprecated_member_use_from_same_package
-        (mangaFilterLewd ^ (manga.source?.isNsfw ?? false))) {
+        (mangaFilterLewd ^
+            isAdultManga(manga.source?.contentWarning, manga.genre))) {
       return false;
     }
     // Meta-derived fields (rating, tags) plus the DSL-searchable fields, built

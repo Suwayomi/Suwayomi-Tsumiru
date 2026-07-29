@@ -21,7 +21,7 @@ SourceDto _src({
       'iconUrl': '',
       'id': id,
       'isConfigurable': false,
-      'isNsfw': false,
+      'contentWarning': 'SAFE',
       'lang': lang,
       'name': name,
       'supportsLatest': true,

@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import '../../library/domain/category/category_model.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
@@ -30,9 +32,8 @@ class OfflineSync {
       sourceId: manga.source?.id,
       sourceName: manga.source?.name,
       sourceLang: manga.source?.lang,
-      // #138: legacy field, kept until a min server version is enforced.
-      // ignore: deprecated_member_use_from_same_package
-      sourceIsNsfw: manga.source?.isNsfw ?? false,
+      sourceContentWarning: manga.source?.contentWarning.name,
+      genre: manga.genre.isEmpty ? null : jsonEncode(manga.genre),
       status: manga.status.name,
       unreadCount: manga.unreadCount,
       downloadCount: manga.downloadCount,

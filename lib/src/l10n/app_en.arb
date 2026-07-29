@@ -3200,10 +3200,6 @@
     "@recommendsInOverflowSubtitle": {
         "description": "Subtitle for the recommendations-in-overflow setting"
     },
-    "updateServerForExtensions": "Update your Suwayomi server to manage extensions",
-    "@updateServerForExtensions": {
-        "description": "Shown on older servers that predate the extension store system, in place of extension management"
-    },
     "addExtensionStore": "Add extension store",
     "@addExtensionStore": {
         "description": "Title of the dialog used to add an extension store"

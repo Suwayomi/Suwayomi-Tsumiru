@@ -29,7 +29,12 @@ class OfflineMangas extends Table {
   TextColumn get sourceId => text().nullable()();
   TextColumn get sourceName => text().nullable()();
   TextColumn get sourceLang => text().nullable()();
-  BoolColumn get sourceIsNsfw => boolean().withDefault(const Constant(false))();
+  // ContentWarning enum name. Null on rows mirrored before the rating existed
+  // and never re-synced since; treated as unrated, so the genre tags decide.
+  TextColumn get sourceContentWarning => text().nullable()();
+  // JSON-encoded tag list. The library's content filter refines a MIXED source
+  // on these, so without them the filter behaves differently offline.
+  TextColumn get genre => text().nullable()();
   TextColumn get status => text().nullable()();
   IntColumn get unreadCount => integer().withDefault(const Constant(0))();
   IntColumn get downloadCount => integer().withDefault(const Constant(0))();
@@ -149,7 +154,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -197,7 +202,6 @@ class OfflineDatabase extends _$OfflineDatabase {
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceId);
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceName);
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceLang);
-        await _addColumnIfMissing(m, offlineMangas, offlineMangas.sourceIsNsfw);
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.status);
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.unreadCount);
         await _addColumnIfMissing(
@@ -262,8 +266,43 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.scanlator,
         );
       }
+      if (from < 10 && await _hasTable(offlineMangas)) {
+        await _addColumnIfMissing(
+          m,
+          offlineMangas,
+          offlineMangas.sourceContentWarning,
+        );
+        await _addColumnIfMissing(m, offlineMangas, offlineMangas.genre);
+        // Carry the old boolean forward so an offline library keeps filtering
+        // the way it did before the upgrade. The column only exists on devices
+        // that passed through schemas 6-9, so guard on it rather than assuming.
+        if (await _hasColumn(offlineMangas, 'source_is_nsfw')) {
+          await customStatement(
+            "UPDATE offline_mangas SET source_content_warning = "
+            "CASE WHEN source_is_nsfw THEN 'NSFW' ELSE 'SAFE' END "
+            "WHERE source_content_warning IS NULL",
+          );
+        }
+      }
     },
   );
+
+  /// A migration step must not explode on a table this database has never
+  /// created — schema fixtures and partial upgrades both hit that.
+  Future<bool> _hasTable(TableInfo table) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      variables: [Variable<String>(table.actualTableName)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  Future<bool> _hasColumn(TableInfo table, String columnName) async {
+    final info = await customSelect(
+      "PRAGMA table_info('${table.actualTableName}')",
+    ).get();
+    return info.any((row) => row.read<String>('name') == columnName);
+  }
 
   /// drift's [Migrator.addColumn] throws if the column already exists — a
   /// device migrated by an intermediate/dev build can have it present at an
@@ -292,7 +331,8 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? sourceId,
     String? sourceName,
     String? sourceLang,
-    bool sourceIsNsfw = false,
+    String? sourceContentWarning,
+    String? genre,
     String? status,
     int unreadCount = 0,
     int downloadCount = 0,
@@ -313,7 +353,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       sourceId: Value(sourceId),
       sourceName: Value(sourceName),
       sourceLang: Value(sourceLang),
-      sourceIsNsfw: Value(sourceIsNsfw),
+      sourceContentWarning: Value(sourceContentWarning),
+      genre: Value(genre),
       status: Value(status),
       unreadCount: Value(unreadCount),
       downloadCount: Value(downloadCount),

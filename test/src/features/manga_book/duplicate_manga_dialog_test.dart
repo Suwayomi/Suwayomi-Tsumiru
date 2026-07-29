@@ -42,7 +42,7 @@ MangaDto _dup({
           iconUrl: '',
           id: '1',
           isConfigurable: false,
-          isNsfw: false,
+          contentWarning: Enum$ContentWarning.SAFE,
           lang: 'en',
           name: sourceName,
           supportsLatest: false,

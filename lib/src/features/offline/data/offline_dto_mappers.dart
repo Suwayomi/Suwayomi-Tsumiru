@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
 import '../../library/domain/category/category_model.dart';
@@ -13,6 +15,19 @@ import '../../manga_book/domain/chapter/graphql/__generated__/fragment.graphql.d
 import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_database.dart';
+
+/// Tags round-trip as a JSON list; a malformed or absent value degrades to no
+/// tags rather than throwing on every library render.
+List<String> offlineGenre(String? stored) {
+  if (stored == null || stored.isEmpty) return const [];
+  try {
+    final decoded = jsonDecode(stored);
+    if (decoded is! List) return const [];
+    return decoded.whereType<String>().toList(growable: false);
+  } on FormatException {
+    return const [];
+  }
+}
 
 /// Build a [MangaDto] from an on-device catalog row. Used only as the offline
 /// fallback when the server is unreachable. All server-sourced metadata fields
@@ -32,7 +47,9 @@ MangaDto offlineMangaToDto(
           id: m.sourceId!,
           name: m.sourceName ?? '',
           lang: m.sourceLang ?? '',
-          isNsfw: m.sourceIsNsfw,
+          contentWarning: m.sourceContentWarning == null
+              ? Enum$ContentWarning.SAFE
+              : fromJson$Enum$ContentWarning(m.sourceContentWarning!),
           displayName: m.sourceName ?? '',
           iconUrl: '',
           isConfigurable: false,
@@ -108,7 +125,7 @@ MangaDto offlineMangaToDto(
     // the next unread chapter isn't on the device, so it's never a dead end.
     firstUnreadChapter:
         firstUnread == null ? null : offlineChapterToDto(firstUnread),
-    genre: const [],
+    genre: offlineGenre(m.genre),
     inLibrary: true,
     inLibraryAt: m.inLibraryAt ?? '0',
     initialized: true,

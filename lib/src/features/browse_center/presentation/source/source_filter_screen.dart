@@ -14,6 +14,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../data/source_repository/source_repository.dart';
+import '../../domain/content_rating.dart';
 import '../../domain/language/flag_emoji.dart';
 import '../../domain/source/source_model.dart';
 import 'controller/source_controller.dart';
@@ -224,9 +225,7 @@ class _SourceCheckItem extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // #138: legacy field, kept until a min server version is enforced.
-          // ignore: deprecated_member_use_from_same_package
-          if (source.isNsfw.ifNull()) ...[
+          if (isNsfwFromWarning(source.contentWarning)) ...[
             const SizedBox(width: 8),
             Text(
               context.l10n.nsfw18,

@@ -35,7 +35,7 @@ void main() {
         sourceId: 'src-001',
         sourceName: 'Test Source',
         sourceLang: 'en',
-        sourceIsNsfw: false,
+        sourceContentWarning: 'SAFE',
         status: 'COMPLETED',
         unreadCount: 5,
         downloadCount: 2,

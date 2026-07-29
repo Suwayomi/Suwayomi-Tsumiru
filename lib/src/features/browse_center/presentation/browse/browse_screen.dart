@@ -46,9 +46,6 @@ class BrowseScreen extends HookConsumerWidget {
     }, [tabController.index]);
     useListenable(tabController);
 
-    final storeCapable =
-        ref.watch(extensionStoreSupportProvider).value ?? false;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.browse),
@@ -65,7 +62,7 @@ class BrowseScreen extends HookConsumerWidget {
               icon: const Icon(Icons.filter_list_rounded),
             ),
           ],
-          if (tabController.index == 1 && storeCapable) ...[
+          if (tabController.index == 1) ...[
             IconButton(
               tooltip: context.l10n.extensionStores,
               onPressed: () => const ExtensionStoreRoute().push(context),
