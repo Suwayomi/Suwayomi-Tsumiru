@@ -14,9 +14,11 @@ bool isNsfwFromWarning(Enum$ContentWarning warning) => switch (warning) {
       _ => true,
     };
 
-/// Komikku's adult-tag vocabulary, ported verbatim from LewdMangaChecker.kt.
-/// Matched as case-insensitive substrings, so "Mature" and "18+ content" hit.
-const _adultTags = [
+/// Komikku's adult-tag vocabulary (LewdMangaChecker.kt) minus "mature", which
+/// on aggregators marks dark themes, not adult content — it flagged ordinary
+/// action manhwa. Matched as whole tags, not substrings, so "Young Adult"
+/// can never trip "adult".
+const _adultTags = {
   'hentai',
   'adult',
   'smut',
@@ -24,19 +26,11 @@ const _adultTags = [
   'nsfw',
   'erotica',
   'pornographic',
-  'mature',
   '18+',
-];
+};
 
-bool hasAdultTag(Iterable<String> genre) {
-  for (final tag in genre) {
-    final lower = tag.toLowerCase();
-    for (final adult in _adultTags) {
-      if (lower.contains(adult)) return true;
-    }
-  }
-  return false;
-}
+bool hasAdultTag(Iterable<String> genre) =>
+    genre.any((tag) => _adultTags.contains(tag.trim().toLowerCase()));
 
 /// Whether one series counts as adult, for the library's content filter.
 ///

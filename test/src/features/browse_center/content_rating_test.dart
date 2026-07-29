@@ -18,13 +18,18 @@ void main() {
   });
 
   group('adult tags', () {
-    test('matches as a case-insensitive substring', () {
-      expect(hasAdultTag(['Mature']), true);
-      expect(hasAdultTag(['18+ content']), true);
+    test('matches whole tags case-insensitively', () {
+      expect(hasAdultTag(['Adult']), true);
       expect(hasAdultTag(['Ecchi', 'SMUT']), true);
+      expect(hasAdultTag([' 18+ ']), true);
     });
 
-    test('does not match ordinary tags', () {
+    // "Mature" marks dark themes on aggregators, not adult content — it was
+    // flagging ordinary action manhwa. And whole-tag matching keeps compound
+    // tags like "Young Adult" from tripping "adult".
+    test('does not match Mature, compound tags, or ordinary tags', () {
+      expect(hasAdultTag(['Mature']), false);
+      expect(hasAdultTag(['Young Adult']), false);
       expect(hasAdultTag(['Action', 'Romance', 'Drama']), false);
       expect(hasAdultTag(const []), false);
     });
