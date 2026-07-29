@@ -14,8 +14,7 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../helpers/offline_test_db.dart';
 
-
-  void main() {
+void main() {
   group('offline metadata round-trip', () {
     late OfflineDatabase db;
 
@@ -25,9 +24,8 @@ import '../helpers/offline_test_db.dart';
 
     tearDown(() => db.close());
 
-    // A row mirrored before the rating column existed carries a null warning.
-    // It must NOT resolve to SAFE, or an adult-tagged series from a pre-rating
-    // sync leaks past the content filter while offline.
+    // A null warning (pre-rating row) must not resolve to SAFE, or an
+    // adult-tagged series leaks past the offline content filter.
     test('an unmirrored rating defers to the tags, not to SAFE', () async {
       await db.upsertMangaMetadata(
         id: 77,

@@ -273,15 +273,9 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineMangas.sourceContentWarning,
         );
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.genre);
-        // Carry the old boolean forward so an offline library keeps filtering
-        // the way it did before the upgrade. The column only exists on devices
-        // that passed through schemas 6-9, so guard on it rather than assuming.
-        //
-        // true maps to NSFW, not MIXED, even though the old flag covered both:
-        // NSFW reproduces exactly what the pre-upgrade filter did with that row
-        // and errs toward hiding, where MIXED would hand an unproven row to the
-        // tag test and could leak. The cost is that a clean series on a mixed
-        // source stays hidden until its next down-sync overwrites this.
+        // Carry the old boolean forward (present only on devices that passed
+        // through schemas 6-9). true maps to NSFW, not MIXED, matching what
+        // the old filter did and erring toward hiding over an untested tag.
         if (await _hasColumn(offlineMangas, 'source_is_nsfw')) {
           await customStatement(
             "UPDATE offline_mangas SET source_content_warning = "
