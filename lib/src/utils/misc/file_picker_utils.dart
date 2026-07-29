@@ -12,9 +12,11 @@ abstract class FilePickerUtils {
     BuildContext? context,
     List<String>? extensions,
   }) async {
-    final pickedFiles = await FilePicker.platform.pickFiles(
+    final pickedFiles = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: extensions,
+      // Web has no file paths, so the bytes have to come back with the pick.
+      withData: kIsWeb,
     );
     final file = pickedFiles?.files.first;
     if (context != null && context.mounted) {
