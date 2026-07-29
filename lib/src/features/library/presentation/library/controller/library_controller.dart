@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:diacritic/diacritic.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -43,6 +44,14 @@ int randomKey(int id, int seed) => ((id ^ seed) * 2654435761) & 0x7fffffff;
 ///
 /// [mangaIds] is an optional allowlist — when non-null only manga whose id
 /// is in the set pass through (used by [GroupedMangaListWithQueryAndFilter]).
+/// Komikku compares titles with a PRIMARY-strength collator, which ignores
+/// case and accents. Dart ships no collator, so fold both instead — this
+/// misses locale-specific letter ordering (Swedish "å" after "z") and matches
+/// everywhere else.
+int compareTitlesFolded(String a, String b) =>
+    removeDiacritics(a.toLowerCase())
+        .compareTo(removeDiacritics(b.toLowerCase()));
+
 List<MangaDto> applyLibraryFilterSort(
   List<MangaDto> input, {
   Set<int>? mangaIds,
@@ -181,10 +190,21 @@ List<MangaDto> applyLibraryFilterSort(
       if (s2 < 0) return -1; // m2 untracked → always last
       return s1.compareTo(s2) * sortDirToggle;
     }
+    // Fully-read series sort last in both directions, so the zero checks must
+    // also come before the direction toggle — otherwise descending inverts
+    // them and leads with the series you have finished.
+    if (sortedBy == MangaSort.unread) {
+      final u1 = m1.unreadCount.getValueOnNullOrNegative();
+      final u2 = m2.unreadCount.getValueOnNullOrNegative();
+      if (u1 == u2) return 0;
+      if (u1 == 0) return 1;
+      if (u2 == 0) return -1;
+      return u1.compareTo(u2) * sortDirToggle;
+    }
     return (switch (sortedBy) {
-          MangaSort.alphabetical => (m1.title).compareTo(m2.title),
-          MangaSort.unread => (m1.unreadCount.getValueOnNullOrNegative())
-              .compareTo(m2.unreadCount.getValueOnNullOrNegative()),
+          MangaSort.alphabetical => compareTitlesFolded(m1.title, m2.title),
+          // unread is handled above; this arm is unreachable.
+          MangaSort.unread => 0,
           MangaSort.dateAdded => (m1.inLibraryAt.getValueOnNullOrNegative())
               .compareTo(m2.inLibraryAt.getValueOnNullOrNegative()),
           MangaSort.lastUpdated =>
@@ -228,8 +248,12 @@ List<MangaDto> applyLibraryFilterSort(
 
   int sort(MangaDto m1, MangaDto m2) {
     final p = sortPrimary(m1, m2);
-    // List.sort is unstable, so tie-break on id to stop equal keys shuffling on refresh.
-    return p != 0 ? p : m1.id.compareTo(m2.id);
+    if (p != 0) return p;
+    // Ties fall back to title, applied after the direction toggle so it is
+    // never inverted. Id stays as the last resort because List.sort is
+    // unstable and same-titled entries would otherwise shuffle on refresh.
+    final byTitle = compareTitlesFolded(m1.title, m2.title);
+    return byTitle != 0 ? byTitle : m1.id.compareTo(m2.id);
   }
 
   return input.where(filter).toList()..sort(sort);
