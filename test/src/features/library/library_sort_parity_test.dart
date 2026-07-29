@@ -67,10 +67,9 @@ List<int> _sorted(
 
 void main() {
   group('alphabetical sort folds case and accents', () {
-    // Komikku lowercases both titles then compares with a PRIMARY-strength
-    // collator (LibraryScreenModel.kt:635-639, SortUtil.kt:6-15). Raw
-    // compareTo is UTF-16 code-unit order, which puts every capitalised
-    // title before every lowercase one.
+    // Komikku sorts with a PRIMARY-strength collator (LibraryScreenModel.kt:
+    // 635-639, SortUtil.kt:6-15); raw compareTo is UTF-16 order, which puts
+    // every capitalised title before every lowercase one.
     final items = [
       _manga(1, title: 'Zebra'),
       _manga(2, title: 'apple'),
@@ -89,9 +88,8 @@ void main() {
   });
 
   group('unread sort pins zero-unread last in both directions', () {
-    // "Ensure unread content comes first" — LibraryScreenModel.kt:669-675.
-    // The zero branches are direction-aware there and the comparator is
-    // reversed separately, so zero-unread is last whichever way you sort.
+    // LibraryScreenModel.kt:669-675 keeps zero-unread last regardless of
+    // direction — its zero branches are direction-aware, reversed separately.
     final items = [
       _manga(1, title: 'A', unreadCount: 0),
       _manga(2, title: 'B', unreadCount: 5),

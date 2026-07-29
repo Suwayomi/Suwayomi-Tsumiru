@@ -44,10 +44,8 @@ int randomKey(int id, int seed) => ((id ^ seed) * 2654435761) & 0x7fffffff;
 ///
 /// [mangaIds] is an optional allowlist — when non-null only manga whose id
 /// is in the set pass through (used by [GroupedMangaListWithQueryAndFilter]).
-/// Komikku compares titles with a PRIMARY-strength collator, which ignores
-/// case and accents. Dart ships no collator, so fold both instead — this
-/// misses locale-specific letter ordering (Swedish "å" after "z") and matches
-/// everywhere else.
+/// Komikku uses a PRIMARY-strength collator (case/accent-insensitive); Dart
+/// has none, so we fold instead — misses locale quirks like Swedish "å" > "z".
 int compareTitlesFolded(String a, String b) =>
     removeDiacritics(a.toLowerCase())
         .compareTo(removeDiacritics(b.toLowerCase()));
@@ -190,9 +188,8 @@ List<MangaDto> applyLibraryFilterSort(
       if (s2 < 0) return -1; // m2 untracked → always last
       return s1.compareTo(s2) * sortDirToggle;
     }
-    // Fully-read series sort last in both directions, so the zero checks must
-    // also come before the direction toggle — otherwise descending inverts
-    // them and leads with the series you have finished.
+    // Zero-unread must sort last in both directions, so it's checked before
+    // the direction toggle — else descending would lead with finished series.
     if (sortedBy == MangaSort.unread) {
       final u1 = m1.unreadCount.getValueOnNullOrNegative();
       final u2 = m2.unreadCount.getValueOnNullOrNegative();
@@ -249,9 +246,8 @@ List<MangaDto> applyLibraryFilterSort(
   int sort(MangaDto m1, MangaDto m2) {
     final p = sortPrimary(m1, m2);
     if (p != 0) return p;
-    // Ties fall back to title, applied after the direction toggle so it is
-    // never inverted. Id stays as the last resort because List.sort is
-    // unstable and same-titled entries would otherwise shuffle on refresh.
+    // Title tie-break runs after the direction toggle so it's never inverted;
+    // id is the last resort since List.sort is unstable.
     final byTitle = compareTitlesFolded(m1.title, m2.title);
     return byTitle != 0 ? byTitle : m1.id.compareTo(m2.id);
   }
