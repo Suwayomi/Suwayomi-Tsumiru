@@ -24,6 +24,7 @@ import '../../../settings/presentation/appearance/widgets/show_recommendations/s
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../migration/domain/migration_models.dart';
 import '../../domain/chapter/chapter_model.dart';
+import '../../domain/manga/manga_model.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'controller/manga_details_controller.dart';
 import 'server_web_url.dart';
@@ -275,10 +276,14 @@ class MangaDetailsScreen extends HookConsumerWidget {
                               ],
                             )
                           ],
-                          ChapterDownloadPresetsButton(
-                            chapterList: bulkActionsChapterList,
-                            refresh: refresh,
-                          ),
+                          // Local-source files already live on the server, so
+                          // "Download to server" is meaningless there — same
+                          // gate Komikku applies to local/stub sources.
+                          if (!(data?.isLocalSource).ifNull())
+                            ChapterDownloadPresetsButton(
+                              chapterList: bulkActionsChapterList,
+                              refresh: refresh,
+                            ),
                           Builder(
                             builder: (context) => IconButton(
                               onPressed: () {
