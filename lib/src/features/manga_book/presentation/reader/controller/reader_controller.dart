@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../offline/data/offline_read_fallback.dart';
+import '../../../../offline/data/server_reachability.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -29,6 +30,8 @@ FutureOr<ChapterDto?> chapter(
       // Only read the native-only DB when offline is available (never on web).
       db: ref.watch(offlineReadDatabaseProvider),
       offlineEnabled: ref.watch(offlineActiveProvider),
+      offlineFirst: ref.watch(viewOfflineNowProvider) ||
+          ref.watch(serverUnreachableProvider),
       chapterId: chapterId,
     );
 

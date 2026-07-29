@@ -21,6 +21,7 @@ dependencies:
   cupertino_icons: ^1.0.5
   drift: ^2.32.0
   extension_type_unions: ^1.0.10
+  file: ^7.0.0
   file_picker: ^8.0.0+1
   flex_color_picker: 3.8.0
   flutter:
@@ -101,7 +102,6 @@ dev_dependencies:
   graphql_codegen: ^3.0.0
   json_serializable: ^6.5.4
   lints: ^6.1.0
-  file: ^7.0.0
   riverpod_generator: ^4.0.4
   sqlite3: ^3.0.0
 

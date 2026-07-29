@@ -13,6 +13,19 @@ void main() {
 
   // A genuine loss of connectivity — the only case that should fall back.
   Future<Never> boom() async => throw const SocketException('unreachable');
+
+  // The offline library only lists series with files on this device, so most
+  // seeds need at least one downloaded chapter to be visible at all.
+  var seededChapterId = 900;
+  Future<void> seedDownloadedChapter(int mangaId,
+      {bool isRead = true, String? lastReadAt}) async {
+    final id = seededChapterId++;
+    await db.upsertChapterMetadata(id: id, mangaId: mangaId, name: 'dl$id',
+        chapterIndex: 90 + id, isRead: isRead, lastPageRead: 0,
+        isBookmarked: false, serverIsDownloaded: true, pageCount: 1,
+        updatedAt: DateTime(2026), lastReadAt: lastReadAt);
+    await db.setChapterDeviceState(id, OfflineDeviceState.downloaded, bytes: 1);
+  }
   // The server answered with an error — must surface, never be masked.
   Future<Never> serverError() async => throw Exception('HTTP 500');
 
@@ -22,9 +35,15 @@ void main() {
     expect(r, isNull); // server returned null -> passed through, no fallback
   });
 
-  test('library: falls back to catalog when fetch throws', () async {
+  test('library: falls back to downloaded catalog series when fetch throws, '
+      'and hides series with nothing on the device', () async {
     await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
     await db.upsertMangaMetadata(id: 2, title: 'B', updatedAt: DateTime(2026));
+    // In the catalog but nothing downloaded: not part of the offline library
+    // (people go offline to read, not to browse metadata).
+    await db.upsertMangaMetadata(id: 3, title: 'C', updatedAt: DateTime(2026));
+    await seedDownloadedChapter(1);
+    await seedDownloadedChapter(2);
     final r = await libraryWithOfflineFallback(
         fetch: boom, db: db, offlineEnabled: true);
     expect(r!.map((m) => m.id).toSet(), {1, 2});
@@ -49,8 +68,10 @@ void main() {
   test('library: no offline button when the next unread chapter is not '
       'downloaded', () async {
     await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
-    // Unread chapter exists but only as metadata (deviceState defaults to none),
-    // so it can't be opened offline -> firstUnreadChapter stays null (hidden).
+    // Visible via one downloaded (read) chapter; the unread chapter exists
+    // only as metadata (deviceState none), so it can't be opened offline ->
+    // firstUnreadChapter stays null (button hidden), never a dead end.
+    await seedDownloadedChapter(1, isRead: true);
     await db.upsertChapterMetadata(id: 21, mangaId: 1, name: 'c21',
         chapterIndex: 1, isRead: false, lastPageRead: 0, isBookmarked: false,
         serverIsDownloaded: false, pageCount: 1, updatedAt: DateTime(2026));
@@ -115,6 +136,7 @@ void main() {
   test('reachability: reports unreachable on a connection error, even while '
       'serving cache', () async {
     await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+    await seedDownloadedChapter(1);
     final calls = <bool>[];
     await libraryWithOfflineFallback(
         fetch: boom, db: db, offlineEnabled: true, onReachability: calls.add);

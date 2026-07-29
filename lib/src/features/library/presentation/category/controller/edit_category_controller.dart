@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../features/offline/data/offline_read_fallback.dart';
 import '../../../../../features/offline/data/offline_repository.dart';
+import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../data/category_repository.dart';
 import '../../../domain/category/category_model.dart';
@@ -27,14 +28,20 @@ class CategoryController extends _$CategoryController {
     // .future), after which any ref access throws "used after it has been
     // disposed" — the crash this guards against.
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
+    final viewOffline = ref.watch(viewOfflineNowProvider) ||
+        ref.watch(serverUnreachableProvider);
     final categoryRepository = ref.watch(categoryRepositoryProvider);
     final sync = ref.read(offlineSyncProvider);
+    var servedFromCatalog = false;
     final result = await categoriesWithOfflineFallback(
       fetch: () => categoryRepository.getCategoryList(),
       db: offlineDb,
       offlineEnabled: offlineDb != null,
+      offlineFirst: viewOffline,
+      onCatalogServe: () => servedFromCatalog = true,
     );
-    if (sync != null && result != null) {
+    // A catalog-served list is an echo — never mirror it back.
+    if (sync != null && result != null && !servedFromCatalog) {
       unawaited(sync.syncCategories(result));
     }
     return result;

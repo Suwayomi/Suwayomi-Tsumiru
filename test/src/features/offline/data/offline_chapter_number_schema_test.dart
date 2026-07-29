@@ -74,7 +74,7 @@ void main() {
     });
     tearDown(() => tmp.delete(recursive: true));
 
-    test('adds the columns, preserves rows, lands on version 9', () async {
+    test('adds the columns, preserves rows, lands on version 11', () async {
       final dbPath = p.join(tmp.path, 'test.db');
 
       // Build a genuine v8 file: the chapters table WITHOUT the new columns,
@@ -106,6 +106,34 @@ void main() {
       v8.execute(
           "INSERT INTO offline_chapters (id, manga_id, name, chapter_index, "
           "is_read, updated_at) VALUES (10, 1, 'c10', 9, 1, 0)");
+      // A real v8 file always has the manga table too — the v10 step alters
+      // it, so the fixture must carry it or the upgrade dies on ALTER.
+      v8.execute('''
+        CREATE TABLE offline_mangas (
+          id INTEGER NOT NULL PRIMARY KEY,
+          title TEXT NOT NULL,
+          thumbnail_url TEXT,
+          thumbnail_rel_path TEXT,
+          updated_at INTEGER NOT NULL,
+          keep_rule TEXT NOT NULL DEFAULT 'off',
+          keep_unread_count INTEGER NOT NULL DEFAULT 3,
+          source_id TEXT,
+          source_name TEXT,
+          source_lang TEXT,
+          source_is_nsfw INTEGER NOT NULL DEFAULT 0,
+          status TEXT,
+          unread_count INTEGER NOT NULL DEFAULT 0,
+          download_count INTEGER NOT NULL DEFAULT 0,
+          bookmark_count INTEGER NOT NULL DEFAULT 0,
+          in_library_at TEXT,
+          latest_fetched_at TEXT,
+          latest_uploaded_at TEXT,
+          total_chapters INTEGER NOT NULL DEFAULT 0
+        );
+      ''');
+      v8.execute(
+          "INSERT INTO offline_mangas (id, title, updated_at, in_library_at) "
+          "VALUES (1, 'M1', 0, '100')");
       v8.execute('PRAGMA user_version = 8');
       v8.dispose();
 
@@ -120,7 +148,7 @@ void main() {
           .customSelect('PRAGMA user_version')
           .getSingle()
           .then((r) => r.read<int>('user_version'));
-      expect(version, 9);
+      expect(version, 11);
       await db.close();
     });
   });
