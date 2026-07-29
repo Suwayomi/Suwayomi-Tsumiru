@@ -105,6 +105,17 @@ void main() {
     test('descending puts most-unread first and still zero last', () {
       expect(_sorted(items, by: MangaSort.unread, ascending: false), [2, 3, 1]);
     });
+
+    // Without this, an implementation that ties on unread and then falls
+    // straight to id passes every other case here.
+    test('equal unread counts fall through to the title tie-break', () {
+      final tied = [
+        _manga(1, title: 'Zebra', unreadCount: 3),
+        _manga(2, title: 'Apple', unreadCount: 3),
+      ];
+      expect(_sorted(tied, by: MangaSort.unread, ascending: true), [2, 1]);
+      expect(_sorted(tied, by: MangaSort.unread, ascending: false), [2, 1]);
+    });
   });
 
   group('ties break alphabetically, not by id', () {
