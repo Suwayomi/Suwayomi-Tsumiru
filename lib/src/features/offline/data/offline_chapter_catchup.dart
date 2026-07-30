@@ -18,7 +18,10 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/data/updates/updates_repository.dart';
 import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
+import 'dart:io';
+
 import 'background/background_download_controller_shim.dart';
+import 'background/background_download_lock.dart';
 import 'background/catchup_spec_writer.dart';
 import 'background/catchup_work_spec.dart';
 import 'offline_background_downloads.dart';
@@ -57,25 +60,7 @@ void initChapterCatchUp(ProviderContainer container) {
   // server-side get pulled by the foreground machinery now instead of waiting
   // for the next background wake. Exhausted retries hand off the same way —
   // foreground reconcile owns surfacing stuck downloads.
-  final catchupStore =
-      CatchupStateStore(container.read(sharedPreferencesProvider));
-  final catalogServerId = container
-      .read(sharedPreferencesProvider)
-      .getString(DBKeys.offlineCatalogServerId.name);
-  if (catalogServerId != null) {
-    final ledger = catchupStore.readLedger(catalogServerId);
-    if (ledger.pendingServerFetch.isNotEmpty) {
-      _awaitingServerDownloads.addAll(ledger.pendingServerFetch.values);
-      unawaited(_persistAwaiting(container));
-      unawaited(catchupStore.writeLedger(
-        catalogServerId,
-        ledger.copyWith(
-          pendingServerFetch: const {},
-          serverFetchRetries: const {},
-        ),
-      ));
-    }
-  }
+  unawaited(_adoptWorkerObligations(container));
   // A finished server update run is the moment new chapters exist to pull.
   container.listen(updateRunningSocketProvider, (previous, next) {
     final wasRunning = previous?.value ?? false;
@@ -93,6 +78,42 @@ void initChapterCatchUp(ProviderContainer container) {
   });
   // Catch anything the server found while the app was closed.
   unawaited(runKeepRuleCatchUp(container));
+}
+
+/// Read-modify-write on the worker's ledger, so it runs under the download
+/// lock (a live worker run means skip — next launch retries) and against a
+/// freshly reloaded prefs cache, never this isolate's stale snapshot.
+Future<void> _adoptWorkerObligations(ProviderContainer container) async {
+  try {
+    final catalogServerId = container
+        .read(sharedPreferencesProvider)
+        .getString(DBKeys.offlineCatalogServerId.name);
+    if (catalogServerId == null) return;
+    final catchupStore = await CatchupStateStore.open();
+    final ledger = catchupStore.readLedger(catalogServerId);
+    if (ledger.pendingServerFetch.isEmpty) return;
+
+    final paths = container.read(offlinePathsProvider);
+    final lock =
+        BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
+    if (!await lock.acquire('handoff')) return;
+    try {
+      final fresh = catchupStore.readLedger(catalogServerId);
+      _awaitingServerDownloads.addAll(fresh.pendingServerFetch.values);
+      await _persistAwaiting(container);
+      await catchupStore.writeLedger(
+        catalogServerId,
+        fresh.copyWith(
+          pendingServerFetch: const {},
+          serverFetchRetries: const {},
+        ),
+      );
+    } finally {
+      await lock.release();
+    }
+  } catch (e) {
+    logger.w('Offline: adopting worker obligations failed: $e');
+  }
 }
 
 /// Single-flight: a trigger landing mid-pass is dropped, since its chapters

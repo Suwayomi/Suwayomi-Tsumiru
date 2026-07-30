@@ -34,9 +34,14 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) async {
     final db = read(offlineDatabaseProvider);
     final nets = read(safetyNetConfigProvider);
     final specs = <CatchupMangaSpec>[];
+    var usedBytes = 0;
     for (final m in await db.libraryManga()) {
+      final all = await db.chaptersForManga(m.id);
+      for (final c in all) {
+        if (c.deviceState == OfflineDeviceState.downloaded) usedBytes += c.bytes;
+      }
       if (m.keepRule == OfflineKeepRule.off) continue;
-      final chapters = await db.chaptersForManga(m.id);
+      final chapters = all;
       specs.add(CatchupMangaSpec(
         mangaId: m.id,
         keepRule: m.keepRule,
@@ -58,6 +63,7 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) async {
       wifiOnly: read(offlineWifiOnlyProvider) ?? true,
       storageCapEnabled: nets.storageCapEnabled,
       storageCapBytes: nets.storageCapBytes,
+      usedBytes: usedBytes,
       manga: specs,
     ));
   } catch (e) {

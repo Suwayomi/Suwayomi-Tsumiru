@@ -62,6 +62,7 @@ class CatchupWorkSpec {
     required this.storageCapEnabled,
     required this.storageCapBytes,
     required this.manga,
+    this.usedBytes = 0,
   });
 
   final String serverId;
@@ -70,6 +71,9 @@ class CatchupWorkSpec {
   final int storageCapBytes;
   final List<CatchupMangaSpec> manga;
 
+  /// On-device bytes when the spec was written — the executor's cap baseline.
+  final int usedBytes;
+
   Set<int> get keepRuleMangaIds => {for (final m in manga) m.mangaId};
 
   Map<String, Object?> toJson() => {
@@ -77,6 +81,7 @@ class CatchupWorkSpec {
         'wifiOnly': wifiOnly,
         'storageCapEnabled': storageCapEnabled,
         'storageCapBytes': storageCapBytes,
+        'usedBytes': usedBytes,
         'manga': [for (final m in manga) m.toJson()],
       };
 
@@ -85,6 +90,7 @@ class CatchupWorkSpec {
         wifiOnly: (j['wifiOnly'] as bool?) ?? true,
         storageCapEnabled: (j['storageCapEnabled'] as bool?) ?? false,
         storageCapBytes: (j['storageCapBytes'] as num?)?.toInt() ?? 0,
+        usedBytes: (j['usedBytes'] as num?)?.toInt() ?? 0,
         manga: [
           for (final m in (j['manga'] as List? ?? const []))
             CatchupMangaSpec.fromJson((m as Map).cast<String, Object?>()),
@@ -162,8 +168,14 @@ class CatchupStateStore {
   static const _ledgerKey = 'catchup_ledger';
   static const _enabledKey = 'catchup_bg_enabled';
 
-  static Future<CatchupStateStore> open() async =>
-      CatchupStateStore(await SharedPreferences.getInstance());
+  /// The worker isolate and the app share these keys through separate
+  /// SharedPreferences caches; open() reloads so a run never plans from — or
+  /// writes back — another isolate's stale snapshot.
+  static Future<CatchupStateStore> open() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return CatchupStateStore(prefs);
+  }
 
   // Default ON: keep rules are an explicit per-series "keep this on my device"
   // opt-in, and without them this is a no-op. (Komikku defaults its GLOBAL

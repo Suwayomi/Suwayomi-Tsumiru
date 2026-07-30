@@ -80,6 +80,13 @@ Future<bool> runCatchupDownloads({
     );
     final deadline = DateTime.now().add(_runBudget);
     var downloaded = 0;
+    // Stop-after-crossing per chapter: pre-fetch sizes are unknown, so the
+    // overshoot is bounded by one chapter. Usage comes from the spec snapshot
+    // plus this run's own writes.
+    var runBytes = 0;
+    bool capBlocked() =>
+        spec.storageCapEnabled &&
+        spec.usedBytes + runBytes >= spec.storageCapBytes;
 
     final mangaIds = {
       ...ledger.pendingDownloads.values,
@@ -101,11 +108,14 @@ Future<bool> runCatchupDownloads({
       final chapters = await _fetchMangaChapters(target, record, broker, mangaId);
       if (chapters == null) return false; // transient — retry next wake
 
+      // Pinned chapters are always desired; the server rows can't know about
+      // pins (device-side state), so the spec's set joins the rule's.
+      final serverIds = {for (final r in chapters.rows) r.id};
       final desired = desiredChapterIds(
         chapters.rows,
         mangaSpec.keepRule,
         mangaSpec.keepUnreadCount,
-      );
+      )..addAll(mangaSpec.pinnedChapterIds.intersection(serverIds));
 
       // Present = every truth the executor can see without drift.
       final present = <int>{
@@ -120,6 +130,7 @@ Future<bool> runCatchupDownloads({
       for (final chapterId in desired.difference(present)) {
         if (downloaded >= _maxChaptersPerRun) break;
         if (DateTime.now().isAfter(deadline)) break;
+        if (capBlocked()) break;
         if (await lock.yieldRequested()) break;
         final row = chapters.byId[chapterId];
         if (row == null) continue;
@@ -150,14 +161,17 @@ Future<bool> runCatchupDownloads({
         );
         if (done) {
           downloaded++;
+          runBytes += await store.chapterBytes(mangaId, chapterId);
           pending.remove(chapterId);
           serverFetch.remove(chapterId);
           retries.remove(chapterId);
         }
       }
 
-      // Satisfied-but-undesired obligations (rule window moved on): drop them.
-      pending.removeWhere((c, m) => m == mangaId && !desired.contains(c));
+      // Drop obligations that are satisfied (present) or no longer desired
+      // (rule window moved on) — either way there is nothing left to do.
+      pending.removeWhere(
+          (c, m) => m == mangaId && (!desired.contains(c) || present.contains(c)));
 
       ledger = ledger.copyWith(
         pendingDownloads: pending,
@@ -320,11 +334,10 @@ Future<bool> _downloadOneChapter({
   if (!outcome.succeeded) return false;
 
   final bytes = await store.chapterBytes(mangaId, row.id);
-  final dir = paths.absolute(paths.chapterDirRel(mangaId, row.id));
-  await File('$dir/$kCatchupSentinelName').writeAsString(
-    jsonEncode({'pages': urls.length, 'bytes': bytes, 'srv': spec.serverId}),
-    flush: true,
-  );
+  // Log first, sentinel second: the log is the durable truth replay adopts
+  // from; the sentinel only short-circuits re-scans. The reverse order could
+  // crash into a sentinel with no adoption record — present on disk, unknown
+  // to drift, retried by nothing.
   await log.appendAdopt(AdoptChapterEntry(
     chapterId: row.id,
     mangaId: mangaId,
@@ -336,5 +349,10 @@ Future<bool> _downloadOneChapter({
     bytes: bytes,
     isRead: row.isRead,
   ));
+  final dir = paths.absolute(paths.chapterDirRel(mangaId, row.id));
+  await File('$dir/$kCatchupSentinelName').writeAsString(
+    jsonEncode({'pages': urls.length, 'bytes': bytes, 'srv': spec.serverId}),
+    flush: true,
+  );
   return true;
 }

@@ -252,21 +252,26 @@ Future<void> replayCompletionLog({
     }
     final bytes = await measureBytes(a.mangaId, a.chapterId);
     await db.transaction(() async {
-      if (await db.chapterById(a.chapterId) != null) return; // raced a sync
-      await db.upsertChapterMetadata(
-        id: a.chapterId,
-        mangaId: a.mangaId,
-        name: a.name,
-        chapterIndex: a.chapterIndex,
-        isRead: a.isRead,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: a.pageCount,
-        updatedAt: DateTime.now(),
-        chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
-        syncedIsRead: a.isRead,
-      );
+      // A foreground sync creating the row mid-flight doesn't void the
+      // download — the verified pages attach to whichever row exists. Only a
+      // still-missing row gets the record's metadata; a synced row keeps its
+      // own (fresher read progress included).
+      if (await db.chapterById(a.chapterId) == null) {
+        await db.upsertChapterMetadata(
+          id: a.chapterId,
+          mangaId: a.mangaId,
+          name: a.name,
+          chapterIndex: a.chapterIndex,
+          isRead: a.isRead,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: a.pageCount,
+          updatedAt: DateTime.now(),
+          chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
+          syncedIsRead: a.isRead,
+        );
+      }
       for (final entry in pagesOnDisk.entries) {
         await db.into(db.offlinePages).insertOnConflictUpdate(
               OfflinePagesCompanion.insert(
