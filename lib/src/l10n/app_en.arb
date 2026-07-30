@@ -2725,6 +2725,8 @@
         "description": "Section header for offline download behaviour settings"
     },
     "downloadOverWifiOnly": "Download over Wi-Fi only",
+    "downloadNewChaptersInBackground": "Download new chapters in the background",
+    "downloadNewChaptersInBackgroundDescription": "Fetch new chapters for series you keep offline, without opening the app",
     "@downloadOverWifiOnly": {
         "description": "Toggle to restrict background downloads to Wi-Fi connections"
     },

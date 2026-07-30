@@ -31,6 +31,8 @@ class BackgroundDownloadController {
   Future<void> stopAndClearWorkOrder() async {}
   void finishCatalogClear() {}
   Future<void> replayAtLaunchAndMaybeStart() async {}
+  Future<void> replayAtLaunch() async {}
+  Future<void> maybeStartAfterReplay() async {}
 }
 
 /// Web no-op mirror of the native provider.

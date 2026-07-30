@@ -31,6 +31,7 @@ import 'src/features/offline/data/background/background_download_controller_shim
 import 'src/features/offline/data/server_reachability.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
+import 'src/features/offline/data/background/catchup_spec_writer.dart';
 import 'src/features/offline/data/offline_chapter_catchup.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
 import 'src/features/offline/data/offline_repository.dart';
@@ -307,11 +308,25 @@ Future<void> _startApp() async {
         if (prev == true && !next) flush();
       });
       if (!container.read(offlineActiveProvider)) return;
+      // Replay FIRST: launch reconcile and the catch-up must see post-replay
+      // device state, or overnight background downloads read as missing and
+      // get re-fetched. The service restart stays after reconcile below.
+      if (isAndroidNative) {
+        final controller = container.read(backgroundDownloadControllerProvider);
+        controller.register();
+        await controller.replayAtLaunch();
+      }
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
       // New-chapter catch-up for keep-rule manga (#310): launch pass now, then
       // re-runs when an update finishes or the server download queue drains.
       initChapterCatchUp(container);
+      // Snapshot the background worker's planning state whenever the app
+      // leaves the foreground — the binding keeps the listener alive.
+      AppLifecycleListener(
+        onPause: () => unawaited(writeCatchupWorkSpec(container.read)),
+        onHide: () => unawaited(writeCatchupWorkSpec(container.read)),
+      );
       // One-time sweep of phantom (browsed-not-added) catalog entries.
       if (sharedPreferences.getBool('offlinePhantomCleanupDone') != true) {
         try {
@@ -322,12 +337,10 @@ Future<void> _startApp() async {
         }
       }
       if (isAndroidNative) {
-        // Android: the foreground-service worker owns downloads. Register the
-        // lifecycle/connectivity hooks, replay any leftover completion log into
-        // drift, and restart the service if the queue is non-empty.
+        // Replay already ran above (before reconcile); restart the service if
+        // the queue is non-empty.
         final controller = container.read(backgroundDownloadControllerProvider);
-        controller.register();
-        await controller.replayAtLaunchAndMaybeStart();
+        await controller.maybeStartAfterReplay();
       } else {
         await initOfflineDownloads(container);
       }

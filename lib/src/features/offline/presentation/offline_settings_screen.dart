@@ -8,11 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/platform/is_android_native.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../widgets/section_title.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
+import '../data/background/catchup_settings.dart';
 import '../data/offline_settings_providers.dart';
 import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
@@ -84,6 +86,23 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
         },
       ),
     ),
+    // Background wake-ups are Android's WorkManager; on other platforms the
+    // in-app triggers (launch, update-finish, queue-drain) are the coverage,
+    // so the switch would be a lie there.
+    if (isAndroidNative)
+      SettingsPropTile(
+        title: context.l10n.downloadNewChaptersInBackground,
+        subtitle: context.l10n.downloadNewChaptersInBackgroundDescription,
+        type: SettingsPropType.switchTile(
+          value: ref.watch(backgroundCatchupEnabledProvider),
+          onChanged: (v) async {
+            await ref
+                .read(backgroundCatchupEnabledProvider.notifier)
+                .setEnabled(v);
+            return null;
+          },
+        ),
+      ),
     SettingsPropTile(
       title: context.l10n.offlineConcurrencyLabel,
       subtitle: context.l10n.offlineConcurrencyValue(

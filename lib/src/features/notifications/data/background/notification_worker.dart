@@ -15,6 +15,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../offline/data/background/background_token_record.dart';
+import '../../../offline/data/background/catchup_download_executor.dart';
+import '../../../offline/data/background/catchup_work_spec.dart';
 import '../../domain/new_chapter_detection.dart';
 import '../local_notification_service.dart';
 import '../notification_state_store.dart';
@@ -44,6 +46,20 @@ Future<bool> runNewChapterCheck() async {
   var ok = true;
   if (config.newChaptersEnabled) {
     ok = await _runNewChapters(store, config, client, notifier, l10n);
+  }
+  // Background download step — own cursor, keep-rule scope, no category
+  // filter. Resolution records the obligations; the executor then downloads
+  // as many as the run's budget allows.
+  final catchupStore = await CatchupStateStore.open();
+  if (catchupStore.enabled) {
+    ok = await _runDownloadResolution(catchupStore, config, client) && ok;
+    ok = await runCatchupDownloads(
+          catchupStore: catchupStore,
+          config: config,
+          record: client.currentRecord,
+          broker: client.broker,
+        ) &&
+        ok;
   }
   if (config.appUpdatesEnabled) {
     await _checkAppUpdate(store, config, client, notifier, l10n);
@@ -174,6 +190,79 @@ Future<bool> _runNewChapters(
   await _publish(notifier, client, l10n, config, pending);
   await store.writeWatermark(config.serverId, result.watermark);
   await store.clearOutbox();
+  return true;
+}
+
+/// The download side of detection. Same pagination and detector as the notify
+/// step but consuming its OWN cursor, scoped to the spec's keep-rule manga and
+/// never the notification category filter — muting a category must not
+/// silently stop its downloads.
+Future<bool> _runDownloadResolution(
+  CatchupStateStore catchupStore,
+  NotificationWorkerConfig config,
+  NotificationBackgroundClient client,
+) async {
+  final spec = catchupStore.readSpec();
+  if (spec == null || spec.manga.isEmpty) return true;
+  // The worker must not outlive its world: after a server switch the spec is
+  // dead until the foreground rewrites it.
+  if (spec.serverId != config.serverId) return true;
+
+  var ledger = catchupStore.readLedger(config.serverId);
+
+  // First enable: seed to now. The toggle does not backfill history — the
+  // foreground launch pass owns the backlog.
+  if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
+    final maxFetched = await client.serverMaxFetchedAt();
+    await catchupStore.writeLedger(
+      config.serverId,
+      ledger.copyWith(cursor: NewChapterWatermark(fetchedAt: maxFetched)),
+    );
+    return true;
+  }
+
+  final gte = (ledger.cursor.fetchedAt - kDefaultOverlapMs)
+      .clamp(0, ledger.cursor.fetchedAt);
+  final all = <NotifChapter>[];
+  String? after;
+  while (true) {
+    final page =
+        await client.fetchNewChaptersPage(fetchedAtGte: '$gte', after: after);
+    if (page == null) return false; // transient — retry next wake
+    all.addAll(page.nodes);
+    if (!page.hasNextPage || page.endCursor == null) break;
+    after = page.endCursor;
+  }
+
+  final result = detectNewChapters(
+    candidates: [
+      for (final n in all)
+        (
+          id: n.id,
+          mangaId: n.mangaId,
+          chapterNumber: n.chapterNumber,
+          fetchedAt: n.fetchedAt
+        ),
+    ],
+    watermark: ledger.cursor,
+    allowedMangaIds: spec.keepRuleMangaIds,
+  );
+
+  // Obligations and the advanced cursor land in ONE atomic write: the cursor
+  // may only move once every detected chapter is owed somewhere.
+  final pendingDownloads = {...ledger.pendingDownloads};
+  for (final group in result.groups) {
+    for (final c in group.chapters) {
+      pendingDownloads[c.id] = group.mangaId;
+    }
+  }
+  await catchupStore.writeLedger(
+    config.serverId,
+    ledger.copyWith(
+      cursor: result.watermark,
+      pendingDownloads: pendingDownloads,
+    ),
+  );
   return true;
 }
 

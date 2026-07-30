@@ -9,6 +9,29 @@ import 'dart:io';
 
 import '../offline_database.dart';
 import '../offline_paths.dart';
+import '../offline_types.dart';
+
+/// Final on-disk pages of a chapter, index → relative path. `.part` staging
+/// files are excluded as incomplete.
+Future<Map<int, String>> _pagesOnDisk(
+    OfflinePaths paths, int mangaId, int chapterId) async {
+  final rowsByIndex = <int, String>{};
+  final dir = Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
+  if (await dir.exists()) {
+    await for (final f in dir.list()) {
+      if (f is! File) continue;
+      final name = f.uri.pathSegments.last;
+      if (name.endsWith('.part')) continue;
+      final dot = name.indexOf('.');
+      if (dot <= 0) continue;
+      final idx = int.tryParse(name.substring(0, dot));
+      if (idx == null) continue;
+      rowsByIndex[idx] =
+          paths.pageRel(mangaId, chapterId, idx, name.substring(dot + 1));
+    }
+  }
+  return rowsByIndex;
+}
 
 sealed class LogEntry {
   const LogEntry();
@@ -38,6 +61,29 @@ class DeletedEntry extends LogEntry {
 
 class DrainedEntry extends LogEntry {
   const DrainedEntry();
+}
+
+/// A chapter the background catch-up downloaded that drift has never seen —
+/// carries the metadata replay needs to CREATE the row. Adoption is the one
+/// sanctioned exception to never-resurrect: it only applies when the row is
+/// missing outright (a foreground delete keeps its row as `none`), the manga
+/// still has an active keep rule, and the serverId matches the catalog.
+class AdoptChapterEntry extends LogEntry {
+  const AdoptChapterEntry({
+    required this.chapterId,
+    required this.mangaId,
+    required this.serverId,
+    required this.name,
+    required this.chapterIndex,
+    required this.chapterNumber,
+    required this.pageCount,
+    required this.bytes,
+    required this.isRead,
+  });
+  final int chapterId, mangaId, chapterIndex, pageCount, bytes;
+  final String serverId, name;
+  final double chapterNumber;
+  final bool isRead;
 }
 
 /// Append-only JSONL record of background-download progress — the durable
@@ -77,6 +123,19 @@ class BackgroundCompletionLog {
 
   Future<void> appendDrained() => _append({'t': 'drained'});
 
+  Future<void> appendAdopt(AdoptChapterEntry e) => _append({
+        't': 'adopt',
+        'c': e.chapterId,
+        'm': e.mangaId,
+        'srv': e.serverId,
+        'n': e.name,
+        'idx': e.chapterIndex,
+        'num': e.chapterNumber,
+        'pages': e.pageCount,
+        'bytes': e.bytes,
+        'read': e.isRead,
+      });
+
   Future<List<LogEntry>> parse() async {
     if (!await file.exists()) return const [];
     final lines = await file.readAsLines();
@@ -98,6 +157,18 @@ class BackgroundCompletionLog {
           out.add(DeletedEntry(j['c'] as int, j['g'] as int? ?? 0));
         case 'drained':
           out.add(const DrainedEntry());
+        case 'adopt':
+          out.add(AdoptChapterEntry(
+            chapterId: j['c'] as int,
+            mangaId: j['m'] as int,
+            serverId: j['srv'] as String? ?? '',
+            name: j['n'] as String? ?? '',
+            chapterIndex: (j['idx'] as num?)?.toInt() ?? 0,
+            chapterNumber: (j['num'] as num?)?.toDouble() ?? -1,
+            pageCount: (j['pages'] as num?)?.toInt() ?? 0,
+            bytes: (j['bytes'] as num?)?.toInt() ?? 0,
+            isRead: j['read'] as bool? ?? false,
+          ));
       }
     }
     return out;
@@ -146,9 +217,73 @@ Future<void> replayCompletionLog({
   required OfflinePaths paths,
   required BackgroundCompletionLog log,
   required ChapterBytesMeasurer measureBytes,
+  String? catalogServerId,
 }) async {
   final entries = await log.parse();
   if (entries.isEmpty) return;
+
+  // Background catch-up adoptions first: rows drift has never seen. Refusals
+  // clean their files up here, under replay's ownership — refused downloads
+  // are invisible to eviction (no row) and would otherwise sit on disk forever.
+  final adoptions = <int, AdoptChapterEntry>{};
+  for (final e in entries) {
+    if (e is AdoptChapterEntry) adoptions[e.chapterId] = e;
+  }
+  for (final a in adoptions.values) {
+    if (await db.chapterById(a.chapterId) != null) continue; // known → normal path
+    final manga = await (db.select(db.offlineMangas)
+          ..where((t) => t.id.equals(a.mangaId)))
+        .getSingleOrNull();
+    final pagesOnDisk = await _pagesOnDisk(paths, a.mangaId, a.chapterId);
+    final complete = a.pageCount > 0 &&
+        List.generate(a.pageCount, (i) => i).every(pagesOnDisk.containsKey);
+    final accepted = manga != null &&
+        manga.keepRule != OfflineKeepRule.off &&
+        catalogServerId != null &&
+        a.serverId == catalogServerId &&
+        complete;
+    if (!accepted) {
+      try {
+        final dir = Directory(
+            paths.absolute(paths.chapterDirRel(a.mangaId, a.chapterId)));
+        if (await dir.exists()) await dir.delete(recursive: true);
+      } catch (_) {}
+      continue;
+    }
+    final bytes = await measureBytes(a.mangaId, a.chapterId);
+    await db.transaction(() async {
+      // A foreground sync creating the row mid-flight doesn't void the
+      // download — the verified pages attach to whichever row exists. Only a
+      // still-missing row gets the record's metadata; a synced row keeps its
+      // own (fresher read progress included).
+      if (await db.chapterById(a.chapterId) == null) {
+        await db.upsertChapterMetadata(
+          id: a.chapterId,
+          mangaId: a.mangaId,
+          name: a.name,
+          chapterIndex: a.chapterIndex,
+          isRead: a.isRead,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: a.pageCount,
+          updatedAt: DateTime.now(),
+          chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
+          syncedIsRead: a.isRead,
+        );
+      }
+      for (final entry in pagesOnDisk.entries) {
+        await db.into(db.offlinePages).insertOnConflictUpdate(
+              OfflinePagesCompanion.insert(
+                  chapterId: a.chapterId,
+                  pageIndex: entry.key,
+                  relativePath: entry.value),
+            );
+      }
+      await db.setChapterDeviceState(a.chapterId, OfflineDeviceState.downloaded,
+          bytes: bytes, downloadedAt: DateTime.now());
+    });
+  }
 
   // touched/terminal are scoped to the latest generation seen per chapter, so a
   // stale entry (even one after the delete in file order) is discarded rather
@@ -191,6 +326,8 @@ Future<void> replayCompletionLog({
         terminalPages.remove(chapterId);
       case DrainedEntry():
         break;
+      case AdoptChapterEntry():
+        break; // handled in the adoption pass above
     }
   }
 
@@ -207,23 +344,8 @@ Future<void> replayCompletionLog({
 
     // Enumerate final on-disk pages (filesystem is truth) and measure bytes
     // BEFORE the transaction, so the DB write stays atomic and serializes with
-    // a delete; `.part` staging files are excluded as incomplete.
-    final rowsByIndex = <int, String>{};
-    final dir =
-        Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
-    if (await dir.exists()) {
-      await for (final f in dir.list()) {
-        if (f is! File) continue;
-        final name = f.uri.pathSegments.last; // e.g. 003.jpg
-        if (name.endsWith('.part')) continue; // atomic-write staging, not final
-        final dot = name.indexOf('.');
-        if (dot <= 0) continue;
-        final idx = int.tryParse(name.substring(0, dot));
-        if (idx == null) continue;
-        rowsByIndex[idx] =
-            paths.pageRel(mangaId, chapterId, idx, name.substring(dot + 1));
-      }
-    }
+    // a delete.
+    final rowsByIndex = await _pagesOnDisk(paths, mangaId, chapterId);
     final status = terminal[chapterId];
     final bytes =
         status == 'downloaded' ? await measureBytes(mangaId, chapterId) : 0;
