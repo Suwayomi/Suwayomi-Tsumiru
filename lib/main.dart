@@ -308,6 +308,14 @@ Future<void> _startApp() async {
         if (prev == true && !next) flush();
       });
       if (!container.read(offlineActiveProvider)) return;
+      // Replay FIRST: launch reconcile and the catch-up must see post-replay
+      // device state, or overnight background downloads read as missing and
+      // get re-fetched. The service restart stays after reconcile below.
+      if (isAndroidNative) {
+        final controller = container.read(backgroundDownloadControllerProvider);
+        controller.register();
+        await controller.replayAtLaunch();
+      }
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
       // New-chapter catch-up for keep-rule manga (#310): launch pass now, then
@@ -329,12 +337,10 @@ Future<void> _startApp() async {
         }
       }
       if (isAndroidNative) {
-        // Android: the foreground-service worker owns downloads. Register the
-        // lifecycle/connectivity hooks, replay any leftover completion log into
-        // drift, and restart the service if the queue is non-empty.
+        // Replay already ran above (before reconcile); restart the service if
+        // the queue is non-empty.
         final controller = container.read(backgroundDownloadControllerProvider);
-        controller.register();
-        await controller.replayAtLaunchAndMaybeStart();
+        await controller.maybeStartAfterReplay();
       } else {
         await initOfflineDownloads(container);
       }

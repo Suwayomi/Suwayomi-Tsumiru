@@ -38,6 +38,7 @@ import '../../tracking/domain/track_progress_gate.dart';
 import '../../tracking/domain/tracking_settings_providers.dart';
 import 'background/background_download_controller_shim.dart';
 import 'background/catchup_spec_writer.dart';
+import 'background/catchup_work_spec.dart';
 import 'chapter_download_engine.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
@@ -128,6 +129,9 @@ Future<void> clearOfflineCatalog(WidgetRef ref) async {
     },
     finish: background.finishCatalogClear,
   );
+  // The background worker must not outlive its world: drop its spec + ledger
+  // so no stale-server obligations survive the clear.
+  await CatchupStateStore(ref.read(sharedPreferencesProvider)).clearState();
   ref.invalidate(offlineActiveProvider);
   ref.invalidate(offlineReadDatabaseProvider);
 }

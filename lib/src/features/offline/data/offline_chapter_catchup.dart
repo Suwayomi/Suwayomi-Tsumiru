@@ -20,6 +20,7 @@ import '../../manga_book/data/updates/updates_repository.dart';
 import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
 import 'background/background_download_controller_shim.dart';
 import 'background/catchup_spec_writer.dart';
+import 'background/catchup_work_spec.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_providers.dart';
@@ -52,6 +53,29 @@ void initChapterCatchUp(ProviderContainer container) {
           ?.map(int.tryParse)
           .whereType<int>() ??
       const []);
+  // Adopt the background worker's second-hop obligations: chapters it queued
+  // server-side get pulled by the foreground machinery now instead of waiting
+  // for the next background wake. Exhausted retries hand off the same way —
+  // foreground reconcile owns surfacing stuck downloads.
+  final catchupStore =
+      CatchupStateStore(container.read(sharedPreferencesProvider));
+  final catalogServerId = container
+      .read(sharedPreferencesProvider)
+      .getString(DBKeys.offlineCatalogServerId.name);
+  if (catalogServerId != null) {
+    final ledger = catchupStore.readLedger(catalogServerId);
+    if (ledger.pendingServerFetch.isNotEmpty) {
+      _awaitingServerDownloads.addAll(ledger.pendingServerFetch.values);
+      unawaited(_persistAwaiting(container));
+      unawaited(catchupStore.writeLedger(
+        catalogServerId,
+        ledger.copyWith(
+          pendingServerFetch: const {},
+          serverFetchRetries: const {},
+        ),
+      ));
+    }
+  }
   // A finished server update run is the moment new chapters exist to pull.
   container.listen(updateRunningSocketProvider, (previous, next) {
     final wasRunning = previous?.value ?? false;

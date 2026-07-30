@@ -278,6 +278,18 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> replayAtLaunchAndMaybeStart() async {
     if (!Platform.isAndroid) return;
     await _replay();
+    await maybeStartAfterReplay();
+  }
+
+  /// Replay only — split out so launch can order it BEFORE the reconcile pass
+  /// (which must see post-replay device state), keeping the service start after.
+  Future<void> replayAtLaunch() async {
+    if (!Platform.isAndroid) return;
+    await _replay();
+  }
+
+  Future<void> maybeStartAfterReplay() async {
+    if (!Platform.isAndroid) return;
     final pending = await _pendingChapters();
     if (pending.isNotEmpty) await ensureServiceRunning();
   }
