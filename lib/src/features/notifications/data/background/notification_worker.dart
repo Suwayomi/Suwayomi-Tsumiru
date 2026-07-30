@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../offline/data/background/background_token_record.dart';
+import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
 import '../../domain/new_chapter_detection.dart';
 import '../local_notification_service.dart';
@@ -47,11 +48,18 @@ Future<bool> runNewChapterCheck() async {
     ok = await _runNewChapters(store, config, client, notifier, l10n);
   }
   // Background download step — own cursor, keep-rule scope, no category
-  // filter. Resolution only for now: obligations land in the ledger; the
-  // executor that downloads them is the next increment.
+  // filter. Resolution records the obligations; the executor then downloads
+  // as many as the run's budget allows.
   final catchupStore = await CatchupStateStore.open();
   if (catchupStore.enabled) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
+    ok = await runCatchupDownloads(
+          catchupStore: catchupStore,
+          config: config,
+          record: client.currentRecord,
+          broker: client.broker,
+        ) &&
+        ok;
   }
   if (config.appUpdatesEnabled) {
     await _checkAppUpdate(store, config, client, notifier, l10n);

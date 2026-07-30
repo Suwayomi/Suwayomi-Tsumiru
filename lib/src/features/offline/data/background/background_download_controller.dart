@@ -287,6 +287,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         log: _log,
         measureBytes: (mangaId, chapterId) =>
             _store.chapterBytes(mangaId, chapterId),
+        // Gates catch-up adoptions: a record from another server's catalog is
+        // refused (and its files cleaned up), never adopted across identities.
+        catalogServerId: _ref
+            .read(sharedPreferencesProvider)
+            .getString(DBKeys.offlineCatalogServerId.name),
       );
 
   // ---------------------------------------------------------------------------

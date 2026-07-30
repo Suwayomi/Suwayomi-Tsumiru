@@ -78,6 +78,10 @@ class NotificationBackgroundClient {
   final http.Client _http;
   BackgroundTokenRecord _record;
 
+  /// Live view of the auth record (the broker rotates it mid-run) — the
+  /// catch-up executor shares this client's auth.
+  BackgroundTokenRecord currentRecord() => _record;
+
   static const Object _authError = Object();
   static const Object _networkError = Object();
 
