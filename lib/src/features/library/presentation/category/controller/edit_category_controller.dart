@@ -13,6 +13,7 @@ import '../../../../../features/offline/data/offline_read_fallback.dart';
 import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/network/graphql_errors.dart';
 import '../../../data/category_repository.dart';
 import '../../../domain/category/category_model.dart';
 import '../../library/controller/library_controller.dart';
@@ -81,25 +82,52 @@ class CategoryController extends _$CategoryController {
   }
 
   /// Hide/show a category from the Library tabs. Stored as a server-side
-  /// category meta flag so it persists and syncs across devices.
-  Future<AsyncValue<void>> setHidden(int categoryId, bool hidden) async {
+  /// category meta flag so it persists and syncs across devices. Offline,
+  /// the change lands on the device's mirror instead — downloads in a hidden
+  /// category must stay reachable — and the server's flag reasserts on the
+  /// next online sync.
+  Future<AsyncValue<CategoryVisibilityOutcome>> setHidden(
+      int categoryId, bool hidden) async {
+    // Captured before the awaits: this provider auto-disposes (see build).
     final repo = ref.read(categoryRepositoryProvider);
-    final response = await AsyncValue.guard(
-      () => hidden
-          ? repo.setCategoryMeta(
-              categoryId: categoryId,
-              key: kCategoryHiddenMetaKey,
-              value: 'true',
-            )
-          : repo.deleteCategoryMeta(
-              categoryId: categoryId,
-              key: kCategoryHiddenMetaKey,
-            ),
+    final offlineDb = ref.read(offlineReadDatabaseProvider);
+    final response = await AsyncValue.guard<CategoryVisibilityOutcome>(
+      () async {
+        hidden
+            ? await repo.setCategoryMeta(
+                categoryId: categoryId,
+                key: kCategoryHiddenMetaKey,
+                value: 'true',
+              )
+            : await repo.deleteCategoryMeta(
+                categoryId: categoryId,
+                key: kCategoryHiddenMetaKey,
+              );
+        return CategoryVisibilityOutcome.synced;
+      },
     );
+    // The repository throws OperationMessageException wrapping the link
+    // error — unwrap before classifying, same as _shouldFallBack.
+    if (response case AsyncError(:final error)
+        when isConnectionError(
+              error is OperationMessageException ? error.exception : error,
+            ) &&
+            offlineDb != null) {
+      // A mirror without this row (never synced online) can't honor the
+      // change — fall through to the error rather than claim success.
+      if (await offlineDb.setCategoryHidden(categoryId, hidden)) {
+        ref.invalidateSelf();
+        return const AsyncData(CategoryVisibilityOutcome.deviceOnly);
+      }
+    }
     ref.invalidateSelf();
     return response;
   }
 }
+
+/// How a category visibility change landed: on the server (permanent,
+/// cross-device) or only on this device's offline mirror (until reconnect).
+enum CategoryVisibilityOutcome { synced, deviceOnly }
 
 @riverpod
 List<CategoryDto>? categoryListQuery(

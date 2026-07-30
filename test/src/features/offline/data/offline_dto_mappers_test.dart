@@ -106,8 +106,8 @@ void main() {
 
   test('full metadata survives upsert → read', () async {
     // Arrange – persist categories first (FK-free but order matters semantically)
-    await db.upsertCategory(2, 'Action', 0);
-    await db.upsertCategory(5, 'Romance', 1);
+    await db.upsertCategory(2, 'Action', 0, isHidden: false);
+    await db.upsertCategory(5, 'Romance', 1, isHidden: false);
 
     // Persist a manga with all new fields
     await db.upsertMangaMetadata(
@@ -170,8 +170,8 @@ void main() {
   });
 
   test('allOfflineCategories returns persisted categories', () async {
-    await db.upsertCategory(1, 'Shonen', 0);
-    await db.upsertCategory(2, 'Seinen', 1);
+    await db.upsertCategory(1, 'Shonen', 0, isHidden: false);
+    await db.upsertCategory(2, 'Seinen', 1, isHidden: false);
     final all = await db.allOfflineCategories();
     expect(all.map((c) => c.id).toSet(), {1, 2});
   });

@@ -50,6 +50,7 @@ import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
 import 'src/utils/misc/toast/toast.dart';
+import 'src/utils/soft_clear_image_cache.dart';
 import 'src/utils/platform/is_android_native.dart';
 import 'src/widgets/app_error_app.dart';
 
@@ -62,6 +63,22 @@ String? _crashLogPath;
 /// error (log only; keep the app running). See [_onFatalError].
 bool _appRendered = false;
 
+/// Stock binding except the image cache survives memory-pressure signals
+/// with a working set intact (see [SoftClearImageCache]) — Android sends one
+/// for plain backgrounding, and the default clear-to-zero re-faded every
+/// cover on return.
+class _TsumiruWidgetsBinding extends WidgetsFlutterBinding {
+  @override
+  ImageCache createImageCache() => SoftClearImageCache(floorBytes: 64 << 20);
+
+  static WidgetsBinding ensureInitialized() {
+    // First thing in main, so no binding exists yet; constructing a second
+    // one would assert, which is the alarm we'd want if that ever lied.
+    _TsumiruWidgetsBinding();
+    return WidgetsBinding.instance;
+  }
+}
+
 void main() {
   // Run everything inside a guarded zone so a fatal error — sync, async, or
   // framework — is caught, written to a log file, and shown as a readable
@@ -70,7 +87,10 @@ void main() {
 }
 
 Future<void> _startApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  _TsumiruWidgetsBinding.ensureInitialized();
+  // 100 MB default is too small even for tile-sized covers — evicted covers
+  // re-shimmer on every tab switch. A cap, not an allocation.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
   await _setUpCrashReporting();
   // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
   // any download service is started. Must run after the binding is ready.

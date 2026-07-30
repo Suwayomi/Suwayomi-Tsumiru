@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 
 void main() {
@@ -28,6 +29,29 @@ void main() {
       final e = OperationException(
           graphqlErrors: const [GraphQLError(message: 'Unauthorized')]);
       expect(isConnectionError(e), isFalse);
+    });
+
+    // The repository layer throws OperationMessageException AROUND the
+    // OperationException — the shape every UI mutation actually sees.
+    // isConnectionError does not see through it (importing the wrapper here
+    // would cycle), so call sites MUST unwrap first; this pair pins both
+    // halves of that contract.
+    test('wrapped OperationMessageException is NOT recognized directly', () {
+      final wrapped = OperationMessageException(OperationException(
+          linkException: ServerException(
+              originalException: const SocketException('down'),
+              parsedResponse: null)));
+      expect(isConnectionError(wrapped), isFalse);
+    });
+    test('call-site unwrap of OperationMessageException classifies right', () {
+      final Object wrapped = OperationMessageException(OperationException(
+          linkException: ServerException(
+              originalException: const SocketException('down'),
+              parsedResponse: null)));
+      final cause = wrapped is OperationMessageException
+          ? wrapped.exception
+          : wrapped;
+      expect(isConnectionError(cause), isTrue);
     });
   });
 

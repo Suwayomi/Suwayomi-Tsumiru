@@ -192,10 +192,24 @@ class OfflineSync {
     await onSynced?.call();
   }
 
+  /// Full mirror, not an accumulate: categories deleted on the server must
+  /// stop haunting the offline tabs. Empty is ignored for the same reason as
+  /// [pruneRemovedLibraryManga] — a failed fetch must never wipe the mirror.
   Future<void> syncCategories(List<CategoryDto> categories) async {
-    for (final cat in categories) {
-      await _db.upsertCategory(cat.id, cat.name, cat.order);
-    }
+    if (categories.isEmpty) return;
+    // One transaction: overlapping syncs (fired unawaited on every category
+    // rebuild) must not interleave an old upsert after a newer prune.
+    await _db.transaction(() async {
+      for (final cat in categories) {
+        await _db.upsertCategory(
+          cat.id,
+          cat.name,
+          cat.order,
+          isHidden: cat.isHidden,
+        );
+      }
+      await _db.pruneRemovedCategories({for (final c in categories) c.id});
+    });
     await onSynced?.call();
   }
 }

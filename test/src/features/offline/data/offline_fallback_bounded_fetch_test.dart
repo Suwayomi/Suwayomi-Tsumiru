@@ -26,7 +26,7 @@ void main() {
 
   Future<void> seedCatalog() async {
     await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
-    await db.upsertCategory(3, 'Shelf', 0);
+    await db.upsertCategory(3, 'Shelf', 0, isHidden: false);
     await db.replaceMangaCategories(1, [3]);
     // The offline library only lists series with files on this device.
     await db.upsertChapterMetadata(

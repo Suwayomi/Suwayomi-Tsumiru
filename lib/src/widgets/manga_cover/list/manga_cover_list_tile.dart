@@ -65,6 +65,12 @@ class MangaCoverListTile extends StatelessWidget {
               borderRadius: KBorderRadius.r8.radius,
               child: ServerImage(
                 imageUrl: manga.thumbnailUrl ?? "",
+                // Decode at display size — see the grid tile.
+                memCacheWidth: (kCompactCoverWidth *
+                        scale *
+                        MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(1, 1 << 16),
                 size: Size(
                   kCompactCoverWidth * scale,
                   mangaCoverBoxHeight(kCompactCoverWidth * scale,
