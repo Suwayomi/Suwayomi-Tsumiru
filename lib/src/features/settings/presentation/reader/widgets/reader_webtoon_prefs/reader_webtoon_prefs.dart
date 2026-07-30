@@ -12,9 +12,9 @@ import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'reader_webtoon_prefs.g.dart';
 
-// Global long-strip prefs. Smart-scale is wired on the
-// non-infinity webtoon path; the infinity path's height-cache math is the
-// frozen scroll boundary (see docs/architecture/reader.md).
+// Global long-strip prefs, consumed by the long-strip renderer
+// (multichapter_continuous_reader_mode.dart). The frozen boundary there is the
+// scroll/position/index math, not these render knobs (docs/architecture/reader.md).
 
 @riverpod
 class WebtoonScaleTypeKey extends _$WebtoonScaleTypeKey
@@ -22,6 +22,27 @@ class WebtoonScaleTypeKey extends _$WebtoonScaleTypeKey
   @override
   WebtoonScaleType? build() =>
       initialize(DBKeys.webtoonScaleType, enumList: WebtoonScaleType.values);
+}
+
+@riverpod
+class LongStripWidthLimitUsePixels extends _$LongStripWidthLimitUsePixels
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.longStripWidthLimitUsePixels);
+}
+
+@riverpod
+class LongStripWidthLimitPercent extends _$LongStripWidthLimitPercent
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.longStripWidthLimitPercent);
+}
+
+@riverpod
+class LongStripWidthLimitPx extends _$LongStripWidthLimitPx
+    with SharedPreferenceClientMixin<int> {
+  @override
+  int? build() => initialize(DBKeys.longStripWidthLimitPx);
 }
 
 @riverpod

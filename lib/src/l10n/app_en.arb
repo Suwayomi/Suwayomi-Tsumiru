@@ -1264,10 +1264,13 @@
         "description": "Button text to open manga website"
     },
     "@webtoonScaleType": {
-        "description": "Section label for the long-strip smart-scale chip row"
+        "description": "Section label for the long-strip scale chip row"
     },
     "@webtoonScaleTypeFitScreen": {
-        "description": "Smart scale chip"
+        "description": "Long strip scale chip"
+    },
+    "@webtoonScaleTypeOriginalSize": {
+        "description": "Long strip scale chip: render pages at native size, never upscaled"
     },
     "@webtoonScaleTypeRatio16to9": {
         "description": "Smart scale chip"
@@ -1849,6 +1852,40 @@
     "limitTitleLines": "Limit titles to 2 lines",
     "@limitTitleLines": {
         "description": "Library Display checkbox to cap titles at two ellipsized lines"
+    },
+    "longStripWidthLimit": "Maximum width",
+    "@longStripWidthLimit": {
+        "description": "Long strip slider: cap the strip at a percentage of the window or an absolute pixel width"
+    },
+    "longStripWidthLimitFullWidth": "Full width",
+    "@longStripWidthLimitFullWidth": {
+        "description": "Readout at the width slider's 100% position (the off state)"
+    },
+    "longStripWidthLimitPercent": "{percent}%",
+    "@longStripWidthLimitPercent": {
+        "description": "Value readout for the width slider in percent mode",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitPx": "{px} px",
+    "@longStripWidthLimitPx": {
+        "description": "Value readout for the width slider in pixel mode",
+        "placeholders": {
+            "px": {
+                "type": "int"
+            }
+        }
+    },
+    "longStripWidthLimitUnitPercent": "%",
+    "@longStripWidthLimitUnitPercent": {
+        "description": "Width slider unit chip: percent of window"
+    },
+    "longStripWidthLimitUnitPixels": "px",
+    "@longStripWidthLimitUnitPixels": {
+        "description": "Width slider unit chip: absolute pixels"
     },
     "listSize": "List size",
     "@listSize": {
@@ -2532,8 +2569,9 @@
     "deleteSourceManga": "Delete Source Manga",
     "deleteSourceMangaDescription": "Remove the original manga from library after migration",
     "done": "Done",
-    "webtoonScaleType": "Smart scale on wide screen",
+    "webtoonScaleType": "Long strip scale",
     "webtoonScaleTypeFitScreen": "Fit screen",
+    "webtoonScaleTypeOriginalSize": "Original size",
     "webtoonScaleTypeRatio16to9": "16:9",
     "webtoonScaleTypeRatio20to9": "20:9",
     "webtoonScaleTypeRatio3to2": "3:2",

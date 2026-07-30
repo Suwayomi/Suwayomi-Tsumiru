@@ -286,6 +286,11 @@ enum DBKeys {
   trueDualPageSpread(false),
   // Long-strip parity prefs; crop-borders is scoped per mode.
   webtoonScaleType(WebtoonScaleType.fitScreen),
+  // Strip width cap: % of window (100 = full width) or absolute px
+  // (Houdoku-style unit switch).
+  longStripWidthLimitUsePixels(false),
+  longStripWidthLimitPercent(100),
+  longStripWidthLimitPx(800),
   cropBordersWebtoon(false),
   cropBordersGaps(false),
   smoothAutoScroll(true),

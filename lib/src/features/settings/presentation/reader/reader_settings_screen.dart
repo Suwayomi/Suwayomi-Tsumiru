@@ -28,6 +28,7 @@ import 'widgets/reader_left_handed_seekbar_tile/reader_left_handed_seekbar_tile.
 import 'widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import 'widgets/reader_mode_tile/reader_mode_tile.dart';
 import 'widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
+import 'widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import 'widgets/reader_padding_slider/reader_padding_slider.dart';
 import 'widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import 'widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
@@ -299,6 +300,28 @@ class ReaderSettingsScreen extends ConsumerWidget {
                 enumOf(webtoonScaleTypeKeyProvider) ?? WebtoonScaleType.fitScreen,
             labelOf: (v) => v.toLocale(context),
             onSelected: setEnum(webtoonScaleTypeKeyProvider.notifier),
+          ),
+          // Greyed under Original size: native-size pages never widen, so a
+          // width cap has nothing to do.
+          LongStripWidthLimitSlider(
+            enabled: (enumOf(webtoonScaleTypeKeyProvider) ??
+                    WebtoonScaleType.fitScreen) !=
+                WebtoonScaleType.originalSize,
+            usePixels:
+                ref.watch(longStripWidthLimitUsePixelsProvider).ifNull(),
+            percent: ref.watch(longStripWidthLimitPercentProvider) ??
+                DBKeys.longStripWidthLimitPercent.initial as int,
+            px: ref.watch(longStripWidthLimitPxProvider) ??
+                DBKeys.longStripWidthLimitPx.initial as int,
+            onUnitChanged:
+                ref.read(longStripWidthLimitUsePixelsProvider.notifier).update,
+            // Clamped like the model setters, so every write path guards.
+            onPercentCommitted: (v) => ref
+                .read(longStripWidthLimitPercentProvider.notifier)
+                .update(v.clamp(10, 100)),
+            onPxCommitted: (v) => ref
+                .read(longStripWidthLimitPxProvider.notifier)
+                .update(v.clamp(200, 2000)),
           ),
           _BoolTile(
             title: context.l10n.cropBorders,

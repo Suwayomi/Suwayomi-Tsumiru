@@ -247,6 +247,24 @@ abstract final class ReaderSettings {
     fallback: DBKeys.webtoonScaleType.initial as WebtoonScaleType,
   );
 
+  static final longStripWidthLimitUsePixels = ReaderSetting<bool>(
+    scope: ReaderSettingScope.global,
+    global: longStripWidthLimitUsePixelsProvider,
+    fallback: DBKeys.longStripWidthLimitUsePixels.initial as bool,
+  );
+
+  static final longStripWidthLimitPercent = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: longStripWidthLimitPercentProvider,
+    fallback: DBKeys.longStripWidthLimitPercent.initial as int,
+  );
+
+  static final longStripWidthLimitPx = ReaderSetting<int>(
+    scope: ReaderSettingScope.global,
+    global: longStripWidthLimitPxProvider,
+    fallback: DBKeys.longStripWidthLimitPx.initial as int,
+  );
+
   static final cropBordersWebtoon = ReaderSetting<bool>(
     scope: ReaderSettingScope.global,
     global: cropBordersWebtoonProvider,
@@ -442,6 +460,9 @@ abstract class ReaderSettingsState with _$ReaderSettingsState {
     required bool rotateWideInvert,
     required bool trueDualPageSpread,
     required WebtoonScaleType webtoonScaleType,
+    required bool longStripWidthLimitUsePixels,
+    required int longStripWidthLimitPercent,
+    required int longStripWidthLimitPx,
     required bool cropBordersWebtoon,
     required bool cropBordersGaps,
     required bool smoothAutoScroll,
@@ -503,6 +524,9 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
   late RotateWideInvert _rotateWideInvert;
   late TrueDualPageSpread _trueDualPageSpread;
   late WebtoonScaleTypeKey _webtoonScaleType;
+  late LongStripWidthLimitUsePixels _longStripWidthLimitUsePixels;
+  late LongStripWidthLimitPercent _longStripWidthLimitPercent;
+  late LongStripWidthLimitPx _longStripWidthLimitPx;
   late CropBordersWebtoon _cropBordersWebtoon;
   late CropBordersGaps _cropBordersGaps;
   late SmoothAutoScroll _smoothAutoScroll;
@@ -567,6 +591,11 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
     _rotateWideInvert = ref.read(rotateWideInvertProvider.notifier);
     _trueDualPageSpread = ref.read(trueDualPageSpreadProvider.notifier);
     _webtoonScaleType = ref.read(webtoonScaleTypeKeyProvider.notifier);
+    _longStripWidthLimitUsePixels =
+        ref.read(longStripWidthLimitUsePixelsProvider.notifier);
+    _longStripWidthLimitPercent =
+        ref.read(longStripWidthLimitPercentProvider.notifier);
+    _longStripWidthLimitPx = ref.read(longStripWidthLimitPxProvider.notifier);
     _cropBordersWebtoon = ref.read(cropBordersWebtoonProvider.notifier);
     _cropBordersGaps = ref.read(cropBordersGapsProvider.notifier);
     _smoothAutoScroll = ref.read(smoothAutoScrollProvider.notifier);
@@ -655,6 +684,12 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
       trueDualPageSpread:
           ReaderSettings.trueDualPageSpread.resolveWith(ref, null),
       webtoonScaleType: ReaderSettings.webtoonScaleType.resolveWith(ref, null),
+      longStripWidthLimitUsePixels:
+          ReaderSettings.longStripWidthLimitUsePixels.resolveWith(ref, null),
+      longStripWidthLimitPercent:
+          ReaderSettings.longStripWidthLimitPercent.resolveWith(ref, null),
+      longStripWidthLimitPx:
+          ReaderSettings.longStripWidthLimitPx.resolveWith(ref, null),
       cropBordersWebtoon:
           ReaderSettings.cropBordersWebtoon.resolveWith(ref, null),
       cropBordersGaps: ReaderSettings.cropBordersGaps.resolveWith(ref, null),
@@ -748,6 +783,15 @@ class ReaderSettingsModel extends _$ReaderSettingsModel {
 
   void setWebtoonScaleType(WebtoonScaleType value) =>
       _webtoonScaleType.update(value);
+
+  void setLongStripWidthLimitUsePixels(bool value) =>
+      _longStripWidthLimitUsePixels.update(value);
+
+  void setLongStripWidthLimitPercent(int value) =>
+      _longStripWidthLimitPercent.update(value.clamp(10, 100));
+
+  void setLongStripWidthLimitPx(int value) =>
+      _longStripWidthLimitPx.update(value.clamp(200, 2000));
 
   void setCropBordersWebtoon(bool value) => _cropBordersWebtoon.update(value);
 

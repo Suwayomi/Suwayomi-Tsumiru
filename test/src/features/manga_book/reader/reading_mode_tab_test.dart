@@ -216,7 +216,7 @@ void main() {
     expect(find.text('Disable zoom out'), findsOneWidget);
     // Paged-only: long strip has no zoom-in cap.
     expect(find.text('Disable zoom in'), findsOneWidget);
-    expect(find.text('Smart scale on wide screen'), findsNothing);
+    expect(find.text('Long strip scale'), findsNothing);
     expect(find.text('Smooth Auto Scroll'), findsNothing);
   });
 
@@ -225,11 +225,11 @@ void main() {
     await pumpTab(tester, meta: {'flutter_readerMode': 'webtoon'});
 
     await tester.scrollUntilVisible(
-      find.text('Smart scale on wide screen'),
+      find.text('Long strip scale'),
       200,
       scrollable: tabScrollable(),
     );
-    expect(find.text('Smart scale on wide screen'), findsOneWidget);
+    expect(find.text('Long strip scale'), findsOneWidget);
     expect(find.text('Scale type'), findsNothing);
     // Gaps-scoped crop borders only appears in Long-strip-with-gaps mode.
     await tester.scrollUntilVisible(
@@ -238,6 +238,41 @@ void main() {
       scrollable: tabScrollable(),
     );
     expect(find.text('Crop borders'), findsOneWidget);
+  });
+
+  testWidgets(
+      'width slider: always visible, unit switch to px, greyed under '
+      'Original size', (tester) async {
+    await pumpTab(tester, meta: {'flutter_readerMode': 'webtoon'});
+
+    await tester.scrollUntilVisible(
+      find.text('Maximum width'),
+      200,
+      scrollable: tabScrollable(),
+    );
+    // 100% is the off position — no separate toggle.
+    expect(find.text('Maximum width'), findsOneWidget);
+    expect(find.text('Full width'), findsOneWidget);
+
+    // Unit switch: readout becomes the stored pixel cap.
+    await tester.tap(find.text('px'));
+    await tester.pumpAndSettle();
+    expect(find.text('800 px'), findsOneWidget);
+
+    // Original size greys the control instead of hiding it.
+    await tester.tap(find.text('Original size'));
+    await tester.pumpAndSettle();
+    expect(find.text('Maximum width'), findsOneWidget);
+    final slider = tester.widget<Slider>(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Maximum width'),
+          matching: find.byType(ListTile),
+        ),
+        matching: find.byType(Slider),
+      ),
+    );
+    expect(slider.onChanged, isNull);
   });
 
   testWidgets(
