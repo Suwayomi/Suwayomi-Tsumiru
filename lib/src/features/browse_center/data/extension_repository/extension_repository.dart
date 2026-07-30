@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -39,8 +40,13 @@ class ExtensionRepository {
         .mutate$InstallExternalExtension(
           Options$Mutation$InstallExternalExtension(
             variables: Variables$Mutation$InstallExternalExtension(
-              extensionFile: await http.MultipartFile.fromPath(
-                  "extensionFile", file.path!),
+              // Web picks carry bytes and a blob URL rather than a real path,
+              // so fromPath can't open them.
+              extensionFile: kIsWeb
+                  ? http.MultipartFile.fromBytes("extensionFile", file.bytes!,
+                      filename: file.name)
+                  : await http.MultipartFile.fromPath(
+                      "extensionFile", file.path!),
             ),
           ),
         )
