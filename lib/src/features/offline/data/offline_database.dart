@@ -145,6 +145,9 @@ class OfflineCategories extends Table {
   IntColumn get id => integer()();
   TextColumn get name => text()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  // Mirrors the server's tsumiru.hidden category meta, so hidden tabs stay
+  // hidden offline.
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -183,7 +186,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -360,6 +363,22 @@ class OfflineDatabase extends _$OfflineDatabase {
           'UPDATE offline_chapters SET synced_is_read = is_read',
         );
       }
+      if (from < 14) {
+        // onCreate only runs for brand-new databases, so an upgrade from a
+        // version without these tables has to create them itself.
+        if (await _hasTable(offlineCategories)) {
+          await _addColumnIfMissing(
+            m,
+            offlineCategories,
+            offlineCategories.isHidden,
+          );
+        } else {
+          await m.createTable(offlineCategories);
+        }
+        if (!await _hasTable(offlineMangaCategories)) {
+          await m.createTable(offlineMangaCategories);
+        }
+      }
     },
   );
 
@@ -497,14 +516,75 @@ class OfflineDatabase extends _$OfflineDatabase {
     ),
   );
 
-  Future<void> upsertCategory(int id, String name, int sortOrder) =>
+  Future<void> upsertCategory(
+    int id,
+    String name,
+    int sortOrder, {
+    required bool isHidden,
+  }) =>
       into(offlineCategories).insertOnConflictUpdate(
         OfflineCategoriesCompanion(
           id: Value(id),
           name: Value(name),
           sortOrder: Value(sortOrder),
+          isHidden: Value(isHidden),
         ),
       );
+
+  /// Device-local visibility override while offline. The next online
+  /// [OfflineSync.syncCategories] reasserts the server's flag. False when no
+  /// mirrored row matched — callers must not report success then.
+  Future<bool> setCategoryHidden(int id, bool hidden) async {
+    final rows =
+        await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
+      OfflineCategoriesCompanion(isHidden: Value(hidden)),
+    );
+    return rows > 0;
+  }
+
+  /// Drop categories the server no longer has, membership rows included.
+  /// Callers guard against an empty [serverIds] — a failed fetch must never
+  /// wipe the mirror.
+  Future<void> pruneRemovedCategories(Set<int> serverIds) => transaction(
+        () async {
+          await (delete(offlineMangaCategories)
+                ..where((t) => t.categoryId.isNotIn(serverIds)))
+              .go();
+          await (delete(offlineCategories)
+                ..where((t) => t.id.isNotIn(serverIds)))
+              .go();
+        },
+      );
+
+  /// Downloaded-library manga per category, for the offline tab counts.
+  /// Membership rows outside [mangaIds] don't count.
+  Future<Map<int, int>> mangaCountByCategory(Set<int> mangaIds) async {
+    final rows = await select(offlineMangaCategories).get();
+    final counts = <int, int>{};
+    for (final row in rows) {
+      if (mangaIds.contains(row.mangaId)) {
+        counts[row.categoryId] = (counts[row.categoryId] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  /// Of [mangaIds], the ones with no membership in a STORED category — these
+  /// render under Default. A row pointing at a pruned/unmirrored category
+  /// doesn't count either; the mapper's inner join drops it the same way.
+  Future<Set<int>> uncategorizedOf(Set<int> mangaIds) async {
+    final rows = await (select(offlineMangaCategories).join([
+      innerJoin(
+        offlineCategories,
+        offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
+      ),
+    ]))
+        .get();
+    final categorized = {
+      for (final row in rows) row.readTable(offlineMangaCategories).mangaId,
+    };
+    return mangaIds.difference(categorized);
+  }
 
   /// Replace a manga's full category membership atomically (delete-then-insert).
   /// Safe to call with an empty list — just removes all memberships.

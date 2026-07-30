@@ -9,6 +9,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../domain/category/category_model.dart';
 import '../controller/edit_category_controller.dart';
@@ -87,9 +89,32 @@ class CategoryTile extends HookConsumerWidget {
               tooltip: isHidden
                   ? context.l10n.showCategory
                   : context.l10n.hideCategory,
-              onPressed: () => ref
-                  .read(categoryControllerProvider.notifier)
-                  .setHidden(category.id, !isHidden),
+              // The flag lives on the server; offline the change lands on the
+              // device mirror instead (a hidden category's downloads must stay
+              // reachable), and the server's flag returns on reconnect.
+              onPressed: () async {
+                final result = await ref
+                    .read(categoryControllerProvider.notifier)
+                    .setHidden(category.id, !isHidden);
+                if (!context.mounted) return;
+                switch (result) {
+                  case AsyncData(
+                      value: CategoryVisibilityOutcome.deviceOnly
+                    ):
+                    ref.read(toastProvider)?.show(
+                          context.l10n.categoryVisibilityDeviceOnly,
+                        );
+                  case AsyncError(:final error):
+                    ref.read(toastProvider)?.showError(
+                          isConnectionError(error is OperationMessageException
+                                  ? error.exception
+                                  : error)
+                              ? context.l10n.needsServerConnection
+                              : context.l10n.errorSomethingWentWrong,
+                        );
+                  default:
+                }
+              },
               icon: Icon(
                 isHidden
                     ? Icons.visibility_rounded
@@ -103,20 +128,37 @@ class CategoryTile extends HookConsumerWidget {
               onPressed: !isDefault
                   ? () => showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(context.l10n.deleteCategoryTitle),
-                          content:
-                              Text(context.l10n.deleteCategoryDescription),
+                        builder: (dialogContext) => AlertDialog(
+                          title:
+                              Text(dialogContext.l10n.deleteCategoryTitle),
+                          content: Text(
+                              dialogContext.l10n.deleteCategoryDescription),
                           actions: [
                             const PopButton(),
                             ElevatedButton(
-                              onPressed: () {
-                                ref
+                              onPressed: () async {
+                                Navigator.pop(dialogContext);
+                                final result = await ref
                                     .read(categoryControllerProvider.notifier)
                                     .deleteCategory(category.id);
-                                Navigator.pop(context);
+                                // Deliberately the TILE's context: the dialog
+                                // unmounts with the pop, and this resolves
+                                // long after on the failure paths.
+                                if (result is AsyncError && context.mounted) {
+                                  final error = result.error;
+                                  final cause =
+                                      error is OperationMessageException
+                                          ? error.exception
+                                          : error;
+                                  ref.read(toastProvider)?.showError(
+                                        isConnectionError(cause)
+                                            ? context.l10n.needsServerConnection
+                                            : context
+                                                .l10n.errorSomethingWentWrong,
+                                      );
+                                }
                               },
-                              child: Text(context.l10n.delete),
+                              child: Text(dialogContext.l10n.delete),
                             ),
                           ],
                         ),

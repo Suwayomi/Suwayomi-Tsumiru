@@ -1492,6 +1492,10 @@
     "@categoryTabs": {
         "description": "Library Group checkbox to show or hide the category tab bar in Tabs mode"
     },
+    "categoryVisibilityDeviceOnly": "Changed on this device only until you reconnect",
+    "@categoryVisibilityDeviceOnly": {
+        "description": "Toast when hiding or showing a category offline: the change lives on the device mirror and the server setting returns on the next online sync"
+    },
     "sectionHeadersShowAllCategories": "Show all categories",
     "@sectionHeadersShowAllCategories": {
         "description": "Library Group checkbox to scroll all sections together in Section headers mode"
@@ -2193,6 +2197,10 @@
     },
     "noCategoriesFound": "You don't have any Categories. \n(Tip: Tap the Plus button to create one for organizing your library)",
     "noCategoriesFoundAlt": "You don't have any Categories. \nCreate one in settings for organizing your library",
+    "needsServerConnection": "Needs a connection to the server",
+    "@needsServerConnection": {
+        "description": "Error toast when a server-stored setting is changed while the server is unreachable"
+    },
     "noCategoryMangaFound": "No manga found in this Category. \n(Tip: Check your search & filters!)",
     "noChaptersFound": "No Chapters found",
     "noDownloads": "No Downloads",

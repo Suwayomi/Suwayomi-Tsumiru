@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -22,6 +24,44 @@ class CenterSorayomiShimmerIndicator extends StatelessWidget {
           width: context.width * .35,
           child: const SorayomiShimmerIndicator(),
         ),
+      );
+}
+
+/// Stays invisible for [delay] so a fast resolve (a cached cover re-decoding)
+/// never flashes a loading state. Sized like the shimmer from the start so
+/// layout doesn't shift.
+class DelayedShimmer extends StatefulWidget {
+  const DelayedShimmer({super.key, this.delay = const Duration(milliseconds: 200)});
+
+  final Duration delay;
+
+  @override
+  State<DelayedShimmer> createState() => _DelayedShimmerState();
+}
+
+class _DelayedShimmerState extends State<DelayedShimmer> {
+  bool _visible = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.delay, () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedOpacity(
+        opacity: _visible ? 1 : 0,
+        duration: const Duration(milliseconds: 150),
+        child: const CenterSorayomiShimmerIndicator(),
       );
 }
 

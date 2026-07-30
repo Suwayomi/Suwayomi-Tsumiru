@@ -228,14 +228,25 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
 }) async {
   Future<List<CategoryDto>?> serveCatalog() async {
     final downloadedIds = await db!.mangaIdsWithDeviceDownloads();
-    final count = (await db.libraryManga())
+    final downloadedInLibrary = (await db.libraryManga())
         .where((m) => downloadedIds.contains(m.id))
-        .length;
-    if (count == 0) return null;
+        .map((m) => m.id)
+        .toSet();
+    if (downloadedInLibrary.isEmpty) return null;
     final storedCats = await db.allOfflineCategories();
-    if (storedCats.isNotEmpty) {
-      return [
-        for (final cat in storedCats)
+    if (storedCats.isEmpty) {
+      return [offlineDefaultCategoryDto(downloadedInLibrary.length)];
+    }
+    // Real per-tab counts, so empty tabs drop the same way they do online
+    // (nonZeroCategoryList). Manga with no membership rows live in the
+    // server's default category, which their DTOs don't list.
+    final counts = await db.mangaCountByCategory(downloadedInLibrary);
+    final uncategorized = await db.uncategorizedOf(downloadedInLibrary);
+    int countFor(OfflineCategory cat) =>
+        (counts[cat.id] ?? 0) + (cat.id == 0 ? uncategorized.length : 0);
+    final tabs = [
+      for (final cat in storedCats)
+        if (countFor(cat) > 0)
           Fragment$CategoryDto(
             defaultCategory: cat.id == 0,
             id: cat.id,
@@ -243,12 +254,27 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
             includeInUpdate: Enum$IncludeOrExclude.UNSET,
             name: cat.name,
             order: cat.sortOrder,
-            mangas: Fragment$CategoryDto$mangas(totalCount: count),
-            meta: const <Fragment$CategoryDto$meta>[],
+            mangas: Fragment$CategoryDto$mangas(totalCount: countFor(cat)),
+            // Mirrored so hidden tabs stay hidden offline.
+            meta: [
+              if (cat.isHidden)
+                Fragment$CategoryDto$meta(
+                  key: kCategoryHiddenMetaKey,
+                  value: 'true',
+                ),
+            ],
           ),
-      ];
+    ];
+    // Downloads with no home tab (uncategorizedOf already covers orphaned
+    // memberships) get a synthetic Default.
+    final defaultCovered = tabs.any((t) => t.id == 0);
+    if (!defaultCovered && uncategorized.isNotEmpty) {
+      tabs.insert(0, offlineDefaultCategoryDto(uncategorized.length));
     }
-    return [offlineDefaultCategoryDto(count)];
+    if (tabs.isEmpty) {
+      return [offlineDefaultCategoryDto(downloadedInLibrary.length)];
+    }
+    return tabs;
   }
 
   Future<bool> canServe() async =>

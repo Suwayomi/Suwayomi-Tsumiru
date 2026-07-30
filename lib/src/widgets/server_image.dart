@@ -297,12 +297,18 @@ class ServerImage extends HookConsumerWidget {
       renderMethod = ImageRenderMethodForWeb.HtmlImage;
     }
 
+    // Covers re-decode from disk within a few frames after any cache clear
+    // (tab switch under pressure, background trim). Delaying the shimmer
+    // hides those near-instant reloads while real network loads still show one.
+    final defaultIndicator = isCoverImagePath(imageUrl)
+        ? const DelayedShimmer()
+        : const CenterSorayomiShimmerIndicator();
     finalProgressIndicatorBuilder(
             BuildContext context, String url, DownloadProgress progress) =>
         AppUtils.wrapOn(
           wrapper,
           progressIndicatorBuilder?.call(context, url, progress) ??
-              const CenterSorayomiShimmerIndicator(),
+              defaultIndicator,
         );
 
     Widget errorWidget(BuildContext context, String error, stackTrace) {
@@ -397,6 +403,10 @@ class ServerImage extends HookConsumerWidget {
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,
+      // Package defaults linger the placeholder a full second after the image
+      // is ready.
+      fadeOutDuration: const Duration(milliseconds: 150),
+      fadeInDuration: const Duration(milliseconds: 150),
       memCacheWidth: imageBuilder == null ? cacheWidth : null,
       memCacheHeight: imageBuilder == null ? cacheHeight : null,
       imageRenderMethodForWeb: renderMethod,

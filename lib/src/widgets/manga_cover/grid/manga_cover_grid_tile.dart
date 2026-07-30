@@ -333,13 +333,24 @@ class MangaCoverGridTile extends StatelessWidget {
               )
             : null,
       ),
-      child: ServerImage(
-        imageUrl: manga.thumbnailUrl ?? "",
-        // A freeform tile is only as tall as its cover, so a screen-relative
-        // shimmer would make the grid lurch once the art lands.
-        progressIndicatorBuilder: freeform
-            ? (context, url, progress) => const _FreeformCoverPlaceholder()
-            : null,
+      // Decode at tile size, not source size: full-res covers overflow
+      // Flutter's decoded-image budget after a few dozen tiles, so every tab
+      // switch re-decoded (and re-shimmered) the whole grid.
+      child: LayoutBuilder(
+        builder: (context, constraints) => ServerImage(
+          imageUrl: manga.thumbnailUrl ?? "",
+          memCacheWidth: constraints.hasBoundedWidth
+              ? (constraints.maxWidth *
+                      MediaQuery.devicePixelRatioOf(context))
+                  .round()
+                  .clamp(1, 1 << 16)
+              : null,
+          // A freeform tile is only as tall as its cover, so a screen-relative
+          // shimmer would make the grid lurch once the art lands.
+          progressIndicatorBuilder: freeform
+              ? (context, url, progress) => const _FreeformCoverPlaceholder()
+              : null,
+        ),
       ),
     );
     if (!freeform) return image;
