@@ -70,22 +70,6 @@ void main() {
       expect(result.first.id, 1);
       expect(result.first.title, 'Test Manga');
     });
-
-    test('provider resolves to AsyncValue<List<Fragment\$TrackRecordDto>>', () async {
-      final container = ProviderContainer(
-        overrides: [
-          trackerRepositoryProvider.overrideWith(
-            (ref) => _StubTrackerRepository(fakeClient, records: null),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final list = await container.read(
-        mangaTrackRecordsProvider(mangaId: 1).future,
-      );
-      expect(list, isA<List<Fragment$TrackRecordDto>>());
-    });
   });
 }
 

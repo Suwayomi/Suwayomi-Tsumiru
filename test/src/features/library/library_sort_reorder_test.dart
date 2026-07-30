@@ -160,13 +160,17 @@ void main() {
 
   group('re-sorting the library re-lays out cleanly', () {
     // Only the grid modes read the grid style, and staggered is the one that
-    // used to crash — so the styles are swept across every grid mode.
+    // used to crash — so it's checked against every grid mode, plus uniform
+    // as a sanity case that a style never affected by the bug stays clean.
     for (final mode in [
       DisplayMode.grid,
       DisplayMode.comfortableGrid,
       DisplayMode.coverOnly,
     ]) {
-      for (final style in LibraryGridStyle.values) {
+      for (final style in [
+        LibraryGridStyle.staggered,
+        LibraryGridStyle.uniform,
+      ]) {
         testWidgets('${mode.name} + ${style.name}', (tester) async {
           await expectCleanReorder(tester, mode: mode, style: style);
         });

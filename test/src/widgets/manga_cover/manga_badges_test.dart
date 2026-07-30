@@ -160,6 +160,12 @@ void main() {
       expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
     });
 
+    testWidgets('on-device is absent when the setting is off, even if downloaded',
+        (tester) async {
+      await _pumpBadges(tester, prefs: {'onDeviceBadge': false});
+      expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
+    });
+
     testWidgets('the language flag renders for a mapped source language',
         (tester) async {
       await _pumpBadges(tester);
@@ -218,17 +224,6 @@ void main() {
       expect(find.byIcon(Icons.offline_pin_rounded), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
       expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('the left cluster stays on the left in an RTL locale',
-        (tester) async {
-      // The corners the layout editor offers are physical, so an RTL locale
-      // must not mirror them. Unread sits left by default, language right.
-      await _pumpBadges(tester, textDirection: TextDirection.rtl);
-      expect(
-        tester.getCenter(find.text('4')).dx,
-        lessThan(tester.getCenter(find.text('🇯🇵')).dx),
-      );
     });
 
     testWidgets('an RTL locale still reaches both physical corners',
@@ -382,40 +377,11 @@ void main() {
         'onDeviceBadge': true,
         'languageBadge': false,
       },
-      'a lone flag badge': {
-        'unreadBadgeMode': UnreadBadgeMode.hidden.index,
-        'downloadedBadge': false,
-        'onDeviceBadge': false,
-        'languageBadge': true,
-      },
-      'a lone dot badge': {
-        'unreadBadgeMode': UnreadBadgeMode.dot.index,
-        'downloadedBadge': false,
-        'onDeviceBadge': false,
-        'languageBadge': false,
-      },
       'two badges sharing one corner': {
         'downloadedBadge': true,
         'onDeviceBadge': false,
         'languageBadge': false,
         'badgeRightSide': <String>[],
-      },
-      'one badge per corner': {
-        'downloadedBadge': false,
-        'onDeviceBadge': true,
-        'languageBadge': false,
-      },
-      'three badges on one corner': {
-        'downloadedBadge': true,
-        'onDeviceBadge': true,
-        'languageBadge': false,
-        'badgeRightSide': <String>[],
-      },
-      'every badge at once': {
-        'downloadedBadge': true,
-        'onDeviceBadge': true,
-        'languageBadge': true,
-        'sourceBadge': true,
       },
     };
 

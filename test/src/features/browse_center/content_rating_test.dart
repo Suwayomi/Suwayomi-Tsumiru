@@ -15,6 +15,10 @@ void main() {
       expect(isNsfwFromWarning(Enum$ContentWarning.MIXED), true);
       expect(isNsfwFromWarning(Enum$ContentWarning.NSFW), true);
     });
+
+    test('unknown future enum value maps to 18+ (safe failure)', () {
+      expect(isNsfwFromWarning(Enum$ContentWarning.$unknown), true);
+    });
   });
 
   group('adult tags', () {

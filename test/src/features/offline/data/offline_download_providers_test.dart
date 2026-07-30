@@ -41,15 +41,4 @@ void main() {
     addTearDown(container.dispose);
     expect(container.read(offlineDownloadManagerProvider), isNull);
   });
-
-  test('cascadeServerDeleteToDevice no-ops when offline disabled', () {
-    // cascadeServerDeleteToDevice guards on offlineDownloadManagerProvider == null.
-    // Assert the precondition: default container (offline disabled) yields null,
-    // so the helper exits before touching any device state.
-    // (cascadeServerDeleteToDevice takes WidgetRef; the guard path is tested by
-    //  confirming the provider it reads is null in the default config.)
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    expect(container.read(offlineDownloadManagerProvider), isNull);
-  });
 }

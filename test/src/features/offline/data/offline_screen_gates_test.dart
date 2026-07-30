@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -177,6 +178,22 @@ void main() {
       final ch = await c.read(chapterProvider(chapterId: 99).future);
       expect(ch!.id, 99);
       expect(ch.name, 'Ch99');
+    });
+
+    test('categoryMangaList falls back to the offline catalog on connection loss',
+        () async {
+      await db.upsertMangaMetadata(
+          id: 1, title: 'Saved', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(id: 905, mangaId: 1, name: 'dl905',
+          chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+          serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(905, OfflineDeviceState.downloaded,
+          bytes: 1);
+      final c = await _container(db, [
+        categoryRepositoryProvider.overrideWithValue(_ThrowingCategoryRepo()),
+      ]);
+      final list = await c.read(categoryMangaListProvider(0).future);
+      expect(list!.map((m) => m.id), [1]);
     });
 
     test('mangaDownloadedCount counts only device-downloaded chapters',

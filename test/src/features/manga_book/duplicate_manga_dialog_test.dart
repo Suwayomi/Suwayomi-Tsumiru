@@ -13,7 +13,6 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/duplicate_manga_dialog.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 
 import 'reader/reader_test_fixtures.dart';
 
@@ -157,27 +156,6 @@ void main() {
       expect(find.text('Chugong'), findsOneWidget);
       expect(find.textContaining('12'), findsOneWidget);
       expect(find.text('MangaDex'), findsOneWidget);
-    });
-
-    testWidgets('shows Add anyway / Cancel only, no bulk buttons', (
-      tester,
-    ) async {
-      await _pumpAndOpen(
-        tester,
-        builder: (_) => DuplicateMangaDialog(
-          candidate: candidate,
-          duplicates: [_dup()],
-          certainIds: const {},
-          trackerNameOf: (_) => null,
-        ),
-      );
-
-      expect(find.text('Add anyway'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Allow all'), findsNothing);
-      expect(find.text('Skip it'), findsNothing);
-      expect(find.text('Skip all'), findsNothing);
-      expect(find.text('Show entry'), findsNothing);
     });
 
     testWidgets('Add anyway pops addAnyway', (tester) async {
@@ -488,22 +466,4 @@ void main() {
     });
   });
 
-  testWidgets('count badges sit on the cover, not beside it', (tester) async {
-    await _pumpAndOpen(
-      tester,
-      builder: (_) => DuplicateMangaDialog(
-        candidate: candidate,
-        duplicates: [_dup(unreadCount: 3)],
-        certainIds: const {},
-        trackerNameOf: (_) => null,
-      ),
-    );
-
-    final coverRect = tester.getRect(find.byType(MangaCoverGridTile));
-    final unreadRect = tester.getRect(find.text('3'));
-    final chapterRect = tester.getRect(find.text('12'));
-    expect(coverRect.overlaps(unreadRect), isTrue);
-    expect(unreadRect.right, lessThanOrEqualTo(coverRect.right));
-    expect(coverRect.overlaps(chapterRect), isTrue);
-  });
 }

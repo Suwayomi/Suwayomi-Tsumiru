@@ -245,22 +245,4 @@ void main() {
       expect(lastScale, greaterThan(1.0));
     });
   });
-
-  group('limitations of these tests (read this before relying on them)', () {
-    test(
-        'widget-test gesture arena does NOT reproduce real-device multi-touch '
-        'arena losses', () {
-      // Documented in code, not asserted: in the Flutter widget-test
-      // environment the scale recognizer wins the arena over the underlying
-      // scrollable\'s pan recognizer EVEN WITHOUT `forceHoldOnPointerDown`.
-      // On a real Android device the scrollable wins and the scale gesture
-      // never starts. That is the entire bug `forceHoldOnPointerDown: true`
-      // exists to work around. Therefore a passing pinch test here does
-      // NOT prove the fix works on hardware; the hardware verification is
-      // a separate step.
-      //
-      // This test exists only to keep the limitation explicit in the file.
-      expect(true, isTrue);
-    });
-  });
 }

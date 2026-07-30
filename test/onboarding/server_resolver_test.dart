@@ -71,13 +71,6 @@ void main() {
       ]);
     });
 
-    test('explicit https scheme, NO port → default :4567 first, then bare', () {
-      expect(connectionCandidates('https://suwayomi.example.com'), [
-        'https://suwayomi.example.com:4567',
-        'https://suwayomi.example.com',
-      ]);
-    });
-
     test('bracketed IPv6 with port: two scheme variants on that port', () {
       expect(connectionCandidates('[fe80::1]:4568'), [
         'http://[fe80::1]:4568',

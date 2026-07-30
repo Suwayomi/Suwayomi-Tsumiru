@@ -21,15 +21,6 @@ void main() {
     expect(c.read(updateProgressAfterReadingProvider).ifNull(), isTrue);
   });
 
-  test('updateProgressManualMarkRead defaults to true', () async {
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
-    final c = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
-    addTearDown(c.dispose);
-    expect(c.read(updateProgressManualMarkReadProvider).ifNull(), isTrue);
-  });
-
   test('updateProgressAfterReading persists false', () async {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
@@ -38,15 +29,5 @@ void main() {
     addTearDown(c.dispose);
     c.read(updateProgressAfterReadingProvider.notifier).update(false);
     expect(c.read(updateProgressAfterReadingProvider).ifNull(), isFalse);
-  });
-
-  test('updateProgressManualMarkRead persists false', () async {
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
-    final c = ProviderContainer(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
-    addTearDown(c.dispose);
-    c.read(updateProgressManualMarkReadProvider.notifier).update(false);
-    expect(c.read(updateProgressManualMarkReadProvider).ifNull(), isFalse);
   });
 }

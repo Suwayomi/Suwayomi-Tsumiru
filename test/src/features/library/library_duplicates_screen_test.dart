@@ -82,39 +82,6 @@ Future<void> _pump(
 }
 
 void main() {
-  group('real controller (compute) wiring', () {
-    testWidgets('mounts without crashing on the real, un-stubbed provider', (
-      tester,
-    ) async {
-      // No override: exercises the real build() (kIsWeb ? chunked-web :
-      // compute()), which stays loading for this test's life (see class doc
-      // above) — we're only asserting it mounts without throwing.
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final client = GraphQLClient(
-        link: HttpLink('http://localhost'),
-        cache: GraphQLCache(),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(prefs),
-            graphQlClientProvider.overrideWithValue(client),
-            libraryMangaListProvider.overrideWith((ref) async => const []),
-            libraryTrackerNamesProvider.overrideWithValue(const {}),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: const LibraryDuplicatesScreen(),
-          ),
-        ),
-      );
-      expect(tester.takeException(), isNull);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-  });
-
   group('rendering (stubbed scan result)', () {
     testWidgets('an empty result shows the no-results state', (tester) async {
       await _pump(

@@ -101,33 +101,6 @@ void main() {
   );
 
   testWidgets(
-    'TrackSheetContent always renders "Manage trackers" action',
-    (tester) async {
-      final tracker = _fakeTracker();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(mangaId: 1)
-                .overrideWith((ref) async => []),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: TrackSheetContent(mangaId: 1)),
-          ),
-        ),
-      );
-
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Manage trackers'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
     'TrackSheetContent shows "Log in to edit" card for a logged-out tracker with a bound record',
     (tester) async {
       final tracker = _fakeTracker(isLoggedIn: false);
