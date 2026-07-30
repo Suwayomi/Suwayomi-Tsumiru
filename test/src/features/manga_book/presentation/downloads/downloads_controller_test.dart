@@ -35,6 +35,15 @@ class _FakeRepo extends DownloadsRepository {
     fetches++;
     return response();
   }
+
+  @override
+  Future<void> clearDownloads() async {}
+
+  DownloadStatusDto? reorderResult;
+
+  @override
+  Future<DownloadStatusDto?> reorderDownload(int chapterId, int to) async =>
+      reorderResult;
 }
 
 Map<String, dynamic> _dequeued(Map<String, dynamic> item) => {
@@ -251,7 +260,92 @@ void main() {
       await pumpEventQueue();
 
       // No unhandled async error, and the last known queue survives.
+      expect(repo.fetches, 2, reason: 'the re-fetch was attempted');
       expect(container.read(downloadsChapterIdsProvider), [10]);
+    });
+
+    test('a reorder mid-flight is not undone by the re-fetch', () async {
+      // reorder writes the queue without a rebuild, so its write is the one
+      // the generation counter has to catch on its own.
+      final both = [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ];
+      final swapped = [
+        _queueItem(chapterId: 11, position: 0),
+        _queueItem(chapterId: 10, position: 1),
+      ];
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', both),
+        () => slow.future,
+        () async => _status('STARTED', swapped),
+      ])
+        ..reorderResult = _status('STARTED', swapped);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      container.read(downloadsMapProvider.notifier).reorder(11, 0);
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), [11, 10]);
+
+      slow.complete(_status('STARTED', both));
+      await pumpEventQueue();
+
+      expect(container.read(downloadsChapterIdsProvider), [11, 10],
+          reason: 'the stale snapshot must not undo the reorder');
+    });
+
+    test('clearing the queue mid-flight is not undone by the re-fetch',
+        () async {
+      // #73 all over again if this breaks: the user empties the queue, the
+      // in-flight snapshot lands, and all of it comes back. (clearAll also
+      // invalidates the status query, so the rebuild guards this too.)
+      final both = [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ];
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', both),
+        () => slow.future,
+        () async => _status('STOPPED', const []),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      await container.read(downloadsMapProvider.notifier).clearAll();
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), isEmpty);
+
+      slow.complete(_status('STARTED', both));
+      await pumpEventQueue();
+
+      expect(container.read(downloadsChapterIdsProvider), isEmpty,
+          reason: 'the cleared queue must stay cleared');
     });
   });
 

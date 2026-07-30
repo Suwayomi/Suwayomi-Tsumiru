@@ -42,27 +42,38 @@ class DownloadsMap extends _$DownloadsMap {
       }
     }
     if (stateOrNull != null) {
-      state = currState;
-      _changedSinceFetch = true;
+      _publish(currState);
     }
   }
 
   bool _reconciling = false;
-  bool _changedSinceFetch = false;
+  bool _restartRequested = false;
+
+  /// Bumped by every queue write. A re-read that started before the current
+  /// generation is older than what we already have, whatever its source.
+  int _generation = 0;
+
+  void _publish(Map<int, DownloadDto> queue) {
+    state = queue;
+    _generation++;
+  }
+
+  static const _maxReconcileAttempts = 3;
 
   /// Re-read the whole queue after the server drops deltas past `maxUpdates`.
-  /// Single-flight, and repeats if deltas landed while the request was out —
-  /// applying a snapshot older than those deltas would resurrect a chapter the
-  /// queue has already lost (#313).
+  /// Single-flight, and re-reads rather than applying a snapshot that anything
+  /// else has since moved past — a clear or a reorder landing mid-flight would
+  /// otherwise be undone by the older answer (#313, and the #73 symptom).
   Future<void> _reconcileQueue() async {
     if (_reconciling) {
-      _changedSinceFetch = true;
+      _restartRequested = true;
       return;
     }
     _reconciling = true;
     try {
-      do {
-        _changedSinceFetch = false;
+      for (var attempt = 0; attempt < _maxReconcileAttempts; attempt++) {
+        _restartRequested = false;
+        final generation = _generation;
         DownloadStatusDto? fresh;
         try {
           fresh =
@@ -72,8 +83,13 @@ class DownloadsMap extends _$DownloadsMap {
           return;
         }
         if (!ref.mounted) return;
-        if (!_changedSinceFetch) state = getStateFromUpdates(fresh);
-      } while (_changedSinceFetch);
+        if (generation == _generation && !_restartRequested) {
+          _publish(getStateFromUpdates(fresh));
+          return;
+        }
+      }
+      // Still losing the race after several tries; leave it to the next
+      // message rather than hammering a server that is clearly busy.
     } finally {
       _reconciling = false;
     }
@@ -98,6 +114,9 @@ class DownloadsMap extends _$DownloadsMap {
       });
     });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
+    // A rebuild replaces the queue too, so an in-flight re-read must not
+    // outrank it.
+    _generation++;
     return getStateFromUpdates(downloadStatusDto);
   }
 
@@ -115,7 +134,7 @@ class DownloadsMap extends _$DownloadsMap {
         .read(downloadsRepositoryProvider)
         .reorderDownload(chapterId, to);
     if (!ref.mounted) return;
-    state = getStateFromUpdates(downloadStatusDto);
+    _publish(getStateFromUpdates(downloadStatusDto));
   }
 
   /// Clear the whole server download queue and empty the local map immediately.
@@ -127,7 +146,7 @@ class DownloadsMap extends _$DownloadsMap {
   Future<void> clearAll() async {
     await ref.read(downloadsRepositoryProvider).clearDownloads();
     if (!ref.mounted) return;
-    state = {};
+    _publish({});
     ref.invalidate(downloadStatusProvider);
   }
 }
