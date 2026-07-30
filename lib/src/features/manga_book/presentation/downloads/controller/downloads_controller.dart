@@ -1,7 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/downloads/graphql/__generated__/fragment.graphql.dart';
@@ -54,7 +53,20 @@ class DownloadsMap extends _$DownloadsMap {
     // app-wide. Defer the write off the current frame.
     ref.listen(downloadUpdatesProvider, (_, next) {
       Future.microtask(() {
-        if (ref.mounted) updateDownloadStatus(next.value);
+        if (!ref.mounted) return;
+        // Past `maxUpdates` the server drops the deltas and expects a re-fetch,
+        // which any mass en/dequeue trips (#313). Refetch in place rather than
+        // invalidating, so the queue doesn't blank out while it reloads.
+        if (next.value?.omittedUpdates ?? false) {
+          ref
+              .read(downloadsRepositoryProvider)
+              .getDownloadStatus()
+              .then((fresh) {
+            if (ref.mounted) state = getStateFromUpdates(fresh);
+          });
+          return;
+        }
+        updateDownloadStatus(next.value);
       });
     });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
@@ -103,20 +115,17 @@ List<int> downloadsChapterIds(Ref ref) {
   return downloads.map((d) => d.chapter.id).toList();
 }
 
+/// Anything queued must be pausable or resumable. Reading the feed's delta list
+/// instead hid the control on a fresh subscribe and on any queue that had
+/// stopped changing, failed ones included (#313).
 @riverpod
-AsyncValue<DownloaderState?> downloaderState(Ref ref) {
-  return ref.watch(downloadUpdatesProvider
-      .select((value) => value.copyWithData((data) => data?.state)));
-}
+bool showDownloadsFAB(Ref ref) => ref.watch(downloadsMapProvider).isNotEmpty;
 
+/// Best-known run state. The feed only speaks when something changes, so a
+/// paused queue leaves it with no answer — fall back to the query (#313).
 @riverpod
-bool showDownloadsFAB(Ref ref) {
-  final downloads = ref.watch(downloadUpdatesProvider);
-  return downloads.value?.state == DownloaderState.STARTED ||
-      (downloads.value?.updates).isNotBlank &&
-          downloads.value!.updates.any(
-            (element) =>
-                element.download.state != DownloadState.ERROR ||
-                element.download.tries != 3,
-          );
+DownloaderState? downloaderRunState(Ref ref) {
+  final live = ref.watch(downloadUpdatesProvider).value?.state;
+  final queried = ref.watch(downloadStatusProvider).value?.state;
+  return live ?? queried;
 }

@@ -16,6 +16,7 @@ import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
 import '../../../offline/presentation/offline_files_view.dart';
 import '../../domain/downloads/downloads_model.dart';
+import '../../domain/downloads_queue/downloads_queue_model.dart';
 import 'controller/downloads_controller.dart';
 import 'widgets/download_progress_list_tile.dart';
 import 'widgets/downloads_fab.dart';
@@ -26,7 +27,8 @@ class DownloadsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadsChapterIds = ref.watch(downloadsChapterIdsProvider);
-    final downloadsGlobalStatus = ref.watch(downloaderStateProvider);
+    final queueStatus = ref.watch(downloadStatusProvider);
+    final downloaderRunState = ref.watch(downloaderRunStateProvider);
     final showDownloadsFAB = ref.watch(showDownloadsFABProvider);
     // Own the tab controller so the FAB can be tab-contextual: the server queue
     // pause on the Server tab, the on-device pause on the On-device tab.
@@ -56,19 +58,21 @@ class DownloadsScreen extends HookConsumerWidget {
             ),
         ],
       ),
+      // Defaulting to STOPPED (i.e. offering Resume) keeps the recovery action
+      // reachable when the run state is unknown: starting an already-running
+      // downloader is a no-op, being unable to restart a stalled one is not.
       floatingActionButton: onDeviceTab
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB
               ? DownloadsFab(
-                  status: downloadsGlobalStatus.value ??
-                      DownloaderState.STARTED)
+                  status: downloaderRunState ?? DownloaderState.STOPPED)
               : null),
       body: TabBarView(
         controller: tabController,
         children: [
           _ServerDownloads(
             downloadsChapterIds: downloadsChapterIds,
-            downloadsGlobalStatus: downloadsGlobalStatus,
+            queueStatus: queueStatus,
           ),
           const OfflineFilesView(),
         ],
@@ -102,16 +106,19 @@ class OfflineDownloadsFab extends ConsumerWidget {
 class _ServerDownloads extends ConsumerWidget {
   const _ServerDownloads({
     required this.downloadsChapterIds,
-    required this.downloadsGlobalStatus,
+    required this.queueStatus,
   });
 
   final List<int> downloadsChapterIds;
-  final AsyncValue<DownloaderState?> downloadsGlobalStatus;
+
+  /// The queue query, not the live feed: the feed can go silent for minutes
+  /// under a mass enqueue, and the tab shouldn't blank out when it does.
+  final AsyncValue<DownloadStatusDto?> queueStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    return downloadsGlobalStatus.showUiWhenData(
+    return queueStatus.showUiWhenData(
         context,
         (data) {
           if (data == null) {
