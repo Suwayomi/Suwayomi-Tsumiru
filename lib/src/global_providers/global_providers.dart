@@ -19,6 +19,7 @@ import '../constants/enum.dart';
 import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/offline/data/server_reachability.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
@@ -128,6 +129,24 @@ GraphQLClient graphQlClient(Ref ref) {
     );
     link = suwayomiAuthLink.concat(link);
   }
+
+  // Any successful server answer proves reachability. Without this the
+  // offline latch only cleared on library refresh gestures, so one transient
+  // blip could pin details/reader offline until the user happened to pull the
+  // library. Deferred a tick: responses can arrive while a provider builds.
+  final reachabilityLink = Link.function((request, [forward]) {
+    return forward!(request).map((response) {
+      if (response.errors == null || response.errors!.isEmpty) {
+        Future(() {
+          try {
+            ref.read(serverUnreachableProvider.notifier).set(false);
+          } catch (_) {}
+        });
+      }
+      return response;
+    });
+  });
+  link = reachabilityLink.concat(link);
 
   final loggerLink = LoggerLink();
   return GraphQLClient(

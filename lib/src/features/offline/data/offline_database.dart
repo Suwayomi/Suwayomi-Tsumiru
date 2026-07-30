@@ -37,6 +37,12 @@ class OfflineMangas extends Table {
   TextColumn get inLibraryAt => text().nullable()();
   TextColumn get latestFetchedAt => text().nullable()();
   TextColumn get latestUploadedAt => text().nullable()();
+  // Server-computed lastReadChapter.lastReadAt: the library "Last Read" sort
+  // key for series whose chapter list was never synced.
+  TextColumn get lastReadAt => text().nullable()();
+  // Server manga meta as JSON (per-series reader mode/orientation, rating,
+  // tags) — the reader needs this offline too.
+  TextColumn get metaJson => text().nullable()();
   IntColumn get totalChapters => integer().withDefault(const Constant(0))();
 
   @override
@@ -172,7 +178,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -273,6 +279,12 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.downloadGeneration,
         );
       }
+      if (from < 10) {
+        await _addColumnIfMissing(m, offlineMangas, offlineMangas.lastReadAt);
+      }
+      if (from < 11) {
+        await _addColumnIfMissing(m, offlineMangas, offlineMangas.metaJson);
+      }
       if (from < 9) {
         await _addColumnIfMissing(
           m,
@@ -285,7 +297,7 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.scanlator,
         );
       }
-      if (from < 10) {
+      if (from < 12) {
         await _addColumnIfMissing(
           m,
           offlineChapters,
@@ -337,6 +349,8 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? inLibraryAt,
     String? latestFetchedAt,
     String? latestUploadedAt,
+    String? lastReadAt,
+    String? metaJson,
     int totalChapters = 0,
   }) => into(offlineMangas).insertOnConflictUpdate(
     OfflineMangasCompanion(
@@ -358,6 +372,12 @@ class OfflineDatabase extends _$OfflineDatabase {
       inLibraryAt: Value(inLibraryAt),
       latestFetchedAt: Value(latestFetchedAt),
       latestUploadedAt: Value(latestUploadedAt),
+      // '0'/null means "no signal", not "erase": a catalog-served DTO echoed
+      // back through sync must never null a stored read timestamp.
+      lastReadAt: (lastReadAt == null || lastReadAt == '0')
+          ? const Value.absent()
+          : Value(lastReadAt),
+      metaJson: Value(metaJson),
       totalChapters: Value(totalChapters),
     ),
   );
@@ -400,9 +420,11 @@ class OfflineDatabase extends _$OfflineDatabase {
       serverIsDownloaded: Value(serverIsDownloaded),
       pageCount: Value(pageCount),
       updatedAt: Value(updatedAt),
-      // lastReadAt is server-managed: always take the server's value on
-      // re-sync (absent only when an older caller doesn't supply it).
-      lastReadAt: lastReadAt == null ? const Value.absent() : Value(lastReadAt),
+      // '0' (the offline DTO mapper's "no signal" value) and null must not
+      // erase a stored read timestamp.
+      lastReadAt: (lastReadAt == null || lastReadAt == '0')
+          ? const Value.absent()
+          : Value(lastReadAt),
       // deviceState + bytes intentionally absent — device-managed.
     ),
   );
@@ -574,6 +596,9 @@ class OfflineDatabase extends _$OfflineDatabase {
     OfflineChaptersCompanion(
       lastPageRead: Value(lastPageRead),
       progressDirty: const Value(true),
+      // Bump Last Read locally (epoch seconds, matching the server's unit) so
+      // the offline sort has a signal until the next down-sync overwrites it.
+      lastReadAt: Value(_nowEpochSeconds()),
       // null → leave read-state untouched (a partial write must not
       // un-read); a read-state change rides its OWN flag so position-only
       // writes can't push a stale isRead (the ch-99 loop).
@@ -582,6 +607,9 @@ class OfflineDatabase extends _$OfflineDatabase {
     ),
   );
 
+  static String _nowEpochSeconds() =>
+      (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+
   /// Record a local read/unread change (list actions, mark-read). Position
   /// untouched; pushed under its own flag on the next online sync.
   Future<void> setChapterReadState(int chapterId, bool isRead) =>
@@ -589,6 +617,10 @@ class OfflineDatabase extends _$OfflineDatabase {
         OfflineChaptersCompanion(
           isRead: Value(isRead),
           readStateDirty: const Value(true),
+          // Marking read counts as reading activity for the Last Read sort;
+          // un-reading is bookkeeping and leaves the timestamp alone.
+          lastReadAt:
+              isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
         ),
       );
 
@@ -819,9 +851,12 @@ class OfflineDatabase extends _$OfflineDatabase {
     offlineChapters,
   )..where((t) => t.id.equals(chapterId))).getSingleOrNull();
 
-  Future<List<OfflineManga>> libraryManga() => (select(
-    offlineMangas,
-  )..orderBy([(t) => OrderingTerm(expression: t.title)])).get();
+  Future<List<OfflineManga>> libraryManga() => (select(offlineMangas)
+        // '0' means explicitly removed (see markNotInLibrary) — those rows
+        // survive only for their downloads and must not resurface here.
+        ..where((t) => t.inLibraryAt.equals('0').not() | t.inLibraryAt.isNull())
+        ..orderBy([(t) => OrderingTerm(expression: t.title)]))
+      .get();
 
   Future<bool> hasCatalogData() async =>
       (await (select(offlineMangas)..limit(1)).get()).isNotEmpty;
@@ -833,6 +868,43 @@ class OfflineDatabase extends _$OfflineDatabase {
     await delete(offlineChapters).go();
     await delete(offlineMangas).go();
   });
+
+  /// Stamps '0' (explicitly removed) on every catalog manga NOT in
+  /// [libraryIds] — the mark half of pruning removed-from-library manga.
+  /// [purgeRemovedLibraryManga] then deletes the ones with nothing
+  /// downloaded. Distinct from NULL, which means "synced before the column
+  /// existed" and must keep counting as a library entry.
+  Future<int> markNotInLibrary(Set<int> libraryIds) =>
+      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds)))
+          .write(const OfflineMangasCompanion(inLibraryAt: Value('0')));
+
+  /// Deletes explicitly-removed manga with nothing downloaded. Scoped to the
+  /// '0' mark so it can run concurrently with the per-manga metadata upserts
+  /// of the same sync pass without racing legacy NULL rows they haven't
+  /// stamped yet.
+  Future<int> purgeRemovedLibraryManga() => transaction(() async {
+        final withDeviceContent = selectOnly(offlineChapters)
+          ..addColumns([offlineChapters.mangaId])
+          ..where(offlineChapters.deviceState
+              .equalsValue(OfflineDeviceState.none)
+              .not());
+        final doomed = await (selectOnly(offlineMangas)
+              ..addColumns([offlineMangas.id])
+              ..where(offlineMangas.inLibraryAt.equals('0') &
+                  offlineMangas.id.isNotInQuery(withDeviceContent)))
+            .map((r) => r.read(offlineMangas.id)!)
+            .get();
+        if (doomed.isEmpty) return 0;
+        // Rows being deleted have no device content, so their chapter and
+        // category rows are metadata-only — sweep them too or the catalog
+        // grows forever.
+        await (delete(offlineChapters)..where((t) => t.mangaId.isIn(doomed)))
+            .go();
+        await (delete(offlineMangaCategories)
+              ..where((t) => t.mangaId.isIn(doomed)))
+            .go();
+        return (delete(offlineMangas)..where((t) => t.id.isIn(doomed))).go();
+      });
 
   /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
   /// and nothing downloaded. Never touches downloads — a swept stray row just
@@ -853,7 +925,8 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   /// Most-recent read timestamp per manga (max chapter `lastReadAt`), for the
   /// offline library's "Last Read" sort — absent for mangas with no read
-  /// chapter. Values are epoch-millis strings, so the max is taken numerically.
+  /// chapter. Values are epoch-seconds strings (the server's unit), so the max
+  /// is taken numerically.
   Future<Map<int, String>> lastReadAtByManga() async {
     final maxExpr = offlineChapters.lastReadAt.cast<int>().max();
     final query = selectOnly(offlineChapters)

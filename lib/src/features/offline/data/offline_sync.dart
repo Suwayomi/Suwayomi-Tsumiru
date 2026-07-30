@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import '../../library/domain/category/category_model.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
@@ -61,6 +63,8 @@ class OfflineSync {
         inLibraryAt: manga.inLibraryAt,
         latestFetchedAt: manga.latestFetchedChapter?.fetchedAt,
         latestUploadedAt: manga.latestUploadedChapter?.uploadDate,
+        lastReadAt: manga.lastReadChapter?.lastReadAt,
+        metaJson: jsonEncode({for (final e in manga.meta) e.key: e.value}),
         totalChapters: manga.chapters.totalCount,
       );
       // The counts just written include every read the server knew about
@@ -174,6 +178,18 @@ class OfflineSync {
       ];
       if (goneIds.isNotEmpty) await _db.markChaptersOrphaned(goneIds);
     }
+    await onSynced?.call();
+  }
+
+  /// Removes manga that have left the server library from the offline catalog.
+  /// Rows with device downloads survive (hidden from the offline library by
+  /// the libraryManga membership filter, still listed in On device). An empty
+  /// [serverLibrary] is ignored — a failed or empty fetch must never prune the
+  /// whole catalog.
+  Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
+    if (serverLibrary.isEmpty) return;
+    await _db.markNotInLibrary({for (final m in serverLibrary) m.id});
+    await _db.purgeRemovedLibraryManga();
     await onSynced?.call();
   }
 

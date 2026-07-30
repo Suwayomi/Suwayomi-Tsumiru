@@ -22,7 +22,9 @@ import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/widgets/update_status_popup_menu.dart';
+import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
+import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../domain/category/category_model.dart';
@@ -89,8 +91,9 @@ Widget _groupedBody({
           // "attached to more than one ScrollPosition" once two tabs are alive.
           // Dropping the scrollbar removes the reader; scrolling is untouched.
           builder: (context) => ScrollConfiguration(
-            behavior:
-                ScrollConfiguration.of(context).copyWith(scrollbars: false),
+            behavior: ScrollConfiguration.of(
+              context,
+            ).copyWith(scrollbars: false),
             child: TabBarView(children: tabViews()),
           ),
         )
@@ -222,8 +225,9 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     final style =
         ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
     final categoryTabsOn = ref.watch(categoryTabsProvider).ifNull(true);
-    final showAllCategories =
-        ref.watch(sectionHeadersShowAllCategoriesProvider).ifNull(false);
+    final showAllCategories = ref
+        .watch(sectionHeadersShowAllCategoriesProvider)
+        .ifNull(false);
     final useTabs = _useTabs(style, showAllCategories);
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
@@ -239,6 +243,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
 
     return categoryList.showUiWhenData(
       context,
+      loadingWidget: const OfflineViewLoading(),
+      offlineEscapeHatch: true,
       (data) {
         if (data.isBlank) {
           return Emoticons(
@@ -368,7 +374,12 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
           );
         }
       },
-      refresh: () => ref.refresh(categoryControllerProvider.future),
+      refresh: () {
+        // A manual retry means "try the server again" — drop the offline pin.
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
+        ref.invalidate(categoryControllerProvider);
+      },
       wrapper: (body) => Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),
         body: _libraryBody(body),
@@ -401,6 +412,8 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
 
     return categoryList.showUiWhenData(
       context,
+      loadingWidget: const OfflineViewLoading(),
+      offlineEscapeHatch: true,
       (data) {
         if (data.isBlank) {
           return Scaffold(
@@ -418,14 +431,15 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         final style =
             ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
         final categoryTabsOn = ref.watch(categoryTabsProvider).ifNull(true);
-        final showAllCategories =
-            ref.watch(sectionHeadersShowAllCategoriesProvider).ifNull(false);
+        final showAllCategories = ref
+            .watch(sectionHeadersShowAllCategoriesProvider)
+            .ifNull(false);
         final useTabs = _useTabs(style, showAllCategories);
         final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
-        final showCounts =
-            ref.watch(categoryNumberOfItemsProvider).ifNull(false);
-        final showTabs =
-            data!.length > 1 && _showTabBar(style, categoryTabsOn);
+        final showCounts = ref
+            .watch(categoryNumberOfItemsProvider)
+            .ifNull(false);
+        final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
 
         return DefaultTabController(
           length: data.length,
@@ -528,7 +542,12 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           ),
         );
       },
-      refresh: () => ref.refresh(categoryControllerProvider.future),
+      refresh: () {
+        // A manual retry means "try the server again" — drop the offline pin.
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
+        ref.invalidate(categoryControllerProvider);
+      },
       wrapper: (body) => Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),
         body: _libraryBody(body),
@@ -563,8 +582,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     final style =
         ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
     final categoryTabsOn = ref.watch(categoryTabsProvider).ifNull(true);
-    final showAllCategories =
-        ref.watch(sectionHeadersShowAllCategoriesProvider).ifNull(false);
+    final showAllCategories = ref
+        .watch(sectionHeadersShowAllCategoriesProvider)
+        .ifNull(false);
     final useTabs = _useTabs(style, showAllCategories);
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
@@ -580,6 +600,8 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
 
     return groupedTabsAsync.showUiWhenData(
       context,
+      loadingWidget: const OfflineViewLoading(),
+      offlineEscapeHatch: true,
       (tabs) {
         if (tabs.isEmpty) {
           return Scaffold(
@@ -688,7 +710,11 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
           ),
         );
       },
-      refresh: () => ref.refresh(libraryGroupedTabsProvider.future),
+      refresh: () {
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
+        ref.invalidate(libraryGroupedTabsProvider);
+      },
       // Changing the grouping type reloads this provider; keep the current
       // tabs — and their Scaffold's endDrawer — up instead of flashing the
       // spinner Scaffold below.
@@ -719,8 +745,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final style =
         ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
     final categoryTabsOn = ref.watch(categoryTabsProvider).ifNull(true);
-    final showAllCategories =
-        ref.watch(sectionHeadersShowAllCategoriesProvider).ifNull(false);
+    final showAllCategories = ref
+        .watch(sectionHeadersShowAllCategoriesProvider)
+        .ifNull(false);
     final useTabs = _useTabs(style, showAllCategories);
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
@@ -733,6 +760,8 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
 
     return groupedTabsAsync.showUiWhenData(
       context,
+      loadingWidget: const OfflineViewLoading(),
+      offlineEscapeHatch: true,
       (tabs) {
         if (tabs.isEmpty) {
           return Scaffold(
@@ -831,7 +860,11 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
           ),
         );
       },
-      refresh: () => ref.refresh(libraryGroupedTabsProvider.future),
+      refresh: () {
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
+        ref.invalidate(libraryGroupedTabsProvider);
+      },
       // Changing the grouping type reloads this provider; keep the current
       // tabs — and their Scaffold's endDrawer — up instead of flashing the
       // spinner Scaffold below.
@@ -955,33 +988,43 @@ class _GroupedMangaList extends ConsumerWidget {
       groupedMangaListWithQueryAndFilterProvider(tabId: tabId),
     );
 
-    return mangaListAsync.showUiWhenData(context, (data) {
-      if (data == null || data.isEmpty) {
-        return Emoticons(title: context.l10n.noCategoryMangaFound);
-      }
-      final items = data;
-      return RefreshIndicator(
-        // Grouped views (by source/status/ungrouped) have no single category
-        // to update, so pull triggers a whole-library source-check (matches
-        // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
-        // spinner only waits on the immediate server re-read.
-        onRefresh: () async {
-          ref.read(updateOptimisticProvider.notifier).arm();
-          unawaited(
-            ref
-                .read(updatesRepositoryProvider)
-                .fetchUpdates()
-                .catchError((Object _) {}),
-          );
-          ref.invalidate(libraryMangaListProvider);
-          await ref.read(libraryMangaListProvider.future);
-        },
-        child: LibraryMangaGridView(
-          items: items,
-          onOpen: (manga) => MangaRoute(mangaId: manga.id).push(context),
-        ),
-      );
-    }, refresh: () => ref.refresh(libraryMangaListProvider));
+    return mangaListAsync.showUiWhenData(
+      context,
+      loadingWidget: const OfflineViewLoading(),
+      offlineEscapeHatch: true,
+      (data) {
+        if (data == null || data.isEmpty) {
+          return Emoticons(title: context.l10n.noCategoryMangaFound);
+        }
+        final items = data;
+        return RefreshIndicator(
+          // Grouped views (by source/status/ungrouped) have no single category
+          // to update, so pull triggers a whole-library source-check (matches
+          // Komikku's non-BY_DEFAULT rule). The banner shows its progress; the
+          // spinner only waits on the immediate server re-read.
+          onRefresh: () async {
+            ref.read(updateOptimisticProvider.notifier).arm();
+            unawaited(
+              ref
+                  .read(updatesRepositoryProvider)
+                  .fetchUpdates()
+                  .catchError((Object _) {}),
+            );
+            ref.invalidate(libraryMangaListProvider);
+            await ref.read(libraryMangaListProvider.future);
+          },
+          child: LibraryMangaGridView(
+            items: items,
+            onOpen: (manga) => MangaRoute(mangaId: manga.id).push(context),
+          ),
+        );
+      },
+      refresh: () {
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
+        ref.invalidate(libraryMangaListProvider);
+      },
+    );
   }
 }
 
@@ -1019,8 +1062,9 @@ class _LibraryTitle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final style =
         ref.watch(libraryGroupStyleKeyProvider) ?? LibraryGroupStyle.tabs;
-    final showAllCategories =
-        ref.watch(sectionHeadersShowAllCategoriesProvider).ifNull(false);
+    final showAllCategories = ref
+        .watch(sectionHeadersShowAllCategoriesProvider)
+        .ifNull(false);
     // Continuous scroll only — paginated pages carry their own inline header.
     final isSectionHeaders = !_useTabs(style, showAllCategories);
     final visibleId = ref.watch(libraryVisibleSectionProvider);

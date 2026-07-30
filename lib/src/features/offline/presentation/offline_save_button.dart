@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../utils/extensions/custom_extensions.dart';
+
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
@@ -62,8 +64,9 @@ class OfflineSaveButton extends ConsumerWidget {
       await saveChapterToDevice(ref, chapterId);
     } catch (e) {
       if (context.mounted) {
+        // Raw exception text is a multi-line socket dump when offline.
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save failed: $e')),
+          SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
         );
       }
     }

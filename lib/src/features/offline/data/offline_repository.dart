@@ -247,6 +247,16 @@ OfflineDatabase? offlineReadDatabase(Ref ref) {
   return ref.watch(offlineDatabaseProvider);
 }
 
+/// Whether the offline library has anything to SHOW — series with files on
+/// this device. Gates the "View offline" escape hatch: offering it with
+/// nothing downloaded would land on an empty screen.
+@riverpod
+Future<bool> offlineCatalogAvailable(Ref ref) async {
+  final db = ref.watch(offlineReadDatabaseProvider);
+  if (db == null) return false;
+  return (await db.mangaIdsWithDeviceDownloads()).isNotEmpty;
+}
+
 /// The metadata down-sync, or null when offline storage is unavailable — so
 /// online controllers can call `ref.read(offlineSyncProvider)?.syncManga(m)`
 /// without caring about platform.

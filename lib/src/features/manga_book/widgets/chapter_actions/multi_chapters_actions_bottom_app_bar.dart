@@ -94,8 +94,20 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                     summary: '${ids.length} chapters', toDevice: true)) {
               return;
             }
+            // Per-chapter guard: one failure (offline, a chapter the server
+            // hasn't downloaded) must not silently abandon the rest.
+            var failures = 0;
             for (final id in ids) {
-              await saveChapterToDevice(ref, id);
+              try {
+                await saveChapterToDevice(ref, id);
+              } catch (_) {
+                failures++;
+              }
+            }
+            if (failures > 0 && context.mounted) {
+              ref
+                  .read(toastProvider)
+                  ?.showError(context.l10n.errorSomethingWentWrong);
             }
             await refresh(true);
           },

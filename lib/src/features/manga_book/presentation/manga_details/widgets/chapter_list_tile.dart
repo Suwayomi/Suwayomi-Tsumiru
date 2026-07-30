@@ -100,12 +100,15 @@ class ChapterListTile extends ConsumerWidget {
             OfflineSaveButton(
               chapterId: chapter.id,
             ),
-            DownloadStatusIcon(
-              updateData: updateData,
-              chapter: chapter,
-              mangaId: manga.id,
-              isDownloaded: chapter.isDownloaded.ifNull(),
-            ),
+            // Local source: the files are already on the server, so there is
+            // nothing to download there (Komikku parity).
+            if (!manga.isLocalSource)
+              DownloadStatusIcon(
+                updateData: updateData,
+                chapter: chapter,
+                mangaId: manga.id,
+                isDownloaded: chapter.isDownloaded.ifNull(),
+              ),
           ],
         ),
         selectedColor: context.theme.colorScheme.onSurface,

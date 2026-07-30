@@ -441,6 +441,19 @@ class AuthCoordinator extends _$AuthCoordinator {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     // A switch bumping the epoch mid-refresh discards the write below.
     final startEpoch = store.serverEpoch;
+    // "No tokens" is only meaningful once the store has actually loaded.
+    // Before hydration (or after a failed secure-storage read) the snapshot is
+    // empty even when tokens exist on disk — declaring the session dead there
+    // shows a false "Session expired" and can cascade into wiping good
+    // tokens. Treat it as transient; the next trigger re-reads a settled store.
+    final storeState = ref.read(authCredentialsStoreProvider);
+    if (storeState.value == null) {
+      // A failed hydration would otherwise stay AsyncError forever (nothing
+      // rebuilds the store) and pin the backoff loop — re-run it.
+      if (storeState.hasError) ref.invalidate(authCredentialsStoreProvider);
+      return RefreshOutcome.transientFailure(
+          StateError('credentials store not hydrated'));
+    }
     final tokens = store.uiLoginTokens();
     if (tokens == null) {
       // No tokens to refresh = nothing more we can do. This is treated

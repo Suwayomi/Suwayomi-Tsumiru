@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
 import '../../library/domain/category/category_model.dart';
@@ -142,7 +144,10 @@ MangaDto offlineMangaToDto(
           ),
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
-    meta: const <Fragment$MangaDto$meta>[],
+    meta: [
+      for (final e in _decodeMeta(m.metaJson).entries)
+        Fragment$MangaDto$meta(key: e.key, value: e.value),
+    ],
     source: source,
     sourceId: m.sourceId ?? '0',
     status: status,
@@ -157,6 +162,15 @@ MangaDto offlineMangaToDto(
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '',
   );
+}
+
+Map<String, String> _decodeMeta(String? metaJson) {
+  if (metaJson == null || metaJson.isEmpty) return const {};
+  try {
+    return Map<String, String>.from(jsonDecode(metaJson) as Map);
+  } catch (_) {
+    return const {};
+  }
 }
 
 /// Build a [ChapterDto] from an on-device catalog row (offline fallback).

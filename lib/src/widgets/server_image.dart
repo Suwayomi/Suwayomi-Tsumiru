@@ -27,6 +27,7 @@ import '../global_providers/global_providers.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
+import 'cover_cache/cover_cache.dart';
 import 'custom_circular_progress_indicator.dart';
 
 final _trailingSlashes = RegExp(r'/+$');
@@ -282,6 +283,13 @@ class ServerImage extends HookConsumerWidget {
       authType == AuthType.uiLogin ? uiAccessTokenSnapshot : null,
     );
 
+    // Covers/icons go to the durable cover store; pages stay on the default
+    // temp-dir manager. Offline library covers render from this cache, so it
+    // must not share the page ring buffer's 200-object cap.
+    final cacheManager = isCoverImagePath(imageUrl)
+        ? ref.watch(coverCacheManagerProvider)
+        : DefaultCacheManager();
+
     final ImageRenderMethodForWeb renderMethod;
     if (httpHeaders != null) {
       renderMethod = ImageRenderMethodForWeb.HttpGet;
@@ -324,7 +332,7 @@ class ServerImage extends HookConsumerWidget {
                       //    throws on missing entries on some platforms.
                       for (final keyToEvict in {baseApi, fetchUrl}) {
                         try {
-                          await DefaultCacheManager().removeFile(keyToEvict);
+                          await cacheManager.removeFile(keyToEvict);
                         } catch (_) {/* not in cache; ignore */}
                       }
                       // 2. Speculatively refresh if the ui_login access
@@ -385,7 +393,7 @@ class ServerImage extends HookConsumerWidget {
       imageUrl: fetchUrl,
       cacheKey: baseApi,
       height: size?.height,
-      cacheManager: DefaultCacheManager(),
+      cacheManager: cacheManager,
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,
@@ -523,7 +531,9 @@ ImageProvider serverPageImageProvider(
   return CachedNetworkImageProvider(
     fetchUrl,
     cacheKey: baseApi,
-    cacheManager: DefaultCacheManager(),
+    cacheManager: isCoverImagePath(imageUrl)
+        ? ref.read(coverCacheManagerProvider)
+        : DefaultCacheManager(),
     headers: httpHeaders,
   );
 }

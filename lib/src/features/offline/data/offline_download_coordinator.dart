@@ -4,7 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
+import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/is_android_native.dart';
 import 'chapter_download_engine.dart';
 import 'offline_database.dart';
@@ -73,6 +75,8 @@ class OfflineDownloadCoordinator {
   /// True while a pump loop is draining the queue — only ONE loop ever drains
   /// the shared DB queue even across a mid-drain rebuild.
   static bool _pumping = false;
+  // Set when a chapter parks on a dead network; cleared at each pump start.
+  bool _pausedForOffline = false;
 
   /// Reset all process-wide state. Test-only: tests share one process, so a
   /// coordinator built in one test would otherwise inherit another's claims.
@@ -236,7 +240,10 @@ class OfflineDownloadCoordinator {
       if (outcome.cancelled) return; // leave partial; resume later
       if (outcome.offline) {
         // No network / Wi-Fi-only blocked it — leave the chapter `downloading`
-        // so it resumes on reconnect, NOT `error`.
+        // so it resumes on reconnect, NOT `error`. Stop the pump too: the
+        // parked row stays first in line, so pumping on would just re-pick it
+        // in a hot loop while the network is down.
+        _pausedForOffline = true;
         logger.i('Offline: chapter ${chapter.id} paused (no network); '
             'leaving downloading for resume');
         return;
@@ -255,8 +262,16 @@ class OfflineDownloadCoordinator {
           '${chapter.id} (manga ${chapter.mangaId})');
       await _finalizeIfComplete(chapter.mangaId, chapter.id, urls.length);
     } catch (e) {
-      logger.e('Offline: chapter ${chapter.id} download error: $e');
-      await _applyTerminalError(chapter.id);
+      final cause = e is OperationMessageException ? e.exception : e;
+      if (isConnectionError(cause)) {
+        // Page-list resolve hit a dead network, not a real chapter failure:
+        // leave it downloading so the next pump resumes it (Android worker parity).
+        logger.i('Offline: chapter ${chapter.id} paused (resolve offline); '
+            'leaving downloading for resume');
+      } else {
+        logger.e('Offline: chapter ${chapter.id} download error: $e');
+        await _applyTerminalError(chapter.id);
+      }
     } finally {
       _active.remove(chapter.id);
       // Keep the cancel set while a delete still holds a claim — endDelete owns
@@ -326,9 +341,12 @@ class OfflineDownloadCoordinator {
     if (isPaused) return;
     if (_pumping) return;
     _pumping = true;
+    // A fresh pump is a fresh chance: the offline park below stops THIS drain;
+    // the next trigger (launch resume, a new save, reconnect) tries again.
+    _pausedForOffline = false;
     try {
       while (true) {
-        if (isPaused) break;
+        if (isPaused || _pausedForOffline) break;
         final next = await _nextChapter();
         if (next == null) break;
         await enqueueChapter(next);
