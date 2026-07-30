@@ -22,6 +22,9 @@ GraphQLClient _dummyClient() =>
 class _FakeRepo extends DownloadsRepository {
   _FakeRepo.scripted(this.responses) : super(_dummyClient(), _dummyClient());
 
+  /// Mirrors `_maxReconcileFailures` in the controller.
+  static const maxFailures = 3;
+
   final List<Future<DownloadStatusDto?> Function()> responses;
   int fetches = 0;
 
@@ -242,6 +245,83 @@ void main() {
       expect(container.read(downloadsChapterIdsProvider), [10, 11],
           reason: 'the re-read still lands despite the progress tick');
       expect(repo.fetches, 2, reason: 'no pointless second re-read');
+    });
+
+    test('a progress tick that adds a chapter does outrank the re-read',
+        () async {
+      // PROGRESS is an upsert: a tick for a chapter we don't have adds it. That
+      // is a membership change, so a snapshot taken before it must not win.
+      final one = _queueItem(chapterId: 10, position: 0);
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [one]),
+        () => slow.future,
+        () async => _status('STARTED', [
+              one,
+              _queueItem(chapterId: 11, position: 1),
+            ]),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      feed.add(_feedMessage(updates: [
+        {
+          'type': 'PROGRESS',
+          'download': _queueItem(chapterId: 11, position: 1),
+          '__typename': 'DownloadUpdate',
+        }
+      ]));
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+
+      slow.complete(_status('STARTED', [one]));
+      await pumpEventQueue();
+
+      expect(container.read(downloadsChapterIdsProvider), [10, 11],
+          reason: 'the older snapshot must not drop chapter 11 again');
+    });
+
+    test('a server that keeps refusing the read is left alone', () async {
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+            ]),
+        () async => throw Exception('server unreachable'),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      // Ten ordinary messages would be ten more requests without a backoff.
+      for (var i = 0; i < 10; i++) {
+        feed.add(_feedMessage());
+        await pumpEventQueue();
+      }
+
+      expect(repo.fetches, greaterThan(1), reason: 'it does retry at first');
+      expect(repo.fetches, lessThanOrEqualTo(1 + _FakeRepo.maxFailures),
+          reason: 'but stops rather than issuing one per feed message');
     });
 
     test('a slow re-fetch cannot resurrect a chapter dequeued mid-flight',

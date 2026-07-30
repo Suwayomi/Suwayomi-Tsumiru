@@ -21,27 +21,37 @@ class DownloadsMap extends _$DownloadsMap {
   void updateDownloadStatus(Fragment$DownloadUpdatesDto? downloadStatusDto) {
     final currState = {...?stateOrNull};
     // Progress ticks arrive about once a second while anything is downloading.
-    // They move no chapter in or out, so they must not count as a change that
-    // outranks an in-flight re-read — otherwise a round-trip slower than the
-    // tick rate can never win the race and the queue stays stale for good.
+    // A tick that only moves a percentage must not outrank an in-flight
+    // re-read, or a round-trip slower than the tick rate could never land and
+    // the queue would stay stale for good. A tick that adds a chapter or moves
+    // one, though, is a real change and does outrank it.
     var structural = downloadStatusDto?.initial?.isNotEmpty ?? false;
     for (final element in [...?downloadStatusDto?.initial]) {
       currState[element.chapter.id] = element;
     }
     for (final element in [...?downloadStatusDto?.updates]) {
-      if (element.type != DownloadUpdateType.PROGRESS) structural = true;
+      final chapterId = element.download.chapter.id;
       switch (element.type) {
         case DownloadUpdateType.DEQUEUED:
         case DownloadUpdateType.FINISHED:
-          currState.remove(element.download.chapter.id);
+          structural = true;
+          currState.remove(chapterId);
+          break;
+        case DownloadUpdateType.PROGRESS:
+          final previous = currState[chapterId];
+          if (previous == null ||
+              previous.position != element.download.position) {
+            structural = true;
+          }
+          currState[chapterId] = element.download;
           break;
         case DownloadUpdateType.QUEUED:
-        case DownloadUpdateType.PROGRESS:
         case DownloadUpdateType.POSITION:
         case DownloadUpdateType.PAUSED:
         case DownloadUpdateType.ERROR:
         case DownloadUpdateType.STOPPED:
-          currState[element.download.chapter.id] = element.download;
+          structural = true;
+          currState[chapterId] = element.download;
           break;
         case DownloadUpdateType.$unknown:
           throw UnimplementedError();
@@ -71,6 +81,11 @@ class DownloadsMap extends _$DownloadsMap {
   }
 
   static const _maxReconcileAttempts = 3;
+  static const _maxReconcileFailures = 3;
+
+  /// A queue that keeps losing the race is worth retrying on every message; a
+  /// server that keeps refusing the read is not, so failures back off instead.
+  int _consecutiveFailures = 0;
 
   /// Re-read the whole queue after the server drops deltas past `maxUpdates`.
   /// Single-flight, and re-reads rather than applying a snapshot that anything
@@ -80,6 +95,8 @@ class DownloadsMap extends _$DownloadsMap {
   /// out, so the answer in flight is already incomplete and has to be redone.
   /// An ordinary message is not a reason to restart it.
   Future<void> _reconcileQueue({bool moreDropped = false}) async {
+    if (moreDropped) _consecutiveFailures = 0;
+    if (_consecutiveFailures >= _maxReconcileFailures) return;
     if (_reconciling) {
       if (moreDropped) _restartRequested = true;
       return;
@@ -94,11 +111,15 @@ class DownloadsMap extends _$DownloadsMap {
           fresh =
               await ref.read(downloadsRepositoryProvider).getDownloadStatus();
         } catch (_) {
-          return; // _reconcileNeeded stays set, so the next message retries.
+          // _reconcileNeeded stays set, so the next message retries — until
+          // the failures say the server, not the race, is the problem.
+          _consecutiveFailures++;
+          return;
         }
         if (!ref.mounted) return;
         if (generation == _generation && !_restartRequested) {
           _publish(getStateFromUpdates(fresh));
+          _consecutiveFailures = 0;
           _reconcileNeeded = false;
           return;
         }
@@ -132,8 +153,10 @@ class DownloadsMap extends _$DownloadsMap {
     });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
     // A rebuild replaces the queue too, so an in-flight re-read must not
-    // outrank it.
+    // outrank it. It's also the user's way back in after a run of failures
+    // (pull-to-refresh, re-entering the screen), so clear the backoff.
     _generation++;
+    _consecutiveFailures = 0;
     return getStateFromUpdates(downloadStatusDto);
   }
 
