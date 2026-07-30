@@ -19,6 +19,7 @@ import '../../settings/presentation/server/widget/credential_popup/credentials_p
 import '../data/background/notification_background_client.dart';
 import '../data/background/notification_background_entry.dart';
 import '../data/local_notification_service.dart';
+import '../../offline/data/background/catchup_work_spec.dart';
 import '../data/notification_state_store.dart';
 import 'notification_settings_providers.dart';
 
@@ -84,7 +85,12 @@ class NotificationsController {
     // The periodic job runs when ANY check is on; if the new-chapter check went
     // off, drop its detection state.
     if (!newChapters) await store.clearState();
-    if (!config.anyEnabled) {
+    // Background chapter downloads ride this same job — it must keep running
+    // (and the config/token written above must keep seeding) for a user with
+    // keep rules and every notification switched off.
+    final catchupOn =
+        CatchupStateStore(_ref.read(sharedPreferencesProvider)).enabled;
+    if (!config.anyEnabled && !catchupOn) {
       await Workmanager().cancelByUniqueName(kNewChapterPeriodicName);
       return;
     }

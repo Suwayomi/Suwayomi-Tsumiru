@@ -165,7 +165,10 @@ class CatchupStateStore {
   static Future<CatchupStateStore> open() async =>
       CatchupStateStore(await SharedPreferences.getInstance());
 
-  bool get enabled => _prefs.getBool(_enabledKey) ?? false;
+  // Default ON: keep rules are an explicit per-series "keep this on my device"
+  // opt-in, and without them this is a no-op. (Komikku defaults its GLOBAL
+  // auto-download off — a deliberate deviation, flagged in the design doc.)
+  bool get enabled => _prefs.getBool(_enabledKey) ?? true;
   Future<void> setEnabled(bool v) => _prefs.setBool(_enabledKey, v);
 
   Future<void> writeSpec(CatchupWorkSpec spec) =>

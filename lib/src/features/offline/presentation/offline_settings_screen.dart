@@ -13,6 +13,7 @@ import '../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../widgets/section_title.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
+import '../data/background/catchup_settings.dart';
 import '../data/offline_settings_providers.dart';
 import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
@@ -80,6 +81,19 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
         value: ref.watch(offlineWifiOnlyProvider) ?? true,
         onChanged: (v) async {
           ref.read(offlineWifiOnlyProvider.notifier).update(v);
+          return null;
+        },
+      ),
+    ),
+    SettingsPropTile(
+      title: context.l10n.downloadNewChaptersInBackground,
+      subtitle: context.l10n.downloadNewChaptersInBackgroundDescription,
+      type: SettingsPropType.switchTile(
+        value: ref.watch(backgroundCatchupEnabledProvider),
+        onChanged: (v) async {
+          await ref
+              .read(backgroundCatchupEnabledProvider.notifier)
+              .setEnabled(v);
           return null;
         },
       ),
