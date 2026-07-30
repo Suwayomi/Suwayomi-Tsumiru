@@ -27,6 +27,7 @@ class OfflineReconciler {
     required this.onEvict,
     required this.now,
     this.onServerDownload,
+    this.sessionProtected = const {},
   });
 
   final OfflineDatabase db;
@@ -34,6 +35,10 @@ class OfflineReconciler {
   final Future<void> Function(int chapterId) onDownload;
   final Future<void> Function(int chapterId) onEvict;
   final DateTime now;
+
+  /// Chapters read this session — shielded from rule eviction so finishing a
+  /// chapter doesn't remove it from the device until the next launch.
+  final Set<int> sessionProtected;
 
   /// Called with chapters the keep-rule wants but the SERVER hasn't downloaded
   /// yet — enqueue a server download (server-client model: the server fetches
@@ -69,6 +74,7 @@ class OfflineReconciler {
       desired: desired,
       nets: nets,
       now: now,
+      protected: sessionProtected,
     );
 
     // Merge orphaned ids into the evict set.

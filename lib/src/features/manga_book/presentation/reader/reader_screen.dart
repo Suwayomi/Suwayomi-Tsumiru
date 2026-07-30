@@ -140,21 +140,16 @@ class ReaderScreen extends HookConsumerWidget {
         toast?.showError(context.l10n.errorSomethingWentWrong);
       }
 
-      // Delete the on-device copy once read, if the user opted in.
-      // On a new read, auto-delete behind the reader — both the on-device copy
-      // and (per the server settings) the server copy. Each no-ops if its own
-      // setting is off.
+      // Auto-delete waits for reader exit (Komikku's timing): finishing a
+      // chapter resolves and queues its delete; the PopScope flush runs it.
+      // Awaited so a chapter completed by the pop-time flush still lands in
+      // the queue before that same pop drains it.
       if (isReadingCompleted && context.mounted) {
-        unawaited(maybeDeleteOnReadLocal(
+        await noteChapterFinishedInReader(
           ref,
           mangaId: mangaId,
-          readChapterId: chapterValue.id,
-        ));
-        unawaited(maybeDeleteOnReadServer(
-          ref,
-          mangaId: mangaId,
-          readChapterId: chapterValue.id,
-        ));
+          chapterId: chapterValue.id,
+        );
       }
 
       // Invalidate history to refresh the reading progress. Defer past the
@@ -316,6 +311,10 @@ class ReaderScreen extends HookConsumerWidget {
               await updateLastRead(latestPage.value);
             }
           } finally {
+            // Deferred while-reading deletes run now — leaving the reader is
+            // the point where the just-read chapters may be deleted. Container-
+            // driven: the server round-trip outlives this route's ref.
+            unawaited(flushPendingReadDeletes(providerContainer));
             // The write above lands first (awaited); defer the list refreshes
             // past this frame — invalidating during the pop's build phase trips
             // the Riverpod-3 modify-during-build assert.
