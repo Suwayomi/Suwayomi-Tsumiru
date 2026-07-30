@@ -43,6 +43,39 @@ class DownloadsMap extends _$DownloadsMap {
     }
     if (stateOrNull != null) {
       state = currState;
+      _changedSinceFetch = true;
+    }
+  }
+
+  bool _reconciling = false;
+  bool _changedSinceFetch = false;
+
+  /// Re-read the whole queue after the server drops deltas past `maxUpdates`.
+  /// Single-flight, and repeats if deltas landed while the request was out —
+  /// applying a snapshot older than those deltas would resurrect a chapter the
+  /// queue has already lost (#313).
+  Future<void> _reconcileQueue() async {
+    if (_reconciling) {
+      _changedSinceFetch = true;
+      return;
+    }
+    _reconciling = true;
+    try {
+      do {
+        _changedSinceFetch = false;
+        DownloadStatusDto? fresh;
+        try {
+          fresh =
+              await ref.read(downloadsRepositoryProvider).getDownloadStatus();
+        } catch (_) {
+          // Transient; the next update message reconciles again.
+          return;
+        }
+        if (!ref.mounted) return;
+        if (!_changedSinceFetch) state = getStateFromUpdates(fresh);
+      } while (_changedSinceFetch);
+    } finally {
+      _reconciling = false;
     }
   }
 
@@ -58,12 +91,7 @@ class DownloadsMap extends _$DownloadsMap {
         // which any mass en/dequeue trips (#313). Refetch in place rather than
         // invalidating, so the queue doesn't blank out while it reloads.
         if (next.value?.omittedUpdates ?? false) {
-          ref
-              .read(downloadsRepositoryProvider)
-              .getDownloadStatus()
-              .then((fresh) {
-            if (ref.mounted) state = getStateFromUpdates(fresh);
-          });
+          _reconcileQueue();
           return;
         }
         updateDownloadStatus(next.value);

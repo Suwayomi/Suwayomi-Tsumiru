@@ -17,19 +17,43 @@ import 'package:tsumiru/src/features/manga_book/presentation/downloads/controlle
 GraphQLClient _dummyClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
-/// Serves a canned queue and counts how often it was asked for one.
+/// Answers each queue fetch from a script, so a test can delay one response or
+/// make it fail. The last entry repeats once the script runs out.
 class _FakeRepo extends DownloadsRepository {
-  _FakeRepo(this.status) : super(_dummyClient(), _dummyClient());
+  _FakeRepo.constant(DownloadStatusDto status)
+      : responses = [() async => status],
+        super(_dummyClient(), _dummyClient());
 
-  final DownloadStatusDto status;
+  _FakeRepo.scripted(this.responses) : super(_dummyClient(), _dummyClient());
+
+  final List<Future<DownloadStatusDto?> Function()> responses;
   int fetches = 0;
 
   @override
-  Future<DownloadStatusDto?> getDownloadStatus() async {
+  Future<DownloadStatusDto?> getDownloadStatus() {
+    final response = responses[fetches.clamp(0, responses.length - 1)];
     fetches++;
-    return status;
+    return response();
   }
 }
+
+Map<String, dynamic> _dequeued(Map<String, dynamic> item) => {
+      'type': 'DEQUEUED',
+      'download': item,
+      '__typename': 'DownloadUpdate',
+    };
+
+DownloadUpdatesDto _feedMessage({
+  bool omitted = false,
+  List<Map<String, dynamic>> updates = const [],
+}) =>
+    DownloadUpdatesDto.fromJson({
+      'state': 'STARTED',
+      'omittedUpdates': omitted,
+      'updates': updates,
+      'initial': null,
+      '__typename': 'DownloadUpdates',
+    });
 
 Map<String, dynamic> _queueItem({
   required int chapterId,
@@ -124,7 +148,7 @@ void main() {
         _queueItem(chapterId: 10, position: 0),
         _queueItem(chapterId: 11, position: 1),
       ]);
-      final repo = _FakeRepo(status);
+      final repo = _FakeRepo.constant(status);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
@@ -160,6 +184,74 @@ void main() {
       expect(container.read(downloadsChapterIdsProvider), [10, 11]);
       expect(seen, isNot(contains(0)),
           reason: 'the queue never went empty mid-reload');
+    });
+
+    test('a slow re-fetch cannot resurrect a chapter dequeued mid-flight',
+        () async {
+      // Refetch goes out holding [10, 11]; a DEQUEUED delta drops 11 while it
+      // is still in the air. Applying the stale snapshot on arrival would put
+      // 11 back — so the snapshot is discarded and the queue re-read.
+      final both = [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ];
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', both),
+        () => slow.future,
+        () async => _status('STARTED', [both.first]),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+      expect(repo.fetches, 2, reason: 'the re-fetch is in flight');
+
+      feed.add(_feedMessage(updates: [_dequeued(both[1])]));
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), [10]);
+
+      slow.complete(_status('STARTED', both));
+      await pumpEventQueue();
+
+      expect(container.read(downloadsChapterIdsProvider), [10],
+          reason: 'the stale snapshot must not bring chapter 11 back');
+      expect(repo.fetches, 3, reason: 'it re-reads instead of applying stale');
+    });
+
+    test('a failed re-fetch leaves the queue intact', () async {
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+            ]),
+        () async => throw Exception('server unreachable'),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      // No unhandled async error, and the last known queue survives.
+      expect(container.read(downloadsChapterIdsProvider), [10]);
     });
   });
 
