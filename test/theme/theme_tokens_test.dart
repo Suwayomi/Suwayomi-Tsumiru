@@ -10,6 +10,12 @@ void main() {
     expect(t.ink, const Color(0xFFEEF0FB));
     expect(t.accent, const Color(0xFF7C7BFF));
     expect(t.accent2, const Color(0xFF33D6FF));
+    expect(t.danger, const Color(0xFFFF6B6B));
+  });
+
+  test('carbon light tokens use the light brand surface', () {
+    final t = tokensFor(AppTheme.carbon, Brightness.light);
+    expect(t.bg, const Color(0xFFF6FFFB));
   });
 
   test('every named theme resolves tokens for both brightnesses', () {

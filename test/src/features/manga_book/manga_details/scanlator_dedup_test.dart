@@ -34,18 +34,17 @@ void main() {
       expect(rows.single.id, 2);
     });
 
-    test('in-progress copy beats rank; downloaded beats rank', () {
-      final inProgress = applyPreferredScanlators([
+    test('in-progress or downloaded copy beats rank', () {
+      for (final favored in [
         ch(id: 1, number: 1, scanlator: 'A', lastPageRead: 5),
-        ch(id: 2, number: 1, scanlator: 'B'),
-      ], const ['B']);
-      expect(inProgress.single.id, 1);
-
-      final downloaded = applyPreferredScanlators([
         ch(id: 1, number: 1, scanlator: 'A', isDownloaded: true),
-        ch(id: 2, number: 1, scanlator: 'B'),
-      ], const ['B']);
-      expect(downloaded.single.id, 1);
+      ]) {
+        final rows = applyPreferredScanlators([
+          favored,
+          ch(id: 2, number: 1, scanlator: 'B'),
+        ], const ['B']);
+        expect(rows.single.id, 1);
+      }
     });
 
     test('a read copy does NOT beat rank (aggregate covers it)', () {

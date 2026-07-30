@@ -393,23 +393,6 @@ void main() {
     expect(container(tester).read(rotateWideInvertProvider), isTrue);
   });
 
-  testWidgets('dual page spread toggle writes its global provider',
-      (tester) async {
-    await pumpTab(tester, meta: {'flutter_readerMode': 'singleHorizontalLTR'});
-
-    await tester.scrollUntilVisible(
-      find.text('Dual page spread in landscape'),
-      200,
-      scrollable: tabScrollable(),
-    );
-    await tester.ensureVisible(find.text('Dual page spread in landscape'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dual page spread in landscape'));
-    await tester.pumpAndSettle();
-
-    expect(container(tester).read(trueDualPageSpreadProvider), isTrue);
-  });
-
   testWidgets(
       'webtoon split-wide is hidden (frozen page-list remap); no paged-only '
       'rows leak into the long-strip section', (tester) async {

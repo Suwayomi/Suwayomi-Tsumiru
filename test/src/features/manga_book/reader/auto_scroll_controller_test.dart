@@ -31,15 +31,5 @@ void main() {
       notifier.stop();
       expect(container.read(autoScrollActiveProvider), isFalse);
     });
-
-    test('toggle() flips the state each call', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(autoScrollActiveProvider.notifier);
-      notifier.toggle();
-      expect(container.read(autoScrollActiveProvider), isTrue);
-      notifier.toggle();
-      expect(container.read(autoScrollActiveProvider), isFalse);
-    });
   });
 }

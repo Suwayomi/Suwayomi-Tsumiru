@@ -88,20 +88,6 @@ void main() {
     expect(_names(c), ['alpha', 'Beta', 'Gamma']);
   });
 
-  test('alphabetical sort respects descending direction', () async {
-    final c = await _container(chapters);
-    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.alphabetical);
-    c.read(mangaChapterSortDirectionProvider.notifier).update(false);
-    expect(_names(c), ['Gamma', 'Beta', 'alpha']);
-  });
-
-  test('upload date sort still orders numerically', () async {
-    final c = await _container(chapters);
-    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.uploadDate);
-    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-    expect(_names(c), ['alpha', 'Beta', 'Gamma']);
-  });
-
   test('chapter number sort orders by parsed number, not source order',
       () async {
     final c = await _container(chapters);

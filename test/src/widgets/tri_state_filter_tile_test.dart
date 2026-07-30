@@ -138,21 +138,6 @@ void main() {
         if (chip.selected) ((chip.label as Text).data)!,
     };
 
-    testWidgets('null selects Any', (tester) async {
-      await _pump(tester);
-      expect(selectedLabels(tester), {'Any'});
-    });
-
-    testWidgets('true selects Included', (tester) async {
-      await _pump(tester, initial: true);
-      expect(selectedLabels(tester), {'Included'});
-    });
-
-    testWidgets('false selects Excluded', (tester) async {
-      await _pump(tester, initial: false);
-      expect(selectedLabels(tester), {'Excluded'});
-    });
-
     testWidgets('exactly one pill is ever selected', (tester) async {
       for (final initial in <bool?>[null, true, false]) {
         await _pump(tester, initial: initial);

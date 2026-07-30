@@ -117,9 +117,11 @@ void main() {
 
     // Comfortable grid is the one mode with a title block competing with the
     // cover for a fixed cell, and it only overflows once text scale grows.
-    for (final scale in [1.3, 1.5, 2.0, 3.0]) {
+    // Boundary values only (min/max scale, min/max columns) — the cross
+    // product isn't testing anything geometric, just that layout survives.
+    for (final scale in [1.3, 3.0]) {
       for (final style in LibraryGridStyle.values) {
-        for (final columns in [1, 3, 8]) {
+        for (final columns in [1, 8]) {
           for (final limit in [true, false]) {
             testWidgets(
                 'comfortable ${style.name} survives scale $scale, '

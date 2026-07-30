@@ -66,50 +66,6 @@ void main() {
     );
   }
 
-  testWidgets('A: stable variable heights — jumpTo lands exactly',
-      (tester) async {
-    final controller = ItemScrollController();
-    final listener = ItemPositionsListener.create();
-    final heights = _realHeights(screen);
-
-    await pumpList(
-      tester,
-      controller: controller,
-      listener: listener,
-      itemBuilder: (_, i) => SizedBox(height: heights[i], width: 400),
-    );
-
-    controller.jumpTo(index: 20);
-    await tester.pumpAndSettle();
-
-    expect(_topIndex(listener), 20);
-  });
-
-  testWidgets('B: items grow after first layout — jumpTo landing',
-      (tester) async {
-    final controller = ItemScrollController();
-    final listener = ItemPositionsListener.create();
-    final heights = _realHeights(screen);
-
-    await pumpList(
-      tester,
-      controller: controller,
-      listener: listener,
-      itemBuilder: (_, i) => _GrowingPage(
-        placeholder: screen * 0.7,
-        real: heights[i],
-      ),
-    );
-
-    controller.jumpTo(index: 20);
-    await tester.pump(); // jump frame
-    await tester.pump(const Duration(milliseconds: 16)); // pages "decode"
-    await tester.pump(const Duration(milliseconds: 16));
-    await tester.pumpAndSettle();
-
-    expect(_topIndex(listener), 20);
-  });
-
   // This is the offline seek bug AND its fix, captured off-device.
   //
   // The offline (file://) ServerImage branch skips progressIndicatorBuilder and

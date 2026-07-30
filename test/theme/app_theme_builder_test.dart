@@ -34,6 +34,23 @@ void main() {
     expect(light.colorScheme.surface, isNot(const Color(0xFF000000)));
   });
 
+  test('amoled preserves the accent and text colors', () {
+    final normal = buildAppTheme(
+      theme: AppTheme.indigoNight,
+      brightness: Brightness.dark,
+      customSeed: const Color(0xFF7C7BFF),
+      amoled: false,
+    );
+    final amoled = buildAppTheme(
+      theme: AppTheme.indigoNight,
+      brightness: Brightness.dark,
+      customSeed: const Color(0xFF7C7BFF),
+      amoled: true,
+    );
+    expect(amoled.colorScheme.primary, normal.colorScheme.primary);
+    expect(amoled.colorScheme.onSurface, normal.colorScheme.onSurface);
+  });
+
   test('custom theme derives from seed', () {
     final theme = buildAppTheme(
       theme: AppTheme.custom,

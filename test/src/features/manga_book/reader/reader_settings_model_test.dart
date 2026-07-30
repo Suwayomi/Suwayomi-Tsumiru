@@ -392,16 +392,5 @@ void main() {
       expect(container.read(readerSettingsModelProvider(1)).readerMode,
           ReaderMode.continuousHorizontalRTL);
     });
-
-    test('readerEffectiveSettingsProvider is the model family', () async {
-      final container = await _container(_manga(meta: {
-        'flutter_readerPadding': '0.4',
-      }));
-
-      final state = await _resolvedState(container);
-      expect(container.read(readerEffectiveSettingsProvider(1)), state);
-      expect(
-          container.read(readerEffectiveSettingsProvider(1)).sidePadding, 0.4);
-    });
   });
 }

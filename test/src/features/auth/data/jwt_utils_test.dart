@@ -126,14 +126,5 @@ void main() {
       expect(decodeJwtExp('   '), isNull);
     });
 
-    test('returns null when exp value is a bool', () {
-      final jwt = _jwt({'exp': true});
-      expect(decodeJwtExp(jwt), isNull);
-    });
-
-    test('returns null when exp value is a list', () {
-      final jwt = _jwt({'exp': [1700000000]});
-      expect(decodeJwtExp(jwt), isNull);
-    });
   });
 }

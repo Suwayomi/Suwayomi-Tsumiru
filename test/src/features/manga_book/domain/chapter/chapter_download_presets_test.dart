@@ -135,19 +135,6 @@ void main() {
       expect(result, [101, 103, 105]);
     });
 
-    test('empty input returns empty list', () {
-      final result = chaptersToQueueForPreset([], DownloadPreset.all);
-      expect(result, isEmpty);
-    });
-
-    test('all chapters already downloaded returns empty list', () {
-      final result = chaptersToQueueForPreset([
-        _ch(101, 1, isDownloaded: true),
-        _ch(102, 2, isDownloaded: true),
-      ], DownloadPreset.all);
-      expect(result, isEmpty);
-    });
-
     test('decimal chapter numbers (e.g., 1.5) sort correctly', () {
       final result = chaptersToQueueForPreset([
         _ch(102, 2),

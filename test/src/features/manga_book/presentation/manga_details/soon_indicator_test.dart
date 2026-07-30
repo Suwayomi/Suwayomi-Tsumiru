@@ -120,23 +120,4 @@ void main() {
       expect(tapped, isTrue);
     });
   });
-
-  group('Action row — Soon button removed', () {
-    // The action row no longer contains a Soon MangaActionButton.
-    // MangaDescription is a HookConsumerWidget with heavy Riverpod + GraphQL
-    // dependencies that require a full server stack to pump. We verify the
-    // structural contract here:
-    //
-    //   • The Soon indicator is passed as `belowStatus` to MangaCoverDescriptiveListTile
-    //     (tested above: renders when provided, absent when null).
-    //   • The action row's Row children are Library · Tracking · Offline · WebView
-    //     (the Soon Expanded has been deleted from that list in the source).
-    //
-    // Compile-time sentinel: this test must compile, which means the Soon
-    // MangaActionButton import/usage in manga_description.dart was removed
-    // without breaking the build.
-    test('Soon is expressed as belowStatus Widget, not an action button', () {
-      expect(true, isTrue);
-    });
-  });
 }
