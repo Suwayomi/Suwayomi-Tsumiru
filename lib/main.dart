@@ -31,6 +31,7 @@ import 'src/features/offline/data/background/background_download_controller_shim
 import 'src/features/offline/data/server_reachability.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
+import 'src/features/offline/data/offline_chapter_catchup.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
 import 'src/features/offline/data/offline_repository.dart';
 import 'src/features/offline/data/offline_server_identity_repository.dart';
@@ -308,6 +309,9 @@ Future<void> _startApp() async {
       if (!container.read(offlineActiveProvider)) return;
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);
+      // New-chapter catch-up for keep-rule manga (#310): launch pass now, then
+      // re-runs when an update finishes or the server download queue drains.
+      initChapterCatchUp(container);
       // One-time sweep of phantom (browsed-not-added) catalog entries.
       if (sharedPreferences.getBool('offlinePhantomCleanupDone') != true) {
         try {

@@ -152,6 +152,11 @@ enum DBKeys {
   // download starters to gate every restart path.
   offlineDownloadsPaused(false),
   offlineCatalogServerId(null),
+  // Newest chapter fetchedAt the catch-up pass has processed (epoch seconds).
+  offlineCatchUpWatermark(0),
+  // Manga ids still owed a device pull once the server finishes downloading —
+  // persisted because the watermark has already moved past their chapters.
+  offlineCatchUpAwaitingPull(null),
   offlineLastServerId(null),
   offlineLastServerAddress(null),
   offlineServerMismatchDismissedList(null),
