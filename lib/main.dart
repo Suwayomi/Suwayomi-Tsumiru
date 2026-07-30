@@ -31,6 +31,7 @@ import 'src/features/offline/data/background/background_download_controller_shim
 import 'src/features/offline/data/server_reachability.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
+import 'src/features/offline/data/background/catchup_spec_writer.dart';
 import 'src/features/offline/data/offline_chapter_catchup.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
 import 'src/features/offline/data/offline_repository.dart';
@@ -312,6 +313,12 @@ Future<void> _startApp() async {
       // New-chapter catch-up for keep-rule manga (#310): launch pass now, then
       // re-runs when an update finishes or the server download queue drains.
       initChapterCatchUp(container);
+      // Snapshot the background worker's planning state whenever the app
+      // leaves the foreground — the binding keeps the listener alive.
+      AppLifecycleListener(
+        onPause: () => unawaited(writeCatchupWorkSpec(container.read)),
+        onHide: () => unawaited(writeCatchupWorkSpec(container.read)),
+      );
       // One-time sweep of phantom (browsed-not-added) catalog entries.
       if (sharedPreferences.getBool('offlinePhantomCleanupDone') != true) {
         try {

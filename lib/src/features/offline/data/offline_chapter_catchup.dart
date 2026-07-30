@@ -19,6 +19,7 @@ import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/data/updates/updates_repository.dart';
 import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
 import 'background/background_download_controller_shim.dart';
+import 'background/catchup_spec_writer.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_providers.dart';
@@ -121,6 +122,8 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     // queue-drain edge alone can be missed when downloads finish faster than
     // the subscription reports them.
     await _pullAwaiting(container);
+    // Freshest device-state snapshot for the background worker.
+    await writeCatchupWorkSpec(container.read);
   } catch (e) {
     logger.w('Offline: chapter catch-up pass failed: $e');
   } finally {
