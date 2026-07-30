@@ -311,13 +311,15 @@ enum ColorFilterBlendMode {
       };
 }
 
-/// Long-strip smart scale on wide screens.
+/// Long-strip scale: fit, ratio-capped column, or native-size pages.
+// Persisted by index — append only.
 enum WebtoonScaleType {
   fitScreen,
   ratio4to3,
   ratio3to2,
   ratio16to9,
-  ratio20to9;
+  ratio20to9,
+  originalSize;
 
   String toLocale(BuildContext context) => switch (this) {
         WebtoonScaleType.fitScreen => context.l10n.webtoonScaleTypeFitScreen,
@@ -325,15 +327,19 @@ enum WebtoonScaleType {
         WebtoonScaleType.ratio3to2 => context.l10n.webtoonScaleTypeRatio3to2,
         WebtoonScaleType.ratio16to9 => context.l10n.webtoonScaleTypeRatio16to9,
         WebtoonScaleType.ratio20to9 => context.l10n.webtoonScaleTypeRatio20to9,
+        WebtoonScaleType.originalSize =>
+          context.l10n.webtoonScaleTypeOriginalSize,
       };
 
-  /// Target column width/height ratio. FIT = 0 → no cap.
+  /// Target column width/height ratio. 0 → no strip-level cap (fitScreen, and
+  /// originalSize, whose per-page cap lives in the renderer).
   double get _ratio => switch (this) {
         WebtoonScaleType.fitScreen => 0,
         WebtoonScaleType.ratio4to3 => 3 / 4,
         WebtoonScaleType.ratio3to2 => 2 / 3,
         WebtoonScaleType.ratio16to9 => 9 / 16,
         WebtoonScaleType.ratio20to9 => 9 / 20,
+        WebtoonScaleType.originalSize => 0,
       };
 
   /// Max long-strip content width for a [screenWidth]×[screenHeight] viewport.

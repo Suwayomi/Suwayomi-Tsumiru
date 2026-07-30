@@ -488,13 +488,12 @@ class ServerImageWithCpi extends StatelessWidget {
   return (fetchUrl: fetchUrl, cacheKey: cacheKey, headers: headers, localPath: null);
 }
 
-/// The exact [ImageProvider] that [ServerImage] would render for [imageUrl],
-/// so callers (the reader's prefetcher) can `precacheImage` the SAME cache
-/// entry the on-screen widget will read — identical cacheKey and auth. This is
-/// the core of smooth webtoon scrolling: decode each page ONCE, off-screen and
-/// ahead of the viewport, so the on-screen build is instant and the page never
-/// resizes (and shoves the scroll) while it's above you. Mirrors the provider
-/// selection in [ServerImage.build]; reads creds non-reactively (ref.read).
+/// The [ImageProvider] matching what [ServerImage] renders for [imageUrl] —
+/// same URL, cacheKey and auth, but WITHOUT the widget's memCache* decode cap,
+/// so a prefetch through this decodes native-res into its own cache entry.
+/// Callers use it to learn page dimensions (and warm the network cache) ahead
+/// of the viewport; mirrors the provider selection in [ServerImage.build];
+/// reads creds non-reactively (ref.read).
 ImageProvider serverPageImageProvider(
   WidgetRef ref,
   String imageUrl, {

@@ -12,6 +12,7 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_magnifier_size_slider/reader_magnifier_size_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart';
+import '../../../../../../settings/presentation/reader/widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../controller/reader_mode_adapter.dart';
 import '../../../utils/reader_mode_kind.dart';
@@ -360,6 +361,17 @@ class _LongStripSection extends ConsumerWidget {
                 onSelected: (_) => model.setWebtoonScaleType(scale),
               ),
           ],
+        ),
+        LongStripWidthLimitSlider(
+          // Greyed under Original size: native-size pages never widen, so a
+          // width cap has nothing to do.
+          enabled: settings.webtoonScaleType != WebtoonScaleType.originalSize,
+          usePixels: settings.longStripWidthLimitUsePixels,
+          percent: settings.longStripWidthLimitPercent,
+          px: settings.longStripWidthLimitPx,
+          onUnitChanged: model.setLongStripWidthLimitUsePixels,
+          onPercentCommitted: model.setLongStripWidthLimitPercent,
+          onPxCommitted: model.setLongStripWidthLimitPx,
         ),
         SwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,

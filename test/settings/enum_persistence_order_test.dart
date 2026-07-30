@@ -56,7 +56,8 @@ void main() {
     'TapInvert': ['none', 'horizontal', 'vertical', 'both'],
     'ThemeMode': ['system', 'light', 'dark'],
     'WebtoonScaleType': [
-      'fitScreen', 'ratio4to3', 'ratio3to2', 'ratio16to9', 'ratio20to9'
+      'fitScreen', 'ratio4to3', 'ratio3to2', 'ratio16to9', 'ratio20to9',
+      'originalSize'
     ],
     'ZoomStart': ['automatic', 'left', 'right', 'center'],
   };
