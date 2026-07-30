@@ -313,9 +313,11 @@ void main() {
       feed.add(_feedMessage(omitted: true));
       await pumpEventQueue();
 
-      // Ten ordinary messages would be ten more requests without a backoff.
+      // Ten more messages would be ten more requests without a backoff. Half
+      // report further dropped batches, which re-arm the need for a read but
+      // must not be read as the server having recovered.
       for (var i = 0; i < 10; i++) {
-        feed.add(_feedMessage());
+        feed.add(_feedMessage(omitted: i.isEven));
         await pumpEventQueue();
       }
 

@@ -95,7 +95,8 @@ class DownloadsMap extends _$DownloadsMap {
   /// out, so the answer in flight is already incomplete and has to be redone.
   /// An ordinary message is not a reason to restart it.
   Future<void> _reconcileQueue({bool moreDropped = false}) async {
-    if (moreDropped) _consecutiveFailures = 0;
+    // A newly dropped batch means the read is needed again, not that the
+    // server has recovered, so it does not clear the failure backoff.
     if (_consecutiveFailures >= _maxReconcileFailures) return;
     if (_reconciling) {
       if (moreDropped) _restartRequested = true;
