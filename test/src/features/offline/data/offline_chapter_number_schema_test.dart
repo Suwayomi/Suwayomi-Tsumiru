@@ -74,7 +74,7 @@ void main() {
     });
     tearDown(() => tmp.delete(recursive: true));
 
-    test('adds the columns, preserves rows, lands on version 12', () async {
+    test('adds the columns, preserves rows, lands on version 13', () async {
       final dbPath = p.join(tmp.path, 'test.db');
 
       // Build a genuine v8 file: the chapters table WITHOUT the new columns,
@@ -148,7 +148,7 @@ void main() {
           .customSelect('PRAGMA user_version')
           .getSingle()
           .then((r) => r.read<int>('user_version'));
-      expect(version, 12);
+      expect(version, 13);
       await db.close();
     });
   });

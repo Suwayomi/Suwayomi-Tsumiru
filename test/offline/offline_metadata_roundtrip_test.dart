@@ -4,8 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
+import 'package:tsumiru/src/features/browse_center/domain/content_rating.dart';
 import 'package:tsumiru/src/features/offline/data/offline_dto_mappers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
@@ -21,6 +24,36 @@ void main() {
 
     tearDown(() => db.close());
 
+    // A null warning (pre-rating row) must not resolve to SAFE, or an
+    // adult-tagged series leaks past the offline content filter.
+    test('an unmirrored rating defers to the tags, not to SAFE', () async {
+      await db.upsertMangaMetadata(
+        id: 77,
+        title: 'Untagged Rating',
+        updatedAt: DateTime(2026, 1, 1),
+        sourceId: 'src-002',
+        sourceName: 'Legacy Source',
+        genre: jsonEncode(['Hentai']),
+      );
+      final dto = offlineMangaToDto((await db.mangaById(77))!);
+      expect(dto.source?.contentWarning, Enum$ContentWarning.MIXED);
+      expect(isAdultManga(dto.source?.contentWarning, dto.genre), true);
+    });
+
+    test('genre survives the JSON round-trip; junk degrades to no tags', () async {
+      await db.upsertMangaMetadata(
+        id: 78,
+        title: 'Tagged',
+        updatedAt: DateTime(2026, 1, 1),
+        genre: jsonEncode(['Action', 'Drama']),
+      );
+      expect(offlineMangaToDto((await db.mangaById(78))!).genre,
+          ['Action', 'Drama']);
+      expect(offlineGenre('not json'), isEmpty);
+      expect(offlineGenre('{"a":1}'), isEmpty);
+      expect(offlineGenre(null), isEmpty);
+    });
+
     test('full metadata survives upsert → read', () async {
       // Arrange – persist categories first (FK-free but order matters semantically)
       await db.upsertCategory(2, 'Action', 0);
@@ -35,7 +68,7 @@ void main() {
         sourceId: 'src-001',
         sourceName: 'Test Source',
         sourceLang: 'en',
-        sourceIsNsfw: false,
+        sourceContentWarning: 'SAFE',
         status: 'COMPLETED',
         unreadCount: 5,
         downloadCount: 2,

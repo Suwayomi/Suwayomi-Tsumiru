@@ -3,7 +3,7 @@ fragment SourceDto on SourceType {
   iconUrl
   id
   isConfigurable
-  isNsfw
+  contentWarning
   lang
   name
   supportsLatest

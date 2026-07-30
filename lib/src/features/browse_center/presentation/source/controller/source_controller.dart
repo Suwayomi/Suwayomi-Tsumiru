@@ -13,6 +13,7 @@ import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/source_repository/source_repository.dart';
+import '../../../domain/content_rating.dart';
 import '../../../domain/source/source_model.dart';
 
 part 'source_controller.g.dart';
@@ -30,10 +31,9 @@ Future<List<SourceDto>?> sourceList(Ref ref) =>
 AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
   return ref.watch(sourceListProvider).copyWithData(
-        (list) =>
-            // #138: legacy field, kept until a min server version is enforced.
-            // ignore: deprecated_member_use_from_same_package
-            list == null || showNsfw ? list : [...list.where((e) => !e.isNsfw)],
+        (list) => list == null || showNsfw
+            ? list
+            : [...list.where((e) => !isNsfwFromWarning(e.contentWarning))],
       );
 }
 

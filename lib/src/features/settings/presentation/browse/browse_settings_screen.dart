@@ -27,11 +27,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final serverSettings = ref.watch(settingsProvider);
     final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
-    final storeCapable =
-        ref.watch(extensionStoreSupportProvider).value ?? false;
-    final storeCount = storeCapable
-        ? ref.watch(extensionStoreListProvider).value?.totalCount
-        : null;
+    final storeCount = ref.watch(extensionStoreListProvider).value?.totalCount;
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.browse)),
       body: RefreshIndicator(
@@ -85,24 +81,16 @@ class BrowseSettingsScreen extends ConsumerWidget {
                   description: context.l10n.localSourceLocationDescription,
                   subtitle: browseSettings?.localSourcePath,
                 ),
-                if (storeCapable)
-                  ListTile(
-                    leading: const Icon(Icons.extension_rounded),
-                    title: Text(context.l10n.extensionStores),
-                    subtitle: Text(
-                      storeCount == null
-                          ? context.l10n.extensionStoresDescription
-                          : context.l10n.nStores(storeCount),
-                    ),
-                    onTap: () => const ExtensionStoreRoute().push(context),
-                  )
-                else
-                  ListTile(
-                    leading: const Icon(Icons.extension_rounded),
-                    title: Text(context.l10n.extensionStores),
-                    subtitle: Text(context.l10n.updateServerForExtensions),
-                    enabled: false,
+                ListTile(
+                  leading: const Icon(Icons.extension_rounded),
+                  title: Text(context.l10n.extensionStores),
+                  subtitle: Text(
+                    storeCount == null
+                        ? context.l10n.extensionStoresDescription
+                        : context.l10n.nStores(storeCount),
                   ),
+                  onTap: () => const ExtensionStoreRoute().push(context),
+                ),
               ],
             ],
           ),

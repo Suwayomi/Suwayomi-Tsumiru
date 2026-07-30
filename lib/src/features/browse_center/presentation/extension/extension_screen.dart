@@ -52,18 +52,6 @@ class ExtensionScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Extension management needs a store-capable server. On older servers,
-    // nudge to update rather than watching the list (its store-only query
-    // would error there). Pending probe shows a brief loader.
-    final storeCapable = ref.watch(extensionStoreSupportProvider).value;
-    if (storeCapable != true) {
-      return Center(
-        child: storeCapable == false
-            ? Emoticons(title: context.l10n.updateServerForExtensions)
-            : const CircularProgressIndicator(),
-      );
-    }
-
     final extensionMapData = ref.watch(extensionMapFilteredAndQueriedProvider);
 
     final extensionMap = {...?extensionMapData.value};

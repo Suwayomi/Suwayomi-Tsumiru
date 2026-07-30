@@ -13,12 +13,13 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 // ─────────────────────────── helpers ────────────────────────────
 
-Fragment$SourceDto _source({required bool isNsfw}) => Fragment$SourceDto(
+Fragment$SourceDto _source({required Enum$ContentWarning contentWarning}) =>
+    Fragment$SourceDto(
       displayName: 'Test Source',
       iconUrl: '',
       id: '1',
       isConfigurable: false,
-      isNsfw: isNsfw,
+      contentWarning: contentWarning,
       lang: 'en',
       name: 'Test Source',
       supportsLatest: false,
@@ -102,8 +103,10 @@ List<int> _filter(
 // ────────────────────────── tests ───────────────────────────────
 
 void main() {
-  final nsfw = _manga(id: 1, source: _source(isNsfw: true));
-  final sfw = _manga(id: 2, source: _source(isNsfw: false));
+  final nsfw =
+      _manga(id: 1, source: _source(contentWarning: Enum$ContentWarning.NSFW));
+  final sfw =
+      _manga(id: 2, source: _source(contentWarning: Enum$ContentWarning.SAFE));
   final noSource = _manga(id: 3); // source == null → treated as non-nsfw
 
   group('Lewd filter (mangaFilterLewd)', () {

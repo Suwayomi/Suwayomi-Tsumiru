@@ -53,9 +53,8 @@ class OfflineSync {
         sourceId: manga.source?.id,
         sourceName: manga.source?.name,
         sourceLang: manga.source?.lang,
-        // #138: legacy field, kept until a min server version is enforced.
-        // ignore: deprecated_member_use_from_same_package
-        sourceIsNsfw: manga.source?.isNsfw ?? false,
+        sourceContentWarning: manga.source?.contentWarning.name,
+        genre: manga.genre.isEmpty ? null : jsonEncode(manga.genre),
         status: manga.status.name,
         unreadCount: manga.unreadCount,
         downloadCount: manga.downloadCount,

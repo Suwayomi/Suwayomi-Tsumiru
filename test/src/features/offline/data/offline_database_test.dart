@@ -16,8 +16,8 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  test('opens at schema version 12', () {
-    expect(db.schemaVersion, 12);
+  test('opens at schema version 13', () {
+    expect(db.schemaVersion, 13);
   });
 
   test('inserts and reads a manga', () async {

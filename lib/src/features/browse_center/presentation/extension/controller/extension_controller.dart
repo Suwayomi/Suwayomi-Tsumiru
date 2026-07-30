@@ -13,6 +13,7 @@ import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/extension_repository/extension_repository.dart';
+import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 
 part 'extension_controller.g.dart';
@@ -32,9 +33,7 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   final extensionList = [...?extensionListData.value];
   final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
   for (final e in extensionList) {
-    // #138: legacy field, kept until a min server version is enforced.
-    // ignore: deprecated_member_use_from_same_package
-    if (!showNsfw && (e.isNsfw.ifNull())) continue;
+    if (!showNsfw && isNsfwFromWarning(e.contentWarning)) continue;
     if (e.isInstalled.ifNull()) {
       if (e.hasUpdate.ifNull()) {
         extensionMap.update(
