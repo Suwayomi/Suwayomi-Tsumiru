@@ -5,10 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/db_keys.dart';
@@ -18,8 +18,6 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/data/updates/updates_repository.dart';
 import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
-import 'dart:io';
-
 import 'background/background_download_controller_shim.dart';
 import 'background/background_download_lock.dart';
 import 'background/catchup_spec_writer.dart';
@@ -98,10 +96,14 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
         BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
     if (!await lock.acquire('handoff')) return;
     try {
-      final fresh = catchupStore.readLedger(catalogServerId);
+      // Re-open INSIDE the lock: open() reloads the prefs cache, so the read
+      // below cannot predate a worker write that slipped in before acquire.
+      final lockedStore = await CatchupStateStore.open();
+      final fresh = lockedStore.readLedger(catalogServerId);
+      if (fresh.pendingServerFetch.isEmpty) return;
       _awaitingServerDownloads.addAll(fresh.pendingServerFetch.values);
       await _persistAwaiting(container);
-      await catchupStore.writeLedger(
+      await lockedStore.writeLedger(
         catalogServerId,
         fresh.copyWith(
           pendingServerFetch: const {},
