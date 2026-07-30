@@ -118,7 +118,14 @@ class _ServerDownloads extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    return queueStatus.showUiWhenData(
+    // With nothing to show, a dead feed is still worth reporting — otherwise a
+    // broken socket over a working connection reads as an empty queue.
+    final feed = ref.watch(downloadUpdatesProvider);
+    final effectiveStatus = downloadsChapterIds.isBlank && feed.hasError
+        ? AsyncValue<DownloadStatusDto?>.error(
+            feed.error!, feed.stackTrace ?? StackTrace.current)
+        : queueStatus;
+    return effectiveStatus.showUiWhenData(
         context,
         (data) {
           if (data == null) {
@@ -146,6 +153,10 @@ class _ServerDownloads extends ConsumerWidget {
               ),
             );
           }
+        },
+        refresh: () {
+          ref.invalidate(downloadStatusProvider);
+          ref.invalidate(downloadUpdatesProvider);
         },
         showGenericError: true,
     );

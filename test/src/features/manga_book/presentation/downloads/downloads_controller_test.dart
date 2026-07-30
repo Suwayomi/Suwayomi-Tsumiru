@@ -20,10 +20,6 @@ GraphQLClient _dummyClient() =>
 /// Answers each queue fetch from a script, so a test can delay one response or
 /// make it fail. The last entry repeats once the script runs out.
 class _FakeRepo extends DownloadsRepository {
-  _FakeRepo.constant(DownloadStatusDto status)
-      : responses = [() async => status],
-        super(_dummyClient(), _dummyClient());
-
   _FakeRepo.scripted(this.responses) : super(_dummyClient(), _dummyClient());
 
   final List<Future<DownloadStatusDto?> Function()> responses;
@@ -153,11 +149,19 @@ void main() {
       // The server drops deltas past `maxUpdates` on a mass enqueue and expects
       // a re-fetch. The queue must survive that reload — an empty frame would
       // take the control down with it, which is the bug all over again.
-      final status = _status('STARTED', [
-        _queueItem(chapterId: 10, position: 0),
-        _queueItem(chapterId: 11, position: 1),
+      // The re-read returns a queue that has moved on, so the assertions can
+      // tell "applied" apart from "fetched and thrown away".
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+              _queueItem(chapterId: 11, position: 1),
+            ]),
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+              _queueItem(chapterId: 11, position: 1),
+              _queueItem(chapterId: 12, position: 2),
+            ]),
       ]);
-      final repo = _FakeRepo.constant(status);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
@@ -190,9 +194,54 @@ void main() {
       await pumpEventQueue();
 
       expect(repo.fetches, 2, reason: 'the dropped batch forces a re-fetch');
-      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+      expect(container.read(downloadsChapterIdsProvider), [10, 11, 12],
+          reason: 'the re-read is applied, not discarded');
       expect(seen, isNot(contains(0)),
           reason: 'the queue never went empty mid-reload');
+    });
+
+    test('a progress tick does not outrank an in-flight re-read', () async {
+      // The feed publishes roughly once a second while downloading. If those
+      // ticks counted as changes, a round-trip slower than the tick rate could
+      // never land and the queue would stay stale for good.
+      final one = _queueItem(chapterId: 10, position: 0);
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [one]),
+        () => slow.future,
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
+
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+
+      feed.add(_feedMessage(updates: [
+        {
+          'type': 'PROGRESS',
+          'download': _queueItem(chapterId: 10, position: 0),
+          '__typename': 'DownloadUpdate',
+        }
+      ]));
+      await pumpEventQueue();
+
+      slow.complete(_status('STARTED', [
+        one,
+        _queueItem(chapterId: 11, position: 1),
+      ]));
+      await pumpEventQueue();
+
+      expect(container.read(downloadsChapterIdsProvider), [10, 11],
+          reason: 'the re-read still lands despite the progress tick');
+      expect(repo.fetches, 2, reason: 'no pointless second re-read');
     });
 
     test('a slow re-fetch cannot resurrect a chapter dequeued mid-flight',

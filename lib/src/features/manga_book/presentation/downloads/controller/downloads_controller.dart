@@ -20,10 +20,16 @@ Future<DownloadStatusDto?> downloadStatus(Ref ref) =>
 class DownloadsMap extends _$DownloadsMap {
   void updateDownloadStatus(Fragment$DownloadUpdatesDto? downloadStatusDto) {
     final currState = {...?stateOrNull};
+    // Progress ticks arrive about once a second while anything is downloading.
+    // They move no chapter in or out, so they must not count as a change that
+    // outranks an in-flight re-read — otherwise a round-trip slower than the
+    // tick rate can never win the race and the queue stays stale for good.
+    var structural = downloadStatusDto?.initial?.isNotEmpty ?? false;
     for (final element in [...?downloadStatusDto?.initial]) {
       currState[element.chapter.id] = element;
     }
     for (final element in [...?downloadStatusDto?.updates]) {
+      if (element.type != DownloadUpdateType.PROGRESS) structural = true;
       switch (element.type) {
         case DownloadUpdateType.DEQUEUED:
         case DownloadUpdateType.FINISHED:
@@ -42,20 +48,26 @@ class DownloadsMap extends _$DownloadsMap {
       }
     }
     if (stateOrNull != null) {
-      _publish(currState);
+      _publish(currState, structural: structural);
     }
   }
 
   bool _reconciling = false;
   bool _restartRequested = false;
 
-  /// Bumped by every queue write. A re-read that started before the current
-  /// generation is older than what we already have, whatever its source.
+  /// Set once the server tells us it dropped updates, cleared only when a full
+  /// re-read has actually landed. Ordinary messages don't carry what was lost,
+  /// so until then the queue is known-incomplete and every message retries.
+  bool _reconcileNeeded = false;
+
+  /// Bumped by every write that changes which chapters are queued or where.
+  /// A re-read that started before the current generation is older than what
+  /// we already have, whatever its source.
   int _generation = 0;
 
-  void _publish(Map<int, DownloadDto> queue) {
+  void _publish(Map<int, DownloadDto> queue, {bool structural = true}) {
     state = queue;
-    _generation++;
+    if (structural) _generation++;
   }
 
   static const _maxReconcileAttempts = 3;
@@ -64,9 +76,12 @@ class DownloadsMap extends _$DownloadsMap {
   /// Single-flight, and re-reads rather than applying a snapshot that anything
   /// else has since moved past — a clear or a reorder landing mid-flight would
   /// otherwise be undone by the older answer (#313, and the #73 symptom).
-  Future<void> _reconcileQueue() async {
+  /// [moreDropped] means the server dropped another batch while this read was
+  /// out, so the answer in flight is already incomplete and has to be redone.
+  /// An ordinary message is not a reason to restart it.
+  Future<void> _reconcileQueue({bool moreDropped = false}) async {
     if (_reconciling) {
-      _restartRequested = true;
+      if (moreDropped) _restartRequested = true;
       return;
     }
     _reconciling = true;
@@ -79,17 +94,17 @@ class DownloadsMap extends _$DownloadsMap {
           fresh =
               await ref.read(downloadsRepositoryProvider).getDownloadStatus();
         } catch (_) {
-          // Transient; the next update message reconciles again.
-          return;
+          return; // _reconcileNeeded stays set, so the next message retries.
         }
         if (!ref.mounted) return;
         if (generation == _generation && !_restartRequested) {
           _publish(getStateFromUpdates(fresh));
+          _reconcileNeeded = false;
           return;
         }
       }
-      // Still losing the race after several tries; leave it to the next
-      // message rather than hammering a server that is clearly busy.
+      // Kept losing the race. Stop for now rather than hammering a busy
+      // server; _reconcileNeeded is still set, so the next message tries again.
     } finally {
       _reconciling = false;
     }
@@ -106,11 +121,13 @@ class DownloadsMap extends _$DownloadsMap {
         // Past `maxUpdates` the server drops the deltas and expects a re-fetch,
         // which any mass en/dequeue trips (#313). Refetch in place rather than
         // invalidating, so the queue doesn't blank out while it reloads.
-        if (next.value?.omittedUpdates ?? false) {
-          _reconcileQueue();
-          return;
+        final dropped = next.value?.omittedUpdates ?? false;
+        if (dropped) {
+          _reconcileNeeded = true;
+        } else {
+          updateDownloadStatus(next.value);
         }
-        updateDownloadStatus(next.value);
+        if (_reconcileNeeded) _reconcileQueue(moreDropped: dropped);
       });
     });
     final downloadStatusDto = ref.watch(downloadStatusProvider).value;
