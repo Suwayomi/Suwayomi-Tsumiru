@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
@@ -19,17 +21,105 @@ import 'offline_dto_mappers.dart';
 bool _shouldFallBack(Object e) =>
     isConnectionError(e is OperationMessageException ? e.exception : e);
 
+/// Bounds how long a fallback-capable read waits on the network once a
+/// catalog exists to serve instead — otherwise a hung request (airplane mode,
+/// a dead Cloudflare origin) burns the full client timeout before the catalog
+/// appears. TimeoutException counts as a connection error, so the fallback
+/// path takes over at the cap.
+const kOfflineFallbackFetchTimeout = Duration(seconds: 15);
+
+/// Runs [fetch], capped at [fetchTimeout] when [canServe] says this wrapper
+/// has something to fall back to. With nothing to serve, the cap would only
+/// turn a slow-but-working load into an error — so the full client timeout
+/// applies.
+Future<T> _boundedFetch<T>(
+  Future<T> Function() fetch,
+  Future<bool> Function() canServe,
+  Duration fetchTimeout,
+) async {
+  if (!await canServe()) return fetch();
+  return fetch().timeout(fetchTimeout);
+}
+
 /// Network-first read with on-device catalog fallback. Tries [fetch]; if it
 /// throws and offline is available with catalog data, returns the catalog
 /// mapped to the server DTO type. Otherwise rethrows the original error.
+///
+/// [offlineFirst] (the "View offline" button) skips the network and serves the
+/// catalog straight away — still reported as unreachable so the offline banner
+/// stays up.
 Future<List<MangaDto>?> libraryWithOfflineFallback({
   required Future<List<MangaDto>?> Function() fetch,
   required OfflineDatabase? db,
   required bool offlineEnabled,
   void Function(bool reachable)? onReachability,
+  Duration fetchTimeout = kOfflineFallbackFetchTimeout,
+  bool offlineFirst = false,
+  // Fired (synchronously, before return) when the result came from the
+  // catalog, not the server. Callers MUST NOT sync a catalog-served result
+  // back into the catalog: the DTO round-trip loses fields (lastReadAt,
+  // real chapter numbers) and would overwrite good rows with the echo.
+  void Function()? onCatalogServe,
 }) async {
+  // Null means nothing to serve, so callers rethrow the original network
+  // error (or fall through to it) rather than a synthetic one.
+  //
+  // Scoped to series with files on this device — the offline library is for
+  // reading, not browsing metadata. Everything else lives in Downloads → On
+  // device.
+  Future<List<MangaDto>?> serveCatalog() async {
+    final downloadedIds = await db!.mangaIdsWithDeviceDownloads();
+    if (downloadedIds.isEmpty) return null;
+    final rows = [
+      for (final m in await db.libraryManga())
+        if (downloadedIds.contains(m.id)) m,
+    ];
+    if (rows.isEmpty) return null;
+    final lastReadByManga = await db.lastReadAtByManga();
+    final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
+    // Load all category memberships in one pass keyed by mangaId
+    final categoryMap = <int, List<OfflineCategory>>{};
+    for (final m in rows) {
+      categoryMap[m.id] = await db.categoriesForManga(m.id);
+    }
+    // The manga column carries the server's Last-Read snapshot for every
+    // library entry; a chapter-row max can be newer when something was read
+    // offline since the last sync. Numeric max — both are epoch strings.
+    String? mergedLastRead(OfflineManga m) {
+      final fromChapters = int.tryParse(lastReadByManga[m.id] ?? '');
+      final fromManga = int.tryParse(m.lastReadAt ?? '');
+      final best = [
+        if (fromChapters != null) fromChapters,
+        if (fromManga != null) fromManga,
+      ];
+      if (best.isEmpty) return null;
+      return best.reduce((a, b) => a > b ? a : b).toString();
+    }
+
+    return [
+      for (final m in rows)
+        offlineMangaToDto(
+          m,
+          lastReadAt: mergedLastRead(m),
+          firstUnread: firstUnreadByManga[m.id],
+          offlineCategories: categoryMap[m.id] ?? [],
+        ),
+    ];
+  }
+
+  Future<bool> canServe() async =>
+      db != null && (await db.mangaIdsWithDeviceDownloads()).isNotEmpty;
+
+  if (offlineEnabled && offlineFirst && await canServe()) {
+    final served = await serveCatalog();
+    if (served != null) {
+      onReachability?.call(false);
+      onCatalogServe?.call();
+      return served;
+    }
+  }
   try {
-    final result = await fetch();
+    final result = await _boundedFetch(fetch, canServe, fetchTimeout);
     onReachability?.call(true);
     return result;
   } catch (e) {
@@ -38,24 +128,10 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     final connectionLost = _shouldFallBack(e);
     onReachability?.call(!connectionLost);
     if (!offlineEnabled || !connectionLost) rethrow;
-    final rows = await db!.libraryManga();
-    if (rows.isEmpty) rethrow;
-    final lastReadByManga = await db.lastReadAtByManga();
-    final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
-    // Load all category memberships in one pass keyed by mangaId
-    final categoryMap = <int, List<OfflineCategory>>{};
-    for (final m in rows) {
-      categoryMap[m.id] = await db.categoriesForManga(m.id);
-    }
-    return [
-      for (final m in rows)
-        offlineMangaToDto(
-          m,
-          lastReadAt: lastReadByManga[m.id],
-          firstUnread: firstUnreadByManga[m.id],
-          offlineCategories: categoryMap[m.id] ?? [],
-        ),
-    ];
+    final served = await serveCatalog();
+    if (served == null) rethrow;
+    onCatalogServe?.call();
+    return served;
   }
 }
 
@@ -64,16 +140,37 @@ Future<MangaDto?> mangaWithOfflineFallback({
   required OfflineDatabase? db,
   required bool offlineEnabled,
   required int mangaId,
+  Duration fetchTimeout = kOfflineFallbackFetchTimeout,
+  bool offlineFirst = false,
+  void Function()? onCatalogServe,
 }) async {
-  try {
-    return await fetch();
-  } catch (e) {
-    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
+  Future<MangaDto?> serveCatalog() async {
     final m = await db!.mangaById(mangaId);
-    if (m == null) rethrow;
+    if (m == null) return null;
     final count = (await db.chaptersForManga(mangaId)).length;
     final cats = await db.categoriesForManga(mangaId);
     return offlineMangaToDto(m, chapterCount: count, offlineCategories: cats);
+  }
+
+  Future<bool> canServe() async =>
+      db != null && await db.mangaById(mangaId) != null;
+
+  if (offlineEnabled && offlineFirst && db != null) {
+    final served = await serveCatalog();
+    if (served != null) {
+      onCatalogServe?.call();
+      return served;
+    }
+    // Not in the catalog (e.g. a browse result) — fall through to the network.
+  }
+  try {
+    return await _boundedFetch(fetch, canServe, fetchTimeout);
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
+    final served = await serveCatalog();
+    if (served == null) rethrow;
+    onCatalogServe?.call();
+    return served;
   }
 }
 
@@ -84,13 +181,27 @@ Future<ChapterDto?> chapterMetaWithOfflineFallback({
   required OfflineDatabase? db,
   required bool offlineEnabled,
   required int chapterId,
+  Duration fetchTimeout = kOfflineFallbackFetchTimeout,
+  bool offlineFirst = false,
+  void Function()? onCatalogServe,
 }) async {
+  Future<bool> canServe() async =>
+      db != null && await db.chapterById(chapterId) != null;
+
+  if (offlineEnabled && offlineFirst && db != null) {
+    final c = await db.chapterById(chapterId);
+    if (c != null) {
+      onCatalogServe?.call();
+      return offlineChapterToDto(c);
+    }
+  }
   try {
-    return await fetch();
+    return await _boundedFetch(fetch, canServe, fetchTimeout);
   } catch (e) {
     if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final c = await db!.chapterById(chapterId);
     if (c == null) rethrow;
+    onCatalogServe?.call();
     return offlineChapterToDto(c);
   }
 }
@@ -103,13 +214,16 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
   required Future<List<CategoryDto>?> Function() fetch,
   required OfflineDatabase? db,
   required bool offlineEnabled,
+  Duration fetchTimeout = kOfflineFallbackFetchTimeout,
+  bool offlineFirst = false,
+  void Function()? onCatalogServe,
 }) async {
-  try {
-    return await fetch();
-  } catch (e) {
-    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
-    final count = (await db!.libraryManga()).length;
-    if (count == 0) rethrow;
+  Future<List<CategoryDto>?> serveCatalog() async {
+    final downloadedIds = await db!.mangaIdsWithDeviceDownloads();
+    final count = (await db.libraryManga())
+        .where((m) => downloadedIds.contains(m.id))
+        .length;
+    if (count == 0) return null;
     final storedCats = await db.allOfflineCategories();
     if (storedCats.isNotEmpty) {
       return [
@@ -128,6 +242,26 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
     }
     return [offlineDefaultCategoryDto(count)];
   }
+
+  Future<bool> canServe() async =>
+      db != null && (await db.mangaIdsWithDeviceDownloads()).isNotEmpty;
+
+  if (offlineEnabled && offlineFirst && db != null) {
+    final served = await serveCatalog();
+    if (served != null) {
+      onCatalogServe?.call();
+      return served;
+    }
+  }
+  try {
+    return await _boundedFetch(fetch, canServe, fetchTimeout);
+  } catch (e) {
+    if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
+    final served = await serveCatalog();
+    if (served == null) rethrow;
+    onCatalogServe?.call();
+    return served;
+  }
 }
 
 Future<List<ChapterDto>?> chaptersWithOfflineFallback({
@@ -135,13 +269,27 @@ Future<List<ChapterDto>?> chaptersWithOfflineFallback({
   required OfflineDatabase? db,
   required bool offlineEnabled,
   required int mangaId,
+  Duration fetchTimeout = kOfflineFallbackFetchTimeout,
+  bool offlineFirst = false,
+  void Function()? onCatalogServe,
 }) async {
+  Future<bool> canServe() async =>
+      db != null && (await db.chaptersForManga(mangaId)).isNotEmpty;
+
+  if (offlineEnabled && offlineFirst && db != null) {
+    final rows = await db.chaptersForManga(mangaId);
+    if (rows.isNotEmpty) {
+      onCatalogServe?.call();
+      return [for (final c in rows) offlineChapterToDto(c)];
+    }
+  }
   try {
-    return await fetch();
+    return await _boundedFetch(fetch, canServe, fetchTimeout);
   } catch (e) {
     if (!offlineEnabled || !_shouldFallBack(e)) rethrow;
     final rows = await db!.chaptersForManga(mangaId);
     if (rows.isEmpty) rethrow;
+    onCatalogServe?.call();
     return [for (final c in rows) offlineChapterToDto(c)];
   }
 }

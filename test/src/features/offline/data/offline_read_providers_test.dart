@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
@@ -34,6 +35,10 @@ void main() {
     addTearDown(db.close);
     await db.upsertMangaMetadata(
         id: 1, title: 'Saved', updatedAt: DateTime(2026));
+    await db.upsertChapterMetadata(id: 901, mangaId: 1, name: 'dl901',
+        chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+        serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+    await db.setChapterDeviceState(901, OfflineDeviceState.downloaded, bytes: 1);
 
     final c = ProviderContainer(overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),

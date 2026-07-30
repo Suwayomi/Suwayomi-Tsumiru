@@ -14,6 +14,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
@@ -52,8 +53,9 @@ class GeneralScreen extends ConsumerWidget {
             title: Text(context.l10n.clearCache),
             onTap: () async {
               // The GraphQL cache is in-memory (and bypassed by noCache), so
-              // "clear cache" now means the image cache.
+              // "clear cache" now means the image caches: pages and covers.
               await DefaultCacheManager().emptyCache();
+              await ref.read(coverCacheManagerProvider).emptyCache();
               if (context.mounted) {
                 ref.read(toastProvider)?.show(context.l10n.cacheCleared);
               }

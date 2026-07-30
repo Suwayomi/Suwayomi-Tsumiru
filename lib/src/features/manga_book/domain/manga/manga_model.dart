@@ -23,6 +23,11 @@ extension MangaExtensions on MangaDto {
   MangaMeta get metaData => MangaMeta.fromJson(
       {for (final metaItem in meta) metaItem.key: metaItem.value});
 
+  /// Suwayomi's Local source has the fixed id "0". Its files already live on
+  /// the server, so server-download actions don't apply (Komikku hides them
+  /// for local/stub sources too — MangaScreen.kt gates on isLocalOrStub).
+  bool get isLocalSource => sourceId == '0';
+
   /// Whether this manga matches [query] under the library search DSL. Used by
   /// quick-search; the library list parses the query once instead (see
   /// applyLibraryFilterSort).

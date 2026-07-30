@@ -28,6 +28,7 @@ import 'src/features/migration/controller/bulk_migration_providers.dart';
 import 'src/features/notifications/controller/notifications_controller.dart';
 import 'src/features/notifications/data/background/notification_background_entry.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
+import 'src/features/offline/data/server_reachability.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_bootstrap.dart';
 import 'src/features/offline/data/offline_download_providers.dart';
@@ -273,6 +274,37 @@ Future<void> _startApp() async {
       try {
         await container.read(notificationsControllerProvider).sync();
       } catch (_) {}
+      // Push queued progress the moment the server comes back, not just on
+      // next cold launch. Registered before the offline gate: the flush no-ops
+      // while inactive and the catalog can activate later in the session. A
+      // transition landing mid-flush queues one re-run, so rows dirtied after
+      // the snapshot aren't stranded with no later transition to catch them.
+      var flushing = false;
+      var rerun = false;
+      void flush() {
+        if (flushing) {
+          rerun = true;
+          return;
+        }
+        flushing = true;
+        unawaited(pushPendingProgress(container).catchError((Object e) {
+          debugPrint('reconnect progress flush failed: $e');
+        }).whenComplete(() {
+          flushing = false;
+          if (rerun) {
+            rerun = false;
+            flush();
+          }
+        }));
+        // Desktop pump parks while offline; reconnect restarts it. (No-op on
+        // Android — the worker owns downloads there.)
+        final coordinator = container.read(offlineDownloadCoordinatorProvider);
+        if (coordinator != null) unawaited(coordinator.pumpDownloads());
+      }
+
+      container.listen<bool>(serverUnreachableProvider, (prev, next) {
+        if (prev == true && !next) flush();
+      });
       if (!container.read(offlineActiveProvider)) return;
       await pushPendingProgress(container);
       await reconcileAllAtLaunch(container);

@@ -5,7 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../features/offline/data/offline_repository.dart';
+import '../features/offline/data/server_reachability.dart';
 import '../routes/router_config.dart';
 import '../utils/extensions/custom_extensions.dart';
 import 'emoticons.dart';
@@ -16,15 +19,25 @@ import 'emoticons.dart';
 /// It points straight at Connection settings, the one screen where a wrong
 /// server URL is fixed, so a disconnected user is never stranded on a blank
 /// screen with no way forward.
-class ServerUnreachableView extends StatelessWidget {
-  const ServerUnreachableView({super.key, this.onRetry});
+class ServerUnreachableView extends ConsumerWidget {
+  const ServerUnreachableView({super.key, this.onRetry, this.offlineEscape = false});
 
   /// Optional retry (re-runs the failed query). Omitted where there's nothing
   /// to re-fetch.
   final VoidCallback? onRetry;
 
+  /// Offer the "View offline" pin. Only screens that honor the pin (the
+  /// library) pass true; elsewhere the button would silently flip a switch
+  /// the current screen ignores.
+  final bool offlineEscape;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The escape hatch belongs here as much as on the loading screen — a retry
+    // that fails lands on this view, and without it the user is stuck waiting
+    // out network windows with a perfectly good catalog on disk.
+    final hasCatalog =
+        ref.watch(offlineCatalogAvailableProvider).value ?? false;
     return Emoticons(
       iconData: Icons.cloud_off_rounded,
       title: context.l10n.serverUnreachableTitle,
@@ -38,11 +51,15 @@ class ServerUnreachableView extends StatelessWidget {
             icon: const Icon(Icons.settings_ethernet_rounded),
             label: Text(context.l10n.serverUnreachableAction),
           ),
-          if (onRetry != null)
-            TextButton(
-              onPressed: onRetry,
-              child: Text(context.l10n.refresh),
+          if (offlineEscape && hasCatalog)
+            TextButton.icon(
+              icon: const Icon(Icons.cloud_off_rounded),
+              label: Text(context.l10n.viewOffline),
+              onPressed: () =>
+                  ref.read(viewOfflineNowProvider.notifier).set(true),
             ),
+          if (onRetry != null)
+            TextButton(onPressed: onRetry, child: Text(context.l10n.refresh)),
         ],
       ),
     );

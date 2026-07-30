@@ -24,7 +24,9 @@ import '../../../manga_book/presentation/manga_details/widgets/edit_manga_catego
 import '../../../migration/domain/migration_models.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
+import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/keep_rule_picker.dart';
+import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_manga_list.dart';
@@ -36,8 +38,9 @@ class CategoryMangaList extends HookConsumerWidget {
   final int categoryId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final provider =
-        categoryMangaListWithQueryAndFilterProvider(categoryId: categoryId);
+    final provider = categoryMangaListWithQueryAndFilterProvider(
+      categoryId: categoryId,
+    );
     final mangaList = ref.watch(provider);
     refresh() => ref.invalidate(categoryMangaListProvider(categoryId));
     useEffect(() {
@@ -74,10 +77,22 @@ class CategoryMangaList extends HookConsumerWidget {
       final ids = selection.value.toList();
       selection.value = const {};
       final repo = ref.read(mangaBookRepositoryProvider);
+      final offlineDb = ref.read(offlineReadDatabaseProvider);
       var allOk = true;
       for (final id in ids) {
-        final chapters = await repo.getChapterList(id);
-        final cids = <int>[for (final c in chapters ?? const []) c.id];
+        // Server first; offline, fall back to the catalog chapter rows
+        // instead of failing the whole series silently.
+        List<int> cids;
+        try {
+          final chapters = await repo.getChapterList(id);
+          cids = <int>[for (final c in chapters ?? const []) c.id];
+        } catch (_) {
+          if (offlineDb == null) {
+            allOk = false;
+            continue;
+          }
+          cids = [for (final c in await offlineDb.chaptersForManga(id)) c.id];
+        }
         if (cids.isNotEmpty) {
           // Offline-aware write-through: the local rows are updated first (so
           // the change survives offline + restart and keeps Resume truthful),
@@ -87,12 +102,14 @@ class CategoryMangaList extends HookConsumerWidget {
           // Marking a whole series read here bypasses the reader, so push the
           // new progress to the bound tracker(s) explicitly (manual path).
           if (read && ok) {
-            unawaited(maybeTrackProgressOnReadFetch(
-              ref,
-              mangaId: id,
-              isRead: true,
-              manual: true,
-            ));
+            unawaited(
+              maybeTrackProgressOnReadFetch(
+                ref,
+                mangaId: id,
+                isRead: true,
+                manual: true,
+              ),
+            );
           }
         }
       }
@@ -104,166 +121,186 @@ class CategoryMangaList extends HookConsumerWidget {
       // surface it instead of a false success. (An offline-active failure is
       // queued locally and up-syncs later, so the success message still holds.)
       if (!allOk && !ref.read(offlineActiveProvider)) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.l10n.errorSomethingWentWrong),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
+        );
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(read
-            ? 'Marked ${ids.length} series read'
-            : 'Marked ${ids.length} series unread'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            read
+                ? 'Marked ${ids.length} series read'
+                : 'Marked ${ids.length} series unread',
+          ),
+        ),
+      );
     }
 
     return mangaList.showUiWhenData(
-      context,
-      (data) {
-        if (data.isBlank) {
-          return Emoticons(
-            title: context.l10n.noCategoryMangaFound,
-            button: TextButton(
-              onPressed: refresh,
-              child: Text(context.l10n.refresh),
-            ),
-          );
-        }
-        final items = data!;
-        final Widget grid = LibraryMangaGridView(
-          items: items,
-          selection: selection.value,
-          onOpen: open,
-          onLongPress: (manga) => toggle(manga.id),
-        );
-
-        final list = RefreshIndicator(
-          // Pull = "check this category for new chapters, and pull down the
-          // latest" (Mihon/Komikku parity). The source-check runs server-side
-          // and the progress banner reflects it, so the spinner only waits on
-          // the immediate re-read, not the whole update. The standing rule in
-          // LibraryScreen re-reads again when the update finishes.
-          onRefresh: () async {
-            ref.read(updateOptimisticProvider.notifier).arm();
-            unawaited(ref
-                .read(updatesRepositoryProvider)
-                .fetchUpdates(categoryId: categoryId)
-                .catchError((Object _) {}));
-            ref.invalidate(libraryMangaListProvider);
-            await ref.read(libraryMangaListProvider.future);
-          },
-          child: grid,
-        );
-
-        // While selecting, swallow the system back to exit selection first, and
-        // show a contextual action bar over the grid.
-        return PopScope(
-          canPop: !selecting,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) selection.value = const {};
-          },
-          child: Stack(
-            children: [
-              list,
-              if (selecting)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _SelectionBar(
-                    count: selection.value.length,
-                    onSelectAll: () =>
-                        selection.value = {for (final m in items) m.id},
-                    onClear: () => selection.value = const {},
-                    onMarkRead: () => markSelection(true),
-                    onMarkUnread: () => markSelection(false),
-                    onKeepOffline: () async {
-                      final ids = selection.value.toList();
-                      // Let the user choose how much to keep (next-N / all-unread
-                      // / all) instead of silently downloading every chapter —
-                      // picking "all" across a read library can queue thousands.
-                      final picked = await pickOfflineKeepRule(context);
-                      if (picked == null) return;
-                      if (ids.length > 1 &&
-                          context.mounted &&
-                          !await confirmBulkDownload(context,
-                              summary: '${ids.length} series',
-                              toDevice: true)) {
-                        return;
-                      }
-                      selection.value = const {};
-                      final db = ref.read(offlineDatabaseProvider);
-                      for (final id in ids) {
-                        await db.setKeepRule(id, picked.rule, picked.count);
-                        await reconcileMangaWidget(ref, id);
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Keeping ${ids.length} series offline'),
-                        ));
-                      }
-                    },
-                    onDownloadToServer: () async {
-                      final ids = selection.value.toList();
-                      if (ids.length > 1 &&
-                          !await confirmBulkDownload(context,
-                              summary: '${ids.length} series',
-                              toDevice: false)) {
-                        return;
-                      }
-                      selection.value = const {};
-                      final repo = ref.read(mangaBookRepositoryProvider);
-                      final dl = ref.read(downloadsRepositoryProvider);
-                      for (final id in ids) {
-                        final chapters = await repo.getChapterList(id);
-                        final chapterIds = <int>[
-                          for (final c in chapters ?? const []) c.id,
-                        ];
-                        if (chapterIds.isNotEmpty) {
-                          await dl.addChaptersBatchToDownloadQueue(chapterIds);
-                        }
-                      }
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(
-                              'Downloading ${ids.length} series to server'),
-                        ));
-                      }
-                    },
-                    onEditCategories: () async {
-                      final selected = items
-                          .where((m) => selection.value.contains(m.id))
-                          .toList();
-                      if (selected.isEmpty) return;
-                      selection.value = const {};
-                      // One series → the per-series toggle dialog; many → the
-                      // bulk tri-state dialog.
-                      await showDialog<void>(
-                        context: context,
-                        builder: (context) => selected.length == 1
-                            ? EditMangaCategoryDialog(
-                                mangaId: selected.first.id,
-                                title: selected.first.title,
-                              )
-                            : EditMangasCategoryDialog(mangas: selected),
-                      );
-                      refresh();
-                    },
-                    onMigrate: () {
-                      final ids = selection.value.toList();
-                      if (ids.isEmpty) return;
-                      selection.value = const {};
-                      MigrationBulkConfigRoute(
-                        $extra: MigrationBulkConfigData(mangaIds: ids),
-                      ).push(context);
-                    },
-                  ),
-                ),
-            ],
+        // Own loading state per tab, so the offline escape hatch needs to
+        // live here too, not only on the library-level gates.
+        loadingWidget: const OfflineViewLoading(),
+        offlineEscapeHatch: true,
+        context, (data) {
+      if (data.isBlank) {
+        return Emoticons(
+          title: context.l10n.noCategoryMangaFound,
+          button: TextButton(
+            onPressed: refresh,
+            child: Text(context.l10n.refresh),
           ),
         );
-      },
-      refresh: refresh,
-    );
+      }
+      final items = data!;
+      final Widget grid = LibraryMangaGridView(
+        items: items,
+        selection: selection.value,
+        onOpen: open,
+        onLongPress: (manga) => toggle(manga.id),
+      );
+
+      final list = RefreshIndicator(
+        // Pull = "check this category for new chapters, and pull down the
+        // latest" (Mihon/Komikku parity). The source-check runs server-side
+        // and the progress banner reflects it, so the spinner only waits on
+        // the immediate re-read, not the whole update. The standing rule in
+        // LibraryScreen re-reads again when the update finishes.
+        onRefresh: () async {
+          // A pull means "try the server again" — drop the offline pin.
+          // Only a user gesture clears it; the mount effect must not.
+          ref.read(viewOfflineNowProvider.notifier).set(false);
+          ref.read(serverUnreachableProvider.notifier).set(false);
+          ref.read(updateOptimisticProvider.notifier).arm();
+          unawaited(
+            ref
+                .read(updatesRepositoryProvider)
+                .fetchUpdates(categoryId: categoryId)
+                .catchError((Object _) {}),
+          );
+          ref.invalidate(libraryMangaListProvider);
+          await ref.read(libraryMangaListProvider.future);
+        },
+        child: grid,
+      );
+
+      // While selecting, swallow the system back to exit selection first, and
+      // show a contextual action bar over the grid.
+      return PopScope(
+        canPop: !selecting,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) selection.value = const {};
+        },
+        child: Stack(
+          children: [
+            list,
+            if (selecting)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: _SelectionBar(
+                  count: selection.value.length,
+                  onSelectAll: () =>
+                      selection.value = {for (final m in items) m.id},
+                  onClear: () => selection.value = const {},
+                  onMarkRead: () => markSelection(true),
+                  onMarkUnread: () => markSelection(false),
+                  onKeepOffline: () async {
+                    final ids = selection.value.toList();
+                    // Let the user choose how much to keep (next-N / all-unread
+                    // / all) instead of silently downloading every chapter —
+                    // picking "all" across a read library can queue thousands.
+                    final picked = await pickOfflineKeepRule(context);
+                    if (picked == null) return;
+                    if (ids.length > 1 &&
+                        context.mounted &&
+                        !await confirmBulkDownload(
+                          context,
+                          summary: '${ids.length} series',
+                          toDevice: true,
+                        )) {
+                      return;
+                    }
+                    selection.value = const {};
+                    final db = ref.read(offlineDatabaseProvider);
+                    for (final id in ids) {
+                      await db.setKeepRule(id, picked.rule, picked.count);
+                      await reconcileMangaWidget(ref, id);
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Keeping ${ids.length} series offline'),
+                        ),
+                      );
+                    }
+                  },
+                  onDownloadToServer: () async {
+                    final ids = selection.value.toList();
+                    if (ids.length > 1 &&
+                        !await confirmBulkDownload(
+                          context,
+                          summary: '${ids.length} series',
+                          toDevice: false,
+                        )) {
+                      return;
+                    }
+                    selection.value = const {};
+                    final repo = ref.read(mangaBookRepositoryProvider);
+                    final dl = ref.read(downloadsRepositoryProvider);
+                    for (final id in ids) {
+                      final chapters = await repo.getChapterList(id);
+                      final chapterIds = <int>[
+                        for (final c in chapters ?? const []) c.id,
+                      ];
+                      if (chapterIds.isNotEmpty) {
+                        await dl.addChaptersBatchToDownloadQueue(chapterIds);
+                      }
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Downloading ${ids.length} series to server',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  onEditCategories: () async {
+                    final selected = items
+                        .where((m) => selection.value.contains(m.id))
+                        .toList();
+                    if (selected.isEmpty) return;
+                    selection.value = const {};
+                    // One series → the per-series toggle dialog; many → the
+                    // bulk tri-state dialog.
+                    await showDialog<void>(
+                      context: context,
+                      builder: (context) => selected.length == 1
+                          ? EditMangaCategoryDialog(
+                              mangaId: selected.first.id,
+                              title: selected.first.title,
+                            )
+                          : EditMangasCategoryDialog(mangas: selected),
+                    );
+                    refresh();
+                  },
+                  onMigrate: () {
+                    final ids = selection.value.toList();
+                    if (ids.isEmpty) return;
+                    selection.value = const {};
+                    MigrationBulkConfigRoute(
+                      $extra: MigrationBulkConfigData(mangaIds: ids),
+                    ).push(context);
+                  },
+                ),
+              ),
+          ],
+        ),
+      );
+    }, refresh: refresh);
   }
 }
 
@@ -293,17 +330,13 @@ class _SelectionBar extends StatelessWidget {
   final VoidCallback onMigrate;
 
   PopupMenuItem<VoidCallback> _moreItem(
-          IconData icon, String label, VoidCallback onTap) =>
-      PopupMenuItem<VoidCallback>(
-        value: onTap,
-        child: Row(
-          children: [
-            Icon(icon),
-            const SizedBox(width: 12),
-            Text(label),
-          ],
-        ),
-      );
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) => PopupMenuItem<VoidCallback>(
+    value: onTap,
+    child: Row(children: [Icon(icon), const SizedBox(width: 12), Text(label)]),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -347,7 +380,10 @@ class _SelectionBar extends StatelessWidget {
             _moreItem(Icons.select_all_rounded, 'Select all', onSelectAll),
             _moreItem(Icons.save_alt_rounded, 'Keep on device', onKeepOffline),
             _moreItem(
-                Icons.swap_horiz, context.l10n.bulkMigrationTitle, onMigrate),
+              Icons.swap_horiz,
+              context.l10n.bulkMigrationTitle,
+              onMigrate,
+            ),
           ],
         ),
       ],

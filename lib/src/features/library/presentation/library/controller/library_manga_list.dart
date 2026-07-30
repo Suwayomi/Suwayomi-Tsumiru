@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../features/offline/data/offline_cover_warmer.dart';
 import '../../../../../features/offline/data/offline_read_fallback.dart';
 import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
@@ -22,26 +23,48 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   // Captured before the await; touching ref after the async gap throws if this
-  // provider was disposed mid-build. The keepAlive notifier outlives it.
+  // provider was disposed mid-build. The keepAlive notifiers outlive it.
   final reachability = ref.read(serverUnreachableProvider.notifier);
   final sync = ref.read(offlineSyncProvider);
+  final coverWarmer = ref.read(offlineCoverWarmerProvider.notifier);
+  // Set synchronously by the fallback before it returns, so the warm below can
+  // skip its pointless-offline pass without re-reading provider state.
+  var serverReachable = true;
   final list = await libraryWithOfflineFallback(
     fetch: () => categoryRepository.getAllLibraryMangas(),
     // Only read the native-only DB when offline is available (never on web).
     db: offlineDb,
     offlineEnabled: offlineDb != null,
+    offlineFirst:
+        ref.watch(viewOfflineNowProvider) ||
+        ref.watch(serverUnreachableProvider),
     // Riverpod forbids modifying another provider while this one is building,
     // so defer the flip to a later tick (past the build) and ignore it if the
     // container is already gone.
-    onReachability: (reachable) => Future(() {
-      try {
-        reachability.set(!reachable);
-      } catch (_) {}
-    }),
+    onReachability: (reachable) {
+      serverReachable = reachable;
+      Future(() {
+        try {
+          reachability.set(!reachable);
+        } catch (_) {}
+      });
+    },
   );
-  if (sync != null && list != null) {
-    for (final manga in list) {
-      unawaited(sync.syncManga(manga));
+  if (list != null) {
+    // Everything below mirrors server state into the catalog — a
+    // catalog-served fallback list is an echo of the catalog itself, and
+    // syncing it back would overwrite real rows with the DTO round-trip's
+    // lossy fields (lastReadAt, chapter numbers).
+    if (sync != null && serverReachable) {
+      for (final manga in list) {
+        unawaited(sync.syncManga(manga));
+      }
+      unawaited(sync.pruneRemovedLibraryManga(list));
+    }
+    // Top up missing library covers in the durable cover cache, so a series
+    // never opened still has its cover when the server is unreachable.
+    if (serverReachable) {
+      unawaited(coverWarmer.warmLibraryCovers(list));
     }
   }
   return list;

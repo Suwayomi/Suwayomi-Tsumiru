@@ -14,7 +14,8 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
 
-Widget _host(AsyncValue<int> async, {VoidCallback? refresh}) => MaterialApp(
+Widget _host(AsyncValue<int> async, {VoidCallback? refresh}) => ProviderScope(
+    child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -24,7 +25,7 @@ Widget _host(AsyncValue<int> async, {VoidCallback? refresh}) => MaterialApp(
                   refresh: refresh),
         ),
       ),
-    );
+    ));
 
 // A genuine unreachable-server failure as it arrives in the app: the GraphQL
 // wrapper around a ServerException whose cause is a socket error.
