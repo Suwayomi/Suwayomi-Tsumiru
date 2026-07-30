@@ -23,6 +23,10 @@ extension MangaExtensions on MangaDto {
   MangaMeta get metaData => MangaMeta.fromJson(
       {for (final metaItem in meta) metaItem.key: metaItem.value});
 
+  /// Chapters finished. The server reports the total and the unread count, not
+  /// this, so it has to be derived.
+  int get readChapterCount => chapters.totalCount - unreadCount;
+
   /// Suwayomi's Local source has the fixed id "0". Its files already live on
   /// the server, so server-download actions don't apply (Komikku hides them
   /// for local/stub sources too — MangaScreen.kt gates on isLocalOrStub).

@@ -651,13 +651,16 @@ Future<void> pushPendingProgress(
         if (serverAhead) {
           pushProgress = false;
           pushReadState = false;
-          if (c.progressDirty) {
-            await db.clearProgressDirtyIfUnchanged(c.id,
-                lastPageRead: c.lastPageRead);
-          }
-          if (c.readStateDirty) {
-            await db.clearReadStateDirtyIfUnchanged(c.id, isRead: c.isRead);
-          }
+          // The local change lost, so settle the whole row to the state we
+          // just fetched — not merely drop the flags, which would leave the
+          // stale local values (and their unread correction) frozen in place.
+          await db.adoptServerReadState(
+            c.id,
+            expectedIsRead: c.isRead,
+            expectedLastPageRead: c.lastPageRead,
+            serverIsRead: serverRead,
+            serverLastPageRead: server.lastPageRead.getValueOnNullOrNegative(),
+          );
         }
       }
     }

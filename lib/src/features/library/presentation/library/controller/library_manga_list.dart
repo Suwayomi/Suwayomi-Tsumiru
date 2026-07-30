@@ -27,11 +27,20 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   final reachability = ref.read(serverUnreachableProvider.notifier);
   final sync = ref.read(offlineSyncProvider);
   final coverWarmer = ref.read(offlineCoverWarmerProvider.notifier);
-  // Set synchronously by the fallback before it returns, so the warm below can
-  // skip its pointless-offline pass without re-reading provider state.
+  // Ordered against push acks: captured before the fetch goes out.
+  final fetchGen = sync?.syncGeneration ?? 0;
+  // Mirror only genuine server responses. Fallback DTOs are catalog echoes:
+  // they already carry the unread correction (double-applied if written
+  // back), and the DTO round-trip loses lastReadAt and real chapter numbers.
+  var fromServer = false;
+  // Kept for the reachability flip below; fromServer is the mirror gate.
   var serverReachable = true;
   final list = await libraryWithOfflineFallback(
-    fetch: () => categoryRepository.getAllLibraryMangas(),
+    fetch: () async {
+      final r = await categoryRepository.getAllLibraryMangas();
+      fromServer = true;
+      return r;
+    },
     // Only read the native-only DB when offline is available (never on web).
     db: offlineDb,
     offlineEnabled: offlineDb != null,
@@ -50,22 +59,16 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
       });
     },
   );
-  if (list != null) {
-    // Everything below mirrors server state into the catalog — a
-    // catalog-served fallback list is an echo of the catalog itself, and
-    // syncing it back would overwrite real rows with the DTO round-trip's
-    // lossy fields (lastReadAt, chapter numbers).
-    if (sync != null && serverReachable) {
+  if (list != null && fromServer) {
+    if (sync != null) {
       for (final manga in list) {
-        unawaited(sync.syncManga(manga));
+        unawaited(sync.syncManga(manga, fetchedAtGen: fetchGen));
       }
       unawaited(sync.pruneRemovedLibraryManga(list));
     }
     // Top up missing library covers in the durable cover cache, so a series
     // never opened still has its cover when the server is unreachable.
-    if (serverReachable) {
-      unawaited(coverWarmer.warmLibraryCovers(list));
-    }
+    unawaited(coverWarmer.warmLibraryCovers(list));
   }
   return list;
 }
