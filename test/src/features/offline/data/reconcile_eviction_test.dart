@@ -30,6 +30,28 @@ void main() {
     expect(r.overCapWarning, false);
   });
 
+  test('session-read chapters dodge rule eviction', () {
+    final r = applySafetyNets(
+      downloaded: [dl(1), dl(2)], desired: {1}, nets: SafetyNetConfig.off,
+      now: now, protected: {2});
+    expect(r.evict, isEmpty,
+        reason: 'a chapter read this session must survive its manga\'s '
+            'keep-rule until the next launch');
+  });
+
+  test('storage cap still evicts session-read chapters', () {
+    final nets = SafetyNetConfig(timeEvictEnabled: false, keepDays: 30,
+        storageCapEnabled: true, storageCapBytes: 150);
+    final r = applySafetyNets(
+      downloaded: [
+        dl(1, bytes: 100, at: DateTime(2026, 1, 1)),
+        dl(2, bytes: 100, at: DateTime(2026, 1, 2)),
+      ],
+      desired: {2}, nets: nets, now: now, protected: {1});
+    expect(r.evict, {1},
+        reason: 'session protection yields to space pressure');
+  });
+
   test('never evicts pinned, even if not desired', () {
     final r = applySafetyNets(
       downloaded: [dl(1, pinned: true)], desired: {}, nets: SafetyNetConfig.off, now: now);

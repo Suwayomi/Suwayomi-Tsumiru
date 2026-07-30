@@ -30,17 +30,23 @@ Set<int> desiredChapterIds(
 
 /// Decide evictions over the currently-downloaded set, honoring precedence:
 /// pinned > safety-nets > rule. Pinned chapters are never evicted.
+/// [protected] chapters (read this session) dodge the rule eviction only —
+/// the time and storage nets still apply, since those exist for space
+/// pressure, not the rolling unread window.
 ({Set<int> evict, bool overCapWarning}) applySafetyNets({
   required List<OfflineChapter> downloaded,
   required Set<int> desired,
   required SafetyNetConfig nets,
   required DateTime now,
+  Set<int> protected = const {},
 }) {
   final evict = <int>{};
 
   // 1) Not wanted by any rule and not pinned.
   for (final c in downloaded) {
-    if (!c.pinned && !desired.contains(c.id)) evict.add(c.id);
+    if (!c.pinned && !desired.contains(c.id) && !protected.contains(c.id)) {
+      evict.add(c.id);
+    }
   }
 
   // 2) Time-net: non-pinned older than keepDays.

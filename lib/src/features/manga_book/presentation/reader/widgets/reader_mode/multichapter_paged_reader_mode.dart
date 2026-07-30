@@ -246,10 +246,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         completedChapterIds.value = {...completedChapterIds.value, chapterId};
         unawaited(maybeTrackProgressOnReadFetch(ref,
             mangaId: manga.id, isRead: true, manual: false));
-        unawaited(maybeDeleteOnReadLocal(ref,
-            mangaId: manga.id, readChapterId: chapterId));
-        unawaited(maybeDeleteOnReadServer(ref,
-            mangaId: manga.id, readChapterId: chapterId));
+        unawaited(noteChapterFinishedInReader(ref,
+            mangaId: manga.id, chapterId: chapterId));
       }
       // Fired off a scroll/visibility notification — defer past the frame or
       // it trips the Riverpod-3 modify-during-build assert.
@@ -759,15 +757,10 @@ void _markChapterRead(
       isRead: true,
       manual: false,
     ));
-    unawaited(maybeDeleteOnReadLocal(
+    unawaited(noteChapterFinishedInReader(
       ref,
       mangaId: mangaId,
-      readChapterId: chapter.id,
-    ));
-    unawaited(maybeDeleteOnReadServer(
-      ref,
-      mangaId: mangaId,
-      readChapterId: chapter.id,
+      chapterId: chapter.id,
     ));
   }));
   // Deliberately do NOT invalidate chapterProvider / mangaChapterList here —

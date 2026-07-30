@@ -100,7 +100,7 @@ void main() {
         ),
       );
 
-      final pending = whileReadingDeleteTarget(captured, 1, 33, 2);
+      final pending = whileReadingDeleteTarget(captured.read, 1, 33, 2);
       slow.gate.complete(chapters);
       await tester.pump();
 

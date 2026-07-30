@@ -286,17 +286,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ),
         );
         unawaited(
-          maybeDeleteOnReadLocal(
+          noteChapterFinishedInReader(
             ref,
             mangaId: manga.id,
-            readChapterId: chapterId,
-          ),
-        );
-        unawaited(
-          maybeDeleteOnReadServer(
-            ref,
-            mangaId: manga.id,
-            readChapterId: chapterId,
+            chapterId: chapterId,
           ),
         );
       }
@@ -1360,21 +1353,13 @@ void _markChapterRead(
           manual: false,
         ),
       );
-      // The chapter just crossed is behind the reader now → auto-delete it (both
-      // the on-device copy and, per the server settings, the server copy). Each
-      // no-ops if its own setting is off.
+      // The chapter just crossed is behind the reader now — queue its
+      // auto-delete for reader exit (Komikku's timing).
       unawaited(
-        maybeDeleteOnReadLocal(
+        noteChapterFinishedInReader(
           ref,
           mangaId: mangaId,
-          readChapterId: chapter.id,
-        ),
-      );
-      unawaited(
-        maybeDeleteOnReadServer(
-          ref,
-          mangaId: mangaId,
-          readChapterId: chapter.id,
+          chapterId: chapter.id,
         ),
       );
     }),
