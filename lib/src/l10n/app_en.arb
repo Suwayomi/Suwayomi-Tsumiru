@@ -2813,6 +2813,10 @@
         "description": "Series offline button label when the series has downloads on this device"
     },
     "offlineSheetTitle": "Offline reading",
+    "viewOffline": "View offline",
+    "@viewOffline": {
+        "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
+    },
     "offlineSheetSubtitle": "Keep chapters downloaded on this device, topped up automatically as you read. Separate from server downloads (the cloud icon up top).",
     "offlineDownloadAll": "Download all chapters",
     "@offlineDownloadAll": {

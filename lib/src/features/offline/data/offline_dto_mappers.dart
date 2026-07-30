@@ -39,7 +39,14 @@ MangaDto offlineMangaToDto(
   String? lastReadAt,
   OfflineChapter? firstUnread,
   List<OfflineCategory> offlineCategories = const [],
+  int unsyncedReadDelta = 0,
 }) {
+  // A row mirrored before totalChapters existed stores zero, so fall back to
+  // the chapters actually on hand. Used for both the reported total and the
+  // unread bound below — clamping against the raw zero would force unread to
+  // zero and make the series look fully read.
+  final effectiveTotal = m.totalChapters > 0 ? m.totalChapters : chapterCount;
+
   // Restore source from stored columns
   final Fragment$SourceDto? source = m.sourceId == null
       ? null
@@ -119,8 +126,7 @@ MangaDto offlineMangaToDto(
     title: m.title,
     thumbnailUrl: m.thumbnailUrl,
     bookmarkCount: m.bookmarkCount,
-    chapters: Fragment$MangaDto$chapters(
-        totalCount: m.totalChapters > 0 ? m.totalChapters : chapterCount),
+    chapters: Fragment$MangaDto$chapters(totalCount: effectiveTotal),
     downloadCount: m.downloadCount,
     // The next unread chapter that's downloaded on this device, if any. Drives
     // the offline "continue reading" button — left null (button hidden) when
@@ -155,16 +161,33 @@ MangaDto offlineMangaToDto(
           ),
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
-    meta: const <Fragment$MangaDto$meta>[],
+    meta: [
+      for (final e in _decodeMeta(m.metaJson).entries)
+        Fragment$MangaDto$meta(key: e.key, value: e.value),
+    ],
     source: source,
     sourceId: m.sourceId ?? '0',
     status: status,
     categories: Fragment$MangaDto$categories(nodes: categoryNodes),
     trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-    unreadCount: m.unreadCount,
+    // The stored count is the server's, so it does not move when you read
+    // offline. Add back what this device has changed since the server last
+    // reported, measured per chapter against its synced baseline — exact in
+    // both directions, and correct for a partial mirror because each row
+    // carries its own before-and-after.
+    unreadCount: (m.unreadCount - unsyncedReadDelta).clamp(0, effectiveTotal),
     updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
     url: '',
   );
+}
+
+Map<String, String> _decodeMeta(String? metaJson) {
+  if (metaJson == null || metaJson.isEmpty) return const {};
+  try {
+    return Map<String, String>.from(jsonDecode(metaJson) as Map);
+  } catch (_) {
+    return const {};
+  }
 }
 
 /// Build a [ChapterDto] from an on-device catalog row (offline fallback).

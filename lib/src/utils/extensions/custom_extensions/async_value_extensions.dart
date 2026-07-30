@@ -44,6 +44,11 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     // anything the user had open (e.g. the library organizer's endDrawer). Pass
     // true to keep the previous data on screen.
     bool skipLoadingOnReload = false,
+    Widget? loadingWidget,
+    // Offer "View offline" on the unreachable view. Only for screens that
+    // actually honor the offline pin (the library) — elsewhere the button
+    // would flip a switch this screen ignores.
+    bool offlineEscapeHatch = false,
   }) {
     if (addScaffoldWrapper) {
       wrapper = (body) => Scaffold(appBar: AppBar(), body: body);
@@ -60,7 +65,9 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
             error is OperationMessageException ? error.exception : error;
         if (isConnectionError(unwrapped)) {
           return AppUtils.wrapOn(
-              wrapper, ServerUnreachableView(onRetry: refresh));
+              wrapper,
+              ServerUnreachableView(
+                  onRetry: refresh, offlineEscape: offlineEscapeHatch));
         }
         return AppUtils.wrapOn(
             wrapper,
@@ -76,8 +83,8 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
                   : null,
             ));
       },
-      loading: () =>
-          AppUtils.wrapOn(wrapper, const CenterSorayomiShimmerIndicator()),
+      loading: () => AppUtils.wrapOn(
+          wrapper, loadingWidget ?? const CenterSorayomiShimmerIndicator()),
     );
   }
 

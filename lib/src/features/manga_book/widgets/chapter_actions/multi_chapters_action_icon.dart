@@ -96,6 +96,15 @@ class MultiChaptersActionIcon extends ConsumerWidget {
         // honour the delete-on-manual-read setting — keyed off each chapter's
         // own mangaId, so a multi-manga selection (updates screen) syncs them
         // all instead of being silently skipped.
+        if (change.isRead == true) {
+          // Local delete is purely local: run it even if the server push is
+          // still pending, or offline reads leave the copy stranded.
+          for (final entry in expandedByManga.entries) {
+            for (final id in entry.value) {
+              unawaited(maybeDeleteOnManualLocal(ref, chapterId: id));
+            }
+          }
+        }
         if (ok && change.isRead == true) {
           for (final mangaId in {for (final c in chapters) c.mangaId}) {
             unawaited(maybeTrackProgressOnReadFetch(
@@ -108,7 +117,6 @@ class MultiChaptersActionIcon extends ConsumerWidget {
           // Expanded set: hidden duplicates get delete-on-manual-read too.
           for (final entry in expandedByManga.entries) {
             for (final id in entry.value) {
-              unawaited(maybeDeleteOnManualLocal(ref, chapterId: id));
               unawaited(maybeDeleteOnManualServer(ref,
                   mangaId: entry.key, chapterId: id));
             }

@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
+import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../global_providers/global_providers.dart';
 import 'offline_database.dart';
 import 'offline_page_store.dart';
@@ -246,6 +247,16 @@ OfflineDatabase? offlineReadDatabase(Ref ref) {
   return ref.watch(offlineDatabaseProvider);
 }
 
+/// Whether the offline library has anything to SHOW — series with files on
+/// this device. Gates the "View offline" escape hatch: offering it with
+/// nothing downloaded would land on an empty screen.
+@riverpod
+Future<bool> offlineCatalogAvailable(Ref ref) async {
+  final db = ref.watch(offlineReadDatabaseProvider);
+  if (db == null) return false;
+  return (await db.mangaIdsWithDeviceDownloads()).isNotEmpty;
+}
+
 /// The metadata down-sync, or null when offline storage is unavailable — so
 /// online controllers can call `ref.read(offlineSyncProvider)?.syncManga(m)`
 /// without caring about platform.
@@ -257,6 +268,11 @@ OfflineSync? offlineSync(Ref ref) {
   final preferences = ref.watch(sharedPreferencesProvider);
   return OfflineSync(
     ref.watch(offlineDatabaseProvider),
+    // Single-manga count refetch for settling corrections whose acks raced an
+    // aggregate fetch (see OfflineSync.refetchManga). Same DI precedent as the
+    // push loop reading the repository directly.
+    refetchManga: (mangaId) =>
+        ref.read(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
     onSynced: () async {
       if (preferences.getString(DBKeys.offlineCatalogServerId.name) == null) {
         await preferences.setString(

@@ -8,6 +8,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/network/graphql_errors.dart';
+import '../../offline/data/offline_repository.dart';
 import '../controller/manga_track_records_controller.dart';
 import '../data/tracker_repository.dart';
 import 'tracking_settings_providers.dart';
@@ -47,6 +49,7 @@ Future<void> _pushTrackProgressIfEnabled({
   required bool enabledAfterReading,
   required bool enabledManualMarkRead,
   required int trackRecordCount,
+  bool offlineCaptureActive = false,
 }) async {
   if (!shouldTrackProgress(
     isRead: isRead,
@@ -58,6 +61,14 @@ Future<void> _pushTrackProgressIfEnabled({
     return;
   }
   final result = await AsyncValue.guard(() => repo.trackProgress(mangaId));
+  // Unreachable-server failures stay quiet when offline capture is on: the
+  // reconnect flush re-nudges trackers, so this toast would be a false alarm
+  // on every offline chapter finish.
+  if (result.hasError && offlineCaptureActive) {
+    final e = result.error!;
+    final cause = e is OperationMessageException ? e.exception : e;
+    if (isConnectionError(cause)) return;
+  }
   result.showToastOnError(toast, withMicrotask: true);
 }
 
@@ -81,6 +92,7 @@ Future<void> maybeTrackProgressOnRead(
       isRead: isRead,
       manual: manual,
       trackRecordCount: trackRecordCount,
+      offlineCaptureActive: ref.read(offlineActiveProvider),
     );
 
 /// Convenience overload for call sites that don't have the track-record count
@@ -98,6 +110,7 @@ Future<void> maybeTrackProgressOnReadFetch(
 }) async {
   final repo = ref.read(trackerRepositoryProvider);
   final toast = ref.read(toastProvider);
+  final offlineCaptureActive = ref.read(offlineActiveProvider);
   final enabledAfterReading =
       ref.read(updateProgressAfterReadingProvider).ifNull();
   final enabledManualMarkRead =
@@ -122,5 +135,6 @@ Future<void> maybeTrackProgressOnReadFetch(
     isRead: isRead,
     manual: manual,
     trackRecordCount: records.value?.length ?? 0,
+    offlineCaptureActive: offlineCaptureActive,
   );
 }

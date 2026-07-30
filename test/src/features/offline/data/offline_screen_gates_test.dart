@@ -71,6 +71,14 @@ void main() {
           id: 1, title: 'A', updatedAt: DateTime(2026));
       await db.upsertMangaMetadata(
           id: 2, title: 'B', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(id: 901, mangaId: 1, name: 'dl901',
+          chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+          serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(901, OfflineDeviceState.downloaded, bytes: 1);
+      await db.upsertChapterMetadata(id: 902, mangaId: 2, name: 'dl902',
+          chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+          serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(902, OfflineDeviceState.downloaded, bytes: 1);
       final cats = await categoriesWithOfflineFallback(
           fetch: boom, db: db, offlineEnabled: true);
       expect(cats!.length, 1);
@@ -132,6 +140,16 @@ void main() {
           id: 1, title: 'A', updatedAt: DateTime(2026));
       await db.upsertMangaMetadata(
           id: 2, title: 'B', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(id: 903, mangaId: 1, name: 'dl903',
+          chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+          serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(903, OfflineDeviceState.downloaded,
+          bytes: 1);
+      await db.upsertChapterMetadata(id: 904, mangaId: 2, name: 'dl904',
+          chapterIndex: 1, isRead: true, lastPageRead: 0, isBookmarked: false,
+          serverIsDownloaded: true, pageCount: 1, updatedAt: DateTime(2026));
+      await db.setChapterDeviceState(904, OfflineDeviceState.downloaded,
+          bytes: 1);
       final c = await _container(db, [
         categoryRepositoryProvider.overrideWithValue(_ThrowingCategoryRepo()),
       ]);
