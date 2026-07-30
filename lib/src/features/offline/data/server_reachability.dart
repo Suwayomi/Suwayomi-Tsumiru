@@ -25,3 +25,18 @@ class ServerUnreachable extends _$ServerUnreachable {
     if (state != value) state = value;
   }
 }
+
+/// User-requested offline view: skip the network entirely and serve the
+/// on-device catalog. Set by the "View offline" button shown while a
+/// fallback-capable read is still waiting on its network window, so nobody has
+/// to sit out even the capped wait. Session-only by design — a restart or a
+/// manual refresh goes back to trying the server first.
+@Riverpod(keepAlive: true)
+class ViewOfflineNow extends _$ViewOfflineNow {
+  @override
+  bool build() => false;
+
+  void set(bool value) {
+    if (state != value) state = value;
+  }
+}

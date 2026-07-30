@@ -11,6 +11,7 @@ import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../../../../offline/data/server_reachability.dart';
 import '../../../data/recommendations/recommendation_repository.dart';
 import '../../recommends/recommendation_card.dart';
 
@@ -26,8 +27,13 @@ class RecommendsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Recommendations need the network (server sources + external services);
+    // while the server is unreachable or the user pinned the offline view,
+    // hide the row instead of leaving it loading forever.
     if (!ref.watch(showRecommendationsProvider).ifNull(true) ||
-        ref.watch(recommendsInOverflowProvider).ifNull(false)) {
+        ref.watch(recommendsInOverflowProvider).ifNull(false) ||
+        ref.watch(serverUnreachableProvider) ||
+        ref.watch(viewOfflineNowProvider)) {
       return const SizedBox.shrink();
     }
     final recs = ref.watch(mangaRecommendationsProvider(mangaId));
@@ -39,16 +45,19 @@ class RecommendsRow extends ConsumerWidget {
       children: [
         const Divider(height: 0),
         InkWell(
-          onTap: () =>
-              RecommendsRoute(mangaId: mangaId, mangaTitle: mangaTitle)
-                  .push(context),
+          onTap: () => RecommendsRoute(
+            mangaId: mangaId,
+            mangaTitle: mangaTitle,
+          ).push(context),
           child: Padding(
             padding: KEdgeInsets.h16v8.size,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(context.l10n.suggestions,
-                    style: context.textTheme.titleMedium),
+                Text(
+                  context.l10n.suggestions,
+                  style: context.textTheme.titleMedium,
+                ),
                 const Icon(Icons.arrow_forward_rounded),
               ],
             ),

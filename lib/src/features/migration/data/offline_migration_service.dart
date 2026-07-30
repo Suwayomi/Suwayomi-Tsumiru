@@ -70,6 +70,8 @@ class OfflineMigrationService {
     // Seed the target catalog rows to attach the keep-rule and downloads to;
     // preserves device-managed columns, so this is safe even if B already had
     // offline content.
+    // Ordered against push acks: captured before the fetches go out.
+    final fetchGen = sync.syncGeneration;
     final targetManga = await fetchManga(toMangaId);
     if (targetManga == null) {
       return const OfflineMigrationResult(
@@ -77,7 +79,7 @@ class OfflineMigrationService {
       );
     }
     final targetChapters = await fetchChapters(toMangaId) ?? const [];
-    await sync.syncManga(targetManga);
+    await sync.syncManga(targetManga, fetchedAtGen: fetchGen);
     await sync.syncChapters(targetChapters);
 
     if (options.migrateOfflineSettings) {

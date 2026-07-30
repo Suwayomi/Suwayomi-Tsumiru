@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +16,7 @@ import '../../../constants/endpoints.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/logger/logger.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/platform/is_android_native.dart';
@@ -264,9 +267,9 @@ Future<AsyncValue<void>> recordReadingProgress(
         // Match the bulk mark-read action: siblings drop stale progress too.
         resetPosition: true,
       );
-      // No retry state for a failed sibling write — surface it rather than
-      // reporting the read as fully recorded.
-      if (!siblingsOk) {
+      // Offline, siblings are dirty-flagged like the chapter and retried later;
+      // only an online-only failure has no fallback and must surface.
+      if (!siblingsOk && !offline) {
         return AsyncValue.error(
           Exception('marking duplicate copies read failed'),
           StackTrace.current,
@@ -316,6 +319,13 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
     if (markRead != null) {
       await db.clearReadStateDirtyIfUnchanged(chapterId, isRead: markRead);
     }
+  }
+  // Local capture already has it dirty-flagged for the next sync, so a
+  // connection failure here isn't a lost write — don't surface it as one.
+  if (result.hasError && offlineEnabled && db != null) {
+    final e = result.error!;
+    final cause = e is OperationMessageException ? e.exception : e;
+    if (isConnectionError(cause)) return const AsyncValue.data(null);
   }
   return result;
 }
@@ -641,13 +651,16 @@ Future<void> pushPendingProgress(
         if (serverAhead) {
           pushProgress = false;
           pushReadState = false;
-          if (c.progressDirty) {
-            await db.clearProgressDirtyIfUnchanged(c.id,
-                lastPageRead: c.lastPageRead);
-          }
-          if (c.readStateDirty) {
-            await db.clearReadStateDirtyIfUnchanged(c.id, isRead: c.isRead);
-          }
+          // The local change lost, so settle the whole row to the state we
+          // just fetched — not merely drop the flags, which would leave the
+          // stale local values (and their unread correction) frozen in place.
+          await db.adoptServerReadState(
+            c.id,
+            expectedIsRead: c.isRead,
+            expectedLastPageRead: c.lastPageRead,
+            serverIsRead: serverRead,
+            serverLastPageRead: server.lastPageRead.getValueOnNullOrNegative(),
+          );
         }
       }
     }
@@ -877,7 +890,17 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
         '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds!.uiAccessToken!)}';
   }
 
-  final res = await http.get(Uri.parse(fetchUrl), headers: headers);
+  final http.Response res;
+  try {
+    res = await http.get(Uri.parse(fetchUrl), headers: headers);
+  } on SocketException {
+    // Dead network is not a page failure: park resumable (Android worker
+    // parity) instead of burning retries into a terminal error that poisons
+    // the rest of the queue chapter by chapter.
+    throw const PageOfflineException();
+  } on http.ClientException {
+    throw const PageOfflineException();
+  }
   if (res.statusCode == 401 || res.statusCode == 403) {
     throw const PageAuthException();
   }

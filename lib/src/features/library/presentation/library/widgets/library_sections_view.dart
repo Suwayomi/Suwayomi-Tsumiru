@@ -14,6 +14,7 @@ import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/shell/update_banner_state.dart';
 import '../../../../manga_book/data/updates/updates_repository.dart';
+import '../../../../offline/data/server_reachability.dart';
 import '../controller/library_controller.dart';
 import '../controller/library_grouping.dart';
 import '../controller/library_manga_list.dart';
@@ -53,9 +54,7 @@ class LibrarySectionsView extends HookConsumerWidget {
     for (final s in sections) {
       headerKeys.value.putIfAbsent(s.id, GlobalKey.new);
     }
-    headerKeys.value.removeWhere(
-      (id, _) => !sections.any((s) => s.id == id),
-    );
+    headerKeys.value.removeWhere((id, _) => !sections.any((s) => s.id == id));
 
     final scrollController = useScrollController();
 
@@ -97,6 +96,9 @@ class LibrarySectionsView extends HookConsumerWidget {
       // No single group under the finger here, so pull runs a whole-library
       // source check — same rule the grouped tabs use.
       onRefresh: () async {
+        // A pull means "try the server again" — drop the offline pin.
+        ref.read(viewOfflineNowProvider.notifier).set(false);
+        ref.read(serverUnreachableProvider.notifier).set(false);
         ref.read(updateOptimisticProvider.notifier).arm();
         unawaited(
           ref

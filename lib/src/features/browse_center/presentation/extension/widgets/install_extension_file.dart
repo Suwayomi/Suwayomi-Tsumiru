@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -19,9 +20,11 @@ class InstallExtensionFile extends ConsumerWidget {
 
   void extensionFilePicker(WidgetRef ref, BuildContext context) async {
     final toast = ref.read(toastProvider);
-    final file = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['apk'],
+      // Web has no file paths, so the bytes have to come back with the pick.
+      withData: kIsWeb,
     );
     if ((file?.files).isNotBlank) {
       if (context.mounted) {
