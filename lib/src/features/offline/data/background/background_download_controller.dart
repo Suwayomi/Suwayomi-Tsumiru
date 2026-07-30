@@ -146,6 +146,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         serviceTypes: [ForegroundServiceTypes.dataSync],
         notificationTitle: 'Downloading chapters',
         notificationText: 'Starting…',
+        // Explicit monochrome icon: the fallback is the launcher icon, which
+        // Android alpha-masks into an unrecognizable blob in the status bar.
+        notificationIcon:
+            const NotificationIcon(metaDataName: kNotificationIconMetaData),
         callback: backgroundDownloadCallback,
       );
       if (res is ServiceRequestFailure) {

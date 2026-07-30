@@ -23,6 +23,8 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="false">
+        <!-- Monochrome status-bar icon for the downloads foreground service. -->
+        <meta-data android:name="app.tsumiru.NOTIFICATION_ICON" android:resource="@drawable/ic_stat_tsumiru" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

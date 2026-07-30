@@ -339,9 +339,13 @@ class DownloadTaskHandler extends TaskHandler {
       'gen': _genOf[chapterId] ?? 0,
       'status': status,
     });
+    // The icon rides every update — the plugin persists the latest content
+    // wholesale, so omitting it here could reset the icon to the fallback.
     FlutterForegroundTask.updateService(
       notificationTitle: 'Downloading chapters',
       notificationText: 'Downloading — $_done/$_total',
+      notificationIcon:
+          const NotificationIcon(metaDataName: kNotificationIconMetaData),
     );
   }
 

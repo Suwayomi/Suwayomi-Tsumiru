@@ -76,3 +76,6 @@ class BackgroundWorkOrder {
         rootIsolateToken: j['rootIsolateToken'] as int? ?? 0,
       );
 }
+
+/// Manifest meta-data key naming the monochrome status-bar icon drawable.
+const kNotificationIconMetaData = 'app.tsumiru.NOTIFICATION_ICON';
