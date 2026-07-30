@@ -344,6 +344,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         ? -1
         : widget.window.chapterRawToDisplay(chapterId, rawIndex);
     if (target < 0 || target == _displayIndex) {
+      // _abandonMotion may have killed a settle whose commit never ran; a jump
+      // resolving to the current page must still land the pager back on it.
+      if (_dragOffset != 0) setState(() => _dragOffset = 0);
       _emitRawPage();
       return;
     }
@@ -608,6 +611,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       if (!_interruptedByAnimation && !_suppressTap) {
         _handleTap(event.localPosition);
       }
+    }
+    // A page-owned gesture (or swallowed tap) can end with the pager still
+    // displaced by an abandoned turn — never let it rest between slots.
+    if (_dragOwner != _DragOwner.pager &&
+        _dragOffset != 0 &&
+        !_pageAnimation.isAnimating) {
+      _settleDrag();
     }
 
     _resetGesture();

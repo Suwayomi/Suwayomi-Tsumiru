@@ -903,6 +903,62 @@ void main() {
     await first.up();
   });
 
+  testWidgets('same-page seek during a turn settle cannot park mid-turn',
+      (tester) async {
+    // The seekbar fires jumpToRaw on every drag tick; mid-settle it can target
+    // the still-current page, abandoning the turn without restoring the offset.
+    final pages = _localPages(2);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(),
+      animateTransitions: true,
+    );
+
+    // Slow drag past the turn threshold, then release to start the settle.
+    final center = tester.getCenter(find.byType(PagedReaderViewport));
+    final turn = await tester.startGesture(center);
+    for (var i = 0; i < 4; i++) {
+      await turn.moveBy(const Offset(-60, 0));
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+    await turn.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+
+    // Mid-settle the seekbar reports the current page (raw 0).
+    controller.jumpToRaw(0);
+    await tester.pumpAndSettle();
+
+    // A settled slot always sits at translation 0; parked mid-turn, every
+    // slot is off-grid.
+    final slotOffsets = [
+      for (final transform in tester.widgetList<Transform>(find.ancestor(
+        of: find.byType(ClipRect),
+        matching: find.byType(Transform),
+      )))
+        transform.transform.storage[12],
+    ];
+    expect(
+      slotOffsets.where((dx) => dx.abs() < 0.1),
+      isNotEmpty,
+      reason: 'pager rested between slots: $slotOffsets',
+    );
+  });
+
   testWidgets('two-finger tap does not leak into reader tap actions',
       (tester) async {
     final pages = _localPages(1);
