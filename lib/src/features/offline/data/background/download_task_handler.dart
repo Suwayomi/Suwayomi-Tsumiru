@@ -16,6 +16,7 @@ import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
 import 'background_completion_log.dart';
+import 'background_download_lock.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 
@@ -89,6 +90,7 @@ class DownloadTaskHandler extends TaskHandler {
   var _paused = false;
 
   BackgroundWorkOrder? _order;
+  BackgroundDownloadLock? _lock;
   late BackgroundCompletionLog _log;
   late OfflinePaths _paths;
   late IoOfflinePageStore _store;
@@ -116,6 +118,24 @@ class DownloadTaskHandler extends TaskHandler {
     _wifiOnly = order.wifiOnly;
     _record = order.auth;
     _broker = _buildBroker();
+
+    // The log has one writer at a time. A WorkManager catch-up run mid-flight
+    // checkpoints within seconds of a yield request; a stale holder expires by
+    // heartbeat age.
+    _lock = BackgroundDownloadLock(File('${order.baseDir}/.bg_lock'));
+    var acquired = await _lock!.acquire('fgs');
+    if (!acquired) {
+      await _lock!.requestYield();
+      for (var i = 0; i < 15 && !acquired; i++) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        acquired = await _lock!.acquire('fgs');
+      }
+    }
+    if (!acquired) {
+      // Still contended — leave the queue in drift; the next start retries.
+      await FlutterForegroundTask.stopService();
+      return;
+    }
 
     _queue.addAll(order.chapterIds);
     _mangaOf.addAll(order.mangaIdByChapter);
@@ -170,6 +190,7 @@ class DownloadTaskHandler extends TaskHandler {
     // The drain loop + the in-flight chapter both observe this and unwind. The
     // log is flushed per page, so nothing is lost on an abrupt stop.
     _stopping = true;
+    await _lock?.release();
   }
 
   // ---------------------------------------------------------------------------
@@ -189,6 +210,7 @@ class DownloadTaskHandler extends TaskHandler {
         // and restart us), then self-stop.
         await _log.appendDrained();
         FlutterForegroundTask.sendDataToMain({'kind': 'drained'});
+        await _lock?.release();
         await FlutterForegroundTask.stopService();
         return;
       }
@@ -199,6 +221,7 @@ class DownloadTaskHandler extends TaskHandler {
       if (parked) {
         // Server unreachable — stop with the queue still in drift so a reconnect
         // (or relaunch) resumes it. No drained marker: it isn't drained, parked.
+        await _lock?.release();
         await FlutterForegroundTask.stopService();
         return;
       }
@@ -208,6 +231,7 @@ class DownloadTaskHandler extends TaskHandler {
     // resume just re-enqueues; do NOT append a drained marker — this is parked,
     // not drained.
     if (_paused && !_stopping) {
+      await _lock?.release();
       await FlutterForegroundTask.stopService();
     }
   }

@@ -31,6 +31,7 @@ import '../offline_paths.dart';
 import '../offline_repository.dart';
 import '../offline_settings_providers.dart';
 import 'background_completion_log.dart';
+import 'background_download_lock.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 import 'download_task_handler.dart';
@@ -281,7 +282,22 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     if (pending.isNotEmpty) await ensureServiceRunning();
   }
 
-  Future<void> _replay() => replayCompletionLog(
+  Future<void> _replay() async {
+    // Replay parses then TRUNCATES — it must own the log. A running worker
+    // (FGS or WorkManager catch-up) is asked to yield and checkpoints within
+    // seconds; launch never waits out a multi-minute run.
+    final lock = BackgroundDownloadLock(File('${_paths.baseDir}/.bg_lock'));
+    var acquired = await lock.acquire('replay');
+    if (!acquired) {
+      await lock.requestYield();
+      for (var i = 0; i < 15 && !acquired; i++) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        acquired = await lock.acquire('replay');
+      }
+    }
+    if (!acquired) return; // contended past the wait — next launch replays
+    try {
+      await replayCompletionLog(
         db: _db,
         paths: _paths,
         log: _log,
@@ -293,6 +309,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
             .read(sharedPreferencesProvider)
             .getString(DBKeys.offlineCatalogServerId.name),
       );
+    } finally {
+      await lock.release();
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Worker events + drain handshake (CRITICAL-1)
