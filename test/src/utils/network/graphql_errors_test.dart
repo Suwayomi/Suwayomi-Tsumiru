@@ -18,6 +18,41 @@ void main() {
     test('a plain Exception is not (ambiguous -> surface)', () {
       expect(isConnectionError(Exception('boom')), isFalse);
     });
+    // A reverse proxy answering for a dead upstream is a connection loss:
+    // the user's server never spoke, only the middleman did. The decoder's
+    // throw arrives wrapped in the PARSER exception (gql_http_link wraps
+    // httpResponseDecoder throws in HttpLinkParserException, a SIBLING of
+    // ServerException) — pin the real chain: a fabricated ServerException
+    // wrapper made an earlier version of this pass while production failed.
+    test('gateway statuses through the real parser-exception chain fall back',
+        () {
+      for (final status in [502, 503, 504, 521, 524]) {
+        final e = OperationException(
+            linkException: HttpLinkParserException(
+                originalException: ServerNotJsonException(status, "<html>"),
+                originalStackTrace: StackTrace.empty,
+                response: http.Response('<html>', status)));
+        expect(isConnectionError(e), isTrue, reason: 'HTTP $status');
+      }
+    });
+    test('non-gateway error pages still surface (500, captive-portal 200)',
+        () {
+      for (final status in [500, 200, 520, 525]) {
+        final e = OperationException(
+            linkException: HttpLinkParserException(
+                originalException: ServerNotJsonException(status, "<html>"),
+                originalStackTrace: StackTrace.empty,
+                response: http.Response('<html>', status)));
+        expect(isConnectionError(e), isFalse, reason: 'HTTP $status');
+      }
+    });
+    test('a gateway status with a JSON body still counts as unreachable', () {
+      final e = OperationException(
+          linkException: HttpLinkServerException(
+              response: http.Response('{"errors":[]}', 502),
+              parsedResponse: const Response(response: {}, errors: [])));
+      expect(isConnectionError(e), isTrue);
+    });
     test('ServerException wrapping a socket error (no parsed response) is', () {
       final e = OperationException(
           linkException: ServerException(

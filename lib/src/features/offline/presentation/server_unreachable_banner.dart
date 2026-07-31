@@ -9,6 +9,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../library/presentation/category/controller/edit_category_controller.dart';
+import '../data/offline_repository.dart';
 import '../data/server_reachability.dart';
 
 /// Inline banner shown in the library while the server can't be reached.
@@ -32,6 +34,16 @@ class ServerUnreachableBanner extends ConsumerWidget {
         TextButton(
           onPressed: () => const ConnectionRoute().push(context),
           child: Text(context.l10n.serverUnreachableAction),
+        ),
+        TextButton(
+          // Same contract as the library's refresh gestures: drop both pins,
+          // then genuinely re-ask the server.
+          onPressed: () {
+            ref.read(viewOfflineNowProvider.notifier).set(false);
+            ref.read(serverUnreachableProvider.notifier).set(false);
+            ref.invalidate(categoryControllerProvider);
+          },
+          child: Text(context.l10n.refresh),
         ),
       ],
     );

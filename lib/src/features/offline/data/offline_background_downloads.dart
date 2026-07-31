@@ -23,6 +23,7 @@ import 'offline_database.dart';
 import 'offline_download_coordinator.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
+import 'server_reachability.dart';
 import 'offline_settings_providers.dart';
 
 part 'offline_background_downloads.g.dart';
@@ -98,6 +99,12 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
     measureChapterBytes: store.chapterBytes,
     persistedPaused: () =>
         prefs.getBool(DBKeys.offlineDownloadsPaused.name) ?? false,
+    // Deferred: the pump can hit this mid-provider-build.
+    onServerUnreachable: () => Future(() {
+      try {
+        ref.read(serverUnreachableProvider.notifier).set(true);
+      } catch (_) {}
+    }),
   );
 }
 

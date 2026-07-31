@@ -45,9 +45,10 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
     // true to keep the previous data on screen.
     bool skipLoadingOnReload = false,
     Widget? loadingWidget,
-    // Offer "View offline" on the unreachable view. Only for screens that
-    // actually honor the offline pin (the library) — elsewhere the button
-    // would flip a switch this screen ignores.
+    // Offer "View offline" on every failure view, unreachable or not — the
+    // error stays on screen, the pin is the user's bypass. Only for screens
+    // that actually honor the offline pin (the library) — elsewhere the
+    // button would flip a switch this screen ignores.
     bool offlineEscapeHatch = false,
   }) {
     if (addScaffoldWrapper) {
@@ -75,12 +76,27 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
               title: showGenericError
                   ? context.l10n.errorSomethingWentWrong
                   : error.toString(),
-              button: refresh != null
-                  ? TextButton(
-                      onPressed: refresh,
-                      child: Text(context.l10n.refresh),
-                    )
-                  : null,
+              // Null when there's nothing to show — an empty Column still
+              // costs Emoticons' spacing slot. The pin self-gates on the
+              // catalog (no ref here); its shrunk state trails the column,
+              // where the dead spacing lands below the last visible button.
+              // Accepted edge: hatch set, no refresh, no catalog reserves one
+              // phantom slot — no current caller hits it (the library always
+              // passes refresh).
+              button: (refresh == null && !offlineEscapeHatch)
+                  ? null
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        if (refresh != null)
+                          TextButton(
+                            onPressed: refresh,
+                            child: Text(context.l10n.refresh),
+                          ),
+                        if (offlineEscapeHatch) const ViewOfflineButton(),
+                      ],
+                    ),
             ));
       },
       loading: () => AppUtils.wrapOn(

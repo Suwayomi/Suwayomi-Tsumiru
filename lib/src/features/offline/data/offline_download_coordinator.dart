@@ -30,12 +30,19 @@ class OfflineDownloadCoordinator {
     required this.engine,
     required this.measureChapterBytes,
     this.persistedPaused,
+    this.onServerUnreachable,
   });
 
   final OfflineDatabase db;
   final PageUrlsResolver resolvePages;
   final ChapterDownloadEngine engine;
   final ChapterBytesMeasurer measureChapterBytes;
+
+  /// Reports "the server is unreachable" upward when a resolve fails on a
+  /// connection error. Without it the pump can park during a background-only
+  /// outage that no UI read ever notices, and the reconnect listener (which
+  /// needs a true->false transition) would never fire to unpark it.
+  void Function()? onServerUnreachable;
 
   /// Reads the persisted "downloads paused" flag (injected so a restart
   /// survives with the pause intact, without depending on SharedPreferences
@@ -265,7 +272,12 @@ class OfflineDownloadCoordinator {
       final cause = e is OperationMessageException ? e.exception : e;
       if (isConnectionError(cause)) {
         // Page-list resolve hit a dead network, not a real chapter failure:
-        // leave it downloading so the next pump resumes it (Android worker parity).
+        // leave it downloading so the next pump resumes it (Android worker
+        // parity). Park the pump too — a proxy answering 502 fails in
+        // milliseconds, and re-picking the same row would hot-loop for the
+        // whole outage.
+        _pausedForOffline = true;
+        onServerUnreachable?.call();
         logger.i('Offline: chapter ${chapter.id} paused (resolve offline); '
             'leaving downloading for resume');
       } else {
