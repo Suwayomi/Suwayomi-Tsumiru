@@ -33,13 +33,26 @@ Map<String, dynamic>? tsumiruHttpResponseDecoder(http.Response response) {
   }
 }
 
-/// True only when the request never reached a responding server (no
-/// connectivity) — the one case where falling back to the offline cache is
-/// right. A server that answered with an error (500/parse/auth) is not this.
+/// True only when the request never reached the Suwayomi server — the one
+/// case where falling back to the offline cache is right. The server itself
+/// answering with an error (500/parse/auth) is not this, but a reverse proxy
+/// answering FOR an unreachable upstream (502/503/504) is: the user's server
+/// is down, only the middleman is talking.
 bool isConnectionError(Object error) {
   if (error is OperationException) {
     final link = error.linkException;
+    if (link is HttpLinkServerException &&
+        _isGatewayStatus(link.response.statusCode)) {
+      // A gateway status is the middleman speaking for a dead origin even
+      // when its body happens to parse (some balancers emit JSON errors).
+      return true;
+    }
     if (link is ServerException && link.parsedResponse == null) {
+      return _isSocketLike(link.originalException);
+    }
+    // A response-decoder throw (our ServerNotJsonException) arrives wrapped
+    // in the PARSER exception, a sibling of ServerException — not inside it.
+    if (link is ResponseFormatException) {
       return _isSocketLike(link.originalException);
     }
     return false;
@@ -51,4 +64,12 @@ bool _isSocketLike(Object? e) =>
     e is SocketException ||
     e is TimeoutException ||
     e is HandshakeException ||
-    e is http.ClientException;
+    e is http.ClientException ||
+    (e is ServerNotJsonException && _isGatewayStatus(e.statusCode));
+
+// A proxy answering for a dead origin: 502/503/504, plus Cloudflare's
+// origin-down codes. 520/525/526 stay surfaced — the origin is alive but
+// misbehaving there, which the user must see to fix.
+bool _isGatewayStatus(int status) =>
+    status == 502 || status == 503 || status == 504 ||
+    (status >= 521 && status <= 524);

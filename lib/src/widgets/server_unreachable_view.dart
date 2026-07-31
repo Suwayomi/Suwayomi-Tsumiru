@@ -33,9 +33,8 @@ class ServerUnreachableView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The escape hatch belongs here as much as on the loading screen — a retry
-    // that fails lands on this view, and without it the user is stuck waiting
-    // out network windows with a perfectly good catalog on disk.
+    // Gated here, not inside the button: a shrunk child still costs the
+    // Column's spacing, doubling the gap between its neighbours.
     final hasCatalog =
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
     return Emoticons(
@@ -51,17 +50,31 @@ class ServerUnreachableView extends ConsumerWidget {
             icon: const Icon(Icons.settings_ethernet_rounded),
             label: Text(context.l10n.serverUnreachableAction),
           ),
-          if (offlineEscape && hasCatalog)
-            TextButton.icon(
-              icon: const Icon(Icons.cloud_off_rounded),
-              label: Text(context.l10n.viewOffline),
-              onPressed: () =>
-                  ref.read(viewOfflineNowProvider.notifier).set(true),
-            ),
+          if (offlineEscape && hasCatalog) const ViewOfflineButton(),
           if (onRetry != null)
             TextButton(onPressed: onRetry, child: Text(context.l10n.refresh)),
         ],
       ),
+    );
+  }
+}
+
+/// The "View offline" pin. The error it accompanies stays visible — this is
+/// the user's bypass, never an automatic mask. Self-gates on the catalog for
+/// callers without a ref; ref-having parents should gate externally so a
+/// shrunk child doesn't eat Column spacing.
+class ViewOfflineButton extends ConsumerWidget {
+  const ViewOfflineButton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasCatalog =
+        ref.watch(offlineCatalogAvailableProvider).value ?? false;
+    if (!hasCatalog) return const SizedBox.shrink();
+    return TextButton.icon(
+      icon: const Icon(Icons.cloud_off_rounded),
+      label: Text(context.l10n.viewOffline),
+      onPressed: () => ref.read(viewOfflineNowProvider.notifier).set(true),
     );
   }
 }
