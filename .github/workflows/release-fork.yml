@@ -314,3 +314,37 @@ jobs:
           fi
           gh api repos/tsumiru-app/tsumiru-app.github.io/dispatches \
             -f event_type=app-release
+      # Announce in the Discord releases channel once the release is really
+      # live. Best-effort and silent until the webhook secret exists.
+      - name: Announce release on Discord
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          # Release-notification role in the Suwayomi Discord (not secret).
+          PING_ROLE: '1520123103433195540'
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_RELEASES_WEBHOOK not set; skipping announcement."
+            exit 0
+          fi
+          url=$(gh release view "$TAG" --repo "$REPO" --json url -q .url)
+          # The channel's usual format: role ping + bare link, and Discord's
+          # own unfurl draws the release card. A custom embed would suppress it.
+          python3 - "$url" <<'PY'
+          import json, os, sys, urllib.request
+          role = os.environ.get('PING_ROLE', '')
+          ping = f'<@&{role}>\n' if role else ''
+          payload = {
+              'content': ping + sys.argv[1],
+              'allowed_mentions': {'roles': [role] if role else []},
+          }
+          req = urllib.request.Request(
+              os.environ['WEBHOOK'],
+              data=json.dumps(payload).encode(),
+              headers={'Content-Type': 'application/json'})
+          urllib.request.urlopen(req)
+          PY
