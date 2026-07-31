@@ -44,7 +44,7 @@ A release is **maintainer-initiated as a draft, then auto-published once every p
 - Android signing secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
 - Linux build deps: `clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libblkid-dev liblzma-dev libsecret-1-dev libjsoncpp-dev` (last two needed for `flutter_secure_storage_linux`).
 
-**`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build the Linux bundle, package + GPG-sign in the `freedesktop:24.08` flatter container, deploy to Pages at `suwayomi.github.io/Suwayomi-Tsumiru` (the app repo's own Pages — it moved with the repo; the docs site lives at `tsumiru.app`, served from `tsumiru-app/tsumiru-app.github.io` behind Cloudflare). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Manifest id is still `io.github.aaronbamblett.tsumiru`.
+**`flatpak.yml`** (self-hosted Flatpak repo → GitHub Pages) — three sequential jobs: build the Linux bundle, package + GPG-sign in the `freedesktop:24.08` flatter container, deploy to Pages at `flatpak.tsumiru.app` (the app repo's own Pages behind Cloudflare, so update checks are countable; the old `suwayomi.github.io/Suwayomi-Tsumiru` URLs 301 there, so existing remotes keep working uncounted-then-counted through the redirect; the docs site lives at `tsumiru.app`, served from `tsumiru-app/tsumiru-app.github.io` behind Cloudflare). Needs secrets `FLATPAK_GPG_PRIVATE_KEY` + `FLATPAK_GPG_KEY_ID`. Manifest id is still `io.github.aaronbamblett.tsumiru`.
 
 ## CI quality gates
 

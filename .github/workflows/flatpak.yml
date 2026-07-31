@@ -93,6 +93,7 @@ jobs:
           upload-pages-includes: |
             flatpak/tsumiru-repo.gpg
             flatpak/io.github.aaronbamblett.tsumiru.flatpakref
+            flatpak/index.flatpakrepo
 
   deploy:
     name: Deploy Pages
