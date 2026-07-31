@@ -28,6 +28,30 @@ Set<int> desiredChapterIds(
   return ruleSet..addAll(pinned);
 }
 
+/// Read chapters the "finished chapters to keep" setting still wants kept.
+/// Slot N targets the chapter N-1 behind the one just finished, so the N-1
+/// most recently read chapters are the ones the user asked to hold on to.
+///
+/// Ordered by the server's read timestamp, not chapter order: someone who
+/// dips back to an early chapter has just-finished it, and ranking by chapter
+/// number would protect wherever they got furthest instead. Rows synced before
+/// per-chapter timestamps existed carry none, so they fall back to reading
+/// order.
+Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
+  if (slots <= 1) return const {};
+  int readAt(OfflineChapter c) => int.tryParse(c.lastReadAt ?? '') ?? 0;
+  final read = chapters.where((c) => c.isRead).toList()
+    ..sort((a, b) {
+      final byTime = readAt(b).compareTo(readAt(a));
+      if (byTime != 0) return byTime;
+      final byOrder = b.chapterIndex.compareTo(a.chapterIndex);
+      // Duplicate scanlator copies share a chapter index; id keeps the pick
+      // stable instead of letting sort order decide.
+      return byOrder != 0 ? byOrder : b.id.compareTo(a.id);
+    });
+  return read.take(slots - 1).map((c) => c.id).toSet();
+}
+
 /// Decide evictions over the currently-downloaded set, honoring precedence:
 /// pinned > safety-nets > rule. Pinned chapters are never evicted.
 /// [protected] chapters (read this session) dodge the rule eviction only —

@@ -20,6 +20,7 @@ import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../offline/data/offline_background_downloads.dart';
 import '../../offline/data/offline_download_providers.dart';
 import '../../offline/data/offline_repository.dart';
+import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../data/bulk_migration_runner.dart';
 import '../data/migration_journal.dart';
 import '../data/migration_repository.dart';
@@ -139,6 +140,8 @@ Future<void> migrateOfflineLocalState(
         coordinator: coordinator,
         nets: container.read(safetyNetConfigProvider),
         mangaId: id,
+        deleteWhileReadingSlots:
+            container.read(localDeleteSettingsProvider).deleteWhileReading,
         enqueueServerDownload: (ids) => container
             .read(downloadsRepositoryProvider)
             .addChaptersBatchToDownloadQueue(ids),

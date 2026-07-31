@@ -18,6 +18,7 @@ import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/data/updates/updates_repository.dart';
 import '../../manga_book/presentation/downloads/controller/downloads_controller.dart';
+import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import 'background/background_download_controller_shim.dart';
 import 'background/background_download_lock.dart';
 import 'background/catchup_spec_writer.dart';
@@ -299,6 +300,8 @@ Future<bool> _reconcileTracked(
     nets: container.read(safetyNetConfigProvider),
     mangaId: mangaId,
     sessionProtected: container.read(sessionReadChaptersProvider),
+    deleteWhileReadingSlots:
+        container.read(localDeleteSettingsProvider).deleteWhileReading,
     enqueueServerDownload: (ids) async {
       try {
         await container

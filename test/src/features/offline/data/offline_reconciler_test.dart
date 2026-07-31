@@ -207,4 +207,27 @@ void main() {
     expect(r2.toDownload, isEmpty);
     expect(r2.toEvict, isEmpty);
   });
+
+  test('a chapter read on another device survives the keep rule (#325)',
+      () async {
+    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+    await db.setKeepRule(1, OfflineKeepRule.nUnread, 2);
+    // Read elsewhere, so nothing is in this device's reading session.
+    await seedChapter(1, 1, read: true, dev: OfflineDeviceState.downloaded);
+    await seedChapter(2, 2, read: true, dev: OfflineDeviceState.downloaded);
+    await seedChapter(3, 3, dev: OfflineDeviceState.downloaded);
+
+    final evicted = <int>[];
+    await OfflineReconciler(
+      db: db,
+      nets: SafetyNetConfig.off,
+      onDownload: (id) async {},
+      onEvict: (id) async => evicted.add(id),
+      now: DateTime(2026, 3, 1),
+      deleteWhileReadingSlots: 2,
+    ).reconcileManga(1);
+
+    expect(evicted, [1],
+        reason: 'the keep window has to reach the reconciler, not just exist');
+  });
 }
