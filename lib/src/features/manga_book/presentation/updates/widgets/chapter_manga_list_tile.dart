@@ -20,12 +20,14 @@ class ChapterMangaListTile extends StatelessWidget {
     super.key,
     required this.chapterWithMangaDto,
     required this.updatePair,
+    required this.refreshManga,
     required this.toggleSelect,
     this.canTapSelect = false,
     this.isSelected = false,
   });
   final ChapterWithMangaDto chapterWithMangaDto;
   final AsyncCallback updatePair;
+  final AsyncCallback refreshManga;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
   final bool canTapSelect;
   final bool isSelected;
@@ -50,11 +52,11 @@ class ChapterMangaListTile extends StatelessWidget {
               chapterId: chapterWithMangaDto.id,
               showReaderLayoutAnimation: true,
             ).push(context);
-            // Refresh this row on return so a chapter read in the reader greys
-            // out here (its read state, download, and progress are re-fetched).
-            // Guard mounted: the user may have left Updates while reading.
+            // Refresh the whole series on return, not just this row — the
+            // reader walks on into the next chapters, and those have rows here
+            // too. Guard mounted: the user may have left Updates while reading.
             if (!context.mounted) return;
-            await updatePair();
+            await refreshManga();
           }
         },
         onLongPress: () => toggleSelect(chapterWithMangaDto),
@@ -67,7 +69,19 @@ class ChapterMangaListTile extends StatelessWidget {
                 ClipRRect(
                   borderRadius: KBorderRadius.r8.radius,
                   child: InkWell(
-                    onTap: () => MangaRoute(mangaId: manga.id).push(context),
+                    onTap: () async {
+                      // The cover sits inside the row, so it has to honour
+                      // multi-select too or it navigates away mid-selection.
+                      if (canTapSelect) {
+                        toggleSelect(chapterWithMangaDto);
+                        return;
+                      }
+                      await MangaRoute(mangaId: manga.id).push(context);
+                      if (!context.mounted) return;
+                      // Chapters get read on the details page too, so this row
+                      // is stale the moment we come back.
+                      await refreshManga();
+                    },
                     child: ServerImage(
                       imageUrl: manga.thumbnailUrl ?? "",
                       size: const Size(56, 80),
