@@ -335,7 +335,7 @@ jobs:
           # The channel's usual format: role ping + bare link, and Discord's
           # own unfurl draws the release card. A custom embed would suppress it.
           python3 - "$url" <<'PY'
-          import json, os, sys, urllib.request
+          import json, os, sys, urllib.error, urllib.request
           role = os.environ.get('PING_ROLE', '')
           ping = f'<@&{role}>\n' if role else ''
           payload = {
@@ -345,6 +345,18 @@ jobs:
           req = urllib.request.Request(
               os.environ['WEBHOOK'],
               data=json.dumps(payload).encode(),
-              headers={'Content-Type': 'application/json'})
-          urllib.request.urlopen(req)
+              headers={
+                  'Content-Type': 'application/json',
+                  # Cloudflare turns urllib's default agent away with a 403
+                  # before Discord ever sees the request.
+                  'User-Agent': 'Tsumiru-Release (+https://tsumiru.app)',
+              })
+          try:
+              urllib.request.urlopen(req)
+          except urllib.error.HTTPError as e:
+              # Discord says why in the body; the bare traceback only shows the
+              # status, which is what made the Cloudflare block look like a bad
+              # webhook.
+              sys.exit(f'Discord rejected the announcement: {e.code} '
+                       f'{e.read().decode("utf-8", "replace")}')
           PY
