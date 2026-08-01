@@ -41,25 +41,24 @@ ReaderInputCallbacks _callbacks({
   ValueChanged<Offset>? onLongPressStart,
   VoidCallback? onLongPressEnd,
   VoidCallback? onLongPressCancel,
-}) =>
-    ReaderInputCallbacks(
-      onTap: onTap ?? () {},
-      onLongPressStart: onLongPressStart ?? (_) {},
-      onLongPressMoveUpdate: (_) {},
-      onLongPressEnd: onLongPressEnd ?? () {},
-      onLongPressCancel: onLongPressCancel ?? () {},
-      onNext: () {},
-      onPrevious: () {},
-      onNextBoundary: onNextBoundary ?? () => false,
-      onPreviousBoundary: onPreviousBoundary ?? () => false,
-      // Default to "a chapter exists" so boundary-move tests fire; the
-      // no-adjacent-chapter case passes () => false explicitly.
-      hasNextBoundary: hasNextBoundary ?? () => true,
-      hasPreviousBoundary: hasPreviousBoundary ?? () => true,
-      navigationLayout: ReaderNavigationLayout.disabled,
-      tapInvert: TapInvert.none,
-      smallerTapZones: false,
-    );
+}) => ReaderInputCallbacks(
+  onTap: onTap ?? () {},
+  onLongPressStart: onLongPressStart ?? (_) {},
+  onLongPressMoveUpdate: (_) {},
+  onLongPressEnd: onLongPressEnd ?? () {},
+  onLongPressCancel: onLongPressCancel ?? () {},
+  onNext: () {},
+  onPrevious: () {},
+  onNextBoundary: onNextBoundary ?? () => false,
+  onPreviousBoundary: onPreviousBoundary ?? () => false,
+  // Default to "a chapter exists" so boundary-move tests fire; the
+  // no-adjacent-chapter case passes () => false explicitly.
+  hasNextBoundary: hasNextBoundary ?? () => true,
+  hasPreviousBoundary: hasPreviousBoundary ?? () => true,
+  navigationLayout: ReaderNavigationLayout.disabled,
+  tapInvert: TapInvert.none,
+  smallerTapZones: false,
+);
 
 Future<void> _pumpViewport(
   WidgetTester tester, {
@@ -78,6 +77,7 @@ Future<void> _pumpViewport(
   VoidCallback? onReachedStartEdge,
   VoidCallback? onReachedEndEdge,
   void Function(int chapterId, int raw, bool isWide)? onPageWide,
+  DateTime Function()? clock,
 }) async {
   // The viewport now renders a PagedDisplayWindow instead of a bare
   // mapping+pages pair. These single-chapter tests wrap the mapping in a
@@ -102,6 +102,7 @@ Future<void> _pumpViewport(
       width: 300,
       height: 500,
       child: PagedReaderViewport(
+        clock: clock ?? DateTime.now,
         controller: controller,
         window: window,
         initialDisplayIndex: initialDisplayIndex,
@@ -142,11 +143,9 @@ Future<void> _pumpViewport(
 }
 
 List<double> _transformScales(WidgetTester tester) => [
-      for (final transform in tester.widgetList<Transform>(
-        find.byType(Transform),
-      ))
-        _xyScale(transform.transform.storage),
-    ];
+  for (final transform in tester.widgetList<Transform>(find.byType(Transform)))
+    _xyScale(transform.transform.storage),
+];
 
 double _xyScale(Float64List storage) {
   final scaleX = math.sqrt(storage[0] * storage[0] + storage[1] * storage[1]);
@@ -161,14 +160,9 @@ double _smallestScale(WidgetTester tester) =>
     _transformScales(tester).reduce(math.min);
 
 List<Offset> _transformTranslations(WidgetTester tester) => [
-      for (final transform in tester.widgetList<Transform>(
-        find.byType(Transform),
-      ))
-        Offset(
-          transform.transform.storage[12],
-          transform.transform.storage[13],
-        ),
-    ];
+  for (final transform in tester.widgetList<Transform>(find.byType(Transform)))
+    Offset(transform.transform.storage[12], transform.transform.storage[13]),
+];
 
 double _leftmostTranslation(WidgetTester tester) =>
     _transformTranslations(tester).map((offset) => offset.dx).reduce(math.min);
@@ -236,8 +230,9 @@ void main() {
     expect(reported, [1]);
   });
 
-  testWidgets('next command at the last display hits the end edge',
-      (tester) async {
+  testWidgets('next command at the last display hits the end edge', (
+    tester,
+  ) async {
     // migrated: the viewport no longer performs the chapter move itself (that's
     // the host's job now). At the window's outer end it fires onReachedEndEdge —
     // the new edge signal that replaces the old onNextBoundary handoff.
@@ -269,8 +264,9 @@ void main() {
     expect(endEdgeHits, 1);
   });
 
-  testWidgets('next command lands on the chapter transition first',
-      (tester) async {
+  testWidgets('next command lands on the chapter transition first', (
+    tester,
+  ) async {
     // migrated: the trailing transition card is now an ordinary in-window slot
     // (via transitionBuilder), so the first next() pages onto it and only the
     // next() past it reaches the window's end edge (onReachedEndEdge).
@@ -350,8 +346,9 @@ void main() {
     expect(endEdgeHits, 1);
   });
 
-  testWidgets('window end edge bounces back onto the last page',
-      (tester) async {
+  testWidgets('window end edge bounces back onto the last page', (
+    tester,
+  ) async {
     // migrated: the old model gated the boundary move on hasNextBoundary and had
     // to avoid sliding onto an empty slot. In the new model the window's outer
     // edge ALWAYS bounces (never slides off) and just reports onReachedEndEdge;
@@ -395,8 +392,9 @@ void main() {
     expect(controller.isAtLast, isTrue);
   });
 
-  testWidgets('last display swipe settles on the chapter transition first',
-      (tester) async {
+  testWidgets('last display swipe settles on the chapter transition first', (
+    tester,
+  ) async {
     // migrated: the trailing transition card is an ordinary in-window slot now,
     // so the first fling pages onto it ('Finished') and only the second fling —
     // off the window's outer end — trips onReachedEndEdge.
@@ -445,8 +443,9 @@ void main() {
     expect(endEdgeHits, 1);
   });
 
-  testWidgets('sub-threshold drag does not turn a double-page spread',
-      (tester) async {
+  testWidgets('sub-threshold drag does not turn a double-page spread', (
+    tester,
+  ) async {
     final pages = _localPages(4);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -815,8 +814,9 @@ void main() {
     await gesture.up();
   });
 
-  testWidgets('two-finger hold does not reach ancestor shortcuts',
-      (tester) async {
+  testWidgets('two-finger hold does not reach ancestor shortcuts', (
+    tester,
+  ) async {
     final pages = _localPages(1);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -903,8 +903,9 @@ void main() {
     await first.up();
   });
 
-  testWidgets('same-page seek during a turn settle cannot park mid-turn',
-      (tester) async {
+  testWidgets('same-page seek during a turn settle cannot park mid-turn', (
+    tester,
+  ) async {
     // The seekbar fires jumpToRaw on every drag tick; mid-settle it can target
     // the still-current page, abandoning the turn without restoring the offset.
     final pages = _localPages(2);
@@ -946,10 +947,12 @@ void main() {
     // A settled slot always sits at translation 0; parked mid-turn, every
     // slot is off-grid.
     final slotOffsets = [
-      for (final transform in tester.widgetList<Transform>(find.ancestor(
-        of: find.byType(ClipRect),
-        matching: find.byType(Transform),
-      )))
+      for (final transform in tester.widgetList<Transform>(
+        find.ancestor(
+          of: find.byType(ClipRect),
+          matching: find.byType(Transform),
+        ),
+      ))
         transform.transform.storage[12],
     ];
     expect(
@@ -959,8 +962,9 @@ void main() {
     );
   });
 
-  testWidgets('two-finger tap does not leak into reader tap actions',
-      (tester) async {
+  testWidgets('two-finger tap does not leak into reader tap actions', (
+    tester,
+  ) async {
     final pages = _localPages(1);
     final mapping = buildSpreadMapping(
       pageCount: pages.length,
@@ -993,8 +997,116 @@ void main() {
 
     await second.up();
     await first.up();
-    await tester.pump(const Duration(milliseconds: 300));
+    // Past the single-tap delay, so a leaked tap would have fired by now.
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(taps, 0);
   });
+
+  /// Drives the double-tap window, which compares wall clock time and so is
+  /// untouched by the test binding's fake clock.
+  Future<void> tapPair(
+    WidgetTester tester,
+    _FakeClock clock,
+    Duration apart, {
+    Offset? secondAt,
+  }) async {
+    final target = find.byType(PagedReaderViewport);
+    await tester.tap(target);
+    clock.advance(apart);
+    await tester.pump(apart);
+    if (secondAt == null) {
+      await tester.tap(target);
+    } else {
+      await tester.tapAt(secondAt);
+    }
+    await tester.pump();
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a 250ms double tap zooms', (tester) async {
+    // Real double taps commonly land 130-235ms apart. 200ms missed them.
+    final clock = _FakeClock();
+    var menuToggles = 0;
+    await _pumpViewport(
+      tester,
+      controller: PagedReaderController(),
+      mapping: _singlePageMapping(),
+      pages: _localPages(1),
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(onTap: () => menuToggles++),
+      clock: clock.now,
+    );
+
+    await tapPair(tester, clock, const Duration(milliseconds: 250));
+
+    expect(_largestScale(tester), greaterThan(1.9));
+    expect(menuToggles, 0);
+  });
+
+  testWidgets('taps beyond the window stay two separate taps', (tester) async {
+    final clock = _FakeClock();
+    var menuToggles = 0;
+    await _pumpViewport(
+      tester,
+      controller: PagedReaderController(),
+      mapping: _singlePageMapping(),
+      pages: _localPages(1),
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(onTap: () => menuToggles++),
+      clock: clock.now,
+    );
+
+    await tapPair(tester, clock, const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(_largestScale(tester), lessThan(1.01), reason: 'no zoom');
+    expect(menuToggles, 2);
+  });
+
+  testWidgets('a second tap elsewhere does not swallow the first', (
+    tester,
+  ) async {
+    // Two quick taps far apart are two deliberate page turns, and widening the
+    // window gave the first one longer to be dropped in.
+    final clock = _FakeClock();
+    var taps = 0;
+    await _pumpViewport(
+      tester,
+      controller: PagedReaderController(),
+      mapping: _singlePageMapping(),
+      pages: _localPages(1),
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(onTap: () => taps++),
+      clock: clock.now,
+    );
+
+    final box = tester.getRect(find.byType(PagedReaderViewport));
+    await tester.tapAt(Offset(box.left + 10, box.center.dy));
+    clock.advance(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tapAt(Offset(box.right - 10, box.center.dy));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(taps, 2);
+  });
+}
+
+SpreadMapping _singlePageMapping() => buildSpreadMapping(
+  pageCount: 1,
+  doublePages: false,
+  splitWide: false,
+  splitInvert: false,
+  isWide: (_) => false,
+);
+
+/// Wall clock the double-tap window can be driven against.
+class _FakeClock {
+  DateTime _at = DateTime(2026);
+  DateTime now() => _at;
+  void advance(Duration by) => _at = _at.add(by);
 }
