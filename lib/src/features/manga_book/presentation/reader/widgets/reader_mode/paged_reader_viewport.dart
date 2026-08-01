@@ -83,7 +83,12 @@ class PagedReaderViewport extends StatefulWidget {
     this.onIdle,
     this.onReachedStartEdge,
     this.onReachedEndEdge,
+    this.clock = DateTime.now,
   });
+
+  /// Wall clock behind the double-tap window. Injectable because the test
+  /// binding's fake clock moves timers but not [DateTime.now].
+  final DateTime Function() clock;
 
   final PagedReaderController controller;
   final PagedDisplayWindow window;
@@ -147,10 +152,15 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const double _pageTurnVelocity = 650;
   static const double _panFlingVelocity = 700;
   static const double _panFlingDistanceFactor = 0.2;
-  static const Duration _tapDelay = Duration(milliseconds: 220);
-  // Must stay shorter than _tapDelay: a double-tap has to be recognised before
-  // the single-tap timer fires, or a slow double-tap runs both actions.
-  static const Duration _doubleTapWindow = Duration(milliseconds: 200);
+  // Android's double-tap timeout. Komikku uses the same value.
+  static const int _doubleTapWindowMs = 300;
+  // Must outlast _doubleTapWindow, or a slow double tap fires both actions.
+  static const Duration _tapDelay = Duration(
+    milliseconds: _doubleTapWindowMs + 20,
+  );
+  static const Duration _doubleTapWindow = Duration(
+    milliseconds: _doubleTapWindowMs,
+  );
   static const Duration _longPressDelay = Duration(milliseconds: 480);
   static const Duration _maxSettleDuration = Duration(milliseconds: 180);
   static const Duration _minSettleDuration = Duration(milliseconds: 70);
@@ -174,11 +184,12 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   // re-chunks a chapter's mapping and shifts display indices, and two chapters
   // can share a raw index, so the chapter disambiguates equal raws.
   final Map<({int chapterId, PageUnit unit}), _PageZoomController>
-      _zoomControllers = {};
+  _zoomControllers = {};
 
   /// Decoded pixel sizes per page, under the same key as [_zoomControllers] and
   /// for the same reason.
-  final Map<({int chapterId, PageUnit unit}), Map<int, Size>> _naturalSizes = {};
+  final Map<({int chapterId, PageUnit unit}), Map<int, Size>> _naturalSizes =
+      {};
 
   Offset? _lastSinglePosition;
   Offset _totalDrag = Offset.zero;
@@ -274,6 +285,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     // page the user is reading.
     if (!identical(oldWidget.window, widget.window)) {
       _reanchor(oldWidget.window);
+      _clearPendingTap();
     }
     _syncZoomBounds();
   }
@@ -301,8 +313,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         : null;
     var target = -1;
     if (item is SpreadDisplay) {
-      target =
-          widget.window.chapterRawToDisplay(item.chapterId, item.entry.first.raw);
+      target = widget.window.chapterRawToDisplay(
+        item.chapterId,
+        item.entry.first.raw,
+      );
     } else if (item is TransitionDisplay) {
       // Anchor to the chapter being ENTERED (its first page). For an
       // end-of-window "next chapter" card that doesn't know its target yet, fall
@@ -315,8 +329,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         target = widget.window.lastDisplayOf(item.fromChapterId!);
       }
     }
-    _displayIndex =
-        target >= 0 ? target : _clampDisplay(widget.initialDisplayIndex);
+    _displayIndex = target >= 0
+        ? target
+        : _clampDisplay(widget.initialDisplayIndex);
     _dragOffset = 0;
     // Runs inside didUpdateWidget; a sync emit would setState an ancestor
     // mid-build. Defer (like commitPendingIfAny).
@@ -350,6 +365,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       _emitRawPage();
       return;
     }
+    _clearPendingTap();
     setState(() {
       _displayIndex = target;
       _dragOffset = 0;
@@ -440,12 +456,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   _PageZoomController? get _currentZoomOrNull {
     if (_isTransitionSlot(_displayIndex)) return null;
-    return _zoomControllerFor(_displayIndex)
-      ..configure(
-        minMultiplier: _minMultiplier,
-        maxMultiplier: _maxMultiplier,
-        viewport: _viewportSize,
-      );
+    return _zoomControllerFor(_displayIndex)..configure(
+      minMultiplier: _minMultiplier,
+      maxMultiplier: _maxMultiplier,
+      viewport: _viewportSize,
+    );
   }
 
   _PageZoomController _zoomControllerFor(int displayIndex) {
@@ -464,7 +479,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     // so the ensuing tap is swallowed (the in-flight turn still commits on
     // cancel, so we must not also fire a second tap action on top of it).
     if (_pointers.isEmpty) {
-      _interruptedByAnimation = _pageAnimation.isAnimating ||
+      _interruptedByAnimation =
+          _pageAnimation.isAnimating ||
           _panAnimation.isAnimating ||
           _zoomAnimation.isAnimating;
     }
@@ -526,9 +542,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final previousOwner = _dragOwner;
 
     if (_longPressActive) {
-      ReaderInputScope.maybeOf(context)?.onLongPressMoveUpdate(
-        event.localPosition,
-      );
+      ReaderInputScope.maybeOf(
+        context,
+      )?.onLongPressMoveUpdate(event.localPosition);
       return;
     }
 
@@ -642,6 +658,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _onPointerCancel(PointerCancelEvent event) {
     _pointers.remove(event.pointer);
+    _clearPendingTap();
     _finishLongPress(cancelled: true);
     if (_dragOwner == _DragOwner.pager || _dragOffset != 0) _settleDrag();
     if (_pointers.isNotEmpty) {
@@ -755,6 +772,15 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       ..setScaleAround(scale, focal);
   }
 
+  // A tap left armed across a page change can act on, or zoom, whichever
+  // page replaced the one it landed on.
+  void _clearPendingTap() {
+    _singleTapTimer?.cancel();
+    _singleTapTimer = null;
+    _lastTapAt = null;
+    _lastTapPosition = null;
+  }
+
   void _handleTap(Offset position) {
     // No double-tap-to-zoom → nothing to disambiguate, so act immediately
     // instead of holding every tap for _tapDelay (a felt page-turn latency).
@@ -763,26 +789,29 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       return;
     }
 
-    final now = DateTime.now();
+    final now = widget.clock();
     final previousTapAt = _lastTapAt;
     final previousTapPosition = _lastTapPosition;
-    _lastTapAt = now;
-    _lastTapPosition = position;
+    _clearPendingTap();
 
     if (previousTapAt != null &&
         now.difference(previousTapAt) <= _doubleTapWindow &&
         previousTapPosition != null &&
         (previousTapPosition - position).distance <= _tapSlop * 2) {
-      _singleTapTimer?.cancel();
-      _lastTapAt = null;
-      _lastTapPosition = null;
       _handleDoubleTap(position);
       return;
     }
 
+    // Too far apart to pair: fire the stranded tap now. Must happen before
+    // arming this one, since acting on it can change the page and clear state.
+    if (previousTapAt != null && previousTapPosition != null) {
+      _handleSingleTap(previousTapPosition);
+    }
+
+    _lastTapAt = now;
+    _lastTapPosition = position;
     _singleTapTimer = Timer(_tapDelay, () {
-      _lastTapAt = null;
-      _lastTapPosition = null;
+      _clearPendingTap();
       if (!mounted) return;
       _handleSingleTap(position);
     });
@@ -807,7 +836,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// Animate a page's zoom to a target scale/offset (double-tap), so it eases
   /// in instead of snapping — matching the webtoon reader's zoom feel.
   void _animateZoomTo(
-      _PageZoomController zoom, ({double scale, Offset offset}) end) {
+    _PageZoomController zoom,
+    ({double scale, Offset offset}) end,
+  ) {
     // reset() drives the controller to `dismissed`, which fires the status
     // listener that clears these tweens — so it has to run BEFORE we build them.
     // A second double-tap arrives with the controller sitting at `completed`, so
@@ -818,10 +849,12 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       ..reset();
     _zoomAnimationTarget = zoom;
     _zoomScaleTween = Tween<double>(begin: zoom.scale, end: end.scale).animate(
-        CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
+      CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic),
+    );
     _zoomOffsetTween = Tween<Offset>(begin: zoom.offset, end: end.offset)
         .animate(
-            CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic));
+          CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic),
+        );
     _zoomAnimation
       ..duration = _doubleTapZoomDuration
       ..forward();
@@ -847,14 +880,13 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     Offset position,
     Size size,
     ReaderInputCallbacks callbacks,
-  ) =>
-      tapActionForZone(
-        position: position,
-        size: size,
-        layout: callbacks.navigationLayout,
-        tapInvert: callbacks.tapInvert,
-        smallerTapZones: callbacks.smallerTapZones,
-      );
+  ) => tapActionForZone(
+    position: position,
+    size: size,
+    layout: callbacks.navigationLayout,
+    tapInvert: callbacks.tapInvert,
+    smallerTapZones: callbacks.smallerTapZones,
+  );
 
   Offset _releaseVelocity(PointerUpEvent event) {
     if (_velocityPointer != event.pointer) return Offset.zero;
@@ -869,9 +901,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     final signedVelocity = -releaseVelocity * _axisSign;
     if (signedDistance.abs() > _touchSlop &&
         signedVelocity.abs() > _pageTurnVelocity) {
-      _animateToDisplay(
-        _displayIndex + (signedVelocity > 0 ? 1 : -1),
-      );
+      _animateToDisplay(_displayIndex + (signedVelocity > 0 ? 1 : -1));
       return;
     }
 
@@ -962,14 +992,17 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       return;
     }
     final targetOffset = -delta * _axisSign * _axisExtent;
-    _animateOffsetTo(targetOffset, onComplete: () {
-      if (!mounted) return;
-      setState(() {
-        _displayIndex = targetDisplay;
-        _dragOffset = 0;
-      });
-      _emitRawPage();
-    });
+    _animateOffsetTo(
+      targetOffset,
+      onComplete: () {
+        if (!mounted) return;
+        setState(() {
+          _displayIndex = targetDisplay;
+          _dragOffset = 0;
+        });
+        _emitRawPage();
+      },
+    );
   }
 
   void _applyPagerDragDelta(double dragDelta) {
@@ -1012,12 +1045,15 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   Duration _settleDuration(double target) {
     if (!widget.animateTransitions || _axisExtent <= 0) return Duration.zero;
-    final remaining =
-        ((target - _dragOffset).abs() / _axisExtent).clamp(0.0, 1.0);
+    final remaining = ((target - _dragOffset).abs() / _axisExtent).clamp(
+      0.0,
+      1.0,
+    );
     final minMs = _minSettleDuration.inMilliseconds;
     final maxMs = _maxSettleDuration.inMilliseconds;
     return Duration(
-        milliseconds: minMs + ((maxMs - minMs) * remaining).round());
+      milliseconds: minMs + ((maxMs - minMs) * remaining).round(),
+    );
   }
 
   _PanDirection _commandPanDirection(int delta) {
@@ -1044,10 +1080,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final nextViewport = Size(
-          constraints.maxWidth,
-          constraints.maxHeight,
-        );
+        final nextViewport = Size(constraints.maxWidth, constraints.maxHeight);
         final resized = nextViewport != _viewportSize;
         _viewportSize = nextViewport;
         _syncZoomBounds();
@@ -1131,7 +1164,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// Feeds the decoded page size to its zoom controller, so pan bounds match
   /// the page's real extent instead of an assumed full-viewport size.
   void _recordNaturalSize(
-      int index, SpreadDisplay spread, int raw, Size natural) {
+    int index,
+    SpreadDisplay spread,
+    int raw,
+    Size natural,
+  ) {
     // An already-decoded page reports during build (the image stream fires its
     // listener synchronously on a cache hit); notifying the zoom then would
     // rebuild mid-build. Publish after the frame instead.
@@ -1180,8 +1217,9 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     }
     if (width <= 0 || height <= 0) return;
 
-    _zoomControllerFor(index)
-        .setPageMetrics(content: Size(width, height), baseScale: 1);
+    _zoomControllerFor(
+      index,
+    ).setPageMetrics(content: Size(width, height), baseScale: 1);
   }
 
   void _republishVisibleMetrics() {
@@ -1197,7 +1235,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     if (!spread.entry.isPair) {
       return Size(_viewportSize.width, _viewportSize.height);
     }
-    final margin = widget.centerMargin == CenterMarginType.doublePage ||
+    final margin =
+        widget.centerMargin == CenterMarginType.doublePage ||
             widget.centerMargin == CenterMarginType.doubleAndWide
         ? kCenterMargin
         : 0.0;
@@ -1221,8 +1260,9 @@ class _PositionedDisplayEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final translation =
-        axis == Axis.horizontal ? Offset(offset, 0) : Offset(0, offset);
+    final translation = axis == Axis.horizontal
+        ? Offset(offset, 0)
+        : Offset(0, offset);
     return Transform.translate(offset: translation, child: child);
   }
 }
@@ -1249,10 +1289,7 @@ class _ZoomedDisplayEntry extends StatelessWidget {
       builder: (context, child) {
         return Transform.translate(
           offset: controller.offset,
-          child: Transform.scale(
-            scale: controller.scale,
-            child: child,
-          ),
+          child: Transform.scale(scale: controller.scale, child: child),
         );
       },
       child: child,
@@ -1349,7 +1386,9 @@ class _PageZoomController extends ChangeNotifier {
   /// The (scale, offset) that [setScaleAround] would land on — without applying
   /// it, so the viewport can animate toward it.
   ({double scale, Offset offset}) scaleAroundTarget(
-      double targetScale, Offset focal) {
+    double targetScale,
+    Offset focal,
+  ) {
     final nextScale = targetScale.clamp(minScale, maxScale).toDouble();
     final scaleRatio = nextScale / _scale;
     final viewportCenter = Offset(_viewport.width / 2, _viewport.height / 2);
@@ -1387,10 +1426,8 @@ class _PageZoomController extends ChangeNotifier {
 
   /// Whether [drag]'s dominant axis is one the page can still travel along.
   bool canPanAlong(Offset drag) => canPanBy(
-        drag.dx.abs() >= drag.dy.abs()
-            ? Offset(drag.dx, 0)
-            : Offset(0, drag.dy),
-      );
+    drag.dx.abs() >= drag.dy.abs() ? Offset(drag.dx, 0) : Offset(0, drag.dy),
+  );
 
   bool canPan(_PanDirection direction) {
     return switch (direction) {
@@ -1444,46 +1481,52 @@ TapAction tapActionForZone({
   required TapInvert tapInvert,
   required bool smallerTapZones,
 }) {
-  final leftAction =
-      tapInvert.invertsHorizontal ? TapAction.next : TapAction.previous;
-  final rightAction =
-      tapInvert.invertsHorizontal ? TapAction.previous : TapAction.next;
-  final topAction =
-      tapInvert.invertsVertical ? TapAction.next : TapAction.previous;
-  final bottomAction =
-      tapInvert.invertsVertical ? TapAction.previous : TapAction.next;
+  final leftAction = tapInvert.invertsHorizontal
+      ? TapAction.next
+      : TapAction.previous;
+  final rightAction = tapInvert.invertsHorizontal
+      ? TapAction.previous
+      : TapAction.next;
+  final topAction = tapInvert.invertsVertical
+      ? TapAction.next
+      : TapAction.previous;
+  final bottomAction = tapInvert.invertsVertical
+      ? TapAction.previous
+      : TapAction.next;
   final edgeWidth = size.width * (smallerTapZones ? 0.25 : 1 / 3);
   final edgeHeight = size.height * (smallerTapZones ? 0.25 : 1 / 3);
 
   return switch (layout) {
-    ReaderNavigationLayout.rightAndLeft => position.dx < edgeWidth
-        ? leftAction
-        : position.dx >= size.width - edgeWidth
-            ? rightAction
-            : TapAction.menu,
+    ReaderNavigationLayout.rightAndLeft =>
+      position.dx < edgeWidth
+          ? leftAction
+          : position.dx >= size.width - edgeWidth
+          ? rightAction
+          : TapAction.menu,
     ReaderNavigationLayout.edge =>
       position.dx < edgeWidth || position.dx >= size.width - edgeWidth
           ? rightAction
           : position.dy >= size.height - edgeHeight
-              ? leftAction
-              : TapAction.menu,
+          ? leftAction
+          : TapAction.menu,
     // Komikku's kindlish layout: menu across the top, left/right below it.
-    ReaderNavigationLayout.kindlish => position.dy < edgeHeight
-        ? TapAction.menu
-        : position.dx < edgeWidth
-            ? leftAction
-            : rightAction,
-    ReaderNavigationLayout.lShaped => position.dy < edgeHeight
-        ? topAction
-        : position.dy >= size.height - edgeHeight
-            ? bottomAction
-            : position.dx < edgeWidth
-                ? leftAction
-                : position.dx >= size.width - edgeWidth
-                    ? rightAction
-                    : TapAction.menu,
+    ReaderNavigationLayout.kindlish =>
+      position.dy < edgeHeight
+          ? TapAction.menu
+          : position.dx < edgeWidth
+          ? leftAction
+          : rightAction,
+    ReaderNavigationLayout.lShaped =>
+      position.dy < edgeHeight
+          ? topAction
+          : position.dy >= size.height - edgeHeight
+          ? bottomAction
+          : position.dx < edgeWidth
+          ? leftAction
+          : position.dx >= size.width - edgeWidth
+          ? rightAction
+          : TapAction.menu,
     ReaderNavigationLayout.defaultNavigation ||
-    ReaderNavigationLayout.disabled =>
-      TapAction.menu,
+    ReaderNavigationLayout.disabled => TapAction.menu,
   };
 }
