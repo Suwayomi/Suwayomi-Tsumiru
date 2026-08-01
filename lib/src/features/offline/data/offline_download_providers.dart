@@ -1191,11 +1191,13 @@ Future<void> reconcileMangaCore({
   Future<void> Function(List<int> chapterIds)? enqueueServerDownload,
   Future<void> Function(int chapterId)? removeFromWorker,
   Set<int> sessionProtected = const {},
+  int deleteWhileReadingSlots = 0,
 }) {
   return OfflineReconciler(
     db: db,
     nets: nets,
     sessionProtected: sessionProtected,
+    deleteWhileReadingSlots: deleteWhileReadingSlots,
     now: DateTime.now(),
     // Only QUEUE chapters here; starting the download is the caller's job (via
     // downloadStarterProvider) so the Ref-less launch path and tests stay in
@@ -1251,6 +1253,8 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     nets: ref.read(safetyNetConfigProvider),
     mangaId: mangaId,
     sessionProtected: ref.read(sessionReadChaptersProvider),
+    deleteWhileReadingSlots:
+        ref.read(localDeleteSettingsProvider).deleteWhileReading,
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
@@ -1280,6 +1284,8 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
     nets: ref.read(safetyNetConfigProvider),
     mangaId: mangaId,
     sessionProtected: ref.read(sessionReadChaptersProvider),
+    deleteWhileReadingSlots:
+        ref.read(localDeleteSettingsProvider).deleteWhileReading,
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
@@ -1313,6 +1319,8 @@ Future<void> reconcileMangaContainer(
     nets: container.read(safetyNetConfigProvider),
     mangaId: mangaId,
     sessionProtected: container.read(sessionReadChaptersProvider),
+    deleteWhileReadingSlots:
+        container.read(localDeleteSettingsProvider).deleteWhileReading,
     enqueueServerDownload: (ids) => container
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
@@ -1345,6 +1353,8 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
         coordinator: coordinator,
         nets: nets,
         mangaId: m.id,
+        deleteWhileReadingSlots:
+            container.read(localDeleteSettingsProvider).deleteWhileReading,
         enqueueServerDownload: (ids) => container
             .read(downloadsRepositoryProvider)
             .addChaptersBatchToDownloadQueue(ids),
