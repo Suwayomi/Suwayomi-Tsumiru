@@ -18,6 +18,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter/graphql/__generated__/fragment.graphql.dart';
+import '../../domain/updates/updates_row_patch.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
@@ -25,6 +26,18 @@ import '../reader/controller/reader_controller.dart';
 import 'controller/updates_filter_controller.dart';
 import 'widgets/chapter_manga_list_tile.dart';
 import 'widgets/updates_filter.dart';
+
+/// Refetches one chapter, holding its autoDispose provider open so a bare
+/// refresh with nothing listening can't tear it down mid-fetch and throw.
+Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
+  final provider = chapterProvider(chapterId: chapterId);
+  final keepAlive = ref.listenManual(provider, (_, _) {});
+  try {
+    return await ref.refresh(provider.future);
+  } finally {
+    keepAlive.close();
+  }
+}
 
 class UpdatesScreen extends HookConsumerWidget {
   const UpdatesScreen({super.key});
@@ -73,6 +86,9 @@ class UpdatesScreen extends HookConsumerWidget {
     final controller = usePagingController<int, ChapterWithMangaDto>(
       firstPageKey: 0,
     );
+    // The item builder's context belongs to a row that recycles on scroll, so
+    // post-await guards ask this one whether the screen itself is still alive.
+    final screenContext = context;
     final updatesRepository = ref.watch(updatesRepositoryProvider);
     final isUpdatesChecking = ref
         .watch(updatesSocketProvider.select((value) => value.value?.isRunning))
@@ -234,9 +250,7 @@ class UpdatesScreen extends HookConsumerWidget {
                   final chapterTile = ChapterMangaListTile(
                     chapterWithMangaDto: item,
                     updatePair: () async {
-                      final chapter = await ref.refresh(
-                        chapterProvider(chapterId: item.id).future,
-                      );
+                      final chapter = await refetchChapter(ref, item.id);
                       // Locate the row by id, not the captured build-time index —
                       // the list may have changed (paging/refresh) while the reader
                       // was open, so an index-based patch could hit the wrong row.
@@ -252,6 +266,33 @@ class UpdatesScreen extends HookConsumerWidget {
                         lastPageRead: chapter?.lastPageRead,
                       );
                       controller.itemList = list;
+                    },
+                    refreshManga: () async {
+                      final mangaId = item.mangaId;
+                      final startGeneration = generation.value;
+                      final ids = [
+                        for (final row in [...?controller.itemList])
+                          if (row.mangaId == mangaId) row.id,
+                      ];
+                      // Per chapter rather than via mangaChapterList: refreshing
+                      // that one also runs the offline reconcile, and merely
+                      // coming back to this list must never delete a download.
+                      final chapters = await fetchChaptersInBatches(
+                        ids: ids,
+                        fetch: (id) => refetchChapter(ref, id),
+                      );
+                      // Same staleness rule as _fetchPage: a refresh or filter
+                      // change during the fetch leaves these rows describing a
+                      // list that no longer exists.
+                      if (!screenContext.mounted ||
+                          generation.value != startGeneration) {
+                        return;
+                      }
+                      controller.itemList = patchRowsForManga(
+                        rows: [...?controller.itemList],
+                        mangaId: mangaId,
+                        chapters: chapters,
+                      );
                     },
                     isSelected: selectedChapters.value.containsKey(item.id),
                     canTapSelect: selectedChapters.value.isNotEmpty,
