@@ -23,6 +23,7 @@ import '../../../manga_details/controller/manga_details_controller.dart';
 import '../../utils/reader_mode_kind.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
+import 'chapter_nav_buttons.dart';
 import 'chrome_extents.dart';
 
 /// The reader's bottom chrome controls, extracted from [ReaderWrapper]'s
@@ -42,7 +43,8 @@ class ReaderBottomControls extends ConsumerWidget {
     required this.totalPageCount,
     required this.useBottomSeekBar,
     required this.scrollDirection,
-    required this.nextPrevChapterPair,
+    required this.onPreviousChapter,
+    required this.onNextChapter,
     required this.resolvedReaderMode,
     required this.reverseSeekBar,
     required this.onChanged,
@@ -60,7 +62,11 @@ class ReaderBottomControls extends ConsumerWidget {
   /// True when horizontal seek bar should be shown (paged / landscape modes).
   final bool useBottomSeekBar;
   final Axis scrollDirection;
-  final ({ChapterDto? first, ChapterDto? second})? nextPrevChapterPair;
+
+  /// Null when there is no chapter that way; the button renders disabled.
+  final VoidCallback? onPreviousChapter;
+  final VoidCallback? onNextChapter;
+
   final ReaderMode resolvedReaderMode;
   final bool reverseSeekBar;
 
@@ -77,6 +83,11 @@ class ReaderBottomControls extends ConsumerWidget {
     final view = View.of(context);
     final systemBottomInset = view.viewPadding.bottom / view.devicePixelRatio;
     final isPagedMode = isPagedReaderMode(resolvedReaderMode);
+    final chapterButtons = chapterNavCallbacks(
+      isRtl: isRTLReaderMode(resolvedReaderMode),
+      onPreviousChapter: onPreviousChapter,
+      onNextChapter: onNextChapter,
+    );
     final pageLayout = ref.watch(pageLayoutKeyProvider) ?? PageLayout.automatic;
     final dualPageSplitPaged = ref.watch(dualPageSplitPagedProvider).ifNull();
     final cropBorders = isPagedMode
@@ -122,15 +133,7 @@ class ReaderBottomControls extends ConsumerWidget {
                     elevation: 0,
                     color: readerNavSurface(context.theme.colorScheme),
                     child: IconButton(
-                      onPressed: nextPrevChapterPair?.second != null
-                          ? () => ReaderRoute(
-                                mangaId: nextPrevChapterPair!.second!.mangaId,
-                                chapterId: nextPrevChapterPair!.second!.id,
-                                toPrev: true,
-                                transVertical: scrollDirection == Axis.vertical,
-                                openAtEnd: true,
-                              ).pushReplacement(context)
-                          : null,
+                      onPressed: chapterButtons.leading,
                       icon: const Icon(Icons.skip_previous_rounded),
                     ),
                   ),
@@ -149,13 +152,7 @@ class ReaderBottomControls extends ConsumerWidget {
                     elevation: 0,
                     color: readerNavSurface(context.theme.colorScheme),
                     child: IconButton(
-                      onPressed: nextPrevChapterPair?.first != null
-                          ? () => ReaderRoute(
-                                mangaId: nextPrevChapterPair!.first!.mangaId,
-                                chapterId: nextPrevChapterPair!.first!.id,
-                                transVertical: scrollDirection == Axis.vertical,
-                              ).pushReplacement(context)
-                          : null,
+                      onPressed: chapterButtons.trailing,
                       icon: const Icon(Icons.skip_next_rounded),
                     ),
                   ),

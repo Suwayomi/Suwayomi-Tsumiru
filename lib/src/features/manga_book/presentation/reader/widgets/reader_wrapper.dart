@@ -705,7 +705,11 @@ class ReaderWrapper extends HookConsumerWidget {
                 useBottomSeekBar: useBottomSeekBar,
                 showSideSeekBar: showSideSeekBar,
                 scrollDirection: scrollDirection,
-                nextPrevChapterPair: nextPrevChapterPair,
+                onPreviousChapter: nextPrevChapterPair?.second != null
+                    ? pushPreviousChapter
+                    : null,
+                onNextChapter:
+                    nextPrevChapterPair?.first != null ? pushNextChapter : null,
                 resolvedReaderMode: resolvedReaderMode,
                 autoScrollSupported: onToggleAutoScroll != null,
                 reverseSeekBar: isRTLReaderMode(resolvedReaderMode),

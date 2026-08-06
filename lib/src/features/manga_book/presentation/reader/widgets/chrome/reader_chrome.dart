@@ -66,7 +66,8 @@ class ReaderChrome extends HookConsumerWidget {
     required this.useBottomSeekBar,
     required this.showSideSeekBar,
     required this.scrollDirection,
-    required this.nextPrevChapterPair,
+    required this.onPreviousChapter,
+    required this.onNextChapter,
     required this.resolvedReaderMode,
     required this.autoScrollSupported,
     required this.reverseSeekBar,
@@ -99,7 +100,11 @@ class ReaderChrome extends HookConsumerWidget {
   final bool showSideSeekBar;
 
   final Axis scrollDirection;
-  final ({ChapterDto? first, ChapterDto? second})? nextPrevChapterPair;
+
+  /// Null when there is no chapter that way; the button renders disabled.
+  final VoidCallback? onPreviousChapter;
+  final VoidCallback? onNextChapter;
+
   final ReaderMode resolvedReaderMode;
 
   /// True only in modes that actually mount an auto-scroll/auto-advance engine.
@@ -386,6 +391,8 @@ class ReaderChrome extends HookConsumerWidget {
                       pageCount:
                           totalPageCount ?? chapterPages.chapter.pageCount,
                       onChanged: onChanged,
+                      onPreviousChapter: onPreviousChapter,
+                      onNextChapter: onNextChapter,
                     ),
                   ),
                 ),
@@ -415,7 +422,8 @@ class ReaderChrome extends HookConsumerWidget {
                       totalPageCount: totalPageCount,
                       useBottomSeekBar: useBottomSeekBar,
                       scrollDirection: scrollDirection,
-                      nextPrevChapterPair: nextPrevChapterPair,
+                      onPreviousChapter: onPreviousChapter,
+                      onNextChapter: onNextChapter,
                       resolvedReaderMode: resolvedReaderMode,
                       reverseSeekBar: reverseSeekBar,
                       onChanged: onChanged,

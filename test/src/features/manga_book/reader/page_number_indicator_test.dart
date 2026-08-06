@@ -107,7 +107,8 @@ Future<void> _pumpChrome(
             useBottomSeekBar: true,
             showSideSeekBar: false,
             scrollDirection: Axis.horizontal,
-            nextPrevChapterPair: null,
+            onPreviousChapter: null,
+            onNextChapter: null,
             resolvedReaderMode: reverseSeekBar
                 ? ReaderMode.singleHorizontalRTL
                 : ReaderMode.singleHorizontalLTR,
