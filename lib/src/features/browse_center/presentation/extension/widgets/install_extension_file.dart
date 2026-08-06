@@ -12,8 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
-import '../../../data/extension_repository/extension_repository.dart';
-import '../controller/extension_controller.dart';
+import '../controller/extension_actions.dart';
 
 class InstallExtensionFile extends ConsumerWidget {
   const InstallExtensionFile({super.key});
@@ -34,9 +33,8 @@ class InstallExtensionFile extends ConsumerWidget {
     AppUtils.guard(
       () async {
         await ref
-            .read(extensionRepositoryProvider)
-            .installExtensionFile(context, file: file?.files.single);
-        ref.invalidate(extensionProvider);
+            .read(extensionActionsProvider)
+            .installFile(context, file: file?.files.single);
         if (context.mounted) {
           toast?.show(context.l10n.extensionInstalled, instantShow: true);
         }

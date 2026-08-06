@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,7 +14,6 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
-import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/extension_model.dart';
 import 'controller/extension_controller.dart';
 import 'widgets/extension_list_tile.dart';
@@ -27,7 +25,6 @@ class ExtensionScreen extends HookConsumerWidget {
     Key? key,
     required String title,
     required List<Extension>? extensions,
-    required AsyncCallback refresh,
   }) {
     if (extensions.isBlank) return <Widget>[];
     return [
@@ -42,7 +39,6 @@ class ExtensionScreen extends HookConsumerWidget {
           (context, index) => ExtensionListTile(
             key: ValueKey(extensions[index].pkgName),
             extension: extensions[index],
-            refresh: refresh,
           ),
           childCount: extensions!.length,
         ),
@@ -104,28 +100,24 @@ class ExtensionScreen extends HookConsumerWidget {
                       key: const ValueKey("update"),
                       title: languageMap["update"]?.displayName ?? "",
                       extensions: update,
-                      refresh: refresh,
                     ),
                   if (installed.isNotBlank)
                     ...extensionSet(
                       key: const ValueKey("installed"),
                       title: languageMap["installed"]?.displayName ?? "",
                       extensions: installed,
-                      refresh: refresh,
                     ),
                   if (all.isNotBlank)
                     ...extensionSet(
                       key: const ValueKey("all"),
                       title: languageMap["all"]?.displayName ?? "",
                       extensions: all,
-                      refresh: refresh,
                     ),
                   for (final k in extensionMap.keys)
                     ...extensionSet(
                       key: ValueKey(k),
                       title: languageMap[k]?.displayName ?? k,
                       extensions: extensionMap[k],
-                      refresh: refresh,
                     ),
                 ],
               ),
