@@ -16,6 +16,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/read
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_spread_mapping.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
+import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 
 const _png1x1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
@@ -960,6 +961,194 @@ void main() {
       isNotEmpty,
       reason: 'pager rested between slots: $slotOffsets',
     );
+  });
+
+  Future<List<double>> strandAndSettle(
+    WidgetTester tester,
+    PagedReaderController controller,
+    double progress,
+  ) async {
+    controller.debugStrand(progress);
+    await tester.pumpAndSettle();
+    return [
+      for (final transform in tester.widgetList<Transform>(
+        find.ancestor(
+          of: find.byType(ClipRect),
+          matching: find.byType(Transform),
+        ),
+      ))
+        transform.transform.storage[12],
+    ];
+  }
+
+  testWidgets('a pager stranded mid-turn comes to rest on a slot', (
+    tester,
+  ) async {
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(),
+    );
+
+    final offsets = await strandAndSettle(tester, controller, 0.4);
+    expect(
+      offsets.where((dx) => dx.abs() < 0.1),
+      isNotEmpty,
+      reason: 'pager left resting between slots: $offsets',
+    );
+  });
+
+  testWidgets('a barely-started turn snaps back instead of skipping a page', (
+    tester,
+  ) async {
+    // 0.19 clears the 0.18 turn threshold, so recovering through the normal
+    // settle logic would advance the page.
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    final seen = <int>[];
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: seen.add,
+      callbacks: _callbacks(),
+    );
+    seen.clear();
+
+    await strandAndSettle(tester, controller, 0.19);
+
+    expect(seen, isEmpty, reason: 'recovery moved the reader off the page');
+  });
+
+  testWidgets('an all-but-finished turn is committed, not thrown away', (
+    tester,
+  ) async {
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    final seen = <int>[];
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: seen.add,
+      callbacks: _callbacks(),
+    );
+    seen.clear();
+
+    final offsets = await strandAndSettle(tester, controller, 0.95);
+
+    expect(seen.last, 1, reason: 'the turn the user made was dropped');
+    expect(offsets.where((dx) => dx.abs() < 0.1), isNotEmpty);
+  });
+
+  testWidgets('recovering records a diagnostic naming what it did', (
+    tester,
+  ) async {
+    final lines = <String>[];
+    setDiagnosticSink(lines.add);
+    addTearDown(() => setDiagnosticSink(null));
+
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(),
+    );
+
+    await strandAndSettle(tester, controller, 0.4);
+
+    expect(lines, hasLength(1));
+    expect(lines.single, contains('reader-rest:'));
+    expect(lines.single, contains('action=snapback'));
+    expect(lines.single, contains('progress=0.400'));
+    expect(lines.single, contains('axis=horizontal'));
+  });
+
+  testWidgets('the guard leaves a drag in progress alone', (tester) async {
+    final pages = _localPages(3);
+    final mapping = buildSpreadMapping(
+      pageCount: pages.length,
+      doublePages: false,
+      splitWide: false,
+      splitInvert: false,
+      isWide: (_) => false,
+    );
+    final controller = PagedReaderController();
+    await _pumpViewport(
+      tester,
+      controller: controller,
+      mapping: mapping,
+      pages: pages,
+      initialDisplayIndex: 0,
+      onRawPageChanged: (_) {},
+      callbacks: _callbacks(),
+    );
+
+    final center = tester.getCenter(find.byType(PagedReaderViewport));
+    final drag = await tester.startGesture(center);
+    await drag.moveBy(const Offset(-60, 0));
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.pump(const Duration(milliseconds: 40));
+
+    // Mid-drag every slot is legitimately off-grid; snapping here would fight
+    // the finger.
+    final offsets = [
+      for (final transform in tester.widgetList<Transform>(
+        find.ancestor(
+          of: find.byType(ClipRect),
+          matching: find.byType(Transform),
+        ),
+      ))
+        transform.transform.storage[12],
+    ];
+    expect(offsets.every((dx) => dx.abs() >= 0.1), isTrue,
+        reason: 'the guard snapped the pager while a finger was down');
+
+    await drag.up();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('two-finger tap does not leak into reader tap actions', (

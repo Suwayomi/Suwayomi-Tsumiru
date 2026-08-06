@@ -46,6 +46,7 @@ import 'src/features/tracking/domain/tracker_oauth_helpers.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
+import 'src/utils/crash/diagnostics.dart';
 import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
@@ -398,6 +399,7 @@ void _logBoot(String stage) {
 /// crash startup.
 Future<void> _setUpCrashReporting() async {
   _crashLogPath = await initCrashLog();
+  setDiagnosticSink((line) => writeCrashLog(_crashLogPath, line));
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     _logCrash(details.exception, details.stack);
