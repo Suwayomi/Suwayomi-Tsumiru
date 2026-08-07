@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -50,6 +52,9 @@ void main() {
     bool Function()? persistedPaused,
     Future<void> Function()? onFetch,
     Future<int> Function(int, int)? measureOverride,
+    bool pageOffline = false,
+    Object? resolveThrows,
+    void Function()? onServerUnreachable,
   }) {
     final engine = ChapterDownloadEngine(
       writePage: store,
@@ -58,6 +63,7 @@ void main() {
       refreshAuth: () async => refreshOk,
       fetchPage: (url) async {
         if (onFetch != null) await onFetch();
+        if (pageOffline) throw const PageOfflineException();
         if (auth401) throw const PageAuthException();
         if (fail) throw Exception('boom');
         return (bytes: [1, 2, 3], ext: 'jpg');
@@ -67,8 +73,12 @@ void main() {
       db: db,
       engine: engine,
       store: store,
-      resolvePages: (_) async => pages,
+      resolvePages: (_) async {
+        if (resolveThrows != null) throw resolveThrows;
+        return pages;
+      },
       persistedPaused: persistedPaused,
+      onServerUnreachable: onServerUnreachable,
     );
   }
 
@@ -510,4 +520,65 @@ void main() {
       );
     },
   );
+
+  group('parking on a dead network reports it', () {
+    // Parking the pump is only half a plan: the reconnect that restarts it is
+    // driven by the server-unreachable flag going up and back down. A park that
+    // stays quiet strands the whole queue until the app restarts, with nothing
+    // on screen saying why. Both park paths must raise it.
+
+    test(
+      'a page fetch that goes offline reports the server unreachable',
+      () async {
+        await seedChapter(1, 7, 3);
+        var reported = false;
+        await coord(
+          pageOffline: true,
+          onServerUnreachable: () => reported = true,
+        ).enqueueChapter((await db.chapterById(1))!);
+
+        expect(
+          reported,
+          isTrue,
+          reason: 'without this the reconnect listener never fires',
+        );
+        expect(
+          (await db.chapterById(1))!.deviceState,
+          OfflineDeviceState.downloading,
+          reason: 'left resumable, not errored',
+        );
+      },
+    );
+
+    test('a page-list resolve that goes offline reports it too', () async {
+      await seedChapter(1, 7, 3);
+      var reported = false;
+      await coord(
+        resolveThrows: const SocketException('no route to host'),
+        onServerUnreachable: () => reported = true,
+      ).enqueueChapter((await db.chapterById(1))!);
+
+      expect(reported, isTrue);
+      expect(
+        (await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloading,
+      );
+    });
+
+    test('a genuine page failure is an error, not a park', () async {
+      await seedChapter(1, 7, 3);
+      var reported = false;
+      await coord(
+        fail: true,
+        onServerUnreachable: () => reported = true,
+      ).enqueueChapter((await db.chapterById(1))!);
+
+      expect(
+        reported,
+        isFalse,
+        reason: 'a broken chapter is not an unreachable server',
+      );
+      expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
+    });
+  });
 }

@@ -272,6 +272,11 @@ class OfflineDownloadCoordinator {
         // parked row stays first in line, so pumping on would just re-pick it
         // in a hot loop while the network is down.
         _pausedForOffline = true;
+        // Say so out loud. Parking is only half a plan — the reconnect that
+        // restarts the pump is triggered by this flag going up and back down,
+        // so a park that stays quiet strands the whole queue until the app is
+        // restarted, with nothing on screen to explain why.
+        onServerUnreachable?.call();
         logger.i(
           'Offline: chapter ${chapter.id} paused (no network); '
           'leaving downloading for resume',
