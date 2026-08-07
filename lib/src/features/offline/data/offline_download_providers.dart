@@ -197,7 +197,13 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
 @riverpod
 double? offlineChapterProgress(Ref ref, int chapterId) {
   if (!ref.watch(offlineActiveProvider)) return null;
-  final progress = ref.watch(offlineDownloadProgressProvider)[chapterId];
+  // Watch THIS chapter's entry, not the whole map. A chapter list holds a few
+  // hundred of these, and reading the map wakes every one of them each time any
+  // single chapter advances a page — so one download made the entire visible
+  // list re-evaluate itself, hundreds of times a second.
+  final progress = ref.watch(
+    offlineDownloadProgressProvider.select((all) => all[chapterId]),
+  );
   if (progress == null || progress.total <= 0) return null;
   return (progress.done / progress.total).clamp(0.0, 1.0);
 }

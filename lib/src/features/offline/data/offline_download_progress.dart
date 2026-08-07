@@ -21,10 +21,28 @@ class OfflineDownloadProgress
   @override
   Map<int, ChapterDownloadProgress> build() => const {};
 
-  /// A chapter began with a known page total.
+  /// A chapter began with a known page total, or advanced to [done] pages.
+  ///
+  /// Pages land far faster than a display can show them — a webtoon chapter
+  /// over a fast link arrives at dozens a second, against a screen that redraws
+  /// 60 times a second and an arc a person cannot read to better than a percent
+  /// or so. Publishing every page made the UI rebuild for updates nobody could
+  /// see, so only a visible change is published: the arc looks identical and
+  /// most of the repaints stop happening.
   void start(int chapterId, {required int total, int done = 0}) {
+    final current = state[chapterId];
+    if (current != null &&
+        current.total == total &&
+        _percent(done, total) == _percent(current.done, current.total) &&
+        done != total) {
+      return;
+    }
     state = {...state, chapterId: (done: done, total: total)};
   }
+
+  /// Whole percent, the finest step the arc actually renders.
+  static int _percent(int done, int total) =>
+      total <= 0 ? 0 : (done * 100) ~/ total;
 
   /// One more page landed.
   void advance(int chapterId) {
