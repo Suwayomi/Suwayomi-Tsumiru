@@ -164,6 +164,18 @@ Future<void> recoverChaptersOnDisk({
             dir.chapterId,
           );
           switch (committed.state) {
+            case ChapterDirState.complete
+                when committed.generation != row.downloadGeneration:
+              // Content a delete was meant to remove but didn't (the file
+              // removal is best-effort). The chapter has since been re-queued,
+              // so adopting this would hand back exactly what the user deleted
+              // and throw away the download that replaces it.
+              logger.i(
+                'Offline: dropping superseded committed chapter '
+                '${dir.chapterId} (generation ${committed.generation} '
+                'vs ${row.downloadGeneration})',
+              );
+              await store.deleteCommitted(dir.mangaId, dir.chapterId);
             case ChapterDirState.complete:
               // Already settled, or the rename landed and the catalog write
               // didn't — either way the rows are cheap to reassert.

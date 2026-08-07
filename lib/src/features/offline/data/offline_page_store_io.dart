@@ -191,20 +191,32 @@ class IoOfflinePageStore implements OfflinePageStore {
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId) async {
     final dir = _finalDir(mangaId, chapterId);
     if (!await dir.exists()) {
-      return (state: ChapterDirState.absent, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.absent,
+        generation: 0,
+        pages: const <CommittedPage>[],
+      );
     }
     // The manifest rides along in the commit rename, so a committed chapter
     // carries the record of what it should contain. Its absence dates the
     // directory to before atomic commits.
     final manifestFile = File(p.join(dir.path, kChapterManifestName));
     if (!await manifestFile.exists()) {
-      return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.legacy,
+        generation: 0,
+        pages: const <CommittedPage>[],
+      );
     }
     final manifest = ChapterManifest.tryParse(
       await manifestFile.readAsString(),
     );
     if (manifest == null) {
-      return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.legacy,
+        generation: 0,
+        pages: const <CommittedPage>[],
+      );
     }
 
     final byIndex = <int, String>{};
@@ -220,6 +232,7 @@ class IoOfflinePageStore implements OfflinePageStore {
     if (!manifest.indices.every(byIndex.containsKey)) {
       return (
         state: ChapterDirState.incomplete,
+        generation: manifest.generation,
         pages: const <CommittedPage>[],
       );
     }
@@ -235,7 +248,11 @@ class IoOfflinePageStore implements OfflinePageStore {
       ));
     }
     pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
-    return (state: ChapterDirState.complete, pages: pages);
+    return (
+      state: ChapterDirState.complete,
+      generation: manifest.generation,
+      pages: pages,
+    );
   }
 
   @override
@@ -246,6 +263,10 @@ class IoOfflinePageStore implements OfflinePageStore {
     }
     return total;
   }
+
+  @override
+  Future<void> deleteCommitted(int mangaId, int chapterId) =>
+      _quietDeleteDir(_finalDir(mangaId, chapterId));
 
   @override
   Future<void> deleteStaging(int mangaId, int chapterId) =>

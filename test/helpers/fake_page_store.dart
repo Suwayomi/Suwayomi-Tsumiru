@@ -125,20 +125,30 @@ class FakePageStore implements OfflinePageStore {
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId) async {
     final pages = committed[chapterId];
     if (pages == null) {
-      return (state: ChapterDirState.absent, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.absent,
+        generation: 0,
+        pages: const <CommittedPage>[],
+      );
     }
     final manifest = manifests[chapterId];
     if (manifest == null) {
-      return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.legacy,
+        generation: 0,
+        pages: const <CommittedPage>[],
+      );
     }
     if (!manifest.indices.every(pages.containsKey)) {
       return (
         state: ChapterDirState.incomplete,
+        generation: manifest.generation,
         pages: const <CommittedPage>[],
       );
     }
     return (
       state: ChapterDirState.complete,
+      generation: manifest.generation,
       pages: [
         for (final i in manifest.indices)
           (
@@ -153,6 +163,11 @@ class FakePageStore implements OfflinePageStore {
   @override
   Future<int> stagedBytes(int mangaId, int chapterId) async =>
       (staged[chapterId] ?? const {}).values.fold<int>(0, (sum, b) => sum + b);
+
+  @override
+  Future<void> deleteCommitted(int mangaId, int chapterId) async {
+    committed.remove(chapterId);
+  }
 
   @override
   Future<void> deleteStaging(int mangaId, int chapterId) async {

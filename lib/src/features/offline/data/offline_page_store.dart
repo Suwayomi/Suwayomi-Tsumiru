@@ -27,8 +27,14 @@ enum ChapterDirState {
   complete,
 }
 
-/// A chapter's final directory and, when [state] is complete, its pages.
-typedef CommittedChapter = ({ChapterDirState state, List<CommittedPage> pages});
+/// A chapter's final directory: what shape it is in, which download generation
+/// produced it (0 when its manifest predates them), and its pages when
+/// complete.
+typedef CommittedChapter = ({
+  ChapterDirState state,
+  int generation,
+  List<CommittedPage> pages,
+});
 
 /// A chapter that has files on disk, and which of its two directories exist.
 typedef StoredChapter = ({
@@ -98,6 +104,10 @@ abstract class OfflinePageStore {
   /// Total bytes currently staged for a chapter. Unlike [chapterBytes] this
   /// covers a chapter that hasn't been published yet.
   Future<int> stagedBytes(int mangaId, int chapterId);
+
+  /// Discard a chapter's committed directory, leaving any staging alone —
+  /// for content a delete was supposed to remove and didn't.
+  Future<void> deleteCommitted(int mangaId, int chapterId);
 
   /// Discard a chapter's staging directory (delete, or a producer that lost its
   /// claim cleaning up after itself).

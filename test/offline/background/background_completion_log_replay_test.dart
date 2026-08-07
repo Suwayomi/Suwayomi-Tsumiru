@@ -187,6 +187,51 @@ void main() {
     expect(stagingExists(1, 5), isFalse, reason: 'refused staging is dropped');
   });
 
+  test(
+    'a committed dir a delete failed to remove is not resurrected',
+    () async {
+      // Deleting files is best-effort, so a locked or unwritable directory can
+      // outlive the delete. Once the chapter is re-queued, adopting that
+      // directory would hand back exactly what the user removed.
+      await stage(1, 5, [0, 1], [0, 1]);
+      await store.commitStaging(1, 5); // committed at generation 0
+      await db.bumpChapterGeneration(5); // the delete
+      await db.setChapterDeviceState(5, OfflineDeviceState.queued); // re-queued
+
+      await replay();
+
+      expect(
+        (await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.queued,
+        reason: 'the superseded copy must not complete the new generation',
+      );
+      expect(await db.downloadedPageCount(5), 0);
+      expect(finalDirExists(1, 5), isFalse, reason: 'stale content dropped');
+    },
+  );
+
+  test('a superseded committed dir does not clobber the new download', () async {
+    // The stale directory and a fresh, complete staging attempt at the current
+    // generation both exist. The new download is the one that should land.
+    await stage(1, 5, [0, 1], [0, 1]);
+    await store.commitStaging(1, 5); // generation 0, superseded below
+    await db.bumpChapterGeneration(5);
+    await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
+    await stage(1, 5, [0, 1, 2], [0, 1, 2], generation: 1);
+
+    await replay();
+
+    expect(
+      (await db.chapterById(5))!.deviceState,
+      OfflineDeviceState.downloaded,
+    );
+    expect(
+      await db.downloadedPageCount(5),
+      3,
+      reason: 'the generation-1 download landed, not the stale copy',
+    );
+  });
+
   test('a re-download at the current generation still commits', () async {
     await db.bumpChapterGeneration(5); // now generation 1
     await stage(1, 5, [0, 1], [0, 1], generation: 1);
