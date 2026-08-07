@@ -34,8 +34,15 @@ class OfflineSaveButton extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
 
     return switch (state) {
-      OfflineDeviceState.queued || OfflineDeviceState.downloading =>
-        _DownloadingIndicator(chapterId: chapterId),
+      // A queued chapter is waiting its turn, not working. It used to render
+      // the same spinner as a live download, and a spinner animates every
+      // frame — so a few hundred queued chapters repainted the entire list at
+      // 60fps for as long as the queue lasted, whether or not anything was
+      // actually being fetched. Waiting looks like waiting now.
+      OfflineDeviceState.queued => const _QueuedIndicator(),
+      OfflineDeviceState.downloading => _DownloadingIndicator(
+        chapterId: chapterId,
+      ),
       OfflineDeviceState.downloaded => IconButton(
         tooltip: 'Remove from device',
         icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
@@ -66,6 +73,28 @@ class OfflineSaveButton extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+/// A chapter waiting its turn in the queue. Deliberately static: this is the
+/// state hundreds of rows sit in at once, so anything that animates here costs
+/// a full-list repaint every frame for the life of the queue.
+class _QueuedIndicator extends StatelessWidget {
+  const _QueuedIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Center(
+        child: Icon(
+          Icons.schedule_rounded,
+          size: 18,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
   }
 }
 
