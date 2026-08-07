@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
@@ -53,7 +54,7 @@ class BrowseScreen extends HookConsumerWidget {
           if (tabController.index == 0) ...[
             IconButton(
               tooltip: context.l10n.globalSearch,
-              onPressed: () => const GlobalSearchRoute().push(context),
+              onPressed: () => openGlobalSearch(context),
               icon: const Icon(Icons.travel_explore_rounded),
             ),
             IconButton(

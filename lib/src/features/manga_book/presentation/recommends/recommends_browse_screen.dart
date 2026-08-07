@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../routes/router_config.dart';
+import '../../../../routes/navigation.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../data/recommendations/recommendation_repository.dart';
@@ -66,7 +66,7 @@ class RecommendsBrowseScreen extends ConsumerWidget {
                   return InkWell(
                     borderRadius: KBorderRadius.r8.radius,
                     onTap: () =>
-                        GlobalSearchRoute(query: r.title).push(context),
+                        openGlobalSearch(context, query: r.title),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

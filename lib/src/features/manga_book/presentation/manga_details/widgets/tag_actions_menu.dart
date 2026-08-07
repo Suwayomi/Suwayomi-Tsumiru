@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../routes/navigation.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
@@ -52,7 +53,7 @@ Future<void> showTagActionsMenu(
       ref.read(libraryQueryProvider.notifier).update(tag);
       const LibraryRoute(categoryId: 0).go(context);
     case 'global':
-      GlobalSearchRoute(query: tag).push(context);
+      openGlobalSearch(context, query: tag);
     case 'copy':
       Clipboard.setData(ClipboardData(text: tag));
       ref.read(toastProvider)?.show(context.l10n.copiedToClipboard);
