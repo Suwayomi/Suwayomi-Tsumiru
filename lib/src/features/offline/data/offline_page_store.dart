@@ -95,6 +95,10 @@ abstract class OfflinePageStore {
   /// between adopting it, grandfathering it, and rebuilding it.
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId);
 
+  /// Total bytes currently staged for a chapter. Unlike [chapterBytes] this
+  /// covers a chapter that hasn't been published yet.
+  Future<int> stagedBytes(int mangaId, int chapterId);
+
   /// Discard a chapter's staging directory (delete, or a producer that lost its
   /// claim cleaning up after itself).
   Future<void> deleteStaging(int mangaId, int chapterId);

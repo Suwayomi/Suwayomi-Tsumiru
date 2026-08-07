@@ -151,6 +151,10 @@ class FakePageStore implements OfflinePageStore {
   }
 
   @override
+  Future<int> stagedBytes(int mangaId, int chapterId) async =>
+      (staged[chapterId] ?? const {}).values.fold<int>(0, (sum, b) => sum + b);
+
+  @override
   Future<void> deleteStaging(int mangaId, int chapterId) async {
     staged.remove(chapterId);
     manifests.remove(chapterId);

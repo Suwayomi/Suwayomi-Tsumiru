@@ -239,6 +239,15 @@ class IoOfflinePageStore implements OfflinePageStore {
   }
 
   @override
+  Future<int> stagedBytes(int mangaId, int chapterId) async {
+    var total = 0;
+    for (final file in (await _stagedPages(mangaId, chapterId)).values) {
+      total += await file.length();
+    }
+    return total;
+  }
+
+  @override
   Future<void> deleteStaging(int mangaId, int chapterId) =>
       _quietDeleteDir(_staging(mangaId, chapterId));
 

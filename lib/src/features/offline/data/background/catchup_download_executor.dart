@@ -343,12 +343,25 @@ Future<int> _downloadOneChapter({
   // Generation 0: the row doesn't exist yet, so it will be created at
   // generation 0 by the adoption pass. A chapter drift already knows about is
   // never routed here — it is `present` and skipped.
-  await store.deleteStaging(mangaId, row.id);
-  await store.beginChapter(
-    mangaId,
-    row.id,
-    ChapterManifest(generation: 0, indices: indices),
-  );
+  //
+  // Reuse staging that matches, the way the foreground downloaders do. These
+  // runs are cut short constantly — the WorkManager budget, a dropped
+  // connection, a yield to the foreground service — and a big chapter that
+  // restarted from page zero every time might never finish at all.
+  final existing = await store.readManifest(mangaId, row.id);
+  var staged = const <int>{};
+  if (existing != null &&
+      existing.generation == 0 &&
+      existing.coversSameIndices(indices)) {
+    staged = await store.stagedPageIndices(mangaId, row.id);
+  } else {
+    await store.deleteStaging(mangaId, row.id);
+    await store.beginChapter(
+      mangaId,
+      row.id,
+      ChapterManifest(generation: 0, indices: indices),
+    );
+  }
 
   final engine = buildBackgroundEngine(
     store: store,
@@ -359,13 +372,19 @@ Future<int> _downloadOneChapter({
   final outcome = await engine.download(
     mangaId: mangaId,
     chapterId: row.id,
-    pages: [for (var i = 0; i < urls.length; i++) (index: i, url: urls[i])],
+    pages: [
+      for (var i = 0; i < urls.length; i++)
+        if (!staged.contains(i)) (index: i, url: urls[i]),
+    ],
     isCancelled: () => false,
     onPageStored: (_, __, ___) async {},
   );
   if (!outcome.succeeded) return 0;
 
-  final bytes = outcome.storedPages.values.fold<int>(0, (s, p) => s + p.bytes);
+  // Measured off staging rather than this run's writes: a resumed chapter
+  // fetched only what was missing, and the ledger's cap accounting wants the
+  // whole chapter.
+  final bytes = await store.stagedBytes(mangaId, row.id);
   await log.appendAdopt(
     AdoptChapterEntry(
       chapterId: row.id,
