@@ -15,6 +15,11 @@ import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store.dart';
 import 'background_token_record.dart';
 
+/// One client for the whole background run. `http.get`/`http.post` open and
+/// close a connection per call, so a catch-up batch paid a fresh TLS handshake
+/// for every page it fetched. Lives as long as the isolate does.
+final http.Client backgroundHttpClient = http.Client();
+
 /// Server coordinates for the isolate-side fetch paths — the work-order fields
 /// the FGS uses, shared with the WorkManager catch-up executor.
 class BackgroundServerTarget {
@@ -82,7 +87,7 @@ Future<Object?> postBackgroundGraphql({
   final headers = <String, String>{'Content-Type': 'application/json'};
   applyBackgroundAuthHeaders(headers, record, accessToken: accessToken);
   try {
-    final res = await http.post(
+    final res = await backgroundHttpClient.post(
       Uri.parse(target.graphql),
       headers: headers,
       body: jsonEncode({'query': query, 'variables': variables}),
@@ -168,7 +173,10 @@ ChapterDownloadEngine buildBackgroundEngine({
     }
     final http.Response res;
     try {
-      res = await http.get(Uri.parse(fetchUrl), headers: headers);
+      res = await backgroundHttpClient.get(
+        Uri.parse(fetchUrl),
+        headers: headers,
+      );
     } on SocketException {
       throw const PageOfflineException();
     }

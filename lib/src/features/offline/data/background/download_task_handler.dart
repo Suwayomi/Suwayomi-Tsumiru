@@ -90,6 +90,11 @@ class DownloadTaskHandler extends TaskHandler {
   /// queued/downloading so resume re-enqueues them.
   var _paused = false;
 
+  /// One client for every request this worker makes. `http.get`/`http.post`
+  /// open and close a connection per call, so downloading paid a fresh TLS
+  /// handshake for every single page.
+  final http.Client _http = http.Client();
+
   BackgroundWorkOrder? _order;
   BackgroundDownloadLock? _lock;
   late BackgroundCompletionLog _log;
@@ -193,6 +198,7 @@ class DownloadTaskHandler extends TaskHandler {
     // log is flushed per page, so nothing is lost on an abrupt stop.
     _stopping = true;
     await _lock?.release();
+    _http.close();
   }
 
   // ---------------------------------------------------------------------------
@@ -430,7 +436,7 @@ class DownloadTaskHandler extends TaskHandler {
       },
     });
     try {
-      final res = await http.post(
+      final res = await _http.post(
         Uri.parse(endpoint),
         headers: headers,
         body: body,
@@ -478,7 +484,7 @@ class DownloadTaskHandler extends TaskHandler {
       final (url, headers) = _authedPageRequest(pageUrl);
       final http.Response res;
       try {
-        res = await http.get(Uri.parse(url), headers: headers);
+        res = await _http.get(Uri.parse(url), headers: headers);
       } on SocketException {
         // Device offline (connection refused / unreachable host / DNS).
         throw const PageOfflineException();
@@ -575,7 +581,7 @@ class DownloadTaskHandler extends TaskHandler {
         },
       });
       try {
-        final res = await http.post(
+        final res = await _http.post(
           Uri.parse(endpoint),
           headers: const {'Content-Type': 'application/json'},
           body: body,

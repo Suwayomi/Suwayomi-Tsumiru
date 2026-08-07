@@ -1025,6 +1025,21 @@ OfflineDownloadManager? offlineDownloadManager(Ref ref) {
   );
 }
 
+/// One HTTP client for every page of every chapter, kept open for the life of
+/// the app.
+///
+/// `http.get` builds a client, opens a connection and closes it again per call,
+/// so downloading meant a fresh TCP connection and a full TLS handshake for
+/// EVERY page — dozens a second, all to the same host we were already talking
+/// to. Reusing one client lets those connections stay open, which is what makes
+/// the handshake cost disappear rather than merely shrink.
+@Riverpod(keepAlive: true)
+http.Client offlinePageClient(Ref ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
+}
+
 /// Fetch one page image's bytes with the active auth, resolved at call time
 /// (never baked) — mirrors `ServerImage`'s request building (base API without
 /// `/api`, ui_login `?token=`, basic/simple_login via headers). Throws
@@ -1057,7 +1072,9 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
 
   final http.Response res;
   try {
-    res = await http.get(Uri.parse(fetchUrl), headers: headers);
+    res = await ref
+        .read(offlinePageClientProvider)
+        .get(Uri.parse(fetchUrl), headers: headers);
   } on SocketException {
     // Dead network is not a page failure: park resumable (Android worker
     // parity) instead of burning retries into a terminal error that poisons
