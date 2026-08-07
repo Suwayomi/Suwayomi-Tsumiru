@@ -427,7 +427,11 @@ class ReaderWrapper extends HookConsumerWidget {
       return true;
     }
 
-    bool pushPreviousChapter() {
+    // openAtEnd belongs to backward boundary crossings, where the reader is
+    // still moving through the story and the last page is the next thing they
+    // should see. An explicit "previous chapter" command resumes that chapter
+    // instead, matching Komikku's loadPreviousChapter.
+    bool pushPreviousChapter({bool openAtEnd = false}) {
       if (nextPrevChapterPair?.second == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
       final toPrev = !isRTLReaderMode(resolvedReaderMode);
@@ -436,7 +440,7 @@ class ReaderWrapper extends HookConsumerWidget {
         chapterId: nextPrevChapterPair!.second!.id,
         transVertical: transVertical,
         toPrev: toPrev,
-        openAtEnd: true,
+        openAtEnd: openAtEnd,
       ).pushReplacement(context);
       return true;
     }
@@ -452,7 +456,7 @@ class ReaderWrapper extends HookConsumerWidget {
     bool tryPreviousChapter() {
       if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
-      return pushPreviousChapter();
+      return pushPreviousChapter(openAtEnd: true);
     }
 
     final onReaderNext = useCallback(() {
@@ -493,8 +497,10 @@ class ReaderWrapper extends HookConsumerWidget {
       pushNextChapter();
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
+    // Feeds _BoundarySwipeDetector only: every call site is an overscroll past
+    // the first page, which is a backward crossing rather than a command.
     final onPreviousChapter = useCallback(() {
-      pushPreviousChapter();
+      pushPreviousChapter(openAtEnd: true);
     }, [nextPrevChapterPair, manga.id, resolvedReaderMode]);
 
     // Managed (not autofocus) so re-requesting focus after the settings
@@ -705,7 +711,11 @@ class ReaderWrapper extends HookConsumerWidget {
                 useBottomSeekBar: useBottomSeekBar,
                 showSideSeekBar: showSideSeekBar,
                 scrollDirection: scrollDirection,
-                nextPrevChapterPair: nextPrevChapterPair,
+                onPreviousChapter: nextPrevChapterPair?.second != null
+                    ? () => pushPreviousChapter()
+                    : null,
+                onNextChapter:
+                    nextPrevChapterPair?.first != null ? pushNextChapter : null,
                 resolvedReaderMode: resolvedReaderMode,
                 autoScrollSupported: onToggleAutoScroll != null,
                 reverseSeekBar: isRTLReaderMode(resolvedReaderMode),

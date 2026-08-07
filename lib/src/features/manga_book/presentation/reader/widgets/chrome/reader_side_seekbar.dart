@@ -14,8 +14,8 @@ import '../brand_page_seekbar.dart';
 /// The reader's floating vertical seek bar content, shown in webtoon/vertical
 /// mode.
 ///
-/// This widget renders the seek-bar column (skip-to-start button ↑ + track +
-/// skip-to-end button ↓). It does **not** own a [Positioned] — the caller
+/// This widget renders the seek-bar column (previous-chapter button ↑ + track +
+/// next-chapter button ↓). It does **not** own a [Positioned] — the caller
 /// ([ReaderChrome]) is responsible for wrapping it in a [Positioned] whose
 /// [top] and [bottom] are derived from the measured [ChromeExtents], so the
 /// seekbar never overlaps the top or bottom chrome bars.
@@ -25,6 +25,8 @@ class ReaderSideSeekBar extends StatelessWidget {
     required this.currentIndex,
     required this.pageCount,
     required this.onChanged,
+    required this.onPreviousChapter,
+    required this.onNextChapter,
   });
 
   final int currentIndex;
@@ -34,20 +36,21 @@ class ReaderSideSeekBar extends StatelessWidget {
 
   final ValueChanged<int> onChanged;
 
+  /// Null when there is no chapter that way; the button renders disabled.
+  final VoidCallback? onPreviousChapter;
+  final VoidCallback? onNextChapter;
+
   @override
   Widget build(BuildContext context) {
     final navSurface = readerNavSurface(context.theme.colorScheme);
-    final lastPage = pageCount - 1;
 
     return Column(
       children: [
-        // Jump to the start of this chapter (skip-previous glyph rotated
-        // to point up).
         BrandFilledCircleButton(
           icon: Icons.skip_previous_rounded,
           quarterTurns: 1,
           color: navSurface,
-          onPressed: () => onChanged(0),
+          onPressed: onPreviousChapter,
         ),
         const Gap(8),
         Expanded(
@@ -60,13 +63,11 @@ class ReaderSideSeekBar extends StatelessWidget {
           ),
         ),
         const Gap(8),
-        // Jump to the end of this chapter (skip-next glyph rotated
-        // to point down).
         BrandFilledCircleButton(
           icon: Icons.skip_next_rounded,
           quarterTurns: 1,
           color: navSurface,
-          onPressed: () => onChanged(lastPage),
+          onPressed: onNextChapter,
         ),
       ],
     );
