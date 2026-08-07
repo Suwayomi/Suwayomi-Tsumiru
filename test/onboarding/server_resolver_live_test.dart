@@ -16,29 +16,36 @@ import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
 void main() {
   final host = Platform.environment['TSUMIRU_LIVE_SERVER'];
 
-  test('LIVE: resolves a real Suwayomi server as found', () async {
-    if (host == null || host.isEmpty) {
-      // ignore: avoid_print
-      print('SKIP: set TSUMIRU_LIVE_SERVER=host:port to run the live test.');
-      return;
-    }
+  test(
+    'LIVE: resolves a real Suwayomi server as found',
+    () async {
+      if (host == null || host.isEmpty) {
+        // ignore: avoid_print
+        print('SKIP: set TSUMIRU_LIVE_SERVER=host:port to run the live test.');
+        return;
+      }
 
-    final client = http.Client();
-    final result = await resolveServer(host, client: client);
-    client.close();
+      final client = http.Client();
+      final result = await resolveServer(host, client: client);
+      client.close();
 
-    if (result.outcome == ResolveOutcome.notReached) {
-      // ignore: avoid_print
-      print('SKIP: $host not reachable from this machine.');
-      return;
-    }
+      if (result.outcome == ResolveOutcome.notReached) {
+        // ignore: avoid_print
+        print('SKIP: $host not reachable from this machine.');
+        return;
+      }
 
-    // A reachable Suwayomi confirms with a real name + version.
-    expect(result.outcome, ResolveOutcome.found,
-        reason: 'a real Suwayomi server should be confirmed');
-    expect(result.serverName, isNotEmpty);
-    expect(result.serverVersion, isNotNull);
-    // Auth mode is whatever the server is configured for; just assert we read one.
-    expect(result.authMode, isNotNull);
-  }, timeout: const Timeout(Duration(seconds: 30)));
+      // A reachable Suwayomi confirms with a real name + version.
+      expect(
+        result.outcome,
+        ResolveOutcome.found,
+        reason: 'a real Suwayomi server should be confirmed',
+      );
+      expect(result.serverName, isNotEmpty);
+      expect(result.serverVersion, isNotNull);
+      // Auth mode is whatever the server is configured for; just assert we read one.
+      expect(result.authMode, isNotNull);
+    },
+    timeout: const Timeout(Duration(seconds: 30)),
+  );
 }

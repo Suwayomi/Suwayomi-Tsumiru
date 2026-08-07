@@ -41,8 +41,11 @@ void main() {
 
     testWidgets('top button opens the previous chapter', (tester) async {
       var previousCalls = 0;
-      await pump(tester, onPreviousChapter: () => previousCalls++,
-          onNextChapter: () {});
+      await pump(
+        tester,
+        onPreviousChapter: () => previousCalls++,
+        onNextChapter: () {},
+      );
 
       await tester.tap(find.byType(BrandFilledCircleButton).first);
       await tester.pumpAndSettle();
@@ -52,8 +55,11 @@ void main() {
 
     testWidgets('bottom button opens the next chapter', (tester) async {
       var nextCalls = 0;
-      await pump(tester, onPreviousChapter: () {},
-          onNextChapter: () => nextCalls++);
+      await pump(
+        tester,
+        onPreviousChapter: () {},
+        onNextChapter: () => nextCalls++,
+      );
 
       await tester.tap(find.byType(BrandFilledCircleButton).last);
       await tester.pumpAndSettle();
@@ -74,8 +80,11 @@ void main() {
       await tester.tap(find.byType(BrandFilledCircleButton).last);
       await tester.pumpAndSettle();
 
-      expect(seeks, isEmpty,
-          reason: 'jumping to page 0 / last page was the old behavior');
+      expect(
+        seeks,
+        isEmpty,
+        reason: 'jumping to page 0 / last page was the old behavior',
+      );
     });
 
     testWidgets('no adjacent chapter disables the button', (tester) async {
@@ -83,7 +92,8 @@ void main() {
 
       final buttons = tester
           .widgetList<BrandFilledCircleButton>(
-              find.byType(BrandFilledCircleButton))
+            find.byType(BrandFilledCircleButton),
+          )
           .toList();
 
       expect(buttons, hasLength(2));

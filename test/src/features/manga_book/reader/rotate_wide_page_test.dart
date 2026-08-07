@@ -34,10 +34,9 @@ class _TestImageProvider extends ImageProvider<_TestImageProvider> {
   ImageStreamCompleter loadImage(
     _TestImageProvider key,
     ImageDecoderCallback decode,
-  ) =>
-      OneFrameImageStreamCompleter(
-        SynchronousFuture(ImageInfo(image: image.clone())),
-      );
+  ) => OneFrameImageStreamCompleter(
+    SynchronousFuture(ImageInfo(image: image.clone())),
+  );
 }
 
 void main() {
@@ -60,8 +59,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('wide image is rotated a quarter turn clockwise',
-      (tester) async {
+  testWidgets('wide image is rotated a quarter turn clockwise', (tester) async {
     await pumpPage(tester, width: 200, height: 100);
 
     final rotated = tester.widget<RotatedBox>(find.byType(RotatedBox));
@@ -82,8 +80,9 @@ void main() {
     expect(find.byType(Image), findsOneWidget);
   });
 
-  testWidgets('square image renders without rotation (not wide)',
-      (tester) async {
+  testWidgets('square image renders without rotation (not wide)', (
+    tester,
+  ) async {
     await pumpPage(tester, width: 150, height: 150);
 
     expect(find.byType(RotatedBox), findsNothing);

@@ -14,8 +14,9 @@ ProviderContainer _container({bool runningNow = false}) {
   final container = ProviderContainer(
     overrides: [
       // arm() reads this to seed whether a run is already in flight.
-      updateRunningSocketProvider
-          .overrideWith((ref) => Stream.value(runningNow)),
+      updateRunningSocketProvider.overrideWith(
+        (ref) => Stream.value(runningNow),
+      ),
     ],
   );
   // Riverpod 3 pauses/disposes unlistened providers, so a one-shot .future
@@ -48,39 +49,49 @@ void main() {
 
       // Server confirms running, then finishes.
       notifier.onRealRunning(true);
-      expect(c.read(updateOptimisticProvider), isTrue,
-          reason: 'still held while the real run is in progress');
+      expect(
+        c.read(updateOptimisticProvider),
+        isTrue,
+        reason: 'still held while the real run is in progress',
+      );
       notifier.onRealRunning(false);
-      expect(c.read(updateOptimisticProvider), isFalse,
-          reason: 'released on the running→idle edge');
+      expect(
+        c.read(updateOptimisticProvider),
+        isFalse,
+        reason: 'released on the running→idle edge',
+      );
     });
 
-    test('a second arm mid-run releases on the next idle edge, not 12s later',
-        () async {
-      final c = _container(runningNow: true);
-      // Seed read resolves to "already running".
-      await c.read(updateRunningSocketProvider.future);
-      final notifier = c.read(updateOptimisticProvider.notifier);
-      notifier.arm();
-      expect(c.read(updateOptimisticProvider), isTrue);
+    test(
+      'a second arm mid-run releases on the next idle edge, not 12s later',
+      () async {
+        final c = _container(runningNow: true);
+        // Seed read resolves to "already running".
+        await c.read(updateRunningSocketProvider.future);
+        final notifier = c.read(updateOptimisticProvider.notifier);
+        notifier.arm();
+        expect(c.read(updateOptimisticProvider), isTrue);
 
-      // The change-only stream never re-delivers `true`; the idle edge alone
-      // must release the hold because arm() seeded "already seen running".
-      notifier.onRealRunning(false);
-      expect(c.read(updateOptimisticProvider), isFalse);
-    });
+        // The change-only stream never re-delivers `true`; the idle edge alone
+        // must release the hold because arm() seeded "already seen running".
+        notifier.onRealRunning(false);
+        expect(c.read(updateOptimisticProvider), isFalse);
+      },
+    );
 
-    test('does not release on idle frames before the real run starts',
-        () async {
-      final c = _container();
-      await c.read(updateRunningSocketProvider.future);
-      final notifier = c.read(updateOptimisticProvider.notifier);
-      notifier.arm();
+    test(
+      'does not release on idle frames before the real run starts',
+      () async {
+        final c = _container();
+        await c.read(updateRunningSocketProvider.future);
+        final notifier = c.read(updateOptimisticProvider.notifier);
+        notifier.arm();
 
-      // Pre-start idle frames must NOT clear the optimistic hold.
-      notifier.onRealRunning(false);
-      expect(c.read(updateOptimisticProvider), isTrue);
-    });
+        // Pre-start idle frames must NOT clear the optimistic hold.
+        notifier.onRealRunning(false);
+        expect(c.read(updateOptimisticProvider), isTrue);
+      },
+    );
 
     test('onRealRunning before arm is a no-op', () {
       final c = _container();
@@ -94,8 +105,9 @@ void main() {
       fakeAsync((async) {
         final container = ProviderContainer(
           overrides: [
-            updateRunningSocketProvider
-                .overrideWith((ref) => const Stream.empty()),
+            updateRunningSocketProvider.overrideWith(
+              (ref) => const Stream.empty(),
+            ),
           ],
         );
         addTearDown(container.dispose);

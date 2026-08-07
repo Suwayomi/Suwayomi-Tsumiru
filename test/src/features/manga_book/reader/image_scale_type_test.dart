@@ -34,7 +34,10 @@ void main() {
 
   test('pagedFit size hints match the fit axis', () {
     expect(ImageScaleType.fitWidth.pagedFit(w, h).$2, const Size.fromWidth(w));
-    expect(ImageScaleType.fitHeight.pagedFit(w, h).$2, const Size.fromHeight(h));
+    expect(
+      ImageScaleType.fitHeight.pagedFit(w, h).$2,
+      const Size.fromHeight(h),
+    );
     // Original size forces no decode hint.
     expect(ImageScaleType.originalSize.pagedFit(w, h).$2, isNull);
   });

@@ -18,34 +18,32 @@ import 'package:go_router/go_router.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
 
 GoRouter _router() => GoRouter(
-      initialLocation: '/library/0',
+  initialLocation: '/library/0',
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) =>
+          Scaffold(body: child, bottomNavigationBar: const Text('BOTTOM NAV')),
       routes: [
-        ShellRoute(
-          builder: (context, state, child) => Scaffold(
-            body: child,
-            bottomNavigationBar: const Text('BOTTOM NAV'),
-          ),
-          routes: [
-            GoRoute(
-              path: '/library/:categoryId',
-              builder: (context, state) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => openGlobalSearch(context, query: 'king'),
-                    child: const Text('global search'),
-                  ),
-                ),
+        GoRoute(
+          path: '/library/:categoryId',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => openGlobalSearch(context, query: 'king'),
+                child: const Text('global search'),
               ),
             ),
-          ],
-        ),
-        GoRoute(
-          path: '/global-search',
-          builder: (context, state) =>
-              const Scaffold(body: Center(child: Text('GLOBAL SEARCH'))),
+          ),
         ),
       ],
-    );
+    ),
+    GoRoute(
+      path: '/global-search',
+      builder: (context, state) =>
+          const Scaffold(body: Center(child: Text('GLOBAL SEARCH'))),
+    ),
+  ],
+);
 
 void main() {
   group('opening global search from the library', () {
@@ -62,12 +60,16 @@ void main() {
       final navigator = tester.state<NavigatorState>(
         find.byType(Navigator).last,
       );
-      expect(navigator.canPop(), isTrue,
-          reason: 'go() would replace the stack and strand the reader here');
+      expect(
+        navigator.canPop(),
+        isTrue,
+        reason: 'go() would replace the stack and strand the reader here',
+      );
     });
 
-    testWidgets('going back returns to the library and its nav bar',
-        (tester) async {
+    testWidgets('going back returns to the library and its nav bar', (
+      tester,
+    ) async {
       final router = _router();
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();

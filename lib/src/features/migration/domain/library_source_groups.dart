@@ -59,6 +59,8 @@ List<LibrarySourceGroup> groupLibraryBySource(List<MangaSourceInfo> mangas) {
       ),
   ];
   groups.sort(
-      (a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    (a, b) =>
+        a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+  );
   return groups;
 }

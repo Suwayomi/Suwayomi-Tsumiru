@@ -80,16 +80,15 @@ Future<ChapterCommitResult> commitStagedChapter({
   required OfflinePageStore store,
   required int mangaId,
   required int chapterId,
-}) =>
-    ChapterFileLock.run(
-      chapterId,
-      () => commitStagedChapterHoldingLock(
-        db: db,
-        store: store,
-        mangaId: mangaId,
-        chapterId: chapterId,
-      ),
-    );
+}) => ChapterFileLock.run(
+  chapterId,
+  () => commitStagedChapterHoldingLock(
+    db: db,
+    store: store,
+    mangaId: mangaId,
+    chapterId: chapterId,
+  ),
+);
 
 /// [commitStagedChapter] without taking the lock — for callers already inside a
 /// [ChapterFileLock] section for this chapter (recovery walks a chapter's whole
@@ -126,4 +125,113 @@ Future<ChapterCommitResult> commitStagedChapterHoldingLock({
   );
   logger.i('Offline: chapter $chapterId committed (${pages.length} pages)');
   return ChapterCommitResult.committed;
+}
+
+/// Walk every chapter directory on disk and settle it against its catalog row.
+///
+/// | on disk          | row                    | what happens                  |
+/// |------------------|------------------------|-------------------------------|
+/// | anything         | `none` or missing      | both directories deleted      |
+/// | final, complete  | `downloaded`           | nothing                       |
+/// | final, complete  | anything else          | adopted — the commit rename landed, its catalog write didn't |
+/// | final, legacy    | `downloaded`           | grandfathered, trusted as-is  |
+/// | final, legacy    | anything else          | cleared, so it re-downloads   |
+/// | staging complete | not `none`             | committed                     |
+/// | staging partial  | not `none`             | left alone, resumed later     |
+///
+/// Driven off the filesystem rather than the catalog: the directories that
+/// exist are bounded by what has actually been downloaded, where the chapter
+/// table is the size of the whole library.
+Future<void> recoverChaptersOnDisk({
+  required OfflineDatabase db,
+  required OfflinePageStore store,
+}) async {
+  for (final dir in await store.chaptersOnDisk()) {
+    try {
+      await ChapterFileLock.run(dir.chapterId, () async {
+        final row = await db.chapterById(dir.chapterId);
+        // Never resurrect: a `none` row is a delete the user made, and a
+        // missing row means nothing authorised these files (adoption above is
+        // the one sanctioned exception, and it has already run).
+        if (row == null || row.deviceState == OfflineDeviceState.none) {
+          await store.deleteChapter(dir.mangaId, dir.chapterId);
+          return;
+        }
+
+        if (dir.hasFinal) {
+          final committed = await store.inspectCommitted(
+            dir.mangaId,
+            dir.chapterId,
+          );
+          switch (committed.state) {
+            case ChapterDirState.complete:
+              // Already settled, or the rename landed and the catalog write
+              // didn't — either way the rows are cheap to reassert.
+              if (row.deviceState != OfflineDeviceState.downloaded) {
+                await db.commitDownloadedChapter(
+                  chapterId: dir.chapterId,
+                  pages: committed.pages,
+                  downloadedAt: row.downloadedAt ?? DateTime.now(),
+                );
+                logger.i(
+                  'Offline: adopted committed chapter '
+                  '${dir.chapterId} (${committed.pages.length} pages)',
+                );
+              }
+              // Staging alongside a complete final dir is a superseded attempt.
+              await store.deleteStaging(dir.mangaId, dir.chapterId);
+              return;
+            case ChapterDirState.legacy:
+              if (row.deviceState == OfflineDeviceState.downloaded) {
+                // Downloaded before chapters were atomic. Nothing on disk can
+                // prove it whole, and re-fetching everyone's library to find
+                // out is not a trade worth making — trust it.
+                return;
+              }
+              // Interrupted under the old scheme, so its pages can't be
+              // verified or safely resumed. One re-download, once, on upgrade.
+              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
+            case ChapterDirState.incomplete:
+              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
+            case ChapterDirState.absent:
+              break;
+          }
+        }
+
+        if (dir.hasStaging) {
+          await commitStagedChapterHoldingLock(
+            db: db,
+            store: store,
+            mangaId: dir.mangaId,
+            chapterId: dir.chapterId,
+          );
+        }
+      });
+    } catch (e) {
+      // One unreadable directory must not stop the rest of the library from
+      // being recovered.
+      logger.e('Offline: recovery skipped for chapter ${dir.chapterId}: $e');
+    }
+  }
+}
+
+/// Drop a chapter's unusable files and rows, leaving the state that makes the
+/// downloader pick it up again.
+Future<void> _clearForRefetch(
+  OfflineDatabase db,
+  OfflinePageStore store,
+  int mangaId,
+  int chapterId,
+) async {
+  await store.deleteChapter(mangaId, chapterId);
+  await db.transaction(() async {
+    await (db.delete(
+      db.offlinePages,
+    )..where((t) => t.chapterId.equals(chapterId))).go();
+    await db.setChapterDeviceState(
+      chapterId,
+      OfflineDeviceState.queued,
+      bytes: 0,
+    );
+  });
 }

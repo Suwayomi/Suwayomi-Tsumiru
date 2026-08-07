@@ -27,7 +27,9 @@ CategoryDto _cat(int id, String name, Enum$IncludeOrExclude includeInUpdate) =>
 /// Pumps a throwaway widget so we get a real BuildContext with the app's
 /// localizations, then evaluates [libraryUpdateCategoriesSummary] against it.
 Future<String> _summaryFor(
-    WidgetTester tester, List<CategoryDto> categories) async {
+  WidgetTester tester,
+  List<CategoryDto> categories,
+) async {
   late String result;
   await tester.pumpWidget(
     MaterialApp(

@@ -24,10 +24,8 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import 'chapter_test_helpers.dart';
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingRepo extends MangaBookRepository {
   _RecordingRepo() : super(_dummyClient());
@@ -66,28 +64,30 @@ class _FakeMangaWithId extends MangaWithId {
   }
 
   Fragment$MangaDto _manga(int mangaId) => Fragment$MangaDto(
-        id: mangaId,
-        title: 'M',
-        bookmarkCount: 0,
-        chapters: Fragment$MangaDto$chapters(totalCount: 0),
-        downloadCount: 0,
-        genre: const [],
-        inLibrary: true,
-        inLibraryAt: '0',
-        initialized: true,
-        meta: [
-          for (final e in meta.entries)
-            Fragment$MangaDto$meta(key: e.key, value: e.value),
-        ],
-        sourceId: '1',
-        status: Enum$MangaStatus.ONGOING,
-        categories: Fragment$MangaDto$categories(nodes: const []),
-        trackRecords:
-            Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-        unreadCount: 0,
-        updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-        url: '/manga/$mangaId',
-      );
+    id: mangaId,
+    title: 'M',
+    bookmarkCount: 0,
+    chapters: Fragment$MangaDto$chapters(totalCount: 0),
+    downloadCount: 0,
+    genre: const [],
+    inLibrary: true,
+    inLibraryAt: '0',
+    initialized: true,
+    meta: [
+      for (final e in meta.entries)
+        Fragment$MangaDto$meta(key: e.key, value: e.value),
+    ],
+    sourceId: '1',
+    status: Enum$MangaStatus.ONGOING,
+    categories: Fragment$MangaDto$categories(nodes: const []),
+    trackRecords: Fragment$MangaDto$trackRecords(
+      totalCount: 0,
+      nodes: const [],
+    ),
+    unreadCount: 0,
+    updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+    url: '/manga/$mangaId',
+  );
 }
 
 class _FixedChapterList extends MangaChapterList {
@@ -140,8 +140,9 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
           offlineActiveProvider.overrideWithValue(false),
-          mangaChapterListProvider(mangaId: 1)
-              .overrideWith(() => _FixedChapterList(chapters)),
+          mangaChapterListProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FixedChapterList(chapters)),
           mangaWithIdProvider(mangaId: 1).overrideWith(
             () => _FakeMangaWithId({
               'flutter_preferredScanlators': jsonEncode(preference),
@@ -159,8 +160,9 @@ void main() {
     // Resolve the manga before opening: in the app the details screen has
     // long since loaded it (keepAlive), so the dialog never sees a loading
     // preference. Without this the draft rank list seeds from [].
-    final container =
-        ProviderScope.containerOf(tester.element(find.byType(_DialogHost)));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(_DialogHost)),
+    );
     await container.read(mangaWithIdProvider(mangaId: 1).future);
     await tester.pumpAndSettle();
 
@@ -170,8 +172,9 @@ void main() {
     return repo;
   }
 
-  testWidgets('renders all three groups; B ranked, blank shown as Unknown',
-      (tester) async {
+  testWidgets('renders all three groups; B ranked, blank shown as Unknown', (
+    tester,
+  ) async {
     await pumpDialog(tester, repo: _RecordingRepo());
 
     expect(find.byType(CheckboxListTile), findsNWidgets(3));
@@ -179,13 +182,15 @@ void main() {
     expect(find.text('B'), findsOneWidget);
     expect(find.text('Unknown'), findsOneWidget);
 
-    final rankedTile = tester
-        .widget<CheckboxListTile>(find.byKey(const ValueKey('ranked-B')));
+    final rankedTile = tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('ranked-B')),
+    );
     expect(rankedTile.value, isTrue);
   });
 
-  testWidgets('checking A then saving persists the new rank order',
-      (tester) async {
+  testWidgets('checking A then saving persists the new rank order', (
+    tester,
+  ) async {
     final repo = await pumpDialog(tester, repo: _RecordingRepo());
 
     await tester.tap(find.byKey(const ValueKey('unranked-A')));
@@ -201,8 +206,7 @@ void main() {
     expect(find.byType(ScanlatorPreferenceDialog), findsNothing);
   });
 
-  testWidgets('a failed server write keeps the dialog open',
-      (tester) async {
+  testWidgets('a failed server write keeps the dialog open', (tester) async {
     await pumpDialog(tester, repo: _FailingRepo());
 
     await tester.tap(find.text('Save'));

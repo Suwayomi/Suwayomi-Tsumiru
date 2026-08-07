@@ -29,25 +29,35 @@ void main() {
     // previous build must still parse, minus them.
     final log = BackgroundCompletionLog(logFile);
     await logFile.writeAsString(
-        '{"t":"page","c":5,"m":1,"i":0,"p":"1/5/000.jpg","b":10,"g":0}\n',
-        mode: FileMode.append);
+      '{"t":"page","c":5,"m":1,"i":0,"p":"1/5/000.jpg","b":10,"g":0}\n',
+      mode: FileMode.append,
+    );
     await log.appendDrained();
 
     final entries = await log.parse();
     expect(entries.single, isA<DrainedEntry>());
   });
 
-  test('a torn final line (crash mid-write) is discarded, earlier lines kept',
-      () async {
-    final log = BackgroundCompletionLog(logFile);
-    await log.appendChapter(chapterId: 5, status: 'error', pages: 1, bytes: 0);
-    // simulate a partial trailing write (no newline, invalid json)
-    await logFile.writeAsString('{"t":"chapter","c":5,"s":"err',
-        mode: FileMode.append);
-    final entries = await log.parse();
-    expect(entries.length, 1);
-    expect((entries.single as ChapterEntry).chapterId, 5);
-  });
+  test(
+    'a torn final line (crash mid-write) is discarded, earlier lines kept',
+    () async {
+      final log = BackgroundCompletionLog(logFile);
+      await log.appendChapter(
+        chapterId: 5,
+        status: 'error',
+        pages: 1,
+        bytes: 0,
+      );
+      // simulate a partial trailing write (no newline, invalid json)
+      await logFile.writeAsString(
+        '{"t":"chapter","c":5,"s":"err',
+        mode: FileMode.append,
+      );
+      final entries = await log.parse();
+      expect(entries.length, 1);
+      expect((entries.single as ChapterEntry).chapterId, 5);
+    },
+  );
 
   test('parse on a missing file returns empty', () async {
     final log = BackgroundCompletionLog(logFile);

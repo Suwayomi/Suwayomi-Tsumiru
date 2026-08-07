@@ -24,13 +24,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final db = testOfflineDatabase();
-    final container = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(preferences),
-      offlineEnabledProvider.overrideWithValue(true),
-      offlineActiveProvider.overrideWithValue(true),
-      serverInstanceIdProvider.overrideWith((ref) async => 'server-id'),
-      offlineDatabaseProvider.overrideWithValue(db),
-    ]);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        offlineEnabledProvider.overrideWithValue(true),
+        offlineActiveProvider.overrideWithValue(true),
+        serverInstanceIdProvider.overrideWith((ref) async => 'server-id'),
+        offlineDatabaseProvider.overrideWithValue(db),
+      ],
+    );
     addTearDown(() {
       container.dispose();
       db.close();

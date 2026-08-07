@@ -18,7 +18,7 @@ import 'offline_paths.dart';
 /// Native (mobile + desktop) implementation: open the drift catalog on a file
 /// under the app-support directory, plus the dart:io page store.
 Future<({OfflineDatabase db, OfflinePaths paths, OfflinePageStore store})?>
-    openOfflineStorage() async {
+openOfflineStorage() async {
   final support = await getApplicationSupportDirectory();
   final baseDir = p.join(support.path, 'offline');
   await Directory(baseDir).create(recursive: true);

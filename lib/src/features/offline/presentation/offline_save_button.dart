@@ -19,10 +19,7 @@ import '../data/offline_repository.dart';
 /// fetches the source), then pulls the device copy — we never scrape sources
 /// ourselves (see [saveChapterToDevice]).
 class OfflineSaveButton extends ConsumerWidget {
-  const OfflineSaveButton({
-    super.key,
-    required this.chapterId,
-  });
+  const OfflineSaveButton({super.key, required this.chapterId});
 
   final int chapterId;
 
@@ -31,9 +28,8 @@ class OfflineSaveButton extends ConsumerWidget {
     if (!ref.watch(offlineEnabledProvider)) {
       return const SizedBox.shrink();
     }
-    final state = ref
-        .watch(offlineChapterStateProvider(chapterId))
-        .value ??
+    final state =
+        ref.watch(offlineChapterStateProvider(chapterId)).value ??
         OfflineDeviceState.none;
     final cs = Theme.of(context).colorScheme;
 
@@ -41,21 +37,21 @@ class OfflineSaveButton extends ConsumerWidget {
       OfflineDeviceState.queued || OfflineDeviceState.downloading =>
         _DownloadingIndicator(chapterId: chapterId),
       OfflineDeviceState.downloaded => IconButton(
-          tooltip: 'Remove from device',
-          icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
-          onPressed: () => deleteChapterFromDevice(ref, chapterId),
-        ),
+        tooltip: 'Remove from device',
+        icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
+        onPressed: () => deleteChapterFromDevice(ref, chapterId),
+      ),
       OfflineDeviceState.error => IconButton(
-          tooltip: 'Save failed — retry',
-          icon: Icon(Icons.error_outline_rounded, color: cs.error),
-          onPressed: () => _save(context, ref),
-        ),
+        tooltip: 'Save failed — retry',
+        icon: Icon(Icons.error_outline_rounded, color: cs.error),
+        onPressed: () => _save(context, ref),
+      ),
       OfflineDeviceState.none || OfflineDeviceState.orphaned => IconButton(
-          tooltip: 'Save to device',
-          // Muted = a "get it" button (vs the solid-indigo "on device" badge).
-          icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
-          onPressed: () => _save(context, ref),
-        ),
+        tooltip: 'Save to device',
+        // Muted = a "get it" button (vs the solid-indigo "on device" badge).
+        icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
+        onPressed: () => _save(context, ref),
+      ),
     };
   }
 

@@ -19,28 +19,27 @@ class _FakeLink extends Link {
   }
 }
 
-GraphQLClient _clientWith(Response response) => GraphQLClient(
-      link: _FakeLink(response),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _clientWith(Response response) =>
+    GraphQLClient(link: _FakeLink(response), cache: GraphQLCache());
 
 Response _updateMangasResponse(List<int> ids) => Response(
-      data: {
-        'updateMangas': {
-          'mangas': [
-            for (final id in ids) {'id': id, '__typename': 'MangaType'},
-          ],
-          '__typename': 'UpdateMangasPayload',
-        },
-        '__typename': 'Mutation',
-      },
-      response: {},
-    );
+  data: {
+    'updateMangas': {
+      'mangas': [
+        for (final id in ids) {'id': id, '__typename': 'MangaType'},
+      ],
+      '__typename': 'UpdateMangasPayload',
+    },
+    '__typename': 'Mutation',
+  },
+  response: {},
+);
 
 void main() {
-  test('addMangasToLibrary returns the server-confirmed updated ids',
-      () async {
-    final repo = MangaBookRepository(_clientWith(_updateMangasResponse([5, 9])));
+  test('addMangasToLibrary returns the server-confirmed updated ids', () async {
+    final repo = MangaBookRepository(
+      _clientWith(_updateMangasResponse([5, 9])),
+    );
 
     final result = await repo.addMangasToLibrary([5, 9, 3]);
 

@@ -66,9 +66,9 @@ Future<void> _pump(
         graphQlClientProvider.overrideWithValue(client),
         libraryMangaListProvider.overrideWith((ref) async => library),
         libraryTrackerNamesProvider.overrideWithValue(const {}),
-        libraryDuplicatesProvider(checkDescriptions: false).overrideWith(
-          () => _FakeLibraryDuplicates(groups, buildCount ?? [0]),
-        ),
+        libraryDuplicatesProvider(
+          checkDescriptions: false,
+        ).overrideWith(() => _FakeLibraryDuplicates(groups, buildCount ?? [0])),
         duplicateEntryRemoverProvider.overrideWithValue(remover),
         if (offline)
           serverUnreachableProvider.overrideWith(_FixedUnreachable.new),
@@ -149,79 +149,75 @@ void main() {
       expect(find.byType(MangaCoverGridTile), findsNWidgets(2));
     });
 
-    testWidgets(
-      'confirming removes all: group drops below two and disappears, '
-      'no rescan',
-      (tester) async {
-        final calls = <int>[];
-        final buildCount = [0];
-        await _pump(
-          tester,
-          library: [_m(1, 'A'), _m(2, 'A')],
-          groups: const [
-            (header: 'A', memberIds: [1, 2], reasons: {DupReason.title}),
-          ],
-          remover: (ref, id) async => calls.add(id),
-          buildCount: buildCount,
-        );
+    testWidgets('confirming removes all: group drops below two and disappears, '
+        'no rescan', (tester) async {
+      final calls = <int>[];
+      final buildCount = [0];
+      await _pump(
+        tester,
+        library: [_m(1, 'A'), _m(2, 'A')],
+        groups: const [
+          (header: 'A', memberIds: [1, 2], reasons: {DupReason.title}),
+        ],
+        remover: (ref, id) async => calls.add(id),
+        buildCount: buildCount,
+      );
 
-        expect(buildCount[0], 1);
+      expect(buildCount[0], 1);
 
-        await _longPressCover(tester, 0);
-        await _longPressCover(tester, 1);
-        await tester.tap(
-          find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Remove'));
-        await tester.pumpAndSettle();
+      await _longPressCover(tester, 0);
+      await _longPressCover(tester, 1);
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
 
-        expect(calls, [1, 2]);
-        // Both members gone → the group vanishes → empty state.
-        expect(find.byType(MangaCoverGridTile), findsNothing);
-        expect(find.text('No results found'), findsOneWidget);
-        expect(find.text('Removed 2 from library'), findsOneWidget);
-        // The read-once scan provider must not rebuild on a removal.
-        expect(buildCount[0], 1);
-      },
-    );
+      expect(calls, [1, 2]);
+      // Both members gone → the group vanishes → empty state.
+      expect(find.byType(MangaCoverGridTile), findsNothing);
+      expect(find.text('No results found'), findsOneWidget);
+      expect(find.text('Removed 2 from library'), findsOneWidget);
+      // The read-once scan provider must not rebuild on a removal.
+      expect(buildCount[0], 1);
+    });
 
-    testWidgets(
-      'a removal failure stops the loop and reports N of M',
-      (tester) async {
-        final calls = <int>[];
-        await _pump(
-          tester,
-          library: [_m(1, 'A'), _m(2, 'A'), _m(3, 'A')],
-          groups: const [
-            (header: 'A', memberIds: [1, 2, 3], reasons: {DupReason.title}),
-          ],
-          remover: (ref, id) async {
-            calls.add(id);
-            if (id == 2) throw Exception('boom');
-          },
-        );
+    testWidgets('a removal failure stops the loop and reports N of M', (
+      tester,
+    ) async {
+      final calls = <int>[];
+      await _pump(
+        tester,
+        library: [_m(1, 'A'), _m(2, 'A'), _m(3, 'A')],
+        groups: const [
+          (header: 'A', memberIds: [1, 2, 3], reasons: {DupReason.title}),
+        ],
+        remover: (ref, id) async {
+          calls.add(id);
+          if (id == 2) throw Exception('boom');
+        },
+      );
 
-        await _longPressCover(tester, 0);
-        await _longPressCover(tester, 1);
-        await _longPressCover(tester, 2);
-        await tester.tap(
-          find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Remove'));
-        await tester.pumpAndSettle();
+      await _longPressCover(tester, 0);
+      await _longPressCover(tester, 1);
+      await _longPressCover(tester, 2);
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
 
-        // Stopped at the first failure (id 2), never reached id 3.
-        expect(calls, [1, 2]);
-        expect(
-          find.text("Removed 1 of 3. The rest couldn't be removed."),
-          findsOneWidget,
-        );
-        // Only id 1 left in memory; the group still has 2 members and shows.
-        expect(find.byType(MangaCoverGridTile), findsNWidgets(2));
-      },
-    );
+      // Stopped at the first failure (id 2), never reached id 3.
+      expect(calls, [1, 2]);
+      expect(
+        find.text("Removed 1 of 3. The rest couldn't be removed."),
+        findsOneWidget,
+      );
+      // Only id 1 left in memory; the group still has 2 members and shows.
+      expect(find.byType(MangaCoverGridTile), findsNWidgets(2));
+    });
 
     testWidgets('remove is disabled with the offline tooltip while offline', (
       tester,

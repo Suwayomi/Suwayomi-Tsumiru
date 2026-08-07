@@ -61,7 +61,10 @@ class MigrationTargetSourcesPref extends _$MigrationTargetSourcesPref
 /// Flushes a source's unsynced offline reads (progress only, no tracker nudge)
 /// then reports whether it's clean; migration blocks removal when this is false.
 Future<bool> bulkMigrationDirtyGate(
-    ProviderContainer container, int mangaId, CancelToken token) async {
+  ProviderContainer container,
+  int mangaId,
+  CancelToken token,
+) async {
   if (!container.read(offlineActiveProvider)) return true;
   try {
     await pushPendingProgress(container, suppressTrackerNudge: true);
@@ -76,7 +79,9 @@ Future<bool> bulkMigrationDirtyGate(
 /// Blocks while a 401 wave has flagged reauth, waking when it clears or the
 /// batch is cancelled. Re-checks on a 1s heartbeat in case the listener misses.
 Future<void> waitAuthReady(
-    ProviderContainer container, CancelToken token) async {
+  ProviderContainer container,
+  CancelToken token,
+) async {
   while (!token.isCancelled && container.read(needsReauthProvider)) {
     final completer = Completer<void>();
     final sub = container.listen<bool>(needsReauthProvider, (_, next) {
@@ -140,8 +145,9 @@ Future<void> migrateOfflineLocalState(
         coordinator: coordinator,
         nets: container.read(safetyNetConfigProvider),
         mangaId: id,
-        deleteWhileReadingSlots:
-            container.read(localDeleteSettingsProvider).deleteWhileReading,
+        deleteWhileReadingSlots: container
+            .read(localDeleteSettingsProvider)
+            .deleteWhileReading,
         enqueueServerDownload: (ids) => container
             .read(downloadsRepositoryProvider)
             .addChaptersBatchToDownloadQueue(ids),
@@ -160,13 +166,19 @@ Future<void> migrateOfflineLocalState(
 /// server-downloaded ones (by number) — so a migrated series is downloaded on
 /// the server, not only on the device that ran the migration.
 Future<void> _migrateServerDownloads(
-    ProviderContainer container, int fromMangaId, int toMangaId) async {
+  ProviderContainer container,
+  int fromMangaId,
+  int toMangaId,
+) async {
   try {
     final repo = container.read(mangaBookRepositoryProvider);
     final source = await repo.getChapterList(fromMangaId) ?? const [];
     final target = await repo.getChapterList(toMangaId) ?? const [];
     final pairs = matchChaptersByNumber(
-      source: [for (final c in source) if (c.isDownloaded) _chapterState(c)],
+      source: [
+        for (final c in source)
+          if (c.isDownloaded) _chapterState(c),
+      ],
       target: [for (final c in target) _chapterState(c)],
     );
     if (pairs.isEmpty) return;
@@ -179,13 +191,13 @@ Future<void> _migrateServerDownloads(
 }
 
 ChapterState _chapterState(ChapterDto c) => ChapterState(
-      id: c.id,
-      chapterNumber: c.chapterNumber,
-      name: c.name,
-      isRead: c.isRead,
-      isBookmarked: c.isBookmarked,
-      lastPageRead: c.lastPageRead,
-    );
+  id: c.id,
+  chapterNumber: c.chapterNumber,
+  name: c.name,
+  isRead: c.isRead,
+  isBookmarked: c.isBookmarked,
+  lastPageRead: c.lastPageRead,
+);
 
 /// Assembles a [BulkMigrationRunner] from the app's real dependencies. Holds a
 /// container (not a Ref) so it survives navigation; the screen owns its lifetime.
@@ -199,8 +211,9 @@ BulkMigrationRunner buildBulkMigrationRunner({
 }) {
   final repo = container.read(migrationRepositoryProvider);
   final journal = MigrationJournal(container.read(sharedPreferencesProvider));
-  final rateLimiter =
-      RateLimiter(minInterval: const Duration(milliseconds: 250));
+  final rateLimiter = RateLimiter(
+    minInterval: const Duration(milliseconds: 250),
+  );
   final allSources =
       container.read(searchableSourcesProvider).value ?? const [];
   final sourceNames = {for (final s in allSources) s.id: s.displayName};

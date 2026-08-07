@@ -14,47 +14,48 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 void main() {
   testWidgets(
-      'wizard advances theme→server, gates Next until verified, Back returns',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
+    'wizard advances theme→server, gates Next until verified, Back returns',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const OnboardingScreen(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const OnboardingScreen(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    // Step 1: welcome + theme. The big brand logo sits above the heading
-    // (header swirl + the large logo → two brand images on this step), and a
-    // top-right Skip escape is offered.
-    expect(find.text('Welcome to Tsumiru'), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
-    expect(find.text('Skip'), findsOneWidget);
-    expect(find.byType(Image), findsNWidgets(2));
+      // Step 1: welcome + theme. The big brand logo sits above the heading
+      // (header swirl + the large logo → two brand images on this step), and a
+      // top-right Skip escape is offered.
+      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
+      expect(find.text('Skip'), findsOneWidget);
+      expect(find.byType(Image), findsNWidgets(2));
 
-    // Advance to step 2 (theme step is always completable).
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    expect(find.text('Connect your server'), findsOneWidget);
-    // Skip is still offered on the server step.
-    expect(find.text('Skip'), findsOneWidget);
+      // Advance to step 2 (theme step is always completable).
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('Connect your server'), findsOneWidget);
+      // Skip is still offered on the server step.
+      expect(find.text('Skip'), findsOneWidget);
 
-    // Next is gated until a connection verifies — tapping must NOT finish.
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    expect(find.text("You're all set"), findsNothing);
-    expect(find.text('Connect your server'), findsOneWidget);
+      // Next is gated until a connection verifies — tapping must NOT finish.
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text("You're all set"), findsNothing);
+      expect(find.text('Connect your server'), findsOneWidget);
 
-    // Back returns to the theme step.
-    await tester.tap(find.text('Back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome to Tsumiru'), findsOneWidget);
-  });
+      // Back returns to the theme step.
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
+    },
+  );
 }

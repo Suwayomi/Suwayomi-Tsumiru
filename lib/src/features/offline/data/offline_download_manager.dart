@@ -41,10 +41,14 @@ class OfflineDownloadManager {
   /// Serial and unbatched — the queue-driven downloaders are what the app
   /// actually runs. This publishes through the same staging-then-commit path
   /// they do, so a chapter it downloads is either whole or absent.
-  Future<void> downloadChapter(OfflineChapter chapter, {bool force = false}) async {
+  Future<void> downloadChapter(
+    OfflineChapter chapter, {
+    bool force = false,
+  }) async {
     if (!force && !chapter.serverIsDownloaded) {
       throw StateError(
-          'Chapter ${chapter.id} is not downloaded server-side (server-first)');
+        'Chapter ${chapter.id} is not downloaded server-side (server-first)',
+      );
     }
     await db.setChapterDeviceState(chapter.id, OfflineDeviceState.downloading);
     var pageCount = 0;
@@ -52,8 +56,10 @@ class OfflineDownloadManager {
     try {
       final urls = await fetchPageUrls(chapter.id);
       pageCount = urls.length;
-      logger.i('Offline: downloading chapter ${chapter.id} '
-          '(manga ${chapter.mangaId}, $pageCount pages)');
+      logger.i(
+        'Offline: downloading chapter ${chapter.id} '
+        '(manga ${chapter.mangaId}, $pageCount pages)',
+      );
       final generation =
           (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
       await store.beginChapter(
@@ -68,7 +74,12 @@ class OfflineDownloadManager {
         atPage = i;
         final page = await fetchBytes(urls[i]);
         await store.writePage(
-            chapter.mangaId, chapter.id, i, page.bytes, page.ext);
+          chapter.mangaId,
+          chapter.id,
+          i,
+          page.bytes,
+          page.ext,
+        );
       }
       await commitStagedChapter(
         db: db,
@@ -78,10 +89,11 @@ class OfflineDownloadManager {
       );
     } catch (e, st) {
       logger.e(
-          'Offline: download FAILED for chapter ${chapter.id} '
-          '(manga ${chapter.mangaId}) at page ${atPage + 1}/$pageCount: $e',
-          error: e,
-          stackTrace: st);
+        'Offline: download FAILED for chapter ${chapter.id} '
+        '(manga ${chapter.mangaId}) at page ${atPage + 1}/$pageCount: $e',
+        error: e,
+        stackTrace: st,
+      );
       await _purge(chapter);
       await db.setChapterDeviceState(chapter.id, OfflineDeviceState.error);
       rethrow;
@@ -95,11 +107,14 @@ class OfflineDownloadManager {
     // and is deleted here, or reads state=none and skips. Files come after —
     // reconcile sweeps an orphan file, not an orphan row.
     await db.transaction(() async {
-      await db.setChapterDeviceState(chapter.id, OfflineDeviceState.none,
-          bytes: 0);
-      await (db.delete(db.offlinePages)
-            ..where((t) => t.chapterId.equals(chapter.id)))
-          .go();
+      await db.setChapterDeviceState(
+        chapter.id,
+        OfflineDeviceState.none,
+        bytes: 0,
+      );
+      await (db.delete(
+        db.offlinePages,
+      )..where((t) => t.chapterId.equals(chapter.id))).go();
     });
     await store.deleteChapter(chapter.mangaId, chapter.id);
   }
@@ -107,10 +122,11 @@ class OfflineDownloadManager {
   /// On launch, reset chapters left mid-download (app killed) so they can be
   /// retried cleanly instead of being stuck `downloading` forever.
   Future<void> sweepInterrupted() async {
-    final stuck = await (db.select(db.offlineChapters)
-          ..where((t) =>
-              t.deviceState.equalsValue(OfflineDeviceState.downloading)))
-        .get();
+    final stuck =
+        await (db.select(db.offlineChapters)..where(
+              (t) => t.deviceState.equalsValue(OfflineDeviceState.downloading),
+            ))
+            .get();
     for (final c in stuck) {
       await deleteChapter(c);
     }
@@ -118,8 +134,8 @@ class OfflineDownloadManager {
 
   Future<void> _purge(OfflineChapter chapter) async {
     await store.deleteChapter(chapter.mangaId, chapter.id);
-    await (db.delete(db.offlinePages)
-          ..where((t) => t.chapterId.equals(chapter.id)))
-        .go();
+    await (db.delete(
+      db.offlinePages,
+    )..where((t) => t.chapterId.equals(chapter.id))).go();
   }
 }

@@ -16,8 +16,12 @@ import 'package:tsumiru/src/widgets/async_buttons/async_elevated_button.dart';
 
 class _SpyBackupRepo extends BackupSettingsRepository {
   _SpyBackupRepo()
-      : super(GraphQLClient(link: HttpLink('http://localhost:0'),
-            cache: GraphQLCache()));
+    : super(
+        GraphQLClient(
+          link: HttpLink('http://localhost:0'),
+          cache: GraphQLCache(),
+        ),
+      );
 
   Map<String, bool>? captured;
 

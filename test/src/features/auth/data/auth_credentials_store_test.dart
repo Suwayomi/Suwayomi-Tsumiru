@@ -17,8 +17,7 @@ String _buildJwt(Map<String, dynamic> payload) {
 }
 
 class _InMemorySecureStorage implements FlutterSecureStorage {
-  _InMemorySecureStorage([Map<String, String>? seed])
-      : _store = {...?seed};
+  _InMemorySecureStorage([Map<String, String>? seed]) : _store = {...?seed};
   final Map<String, String> _store;
 
   @override
@@ -48,8 +47,7 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      _store[key];
+  }) async => _store[key];
 
   @override
   Future<void> delete({
@@ -70,29 +68,31 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
 }
 
 ProviderContainer _container(_InMemorySecureStorage storage) =>
-    ProviderContainer(overrides: [
-      secureStorageProvider.overrideWithValue(storage),
-    ]);
+    ProviderContainer(
+      overrides: [secureStorageProvider.overrideWithValue(storage)],
+    );
 
 void main() {
   group('AuthCredentialsStore — build() (load from secure storage)', () {
-    test('build loads existing values from secure storage into state',
-        () async {
-      final storage = _InMemorySecureStorage({
-        'auth.ui.accessToken': 'A',
-        'auth.ui.refreshToken': 'R',
-        'auth.simple.cookie': 'JSESSIONID=abc',
-        'auth.password': 'hunter2',
-      });
-      final c = _container(storage);
-      addTearDown(c.dispose);
+    test(
+      'build loads existing values from secure storage into state',
+      () async {
+        final storage = _InMemorySecureStorage({
+          'auth.ui.accessToken': 'A',
+          'auth.ui.refreshToken': 'R',
+          'auth.simple.cookie': 'JSESSIONID=abc',
+          'auth.password': 'hunter2',
+        });
+        final c = _container(storage);
+        addTearDown(c.dispose);
 
-      final state = await c.read(authCredentialsStoreProvider.future);
-      expect(state.uiAccessToken, 'A');
-      expect(state.uiRefreshToken, 'R');
-      expect(state.simpleLoginCookie, 'JSESSIONID=abc');
-      expect(state.password, 'hunter2');
-    });
+        final state = await c.read(authCredentialsStoreProvider.future);
+        expect(state.uiAccessToken, 'A');
+        expect(state.uiRefreshToken, 'R');
+        expect(state.simpleLoginCookie, 'JSESSIONID=abc');
+        expect(state.password, 'hunter2');
+      },
+    );
 
     test('build returns empty state when nothing is stored', () async {
       final storage = _InMemorySecureStorage();
@@ -128,28 +128,32 @@ void main() {
       expect(state.uiAccessToken, 'ACCESS123');
       expect(state.uiRefreshToken, 'REFRESH456');
       // Convenience header projection.
-      expect(state.uiAuthorizationHeader, {'Authorization': 'Bearer ACCESS123'});
-    });
-
-    test('clearUiLoginTokens removes both tokens from store AND state',
-        () async {
-      final storage = _InMemorySecureStorage({
-        'auth.ui.accessToken': 'A',
-        'auth.ui.refreshToken': 'R',
+      expect(state.uiAuthorizationHeader, {
+        'Authorization': 'Bearer ACCESS123',
       });
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
-
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.clearUiLoginTokens();
-
-      expect(await storage.read(key: 'auth.ui.accessToken'), isNull);
-      expect(await storage.read(key: 'auth.ui.refreshToken'), isNull);
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.uiAccessToken, isNull);
-      expect(state.uiAuthorizationHeader, isNull);
     });
+
+    test(
+      'clearUiLoginTokens removes both tokens from store AND state',
+      () async {
+        final storage = _InMemorySecureStorage({
+          'auth.ui.accessToken': 'A',
+          'auth.ui.refreshToken': 'R',
+        });
+        final c = _container(storage);
+        addTearDown(c.dispose);
+        await c.read(authCredentialsStoreProvider.future);
+
+        final store = c.read(authCredentialsStoreProvider.notifier);
+        await store.clearUiLoginTokens();
+
+        expect(await storage.read(key: 'auth.ui.accessToken'), isNull);
+        expect(await storage.read(key: 'auth.ui.refreshToken'), isNull);
+        final state = c.read(authCredentialsStoreProvider).requireValue;
+        expect(state.uiAccessToken, isNull);
+        expect(state.uiAuthorizationHeader, isNull);
+      },
+    );
 
     test('updateUiLoginAccessToken updates only the access token', () async {
       final storage = _InMemorySecureStorage({
@@ -165,29 +169,37 @@ void main() {
 
       final state = c.read(authCredentialsStoreProvider).requireValue;
       expect(state.uiAccessToken, 'NEW');
-      expect(state.uiRefreshToken, 'REFRESH',
-          reason: 'refresh token must not be touched on access rotation');
+      expect(
+        state.uiRefreshToken,
+        'REFRESH',
+        reason: 'refresh token must not be touched on access rotation',
+      );
     });
 
-    test('saveUiLoginTokens populates uiAccessTokenExpiresAt from JWT', () async {
-      // JWT with exp=1800000000 (2027-01-15 08:00 UTC).
-      const expTs = 1800000000;
-      final jwt = _buildJwt({'exp': expTs});
+    test(
+      'saveUiLoginTokens populates uiAccessTokenExpiresAt from JWT',
+      () async {
+        // JWT with exp=1800000000 (2027-01-15 08:00 UTC).
+        const expTs = 1800000000;
+        final jwt = _buildJwt({'exp': expTs});
 
-      final storage = _InMemorySecureStorage();
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
+        final storage = _InMemorySecureStorage();
+        final c = _container(storage);
+        addTearDown(c.dispose);
+        await c.read(authCredentialsStoreProvider.future);
 
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.saveUiLoginTokens(accessToken: jwt, refreshToken: 'R');
+        final store = c.read(authCredentialsStoreProvider.notifier);
+        await store.saveUiLoginTokens(accessToken: jwt, refreshToken: 'R');
 
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.uiAccessTokenExpiresAt, isNotNull);
-      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
-          expTs * 1000);
-      expect(state.uiAccessTokenExpiresAt!.isUtc, isTrue);
-    });
+        final state = c.read(authCredentialsStoreProvider).requireValue;
+        expect(state.uiAccessTokenExpiresAt, isNotNull);
+        expect(
+          state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+          expTs * 1000,
+        );
+        expect(state.uiAccessTokenExpiresAt!.isUtc, isTrue);
+      },
+    );
 
     test('updateUiLoginAccessToken refreshes the expiry timestamp', () async {
       final oldJwt = _buildJwt({'exp': 1700000000});
@@ -204,8 +216,10 @@ void main() {
       await store.updateUiLoginAccessToken(newJwt);
 
       final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
-          1800000000 * 1000);
+      expect(
+        state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+        1800000000 * 1000,
+      );
     });
 
     test('clearUiLoginTokens also clears uiAccessTokenExpiresAt', () async {
@@ -220,8 +234,13 @@ void main() {
 
       final store = c.read(authCredentialsStoreProvider.notifier);
       // Expiry should have been seeded on bootstrap.
-      expect(c.read(authCredentialsStoreProvider).requireValue
-          .uiAccessTokenExpiresAt, isNotNull);
+      expect(
+        c
+            .read(authCredentialsStoreProvider)
+            .requireValue
+            .uiAccessTokenExpiresAt,
+        isNotNull,
+      );
 
       await store.clearUiLoginTokens();
       final state = c.read(authCredentialsStoreProvider).requireValue;
@@ -240,34 +259,49 @@ void main() {
       await c.read(authCredentialsStoreProvider.future);
 
       // Sanity: expiry was decoded.
-      expect(c.read(authCredentialsStoreProvider).requireValue
-          .uiAccessTokenExpiresAt, isNotNull);
+      expect(
+        c
+            .read(authCredentialsStoreProvider)
+            .requireValue
+            .uiAccessTokenExpiresAt,
+        isNotNull,
+      );
 
       // Overwrite with a malformed token.
       final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.saveUiLoginTokens(accessToken: 'not-a-jwt', refreshToken: 'R2');
+      await store.saveUiLoginTokens(
+        accessToken: 'not-a-jwt',
+        refreshToken: 'R2',
+      );
 
       final state = c.read(authCredentialsStoreProvider).requireValue;
       expect(state.uiAccessToken, 'not-a-jwt');
-      expect(state.uiAccessTokenExpiresAt, isNull,
-          reason: 'stale expiry from the previous valid token must not survive');
+      expect(
+        state.uiAccessTokenExpiresAt,
+        isNull,
+        reason: 'stale expiry from the previous valid token must not survive',
+      );
     });
 
-    test('build() seeds uiAccessTokenExpiresAt from stored access token',
-        () async {
-      final jwt = _buildJwt({'exp': 1800000000});
-      final storage = _InMemorySecureStorage({
-        'auth.ui.accessToken': jwt,
-        'auth.ui.refreshToken': 'R',
-      });
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
+    test(
+      'build() seeds uiAccessTokenExpiresAt from stored access token',
+      () async {
+        final jwt = _buildJwt({'exp': 1800000000});
+        final storage = _InMemorySecureStorage({
+          'auth.ui.accessToken': jwt,
+          'auth.ui.refreshToken': 'R',
+        });
+        final c = _container(storage);
+        addTearDown(c.dispose);
+        await c.read(authCredentialsStoreProvider.future);
 
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
-          1800000000 * 1000);
-    });
+        final state = c.read(authCredentialsStoreProvider).requireValue;
+        expect(
+          state.uiAccessTokenExpiresAt!.millisecondsSinceEpoch,
+          1800000000 * 1000,
+        );
+      },
+    );
   });
 
   group('AuthCredentialsStore — Simple Login', () {
@@ -285,21 +319,24 @@ void main() {
       expect(state.simpleLoginCookieHeader, {'Cookie': 'JSESSIONID=abc123'});
     });
 
-    test('clearSimpleLoginCookie removes the cookie from store + state',
-        () async {
-      final storage =
-          _InMemorySecureStorage({'auth.simple.cookie': 'JSESSIONID=x'});
-      final c = _container(storage);
-      addTearDown(c.dispose);
-      await c.read(authCredentialsStoreProvider.future);
+    test(
+      'clearSimpleLoginCookie removes the cookie from store + state',
+      () async {
+        final storage = _InMemorySecureStorage({
+          'auth.simple.cookie': 'JSESSIONID=x',
+        });
+        final c = _container(storage);
+        addTearDown(c.dispose);
+        await c.read(authCredentialsStoreProvider.future);
 
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.clearSimpleLoginCookie();
+        final store = c.read(authCredentialsStoreProvider.notifier);
+        await store.clearSimpleLoginCookie();
 
-      final state = c.read(authCredentialsStoreProvider).requireValue;
-      expect(state.simpleLoginCookie, isNull);
-      expect(state.simpleLoginCookieHeader, isNull);
-    });
+        final state = c.read(authCredentialsStoreProvider).requireValue;
+        expect(state.simpleLoginCookie, isNull);
+        expect(state.simpleLoginCookieHeader, isNull);
+      },
+    );
   });
 
   group('AuthCredentialsStore — password', () {
@@ -313,8 +350,10 @@ void main() {
       await store.savePassword('hunter2');
 
       expect(await storage.read(key: 'auth.password'), 'hunter2');
-      expect(c.read(authCredentialsStoreProvider).requireValue.password,
-          'hunter2');
+      expect(
+        c.read(authCredentialsStoreProvider).requireValue.password,
+        'hunter2',
+      );
     });
   });
 

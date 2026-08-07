@@ -18,6 +18,7 @@ import '../../auth/data/auth_coordinator.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'chapter_commit.dart';
 import 'chapter_download_engine.dart';
 import 'offline_database.dart';
 import 'offline_download_coordinator.dart';
@@ -42,9 +43,10 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
   // Page-level parallelism. One chapter downloads
   // at a time; this is how many of its pages are in flight at once.
-  final parallel = (ref.watch(offlineDownloadConcurrencyProvider) ??
-          DBKeys.offlineDownloadConcurrency.initial as int)
-      .clamp(1, 10);
+  final parallel =
+      (ref.watch(offlineDownloadConcurrencyProvider) ??
+              DBKeys.offlineDownloadConcurrency.initial as int)
+          .clamp(1, 10);
   return ChapterDownloadEngine(
     fetchPage: (pageUrl) => fetchOfflinePageBytes(ref, pageUrl),
     writePage: ref.watch(offlinePageStoreProvider),
@@ -58,12 +60,14 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
       // mutation itself can't recurse through SuwayomiAuthLink; the coordinator
       // owns single-flight dedup, so concurrent 401s collapse to one refresh.
       final rawClient = GraphQLClient(
-        link: HttpLink(Endpoints.baseApi(
-          baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-          port: ref.read(serverPortProvider),
-          addPort: ref.read(serverPortToggleProvider).ifNull(),
-          isGraphQl: true,
-        )),
+        link: HttpLink(
+          Endpoints.baseApi(
+            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+            port: ref.read(serverPortProvider),
+            addPort: ref.read(serverPortToggleProvider).ifNull(),
+            isGraphQl: true,
+          ),
+        ),
         cache: GraphQLCache(),
       );
       final outcome = await ref
@@ -128,6 +132,15 @@ Future<void> initOfflineDownloads(ProviderContainer container) async {
   final coord = container.read(offlineDownloadCoordinatorProvider);
   if (coord == null) return;
   final db = container.read(offlineDatabaseProvider);
+  // Settle disk against the catalog BEFORE anything resumes. Android reaches
+  // this through the worker's launch replay; every other platform has no
+  // replay at all, so without this a chapter whose commit landed but whose
+  // catalog write didn't would be downloaded all over again, and files left by
+  // a crashed delete would never be swept.
+  await recoverChaptersOnDisk(
+    db: db,
+    store: container.read(offlinePageStoreProvider),
+  );
   final errored = await db.chaptersInState(OfflineDeviceState.error);
   for (final c in errored) {
     await db.setChapterDeviceState(c.id, OfflineDeviceState.queued);

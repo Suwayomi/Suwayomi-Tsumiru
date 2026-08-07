@@ -28,20 +28,20 @@ const _kMangaId = 7;
 final _watchedAfterAsyncGap = Provider<int>((ref) => 1);
 
 Fragment$MangaBaseDto _manga({int id = _kMangaId}) => Fragment$MangaBaseDto(
-      id: id,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      thumbnailUrl: '/thumb/$id',
-      title: 'Series $id',
-      unreadCount: 3,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/$id',
-    );
+  id: id,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  thumbnailUrl: '/thumb/$id',
+  title: 'Series $id',
+  unreadCount: 3,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/$id',
+);
 
 ChapterWithMangaDto _row({
   required int id,
@@ -49,25 +49,24 @@ ChapterWithMangaDto _row({
   bool isRead = false,
   bool isDownloaded = false,
   int lastPageRead = 0,
-}) =>
-    Fragment$ChapterWithMangaDto(
-      id: id,
-      chapterNumber: id.toDouble(),
-      fetchedAt: '0',
-      isBookmarked: false,
-      isDownloaded: isDownloaded,
-      isRead: isRead,
-      lastPageRead: lastPageRead,
-      lastReadAt: '0',
-      mangaId: mangaId,
-      name: 'Chapter $id',
-      pageCount: 10,
-      sourceOrder: id,
-      uploadDate: '0',
-      url: '/c/$id',
-      meta: const [],
-      manga: _manga(id: mangaId),
-    );
+}) => Fragment$ChapterWithMangaDto(
+  id: id,
+  chapterNumber: id.toDouble(),
+  fetchedAt: '0',
+  isBookmarked: false,
+  isDownloaded: isDownloaded,
+  isRead: isRead,
+  lastPageRead: lastPageRead,
+  lastReadAt: '0',
+  mangaId: mangaId,
+  name: 'Chapter $id',
+  pageCount: 10,
+  sourceOrder: id,
+  uploadDate: '0',
+  url: '/c/$id',
+  meta: const [],
+  manga: _manga(id: mangaId),
+);
 
 ChapterDto _fresh({
   required int id,
@@ -76,24 +75,23 @@ ChapterDto _fresh({
   bool isBookmarked = false,
   bool isDownloaded = false,
   int lastPageRead = 0,
-}) =>
-    Fragment$ChapterDto(
-      id: id,
-      chapterNumber: id.toDouble(),
-      fetchedAt: '0',
-      isBookmarked: isBookmarked,
-      isDownloaded: isDownloaded,
-      isRead: isRead,
-      lastPageRead: lastPageRead,
-      lastReadAt: '0',
-      mangaId: mangaId,
-      name: 'Chapter $id',
-      pageCount: 10,
-      sourceOrder: id,
-      uploadDate: '0',
-      url: '/c/$id',
-      meta: const [],
-    );
+}) => Fragment$ChapterDto(
+  id: id,
+  chapterNumber: id.toDouble(),
+  fetchedAt: '0',
+  isBookmarked: isBookmarked,
+  isDownloaded: isDownloaded,
+  isRead: isRead,
+  lastPageRead: lastPageRead,
+  lastReadAt: '0',
+  mangaId: mangaId,
+  name: 'Chapter $id',
+  pageCount: 10,
+  sourceOrder: id,
+  uploadDate: '0',
+  url: '/c/$id',
+  meta: const [],
+);
 
 void main() {
   group('patchRowsForManga', () {
@@ -228,25 +226,30 @@ void main() {
   group('refetchChapter', () {
     // chapterProvider is autoDispose: a bare ref.refresh() with nothing
     // listening tore it down mid-fetch and threw, leaving the row stale.
-    testWidgets('survives the provider auto-disposing mid-fetch',
-        (tester) async {
+    testWidgets('survives the provider auto-disposing mid-fetch', (
+      tester,
+    ) async {
       late WidgetRef captured;
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          // Mirrors the real provider, which reads its repository off `ref`
-          // after an async gap — that read is what throws once the provider
-          // has been disposed out from under the fetch.
-          chapterProvider(chapterId: 1).overrideWith((ref) async {
-            await Future<void>.delayed(Duration.zero);
-            ref.watch(_watchedAfterAsyncGap);
-            return _fresh(id: 1, isRead: true);
-          }),
-        ],
-        child: Consumer(builder: (context, ref, _) {
-          captured = ref;
-          return const SizedBox();
-        }),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            // Mirrors the real provider, which reads its repository off `ref`
+            // after an async gap — that read is what throws once the provider
+            // has been disposed out from under the fetch.
+            chapterProvider(chapterId: 1).overrideWith((ref) async {
+              await Future<void>.delayed(Duration.zero);
+              ref.watch(_watchedAfterAsyncGap);
+              return _fresh(id: 1, isRead: true);
+            }),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              captured = ref;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
 
       final pending = refetchChapter(captured, 1);
       await tester.pump(const Duration(milliseconds: 10));
@@ -256,16 +259,21 @@ void main() {
 
     testWidgets('a failing fetch still releases the provider', (tester) async {
       late WidgetRef captured;
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          chapterProvider(chapterId: 1)
-              .overrideWith((ref) async => throw Exception('server down')),
-        ],
-        child: Consumer(builder: (context, ref, _) {
-          captured = ref;
-          return const SizedBox();
-        }),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            chapterProvider(
+              chapterId: 1,
+            ).overrideWith((ref) async => throw Exception('server down')),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              captured = ref;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
 
       Object? caught;
       await tester.runAsync(() async {
@@ -282,8 +290,9 @@ void main() {
   });
 
   group('Updates row refresh on return (#326)', () {
-    testWidgets('opening the series from its cover refreshes the row on back',
-        (tester) async {
+    testWidgets('opening the series from its cover refreshes the row on back', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final sp = await SharedPreferences.getInstance();
       var refreshes = 0;
@@ -310,20 +319,25 @@ void main() {
       );
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          // The row's download icon and cover would otherwise open real
-          // sockets from the test.
-          graphQlClientProvider.overrideWithValue(
-            GraphQLClient(link: HttpLink('http://localhost'), cache: GraphQLCache()),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sp),
+            // The row's download icon and cover would otherwise open real
+            // sockets from the test.
+            graphQlClientProvider.overrideWithValue(
+              GraphQLClient(
+                link: HttpLink('http://localhost'),
+                cache: GraphQLCache(),
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            routerConfig: router,
           ),
-        ],
-        child: MaterialApp.router(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          routerConfig: router,
         ),
-      ));
+      );
       await tester.pump();
 
       // The cover's placeholder spinner never stops, so settle() would hang.

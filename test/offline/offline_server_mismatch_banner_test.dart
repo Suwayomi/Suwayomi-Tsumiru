@@ -41,36 +41,40 @@ Future<void> _capture(WidgetTester tester, Key rootKey, String name) async {
   final dir = Directory('build/offline_banner_screenshots')
     ..createSync(recursive: true);
   await tester.runAsync(() async {
-    final boundary =
-        tester.renderObject<RenderRepaintBoundary>(find.byKey(rootKey));
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(rootKey),
+    );
     final image = await boundary.toImage(pixelRatio: 2);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     File('${dir.path}/$name.png').writeAsBytesSync(data!.buffer.asUint8List());
   });
 }
 
-Widget _app(List<Override> overrides, Key rootKey, {String appBarTitle = 'Library'}) =>
-    ProviderScope(
-      overrides: overrides,
-      child: RepaintBoundary(
-        key: rootKey,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(useMaterial3: true, fontFamily: 'Roboto'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            appBar: AppBar(title: Text(appBarTitle)),
-            body: const Column(
-              children: [
-                OfflineServerMismatchBanner(showAfterDismissal: true),
-                Expanded(child: Center(child: Text('library grid…'))),
-              ],
-            ),
-          ),
+Widget _app(
+  List<Override> overrides,
+  Key rootKey, {
+  String appBarTitle = 'Library',
+}) => ProviderScope(
+  overrides: overrides,
+  child: RepaintBoundary(
+    key: rootKey,
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true, fontFamily: 'Roboto'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        appBar: AppBar(title: Text(appBarTitle)),
+        body: const Column(
+          children: [
+            OfflineServerMismatchBanner(showAfterDismissal: true),
+            Expanded(child: Center(child: Text('library grid…'))),
+          ],
         ),
       ),
-    );
+    ),
+  ),
+);
 
 void main() {
   setUpAll(_loadRoboto);
@@ -84,28 +88,39 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     const mismatch = OfflineServerMismatch(
-        catalogServer: 'server-A', currentServer: 'server-B', dismissed: false);
+      catalogServer: 'server-A',
+      currentServer: 'server-B',
+      dismissed: false,
+    );
     final rootKey = GlobalKey();
 
-    await tester.pumpWidget(_app([
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      offlineServerMismatchProvider.overrideWith((ref) async => mismatch),
-    ], rootKey));
+    await tester.pumpWidget(
+      _app([
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        offlineServerMismatchProvider.overrideWith((ref) async => mismatch),
+      ], rootKey),
+    );
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-        tester.element(find.byType(OfflineServerMismatchBanner)))!;
+      tester.element(find.byType(OfflineServerMismatchBanner)),
+    )!;
     expect(find.byType(MaterialBanner), findsOneWidget);
     expect(find.text(l10n.offlineServerMismatch), findsOneWidget);
-    expect(find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss),
-        findsOneWidget);
-    expect(find.widgetWithText(TextButton, l10n.offlineServerMismatchClear),
-        findsOneWidget);
+    expect(
+      find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(TextButton, l10n.offlineServerMismatchClear),
+      findsOneWidget,
+    );
 
     await _capture(tester, rootKey, 'banner_active');
 
     await tester.tap(
-        find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss));
+      find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -124,25 +139,37 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     const mismatch = OfflineServerMismatch(
-        catalogServer: 'server-A', currentServer: 'server-B', dismissed: true);
+      catalogServer: 'server-A',
+      currentServer: 'server-B',
+      dismissed: true,
+    );
     final rootKey = GlobalKey();
 
-    await tester.pumpWidget(_app([
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      offlineServerMismatchProvider.overrideWith((ref) async => mismatch),
-    ], rootKey, appBarTitle: 'Connection'));
+    await tester.pumpWidget(
+      _app(
+        [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          offlineServerMismatchProvider.overrideWith((ref) async => mismatch),
+        ],
+        rootKey,
+        appBarTitle: 'Connection',
+      ),
+    );
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-        tester.element(find.byType(OfflineServerMismatchBanner)))!;
+      tester.element(find.byType(OfflineServerMismatchBanner)),
+    )!;
     expect(find.text(l10n.offlineServerMismatchDisabled), findsOneWidget);
     expect(
-        find.widgetWithText(
-            TextButton, l10n.offlineServerMismatchClearAction),
-        findsOneWidget);
+      find.widgetWithText(TextButton, l10n.offlineServerMismatchClearAction),
+      findsOneWidget,
+    );
     // No Dismiss once already dismissed.
-    expect(find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss),
-        findsNothing);
+    expect(
+      find.widgetWithText(TextButton, l10n.offlineServerMismatchDismiss),
+      findsNothing,
+    );
 
     await _capture(tester, rootKey, 'banner_dismissed');
   });

@@ -14,11 +14,7 @@ void main() {
   group('detectNewChapters', () {
     test('groups fresh chapters by manga and advances the watermark', () {
       final r = detectNewChapters(
-        candidates: [
-          ch(1, 10, 1, 100),
-          ch(2, 10, 2, 110),
-          ch(3, 20, 5, 120),
-        ],
+        candidates: [ch(1, 10, 1, 100), ch(2, 10, 2, 110), ch(3, 20, 5, 120)],
         watermark: const NewChapterWatermark(fetchedAt: 0),
       );
       expect(r.groups.length, 2);
@@ -50,13 +46,16 @@ void main() {
       expect(r.watermark.recent.containsKey(5), isTrue);
     });
 
-    test('per-series chapters are ordered by chapter number, not fetch order', () {
-      final r = detectNewChapters(
-        candidates: [ch(1, 10, 3, 100), ch(2, 10, 1, 130), ch(3, 10, 2, 120)],
-        watermark: const NewChapterWatermark(),
-      );
-      expect(r.groups.single.chapters.map((c) => c.chapterNumber), [1, 2, 3]);
-    });
+    test(
+      'per-series chapters are ordered by chapter number, not fetch order',
+      () {
+        final r = detectNewChapters(
+          candidates: [ch(1, 10, 3, 100), ch(2, 10, 1, 130), ch(3, 10, 2, 120)],
+          watermark: const NewChapterWatermark(),
+        );
+        expect(r.groups.single.chapters.map((c) => c.chapterNumber), [1, 2, 3]);
+      },
+    );
 
     test('category scope filters which series notify', () {
       final r = detectNewChapters(
@@ -79,7 +78,10 @@ void main() {
     });
 
     test('watermark round-trips through json', () {
-      const wm = NewChapterWatermark(fetchedAt: 42, recent: {1: 40, 2: 41, 3: 42});
+      const wm = NewChapterWatermark(
+        fetchedAt: 42,
+        recent: {1: 40, 2: 41, 3: 42},
+      );
       final back = NewChapterWatermark.fromJson(wm.toJson());
       expect(back.fetchedAt, 42);
       expect(back.recent, {1: 40, 2: 41, 3: 42});
@@ -111,7 +113,8 @@ void main() {
     });
 
     test('more than the cap -> first 5 and N more', () {
-      final l = newChaptersLabel([1, 2, 3, 4, 5, 6, 7], 7) as MultipleNewChapters;
+      final l =
+          newChaptersLabel([1, 2, 3, 4, 5, 6, 7], 7) as MultipleNewChapters;
       expect(l.numbers, ['1', '2', '3', '4', '5']);
       expect(l.more, 2);
     });

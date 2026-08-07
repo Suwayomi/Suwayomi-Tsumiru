@@ -28,21 +28,18 @@ class _FakeReadWithLongTap extends ReadWithLongTap {
 }
 
 ChapterPagesDto _pages() => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
-      pages: const [
-        '/manga/1/chapter/0/page/0',
-        '/manga/1/chapter/0/page/1',
-        '/manga/1/chapter/0/page/2',
-      ],
-    );
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+  pages: const [
+    '/manga/1/chapter/0/page/0',
+    '/manga/1/chapter/0/page/1',
+    '/manga/1/chapter/0/page/2',
+  ],
+);
 
 const _copyKey = ValueKey('reader-page-action-copy-image');
 const _shareKey = ValueKey('reader-page-action-share');
 
-Future<void> _pumpReader(
-  WidgetTester tester, {
-  required bool longTapOn,
-}) async {
+Future<void> _pumpReader(WidgetTester tester, {required bool longTapOn}) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -77,9 +74,7 @@ Future<void> _pumpReader(
             resolvedReaderMode: ReaderMode.webtoon,
             currentIndex: 0,
             chapterPages: _pages(),
-            child: const SizedBox.expand(
-              child: ColoredBox(color: Colors.grey),
-            ),
+            child: const SizedBox.expand(child: ColoredBox(color: Colors.grey)),
           ),
         ),
       ),
@@ -89,8 +84,9 @@ Future<void> _pumpReader(
 }
 
 void main() {
-  testWidgets('pref ON: long-press opens the page-actions sheet',
-      (tester) async {
+  testWidgets('pref ON: long-press opens the page-actions sheet', (
+    tester,
+  ) async {
     await _pumpReader(tester, longTapOn: true);
 
     expect(find.byKey(_copyKey), findsNothing);
@@ -105,14 +101,16 @@ void main() {
     expect(find.byType(RawMagnifier), findsNothing);
   });
 
-  testWidgets('pref OFF: long-press keeps the magnifier, no sheet',
-      (tester) async {
+  testWidgets('pref OFF: long-press keeps the magnifier, no sheet', (
+    tester,
+  ) async {
     await _pumpReader(tester, longTapOn: false);
 
     // Press and hold past the long-press timeout to observe the magnifier
     // while the gesture is still down.
-    final gesture =
-        await tester.startGesture(tester.getCenter(find.byType(ReaderView)));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(ReaderView)),
+    );
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump();
 

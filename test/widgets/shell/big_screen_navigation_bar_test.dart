@@ -13,8 +13,11 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
 
-Future<void> _pump(WidgetTester tester, SharedPreferences prefs,
-    {Size size = const Size(1400, 900)}) async {
+Future<void> _pump(
+  WidgetTester tester,
+  SharedPreferences prefs, {
+  Size size = const Size(1400, 900),
+}) async {
   // Default width (>= 1200) is desktop, so the extended rail + collapse toggle
   // show; callers pass a narrower size to exercise the tablet rail.
   tester.view.physicalSize = size;
@@ -51,8 +54,9 @@ NavigationRail _rail(WidgetTester tester) =>
     tester.widget<NavigationRail>(find.byType(NavigationRail));
 
 void main() {
-  testWidgets('collapse toggles the desktop rail; the logo stays as expand',
-      (tester) async {
+  testWidgets('collapse toggles the desktop rail; the logo stays as expand', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();
     await _pump(tester, prefs);
@@ -66,14 +70,26 @@ void main() {
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();
 
-    expect(_rail(tester).extended, isFalse,
-        reason: 'tapping collapse must switch to the icon-only rail');
-    expect(find.byIcon(Icons.chevron_right), findsNothing,
-        reason: 'the header must not swap to a chevron when collapsed');
-    expect(find.byType(ImageIcon), findsOneWidget,
-        reason: 'collapsed rail keeps the logo (tap to expand)');
-    expect(tester.takeException(), isNull,
-        reason: 'the narrow collapsed leading must not overflow');
+    expect(
+      _rail(tester).extended,
+      isFalse,
+      reason: 'tapping collapse must switch to the icon-only rail',
+    );
+    expect(
+      find.byIcon(Icons.chevron_right),
+      findsNothing,
+      reason: 'the header must not swap to a chevron when collapsed',
+    );
+    expect(
+      find.byType(ImageIcon),
+      findsOneWidget,
+      reason: 'collapsed rail keeps the logo (tap to expand)',
+    );
+    expect(
+      tester.takeException(),
+      isNull,
+      reason: 'the narrow collapsed leading must not overflow',
+    );
 
     // Expand again by tapping the logo.
     await tester.tap(find.byType(ImageIcon));
@@ -95,11 +111,11 @@ void main() {
     expect(_rail(tester).extended, isFalse);
   });
 
-  testWidgets('tablet width ignores the collapse pref (no stranded chevron)',
-      (tester) async {
+  testWidgets('tablet width ignores the collapse pref (no stranded chevron)', (
+    tester,
+  ) async {
     // Persist "collapsed", then render at tablet width (600–1199).
-    SharedPreferences.setMockInitialValues(
-        const {'sidebarExpanded': false});
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
     final prefs = await SharedPreferences.getInstance();
     await _pump(tester, prefs, size: const Size(900, 1200));
 

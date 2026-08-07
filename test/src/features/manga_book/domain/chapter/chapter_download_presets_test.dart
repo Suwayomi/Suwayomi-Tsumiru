@@ -7,25 +7,27 @@ ChapterDownloadCandidate _ch(
   double chapterNumber, {
   bool isRead = false,
   bool isDownloaded = false,
-}) =>
-    ChapterDownloadCandidate(
-      id: id,
-      chapterNumber: chapterNumber,
-      isRead: isRead,
-      isDownloaded: isDownloaded,
-    );
+}) => ChapterDownloadCandidate(
+  id: id,
+  chapterNumber: chapterNumber,
+  isRead: isRead,
+  isDownloaded: isDownloaded,
+);
 
 void main() {
   group('chaptersToQueueForPreset', () {
-    test('nextChapter returns first non-downloaded chapter after read position', () {
-      final result = chaptersToQueueForPreset([
-        _ch(101, 1, isRead: true),
-        _ch(102, 2, isRead: true),
-        _ch(103, 3),
-        _ch(104, 4),
-      ], DownloadPreset.nextChapter);
-      expect(result, [103]);
-    });
+    test(
+      'nextChapter returns first non-downloaded chapter after read position',
+      () {
+        final result = chaptersToQueueForPreset([
+          _ch(101, 1, isRead: true),
+          _ch(102, 2, isRead: true),
+          _ch(103, 3),
+          _ch(104, 4),
+        ], DownloadPreset.nextChapter);
+        expect(result, [103]);
+      },
+    );
 
     test('nextChapter skips already-downloaded', () {
       final result = chaptersToQueueForPreset([
@@ -47,7 +49,7 @@ void main() {
 
     test('next5 takes 5 non-downloaded chapters after read position', () {
       final result = chaptersToQueueForPreset([
-        for (var i = 1; i <= 10; i++) _ch(100 + i, i.toDouble())
+        for (var i = 1; i <= 10; i++) _ch(100 + i, i.toDouble()),
       ], DownloadPreset.next5);
       expect(result, [101, 102, 103, 104, 105]);
     });
@@ -82,14 +84,14 @@ void main() {
 
     test('next10 / next25 use the right N', () {
       final ten = chaptersToQueueForPreset([
-        for (var i = 1; i <= 30; i++) _ch(100 + i, i.toDouble())
+        for (var i = 1; i <= 30; i++) _ch(100 + i, i.toDouble()),
       ], DownloadPreset.next10);
       expect(ten.length, 10);
       expect(ten.first, 101);
       expect(ten.last, 110);
 
       final twentyFive = chaptersToQueueForPreset([
-        for (var i = 1; i <= 30; i++) _ch(100 + i, i.toDouble())
+        for (var i = 1; i <= 30; i++) _ch(100 + i, i.toDouble()),
       ], DownloadPreset.next25);
       expect(twentyFive.length, 25);
       expect(twentyFive.last, 125);
@@ -105,26 +107,36 @@ void main() {
       expect(result, [102, 104]);
     });
 
-    test('unread treats partially-read chapters as unread (strict semantics)', () {
-      // The candidate type only carries isRead; partial-read distinction does
-      // not exist at this layer — the caller is responsible for not flipping
-      // isRead until the user finishes the chapter. The helper takes isRead
-      // at face value.
-      final result = chaptersToQueueForPreset([
-        _ch(101, 1, isRead: false), // partially-read at the source — still unread to us
-        _ch(102, 2, isRead: true),
-      ], DownloadPreset.unread);
-      expect(result, [101]);
-    });
+    test(
+      'unread treats partially-read chapters as unread (strict semantics)',
+      () {
+        // The candidate type only carries isRead; partial-read distinction does
+        // not exist at this layer — the caller is responsible for not flipping
+        // isRead until the user finishes the chapter. The helper takes isRead
+        // at face value.
+        final result = chaptersToQueueForPreset([
+          _ch(
+            101,
+            1,
+            isRead: false,
+          ), // partially-read at the source — still unread to us
+          _ch(102, 2, isRead: true),
+        ], DownloadPreset.unread);
+        expect(result, [101]);
+      },
+    );
 
-    test('all returns every non-downloaded chapter ascending, regardless of read state', () {
-      final result = chaptersToQueueForPreset([
-        _ch(101, 1, isRead: true),
-        _ch(102, 2),
-        _ch(103, 3, isDownloaded: true),
-      ], DownloadPreset.all);
-      expect(result, [101, 102]);
-    });
+    test(
+      'all returns every non-downloaded chapter ascending, regardless of read state',
+      () {
+        final result = chaptersToQueueForPreset([
+          _ch(101, 1, isRead: true),
+          _ch(102, 2),
+          _ch(103, 3, isDownloaded: true),
+        ], DownloadPreset.all);
+        expect(result, [101, 102]);
+      },
+    );
 
     test('result is sorted by chapterNumber, not input order', () {
       final result = chaptersToQueueForPreset([

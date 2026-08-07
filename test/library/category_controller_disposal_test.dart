@@ -46,12 +46,15 @@ void main() {
     addTearDown(() => FlutterError.onError = prevOnError);
 
     await runZonedGuarded(() async {
-      final container = ProviderContainer(overrides: [
-        categoryRepositoryProvider
-            .overrideWithValue(_PendingCategoryRepo(fetch)),
-        offlineReadDatabaseProvider.overrideWithValue(null),
-        offlineSyncProvider.overrideWithValue(null),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          categoryRepositoryProvider.overrideWithValue(
+            _PendingCategoryRepo(fetch),
+          ),
+          offlineReadDatabaseProvider.overrideWithValue(null),
+          offlineSyncProvider.overrideWithValue(null),
+        ],
+      );
       addTearDown(container.dispose);
 
       // Mirror add-to-library: read .future with NO retained listener, so this
@@ -72,9 +75,13 @@ void main() {
       await Future<void>.delayed(Duration.zero);
     }, (error, _) => errors.add(error));
 
-    final disposedRefUse =
-        errors.where((e) => e.toString().contains('after it has been disposed'));
-    expect(disposedRefUse, isEmpty,
-        reason: 'build() used ref after the provider was disposed: $errors');
+    final disposedRefUse = errors.where(
+      (e) => e.toString().contains('after it has been disposed'),
+    );
+    expect(
+      disposedRefUse,
+      isEmpty,
+      reason: 'build() used ref after the provider was disposed: $errors',
+    );
   });
 }

@@ -20,32 +20,31 @@ SourceDto _src({
   String lang = 'en',
   bool nsfw = false,
   bool hidden = false,
-}) =>
-    SourceDto.fromJson({
-      'displayName': name,
-      'iconUrl': '',
-      'id': id,
-      'isConfigurable': false,
-      'contentWarning': nsfw ? 'NSFW' : 'SAFE',
-      'lang': lang,
-      'name': name,
-      'supportsLatest': true,
-      '__typename': 'SourceType',
-      'meta': [
-        if (hidden)
-          {
-            'key': 'tsumiru_isHidden',
-            'value': 'true',
-            '__typename': 'SourceMetaType',
-          },
-      ],
-      'extension': {
-        'pkgName': 'pkg',
-        'repo': 'repo',
-        'isObsolete': false,
-        '__typename': 'ExtensionType',
+}) => SourceDto.fromJson({
+  'displayName': name,
+  'iconUrl': '',
+  'id': id,
+  'isConfigurable': false,
+  'contentWarning': nsfw ? 'NSFW' : 'SAFE',
+  'lang': lang,
+  'name': name,
+  'supportsLatest': true,
+  '__typename': 'SourceType',
+  'meta': [
+    if (hidden)
+      {
+        'key': 'tsumiru_isHidden',
+        'value': 'true',
+        '__typename': 'SourceMetaType',
       },
-    });
+  ],
+  'extension': {
+    'pkgName': 'pkg',
+    'repo': 'repo',
+    'isObsolete': false,
+    '__typename': 'ExtensionType',
+  },
+});
 
 Future<Widget> _harness(Map<String, List<SourceDto>> byLang) async {
   SharedPreferences.setMockInitialValues({});
@@ -67,10 +66,12 @@ void main() {
   testWidgets('renders Komikku structure: language switch, All Sources switch, '
       'per-source checkbox with flag', (tester) async {
     // Default enabled langs include "en" (not "ko"), so en expands and ko does not.
-    await tester.pumpWidget(await _harness({
-      'en': [_src(id: '1', name: 'Asura Scans')],
-      'ko': [_src(id: '2', name: 'Manatoki', lang: 'ko')],
-    }));
+    await tester.pumpWidget(
+      await _harness({
+        'en': [_src(id: '1', name: 'Asura Scans')],
+        'ko': [_src(id: '2', name: 'Manatoki', lang: 'ko')],
+      }),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
@@ -86,10 +87,12 @@ void main() {
     expect(find.textContaining('All Sources'), findsOneWidget);
     expect(find.text('Asura Scans'), findsOneWidget);
     // per-source control is a Checkbox on the trailing side, checked = shown.
-    final box = tester.widget<Checkbox>(find.descendant(
-      of: find.widgetWithText(ListTile, 'Asura Scans'),
-      matching: find.byType(Checkbox),
-    ));
+    final box = tester.widget<Checkbox>(
+      find.descendant(
+        of: find.widgetWithText(ListTile, 'Asura Scans'),
+        matching: find.byType(Checkbox),
+      ),
+    );
     expect(box.value, isTrue);
 
     // ko is disabled by default -> only the language switch, no source row.
@@ -99,31 +102,39 @@ void main() {
   testWidgets('enabled languages sort above disabled ones', (tester) async {
     // "en" is enabled by default, "af" (Afrikaans) is not — English must
     // render above Afrikaans even though "af" sorts first alphabetically.
-    await tester.pumpWidget(await _harness({
-      'af': [_src(id: '1', name: 'AfrikaSource', lang: 'af')],
-      'en': [_src(id: '2', name: 'Asura Scans')],
-    }));
+    await tester.pumpWidget(
+      await _harness({
+        'af': [_src(id: '1', name: 'AfrikaSource', lang: 'af')],
+        'en': [_src(id: '2', name: 'Asura Scans')],
+      }),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    final englishY =
-        tester.getTopLeft(find.textContaining('English (English')).dy;
-    final afrikaansY =
-        tester.getTopLeft(find.textContaining('Afrikaans (Afrikaans')).dy;
+    final englishY = tester
+        .getTopLeft(find.textContaining('English (English'))
+        .dy;
+    final afrikaansY = tester
+        .getTopLeft(find.textContaining('Afrikaans (Afrikaans'))
+        .dy;
     expect(englishY, lessThan(afrikaansY));
   });
 
   testWidgets('a hidden source shows an unchecked box', (tester) async {
-    await tester.pumpWidget(await _harness({
-      'en': [_src(id: '1', name: 'Asura Scans', hidden: true)],
-    }));
+    await tester.pumpWidget(
+      await _harness({
+        'en': [_src(id: '1', name: 'Asura Scans', hidden: true)],
+      }),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    final box = tester.widget<Checkbox>(find.descendant(
-      of: find.widgetWithText(ListTile, 'Asura Scans'),
-      matching: find.byType(Checkbox),
-    ));
+    final box = tester.widget<Checkbox>(
+      find.descendant(
+        of: find.widgetWithText(ListTile, 'Asura Scans'),
+        matching: find.byType(Checkbox),
+      ),
+    );
     expect(box.value, isFalse);
   });
 }

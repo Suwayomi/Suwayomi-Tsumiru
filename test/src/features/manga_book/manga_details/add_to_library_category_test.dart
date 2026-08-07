@@ -22,22 +22,23 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import '../reader/reader_test_fixtures.dart';
 
-CategoryDto _cat({required int id, required String name, bool isDefault = false}) =>
-    Fragment$CategoryDto(
-      defaultCategory: isDefault,
-      id: id,
-      includeInDownload: Enum$IncludeOrExclude.UNSET,
-      includeInUpdate: Enum$IncludeOrExclude.UNSET,
-      name: name,
-      order: id,
-      mangas: Fragment$CategoryDto$mangas(totalCount: 0),
-      meta: const [],
-    );
+CategoryDto _cat({
+  required int id,
+  required String name,
+  bool isDefault = false,
+}) => Fragment$CategoryDto(
+  defaultCategory: isDefault,
+  id: id,
+  includeInDownload: Enum$IncludeOrExclude.UNSET,
+  includeInUpdate: Enum$IncludeOrExclude.UNSET,
+  name: name,
+  order: id,
+  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
+  meta: const [],
+);
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingRepo extends MangaBookRepository {
   _RecordingRepo() : super(_dummyClient());
@@ -60,10 +61,10 @@ class _RecordingRepo extends MangaBookRepository {
 class _FixedCategories extends CategoryController {
   @override
   Future<List<CategoryDto>?> build() async => [
-        _cat(id: 0, name: 'Default'),
-        _cat(id: 1, name: 'Complete'),
-        _cat(id: 2, name: 'Pornhwa'),
-      ];
+    _cat(id: 0, name: 'Default'),
+    _cat(id: 1, name: 'Complete'),
+    _cat(id: 2, name: 'Pornhwa'),
+  ];
 }
 
 class _FixedDefault extends LibraryDefaultCategory {
@@ -74,17 +75,22 @@ class _FixedDefault extends LibraryDefaultCategory {
 }
 
 ProviderContainer _container(_RecordingRepo repo, int defaultCategory) {
-  final c = ProviderContainer(overrides: [
-    mangaBookRepositoryProvider.overrideWithValue(repo),
-    categoryControllerProvider.overrideWith(() => _FixedCategories()),
-    libraryDefaultCategoryProvider.overrideWith(() => _FixedDefault(defaultCategory)),
-    // Empty library: the duplicate gate finds no hits and the add proceeds.
-    libraryMangaListProvider.overrideWith((ref) async => const <MangaDto>[]),
-  ]);
+  final c = ProviderContainer(
+    overrides: [
+      mangaBookRepositoryProvider.overrideWithValue(repo),
+      categoryControllerProvider.overrideWith(() => _FixedCategories()),
+      libraryDefaultCategoryProvider.overrideWith(
+        () => _FixedDefault(defaultCategory),
+      ),
+      // Empty library: the duplicate gate finds no hits and the add proceeds.
+      libraryMangaListProvider.overrideWith((ref) async => const <MangaDto>[]),
+    ],
+  );
   return c;
 }
 
-Widget _harness(ProviderContainer c, MangaDto manga) => UncontrolledProviderScope(
+Widget _harness(ProviderContainer c, MangaDto manga) =>
+    UncontrolledProviderScope(
       container: c,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -103,11 +109,13 @@ Widget _harness(ProviderContainer c, MangaDto manga) => UncontrolledProviderScop
       ),
     );
 
-MangaDto _manga(int id) => testManga().copyWith.call(id: id, title: 'Manga $id');
+MangaDto _manga(int id) =>
+    testManga().copyWith.call(id: id, title: 'Manga $id');
 
 void main() {
-  testWidgets('a specific default category is assigned silently, no prompt',
-      (tester) async {
+  testWidgets('a specific default category is assigned silently, no prompt', (
+    tester,
+  ) async {
     final repo = _RecordingRepo();
     final c = _container(repo, 1); // Complete
     addTearDown(c.dispose);
@@ -120,8 +128,9 @@ void main() {
     expect(repo.addedToCategory, contains((76, 1)));
   });
 
-  testWidgets('Default/uncategorized adds with no category and no prompt',
-      (tester) async {
+  testWidgets('Default/uncategorized adds with no category and no prompt', (
+    tester,
+  ) async {
     final repo = _RecordingRepo();
     final c = _container(repo, 0);
     addTearDown(c.dispose);
@@ -134,8 +143,9 @@ void main() {
     expect(repo.addedToCategory, isEmpty);
   });
 
-  testWidgets('Always ask pops the picker; OK adds and assigns the picks',
-      (tester) async {
+  testWidgets('Always ask pops the picker; OK adds and assigns the picks', (
+    tester,
+  ) async {
     final repo = _RecordingRepo();
     final c = _container(repo, -1);
     addTearDown(c.dispose);
@@ -156,8 +166,9 @@ void main() {
     expect(repo.addedToCategory, isNot(contains((76, 1))));
   });
 
-  testWidgets('a pref pointing at a deleted category prompts, not silent add',
-      (tester) async {
+  testWidgets('a pref pointing at a deleted category prompts, not silent add', (
+    tester,
+  ) async {
     // 9 is not among the fixed categories (0/1/2) — a category the user chose
     // as default and later deleted. Must fall through to the picker (matching
     // the settings label) rather than silently adding uncategorized.

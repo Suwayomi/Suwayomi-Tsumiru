@@ -58,11 +58,9 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
         if (!selectedIds.value.contains(s.id) && matches(s)) s,
     ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    final showLanguage =
-        allSources.map((s) => s.lang).toSet().length > 1;
+    final showLanguage = allSources.map((s) => s.lang).toSet().length > 1;
 
-    void setSelected(Iterable<String> ids) =>
-        selectedIds.value = ids.toList();
+    void setSelected(Iterable<String> ids) => selectedIds.value = ids.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -71,8 +69,10 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           IconButton(
             tooltip: l10n.migrationSelectPinned,
             icon: const Icon(Icons.push_pin_outlined),
-            onPressed: () =>
-                setSelected([for (final s in allSources) if (s.isPinned) s.id]),
+            onPressed: () => setSelected([
+              for (final s in allSources)
+                if (s.isPinned) s.id,
+            ]),
           ),
           IconButton(
             tooltip: l10n.migrationSelectNone,
@@ -82,8 +82,10 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           PopupMenuButton<void>(
             itemBuilder: (context) => [
               PopupMenuItem<void>(
-                onTap: () => setSelected(
-                    [for (final s in allSources) if (!s.isHidden) s.id]),
+                onTap: () => setSelected([
+                  for (final s in allSources)
+                    if (!s.isHidden) s.id,
+                ]),
                 child: Text(l10n.migrationSelectEnabled),
               ),
               PopupMenuItem<void>(
@@ -140,8 +142,11 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
                           source: selected[i],
                           showLanguage: showLanguage,
                           dragIndex: selected.length > 1 ? i : null,
-                          onTap: () => setSelected(selectedIds.value
-                              .where((id) => id != selected[i].id)),
+                          onTap: () => setSelected(
+                            selectedIds.value.where(
+                              (id) => id != selected[i].id,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -160,8 +165,10 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
                             showLanguage: showLanguage,
                             dragIndex: null,
                             card: false,
-                            onTap: () => setSelected(
-                                [...selectedIds.value, available[i].id]),
+                            onTap: () => setSelected([
+                              ...selectedIds.value,
+                              available[i].id,
+                            ]),
                           ),
                         ],
                       ],
@@ -192,8 +199,12 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
     );
   }
 
-  void _start(BuildContext context, WidgetRef ref, MigrationRunConfig config,
-      String? extraSearchQuery) {
+  void _start(
+    BuildContext context,
+    WidgetRef ref,
+    MigrationRunConfig config,
+    String? extraSearchQuery,
+  ) {
     MigrationBulkRunRoute(
       $extra: MigrationBulkRunData(
         mangaIds: mangaIds,
@@ -225,9 +236,9 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(text, style: context.theme.textTheme.bodyMedium),
-      );
+    padding: const EdgeInsets.all(16),
+    child: Text(text, style: context.theme.textTheme.bodyMedium),
+  );
 }
 
 class _SourceCard extends StatelessWidget {
@@ -252,43 +263,42 @@ class _SourceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final tile = ListTile(
-        onTap: onTap,
-        leading: ClipRRect(
-          borderRadius: KBorderRadius.r8.radius,
-          child: ServerImage(
-            imageUrl: source.iconUrl,
-            size: const Size.square(40),
-          ),
+      onTap: onTap,
+      leading: ClipRRect(
+        borderRadius: KBorderRadius.r8.radius,
+        child: ServerImage(
+          imageUrl: source.iconUrl,
+          size: const Size.square(40),
         ),
-        title: Text(source.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showLanguage)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${flagEmojiForLang(source.lang)} (${source.lang.toUpperCase()})',
-                  style: theme.textTheme.bodySmall,
-                ),
+      ),
+      title: Text(source.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showLanguage)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(999),
               ),
-            if (dragIndex != null) ...[
-              const SizedBox(width: 4),
-              ReorderableDragStartListener(
-                index: dragIndex!,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.drag_handle),
-                ),
+              child: Text(
+                '${flagEmojiForLang(source.lang)} (${source.lang.toUpperCase()})',
+                style: theme.textTheme.bodySmall,
               ),
-            ],
+            ),
+          if (dragIndex != null) ...[
+            const SizedBox(width: 4),
+            ReorderableDragStartListener(
+              index: dragIndex!,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(Icons.drag_handle),
+              ),
+            ),
           ],
-        ),
+        ],
+      ),
     );
     if (!card) return tile;
     return Card(

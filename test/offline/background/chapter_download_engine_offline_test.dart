@@ -6,28 +6,30 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
-import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 import '../../helpers/fake_page_store.dart';
+
 void main() {
-  test('a PageOfflineException yields outcome.offline, not error/authFailed',
-      () async {
-    final engine = ChapterDownloadEngine(
-      fetchPage: (_) async => throw const PageOfflineException(),
-      writePage: FakePageStore(),
-      refreshAuth: () async => true,
-    );
-    final outcome = await engine.download(
-      mangaId: 1,
-      chapterId: 2,
-      pages: const [(index: 0, url: 'u0')],
-      isCancelled: () => false,
-    );
-    expect(outcome.offline, isTrue);
-    expect(outcome.error, isNull);
-    expect(outcome.authFailed, isFalse);
-    expect(outcome.succeeded, isFalse);
-    expect(outcome.storedPages, isEmpty);
-  });
+  test(
+    'a PageOfflineException yields outcome.offline, not error/authFailed',
+    () async {
+      final engine = ChapterDownloadEngine(
+        fetchPage: (_) async => throw const PageOfflineException(),
+        writePage: FakePageStore(),
+        refreshAuth: () async => true,
+      );
+      final outcome = await engine.download(
+        mangaId: 1,
+        chapterId: 2,
+        pages: const [(index: 0, url: 'u0')],
+        isCancelled: () => false,
+      );
+      expect(outcome.offline, isTrue);
+      expect(outcome.error, isNull);
+      expect(outcome.authFailed, isFalse);
+      expect(outcome.succeeded, isFalse);
+      expect(outcome.storedPages, isEmpty);
+    },
+  );
 
   test('offline short-circuits immediately (no retry/backoff burn)', () async {
     var calls = 0;

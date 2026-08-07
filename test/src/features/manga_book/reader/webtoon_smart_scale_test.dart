@@ -51,10 +51,12 @@ void main() {
       expect(w20to9, 360); // 800 * 0.45
     });
 
-    test('originalSize never caps at strip level (per-page cap is render-side)',
-        () {
-      expect(WebtoonScaleType.originalSize.maxContentWidth(400, 800), 400);
-      expect(WebtoonScaleType.originalSize.maxContentWidth(2560, 1440), 2560);
-    });
+    test(
+      'originalSize never caps at strip level (per-page cap is render-side)',
+      () {
+        expect(WebtoonScaleType.originalSize.maxContentWidth(400, 800), 400);
+        expect(WebtoonScaleType.originalSize.maxContentWidth(2560, 1440), 2560);
+      },
+    );
   });
 }

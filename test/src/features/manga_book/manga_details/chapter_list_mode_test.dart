@@ -14,10 +14,8 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/chapter_grid_tile.dart';
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingRepo extends MangaBookRepository {
   _RecordingRepo() : super(_dummyClient());
@@ -75,9 +73,13 @@ void main() {
 
   group('mangaChapterListModeProvider', () {
     test('defaults to list when the series has no stored mode', () {
-      final c = ProviderContainer(overrides: [
-        mangaWithIdProvider(mangaId: 1).overrideWith(() => _FakeMangaWithId()),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId()),
+        ],
+      );
       addTearDown(c.dispose);
       expect(
         c.read(mangaChapterListModeProvider(mangaId: 1)),
@@ -87,10 +89,14 @@ void main() {
 
     test('update persists the mode to the per-series meta store', () async {
       final repo = _RecordingRepo();
-      final c = ProviderContainer(overrides: [
-        mangaBookRepositoryProvider.overrideWithValue(repo),
-        mangaWithIdProvider(mangaId: 1).overrideWith(() => _FakeMangaWithId()),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId()),
+        ],
+      );
       addTearDown(c.dispose);
 
       await c

@@ -30,29 +30,29 @@ class CatchupMangaSpec {
   final Set<int> pinnedChapterIds;
 
   Map<String, Object?> toJson() => {
-        'mangaId': mangaId,
-        // By NAME, not index — the enum may gain values and a spec file can
-        // outlive the app version that wrote it.
-        'keepRule': keepRule.name,
-        'keepUnreadCount': keepUnreadCount,
-        'onDevice': onDeviceChapterIds.toList(),
-        'pinned': pinnedChapterIds.toList(),
-      };
+    'mangaId': mangaId,
+    // By NAME, not index — the enum may gain values and a spec file can
+    // outlive the app version that wrote it.
+    'keepRule': keepRule.name,
+    'keepUnreadCount': keepUnreadCount,
+    'onDevice': onDeviceChapterIds.toList(),
+    'pinned': pinnedChapterIds.toList(),
+  };
 
   factory CatchupMangaSpec.fromJson(Map<String, Object?> j) => CatchupMangaSpec(
-        mangaId: (j['mangaId'] as num).toInt(),
-        keepRule: OfflineKeepRule.values.asNameMap()[j['keepRule']] ??
-            OfflineKeepRule.off,
-        keepUnreadCount: (j['keepUnreadCount'] as num?)?.toInt() ?? 0,
-        onDeviceChapterIds: {
-          for (final id in (j['onDevice'] as List? ?? const []))
-            (id as num).toInt(),
-        },
-        pinnedChapterIds: {
-          for (final id in (j['pinned'] as List? ?? const []))
-            (id as num).toInt(),
-        },
-      );
+    mangaId: (j['mangaId'] as num).toInt(),
+    keepRule:
+        OfflineKeepRule.values.asNameMap()[j['keepRule']] ??
+        OfflineKeepRule.off,
+    keepUnreadCount: (j['keepUnreadCount'] as num?)?.toInt() ?? 0,
+    onDeviceChapterIds: {
+      for (final id in (j['onDevice'] as List? ?? const []))
+        (id as num).toInt(),
+    },
+    pinnedChapterIds: {
+      for (final id in (j['pinned'] as List? ?? const [])) (id as num).toInt(),
+    },
+  );
 }
 
 class CatchupWorkSpec {
@@ -77,25 +77,25 @@ class CatchupWorkSpec {
   Set<int> get keepRuleMangaIds => {for (final m in manga) m.mangaId};
 
   Map<String, Object?> toJson() => {
-        'serverId': serverId,
-        'wifiOnly': wifiOnly,
-        'storageCapEnabled': storageCapEnabled,
-        'storageCapBytes': storageCapBytes,
-        'usedBytes': usedBytes,
-        'manga': [for (final m in manga) m.toJson()],
-      };
+    'serverId': serverId,
+    'wifiOnly': wifiOnly,
+    'storageCapEnabled': storageCapEnabled,
+    'storageCapBytes': storageCapBytes,
+    'usedBytes': usedBytes,
+    'manga': [for (final m in manga) m.toJson()],
+  };
 
   factory CatchupWorkSpec.fromJson(Map<String, Object?> j) => CatchupWorkSpec(
-        serverId: j['serverId'] as String,
-        wifiOnly: (j['wifiOnly'] as bool?) ?? true,
-        storageCapEnabled: (j['storageCapEnabled'] as bool?) ?? false,
-        storageCapBytes: (j['storageCapBytes'] as num?)?.toInt() ?? 0,
-        usedBytes: (j['usedBytes'] as num?)?.toInt() ?? 0,
-        manga: [
-          for (final m in (j['manga'] as List? ?? const []))
-            CatchupMangaSpec.fromJson((m as Map).cast<String, Object?>()),
-        ],
-      );
+    serverId: j['serverId'] as String,
+    wifiOnly: (j['wifiOnly'] as bool?) ?? true,
+    storageCapEnabled: (j['storageCapEnabled'] as bool?) ?? false,
+    storageCapBytes: (j['storageCapBytes'] as num?)?.toInt() ?? 0,
+    usedBytes: (j['usedBytes'] as num?)?.toInt() ?? 0,
+    manga: [
+      for (final m in (j['manga'] as List? ?? const []))
+        CatchupMangaSpec.fromJson((m as Map).cast<String, Object?>()),
+    ],
+  );
 }
 
 /// The download side's cursor and obligations, written as ONE JSON value so
@@ -126,36 +126,37 @@ class CatchupLedger {
     Map<int, int>? pendingDownloads,
     Map<int, int>? pendingServerFetch,
     Map<int, int>? serverFetchRetries,
-  }) =>
-      CatchupLedger(
-        cursor: cursor ?? this.cursor,
-        pendingDownloads: pendingDownloads ?? this.pendingDownloads,
-        pendingServerFetch: pendingServerFetch ?? this.pendingServerFetch,
-        serverFetchRetries: serverFetchRetries ?? this.serverFetchRetries,
-      );
+  }) => CatchupLedger(
+    cursor: cursor ?? this.cursor,
+    pendingDownloads: pendingDownloads ?? this.pendingDownloads,
+    pendingServerFetch: pendingServerFetch ?? this.pendingServerFetch,
+    serverFetchRetries: serverFetchRetries ?? this.serverFetchRetries,
+  );
 
   Map<String, Object?> toJson() => {
-        'cursor': cursor.toJson(),
-        'pendingDownloads': _mapToJson(pendingDownloads),
-        'pendingServerFetch': _mapToJson(pendingServerFetch),
-        'serverFetchRetries': _mapToJson(serverFetchRetries),
-      };
+    'cursor': cursor.toJson(),
+    'pendingDownloads': _mapToJson(pendingDownloads),
+    'pendingServerFetch': _mapToJson(pendingServerFetch),
+    'serverFetchRetries': _mapToJson(serverFetchRetries),
+  };
 
   factory CatchupLedger.fromJson(Map<String, Object?> j) => CatchupLedger(
-        cursor: NewChapterWatermark.fromJson(
-            (j['cursor'] as Map? ?? const {}).cast<String, dynamic>()),
-        pendingDownloads: _mapFromJson(j['pendingDownloads']),
-        pendingServerFetch: _mapFromJson(j['pendingServerFetch']),
-        serverFetchRetries: _mapFromJson(j['serverFetchRetries']),
-      );
+    cursor: NewChapterWatermark.fromJson(
+      (j['cursor'] as Map? ?? const {}).cast<String, dynamic>(),
+    ),
+    pendingDownloads: _mapFromJson(j['pendingDownloads']),
+    pendingServerFetch: _mapFromJson(j['pendingServerFetch']),
+    serverFetchRetries: _mapFromJson(j['serverFetchRetries']),
+  );
 
-  static Map<String, Object?> _mapToJson(Map<int, int> m) =>
-      {for (final e in m.entries) '${e.key}': e.value};
+  static Map<String, Object?> _mapToJson(Map<int, int> m) => {
+    for (final e in m.entries) '${e.key}': e.value,
+  };
 
   static Map<int, int> _mapFromJson(Object? raw) => {
-        for (final e in (raw as Map? ?? const {}).entries)
-          int.parse('${e.key}'): (e.value as num).toInt(),
-      };
+    for (final e in (raw as Map? ?? const {}).entries)
+      int.parse('${e.key}'): (e.value as num).toInt(),
+  };
 }
 
 /// SharedPreferences-backed, single-JSON-per-key (atomic writes), readable
@@ -190,7 +191,8 @@ class CatchupStateStore {
     final raw = _prefs.getString(_specKey);
     if (raw == null) return null;
     return CatchupWorkSpec.fromJson(
-        (jsonDecode(raw) as Map).cast<String, Object?>());
+      (jsonDecode(raw) as Map).cast<String, Object?>(),
+    );
   }
 
   /// Ledger scoped to [serverId] — a server switch starts from empty, like the
@@ -200,13 +202,14 @@ class CatchupStateStore {
     if (raw == null) return const CatchupLedger();
     final j = (jsonDecode(raw) as Map).cast<String, Object?>();
     if (j['serverId'] != serverId) return const CatchupLedger();
-    return CatchupLedger.fromJson(
-        (j['ledger'] as Map).cast<String, Object?>());
+    return CatchupLedger.fromJson((j['ledger'] as Map).cast<String, Object?>());
   }
 
   Future<void> writeLedger(String serverId, CatchupLedger ledger) =>
-      _prefs.setString(_ledgerKey,
-          jsonEncode({'serverId': serverId, 'ledger': ledger.toJson()}));
+      _prefs.setString(
+        _ledgerKey,
+        jsonEncode({'serverId': serverId, 'ledger': ledger.toJson()}),
+      );
 
   /// Server switch / sign-out / catalog clear: the worker must not outlive its
   /// world. The enabled flag survives (it's the user's setting).

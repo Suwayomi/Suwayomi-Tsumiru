@@ -16,7 +16,10 @@ void main() {
   });
 
   test('no forward row exists', () {
-    expect(globalHotkeys.any((h) => h.displayKeys.contains('Forward')), isFalse);
+    expect(
+      globalHotkeys.any((h) => h.displayKeys.contains('Forward')),
+      isFalse,
+    );
   });
 
   test('activeGlobalHotkeys on desktop includes desktop-only binds', () {

@@ -16,11 +16,7 @@ const _totalChapters = 5;
 
 /// [readChapters] drives the server's unread count; [lastPageRead] is progress
 /// inside the chapter currently being read, which is not the same thing.
-MangaDto _manga(
-  int id, {
-  required int readChapters,
-  int lastPageRead = 0,
-}) =>
+MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
     Fragment$MangaDto(
       id: id,
       title: 'M$id',
@@ -35,8 +31,10 @@ MangaDto _manga(
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      trackRecords: Fragment$MangaDto$trackRecords(
+        totalCount: 0,
+        nodes: const [],
+      ),
       unreadCount: _totalChapters - readChapters,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/$id',
@@ -48,8 +46,7 @@ MangaDto _manga(
         isDownloaded: false,
         isRead: readChapters > 0,
         lastPageRead: lastPageRead,
-        lastReadAt:
-            (readChapters > 0 || lastPageRead > 0) ? '1700000000' : '0',
+        lastReadAt: (readChapters > 0 || lastPageRead > 0) ? '1700000000' : '0',
         mangaId: id,
         name: 'Chapter 1',
         pageCount: 10,

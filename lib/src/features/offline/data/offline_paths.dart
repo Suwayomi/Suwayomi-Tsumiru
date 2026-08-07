@@ -42,7 +42,12 @@ class OfflinePaths {
 
   /// A page file inside staging — same `<NNN>.<ext>` naming as the final dir,
   /// so committing is a rename of the directory and nothing else.
-  String stagingPageRel(int mangaId, int chapterId, int pageIndex, String ext) =>
+  String stagingPageRel(
+    int mangaId,
+    int chapterId,
+    int pageIndex,
+    String ext,
+  ) =>
       '${chapterStagingDirRel(mangaId, chapterId)}/'
       '${pageIndex.toString().padLeft(3, '0')}.$ext';
 

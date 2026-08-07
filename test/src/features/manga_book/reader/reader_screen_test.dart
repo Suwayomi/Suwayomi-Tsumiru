@@ -63,75 +63,75 @@ List<String> _localPages(int count) {
 }
 
 MangaDto _manga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Manga',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: ReaderMode.singleHorizontalLTR.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 0,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Manga',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: [
+    Fragment$MangaDto$meta(
+      key: MangaMetaKeys.readerMode.key,
+      value: ReaderMode.singleHorizontalLTR.name,
+    ),
+  ],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 0,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 0,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 3,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 0,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 3,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 ChapterDto _partReadChapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 1,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 3,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 1,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 3,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 ChapterPagesDto _chapterPages() => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
-      pages: _localPages(3),
-    );
+  chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
+  pages: _localPages(3),
+);
 
 void main() {
-  testWidgets('flushes debounced progress when the reader unmounts without a pop',
-      (tester) async {
+  testWidgets('flushes debounced progress when the reader unmounts without a pop', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -145,13 +145,17 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -185,8 +189,9 @@ void main() {
     expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
-  testWidgets('flushes debounced progress when the reader route pops',
-      (tester) async {
+  testWidgets('flushes debounced progress when the reader route pops', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -200,13 +205,17 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -252,8 +261,9 @@ void main() {
     expect(repo.putChapterCalls.single.patch.isRead, isNull);
   });
 
-  testWidgets('opening at the end does not mark an unread chapter read',
-      (tester) async {
+  testWidgets('opening at the end does not mark an unread chapter read', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -267,14 +277,19 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(mangaId: 1)
-              .overrideWith(() => _FakeMangaWithId(_manga())),
-          chapterProvider(chapterId: 1)
-              .overrideWith((ref) => _partReadChapter()),
-          chapterPagesProvider(chapterId: 1)
-              .overrideWith((ref) => _chapterPages()),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-              .overrideWithValue(null),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          chapterProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _partReadChapter()),
+          chapterPagesProvider(
+            chapterId: 1,
+          ).overrideWith((ref) => _chapterPages()),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 1,
+          ).overrideWithValue(null),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

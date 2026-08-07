@@ -19,20 +19,19 @@ LibraryFilterFields _manga({
   String? status = 'ONGOING',
   String? sourceName = 'MangaDex',
   Set<String> trackers = const {},
-}) =>
-    LibraryFilterFields(
-      title: title,
-      author: author,
-      artist: artist,
-      genres: genres,
-      unreadCount: unreadCount,
-      downloadCount: downloadCount,
-      rating: rating,
-      userTags: userTags,
-      status: status,
-      sourceName: sourceName,
-      trackers: trackers,
-    );
+}) => LibraryFilterFields(
+  title: title,
+  author: author,
+  artist: artist,
+  genres: genres,
+  unreadCount: unreadCount,
+  downloadCount: downloadCount,
+  rating: rating,
+  userTags: userTags,
+  status: status,
+  sourceName: sourceName,
+  trackers: trackers,
+);
 
 bool _matches(String query, LibraryFilterFields f) =>
     LibrarySearchQuery.parse(query).matches(f);
@@ -161,8 +160,9 @@ void main() {
     });
     test('overflowing rating number does not throw and is a no-op', () {
       expect(
-          () => _matches('rating:99999999999999999999999999', _manga()),
-          returnsNormally);
+        () => _matches('rating:99999999999999999999999999', _manga()),
+        returnsNormally,
+      );
       expect(_matches('rating:99999999999999999999999999', _manga()), isTrue);
     });
     test('combined query: tag AND rating AND bare word', () {
@@ -180,8 +180,9 @@ void main() {
     test('partial matches a multi-word enum', () {
       expect(_matches('status:hiatus', _manga(status: 'ON_HIATUS')), isTrue);
       expect(
-          _matches('status:finished', _manga(status: 'PUBLISHING_FINISHED')),
-          isTrue);
+        _matches('status:finished', _manga(status: 'PUBLISHING_FINISHED')),
+        isTrue,
+      );
     });
     test('null status is a no-op, not a hide-all', () {
       expect(_matches('status:completed', _manga(status: null)), isTrue);
@@ -193,10 +194,15 @@ void main() {
 
   group('source:', () {
     test('substring match on source name, case-insensitive', () {
-      expect(_matches('source:mangadex', _manga(sourceName: 'MangaDex')), isTrue);
+      expect(
+        _matches('source:mangadex', _manga(sourceName: 'MangaDex')),
+        isTrue,
+      );
       expect(_matches('source:dex', _manga(sourceName: 'MangaDex')), isTrue);
       expect(
-          _matches('source:comick', _manga(sourceName: 'MangaDex')), isFalse);
+        _matches('source:comick', _manga(sourceName: 'MangaDex')),
+        isFalse,
+      );
     });
   });
 

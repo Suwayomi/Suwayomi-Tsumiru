@@ -7,13 +7,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-
-import '../../../../utils/logger/logger.dart';
 import '../chapter_commit.dart';
 import '../offline_database.dart';
 import '../offline_page_store.dart';
-import '../offline_paths.dart';
 import '../offline_types.dart';
 
 sealed class LogEntry {
@@ -22,7 +18,12 @@ sealed class LogEntry {
 
 class ChapterEntry extends LogEntry {
   const ChapterEntry(
-      this.chapterId, this.status, this.pages, this.bytes, this.generation);
+    this.chapterId,
+    this.status,
+    this.pages,
+    this.bytes,
+    this.generation,
+  );
   final int chapterId, pages, bytes, generation;
   final String status; // downloaded | error | authFailed | offline
 }
@@ -77,8 +78,11 @@ class BackgroundCompletionLog {
 
   Future<void> _append(Map<String, Object?> obj) async {
     await file.parent.create(recursive: true);
-    await file.writeAsString('${jsonEncode(obj)}\n',
-        mode: FileMode.append, flush: true);
+    await file.writeAsString(
+      '${jsonEncode(obj)}\n',
+      mode: FileMode.append,
+      flush: true,
+    );
   }
 
   Future<void> appendChapter({
@@ -87,8 +91,14 @@ class BackgroundCompletionLog {
     required int pages,
     required int bytes,
     int generation = 0,
-  }) =>
-      _append({'t': 'chapter', 'c': chapterId, 's': status, 'pages': pages, 'bytes': bytes, 'g': generation});
+  }) => _append({
+    't': 'chapter',
+    'c': chapterId,
+    's': status,
+    'pages': pages,
+    'bytes': bytes,
+    'g': generation,
+  });
 
   Future<void> appendDeleted(int chapterId, int generation) =>
       _append({'t': 'deleted', 'c': chapterId, 'g': generation});
@@ -96,17 +106,17 @@ class BackgroundCompletionLog {
   Future<void> appendDrained() => _append({'t': 'drained'});
 
   Future<void> appendAdopt(AdoptChapterEntry e) => _append({
-        't': 'adopt',
-        'c': e.chapterId,
-        'm': e.mangaId,
-        'srv': e.serverId,
-        'n': e.name,
-        'idx': e.chapterIndex,
-        'num': e.chapterNumber,
-        'pages': e.pageCount,
-        'bytes': e.bytes,
-        'read': e.isRead,
-      });
+    't': 'adopt',
+    'c': e.chapterId,
+    'm': e.mangaId,
+    'srv': e.serverId,
+    'n': e.name,
+    'idx': e.chapterIndex,
+    'num': e.chapterNumber,
+    'pages': e.pageCount,
+    'bytes': e.bytes,
+    'read': e.isRead,
+  });
 
   Future<List<LogEntry>> parse() async {
     if (!await file.exists()) return const [];
@@ -125,23 +135,33 @@ class BackgroundCompletionLog {
         // recovery reads the filesystem, which is the same truth without the
         // fsync per page.
         case 'chapter':
-          out.add(ChapterEntry(j['c'] as int, j['s'] as String, j['pages'] as int, j['bytes'] as int, j['g'] as int? ?? 0));
+          out.add(
+            ChapterEntry(
+              j['c'] as int,
+              j['s'] as String,
+              j['pages'] as int,
+              j['bytes'] as int,
+              j['g'] as int? ?? 0,
+            ),
+          );
         case 'deleted':
           out.add(DeletedEntry(j['c'] as int, j['g'] as int? ?? 0));
         case 'drained':
           out.add(const DrainedEntry());
         case 'adopt':
-          out.add(AdoptChapterEntry(
-            chapterId: j['c'] as int,
-            mangaId: j['m'] as int,
-            serverId: j['srv'] as String? ?? '',
-            name: j['n'] as String? ?? '',
-            chapterIndex: (j['idx'] as num?)?.toInt() ?? 0,
-            chapterNumber: (j['num'] as num?)?.toDouble() ?? -1,
-            pageCount: (j['pages'] as num?)?.toInt() ?? 0,
-            bytes: (j['bytes'] as num?)?.toInt() ?? 0,
-            isRead: j['read'] as bool? ?? false,
-          ));
+          out.add(
+            AdoptChapterEntry(
+              chapterId: j['c'] as int,
+              mangaId: j['m'] as int,
+              serverId: j['srv'] as String? ?? '',
+              name: j['n'] as String? ?? '',
+              chapterIndex: (j['idx'] as num?)?.toInt() ?? 0,
+              chapterNumber: (j['num'] as num?)?.toDouble() ?? -1,
+              pageCount: (j['pages'] as num?)?.toInt() ?? 0,
+              bytes: (j['bytes'] as num?)?.toInt() ?? 0,
+              isRead: j['read'] as bool? ?? false,
+            ),
+          );
       }
     }
     return out;
@@ -184,7 +204,6 @@ Future<void> applyBackgroundTerminalState({
 /// catalog write.
 Future<void> replayCompletionLog({
   required OfflineDatabase db,
-  required OfflinePaths paths,
   required OfflinePageStore store,
   required BackgroundCompletionLog log,
   String? catalogServerId,
@@ -200,7 +219,7 @@ Future<void> replayCompletionLog({
     catalogServerId: catalogServerId,
   );
 
-  await _recoverChaptersOnDisk(db: db, paths: paths, store: store);
+  await recoverChaptersOnDisk(db: db, store: store);
 
   await _applyTerminalEntries(db: db, entries: entries);
 
@@ -224,10 +243,11 @@ Future<void> _adoptCatchupChapters({
     // A row that already exists took its own path (including a `none` row from
     // a foreground delete, which recovery honours by deleting the files).
     if (await db.chapterById(a.chapterId) != null) continue;
-    final manga = await (db.select(db.offlineMangas)
-          ..where((t) => t.id.equals(a.mangaId)))
-        .getSingleOrNull();
-    final accepted = manga != null &&
+    final manga = await (db.select(
+      db.offlineMangas,
+    )..where((t) => t.id.equals(a.mangaId))).getSingleOrNull();
+    final accepted =
+        manga != null &&
         manga.keepRule != OfflineKeepRule.off &&
         catalogServerId != null &&
         a.serverId == catalogServerId;
@@ -256,112 +276,11 @@ Future<void> _adoptCatchupChapters({
       // Claim it as ours before the commit runs. If the files turn out to be
       // incomplete, the row stays resumable instead of being thrown away.
       await db.setChapterDeviceState(
-          a.chapterId, OfflineDeviceState.downloading);
+        a.chapterId,
+        OfflineDeviceState.downloading,
+      );
     });
   }
-}
-
-/// Walk every chapter directory on disk and settle it against its catalog row.
-///
-/// | on disk          | row                    | what happens                  |
-/// |------------------|------------------------|-------------------------------|
-/// | anything         | `none` or missing      | both directories deleted      |
-/// | final, complete  | `downloaded`           | nothing                       |
-/// | final, complete  | anything else          | adopted — the commit rename landed, its catalog write didn't |
-/// | final, legacy    | `downloaded`           | grandfathered, trusted as-is  |
-/// | final, legacy    | anything else          | cleared, so it re-downloads   |
-/// | staging complete | not `none`             | committed                     |
-/// | staging partial  | not `none`             | left alone, resumed later     |
-///
-/// Driven off the filesystem rather than the catalog: the directories that
-/// exist are bounded by what has actually been downloaded, where the chapter
-/// table is the size of the whole library.
-Future<void> _recoverChaptersOnDisk({
-  required OfflineDatabase db,
-  required OfflinePaths paths,
-  required OfflinePageStore store,
-}) async {
-  for (final dir in await _chapterDirsOnDisk(paths)) {
-    try {
-      await ChapterFileLock.run(dir.chapterId, () async {
-        final row = await db.chapterById(dir.chapterId);
-        // Never resurrect: a `none` row is a delete the user made, and a
-        // missing row means nothing authorised these files (adoption above is
-        // the one sanctioned exception, and it has already run).
-        if (row == null || row.deviceState == OfflineDeviceState.none) {
-          await store.deleteChapter(dir.mangaId, dir.chapterId);
-          return;
-        }
-
-        if (dir.hasFinal) {
-          final committed =
-              await store.inspectCommitted(dir.mangaId, dir.chapterId);
-          switch (committed.state) {
-            case ChapterDirState.complete:
-              // Already settled, or the rename landed and the catalog write
-              // didn't — either way the rows are cheap to reassert.
-              if (row.deviceState != OfflineDeviceState.downloaded) {
-                await db.commitDownloadedChapter(
-                  chapterId: dir.chapterId,
-                  pages: committed.pages,
-                  downloadedAt: row.downloadedAt ?? DateTime.now(),
-                );
-                logger.i('Offline: adopted committed chapter '
-                    '${dir.chapterId} (${committed.pages.length} pages)');
-              }
-              // Staging alongside a complete final dir is a superseded attempt.
-              await store.deleteStaging(dir.mangaId, dir.chapterId);
-              return;
-            case ChapterDirState.legacy:
-              if (row.deviceState == OfflineDeviceState.downloaded) {
-                // Downloaded before chapters were atomic. Nothing on disk can
-                // prove it whole, and re-fetching everyone's library to find
-                // out is not a trade worth making — trust it.
-                return;
-              }
-              // Interrupted under the old scheme, so its pages can't be
-              // verified or safely resumed. One re-download, once, on upgrade.
-              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
-            case ChapterDirState.incomplete:
-              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
-            case ChapterDirState.absent:
-              break;
-          }
-        }
-
-        if (dir.hasStaging) {
-          await commitStagedChapterHoldingLock(
-            db: db,
-            store: store,
-            mangaId: dir.mangaId,
-            chapterId: dir.chapterId,
-          );
-        }
-      });
-    } catch (e) {
-      // One unreadable directory must not stop the rest of the library from
-      // being recovered.
-      logger.e('Offline: recovery skipped for chapter ${dir.chapterId}: $e');
-    }
-  }
-}
-
-/// Drop a chapter's unusable files and rows, leaving the state that makes the
-/// downloader pick it up again.
-Future<void> _clearForRefetch(
-  OfflineDatabase db,
-  OfflinePageStore store,
-  int mangaId,
-  int chapterId,
-) async {
-  await store.deleteChapter(mangaId, chapterId);
-  await db.transaction(() async {
-    await (db.delete(db.offlinePages)
-          ..where((t) => t.chapterId.equals(chapterId)))
-        .go();
-    await db.setChapterDeviceState(chapterId, OfflineDeviceState.queued,
-        bytes: 0);
-  });
 }
 
 /// Apply the workers' failure records, scoped to the newest generation seen per
@@ -404,41 +323,4 @@ Future<void> _applyTerminalEntries({
       eventGeneration: gen[entry.key] ?? 0,
     );
   }
-}
-
-/// Every chapter directory under the offline base dir, final and staging.
-Future<List<({int mangaId, int chapterId, bool hasFinal, bool hasStaging})>>
-    _chapterDirsOnDisk(OfflinePaths paths) async {
-  final found = <int, ({int mangaId, bool hasFinal, bool hasStaging})>{};
-  final base = Directory(paths.baseDir);
-  if (!await base.exists()) return const [];
-  await for (final mangaEntity in base.list()) {
-    if (mangaEntity is! Directory) continue;
-    // Skips `covers` and anything else that isn't a manga id.
-    final mangaId = int.tryParse(p.basename(mangaEntity.path));
-    if (mangaId == null) continue;
-    await for (final chapterEntity in mangaEntity.list()) {
-      if (chapterEntity is! Directory) continue;
-      final name = p.basename(chapterEntity.path);
-      final staging = name.endsWith('.part');
-      final chapterId = int.tryParse(
-          staging ? name.substring(0, name.length - '.part'.length) : name);
-      if (chapterId == null) continue;
-      final prior = found[chapterId];
-      found[chapterId] = (
-        mangaId: mangaId,
-        hasFinal: (prior?.hasFinal ?? false) || !staging,
-        hasStaging: (prior?.hasStaging ?? false) || staging,
-      );
-    }
-  }
-  return [
-    for (final e in found.entries)
-      (
-        mangaId: e.value.mangaId,
-        chapterId: e.key,
-        hasFinal: e.value.hasFinal,
-        hasStaging: e.value.hasStaging,
-      ),
-  ];
 }

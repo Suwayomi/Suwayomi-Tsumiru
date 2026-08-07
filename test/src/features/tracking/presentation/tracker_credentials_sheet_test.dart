@@ -10,40 +10,46 @@ import 'package:tsumiru/src/features/tracking/presentation/login/tracker_credent
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 void main() {
-  testWidgets('credentials sheet has username and password fields',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: TrackerCredentialsSheet(
-          trackerName: 'MangaUpdates',
-          onSubmit: (_, __) {},
+  testWidgets('credentials sheet has username and password fields', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: TrackerCredentialsSheet(
+            trackerName: 'MangaUpdates',
+            onSubmit: (_, __) {},
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump();
     expect(find.byType(TextField), findsNWidgets(2));
   });
 
-  testWidgets('credentials sheet calls onSubmit with entered values',
-      (tester) async {
+  testWidgets('credentials sheet calls onSubmit with entered values', (
+    tester,
+  ) async {
     String? capturedUsername;
     String? capturedPassword;
 
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: TrackerCredentialsSheet(
-          trackerName: 'MyAnimeList',
-          onSubmit: (u, p) {
-            capturedUsername = u;
-            capturedPassword = p;
-          },
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: TrackerCredentialsSheet(
+            trackerName: 'MyAnimeList',
+            onSubmit: (u, p) {
+              capturedUsername = u;
+              capturedPassword = p;
+            },
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump();
 
     final fields = find.byType(TextField);

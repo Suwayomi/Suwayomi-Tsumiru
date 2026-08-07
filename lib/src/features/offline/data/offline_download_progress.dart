@@ -30,8 +30,9 @@ class OfflineDownloadProgress
   void advance(int chapterId) {
     final current = state[chapterId];
     if (current == null) return;
-    final done =
-        current.done + 1 > current.total ? current.total : current.done + 1;
+    final done = current.done + 1 > current.total
+        ? current.total
+        : current.done + 1;
     state = {...state, chapterId: (done: done, total: current.total)};
   }
 
@@ -46,5 +47,8 @@ class OfflineDownloadProgress
   }
 }
 
-final offlineDownloadProgressProvider = NotifierProvider<OfflineDownloadProgress,
-    Map<int, ChapterDownloadProgress>>(OfflineDownloadProgress.new);
+final offlineDownloadProgressProvider =
+    NotifierProvider<
+      OfflineDownloadProgress,
+      Map<int, ChapterDownloadProgress>
+    >(OfflineDownloadProgress.new);

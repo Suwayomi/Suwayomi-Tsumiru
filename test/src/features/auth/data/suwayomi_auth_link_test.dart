@@ -44,18 +44,20 @@ class _MultiEventLink extends Link {
 Response _ok() => Response(data: {'ok': true}, response: {});
 
 Response _401() => Response(
-      data: null,
-      errors: [
-        const GraphQLError(message: 'Unauthorized', extensions: {
-          'http': {'status': 401},
-        }),
-      ],
-      response: {},
-    );
+  data: null,
+  errors: [
+    const GraphQLError(
+      message: 'Unauthorized',
+      extensions: {
+        'http': {'status': 401},
+      },
+    ),
+  ],
+  response: {},
+);
 
-Request _req() => Request(
-      operation: Operation(document: parseString('query Q { x }')),
-    );
+Request _req() =>
+    Request(operation: Operation(document: parseString('query Q { x }')));
 
 void main() {
   group('SuwayomiAuthLink — UI Login', () {
@@ -107,70 +109,83 @@ void main() {
       // the previous version of this test because the second scripted
       // response is _ok() regardless of header.
       expect(
-        recorder.received[0].context.entry<HttpLinkHeaders>()?.headers[
-            'Authorization'],
+        recorder.received[0].context
+            .entry<HttpLinkHeaders>()
+            ?.headers['Authorization'],
         'Bearer STALE',
         reason: 'first request uses the stale token before refresh',
       );
       expect(
-        recorder.received[1].context.entry<HttpLinkHeaders>()?.headers[
-            'Authorization'],
+        recorder.received[1].context
+            .entry<HttpLinkHeaders>()
+            ?.headers['Authorization'],
         'Bearer FRESH',
         reason: 'second request MUST use the freshly-refreshed token',
       );
     });
 
-    test('R2-4: retry also returns 401 → onNeedsReauth + surface 401',
-        () async {
-      bool reauthCalled = false;
-      final recorder = _RecorderLink([
-        (_) => _401(), // first call
-        (_) => _401(), // retry with FRESH token also 401
-      ]);
-      final link = SuwayomiAuthLink(
-        authType: () => AuthType.uiLogin,
-        getHeaders: () async => {'Authorization': 'Bearer STALE'},
-        refreshAccessToken: () async => const RefreshSuccess('FRESH'),
-        onNeedsReauth: () {
-          reauthCalled = true;
-        },
-      );
+    test(
+      'R2-4: retry also returns 401 → onNeedsReauth + surface 401',
+      () async {
+        bool reauthCalled = false;
+        final recorder = _RecorderLink([
+          (_) => _401(), // first call
+          (_) => _401(), // retry with FRESH token also 401
+        ]);
+        final link = SuwayomiAuthLink(
+          authType: () => AuthType.uiLogin,
+          getHeaders: () async => {'Authorization': 'Bearer STALE'},
+          refreshAccessToken: () async => const RefreshSuccess('FRESH'),
+          onNeedsReauth: () {
+            reauthCalled = true;
+          },
+        );
 
-      Response? lastResponse;
-      await for (final r in link.concat(recorder).request(_req())) {
-        lastResponse = r;
-      }
+        Response? lastResponse;
+        await for (final r in link.concat(recorder).request(_req())) {
+          lastResponse = r;
+        }
 
-      expect(reauthCalled, isTrue,
-          reason: 'second 401 after a fresh token must trigger reauth');
-      expect(recorder.callCount, 2);
-      expect(lastResponse?.errors?.first.message, 'Unauthorized');
-    });
+        expect(
+          reauthCalled,
+          isTrue,
+          reason: 'second 401 after a fresh token must trigger reauth',
+        );
+        expect(recorder.callCount, 2);
+        expect(lastResponse?.errors?.first.message, 'Unauthorized');
+      },
+    );
 
-    test('transientFailure surfaces original 401 without setting reauth',
-        () async {
-      bool reauthCalled = false;
-      final recorder = _RecorderLink([(_) => _401()]);
-      final link = SuwayomiAuthLink(
-        authType: () => AuthType.uiLogin,
-        getHeaders: () async => {'Authorization': 'Bearer STALE'},
-        refreshAccessToken: () async =>
-            RefreshOutcome.transientFailure(Exception('network down')),
-        onNeedsReauth: () {
-          reauthCalled = true;
-        },
-      );
+    test(
+      'transientFailure surfaces original 401 without setting reauth',
+      () async {
+        bool reauthCalled = false;
+        final recorder = _RecorderLink([(_) => _401()]);
+        final link = SuwayomiAuthLink(
+          authType: () => AuthType.uiLogin,
+          getHeaders: () async => {'Authorization': 'Bearer STALE'},
+          refreshAccessToken: () async =>
+              RefreshOutcome.transientFailure(Exception('network down')),
+          onNeedsReauth: () {
+            reauthCalled = true;
+          },
+        );
 
-      Response? lastResponse;
-      await for (final r in link.concat(recorder).request(_req())) {
-        lastResponse = r;
-      }
+        Response? lastResponse;
+        await for (final r in link.concat(recorder).request(_req())) {
+          lastResponse = r;
+        }
 
-      expect(reauthCalled, isFalse,
-          reason: 'transient (network) refresh failure must NOT mark '
-              'the session dead — the refresh token may still be good');
-      expect(lastResponse?.errors?.first.message, 'Unauthorized');
-    });
+        expect(
+          reauthCalled,
+          isFalse,
+          reason:
+              'transient (network) refresh failure must NOT mark '
+              'the session dead — the refresh token may still be good',
+        );
+        expect(lastResponse?.errors?.first.message, 'Unauthorized');
+      },
+    );
 
     test('does NOT truncate multi-event streams (subscriptions): all '
         'downstream events flow through', () async {
@@ -190,9 +205,13 @@ void main() {
       await for (final r in link.concat(downstream).request(_req())) {
         results.add(r);
       }
-      expect(results.length, 3,
-          reason: 'subscription stream truncated — likely '
-              'await stream.first regression');
+      expect(
+        results.length,
+        3,
+        reason:
+            'subscription stream truncated — likely '
+            'await stream.first regression',
+      );
       expect(results.map((r) => r.data?['tick']).toList(), [1, 2, 3]);
     });
 
@@ -222,26 +241,32 @@ void main() {
     // not the Link's (R2-3). See AuthCoordinator tests for the dedup
     // assertion; the Link itself just calls `refreshAccessToken` once per
     // 401 it sees, and trusts the coordinator to handle concurrency.
-    test('R2-3: Link delegates refresh; one 401 → exactly one refresh call',
-        () async {
-      int refreshCalls = 0;
-      final recorder = _RecorderLink([(_) => _401(), (_) => _ok()]);
-      final link = SuwayomiAuthLink(
-        authType: () => AuthType.uiLogin,
-        getHeaders: () async => {'Authorization': 'Bearer STALE'},
-        refreshAccessToken: () async {
-          refreshCalls++;
-          return const RefreshSuccess('FRESH');
-        },
-        onNeedsReauth: () {},
-      );
+    test(
+      'R2-3: Link delegates refresh; one 401 → exactly one refresh call',
+      () async {
+        int refreshCalls = 0;
+        final recorder = _RecorderLink([(_) => _401(), (_) => _ok()]);
+        final link = SuwayomiAuthLink(
+          authType: () => AuthType.uiLogin,
+          getHeaders: () async => {'Authorization': 'Bearer STALE'},
+          refreshAccessToken: () async {
+            refreshCalls++;
+            return const RefreshSuccess('FRESH');
+          },
+          onNeedsReauth: () {},
+        );
 
-      await for (final _ in link.concat(recorder).request(_req())) {}
+        await for (final _ in link.concat(recorder).request(_req())) {}
 
-      expect(refreshCalls, 1,
-          reason: 'Link should invoke refreshAccessToken exactly once '
-              'per 401 — coordinator dedup is its own concern');
-    });
+        expect(
+          refreshCalls,
+          1,
+          reason:
+              'Link should invoke refreshAccessToken exactly once '
+              'per 401 — coordinator dedup is its own concern',
+        );
+      },
+    );
   });
 
   group('SuwayomiAuthLink — Simple Login', () {

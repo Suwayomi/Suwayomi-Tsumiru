@@ -32,9 +32,9 @@ class MigrationSourcePickerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.migrationPickSourceTitle)),
-        body: const MigrationSourcePickerBody(),
-      );
+    appBar: AppBar(title: Text(context.l10n.migrationPickSourceTitle)),
+    body: const MigrationSourcePickerBody(),
+  );
 }
 
 class MigrationSourcePickerBody extends HookConsumerWidget {
@@ -63,11 +63,12 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                 (q.isEmpty || g.displayName.toLowerCase().contains(q)))
               g,
         ];
-        groups = [...groups]..sort((a, b) {
+        groups = [...groups]
+          ..sort((a, b) {
             final c = sortMode.value == _SortMode.alphabetical
-                ? a.displayName
-                    .toLowerCase()
-                    .compareTo(b.displayName.toLowerCase())
+                ? a.displayName.toLowerCase().compareTo(
+                    b.displayName.toLowerCase(),
+                  )
                 : a.count.compareTo(b.count);
             return ascending.value ? c : -c;
           });
@@ -91,19 +92,21 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                 ),
                 IconButton(
                   tooltip: l10n.migrationSortMode,
-                  icon: Icon(sortMode.value == _SortMode.alphabetical
-                      ? Icons.sort_by_alpha
-                      : Icons.numbers),
-                  onPressed: () => sortMode.value =
-                      sortMode.value == _SortMode.alphabetical
-                          ? _SortMode.total
-                          : _SortMode.alphabetical,
+                  icon: Icon(
+                    sortMode.value == _SortMode.alphabetical
+                        ? Icons.sort_by_alpha
+                        : Icons.numbers,
+                  ),
+                  onPressed: () =>
+                      sortMode.value = sortMode.value == _SortMode.alphabetical
+                      ? _SortMode.total
+                      : _SortMode.alphabetical,
                 ),
                 IconButton(
                   tooltip: l10n.migrationSortDirection,
-                  icon: Icon(ascending.value
-                      ? Icons.arrow_upward
-                      : Icons.arrow_downward),
+                  icon: Icon(
+                    ascending.value ? Icons.arrow_upward : Icons.arrow_downward,
+                  ),
                   onPressed: () => ascending.value = !ascending.value,
                 ),
               ],
@@ -133,9 +136,12 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                     ),
                     title: Text(g.displayName),
                     subtitle: g.isObsolete
-                        ? Text(l10n.migrationObsoleteSource,
+                        ? Text(
+                            l10n.migrationObsoleteSource,
                             style: TextStyle(
-                                color: context.theme.colorScheme.error))
+                              color: context.theme.colorScheme.error,
+                            ),
+                          )
                         : null,
                     trailing: _CountBadge(g.count),
                     onTap: () => MigrationSourceMangaRoute(
@@ -168,9 +174,12 @@ class _CountBadge extends StatelessWidget {
         color: theme.colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text('$count',
-          style: theme.textTheme.labelMedium
-              ?.copyWith(color: theme.colorScheme.onSecondaryContainer)),
+      child: Text(
+        '$count',
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
+      ),
     );
   }
 }
@@ -241,8 +250,11 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                       size: const Size.square(40),
                     ),
                   ),
-                  title: Text(m.title,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    m.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: checked ? const Icon(Icons.check_circle) : null,
                   onTap: () {
                     if (selecting) {

@@ -56,8 +56,9 @@ Future<void> _wheel(WidgetTester tester, Offset delta) async {
 }
 
 void main() {
-  testWidgets('one notch travels the multiple of the platform distance',
-      (tester) async {
+  testWidgets('one notch travels the multiple of the platform distance', (
+    tester,
+  ) async {
     final plain = await _pump(tester, speed: 1);
     await _wheel(tester, const Offset(0, 53));
     final base = plain.position.pixels;
@@ -68,8 +69,9 @@ void main() {
     expect(scaled.position.pixels, closeTo(base * 1.7, 0.5));
   });
 
-  testWidgets('a slower speed travels less than the platform would',
-      (tester) async {
+  testWidgets('a slower speed travels less than the platform would', (
+    tester,
+  ) async {
     final plain = await _pump(tester, speed: 1);
     await _wheel(tester, const Offset(0, 53));
     final base = plain.position.pixels;
@@ -79,8 +81,9 @@ void main() {
     expect(slow.position.pixels, closeTo(base * 0.5, 0.5));
   });
 
-  testWidgets('a reversed list travels the same distance, not less',
-      (tester) async {
+  testWidgets('a reversed list travels the same distance, not less', (
+    tester,
+  ) async {
     // A reversed list rests at 0, where a downward notch has nowhere to go.
     // Move into the middle first so there is travel in both directions.
     final plain = await _pump(tester, speed: 1, reverse: true);
@@ -97,8 +100,9 @@ void main() {
     expect(1000 - scaled.position.pixels, closeTo(base * 1.7, 0.5));
   });
 
-  testWidgets('it stops at the top instead of overshooting past it',
-      (tester) async {
+  testWidgets('it stops at the top instead of overshooting past it', (
+    tester,
+  ) async {
     final controller = await _pump(tester, speed: 4);
     await _wheel(tester, const Offset(0, -53));
     expect(controller.position.pixels, 0);

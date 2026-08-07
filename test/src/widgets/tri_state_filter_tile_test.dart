@@ -74,8 +74,9 @@ void main() {
   });
 
   group('TriStateFilterTile', () {
-    testWidgets('names all three states instead of cycling one glyph',
-        (tester) async {
+    testWidgets('names all three states instead of cycling one glyph', (
+      tester,
+    ) async {
       await _pump(tester);
       expect(find.text('Download Status'), findsOneWidget);
       expect(find.text('Any'), findsOneWidget);
@@ -84,8 +85,9 @@ void main() {
       expect(find.byType(FilterChip), findsNWidgets(3));
     });
 
-    testWidgets('a contextual header replaces the generic title',
-        (tester) async {
+    testWidgets('a contextual header replaces the generic title', (
+      tester,
+    ) async {
       // The heading names the AXIS ("Read Status"), not a repeated value.
       await _pump(tester);
       expect(find.byType(OrganizerHeading), findsOneWidget);
@@ -102,8 +104,9 @@ void main() {
       );
     });
 
-    testWidgets('custom included/excluded labels override the generic ones',
-        (tester) async {
+    testWidgets('custom included/excluded labels override the generic ones', (
+      tester,
+    ) async {
       await _pump(
         tester,
         includedLabel: 'Downloaded',
@@ -116,8 +119,9 @@ void main() {
       expect(find.text('Excluded'), findsNothing);
     });
 
-    testWidgets('tapping a custom-labelled pill still writes the right value',
-        (tester) async {
+    testWidgets('tapping a custom-labelled pill still writes the right value', (
+      tester,
+    ) async {
       final changes = await _pump(
         tester,
         includedLabel: 'Downloaded',
@@ -145,8 +149,9 @@ void main() {
       }
     });
 
-    testWidgets('each pill writes its own state, with no cycling',
-        (tester) async {
+    testWidgets('each pill writes its own state, with no cycling', (
+      tester,
+    ) async {
       // The whole point over the old tri-state checkbox: picking a state is one
       // tap on that state, not N taps through a hidden order.
       final changes = await _pump(tester, initial: null);

@@ -32,13 +32,15 @@ class BulkMigrationRunner extends ChangeNotifier {
     RateLimiter? rateLimiter,
     this.autoApplyThreshold = 0.7,
     this.reviewFloor = 0.4,
-  })  : _entries = entries,
-        semaphore = semaphore ?? Semaphore(3),
-        rateLimiter =
-            rateLimiter ?? RateLimiter(minInterval: const Duration(milliseconds: 250));
+  }) : _entries = entries,
+       semaphore = semaphore ?? Semaphore(3),
+       rateLimiter =
+           rateLimiter ??
+           RateLimiter(minInterval: const Duration(milliseconds: 250));
 
   final MigrationRepository repo;
   final MigrationJournal journal;
+
   /// Carry-over flags; mutable so the list screen's Settings sheet can amend
   /// them before commit (deleteSource is applied per-commit, not from here).
   MigrationOption options;
@@ -55,7 +57,11 @@ class BulkMigrationRunner extends ChangeNotifier {
   /// after a successful copy and before source removal. Best-effort: an offline
   /// copy is never data loss, so a failure must not block the migration.
   final Future<void> Function(
-      int fromMangaId, int toMangaId, MigrationOption options)? migrateLocalState;
+    int fromMangaId,
+    int toMangaId,
+    MigrationOption options,
+  )?
+  migrateLocalState;
 
   final Semaphore semaphore;
   final RateLimiter rateLimiter;
@@ -112,7 +118,8 @@ class BulkMigrationRunner extends ChangeNotifier {
       e.confidence = outcome.confidence;
       if (!outcome.hasMatch) {
         _set(e, BulkEntryPhase.noMatch);
-      } else if (outcome.needsReview || outcome.confidence < autoApplyThreshold) {
+      } else if (outcome.needsReview ||
+          outcome.confidence < autoApplyThreshold) {
         _set(e, BulkEntryPhase.needsReview);
       } else {
         _set(e, BulkEntryPhase.ready);
@@ -130,10 +137,12 @@ class BulkMigrationRunner extends ChangeNotifier {
   /// colliding trackers, so the owner can choose keep vs overwrite. No mutations.
   Future<void> preflight() async {
     final work = _entries
-        .where((e) =>
-            e.toMangaId != null &&
-            (e.phase == BulkEntryPhase.ready ||
-                e.phase == BulkEntryPhase.needsReview))
+        .where(
+          (e) =>
+              e.toMangaId != null &&
+              (e.phase == BulkEntryPhase.ready ||
+                  e.phase == BulkEntryPhase.needsReview),
+        )
         .map((e) => semaphore.withPermit(() => _preflightOne(e), _token))
         .toList();
     await _settle(work);
@@ -183,9 +192,9 @@ class BulkMigrationRunner extends ChangeNotifier {
   }
 
   MigrationOption _optionsFor(BulkMigrationEntry e) => options.copyWith(
-        deleteSource: _deleteSource,
-        overwriteExistingTracking: e.overwriteTracking,
-      );
+    deleteSource: _deleteSource,
+    overwriteExistingTracking: e.overwriteTracking,
+  );
 
   Future<void> _commitOne(BulkMigrationEntry e) async {
     final toId = e.toMangaId;
@@ -207,32 +216,50 @@ class BulkMigrationRunner extends ChangeNotifier {
       if (_deleteSource) {
         final clean = await dirtyGate(e.fromMangaId, _token);
         if (!clean) {
-          _set(e, BulkEntryPhase.dirtyBlocked,
-              'Unsynced offline reads — connect and sync, then retry.');
+          _set(
+            e,
+            BulkEntryPhase.dirtyBlocked,
+            'Unsynced offline reads — connect and sync, then retry.',
+          );
           return;
         }
       }
 
-      await journal.put(MigrationJournalEntry(
-        fromMangaId: e.fromMangaId,
-        toMangaId: toId,
-        state: MigrationPairState.prepared,
-        options: _optionsFor(e),
-      ));
+      await journal.put(
+        MigrationJournalEntry(
+          fromMangaId: e.fromMangaId,
+          toMangaId: toId,
+          state: MigrationPairState.prepared,
+          options: _optionsFor(e),
+        ),
+      );
       await journal.advance(e.fromMangaId, MigrationPairState.copying);
       _set(e, BulkEntryPhase.copying);
 
-      final copy = await repo.copyMangaData(e.fromMangaId, toId, _optionsFor(e));
+      final copy = await repo.copyMangaData(
+        e.fromMangaId,
+        toId,
+        _optionsFor(e),
+      );
       e.copyResult = copy;
       if (!copy.success) {
-        await journal.advance(e.fromMangaId, MigrationPairState.failed,
-            failureReason: copy.warnings.join('; '));
-        _set(e, BulkEntryPhase.failed,
-            copy.warnings.isNotEmpty ? copy.warnings.first : 'Copy failed');
+        await journal.advance(
+          e.fromMangaId,
+          MigrationPairState.failed,
+          failureReason: copy.warnings.join('; '),
+        );
+        _set(
+          e,
+          BulkEntryPhase.failed,
+          copy.warnings.isNotEmpty ? copy.warnings.first : 'Copy failed',
+        );
         return;
       }
-      await journal.advance(e.fromMangaId, MigrationPairState.copied,
-          copiedSourceRecordIds: copy.copiedSourceRecordIds);
+      await journal.advance(
+        e.fromMangaId,
+        MigrationPairState.copied,
+        copiedSourceRecordIds: copy.copiedSourceRecordIds,
+      );
 
       final localHook = migrateLocalState;
       if (localHook != null) {
@@ -251,13 +278,21 @@ class BulkMigrationRunner extends ChangeNotifier {
 
       await journal.advance(e.fromMangaId, MigrationPairState.removing);
       _set(e, BulkEntryPhase.removing);
-      final removal = await repo.removeSourceManga(e.fromMangaId,
-          copiedSourceRecordIds: copy.copiedSourceRecordIds);
+      final removal = await repo.removeSourceManga(
+        e.fromMangaId,
+        copiedSourceRecordIds: copy.copiedSourceRecordIds,
+      );
       if (!removal.success) {
-        await journal.advance(e.fromMangaId, MigrationPairState.failed,
-            failureReason: removal.warnings.join('; '));
-        _set(e, BulkEntryPhase.failed,
-            'Copied to the new source, but removing the old one failed.');
+        await journal.advance(
+          e.fromMangaId,
+          MigrationPairState.failed,
+          failureReason: removal.warnings.join('; '),
+        );
+        _set(
+          e,
+          BulkEntryPhase.failed,
+          'Copied to the new source, but removing the old one failed.',
+        );
         return;
       }
       await journal.advance(e.fromMangaId, MigrationPairState.removed);
@@ -267,8 +302,11 @@ class BulkMigrationRunner extends ChangeNotifier {
     } on CancelledException {
       // Leave the journal at its last write-ahead state; recover() resumes it.
     } catch (err) {
-      await journal.advance(e.fromMangaId, MigrationPairState.failed,
-          failureReason: '$err');
+      await journal.advance(
+        e.fromMangaId,
+        MigrationPairState.failed,
+        failureReason: '$err',
+      );
       _set(e, BulkEntryPhase.failed, '$err');
     }
   }
@@ -278,10 +316,10 @@ class BulkMigrationRunner extends ChangeNotifier {
   /// Reconciles the journal on relaunch (delegates to [recoverMigrationJournal]
   /// so a launch hook can drain a crashed batch without a full runner).
   Future<void> recover() => recoverMigrationJournal(
-        repo: repo,
-        journal: journal,
-        onSourceRemoved: onSourceRemoved,
-      );
+    repo: repo,
+    journal: journal,
+    onSourceRemoved: onSourceRemoved,
+  );
 
   /// Best-effort device eviction after a source is removed (device ⊆ server).
   Future<void> _evict(int fromMangaId) async {
@@ -328,8 +366,9 @@ class BulkMigrationRunner extends ChangeNotifier {
     final e = _byId(fromMangaId);
     if (e == null || !e.isRetryable) return;
     if (_token.isCancelled) _token = CancelToken();
-    e.phase =
-        e.toMangaId == null ? BulkEntryPhase.queued : BulkEntryPhase.ready;
+    e.phase = e.toMangaId == null
+        ? BulkEntryPhase.queued
+        : BulkEntryPhase.ready;
     e.message = null;
     notifyListeners();
   }
@@ -403,22 +442,33 @@ Future<void> recoverMigrationJournal({
     }
   }
 
-  Future<void> resume(MigrationJournalEntry entry,
-      {required bool redoCopy}) async {
+  Future<void> resume(
+    MigrationJournalEntry entry, {
+    required bool redoCopy,
+  }) async {
     var copiedRecords = entry.copiedSourceRecordIds;
     try {
       if (redoCopy) {
         await journal.advance(entry.fromMangaId, MigrationPairState.copying);
         final copy = await repo.copyMangaData(
-            entry.fromMangaId, entry.toMangaId, entry.options);
+          entry.fromMangaId,
+          entry.toMangaId,
+          entry.options,
+        );
         if (!copy.success) {
-          await journal.advance(entry.fromMangaId, MigrationPairState.failed,
-              failureReason: copy.warnings.join('; '));
+          await journal.advance(
+            entry.fromMangaId,
+            MigrationPairState.failed,
+            failureReason: copy.warnings.join('; '),
+          );
           return;
         }
         copiedRecords = copy.copiedSourceRecordIds;
-        await journal.advance(entry.fromMangaId, MigrationPairState.copied,
-            copiedSourceRecordIds: copiedRecords);
+        await journal.advance(
+          entry.fromMangaId,
+          MigrationPairState.copied,
+          copiedSourceRecordIds: copiedRecords,
+        );
         if (!copy.sourceInLibrary || !entry.deleteSource) {
           await journal.removeEntry(entry.fromMangaId);
           return;
@@ -429,18 +479,26 @@ Future<void> recoverMigrationJournal({
         return;
       }
       await journal.advance(entry.fromMangaId, MigrationPairState.removing);
-      final removal = await repo.removeSourceManga(entry.fromMangaId,
-          copiedSourceRecordIds: copiedRecords);
+      final removal = await repo.removeSourceManga(
+        entry.fromMangaId,
+        copiedSourceRecordIds: copiedRecords,
+      );
       if (!removal.success) {
-        await journal.advance(entry.fromMangaId, MigrationPairState.failed,
-            failureReason: removal.warnings.join('; '));
+        await journal.advance(
+          entry.fromMangaId,
+          MigrationPairState.failed,
+          failureReason: removal.warnings.join('; '),
+        );
         return;
       }
       await journal.removeEntry(entry.fromMangaId);
       await evict(entry.fromMangaId);
     } catch (err) {
-      await journal.advance(entry.fromMangaId, MigrationPairState.failed,
-          failureReason: '$err');
+      await journal.advance(
+        entry.fromMangaId,
+        MigrationPairState.failed,
+        failureReason: '$err',
+      );
     }
   }
 

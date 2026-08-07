@@ -30,6 +30,14 @@ enum ChapterDirState {
 /// A chapter's final directory and, when [state] is complete, its pages.
 typedef CommittedChapter = ({ChapterDirState state, List<CommittedPage> pages});
 
+/// A chapter that has files on disk, and which of its two directories exist.
+typedef StoredChapter = ({
+  int mangaId,
+  int chapterId,
+  bool hasFinal,
+  bool hasStaging,
+});
+
 /// Stores/removes a chapter's page image files on the device.
 ///
 /// Chapters are written in two stages. Pages accumulate in a staging directory
@@ -77,6 +85,12 @@ abstract class OfflinePageStore {
   /// pages, so stray files can't inflate the catalog's accounting.
   Future<List<CommittedPage>?> commitStaging(int mangaId, int chapterId);
 
+  /// Every chapter with files on disk — the recovery scan's work list.
+  ///
+  /// Bounded by what has actually been downloaded, unlike the chapter table,
+  /// which is the size of the whole library.
+  Future<List<StoredChapter>> chaptersOnDisk();
+
   /// Inspect a chapter's committed directory — what recovery reads to decide
   /// between adopting it, grandfathering it, and rebuilding it.
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId);
@@ -102,8 +116,7 @@ abstract class OfflinePageStore {
     int toMangaId,
     int toChapterId, {
     required int generation,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   /// Total bytes of a chapter's committed page files (for the catalog's byte
   /// count after a background download completes). 0 if nothing is stored.

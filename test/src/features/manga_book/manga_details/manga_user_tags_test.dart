@@ -15,10 +15,8 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingRepo extends MangaBookRepository {
   _RecordingRepo() : super(_dummyClient());
@@ -39,34 +37,38 @@ class _TaggedManga extends MangaWithId {
   final List<String> tags;
   @override
   Future<MangaDto?> build({required int mangaId}) async => Fragment$MangaDto(
-        id: mangaId,
-        title: 'M',
-        bookmarkCount: 0,
-        chapters: Fragment$MangaDto$chapters(totalCount: 0),
-        downloadCount: 0,
-        genre: const [],
-        inLibrary: true,
-        inLibraryAt: '0',
-        initialized: true,
-        meta: [
-          Fragment$MangaDto$meta(key: 'flutter_tags', value: jsonEncode(tags)),
-        ],
-        sourceId: '1',
-        status: Enum$MangaStatus.ONGOING,
-        categories: Fragment$MangaDto$categories(nodes: const []),
-        trackRecords:
-            Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-        unreadCount: 0,
-        updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-        url: '/manga/$mangaId',
-      );
+    id: mangaId,
+    title: 'M',
+    bookmarkCount: 0,
+    chapters: Fragment$MangaDto$chapters(totalCount: 0),
+    downloadCount: 0,
+    genre: const [],
+    inLibrary: true,
+    inLibraryAt: '0',
+    initialized: true,
+    meta: [
+      Fragment$MangaDto$meta(key: 'flutter_tags', value: jsonEncode(tags)),
+    ],
+    sourceId: '1',
+    status: Enum$MangaStatus.ONGOING,
+    categories: Fragment$MangaDto$categories(nodes: const []),
+    trackRecords: Fragment$MangaDto$trackRecords(
+      totalCount: 0,
+      nodes: const [],
+    ),
+    unreadCount: 0,
+    updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+    url: '/manga/$mangaId',
+  );
 }
 
 void main() {
   group('MangaMeta.userTags parse', () {
     test('decodes a JSON string array', () {
-      expect(MangaMeta.fromJson({'flutter_tags': '["a","b"]'}).userTags,
-          ['a', 'b']);
+      expect(MangaMeta.fromJson({'flutter_tags': '["a","b"]'}).userTags, [
+        'a',
+        'b',
+      ]);
     });
     test('null on empty / non-JSON / non-list', () {
       expect(MangaMeta.fromJson(const {}).userTags, isNull);
@@ -78,11 +80,17 @@ void main() {
 
   group('mangaUserTagsProvider', () {
     Future<ProviderContainer> seeded(
-        _RecordingRepo repo, List<String> tags) async {
-      final c = ProviderContainer(overrides: [
-        mangaBookRepositoryProvider.overrideWithValue(repo),
-        mangaWithIdProvider(mangaId: 1).overrideWith(() => _TaggedManga(tags)),
-      ]);
+      _RecordingRepo repo,
+      List<String> tags,
+    ) async {
+      final c = ProviderContainer(
+        overrides: [
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          mangaWithIdProvider(
+            mangaId: 1,
+          ).overrideWith(() => _TaggedManga(tags)),
+        ],
+      );
       addTearDown(c.dispose);
       // Resolve the async manga first so the (synchronous) tags provider reads
       // the seeded tags on its first build.

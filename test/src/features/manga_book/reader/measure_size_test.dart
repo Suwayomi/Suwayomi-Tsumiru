@@ -34,8 +34,9 @@ void main() {
     expect(sizes.last.height, 1234);
   });
 
-  testWidgets('reports the new height when the child grows (decode)',
-      (tester) async {
+  testWidgets('reports the new height when the child grows (decode)', (
+    tester,
+  ) async {
     final sizes = <Size>[];
     final height = ValueNotifier<double>(420); // placeholder
     await tester.pumpWidget(

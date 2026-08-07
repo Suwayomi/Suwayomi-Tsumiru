@@ -46,7 +46,7 @@ class MigrationConfigSheet extends HookWidget {
 
   final bool isSingleEntry;
   final void Function(MigrationRunConfig config, String? extraSearchQuery)
-      onStart;
+  onStart;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +78,9 @@ class MigrationConfigSheet extends HookWidget {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                     child: Text(
                       l10n.migrationDataToMigrateHeader,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: theme.colorScheme.primary),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                   Padding(
@@ -123,7 +124,9 @@ class MigrationConfigSheet extends HookWidget {
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     child: TextField(
                       controller: extraSearch,
                       decoration: InputDecoration(
@@ -193,9 +196,9 @@ class _FlagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: onSelected,
-        showCheckmark: true,
-      );
+    label: Text(label),
+    selected: selected,
+    onSelected: onSelected,
+    showCheckmark: true,
+  );
 }

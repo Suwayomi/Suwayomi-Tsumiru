@@ -83,8 +83,10 @@ class Semaphore {
   }
 
   /// Runs [action] holding one permit, releasing it even on error/cancel.
-  Future<T> withPermit<T>(Future<T> Function() action,
-      [CancelToken? token]) async {
+  Future<T> withPermit<T>(
+    Future<T> Function() action, [
+    CancelToken? token,
+  ]) async {
     await acquire(token);
     try {
       return await action();

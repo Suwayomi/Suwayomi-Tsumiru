@@ -16,6 +16,9 @@ import 'offline_paths.dart';
 /// an interrupted run and is swept, never counted.
 const String _pageTempSuffix = '.tmp';
 
+/// Directory-name suffix marking a chapter's staging area.
+const String _stagingSuffix = '.part';
+
 /// Native (mobile + desktop) page store: writes page files under the app-support
 /// offline dir. dart:io — only constructed on native platforms (via the
 /// conditional-import bootstrap), never on web.
@@ -40,14 +43,16 @@ class IoOfflinePageStore implements OfflinePageStore {
     // The one write in the whole download that still syncs. Everything else can
     // be re-fetched, but a manifest that didn't survive the crash leaves a
     // complete-looking chapter nobody can verify.
-    await File(paths.absolute(paths.stagingManifestRel(mangaId, chapterId)))
-        .writeAsString(manifest.toJsonString(), flush: true);
+    await File(
+      paths.absolute(paths.stagingManifestRel(mangaId, chapterId)),
+    ).writeAsString(manifest.toJsonString(), flush: true);
   }
 
   @override
   Future<ChapterManifest?> readManifest(int mangaId, int chapterId) async {
-    final file =
-        File(paths.absolute(paths.stagingManifestRel(mangaId, chapterId)));
+    final file = File(
+      paths.absolute(paths.stagingManifestRel(mangaId, chapterId)),
+    );
     if (!await file.exists()) return null;
     try {
       return ChapterManifest.tryParse(await file.readAsString());
@@ -85,9 +90,9 @@ class IoOfflinePageStore implements OfflinePageStore {
         byIndex[index] = entity;
         continue;
       }
-      final keepNew = (await entity.stat())
-          .modified
-          .isAfter((await existing.stat()).modified);
+      final keepNew = (await entity.stat()).modified.isAfter(
+        (await existing.stat()).modified,
+      );
       byIndex[index] = keepNew ? entity : existing;
       await _quietDelete(keepNew ? existing : entity);
     }
@@ -144,6 +149,45 @@ class IoOfflinePageStore implements OfflinePageStore {
   }
 
   @override
+  Future<List<StoredChapter>> chaptersOnDisk() async {
+    final found = <int, ({int mangaId, bool hasFinal, bool hasStaging})>{};
+    final base = Directory(paths.baseDir);
+    if (!await base.exists()) return const [];
+    await for (final mangaEntity in base.list()) {
+      if (mangaEntity is! Directory) continue;
+      // Skips `covers` and anything else that isn't a manga id.
+      final mangaId = int.tryParse(p.basename(mangaEntity.path));
+      if (mangaId == null) continue;
+      await for (final chapterEntity in mangaEntity.list()) {
+        if (chapterEntity is! Directory) continue;
+        final name = p.basename(chapterEntity.path);
+        final staging = name.endsWith(_stagingSuffix);
+        final chapterId = int.tryParse(
+          staging
+              ? name.substring(0, name.length - _stagingSuffix.length)
+              : name,
+        );
+        if (chapterId == null) continue;
+        final prior = found[chapterId];
+        found[chapterId] = (
+          mangaId: mangaId,
+          hasFinal: (prior?.hasFinal ?? false) || !staging,
+          hasStaging: (prior?.hasStaging ?? false) || staging,
+        );
+      }
+    }
+    return [
+      for (final e in found.entries)
+        (
+          mangaId: e.value.mangaId,
+          chapterId: e.key,
+          hasFinal: e.value.hasFinal,
+          hasStaging: e.value.hasStaging,
+        ),
+    ];
+  }
+
+  @override
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId) async {
     final dir = _finalDir(mangaId, chapterId);
     if (!await dir.exists()) {
@@ -156,7 +200,9 @@ class IoOfflinePageStore implements OfflinePageStore {
     if (!await manifestFile.exists()) {
       return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
     }
-    final manifest = ChapterManifest.tryParse(await manifestFile.readAsString());
+    final manifest = ChapterManifest.tryParse(
+      await manifestFile.readAsString(),
+    );
     if (manifest == null) {
       return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
     }
@@ -172,7 +218,10 @@ class IoOfflinePageStore implements OfflinePageStore {
       if (index != null) byIndex[index] = name;
     }
     if (!manifest.indices.every(byIndex.containsKey)) {
-      return (state: ChapterDirState.incomplete, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.incomplete,
+        pages: const <CommittedPage>[],
+      );
     }
 
     final rel = paths.chapterDirRel(mangaId, chapterId);

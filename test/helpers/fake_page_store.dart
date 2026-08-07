@@ -26,6 +26,10 @@ class FakePageStore implements OfflinePageStore {
   /// Extension recorded per staged page, so committed paths look real.
   final _ext = <int, Map<int, String>>{};
 
+  /// Which manga each chapter belongs to, so the recovery scan can report it
+  /// the way a directory walk would.
+  final mangaOf = <int, int>{};
+
   /// Chapters whose files were deleted — lets tests assert cleanup happened.
   final deletedChapters = <int>[];
 
@@ -48,8 +52,12 @@ class FakePageStore implements OfflinePageStore {
 
   @override
   Future<void> beginChapter(
-      int mangaId, int chapterId, ChapterManifest manifest) async {
+    int mangaId,
+    int chapterId,
+    ChapterManifest manifest,
+  ) async {
     manifests[chapterId] = manifest;
+    mangaOf[chapterId] = mangaId;
     staged.putIfAbsent(chapterId, () => {});
     _ext.putIfAbsent(chapterId, () => {});
   }
@@ -63,8 +71,13 @@ class FakePageStore implements OfflinePageStore {
       (staged[chapterId] ?? const {}).keys.toSet();
 
   @override
-  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
-      int pageIndex, List<int> bytes, String ext) async {
+  Future<({String relPath, int bytes})> writePage(
+    int mangaId,
+    int chapterId,
+    int pageIndex,
+    List<int> bytes,
+    String ext,
+  ) async {
     staged.putIfAbsent(chapterId, () => {})[pageIndex] = bytes.length;
     _ext.putIfAbsent(chapterId, () => {})[pageIndex] = ext;
     written.add((chapterId: chapterId, pageIndex: pageIndex));
@@ -82,9 +95,7 @@ class FakePageStore implements OfflinePageStore {
     if (manifest == null) return null;
     final pages = staged[chapterId] ?? const {};
     if (!manifest.indices.every(pages.containsKey)) return null;
-    committed[chapterId] = {
-      for (final i in manifest.indices) i: pages[i]!,
-    };
+    committed[chapterId] = {for (final i in manifest.indices) i: pages[i]!};
     staged.remove(chapterId);
     return [
       for (final i in manifest.indices)
@@ -94,6 +105,20 @@ class FakePageStore implements OfflinePageStore {
           bytes: pages[i]!,
         ),
     ]..sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
+  }
+
+  @override
+  Future<List<StoredChapter>> chaptersOnDisk() async {
+    final ids = {...committed.keys, ...staged.keys};
+    return [
+      for (final id in ids)
+        (
+          mangaId: mangaOf[id] ?? 1,
+          chapterId: id,
+          hasFinal: committed.containsKey(id),
+          hasStaging: staged.containsKey(id),
+        ),
+    ];
   }
 
   @override
@@ -107,7 +132,10 @@ class FakePageStore implements OfflinePageStore {
       return (state: ChapterDirState.legacy, pages: const <CommittedPage>[]);
     }
     if (!manifest.indices.every(pages.containsKey)) {
-      return (state: ChapterDirState.incomplete, pages: const <CommittedPage>[]);
+      return (
+        state: ChapterDirState.incomplete,
+        pages: const <CommittedPage>[],
+      );
     }
     return (
       state: ChapterDirState.complete,
@@ -163,9 +191,10 @@ class FakePageStore implements OfflinePageStore {
 
   @override
   Future<int> chapterBytes(int mangaId, int chapterId) async =>
-      (committed[chapterId] ?? const {})
-          .values
-          .fold<int>(0, (sum, b) => sum + b);
+      (committed[chapterId] ?? const {}).values.fold<int>(
+        0,
+        (sum, b) => sum + b,
+      );
 
   @override
   Future<void> clearAll() async {
@@ -189,7 +218,9 @@ class FakePageStore implements OfflinePageStore {
     Map<int, int> pageBytes, {
     bool legacy = false,
     int generation = 0,
+    int mangaId = 1,
   }) {
+    mangaOf[chapterId] = mangaId;
     committed[chapterId] = {...pageBytes};
     _ext[chapterId] = {for (final i in pageBytes.keys) i: 'jpg'};
     if (!legacy) {
@@ -206,9 +237,13 @@ class FakePageStore implements OfflinePageStore {
     Map<int, int> pageBytes, {
     required List<int> indices,
     int generation = 0,
+    int mangaId = 1,
   }) {
-    manifests[chapterId] =
-        ChapterManifest(generation: generation, indices: indices);
+    mangaOf[chapterId] = mangaId;
+    manifests[chapterId] = ChapterManifest(
+      generation: generation,
+      indices: indices,
+    );
     staged[chapterId] = {...pageBytes};
     _ext[chapterId] = {for (final i in pageBytes.keys) i: 'jpg'};
   }

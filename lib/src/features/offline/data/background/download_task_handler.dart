@@ -107,7 +107,8 @@ class DownloadTaskHandler extends TaskHandler {
       return;
     }
     _order = BackgroundWorkOrder.fromJson(
-        jsonDecode(raw) as Map<String, Object?>);
+      jsonDecode(raw) as Map<String, Object?>,
+    );
     final order = _order!;
 
     // Plugin-free path building: the main isolate already resolved the offline
@@ -251,11 +252,12 @@ class DownloadTaskHandler extends TaskHandler {
       // Could not resolve pages (terminal): a server with no pages or a hard
       // failure even after a token refresh. Mark error, keep draining.
       await _log.appendChapter(
-          chapterId: chapterId,
-          status: 'error',
-          pages: 0,
-          bytes: 0,
-          generation: _genOf[chapterId] ?? 0);
+        chapterId: chapterId,
+        status: 'error',
+        pages: 0,
+        bytes: 0,
+        generation: _genOf[chapterId] ?? 0,
+      );
       _done++;
       _afterChapter(chapterId, 'error');
       return false;
@@ -275,8 +277,7 @@ class DownloadTaskHandler extends TaskHandler {
 
     final generation = _genOf[chapterId] ?? 0;
     final indices = [for (var i = 0; i < urls.length; i++) i];
-    final staged =
-        await _openStaging(mangaId, chapterId, indices, generation);
+    final staged = await _openStaging(mangaId, chapterId, indices, generation);
 
     final engine = _buildEngine();
     final pages = [
@@ -306,14 +307,14 @@ class DownloadTaskHandler extends TaskHandler {
     final String? status = outcome.succeeded
         ? 'downloaded'
         : outcome.offline
-            ? 'offline'
-            : outcome.authFailed
-                ? 'authFailed'
-                // cancelled → no terminal line; leave it `downloading` so a
-                // later replay/worker can pick it up (delete cleans it up).
-                : outcome.cancelled
-                    ? null
-                    : 'error';
+        ? 'offline'
+        : outcome.authFailed
+        ? 'authFailed'
+        // cancelled → no terminal line; leave it `downloading` so a
+        // later replay/worker can pick it up (delete cleans it up).
+        : outcome.cancelled
+        ? null
+        : 'error';
 
     if (status != null) {
       // Bytes are measured by whoever commits, after the rename — nothing is in
@@ -372,8 +373,9 @@ class DownloadTaskHandler extends TaskHandler {
     FlutterForegroundTask.updateService(
       notificationTitle: 'Downloading chapters',
       notificationText: 'Downloading — $_done/$_total',
-      notificationIcon:
-          const NotificationIcon(metaDataName: kNotificationIconMetaData),
+      notificationIcon: const NotificationIcon(
+        metaDataName: kNotificationIconMetaData,
+      ),
     );
   }
 
@@ -387,7 +389,9 @@ class DownloadTaskHandler extends TaskHandler {
   Future<List<String>?> _resolvePageUrls(int chapterId) async {
     var result = await _postChapterPages(chapterId, _record.accessToken);
     if (result == _gqlAuthError && _record.authType == 'uiLogin') {
-      final newAccess = await _broker.resolveAfter401(_record.accessToken ?? '');
+      final newAccess = await _broker.resolveAfter401(
+        _record.accessToken ?? '',
+      );
       if (newAccess != null) {
         result = await _postChapterPages(chapterId, newAccess);
       }
@@ -426,8 +430,11 @@ class DownloadTaskHandler extends TaskHandler {
       },
     });
     try {
-      final res = await http.post(Uri.parse(endpoint),
-          headers: headers, body: body);
+      final res = await http.post(
+        Uri.parse(endpoint),
+        headers: headers,
+        body: body,
+      );
       if (res.statusCode == 401 || res.statusCode == 403) return _gqlAuthError;
       if (res.statusCode != 200) return const <String>[];
       final decoded = jsonDecode(res.body) as Map<String, Object?>;
@@ -465,36 +472,37 @@ class DownloadTaskHandler extends TaskHandler {
   // ---------------------------------------------------------------------------
 
   ChapterDownloadEngine _buildEngine() => ChapterDownloadEngine(
-        writePage: _store,
-        parallelPageLimit: 5,
-        fetchPage: (pageUrl) async {
-          final (url, headers) = _authedPageRequest(pageUrl);
-          final http.Response res;
-          try {
-            res = await http.get(Uri.parse(url), headers: headers);
-          } on SocketException {
-            // Device offline (connection refused / unreachable host / DNS).
-            throw const PageOfflineException();
-          }
-          if (res.statusCode == 401 || res.statusCode == 403) {
-            throw const PageAuthException();
-          }
-          if (res.statusCode != 200) {
-            throw Exception('page fetch failed ($pageUrl): ${res.statusCode}');
-          }
-          return (
-            bytes: res.bodyBytes,
-            ext: pageImageExt(res.headers['content-type'], res.bodyBytes),
-          );
-        },
-        refreshAuth: () async {
-          // Only ui_login rotates; basic/simple credentials are static.
-          if (_record.authType != 'uiLogin') return false;
-          final newAccess =
-              await _broker.resolveAfter401(_record.accessToken ?? '');
-          return newAccess != null;
-        },
+    writePage: _store,
+    parallelPageLimit: 5,
+    fetchPage: (pageUrl) async {
+      final (url, headers) = _authedPageRequest(pageUrl);
+      final http.Response res;
+      try {
+        res = await http.get(Uri.parse(url), headers: headers);
+      } on SocketException {
+        // Device offline (connection refused / unreachable host / DNS).
+        throw const PageOfflineException();
+      }
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        throw const PageAuthException();
+      }
+      if (res.statusCode != 200) {
+        throw Exception('page fetch failed ($pageUrl): ${res.statusCode}');
+      }
+      return (
+        bytes: res.bodyBytes,
+        ext: pageImageExt(res.headers['content-type'], res.bodyBytes),
       );
+    },
+    refreshAuth: () async {
+      // Only ui_login rotates; basic/simple credentials are static.
+      if (_record.authType != 'uiLogin') return false;
+      final newAccess = await _broker.resolveAfter401(
+        _record.accessToken ?? '',
+      );
+      return newAccess != null;
+    },
+  );
 
   /// Builds the page-image GET URL + headers, mirroring
   /// `fetchOfflinePageBytes`: base API without `/api` (page URLs already carry
@@ -532,55 +540,58 @@ class DownloadTaskHandler extends TaskHandler {
   // ---------------------------------------------------------------------------
 
   TokenBroker _buildBroker() => TokenBroker(
-        read: () async {
-          final raw =
-              await FlutterForegroundTask.getData<String>(key: kTokenRecordKey);
-          if (raw == null) return _record;
-          _record = BackgroundTokenRecord.fromJson(
-              jsonDecode(raw) as Map<String, Object?>);
-          return _record;
-        },
-        write: (r) async {
-          _record = r;
-          await FlutterForegroundTask.saveData(
-              key: kTokenRecordKey, value: jsonEncode(r.toJson()));
-        },
-        refreshFn: (refreshToken) async {
-          // Only ui_login refreshes; basic/simple return null.
-          if (_record.authType != 'uiLogin') return null;
-          final order = _order!;
-          final endpoint = Endpoints.baseApi(
-            baseUrl: order.serverBase,
-            port: order.port,
-            addPort: order.addPort,
-            isGraphQl: true,
-          );
-          final body = jsonEncode({
-            'query':
-                'mutation RefreshToken(\$input: RefreshTokenInput!){ refreshToken(input: \$input){ accessToken } }',
-            'variables': {
-              'input': {'refreshToken': refreshToken},
-            },
-          });
-          try {
-            final res = await http.post(
-              Uri.parse(endpoint),
-              headers: const {'Content-Type': 'application/json'},
-              body: body,
-            );
-            if (res.statusCode != 200) return null;
-            final decoded = jsonDecode(res.body) as Map<String, Object?>;
-            final data = decoded['data'] as Map<String, Object?>?;
-            final refreshed =
-                data?['refreshToken'] as Map<String, Object?>?;
-            final access = refreshed?['accessToken'] as String?;
-            if (access == null || access.isEmpty) return null;
-            // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
-            // input one (the broker persists it back as the current refresh).
-            return (access: access, refresh: refreshToken);
-          } catch (_) {
-            return null;
-          }
-        },
+    read: () async {
+      final raw = await FlutterForegroundTask.getData<String>(
+        key: kTokenRecordKey,
       );
+      if (raw == null) return _record;
+      _record = BackgroundTokenRecord.fromJson(
+        jsonDecode(raw) as Map<String, Object?>,
+      );
+      return _record;
+    },
+    write: (r) async {
+      _record = r;
+      await FlutterForegroundTask.saveData(
+        key: kTokenRecordKey,
+        value: jsonEncode(r.toJson()),
+      );
+    },
+    refreshFn: (refreshToken) async {
+      // Only ui_login refreshes; basic/simple return null.
+      if (_record.authType != 'uiLogin') return null;
+      final order = _order!;
+      final endpoint = Endpoints.baseApi(
+        baseUrl: order.serverBase,
+        port: order.port,
+        addPort: order.addPort,
+        isGraphQl: true,
+      );
+      final body = jsonEncode({
+        'query':
+            'mutation RefreshToken(\$input: RefreshTokenInput!){ refreshToken(input: \$input){ accessToken } }',
+        'variables': {
+          'input': {'refreshToken': refreshToken},
+        },
+      });
+      try {
+        final res = await http.post(
+          Uri.parse(endpoint),
+          headers: const {'Content-Type': 'application/json'},
+          body: body,
+        );
+        if (res.statusCode != 200) return null;
+        final decoded = jsonDecode(res.body) as Map<String, Object?>;
+        final data = decoded['data'] as Map<String, Object?>?;
+        final refreshed = data?['refreshToken'] as Map<String, Object?>?;
+        final access = refreshed?['accessToken'] as String?;
+        if (access == null || access.isEmpty) return null;
+        // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
+        // input one (the broker persists it back as the current refresh).
+        return (access: access, refresh: refreshToken);
+      } catch (_) {
+        return null;
+      }
+    },
+  );
 }

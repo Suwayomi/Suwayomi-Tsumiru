@@ -17,8 +17,11 @@ void main() {
   test('Monochrome dark: onPrimary is dark against its light-grey accent', () {
     final scheme = darkScheme(AppTheme.mono);
     // The accent is a near-white grey, so white text was illegible (#105).
-    expect(scheme.primary.computeLuminance(), greaterThan(0.5),
-        reason: 'the Monochrome accent should be light');
+    expect(
+      scheme.primary.computeLuminance(),
+      greaterThan(0.5),
+      reason: 'the Monochrome accent should be light',
+    );
     expect(scheme.onPrimary, Colors.black);
   });
 
@@ -31,11 +34,15 @@ void main() {
     for (final theme in AppTheme.values) {
       if (theme == AppTheme.custom) continue; // custom is ColorScheme.fromSeed
       final scheme = darkScheme(theme);
-      final contrast = (scheme.primary.computeLuminance() -
-              scheme.onPrimary.computeLuminance())
-          .abs();
-      expect(contrast, greaterThan(0.3),
-          reason: '$theme: primary/onPrimary too close ($contrast)');
+      final contrast =
+          (scheme.primary.computeLuminance() -
+                  scheme.onPrimary.computeLuminance())
+              .abs();
+      expect(
+        contrast,
+        greaterThan(0.3),
+        reason: '$theme: primary/onPrimary too close ($contrast)',
+      );
     }
   });
 }

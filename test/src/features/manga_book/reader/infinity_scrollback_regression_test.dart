@@ -48,10 +48,8 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _FakeTrackerRepository extends TrackerRepository {
   _FakeTrackerRepository() : super(_dummyClient());
@@ -89,30 +87,29 @@ List<String> _localPages(int count, String tag) {
 }
 
 MangaDto _webtoonManga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Webtoon',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 2),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: ReaderMode.webtoon.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 2,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Webtoon',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 2),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: [
+    Fragment$MangaDto$meta(
+      key: MangaMetaKeys.readerMode.key,
+      value: ReaderMode.webtoon.name,
+    ),
+  ],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 2,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter({required int id, required int sourceOrder}) =>
     Fragment$ChapterDto(
@@ -134,9 +131,9 @@ ChapterDto _chapter({required int id, required int sourceOrder}) =>
     );
 
 ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: id, pageCount: count),
-      pages: _localPages(count, 'c$id'),
-    );
+  chapter: ChapterPagesChapterDto(id: id, pageCount: count),
+  pages: _localPages(count, 'c$id'),
+);
 
 /// Pumps the reader open on chapter 2 page 0 (chapter 1 is its previous).
 /// [prevPages] controls what chapterPagesProvider(1) produces per fetch.
@@ -161,22 +158,31 @@ Future<void> _pumpReaderOnChapter2(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         mangaBookRepositoryProvider.overrideWithValue(_QuietRepo()),
-        mangaWithIdProvider(mangaId: 1)
-            .overrideWith(() => _FakeMangaWithId(_webtoonManga())),
+        mangaWithIdProvider(
+          mangaId: 1,
+        ).overrideWith(() => _FakeMangaWithId(_webtoonManga())),
         chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
         chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
         chapterPagesProvider(chapterId: 1).overrideWith((ref) => prevPages()),
         chapterPagesProvider(chapterId: 2).overrideWith((ref) => _pages(2, 3)),
         if (coldOpenPair)
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
-              .overrideWith((ref) => ref.watch(_pairReadyProvider)
-                  ? (first: null, second: ch1)
-                  : null)
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 2,
+          ).overrideWith(
+            (ref) => ref.watch(_pairReadyProvider)
+                ? (first: null, second: ch1)
+                : null,
+          )
         else
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
-              .overrideWithValue((first: null, second: ch1)),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-            .overrideWithValue((first: ch2, second: null)),
+          getNextAndPreviousChaptersProvider(
+            mangaId: 1,
+            chapterId: 2,
+          ).overrideWithValue((first: null, second: ch1)),
+        getNextAndPreviousChaptersProvider(
+          mangaId: 1,
+          chapterId: 1,
+        ).overrideWithValue((first: ch2, second: null)),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],
       child: MaterialApp(
@@ -208,99 +214,120 @@ void main() {
     MultiChapterContinuousReaderMode.edgeAttemptCooldown = Duration.zero;
   });
   tearDown(() {
-    MultiChapterContinuousReaderMode.edgeAttemptCooldown =
-        const Duration(seconds: 4);
+    MultiChapterContinuousReaderMode.edgeAttemptCooldown = const Duration(
+      seconds: 4,
+    );
   });
 
   testWidgets(
-      'resume at page 0: an upward drag at the clamp loads the previous chapter',
-      (tester) async {
-    var prevFetches = 0;
-    await _pumpReaderOnChapter2(
-      tester,
-      // Async with a real delay: an unheld autoDispose fetch gets disposed
-      // mid-flight and never completes (the "loading… that never loads").
-      prevPages: () async {
-        prevFetches++;
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        return _pages(1, 3);
-      },
-    );
+    'resume at page 0: an upward drag at the clamp loads the previous chapter',
+    (tester) async {
+      var prevFetches = 0;
+      await _pumpReaderOnChapter2(
+        tester,
+        // Async with a real delay: an unheld autoDispose fetch gets disposed
+        // mid-flight and never completes (the "loading… that never loads").
+        prevPages: () async {
+          prevFetches++;
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          return _pages(1, 3);
+        },
+      );
 
-    // No downward movement first — the deadlock precondition.
-    await _dragUp(tester);
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
+      // No downward movement first — the deadlock precondition.
+      await _dragUp(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
 
-    expect(prevFetches, greaterThanOrEqualTo(1),
-        reason: 'blocked upward drag at page 0 never asked for the previous '
-            'chapter (the resume deadlock)');
+      expect(
+        prevFetches,
+        greaterThanOrEqualTo(1),
+        reason:
+            'blocked upward drag at page 0 never asked for the previous '
+            'chapter (the resume deadlock)',
+      );
 
-    // A second pull must be a no-op: the chapter LOADED, so the engine's
-    // already-loaded guard stops a refetch. If the fetch had been disposed
-    // mid-flight (never completing), this drag would fetch again.
-    await _dragUp(tester);
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
-    expect(prevFetches, 1,
-        reason: 'previous chapter never finished loading; the fetch was '
-            'disposed mid-flight and the gesture refetched');
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a failed previous-chapter fetch does not latch for the session',
-      (tester) async {
-    var prevFetches = 0;
-    await _pumpReaderOnChapter2(
-      tester,
-      prevPages: () {
-        prevFetches++;
-        // First fetch fails (returns nothing); later fetches succeed.
-        if (prevFetches == 1) return null;
-        return _pages(1, 3);
-      },
-    );
-
-    // The gesture must retry past the failed fetch instead of latching a
-    // "reached start" state (pre-fix, the count froze at 1 forever).
-    await _dragUp(tester);
-    await _dragUp(tester);
-    expect(prevFetches, greaterThanOrEqualTo(2),
-        reason: 'failed fetch latched the boundary; no retry happened');
-    expect(tester.takeException(), isNull);
-  });
+      // A second pull must be a no-op: the chapter LOADED, so the engine's
+      // already-loaded guard stops a refetch. If the fetch had been disposed
+      // mid-flight (never completing), this drag would fetch again.
+      await _dragUp(tester);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(
+        prevFetches,
+        1,
+        reason:
+            'previous chapter never finished loading; the fetch was '
+            'disposed mid-flight and the gesture refetched',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
-      'cold open: neighbours resolving after mount still enable the boundary',
-      (tester) async {
-    var prevFetches = 0;
+    'a failed previous-chapter fetch does not latch for the session',
+    (tester) async {
+      var prevFetches = 0;
+      await _pumpReaderOnChapter2(
+        tester,
+        prevPages: () {
+          prevFetches++;
+          // First fetch fails (returns nothing); later fetches succeed.
+          if (prevFetches == 1) return null;
+          return _pages(1, 3);
+        },
+      );
 
-    await _pumpReaderOnChapter2(
-      tester,
-      prevPages: () {
-        prevFetches++;
-        return _pages(1, 3);
-      },
-      // Pair is null (chapter list "still loading") until the switch flips.
-      coldOpenPair: true,
-    );
+      // The gesture must retry past the failed fetch instead of latching a
+      // "reached start" state (pre-fix, the count froze at 1 forever).
+      await _dragUp(tester);
+      await _dragUp(tester);
+      expect(
+        prevFetches,
+        greaterThanOrEqualTo(2),
+        reason: 'failed fetch latched the boundary; no retry happened',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-    // While unresolved, an upward drag can't load anything — and must not latch.
-    await _dragUp(tester);
-    expect(prevFetches, 0);
+  testWidgets(
+    'cold open: neighbours resolving after mount still enable the boundary',
+    (tester) async {
+      var prevFetches = 0;
 
-    // The chapter list "finishes loading".
-    final container = ProviderScope.containerOf(
-        tester.element(find.byType(ReaderScreen)));
-    container.read(_pairReadyProvider.notifier).set(true);
-    await tester.pumpAndSettle();
+      await _pumpReaderOnChapter2(
+        tester,
+        prevPages: () {
+          prevFetches++;
+          return _pages(1, 3);
+        },
+        // Pair is null (chapter list "still loading") until the switch flips.
+        coldOpenPair: true,
+      );
 
-    // The same gesture now works — the reader watched the pair instead of
-    // reading it once at mount.
-    await _dragUp(tester);
-    expect(prevFetches, greaterThanOrEqualTo(1),
-        reason: 'neighbours resolved after mount were never picked up '
-            '(the cold-open race)');
-    expect(tester.takeException(), isNull);
-  });
+      // While unresolved, an upward drag can't load anything — and must not latch.
+      await _dragUp(tester);
+      expect(prevFetches, 0);
+
+      // The chapter list "finishes loading".
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ReaderScreen)),
+      );
+      container.read(_pairReadyProvider.notifier).set(true);
+      await tester.pumpAndSettle();
+
+      // The same gesture now works — the reader watched the pair instead of
+      // reading it once at mount.
+      await _dragUp(tester);
+      expect(
+        prevFetches,
+        greaterThanOrEqualTo(1),
+        reason:
+            'neighbours resolved after mount were never picked up '
+            '(the cold-open race)',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

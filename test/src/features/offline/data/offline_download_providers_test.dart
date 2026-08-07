@@ -22,14 +22,31 @@ void main() {
       expect(pageImageExt(null, [0x89, 0x50, ...z]), 'png');
       expect(pageImageExt(null, [0xFF, 0xD8, ...z]), 'jpg');
       expect(pageImageExt(null, [0x47, 0x49, ...z]), 'gif');
-      expect(pageImageExt(null, [0x52, 0x49, 0, 0, 0, 0, 0, 0, 0x57, 0, 0, 0]),
-          'webp');
+      expect(
+        pageImageExt(null, [0x52, 0x49, 0, 0, 0, 0, 0, 0, 0x57, 0, 0, 0]),
+        'webp',
+      );
     });
 
     test('defaults to jpg when unknown', () {
       expect(pageImageExt(null, const [0, 0, 0, 0]), 'jpg');
-      expect(pageImageExt('application/octet-stream',
-          const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]), 'jpg');
+      expect(
+        pageImageExt('application/octet-stream', const [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+        ]),
+        'jpg',
+      );
     });
   });
 

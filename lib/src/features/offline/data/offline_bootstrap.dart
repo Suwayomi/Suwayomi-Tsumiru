@@ -5,7 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'offline_bootstrap_stub.dart'
-    if (dart.library.io) 'offline_bootstrap_io.dart' as platform;
+    if (dart.library.io) 'offline_bootstrap_io.dart'
+    as platform;
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
@@ -17,4 +18,4 @@ import 'offline_paths.dart';
 /// override `offlineDatabaseProvider` / `offlinePathsProvider` /
 /// `offlinePageStoreProvider`.
 Future<({OfflineDatabase db, OfflinePaths paths, OfflinePageStore store})?>
-    initOfflineStorage() => platform.openOfflineStorage();
+initOfflineStorage() => platform.openOfflineStorage();

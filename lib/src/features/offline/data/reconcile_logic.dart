@@ -14,16 +14,23 @@ Set<int> desiredChapterIds(
   OfflineKeepRule rule,
   int keepUnreadCount,
 ) {
-  final pinned = {for (final c in chapters) if (c.pinned) c.id};
+  final pinned = {
+    for (final c in chapters)
+      if (c.pinned) c.id,
+  };
   final ruleSet = switch (rule) {
     OfflineKeepRule.off => <int>{},
     OfflineKeepRule.all => {for (final c in chapters) c.id},
-    OfflineKeepRule.allUnread => {for (final c in chapters) if (!c.isRead) c.id},
-    OfflineKeepRule.nUnread => (chapters.where((c) => !c.isRead).toList()
-          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
-        .take(keepUnreadCount)
-        .map((c) => c.id)
-        .toSet(),
+    OfflineKeepRule.allUnread => {
+      for (final c in chapters)
+        if (!c.isRead) c.id,
+    },
+    OfflineKeepRule.nUnread =>
+      (chapters.where((c) => !c.isRead).toList()
+            ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
+          .take(keepUnreadCount)
+          .map((c) => c.id)
+          .toSet(),
   };
   return ruleSet..addAll(pinned);
 }
@@ -77,7 +84,9 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
   if (nets.timeEvictEnabled) {
     for (final c in downloaded) {
       final dt = c.downloadedAt;
-      if (!c.pinned && dt != null && now.difference(dt).inDays > nets.keepDays) {
+      if (!c.pinned &&
+          dt != null &&
+          now.difference(dt).inDays > nets.keepDays) {
         evict.add(c.id);
       }
     }
@@ -89,16 +98,19 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
     int total() => downloaded
         .where((c) => !evict.contains(c.id))
         .fold(0, (s, c) => s + c.bytes);
-    final candidates = downloaded
-        .where((c) => !c.pinned && !evict.contains(c.id))
-        .toList()
-      ..sort((a, b) => (a.downloadedAt ?? DateTime(0))
-          .compareTo(b.downloadedAt ?? DateTime(0)));
+    final candidates =
+        downloaded.where((c) => !c.pinned && !evict.contains(c.id)).toList()
+          ..sort(
+            (a, b) => (a.downloadedAt ?? DateTime(0)).compareTo(
+              b.downloadedAt ?? DateTime(0),
+            ),
+          );
     var i = 0;
     while (total() > nets.storageCapBytes && i < candidates.length) {
       evict.add(candidates[i++].id);
     }
-    if (total() > nets.storageCapBytes) overCapWarning = true; // only pinned left
+    if (total() > nets.storageCapBytes)
+      overCapWarning = true; // only pinned left
   }
 
   return (evict: evict, overCapWarning: overCapWarning);

@@ -50,8 +50,7 @@ void main() {
       expect(e.bottomInset, 0);
     });
 
-    test('computed extent = systemInset + measuredBarHeight (the math)',
-        () {
+    test('computed extent = systemInset + measuredBarHeight (the math)', () {
       const systemTop = 44.0;
       const measuredTopBar = 56.0;
       const systemBottom = 24.0;

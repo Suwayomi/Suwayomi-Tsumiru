@@ -39,10 +39,8 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _FakeTrackerRepository extends TrackerRepository {
   _FakeTrackerRepository() : super(_dummyClient());
@@ -71,48 +69,47 @@ List<String> _localPages(int count) {
 }
 
 MangaDto _webtoonManga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Webtoon',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 1),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: ReaderMode.webtoon.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 1,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Webtoon',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 1),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: [
+    Fragment$MangaDto$meta(
+      key: MangaMetaKeys.readerMode.key,
+      value: ReaderMode.webtoon.name,
+    ),
+  ],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 1,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter() => Fragment$ChapterDto(
-      chapterNumber: 1,
-      fetchedAt: '0',
-      id: 1,
-      isBookmarked: false,
-      isDownloaded: false,
-      isRead: false,
-      lastPageRead: 0,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'Chapter 1',
-      pageCount: 12,
-      sourceOrder: 1,
-      uploadDate: '0',
-      url: '/chapter/1',
-      meta: const [],
-    );
+  chapterNumber: 1,
+  fetchedAt: '0',
+  id: 1,
+  isBookmarked: false,
+  isDownloaded: false,
+  isRead: false,
+  lastPageRead: 0,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'Chapter 1',
+  pageCount: 12,
+  sourceOrder: 1,
+  uploadDate: '0',
+  url: '/chapter/1',
+  meta: const [],
+);
 
 Future<ProviderContainer> _pumpReader(WidgetTester tester) async {
   tester.view.physicalSize = const Size(800, 1600);
@@ -128,8 +125,9 @@ Future<ProviderContainer> _pumpReader(WidgetTester tester) async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         mangaBookRepositoryProvider.overrideWithValue(_QuietRepo()),
-        mangaWithIdProvider(mangaId: 1)
-            .overrideWith(() => _FakeMangaWithId(_webtoonManga())),
+        mangaWithIdProvider(
+          mangaId: 1,
+        ).overrideWith(() => _FakeMangaWithId(_webtoonManga())),
         chapterProvider(chapterId: 1).overrideWith((ref) => chapter),
         chapterPagesProvider(chapterId: 1).overrideWith(
           (ref) => ChapterPagesDto(
@@ -137,8 +135,10 @@ Future<ProviderContainer> _pumpReader(WidgetTester tester) async {
             pages: _localPages(12),
           ),
         ),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-            .overrideWithValue((first: null, second: null)),
+        getNextAndPreviousChaptersProvider(
+          mangaId: 1,
+          chapterId: 1,
+        ).overrideWithValue((first: null, second: null)),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],
       child: MaterialApp(
@@ -176,8 +176,9 @@ void main() {
     );
   });
 
-  testWidgets('the reader can still move the strip while auto-scroll runs',
-      (tester) async {
+  testWidgets('the reader can still move the strip while auto-scroll runs', (
+    tester,
+  ) async {
     final container = await _pumpReader(tester);
 
     container.read(autoScrollActiveProvider.notifier).start();

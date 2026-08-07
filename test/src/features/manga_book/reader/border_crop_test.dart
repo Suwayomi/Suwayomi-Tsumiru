@@ -22,7 +22,8 @@ Uint8List _buffer(
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
       final i = (y * width + x) * 4;
-      final inside = rect != null &&
+      final inside =
+          rect != null &&
           x >= rect.left &&
           x < rect.right &&
           y >= rect.top &&

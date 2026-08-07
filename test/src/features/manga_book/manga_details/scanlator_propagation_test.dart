@@ -20,8 +20,10 @@ void main() {
   group('expandIdsForDuplicates', () {
     test('unions sibling ids per chapter number', () {
       expect(expandIdsForDuplicates(chapters, [1]), unorderedEquals([1, 2]));
-      expect(expandIdsForDuplicates(chapters, [1, 3]),
-          unorderedEquals([1, 2, 3, 4]));
+      expect(
+        expandIdsForDuplicates(chapters, [1, 3]),
+        unorderedEquals([1, 2, 3, 4]),
+      );
     });
     test('identity when the raw list is unavailable', () {
       expect(expandIdsForDuplicates(null, [1, 3]), [1, 3]);
@@ -36,8 +38,7 @@ void main() {
     });
     test('empty when nothing to mark', () {
       expect(
-        reconcileIdsForReadNumbers(
-            [ch(id: 1, number: 1, scanlator: 'A')]),
+        reconcileIdsForReadNumbers([ch(id: 1, number: 1, scanlator: 'A')]),
         isEmpty,
       );
     });
@@ -49,8 +50,7 @@ void main() {
         ch(id: 1, number: 1, scanlator: 'A', isDownloaded: true),
         ch(id: 2, number: 1, scanlator: 'B', isDownloaded: true),
       ];
-      expect(
-          expandIdsForDuplicates(downloaded, [1]), unorderedEquals([1, 2]));
+      expect(expandIdsForDuplicates(downloaded, [1]), unorderedEquals([1, 2]));
     });
   });
 }

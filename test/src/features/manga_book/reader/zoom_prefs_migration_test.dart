@@ -65,7 +65,10 @@ void main() {
     c.read(pagedPinchToZoomProvider.notifier).update(false);
 
     expect(c.read(pagedPinchToZoomProvider), isFalse);
-    expect(c.read(longStripPinchToZoomProvider), isTrue,
-        reason: 'the two switches must stop moving together');
+    expect(
+      c.read(longStripPinchToZoomProvider),
+      isTrue,
+      reason: 'the two switches must stop moving together',
+    );
   });
 }

@@ -18,7 +18,8 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widge
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
-CategoryDto _cat({required int id, required String name}) => Fragment$CategoryDto(
+CategoryDto _cat({required int id, required String name}) =>
+    Fragment$CategoryDto(
       defaultCategory: false,
       id: id,
       includeInDownload: Enum$IncludeOrExclude.UNSET,
@@ -29,10 +30,8 @@ CategoryDto _cat({required int id, required String name}) => Fragment$CategoryDt
       meta: const [],
     );
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingMangaBookRepo extends MangaBookRepository {
   _RecordingMangaBookRepo({this.failAdd = false}) : super(_dummyClient());
@@ -42,8 +41,9 @@ class _RecordingMangaBookRepo extends MangaBookRepository {
   List<CategoryDto> current = <CategoryDto>[];
 
   @override
-  Future<List<CategoryDto>?> getMangaCategoryList({required int mangaId}) async =>
-      current;
+  Future<List<CategoryDto>?> getMangaCategoryList({
+    required int mangaId,
+  }) async => current;
 
   @override
   Future<void> addMangaToCategory(int mangaId, int categoryId) async {
@@ -61,60 +61,74 @@ class _FixedCategories extends CategoryController {
 }
 
 Widget _app(ProviderContainer container) => UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: EditMangaCategoryDialog(mangaId: 76)),
-      ),
-    );
+  container: container,
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const Scaffold(body: EditMangaCategoryDialog(mangaId: 76)),
+  ),
+);
 
 void main() {
   testWidgets(
-      'toggling a category persists via the repo and re-fetches the library',
-      (tester) async {
-    final repo = _RecordingMangaBookRepo();
-    var libraryBuilds = 0;
-    final container = ProviderContainer(overrides: [
-      mangaBookRepositoryProvider.overrideWithValue(repo),
-      categoryControllerProvider.overrideWith(() => _FixedCategories()),
-      libraryMangaListProvider.overrideWith((ref) async {
-        libraryBuilds++;
-        return const <MangaDto>[];
-      }),
-    ]);
-    addTearDown(container.dispose);
-    // Keep the library source alive so an invalidation actually rebuilds it.
-    container.listen(libraryMangaListProvider, (_, __) {}, fireImmediately: true);
+    'toggling a category persists via the repo and re-fetches the library',
+    (tester) async {
+      final repo = _RecordingMangaBookRepo();
+      var libraryBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          categoryControllerProvider.overrideWith(() => _FixedCategories()),
+          libraryMangaListProvider.overrideWith((ref) async {
+            libraryBuilds++;
+            return const <MangaDto>[];
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Keep the library source alive so an invalidation actually rebuilds it.
+      container.listen(
+        libraryMangaListProvider,
+        (_, __) {},
+        fireImmediately: true,
+      );
 
-    await tester.pumpWidget(_app(container));
-    await tester.pumpAndSettle();
-    expect(libraryBuilds, 1);
+      await tester.pumpWidget(_app(container));
+      await tester.pumpAndSettle();
+      expect(libraryBuilds, 1);
 
-    await tester.tap(find.text('Pornhwa'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Pornhwa'));
+      await tester.pumpAndSettle();
 
-    // The change persisted through the repo (the mutation actually ran)...
-    expect(repo.added, contains(2));
-    // ...and the library's single source list was invalidated + rebuilt, so
-    // the manga will show under the new category tab (the reported bug).
-    expect(libraryBuilds, 2);
-  });
+      // The change persisted through the repo (the mutation actually ran)...
+      expect(repo.added, contains(2));
+      // ...and the library's single source list was invalidated + rebuilt, so
+      // the manga will show under the new category tab (the reported bug).
+      expect(libraryBuilds, 2);
+    },
+  );
 
-  testWidgets('a failed toggle reverts the checkbox and does not refetch',
-      (tester) async {
+  testWidgets('a failed toggle reverts the checkbox and does not refetch', (
+    tester,
+  ) async {
     final repo = _RecordingMangaBookRepo(failAdd: true);
     var libraryBuilds = 0;
-    final container = ProviderContainer(overrides: [
-      mangaBookRepositoryProvider.overrideWithValue(repo),
-      categoryControllerProvider.overrideWith(() => _FixedCategories()),
-      libraryMangaListProvider.overrideWith((ref) async {
-        libraryBuilds++;
-        return const <MangaDto>[];
-      }),
-    ]);
+    final container = ProviderContainer(
+      overrides: [
+        mangaBookRepositoryProvider.overrideWithValue(repo),
+        categoryControllerProvider.overrideWith(() => _FixedCategories()),
+        libraryMangaListProvider.overrideWith((ref) async {
+          libraryBuilds++;
+          return const <MangaDto>[];
+        }),
+      ],
+    );
     addTearDown(container.dispose);
-    container.listen(libraryMangaListProvider, (_, __) {}, fireImmediately: true);
+    container.listen(
+      libraryMangaListProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
 
     await tester.pumpWidget(_app(container));
     await tester.pumpAndSettle();

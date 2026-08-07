@@ -19,8 +19,8 @@ typedef PageUrlsResolver = Future<List<String>> Function(int chapterId);
 
 /// Reports a chapter's live page progress upward (the arc can't be counted from
 /// the catalog any more — page rows only appear at commit).
-typedef DownloadProgressSink = void Function(
-    int chapterId, int done, int total);
+typedef DownloadProgressSink =
+    void Function(int chapterId, int done, int total);
 
 /// Orchestrates background chapter downloads on top of [ChapterDownloadEngine],
 /// one chapter at a time (page-level parallelism lives in the engine) since
@@ -119,8 +119,10 @@ class OfflineDownloadCoordinator {
   /// Claim a chapter for deletion, cancelling it and waiting (bounded) for the
   /// engine to stop writing. Call before deleting files/rows; pair with
   /// [endDelete] in a `finally`.
-  Future<void> beginDelete(int chapterId,
-      {Duration timeout = const Duration(seconds: 3)}) async {
+  Future<void> beginDelete(
+    int chapterId, {
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
     _deleting.update(chapterId, (n) => n + 1, ifAbsent: () => 1);
     _cancelled.add(chapterId);
     final deadline = DateTime.now().add(timeout);
@@ -154,8 +156,9 @@ class OfflineDownloadCoordinator {
   /// clear is sure no `onPageStored` write lands after it wipes the DB/files.
   /// Bounded so it never hangs the clear — worst case is one orphan row,
   /// cleaned up later.
-  Future<void> awaitIdle(
-      {Duration timeout = const Duration(seconds: 3)}) async {
+  Future<void> awaitIdle({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
     final deadline = DateTime.now().add(timeout);
     while ((_active.isNotEmpty || _pumping) &&
         DateTime.now().isBefore(deadline)) {
@@ -212,14 +215,18 @@ class OfflineDownloadCoordinator {
       final started = await db.transaction(() async {
         if (_deleting.containsKey(chapter.id)) return false;
         await db.setChapterDeviceState(
-            chapter.id, OfflineDeviceState.downloading);
+          chapter.id,
+          OfflineDeviceState.downloading,
+        );
         return true;
       });
       if (!started) return;
       final urls = await resolvePages(chapter.id);
       if (urls.isEmpty) {
-        logger.e('Offline: no pages resolved for chapter ${chapter.id}; '
-            'marking error');
+        logger.e(
+          'Offline: no pages resolved for chapter ${chapter.id}; '
+          'marking error',
+        );
         await _applyTerminalError(chapter.id);
         return;
       }
@@ -265,8 +272,10 @@ class OfflineDownloadCoordinator {
         // parked row stays first in line, so pumping on would just re-pick it
         // in a hot loop while the network is down.
         _pausedForOffline = true;
-        logger.i('Offline: chapter ${chapter.id} paused (no network); '
-            'leaving downloading for resume');
+        logger.i(
+          'Offline: chapter ${chapter.id} paused (no network); '
+          'leaving downloading for resume',
+        );
         return;
       }
       if (outcome.authFailed) {
@@ -279,8 +288,10 @@ class OfflineDownloadCoordinator {
         await _applyTerminalError(chapter.id);
         return;
       }
-      logger.i('Offline: enqueued ${pages.length} page tasks for chapter '
-          '${chapter.id} (manga ${chapter.mangaId})');
+      logger.i(
+        'Offline: enqueued ${pages.length} page tasks for chapter '
+        '${chapter.id} (manga ${chapter.mangaId})',
+      );
       await commitStagedChapter(
         db: db,
         store: store,
@@ -297,8 +308,10 @@ class OfflineDownloadCoordinator {
         // whole outage.
         _pausedForOffline = true;
         onServerUnreachable?.call();
-        logger.i('Offline: chapter ${chapter.id} paused (resolve offline); '
-            'leaving downloading for resume');
+        logger.i(
+          'Offline: chapter ${chapter.id} paused (resolve offline); '
+          'leaving downloading for resume',
+        );
       } else {
         logger.e('Offline: chapter ${chapter.id} download error: $e');
         await _applyTerminalError(chapter.id);
@@ -334,8 +347,10 @@ class OfflineDownloadCoordinator {
       return store.stagedPageIndices(mangaId, chapterId);
     }
     if (existing != null) {
-      logger.i('Offline: restarting staging for chapter $chapterId '
-          '(page list or generation changed)');
+      logger.i(
+        'Offline: restarting staging for chapter $chapterId '
+        '(page list or generation changed)',
+      );
     }
     await store.deleteStaging(mangaId, chapterId);
     await store.beginChapter(
@@ -390,8 +405,9 @@ class OfflineDownloadCoordinator {
   /// downloading but nothing is in flight — left over from a kill), else the
   /// head of the `queued` backlog. Null when there's nothing to do.
   Future<OfflineChapter?> _nextChapter() async {
-    final downloading =
-        await db.chaptersInState(OfflineDeviceState.downloading);
+    final downloading = await db.chaptersInState(
+      OfflineDeviceState.downloading,
+    );
     var stranded = 0;
     for (final c in downloading) {
       if (!_active.contains(c.id)) {
@@ -401,8 +417,10 @@ class OfflineDownloadCoordinator {
     final firstStranded = downloading
         .where((c) => !_active.contains(c.id) && !_deleting.containsKey(c.id))
         .firstOrNull;
-    logger.i('Offline pump: downloading=${downloading.length} '
-        'active=${_active.length} stranded=$stranded');
+    logger.i(
+      'Offline pump: downloading=${downloading.length} '
+      'active=${_active.length} stranded=$stranded',
+    );
     if (firstStranded != null) return firstStranded;
     // Skip a queue head mid-deletion so it doesn't stall the rest of the backlog.
     final queued = await db.chaptersInState(OfflineDeviceState.queued);

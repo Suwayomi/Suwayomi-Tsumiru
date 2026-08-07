@@ -26,8 +26,7 @@ class _HangingStorage extends Fake implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) =>
-      Completer<String?>().future;
+  }) => Completer<String?>().future;
 }
 
 void main() {
@@ -36,9 +35,9 @@ void main() {
   test('refresh before the credentials store hydrates is transient, '
       'not "Session expired"', () async {
     debugResetAuthCoordinatorSingleFlight();
-    final container = ProviderContainer(overrides: [
-      secureStorageProvider.overrideWithValue(_HangingStorage()),
-    ]);
+    final container = ProviderContainer(
+      overrides: [secureStorageProvider.overrideWithValue(_HangingStorage())],
+    );
     addTearDown(container.dispose);
 
     final gql = GraphQLClient(

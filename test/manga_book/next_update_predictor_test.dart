@@ -16,28 +16,19 @@ void main() {
 
   group('predictNextUpdate interval', () {
     test('weekly cadence → interval 7', () {
-      final p = predictNextUpdate(
-        [up(2), up(9), up(16), up(23)],
-        now: now,
-      );
+      final p = predictNextUpdate([up(2), up(9), up(16), up(23)], now: now);
       expect(p.intervalDays, 7);
       // latest 2 days ago + 7 → 5 days out.
       expect(p.daysUntil(now), 5);
     });
 
     test('biweekly cadence → interval 14', () {
-      final p = predictNextUpdate(
-        [up(1), up(15), up(29), up(43)],
-        now: now,
-      );
+      final p = predictNextUpdate([up(1), up(15), up(29), up(43)], now: now);
       expect(p.intervalDays, 14);
     });
 
     test('huge gaps clamp at 28', () {
-      final p = predictNextUpdate(
-        [up(1), up(60), up(120), up(180)],
-        now: now,
-      );
+      final p = predictNextUpdate([up(1), up(60), up(120), up(180)], now: now);
       expect(p.intervalDays, 28);
     });
 
@@ -73,10 +64,7 @@ void main() {
       // ~58 days since last release, weekly cadence (the "Surviving the Game"
       // case). cycle = 58 // 7 = 8, nextUpdate = latest + 9*7 = 63 days from
       // latest = 5 days out. Must NOT floor to 0/"Soon".
-      final p = predictNextUpdate(
-        [up(58), up(65), up(72), up(79)],
-        now: now,
-      );
+      final p = predictNextUpdate([up(58), up(65), up(72), up(79)], now: now);
       expect(p.intervalDays, 7);
       expect(p.daysUntil(now), 5);
     });
@@ -89,9 +77,7 @@ void main() {
 
     test('duplicate same-day releases do not skew the gap', () {
       // Three chapters on the same day shouldn't read as a 0-day cadence.
-      final c = <ChapterRelease>[
-        up(2), up(2), up(2), up(9), up(16), up(23),
-      ];
+      final c = <ChapterRelease>[up(2), up(2), up(2), up(9), up(16), up(23)];
       final p = predictNextUpdate(c, now: now);
       expect(p.intervalDays, 7);
     });

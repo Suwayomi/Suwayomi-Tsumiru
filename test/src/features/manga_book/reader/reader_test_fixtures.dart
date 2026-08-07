@@ -11,25 +11,24 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 MangaDto testManga() => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Manga',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 0,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Manga',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 0,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto testChapter({int id = 1, String name = 'Chapter 1'}) =>
     Fragment$ChapterDto(

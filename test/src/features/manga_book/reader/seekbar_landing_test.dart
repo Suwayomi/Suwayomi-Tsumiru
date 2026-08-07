@@ -25,16 +25,15 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 /// Real rendered heights for 40 pages — deliberately wildly variable, like
 /// real webtoon strips (some ~1 screen, some ~5 screens).
 List<double> _realHeights(double screen) => [
-      for (var i = 0; i < 40; i++)
-        screen * (i % 5 == 0 ? 5.0 : (i % 3 == 0 ? 3.0 : 1.2)),
-    ];
+  for (var i = 0; i < 40; i++)
+    screen * (i % 5 == 0 ? 5.0 : (i % 3 == 0 ? 3.0 : 1.2)),
+];
 
 /// Returns the index of the page currently pinned to the viewport top.
 int _topIndex(ItemPositionsListener listener) {
-  final positions = listener.itemPositions.value
-      .where((p) => p.itemTrailingEdge > 0)
-      .toList()
-    ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+  final positions =
+      listener.itemPositions.value.where((p) => p.itemTrailingEdge > 0).toList()
+        ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
   return positions.isEmpty ? -1 : positions.first.index;
 }
 
@@ -74,35 +73,39 @@ void main() {
   // page; reserving the placeholder height first (what the frameBuilder fix in
   // the reader does) makes the jump land true. If the reservation regresses,
   // the `reserved` case below starts landing wrong and this test fails.
-  testWidgets('D: offline pages — zero-height pops mis-land; reserved lands true',
-      (tester) async {
-    final heights = _realHeights(screen);
+  testWidgets(
+    'D: offline pages — zero-height pops mis-land; reserved lands true',
+    (tester) async {
+      final heights = _realHeights(screen);
 
-    Future<int> landingWith(double placeholder) async {
-      final controller = ItemScrollController();
-      final listener = ItemPositionsListener.create();
-      await pumpList(
-        tester,
-        controller: controller,
-        listener: listener,
-        itemBuilder: (_, i) => _GrowingPage(placeholder: placeholder, real: heights[i]),
-      );
-      controller.jumpTo(index: 20);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 16));
-      await tester.pump(const Duration(milliseconds: 16));
-      await tester.pumpAndSettle();
-      return _topIndex(listener);
-    }
+      Future<int> landingWith(double placeholder) async {
+        final controller = ItemScrollController();
+        final listener = ItemPositionsListener.create();
+        await pumpList(
+          tester,
+          controller: controller,
+          listener: listener,
+          itemBuilder: (_, i) =>
+              _GrowingPage(placeholder: placeholder, real: heights[i]),
+        );
+        controller.jumpTo(index: 20);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.pumpAndSettle();
+        return _topIndex(listener);
+      }
 
-    // The bug: no reserved height -> jump does not land on the target.
-    expect(await landingWith(0), isNot(20));
-    // The fix: reserve the placeholder height first -> jump lands true.
-    expect(await landingWith(screen * 0.7), 20);
-  });
+      // The bug: no reserved height -> jump does not land on the target.
+      expect(await landingWith(0), isNot(20));
+      // The fix: reserve the placeholder height first -> jump lands true.
+      expect(await landingWith(screen * 0.7), 20);
+    },
+  );
 
-  testWidgets('C: faithful mini-reader (rebuild on measure + on position)',
-      (tester) async {
+  testWidgets('C: faithful mini-reader (rebuild on measure + on position)', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, screen);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -110,7 +113,11 @@ void main() {
     final controller = ItemScrollController();
     final key = GlobalKey<_MiniReaderState>();
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: _MiniReader(key: key, controller: controller))),
+      MaterialApp(
+        home: Scaffold(
+          body: _MiniReader(key: key, controller: controller),
+        ),
+      ),
     );
     // let the initial pages "decode" and measure
     for (var i = 0; i < 10; i++) {
@@ -160,10 +167,11 @@ class _MiniReaderState extends State<_MiniReader> {
   }
 
   void _onPositions() {
-    final positions = listener.itemPositions.value
-        .where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1)
-        .toList()
-      ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+    final positions =
+        listener.itemPositions.value
+            .where((p) => p.itemTrailingEdge > 0 && p.itemLeadingEdge < 1)
+            .toList()
+          ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
     if (positions.isEmpty) return;
     final top = positions.first.index;
     if (top != currentIndex && mounted) {
@@ -264,6 +272,5 @@ class _GrowingPageState extends State<_GrowingPage> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      SizedBox(height: _height, width: 400);
+  Widget build(BuildContext context) => SizedBox(height: _height, width: 400);
 }

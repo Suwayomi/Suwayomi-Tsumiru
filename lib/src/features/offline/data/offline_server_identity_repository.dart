@@ -49,10 +49,10 @@ class OfflineServerIdentityRepository {
       .getData((data) => data.setGlobalMeta?.meta.value);
 
   Future<String> resolve() => resolveServerInstanceId(
-        read: read,
-        write: write,
-        create: createServerInstanceId,
-      );
+    read: read,
+    write: write,
+    create: createServerInstanceId,
+  );
 }
 
 Future<String> resolveServerInstanceId({
@@ -76,18 +76,19 @@ OfflineServerIdentityRepository offlineServerIdentityRepository(Ref ref) =>
 
 @riverpod
 String currentServerAddress(Ref ref) => serverAddress(
-      baseUrl: ref.watch(serverUrlProvider),
-      port: ref.watch(serverPortProvider),
-      addPort: ref.watch(serverPortToggleProvider).ifNull(),
-    );
+  baseUrl: ref.watch(serverUrlProvider),
+  port: ref.watch(serverPortProvider),
+  addPort: ref.watch(serverPortToggleProvider).ifNull(),
+);
 
 @riverpod
 Future<String> serverInstanceId(Ref ref) async {
   final preferences = ref.watch(sharedPreferencesProvider);
   final address = ref.watch(currentServerAddressProvider);
   final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
-  final cachedAddress =
-      preferences.getString(DBKeys.offlineLastServerAddress.name);
+  final cachedAddress = preferences.getString(
+    DBKeys.offlineLastServerAddress.name,
+  );
 
   // Offline-first: if we already know this address's id, return it immediately
   // (no network wait, so the offline library opens instantly) and verify against
@@ -109,8 +110,9 @@ Future<void> _verifyServerInstanceId(
   String cachedId,
 ) async {
   try {
-    final live =
-        await ref.read(offlineServerIdentityRepositoryProvider).resolve();
+    final live = await ref
+        .read(offlineServerIdentityRepositoryProvider)
+        .resolve();
     if (live == cachedId) return;
     // The address now points at a different server — record its id and
     // re-evaluate so the mismatch guard/banner picks up the switch.
@@ -129,14 +131,16 @@ Future<String> _resolveAndCacheServerInstanceId(
   String address,
 ) async {
   try {
-    final id =
-        await ref.read(offlineServerIdentityRepositoryProvider).resolve();
+    final id = await ref
+        .read(offlineServerIdentityRepositoryProvider)
+        .resolve();
     await preferences.setString(DBKeys.offlineLastServerId.name, id);
     await preferences.setString(DBKeys.offlineLastServerAddress.name, address);
     return id;
   } catch (error) {
-    final cachedAddress =
-        preferences.getString(DBKeys.offlineLastServerAddress.name);
+    final cachedAddress = preferences.getString(
+      DBKeys.offlineLastServerAddress.name,
+    );
     final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
     final fallback = cachedServerIdForFailure(
       error: error,

@@ -10,22 +10,22 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generat
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 
 ChapterDto _ch(int id) => Fragment$ChapterDto(
-      id: id,
-      mangaId: 1,
-      name: 'c$id',
-      chapterNumber: id.toDouble(),
-      sourceOrder: id,
-      isRead: false,
-      isBookmarked: false,
-      isDownloaded: true,
-      lastPageRead: 0,
-      pageCount: 10,
-      fetchedAt: '0',
-      uploadDate: '0',
-      lastReadAt: '0',
-      url: '',
-      meta: const <Fragment$ChapterDto$meta>[],
-    );
+  id: id,
+  mangaId: 1,
+  name: 'c$id',
+  chapterNumber: id.toDouble(),
+  sourceOrder: id,
+  isRead: false,
+  isBookmarked: false,
+  isDownloaded: true,
+  lastPageRead: 0,
+  pageCount: 10,
+  fetchedAt: '0',
+  uploadDate: '0',
+  lastReadAt: '0',
+  url: '',
+  meta: const <Fragment$ChapterDto$meta>[],
+);
 
 void main() {
   group('DeleteChaptersSettings.fromMeta', () {
@@ -59,11 +59,18 @@ void main() {
     });
 
     test('uses the exact key names the WebUI reads/writes', () {
-      expect(kDeleteChaptersManuallyMarkedReadKey,
-          'webUI_deleteChaptersManuallyMarkedRead');
-      expect(kDeleteChaptersWhileReadingKey, 'webUI_deleteChaptersWhileReading');
       expect(
-          kDeleteChaptersWithBookmarkKey, 'webUI_deleteChaptersWithBookmark');
+        kDeleteChaptersManuallyMarkedReadKey,
+        'webUI_deleteChaptersManuallyMarkedRead',
+      );
+      expect(
+        kDeleteChaptersWhileReadingKey,
+        'webUI_deleteChaptersWhileReading',
+      );
+      expect(
+        kDeleteChaptersWithBookmarkKey,
+        'webUI_deleteChaptersWithBookmark',
+      );
     });
   });
 

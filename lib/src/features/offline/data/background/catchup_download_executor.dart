@@ -53,7 +53,8 @@ Future<bool> runCatchupDownloads({
   // those would silently stop the notification check on cellular.
   if (spec.wifiOnly) {
     final net = await Connectivity().checkConnectivity();
-    final unmetered = net.contains(ConnectivityResult.wifi) ||
+    final unmetered =
+        net.contains(ConnectivityResult.wifi) ||
         net.contains(ConnectivityResult.ethernet);
     if (!unmetered) return true; // not an error — just not now
   }
@@ -61,8 +62,9 @@ Future<bool> runCatchupDownloads({
   final support = await getApplicationSupportDirectory();
   final paths = OfflinePaths('${support.path}${Platform.pathSeparator}offline');
   final store = IoOfflinePageStore(paths);
-  final log =
-      BackgroundCompletionLog(File('${paths.baseDir}/.bg_completion.log'));
+  final log = BackgroundCompletionLog(
+    File('${paths.baseDir}/.bg_completion.log'),
+  );
   final lock = BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
 
   // The FGS may legitimately own the log right now; skip the run rather than
@@ -92,8 +94,9 @@ Future<bool> runCatchupDownloads({
       if (downloaded >= _maxChaptersPerRun) break;
       if (DateTime.now().isAfter(deadline)) break;
       if (await lock.yieldRequested()) break;
-      final mangaSpec =
-          spec.manga.where((m) => m.mangaId == mangaId).firstOrNull;
+      final mangaSpec = spec.manga
+          .where((m) => m.mangaId == mangaId)
+          .firstOrNull;
       if (mangaSpec == null) {
         // Rule removed since resolution: drop the obligations.
         ledger = _dropManga(ledger, mangaId);
@@ -101,7 +104,12 @@ Future<bool> runCatchupDownloads({
         continue;
       }
 
-      final chapters = await _fetchMangaChapters(target, record, broker, mangaId);
+      final chapters = await _fetchMangaChapters(
+        target,
+        record,
+        broker,
+        mangaId,
+      );
       if (chapters == null) return false; // transient — retry next wake
 
       // Pinned chapters are always desired; the server rows can't know about
@@ -166,7 +174,8 @@ Future<bool> runCatchupDownloads({
       // Drop obligations that are satisfied (present) or no longer desired
       // (rule window moved on) — either way there is nothing left to do.
       pending.removeWhere(
-          (c, m) => m == mangaId && (!desired.contains(c) || present.contains(c)));
+        (c, m) => m == mangaId && (!desired.contains(c) || present.contains(c)),
+      );
 
       ledger = ledger.copyWith(
         pendingDownloads: pending,
@@ -182,15 +191,15 @@ Future<bool> runCatchupDownloads({
 }
 
 CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) => ledger.copyWith(
-      pendingDownloads: {
-        for (final e in ledger.pendingDownloads.entries)
-          if (e.value != mangaId) e.key: e.value,
-      },
-      pendingServerFetch: {
-        for (final e in ledger.pendingServerFetch.entries)
-          if (e.value != mangaId) e.key: e.value,
-      },
-    );
+  pendingDownloads: {
+    for (final e in ledger.pendingDownloads.entries)
+      if (e.value != mangaId) e.key: e.value,
+  },
+  pendingServerFetch: {
+    for (final e in ledger.pendingServerFetch.entries)
+      if (e.value != mangaId) e.key: e.value,
+  },
+);
 
 /// Chapters already recorded in the un-replayed log, or already committed on
 /// disk — work the spec's snapshot can't know about yet.
@@ -210,7 +219,8 @@ Future<Set<int>> _loggedOrCommitted(
 ) async {
   final present = <int>{};
   for (final e in await log.parse()) {
-    if (e is AdoptChapterEntry && e.mangaId == mangaId) present.add(e.chapterId);
+    if (e is AdoptChapterEntry && e.mangaId == mangaId)
+      present.add(e.chapterId);
     if (e is ChapterEntry && e.status == 'downloaded') present.add(e.chapterId);
   }
   for (final chapterId in candidates) {
@@ -241,12 +251,12 @@ Future<_MangaChapters?> _fetchMangaChapters(
   const query =
       'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber isRead isBookmarked isDownloaded pageCount } } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
-        target: target,
-        record: record(),
-        query: query,
-        variables: {'id': mangaId},
-        accessToken: accessToken,
-      );
+    target: target,
+    record: record(),
+    query: query,
+    variables: {'id': mangaId},
+    accessToken: accessToken,
+  );
   var result = await post(null);
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
@@ -256,7 +266,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
   if (result is! Map<String, Object?>) return _MangaChapters(const []);
   final nodes =
       ((result['chapters'] as Map<String, Object?>?)?['nodes'] as List? ??
-          const []);
+      const []);
   final now = DateTime.now();
   return _MangaChapters([
     for (final n in nodes.cast<Map<String, Object?>>())
@@ -296,7 +306,9 @@ Future<bool> _enqueueServerDownload(
     record: record(),
     query: query,
     variables: {
-      'input': {'ids': [chapterId]},
+      'input': {
+        'ids': [chapterId],
+      },
     },
   );
   return result is Map<String, Object?>;
@@ -354,16 +366,18 @@ Future<int> _downloadOneChapter({
   if (!outcome.succeeded) return 0;
 
   final bytes = outcome.storedPages.values.fold<int>(0, (s, p) => s + p.bytes);
-  await log.appendAdopt(AdoptChapterEntry(
-    chapterId: row.id,
-    mangaId: mangaId,
-    serverId: spec.serverId,
-    name: row.name,
-    chapterIndex: row.chapterIndex,
-    chapterNumber: row.chapterNumber ?? -1,
-    pageCount: urls.length,
-    bytes: bytes,
-    isRead: row.isRead,
-  ));
+  await log.appendAdopt(
+    AdoptChapterEntry(
+      chapterId: row.id,
+      mangaId: mangaId,
+      serverId: spec.serverId,
+      name: row.name,
+      chapterIndex: row.chapterIndex,
+      chapterNumber: row.chapterNumber ?? -1,
+      pageCount: urls.length,
+      bytes: bytes,
+      isRead: row.isRead,
+    ),
+  );
   return bytes;
 }

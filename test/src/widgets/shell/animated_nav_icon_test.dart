@@ -39,8 +39,9 @@ void main() {
       }
     });
 
-    testWidgets('$name mounts already-selected at the settled frame',
-        (tester) async {
+    testWidgets('$name mounts already-selected at the settled frame', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(name, selected: true));
       expect(tester.hasRunningAnimations, isFalse);
     });

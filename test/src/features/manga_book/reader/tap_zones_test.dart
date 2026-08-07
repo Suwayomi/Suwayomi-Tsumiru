@@ -7,9 +7,16 @@ void main() {
     test('never resolves to Default or Disabled', () {
       for (final mode in ReaderMode.values) {
         final resolved = defaultNavigationFor(mode);
-        expect(resolved, isNot(ReaderNavigationLayout.defaultNavigation),
-            reason: '$mode');
-        expect(resolved, isNot(ReaderNavigationLayout.disabled), reason: '$mode');
+        expect(
+          resolved,
+          isNot(ReaderNavigationLayout.defaultNavigation),
+          reason: '$mode',
+        );
+        expect(
+          resolved,
+          isNot(ReaderNavigationLayout.disabled),
+          reason: '$mode',
+        );
       }
     });
 
@@ -86,8 +93,10 @@ void main() {
         ReaderNavigationLayout.displayOrder.toSet(),
         ReaderNavigationLayout.values.toSet(),
       );
-      expect(ReaderNavigationLayout.displayOrder.length,
-          ReaderNavigationLayout.values.length);
+      expect(
+        ReaderNavigationLayout.displayOrder.length,
+        ReaderNavigationLayout.values.length,
+      );
     });
   });
 }

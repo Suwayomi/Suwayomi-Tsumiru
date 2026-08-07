@@ -33,14 +33,14 @@ WindowChapter chapter(
 /// Compact description of each display slot: "cID:raw" for a spread's primary
 /// raw, or "T(from>to)" for a transition.
 List<String> shape(PagedDisplayWindow w) => [
-      for (final item in w.items)
-        switch (item) {
-          SpreadDisplay(:final chapterId, :final entry) =>
-            'c$chapterId:${entry.primaryRaw}',
-          TransitionDisplay(:final fromChapterId, :final toChapterId) =>
-            'T($fromChapterId>$toChapterId)',
-        },
-    ];
+  for (final item in w.items)
+    switch (item) {
+      SpreadDisplay(:final chapterId, :final entry) =>
+        'c$chapterId:${entry.primaryRaw}',
+      TransitionDisplay(:final fromChapterId, :final toChapterId) =>
+        'T($fromChapterId>$toChapterId)',
+    },
+];
 
 void main() {
   group('single chapter — no transitions', () {

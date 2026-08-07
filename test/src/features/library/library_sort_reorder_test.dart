@@ -31,33 +31,33 @@ const _itemCount = 200;
 /// Minimal MangaDto — a null [thumbnailUrl] takes the deterministic no-cover
 /// branch, since a real cover can't decode in a widget test.
 Fragment$MangaDto _manga(int id) => Fragment$MangaDto(
-      id: id,
-      title: 'Manga $id',
-      thumbnailUrl: null,
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 4),
-      downloadCount: 1,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 2,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/$id',
-    );
+  id: id,
+  title: 'Manga $id',
+  thumbnailUrl: null,
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 4),
+  downloadCount: 1,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 2,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/$id',
+);
 
 /// The child index range the grid's sliver currently has laid out, or null when
 /// it has none — which is the crash's visible symptom, a blank grid, and is not
 /// something [WidgetTester.takeException] would report on its own.
 ({int first, int last})? _liveRange(WidgetTester tester) {
-  final adaptor =
-      tester.allRenderObjects.whereType<RenderSliverMultiBoxAdaptor>().first;
+  final adaptor = tester.allRenderObjects
+      .whereType<RenderSliverMultiBoxAdaptor>()
+      .first;
   final first = adaptor.firstChild;
   final last = adaptor.lastChild;
   if (first == null || last == null) return null;
@@ -80,7 +80,8 @@ void _expectPrefixOnly(WidgetTester tester) {
   expect(
     live!.last,
     lessThan(_itemCount - 1),
-    reason: 'the sliver must materialise only a prefix for the re-order below '
+    reason:
+        'the sliver must materialise only a prefix for the re-order below '
         'to be representative',
   );
 }
@@ -108,20 +109,22 @@ Future<Future<void> Function(List<Fragment$MangaDto>)> _harness(
   final overrides = [sharedPreferencesProvider.overrideWithValue(sp)];
 
   return (items) async {
-    await tester.pumpWidget(ProviderScope(
-      overrides: overrides,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: LibraryMangaGridView(
-            items: items,
-            onOpen: (_) {},
-            onLongPress: (_) {},
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: LibraryMangaGridView(
+              items: items,
+              onOpen: (_) {},
+              onLongPress: (_) {},
+            ),
           ),
         ),
       ),
-    ));
+    );
     await tester.pump();
   };
 }

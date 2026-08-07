@@ -27,15 +27,19 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  final client = GraphQLClient(link: HttpLink('http://localhost'), cache: GraphQLCache());
+  final client = GraphQLClient(
+    link: HttpLink('http://localhost'),
+    cache: GraphQLCache(),
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         graphQlClientProvider.overrideWithValue(client),
         libraryMangaListProvider.overrideWith((ref) async => <MangaDto>[]),
-        searchableSourcesProvider
-            .overrideWithValue(const AsyncValue.data(<SourceDto>[])),
+        searchableSourcesProvider.overrideWithValue(
+          const AsyncValue.data(<SourceDto>[]),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

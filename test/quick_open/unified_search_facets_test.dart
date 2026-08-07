@@ -34,7 +34,10 @@ void main() {
     final f = buildLibraryFacets(fields);
     expect(f.source, ['Comick', 'MangaDex']); // sorted
     expect(f.genre, ['Action', 'Romance']); // distinct + sorted
-    expect(f.status, ['completed', 'ongoing']); // lowercased for display + sorted
+    expect(f.status, [
+      'completed',
+      'ongoing',
+    ]); // lowercased for display + sorted
     expect(f.tag, ['dark', 'fav']);
     expect(f.author, ['Kubo']); // distinct
     expect(f.valuesFor('genre'), ['Action', 'Romance']);
