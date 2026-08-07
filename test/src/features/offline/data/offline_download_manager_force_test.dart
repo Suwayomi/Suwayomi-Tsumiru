@@ -10,29 +10,7 @@ import 'package:tsumiru/src/features/offline/data/offline_download_manager.dart'
 import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 
 import '../../../../helpers/offline_test_db.dart';
-
-class _FakeStore implements OfflinePageStore {
-  @override
-  Future<({String relPath, int bytes})> writePage(
-          int m, int c, int i, List<int> b, String e) async =>
-      (relPath: '$m/$c/$i.$e', bytes: b.length);
-  @override
-  Future<void> deleteChapter(int m, int c) async {}
-  @override
-  Future<int> chapterBytes(int m, int c) async => 0;
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
-
+import '../../../../helpers/fake_page_store.dart';
 void main() {
   late OfflineDatabase db;
   setUp(() => db = testOfflineDatabase());
@@ -62,7 +40,7 @@ void main() {
 
   OfflineDownloadManager manager() => OfflineDownloadManager(
         db: db,
-        store: _FakeStore(),
+        store: FakePageStore(),
         fetchPageUrls: (id) async => ['/api/v1/x/0'],
         fetchBytes: (u) async => (bytes: [1, 2, 3], ext: 'jpg'),
       );

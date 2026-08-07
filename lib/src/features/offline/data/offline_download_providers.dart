@@ -39,11 +39,13 @@ import '../../tracking/domain/tracking_settings_providers.dart';
 import 'background/background_download_controller_shim.dart';
 import 'background/catchup_spec_writer.dart';
 import 'background/catchup_work_spec.dart';
+import 'chapter_commit.dart';
 import 'chapter_download_engine.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_coordinator.dart';
 import 'offline_download_manager.dart';
+import 'offline_download_progress.dart';
 import 'offline_page_store.dart';
 import 'offline_reconciler.dart';
 import 'offline_repository.dart';
@@ -181,22 +183,18 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
   return ref.watch(offlineRepositoryProvider).watchChapterState(chapterId);
 }
 
-/// Live download progress for a chapter as a fraction 0..1 (pages on disk /
-/// total pages), or null when the total isn't known yet — drives the
-/// determinate progress arc on a downloading chapter.
+/// Live download progress for a chapter as a fraction 0..1, or null when
+/// nothing is downloading it right now — drives the determinate progress arc.
+///
+/// Reported by the downloader rather than counted from page rows: a chapter's
+/// rows all appear together when it commits, so the catalog has nothing to
+/// count while the download is in flight.
 @riverpod
-Stream<double?> offlineChapterProgress(Ref ref, int chapterId) {
-  if (!ref.watch(offlineActiveProvider)) {
-    return Stream.value(null);
-  }
-  final repo = ref.watch(offlineRepositoryProvider);
-  // Re-read the page total on every tick (not once up front) so the arc flips
-  // from indeterminate to real the moment it's known — webtoon chapters only
-  // learn their count once the downloader resolves pages mid-download.
-  return repo.watchChapterDownloadedPages(chapterId).asyncMap((done) async {
-    final total = (await repo.db.chapterById(chapterId))?.pageCount ?? 0;
-    return total <= 0 ? null : (done / total).clamp(0.0, 1.0);
-  }).distinct();
+double? offlineChapterProgress(Ref ref, int chapterId) {
+  if (!ref.watch(offlineActiveProvider)) return null;
+  final progress = ref.watch(offlineDownloadProgressProvider)[chapterId];
+  if (progress == null || progress.total <= 0) return null;
+  return (progress.done / progress.total).clamp(0.0, 1.0);
 }
 
 /// Save a chapter's pages to the device from the synced catalog row; no-op if
@@ -886,6 +884,11 @@ Future<void> _deleteChapterFromDeviceContainer(
 }
 
 /// Concrete-deps core so both entries share one delete path.
+///
+/// The sequence itself is unchanged from what shipped — bump, cancel,
+/// tombstone, clear rows, delete files. The only addition is the per-chapter
+/// lock, which is what stops a commit landing between the row clear and the
+/// file delete and republishing the chapter the user just removed.
 Future<void> _deleteChapterFromDeviceCore({
   required OfflineDownloadManager manager,
   required OfflineDatabase db,
@@ -908,9 +911,11 @@ Future<void> _deleteChapterFromDeviceCore({
     await coordinator?.beginDelete(chapterId);
   }
   try {
-    final chapter = await repo.chapterById(chapterId);
-    if (chapter != null) await manager.deleteChapter(chapter);
-    await db.setChapterPinned(chapterId, false);
+    await ChapterFileLock.run(chapterId, () async {
+      final chapter = await repo.chapterById(chapterId);
+      if (chapter != null) await manager.deleteChapter(chapter);
+      await db.setChapterPinned(chapterId, false);
+    });
   } finally {
     coordinator?.endDelete(chapterId);
   }
@@ -1189,7 +1194,7 @@ Future<void> reconcileMangaCore({
   required SafetyNetConfig nets,
   required int mangaId,
   Future<void> Function(List<int> chapterIds)? enqueueServerDownload,
-  Future<void> Function(int chapterId)? removeFromWorker,
+  Future<void> Function(int chapterId, int generation)? removeFromWorker,
   Set<int> sessionProtected = const {},
   int deleteWhileReadingSlots = 0,
 }) {
@@ -1211,15 +1216,21 @@ Future<void> reconcileMangaCore({
     },
     onEvict: (id) async {
       try {
+        // Bump before anything else, and unconditionally — an eviction is a
+        // delete, so a producer still holding staging for this chapter has to
+        // be outranked whether or not the Android worker is wired up here.
+        final newGen = await db.bumpChapterGeneration(id);
         // Cancel the active downloader before removing files, or an in-flight
         // download re-writes the chapter after the purge. beginDelete claims
         // the desktop engine; removeFromWorker stops the Android FGS worker
         // (null in the launch/test core, where the coordinator is the only
         // downloader).
         await coordinator.beginDelete(id);
-        if (removeFromWorker != null) await removeFromWorker(id);
-        final c = await repo.chapterById(id);
-        if (c != null) await manager.deleteChapter(c);
+        if (removeFromWorker != null) await removeFromWorker(id, newGen);
+        await ChapterFileLock.run(id, () async {
+          final c = await repo.chapterById(id);
+          if (c != null) await manager.deleteChapter(c);
+        });
       } catch (e) {
         logger.e('Offline: reconcile evict skipped for chapter $id: $e');
       } finally {
@@ -1258,11 +1269,9 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
-    removeFromWorker: (id) async {
+    removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
-      final gen = await ref.read(offlineDatabaseProvider)
-          .bumpChapterGeneration(id);
       await ctrl.recordChapterDeleted(id, gen);
     },
   );
@@ -1289,11 +1298,9 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
     enqueueServerDownload: (ids) => ref
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
-    removeFromWorker: (id) async {
+    removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
-      final gen = await ref.read(offlineDatabaseProvider)
-          .bumpChapterGeneration(id);
       await ctrl.recordChapterDeleted(id, gen);
     },
   );
@@ -1324,12 +1331,9 @@ Future<void> reconcileMangaContainer(
     enqueueServerDownload: (ids) => container
         .read(downloadsRepositoryProvider)
         .addChaptersBatchToDownloadQueue(ids),
-    removeFromWorker: (id) async {
+    removeFromWorker: (id, gen) async {
       final ctrl = container.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
-      final gen = await container
-          .read(offlineDatabaseProvider)
-          .bumpChapterGeneration(id);
       await ctrl.recordChapterDeleted(id, gen);
     },
   );
@@ -1365,12 +1369,9 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
         mangaId: m.id,
         deleteWhileReadingSlots:
             container.read(localDeleteSettingsProvider).deleteWhileReading,
-        removeFromWorker: (id) async {
+        removeFromWorker: (id, gen) async {
           final ctrl = container.read(backgroundDownloadControllerProvider);
           await ctrl.onRemoved(id);
-          final gen = await container
-              .read(offlineDatabaseProvider)
-              .bumpChapterGeneration(id);
           await ctrl.recordChapterDeleted(id, gen);
         });
   }

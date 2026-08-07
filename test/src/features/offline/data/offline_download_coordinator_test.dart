@@ -16,51 +16,15 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 
 import '../../../../helpers/offline_test_db.dart';
-
-/// In-memory page store — "writes" pages to a map keyed by chapter/page.
-class _FakeStore implements OfflinePageStore {
-  final pages = <String, int>{}; // '$chapter/$page' -> bytes
-  @override
-  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
-      int pageIndex, List<int> bytes, String ext) async {
-    pages['$chapterId/$pageIndex'] = bytes.length;
-    return (
-      relPath: '$mangaId/$chapterId/$pageIndex.$ext',
-      bytes: bytes.length
-    );
-  }
-
-  @override
-  Future<void> deleteChapter(int mangaId, int chapterId) async {}
-  @override
-  Future<int> chapterBytes(int mangaId, int chapterId) async {
-    var total = 0;
-    for (final e in pages.entries) {
-      if (e.key.startsWith('$chapterId/')) total += e.value;
-    }
-    return total;
-  }
-
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
+import '../../../../helpers/fake_page_store.dart';
 
 void main() {
   late OfflineDatabase db;
-  late _FakeStore store;
+  late FakePageStore store;
   setUp(() {
     OfflineDownloadCoordinator.resetSharedStateForTest();
     db = testOfflineDatabase();
-    store = _FakeStore();
+    store = FakePageStore();
   });
   tearDown(() => db.close());
 
@@ -102,8 +66,8 @@ void main() {
     return OfflineDownloadCoordinator(
       db: db,
       engine: engine,
+      store: store,
       resolvePages: (_) async => pages,
-      measureChapterBytes: measureOverride ?? store.chapterBytes,
       persistedPaused: persistedPaused,
     );
   }
@@ -124,14 +88,43 @@ void main() {
     expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
   });
 
-  test('resume only fetches pages not already on disk', () async {
+  test('resume only fetches pages not already staged', () async {
     await seedChapter(1, 7, 3);
-    await db.into(db.offlinePages).insert(OfflinePagesCompanion.insert(
-        chapterId: 1, pageIndex: 0, relativePath: '7/1/0.jpg'));
+    // A previous run got page 0 down before it was killed.
+    store.seedStaged(1, {0: 3}, indices: [0, 1, 2]);
     await coord().enqueueChapter((await db.chapterById(1))!);
     expect(
         (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
     expect(store.pages.keys.toSet(), {'1/1', '1/2'}); // only the 2 missing
+  });
+
+  test('staging from a stale page list is restarted, not merged into',
+      () async {
+    await seedChapter(1, 7, 3);
+    // Staging left by a run whose chapter had a different page count; mixing
+    // the two would commit a chapter assembled from both.
+    store.seedStaged(1, {0: 3, 1: 3}, indices: [0, 1]);
+    await coord().enqueueChapter((await db.chapterById(1))!);
+    expect(
+        (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
+    expect(store.pages.keys.toSet(), {'1/0', '1/1', '1/2'},
+        reason: 'every page re-fetched against the fresh list');
+  });
+
+  test('a chapter left incomplete publishes nothing', () async {
+    await seedChapter(1, 7, 3);
+    // Cancelled once the download is under way, so pages are missing when the
+    // engine unwinds. The chapter must be absent, not a short one.
+    late OfflineDownloadCoordinator c;
+    c = coord(onFetch: () async => c.cancel(1));
+    await c.enqueueChapter((await db.chapterById(1))!);
+
+    expect((await db.chapterById(1))!.deviceState,
+        isNot(OfflineDeviceState.downloaded));
+    expect(await db.downloadedPageCount(1), 0);
+    expect(store.committed, isEmpty, reason: 'nothing was published');
+    expect(store.manifests.containsKey(1), isTrue,
+        reason: 'staging survives for the resume');
   });
 
   test('auth failure (401 + refresh dead) -> error', () async {
@@ -252,7 +245,7 @@ void main() {
       coordinator: coord(),
       nets: SafetyNetConfig.off,
       mangaId: 7,
-      removeFromWorker: (id) async => removed.add(id),
+      removeFromWorker: (id, gen) async => removed.add(id),
     );
 
     expect(removed, [9],
@@ -336,22 +329,38 @@ void main() {
     c.endDelete(1);
   });
 
-  test('a delete committing during finalize measurement is not overwritten',
-      () async {
+  test('a delete landing before the commit is not overwritten by it', () async {
     await seedChapter(1, 7, 2);
-    // measureChapterBytes fires inside _finalizeIfComplete, after the pages are
-    // stored but before the downloaded write — the seam where a delete commits.
+    // The user deletes the chapter while its last pages are downloading. The
+    // commit re-reads the row and must refuse rather than republish it.
     final c = coord(
       pages: const ['/p/0', '/p/1'],
-      measureOverride: (m, ch) async {
-        await db.setChapterDeviceState(1, OfflineDeviceState.none);
-        return 6;
-      },
+      onFetch: () async =>
+          db.setChapterDeviceState(1, OfflineDeviceState.none),
     );
     await c.enqueueChapter((await db.chapterById(1))!);
 
     expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.none,
         reason: 'the delete wins — the completion does not resurrect it');
+    expect(await db.downloadedPageCount(1), 0);
+    expect(store.committed, isEmpty);
+  });
+
+  test('a generation bumped mid-download refuses the commit', () async {
+    await seedChapter(1, 7, 2);
+    // A delete-then-requeue while the download ran: the pages in staging belong
+    // to a generation nobody is waiting for.
+    final c = coord(
+      pages: const ['/p/0', '/p/1'],
+      onFetch: () async => db.bumpChapterGeneration(1),
+    );
+    await c.enqueueChapter((await db.chapterById(1))!);
+
+    expect((await db.chapterById(1))!.deviceState,
+        isNot(OfflineDeviceState.downloaded));
+    expect(store.committed, isEmpty);
+    expect(store.manifests.containsKey(1), isFalse,
+        reason: 'refused staging is dropped, not left to accumulate');
   });
 
   test('a delete committing mid-download is not overwritten by a late error',

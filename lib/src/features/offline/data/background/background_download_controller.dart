@@ -25,7 +25,9 @@ import '../../../notifications/data/local_notification_service.dart';
 import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import '../chapter_commit.dart';
 import '../offline_database.dart';
+import '../offline_download_progress.dart';
 import '../offline_page_store.dart';
 import '../offline_paths.dart';
 import '../offline_repository.dart';
@@ -316,9 +318,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       await replayCompletionLog(
         db: _db,
         paths: _paths,
+        store: _store,
         log: _log,
-        measureBytes: (mangaId, chapterId) =>
-            _store.chapterBytes(mangaId, chapterId),
         // Gates catch-up adoptions: a record from another server's catalog is
         // refused (and its files cleaned up), never adopted across identities.
         catalogServerId: _ref
@@ -348,7 +349,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         unawaited(_applyChapterStart(data['chapterId'] as int,
             data['total'] as int?, data['gen'] as int? ?? 0));
       case 'page':
-        unawaited(_applyPageEvent(data));
+        _applyPageEvent(data);
       case 'chapterDone':
         unawaited(_onChapterDone(data));
       case 'drained':
@@ -374,21 +375,17 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _applyPageEvent(Map data) async {
-    final id = data['chapterId'] as int;
-    final eventGen = data['gen'] as int? ?? 0;
-    await _db.transaction(() async {
-      final c = await _db.chapterById(id);
-      if (c == null || c.deviceState == OfflineDeviceState.none) return;
-      if (eventGen < c.downloadGeneration) return; // stale generation
-      await _db.into(_db.offlinePages).insertOnConflictUpdate(
-            OfflinePagesCompanion.insert(
-              chapterId: id,
-              pageIndex: data['pageIndex'] as int,
-              relativePath: data['relPath'] as String,
-            ),
-          );
-    });
+  /// A page landed in the worker's staging area. Nothing is written to the
+  /// catalog — the chapter isn't published until it commits — so this only
+  /// moves the progress arc.
+  void _applyPageEvent(Map data) {
+    final total = data['total'] as int? ?? 0;
+    if (total <= 0) return;
+    _ref.read(offlineDownloadProgressProvider.notifier).start(
+          data['chapterId'] as int,
+          total: total,
+          done: data['done'] as int? ?? 0,
+        );
   }
 
   /// The worker drained and is self-stopping. Anything queued during that
@@ -450,20 +447,27 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     final chapterId = data['chapterId'] as int?;
     final status = data['status'] as String?;
     if (chapterId != null && status != null) {
-      // Measure bytes outside the transaction (filesystem read); the
-      // terminal-state apply rechecks so a chapterDone landing after a delete
-      // can't flip a `none` chapter back to downloaded/error.
-      int bytes = 0;
+      _ref.read(offlineDownloadProgressProvider.notifier).clear(chapterId);
+      // SINGLE COMMITTER: the worker only fills staging. Publishing the chapter
+      // happens here, on the main isolate, so exactly one party ever renames a
+      // staging directory into place and writes the rows for it.
       if (status == 'downloaded') {
         final ch = await _db.chapterById(chapterId);
-        if (ch != null) bytes = await _store.chapterBytes(ch.mangaId, chapterId);
+        if (ch != null) {
+          await commitStagedChapter(
+            db: _db,
+            store: _store,
+            mangaId: ch.mangaId,
+            chapterId: chapterId,
+          );
+        }
+      } else {
+        await applyBackgroundTerminalState(
+            db: _db,
+            chapterId: chapterId,
+            status: status,
+            eventGeneration: data['gen'] as int? ?? 0);
       }
-      await applyBackgroundTerminalState(
-          db: _db,
-          chapterId: chapterId,
-          status: status,
-          bytes: bytes,
-          eventGeneration: data['gen'] as int? ?? 0);
       if (status == 'downloaded') _sessionDownloaded++;
       if (status == 'error') _sessionFailed++;
     }

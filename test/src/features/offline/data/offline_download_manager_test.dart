@@ -10,51 +10,15 @@ import 'package:tsumiru/src/features/offline/data/offline_download_manager.dart'
 import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 
 import '../../../../helpers/offline_test_db.dart';
-
-/// In-memory page store: records writes/deletes, no real file IO.
-class _FakeStore implements OfflinePageStore {
-  final Map<String, int> written = {};
-  final List<int> deletedChapters = [];
-
-  @override
-  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
-      int pageIndex, List<int> bytes, String ext) async {
-    final rel =
-        '$mangaId/$chapterId/${pageIndex.toString().padLeft(3, '0')}.$ext';
-    written[rel] = bytes.length;
-    return (relPath: rel, bytes: bytes.length);
-  }
-
-  @override
-  Future<void> deleteChapter(int mangaId, int chapterId) async {
-    deletedChapters.add(chapterId);
-    written.removeWhere((k, _) => k.startsWith('$mangaId/$chapterId/'));
-  }
-
-  @override
-  Future<int> chapterBytes(int mangaId, int chapterId) async => written.entries
-      .where((e) => e.key.startsWith('$mangaId/$chapterId/'))
-      .fold<int>(0, (s, e) => s + e.value);
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
+import '../../../../helpers/fake_page_store.dart';
 
 void main() {
   late OfflineDatabase db;
-  late _FakeStore store;
+  late FakePageStore store;
 
   setUp(() {
     db = testOfflineDatabase();
-    store = _FakeStore();
+    store = FakePageStore();
   });
   tearDown(() => db.close());
 
@@ -96,7 +60,8 @@ void main() {
         .get();
     expect(pages.length, 3);
     expect(pages.map((p) => p.relativePath),
-        ['552/2000/000.jpg', '552/2000/001.jpg', '552/2000/002.jpg']);
+        ['552/2000/0.jpg', '552/2000/1.jpg', '552/2000/2.jpg'],
+        reason: 'rows point at the committed directory, never at staging');
 
     final c = (await db.chaptersForManga(552)).single;
     expect(c.deviceState, OfflineDeviceState.downloaded);

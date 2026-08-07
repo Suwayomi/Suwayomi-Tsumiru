@@ -21,6 +21,7 @@ import '../../settings/presentation/server/widget/client/server_url_tile/server_
 import 'chapter_download_engine.dart';
 import 'offline_database.dart';
 import 'offline_download_coordinator.dart';
+import 'offline_download_progress.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
 import 'server_reachability.dart';
@@ -93,10 +94,15 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   return OfflineDownloadCoordinator(
     db: ref.watch(offlineDatabaseProvider),
     engine: engine,
+    store: store,
     resolvePages: (chapterId) async =>
         (await repo.getChapterPages(chapterId: chapterId))?.pages ??
         const <String>[],
-    measureChapterBytes: store.chapterBytes,
+    onProgress: (chapterId, done, total) => ref
+        .read(offlineDownloadProgressProvider.notifier)
+        .start(chapterId, total: total, done: done),
+    onProgressDone: (chapterId) =>
+        ref.read(offlineDownloadProgressProvider.notifier).clear(chapterId),
     persistedPaused: () =>
         prefs.getBool(DBKeys.offlineDownloadsPaused.name) ?? false,
     // Deferred: the pump can hit this mid-provider-build.

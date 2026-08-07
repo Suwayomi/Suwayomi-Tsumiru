@@ -8,23 +8,31 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
+import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 
 import '../../helpers/offline_test_db.dart';
 
+/// Recovery runs against the real page store on a real temp directory: the
+/// whole point of the design is what the filesystem looks like after a kill, so
+/// a mocked store would test the mock.
 void main() {
   late OfflineDatabase db;
   late Directory tmp;
   late OfflinePaths paths;
+  late IoOfflinePageStore store;
   late BackgroundCompletionLog log;
 
   setUp(() async {
+    ChapterFileLock.resetForTest();
     db = testOfflineDatabase();
     tmp = await Directory.systemTemp.createTemp('replay');
     paths = OfflinePaths(tmp.path);
+    store = IoOfflinePageStore(paths);
     log = BackgroundCompletionLog(File('${tmp.path}/.bg_completion.log'));
-    // a manga + a downloading chapter exist in drift:
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.upsertChapterMetadata(
         id: 5, mangaId: 1, name: 'c', chapterIndex: 0, isRead: false,
@@ -37,233 +45,261 @@ void main() {
     await tmp.delete(recursive: true);
   });
 
-  Future<void> writePageFile(int m, int c, int i) async {
-    final f = File(paths.absolute(paths.pageRel(m, c, i, 'jpg')));
-    await f.parent.create(recursive: true);
-    await f.writeAsBytes(List.filled(10, 0));
+  Future<void> replay() => replayCompletionLog(
+      db: db, paths: paths, store: store, log: log, catalogServerId: 'srv');
+
+  /// Stage [pages] of chapter [c], as an interrupted or finished worker would.
+  Future<void> stage(int m, int c, List<int> indices, List<int> pages,
+      {int generation = 0}) async {
+    await store.beginChapter(
+        m, c, ChapterManifest(generation: generation, indices: indices));
+    for (final i in pages) {
+      await store.writePage(m, c, i, List.filled(10, 0), 'jpg');
+    }
   }
 
-  test('a page on disk with NO log line still gets a drift row (filesystem truth)',
+  bool finalDirExists(int m, int c) =>
+      Directory(paths.absolute(paths.chapterDirRel(m, c))).existsSync();
+  bool stagingExists(int m, int c) =>
+      Directory(paths.absolute(paths.chapterStagingDirRel(m, c))).existsSync();
+
+  test('complete staging is committed even with no terminal line in the log',
       () async {
-    await writePageFile(1, 5, 0);
-    await writePageFile(1, 5, 1);
-    // log only recorded page 0 + a downloaded terminal (page 1 line was lost):
-    await log.appendPage(chapterId: 5, mangaId: 1, pageIndex: 0, relPath: paths.pageRel(1, 5, 0, 'jpg'), bytes: 10);
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 2, bytes: 20);
+    // The worker was killed after its last page but before it could record
+    // anything. Recovery reads the directory, not the log.
+    await stage(1, 5, [0, 1], [0, 1]);
 
-    await replayCompletionLog(
-        db: db, paths: paths, log: log,
-        measureBytes: (m, c) async => 20);
+    await replay();
 
-    expect(await db.downloadedPageCount(5), 2); // both pages, from the filesystem
-    final ch = await db.chapterById(5);
-    expect(ch!.deviceState, OfflineDeviceState.downloaded);
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloaded);
+    expect(await db.downloadedPageCount(5), 2);
+    expect(finalDirExists(1, 5), isTrue);
+    expect(stagingExists(1, 5), isFalse);
     expect(await log.parse(), isEmpty); // truncated
   });
 
-  test('a deleted chapter (drift row gone) is NOT resurrected', () async {
-    await writePageFile(1, 5, 0);
-    await log.appendPage(chapterId: 5, mangaId: 1, pageIndex: 0, relPath: paths.pageRel(1, 5, 0, 'jpg'), bytes: 10);
-    // user deleted it: state -> none
-    await db.setChapterDeviceState(5, OfflineDeviceState.none);
+  test('a chapter killed mid-download is left absent, never blank', () async {
+    // One of two pages made it. The chapter must not appear at all.
+    await stage(1, 5, [0, 1], [0]);
 
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
+    await replay();
 
-    expect(await db.downloadedPageCount(5), 0); // no rows added
-    final ch = await db.chapterById(5);
-    expect(ch!.deviceState, OfflineDeviceState.none);
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloading,
+        reason: 'still resumable');
+    expect(await db.downloadedPageCount(5), 0, reason: 'nothing published');
+    expect(finalDirExists(1, 5), isFalse, reason: 'no half-chapter on disk');
+    expect(stagingExists(1, 5), isTrue, reason: 'staging kept for the resume');
   });
 
-  test('a delete committing mid-replay wins (recheck inside the transaction)',
+  test('a kill between the commit rename and its catalog write is adopted',
       () async {
-    await writePageFile(1, 5, 0);
-    await log.appendPage(
-        chapterId: 5,
-        mangaId: 1,
-        pageIndex: 0,
-        relPath: paths.pageRel(1, 5, 0, 'jpg'),
-        bytes: 10);
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 1, bytes: 10);
+    // Exactly the crash the design leaves open: the directory is in place and
+    // complete, but the transaction that would have recorded it never ran.
+    await stage(1, 5, [0, 1], [0, 1]);
+    expect(await store.commitStaging(1, 5), isNotNull);
+    // No commitDownloadedChapter — that is the write we are pretending was lost.
+    expect(await db.downloadedPageCount(5), 0);
 
-    // measureBytes fires after replay's initial state check but before its write
-    // transaction — the seam where a concurrent delete commits.
-    await replayCompletionLog(
-        db: db,
-        paths: paths,
-        log: log,
-        measureBytes: (m, c) async {
-          await db.setChapterDeviceState(5, OfflineDeviceState.none);
-          return 10;
-        });
+    await replay();
 
-    expect(await db.downloadedPageCount(5), 0, reason: 'no rows resurrected');
-    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.none,
-        reason: 'the delete wins over the replay');
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloaded);
+    expect(await db.downloadedPageCount(5), 2);
   });
 
-  test('a delete tombstone stops a stale entry completing a re-queued chapter',
-      () async {
-    // Generation 1: the chapter finished (log has downloaded), not yet replayed.
-    await writePageFile(1, 5, 0);
-    await log.appendPage(
-        chapterId: 5,
-        mangaId: 1,
-        pageIndex: 0,
-        relPath: paths.pageRel(1, 5, 0, 'jpg'),
-        bytes: 10);
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 1, bytes: 10);
-    // The user deletes it (tombstone bumps to generation 1), its files go, then
-    // re-queues it.
-    await log.appendDeleted(5, 1);
-    await File(paths.absolute(paths.pageRel(1, 5, 0, 'jpg'))).delete();
+  test('a deleted chapter is not resurrected and its files are swept', () async {
+    await stage(1, 5, [0, 1], [0, 1]);
     await db.setChapterDeviceState(5, OfflineDeviceState.none);
+
+    await replay();
+
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.none);
+    expect(await db.downloadedPageCount(5), 0);
+    expect(stagingExists(1, 5), isFalse);
+    expect(finalDirExists(1, 5), isFalse);
+  });
+
+  test('a complete final dir under a deleted row is deleted, honouring the user',
+      () async {
+    // Crash mid-delete: the row was cleared but the files outlived it.
+    await stage(1, 5, [0, 1], [0, 1]);
+    await store.commitStaging(1, 5);
+    await db.setChapterDeviceState(5, OfflineDeviceState.none);
+
+    await replay();
+
+    expect(finalDirExists(1, 5), isFalse);
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.none);
+  });
+
+  test('staging from a superseded generation cannot commit', () async {
+    // The worker finished at generation 0; a delete then bumped drift to 1 and
+    // the chapter was re-queued. Those pages belong to nobody now.
+    await stage(1, 5, [0, 1], [0, 1]);
+    await db.bumpChapterGeneration(5);
     await db.setChapterDeviceState(5, OfflineDeviceState.queued);
 
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
-
-    final ch = await db.chapterById(5);
-    expect(ch!.deviceState, OfflineDeviceState.queued,
-        reason: 'the stale downloaded entry must not complete the new generation');
-    expect(await db.downloadedPageCount(5), 0, reason: 'no stale rows applied');
-  });
-
-  test('a late downloaded entry after the tombstone cannot complete with no files',
-      () async {
-    // The worker was paused between its final page write and its terminal append,
-    // so the log order is pages -> tombstone -> stale downloaded. The files were
-    // deleted, so the filesystem check must reject the stale completion.
-    await log.appendPage(
-        chapterId: 5,
-        mangaId: 1,
-        pageIndex: 0,
-        relPath: paths.pageRel(1, 5, 0, 'jpg'),
-        bytes: 10);
-    await log.appendDeleted(5, 1);
-    // A current-generation downloaded whose files aren't actually on disk (a
-    // torn/partial download) — the filesystem check must still reject it.
-    await log.appendChapter(
-        chapterId: 5, status: 'downloaded', pages: 1, bytes: 10, generation: 1);
-    // Files gone (deleted), chapter re-queued.
-    await db.setChapterDeviceState(5, OfflineDeviceState.none);
-    await db.setChapterDeviceState(5, OfflineDeviceState.queued);
-
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
+    await replay();
 
     expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued,
-        reason: 'no files on disk — a stale downloaded must not complete it');
+        reason: 'the stale download must not complete the new generation');
     expect(await db.downloadedPageCount(5), 0);
+    expect(stagingExists(1, 5), isFalse, reason: 'refused staging is dropped');
   });
 
-  test('a .part staging file does not count as a completed page', () async {
-    // Only an in-flight atomic-write staging file exists; a stale downloaded
-    // entry must not complete the chapter off it.
-    final part = File('${paths.absolute(paths.pageRel(1, 5, 0, 'jpg'))}.part');
-    await part.parent.create(recursive: true);
-    await part.writeAsBytes(List.filled(10, 0));
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 1, bytes: 10);
-
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
-
-    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.downloading,
-        reason: 'a .part file is not a completed page');
-    expect(await db.downloadedPageCount(5), 0);
-  });
-
-  test('a re-download after a tombstone still completes normally', () async {
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 1, bytes: 10);
+  test('a re-download at the current generation still commits', () async {
+    await db.bumpChapterGeneration(5); // now generation 1
+    await stage(1, 5, [0, 1], [0, 1], generation: 1);
     await log.appendDeleted(5, 1);
-    // Generation 1: re-downloaded after the delete, tagged with the new gen.
-    await writePageFile(1, 5, 0);
-    await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
-    await log.appendChapter(
-        chapterId: 5, status: 'downloaded', pages: 1, bytes: 10, generation: 1);
 
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
+    await replay();
 
-    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.downloaded,
-        reason: 'entries logged after the tombstone still apply');
-    expect(await db.downloadedPageCount(5), 1);
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloaded);
+    expect(await db.downloadedPageCount(5), 2);
   });
 
-  test('a stale error appended after the tombstone is dropped on replay',
+  test('a half-written .tmp page does not count toward completeness', () async {
+    await store.beginChapter(
+        1, 5, const ChapterManifest(generation: 0, indices: [0, 1]));
+    await store.writePage(1, 5, 0, List.filled(10, 0), 'jpg');
+    // Page 1 was killed mid-write, leaving the temp name behind.
+    final partial = File(
+        '${paths.absolute(paths.stagingPageRel(1, 5, 1, 'jpg'))}.tmp');
+    await partial.writeAsBytes(List.filled(10, 0));
+
+    await replay();
+
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloading);
+    expect(finalDirExists(1, 5), isFalse);
+    expect(await partial.exists(), isFalse, reason: 'swept on the resume scan');
+  });
+
+  test('a legacy downloaded chapter is grandfathered, not re-fetched', () async {
+    // A directory written before chapters were atomic: pages, no manifest.
+    final dir = Directory(paths.absolute(paths.chapterDirRel(1, 5)));
+    await dir.create(recursive: true);
+    await File('${dir.path}/000.jpg').writeAsBytes(List.filled(10, 0));
+    await db.setChapterDeviceState(5, OfflineDeviceState.downloaded);
+
+    await replay();
+
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloaded,
+        reason: 'nothing can prove it whole, and re-fetching every library is '
+            'not a trade worth making');
+    expect(finalDirExists(1, 5), isTrue);
+  });
+
+  test('a legacy chapter left mid-download is cleared for one re-fetch',
       () async {
-    // The exact durable ordering: generation-0 activity, tombstone(gen 1), then
-    // the worker's late generation-0 error, then generation-1 activity.
+    final dir = Directory(paths.absolute(paths.chapterDirRel(1, 5)));
+    await dir.create(recursive: true);
+    await File('${dir.path}/000.jpg').writeAsBytes(List.filled(10, 0));
     await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
-    await log.appendDeleted(5, 1);
-    await log.appendChapter(
-        chapterId: 5, status: 'error', pages: 0, bytes: 0, generation: 0);
-    // Generation 1 re-download completes with its page on disk.
-    await writePageFile(1, 5, 0);
-    await log.appendChapter(
-        chapterId: 5, status: 'downloaded', pages: 1, bytes: 10, generation: 1);
 
-    await replayCompletionLog(
-        db: db, paths: paths, log: log, measureBytes: (m, c) async => 10);
+    await replay();
 
-    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.downloaded,
-        reason: 'the stale generation-0 error must not override the new download');
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+    expect(finalDirExists(1, 5), isFalse);
+    expect(await db.downloadedPageCount(5), 0);
+  });
+
+  test('catch-up files with no row are adopted and committed', () async {
+    await db.setKeepRule(1, OfflineKeepRule.all, 3);
+    await stage(1, 9, [0, 1], [0, 1]);
+    await log.appendAdopt(const AdoptChapterEntry(
+      chapterId: 9,
+      mangaId: 1,
+      serverId: 'srv',
+      name: 'caught up',
+      chapterIndex: 2,
+      chapterNumber: 3,
+      pageCount: 2,
+      bytes: 20,
+      isRead: false,
+    ));
+
+    await replay();
+
+    final adopted = await db.chapterById(9);
+    expect(adopted!.deviceState, OfflineDeviceState.downloaded);
+    expect(await db.downloadedPageCount(9), 2);
+  });
+
+  test('a catch-up record from another server is refused and swept', () async {
+    await db.setKeepRule(1, OfflineKeepRule.all, 3);
+    await stage(1, 9, [0, 1], [0, 1]);
+    await log.appendAdopt(const AdoptChapterEntry(
+      chapterId: 9,
+      mangaId: 1,
+      serverId: 'a-different-server',
+      name: 'caught up',
+      chapterIndex: 2,
+      chapterNumber: 3,
+      pageCount: 2,
+      bytes: 20,
+      isRead: false,
+    ));
+
+    await replay();
+
+    expect(await db.chapterById(9), isNull);
+    expect(stagingExists(1, 9), isFalse);
+    expect(finalDirExists(1, 9), isFalse);
+  });
+
+  test('double-replay is idempotent', () async {
+    await stage(1, 5, [0, 1], [0, 1]);
+    await replay();
+    await replay();
+    expect(await db.downloadedPageCount(5), 2);
+    expect((await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.downloaded);
   });
 
   group('applyBackgroundTerminalState (live worker events)', () {
-    test('a stale downloaded event cannot complete a re-queued chapter with too '
-        'few pages', () async {
-      // Chapter 5 exists with pageCount 2 but no page rows (deleted + re-queued).
-      await db.setChapterDeviceState(5, OfflineDeviceState.queued);
-      await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'downloaded', bytes: 10);
-      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued,
-          reason: 'no pages present — a stale downloaded must not complete it');
-    });
-
-    test('a downloaded event completes when all pages are present', () async {
+    test('an error event fails a chapter that is downloading', () async {
       await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
-      await db.into(db.offlinePages).insert(OfflinePagesCompanion.insert(
-          chapterId: 5, pageIndex: 0, relativePath: '1/5/0.jpg'));
-      await db.into(db.offlinePages).insert(OfflinePagesCompanion.insert(
-          chapterId: 5, pageIndex: 1, relativePath: '1/5/1.jpg'));
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'downloaded', bytes: 20);
-      expect((await db.chapterById(5))!.deviceState,
-          OfflineDeviceState.downloaded);
+          db: db, chapterId: 5, status: 'error');
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
     });
 
-    test('a stale error event does not error a freshly queued chapter', () async {
+    test('a stale error event does not error a freshly queued chapter',
+        () async {
       await db.setChapterDeviceState(5, OfflineDeviceState.queued);
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'error', bytes: 0);
+          db: db, chapterId: 5, status: 'error');
       expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued,
           reason: 'error applies only to a chapter actually mid-download');
     });
 
-    test('an error event fails a chapter that is downloading', () async {
+    test('a success never arrives this way — only a commit publishes', () async {
       await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'error', bytes: 0);
-      expect(
-          (await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
+          db: db, chapterId: 5, status: 'downloaded');
+      expect((await db.chapterById(5))!.deviceState,
+          OfflineDeviceState.downloading,
+          reason: 'a log line claiming success cannot publish a chapter');
     });
 
-    test('a downloaded event never resurrects a deleted chapter', () async {
+    test('an event never resurrects a deleted chapter', () async {
       await db.setChapterDeviceState(5, OfflineDeviceState.none);
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'downloaded', bytes: 10);
+          db: db, chapterId: 5, status: 'error');
       expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.none);
     });
 
     test('a stale-generation error is dropped even for a downloading chapter',
         () async {
-      // Generation 0's error arrives after a delete bumped drift to generation 1
-      // and a new download reached downloading.
       await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
       await db.bumpChapterGeneration(5); // now generation 1
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'error', bytes: 0, eventGeneration: 0);
+          db: db, chapterId: 5, status: 'error', eventGeneration: 0);
       expect((await db.chapterById(5))!.deviceState,
           OfflineDeviceState.downloading,
           reason: 'a deleted generation event must not touch the new one');
@@ -273,7 +309,7 @@ void main() {
       await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
       await db.bumpChapterGeneration(5); // now generation 1
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'error', bytes: 0, eventGeneration: 1);
+          db: db, chapterId: 5, status: 'error', eventGeneration: 1);
       expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
     });
 
@@ -283,23 +319,12 @@ void main() {
       // in-memory counter) can't make a second delete reuse a generation.
       expect(await db.bumpChapterGeneration(5), 1); // first delete
       expect(await db.bumpChapterGeneration(5), 2); // second delete, not reused
-      // A late generation-1 event is now stale against the persisted 2.
       await db.setChapterDeviceState(5, OfflineDeviceState.downloading);
       await applyBackgroundTerminalState(
-          db: db, chapterId: 5, status: 'error', bytes: 0, eventGeneration: 1);
+          db: db, chapterId: 5, status: 'error', eventGeneration: 1);
       expect((await db.chapterById(5))!.deviceState,
           OfflineDeviceState.downloading,
           reason: 'a superseded generation event stays stale after a restart');
     });
-  });
-
-  test('double-replay is idempotent', () async {
-    await writePageFile(1, 5, 0);
-    await writePageFile(1, 5, 1);
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 2, bytes: 20);
-    await replayCompletionLog(db: db, paths: paths, log: log, measureBytes: (m, c) async => 20);
-    // replay again on the (now empty) log — must not throw or change counts
-    await replayCompletionLog(db: db, paths: paths, log: log, measureBytes: (m, c) async => 20);
-    expect(await db.downloadedPageCount(5), 2);
   });
 }

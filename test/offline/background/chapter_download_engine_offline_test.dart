@@ -7,35 +7,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
-
-class _NoopStore implements OfflinePageStore {
-  @override
-  Future<({String relPath, int bytes})> writePage(
-          int m, int c, int i, List<int> b, String e) async =>
-      (relPath: 'x', bytes: b.length);
-  @override
-  Future<void> deleteChapter(int m, int c) async {}
-  @override
-  Future<int> chapterBytes(int m, int c) async => 0;
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
-
+import '../../helpers/fake_page_store.dart';
 void main() {
   test('a PageOfflineException yields outcome.offline, not error/authFailed',
       () async {
     final engine = ChapterDownloadEngine(
       fetchPage: (_) async => throw const PageOfflineException(),
-      writePage: _NoopStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => true,
     );
     final outcome = await engine.download(
@@ -58,7 +36,7 @@ void main() {
         calls++;
         throw const PageOfflineException();
       },
-      writePage: _NoopStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => true,
       maxAttempts: 3,
     );

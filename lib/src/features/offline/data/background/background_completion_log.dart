@@ -7,41 +7,17 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
+import '../../../../utils/logger/logger.dart';
+import '../chapter_commit.dart';
 import '../offline_database.dart';
+import '../offline_page_store.dart';
 import '../offline_paths.dart';
 import '../offline_types.dart';
 
-/// Final on-disk pages of a chapter, index → relative path. `.part` staging
-/// files are excluded as incomplete.
-Future<Map<int, String>> _pagesOnDisk(
-    OfflinePaths paths, int mangaId, int chapterId) async {
-  final rowsByIndex = <int, String>{};
-  final dir = Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
-  if (await dir.exists()) {
-    await for (final f in dir.list()) {
-      if (f is! File) continue;
-      final name = f.uri.pathSegments.last;
-      if (name.endsWith('.part')) continue;
-      final dot = name.indexOf('.');
-      if (dot <= 0) continue;
-      final idx = int.tryParse(name.substring(0, dot));
-      if (idx == null) continue;
-      rowsByIndex[idx] =
-          paths.pageRel(mangaId, chapterId, idx, name.substring(dot + 1));
-    }
-  }
-  return rowsByIndex;
-}
-
 sealed class LogEntry {
   const LogEntry();
-}
-
-class PageEntry extends LogEntry {
-  const PageEntry(this.chapterId, this.mangaId, this.pageIndex, this.relPath,
-      this.bytes, this.generation);
-  final int chapterId, mangaId, pageIndex, bytes, generation;
-  final String relPath;
 }
 
 class ChapterEntry extends LogEntry {
@@ -87,8 +63,14 @@ class AdoptChapterEntry extends LogEntry {
 }
 
 /// Append-only JSONL record of background-download progress — the durable
-/// source of truth replayed into drift on resume/launch. A torn final line
-/// (killed mid-write) is silently discarded on parse.
+/// record of what the worker isolates decided, replayed into drift on
+/// resume/launch. A torn final line (killed mid-write) is silently discarded
+/// on parse.
+///
+/// Only terminal, adoption and tombstone entries live here. Per-page lines used
+/// to be appended (and fsynced) as each page landed; they are gone, because the
+/// pages themselves are no longer the thing that makes a chapter complete — the
+/// staging manifest is, and it is written once per chapter.
 class BackgroundCompletionLog {
   BackgroundCompletionLog(this.file);
   final File file;
@@ -98,16 +80,6 @@ class BackgroundCompletionLog {
     await file.writeAsString('${jsonEncode(obj)}\n',
         mode: FileMode.append, flush: true);
   }
-
-  Future<void> appendPage({
-    required int chapterId,
-    required int mangaId,
-    required int pageIndex,
-    required String relPath,
-    required int bytes,
-    int generation = 0,
-  }) =>
-      _append({'t': 'page', 'c': chapterId, 'm': mangaId, 'i': pageIndex, 'p': relPath, 'b': bytes, 'g': generation});
 
   Future<void> appendChapter({
     required int chapterId,
@@ -149,8 +121,9 @@ class BackgroundCompletionLog {
         continue; // torn/partial line — discard
       }
       switch (j['t']) {
-        case 'page':
-          out.add(PageEntry(j['c'] as int, j['m'] as int, j['i'] as int, j['p'] as String, j['b'] as int, j['g'] as int? ?? 0));
+        // 'page': written by builds before chapters became atomic. Ignored —
+        // recovery reads the filesystem, which is the same truth without the
+        // fsync per page.
         case 'chapter':
           out.add(ChapterEntry(j['c'] as int, j['s'] as String, j['pages'] as int, j['bytes'] as int, j['g'] as int? ?? 0));
         case 'deleted':
@@ -179,213 +152,293 @@ class BackgroundCompletionLog {
   }
 }
 
-typedef ChapterBytesMeasurer = Future<int> Function(int mangaId, int chapterId);
-
-/// Apply a worker terminal event (chapterDone) to drift. `downloaded` is
-/// verified against page rows actually on disk, and [eventGeneration] older
-/// than the chapter's persisted `downloadGeneration` (bumped on each delete) is
-/// dropped — both guard against a stale event from a deleted/re-queued chapter.
+/// Apply a worker's non-success terminal event to drift. A success no longer
+/// arrives this way — a chapter becomes `downloaded` by being committed, never
+/// by a log line claiming it is. [eventGeneration] older than the chapter's
+/// persisted `downloadGeneration` (bumped on each delete) is dropped, so a
+/// stale event from a deleted/re-queued chapter can't mark it failed.
 Future<void> applyBackgroundTerminalState({
   required OfflineDatabase db,
   required int chapterId,
   required String status,
-  required int bytes,
   int eventGeneration = 0,
 }) async {
+  if (status != 'error' && status != 'authFailed') return;
   await db.transaction(() async {
     final c = await db.chapterById(chapterId);
     if (c == null || c.deviceState == OfflineDeviceState.none) return;
     if (eventGeneration < c.downloadGeneration) return; // stale generation
-    switch (status) {
-      case 'downloaded':
-        final pages = await db.downloadedPageCount(chapterId);
-        if (pages <= 0 || (c.pageCount > 0 && pages < c.pageCount)) return;
-        await db.setChapterDeviceState(chapterId, OfflineDeviceState.downloaded,
-            bytes: bytes, downloadedAt: DateTime.now());
-      case 'error':
-      case 'authFailed':
-        if (c.deviceState == OfflineDeviceState.downloading) {
-          await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
-        }
-      // 'offline' / null: leave `downloading` so it resumes.
+    if (c.deviceState == OfflineDeviceState.downloading) {
+      await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
     }
   });
 }
 
+/// Reconcile the catalog with what is actually on disk, then apply whatever the
+/// background workers recorded.
+///
+/// Recovery is state-driven rather than log-driven: the workers only ever fill
+/// staging directories, so the durable question at launch is "what does each
+/// chapter's directory look like, and what does its row say" — which survives a
+/// lost log, a killed worker, and a crash between the commit rename and its
+/// catalog write.
 Future<void> replayCompletionLog({
   required OfflineDatabase db,
   required OfflinePaths paths,
+  required OfflinePageStore store,
   required BackgroundCompletionLog log,
-  required ChapterBytesMeasurer measureBytes,
   String? catalogServerId,
 }) async {
   final entries = await log.parse();
-  if (entries.isEmpty) return;
 
-  // Background catch-up adoptions first: rows drift has never seen. Refusals
-  // clean their files up here, under replay's ownership — refused downloads
-  // are invisible to eviction (no row) and would otherwise sit on disk forever.
+  // Adoptions first: they create rows drift has never seen, so the recovery
+  // pass below sees a row to attach the files to rather than an orphan.
+  await _adoptCatchupChapters(
+    db: db,
+    store: store,
+    entries: entries,
+    catalogServerId: catalogServerId,
+  );
+
+  await _recoverChaptersOnDisk(db: db, paths: paths, store: store);
+
+  await _applyTerminalEntries(db: db, entries: entries);
+
+  await log.truncate();
+}
+
+/// Create rows for chapters the background catch-up downloaded while drift knew
+/// nothing about them. The files themselves are published by the recovery pass;
+/// this only decides whether we are willing to own them at all.
+Future<void> _adoptCatchupChapters({
+  required OfflineDatabase db,
+  required OfflinePageStore store,
+  required List<LogEntry> entries,
+  required String? catalogServerId,
+}) async {
   final adoptions = <int, AdoptChapterEntry>{};
   for (final e in entries) {
     if (e is AdoptChapterEntry) adoptions[e.chapterId] = e;
   }
   for (final a in adoptions.values) {
-    if (await db.chapterById(a.chapterId) != null) continue; // known → normal path
+    // A row that already exists took its own path (including a `none` row from
+    // a foreground delete, which recovery honours by deleting the files).
+    if (await db.chapterById(a.chapterId) != null) continue;
     final manga = await (db.select(db.offlineMangas)
           ..where((t) => t.id.equals(a.mangaId)))
         .getSingleOrNull();
-    final pagesOnDisk = await _pagesOnDisk(paths, a.mangaId, a.chapterId);
-    final complete = a.pageCount > 0 &&
-        List.generate(a.pageCount, (i) => i).every(pagesOnDisk.containsKey);
     final accepted = manga != null &&
         manga.keepRule != OfflineKeepRule.off &&
         catalogServerId != null &&
-        a.serverId == catalogServerId &&
-        complete;
+        a.serverId == catalogServerId;
     if (!accepted) {
-      try {
-        final dir = Directory(
-            paths.absolute(paths.chapterDirRel(a.mangaId, a.chapterId)));
-        if (await dir.exists()) await dir.delete(recursive: true);
-      } catch (_) {}
+      // Refusals clean up here, under replay's ownership — a refused download
+      // has no row, so eviction can't see it and it would sit on disk forever.
+      await store.deleteChapter(a.mangaId, a.chapterId);
       continue;
     }
-    final bytes = await measureBytes(a.mangaId, a.chapterId);
     await db.transaction(() async {
-      // A foreground sync creating the row mid-flight doesn't void the
-      // download — the verified pages attach to whichever row exists. Only a
-      // still-missing row gets the record's metadata; a synced row keeps its
-      // own (fresher read progress included).
-      if (await db.chapterById(a.chapterId) == null) {
-        await db.upsertChapterMetadata(
-          id: a.chapterId,
-          mangaId: a.mangaId,
-          name: a.name,
-          chapterIndex: a.chapterIndex,
-          isRead: a.isRead,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: a.pageCount,
-          updatedAt: DateTime.now(),
-          chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
-          syncedIsRead: a.isRead,
-        );
-      }
-      for (final entry in pagesOnDisk.entries) {
-        await db.into(db.offlinePages).insertOnConflictUpdate(
-              OfflinePagesCompanion.insert(
-                  chapterId: a.chapterId,
-                  pageIndex: entry.key,
-                  relativePath: entry.value),
-            );
-      }
-      await db.setChapterDeviceState(a.chapterId, OfflineDeviceState.downloaded,
-          bytes: bytes, downloadedAt: DateTime.now());
+      if (await db.chapterById(a.chapterId) != null) return;
+      await db.upsertChapterMetadata(
+        id: a.chapterId,
+        mangaId: a.mangaId,
+        name: a.name,
+        chapterIndex: a.chapterIndex,
+        isRead: a.isRead,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: a.pageCount,
+        updatedAt: DateTime.now(),
+        chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
+        syncedIsRead: a.isRead,
+      );
+      // Claim it as ours before the commit runs. If the files turn out to be
+      // incomplete, the row stays resumable instead of being thrown away.
+      await db.setChapterDeviceState(
+          a.chapterId, OfflineDeviceState.downloading);
     });
   }
+}
 
-  // touched/terminal are scoped to the latest generation seen per chapter, so a
-  // stale entry (even one after the delete in file order) is discarded rather
-  // than applied to a re-queued chapter.
-  final touched = <int, int>{}; // chapterId -> mangaId
+/// Walk every chapter directory on disk and settle it against its catalog row.
+///
+/// | on disk          | row                    | what happens                  |
+/// |------------------|------------------------|-------------------------------|
+/// | anything         | `none` or missing      | both directories deleted      |
+/// | final, complete  | `downloaded`           | nothing                       |
+/// | final, complete  | anything else          | adopted — the commit rename landed, its catalog write didn't |
+/// | final, legacy    | `downloaded`           | grandfathered, trusted as-is  |
+/// | final, legacy    | anything else          | cleared, so it re-downloads   |
+/// | staging complete | not `none`             | committed                     |
+/// | staging partial  | not `none`             | left alone, resumed later     |
+///
+/// Driven off the filesystem rather than the catalog: the directories that
+/// exist are bounded by what has actually been downloaded, where the chapter
+/// table is the size of the whole library.
+Future<void> _recoverChaptersOnDisk({
+  required OfflineDatabase db,
+  required OfflinePaths paths,
+  required OfflinePageStore store,
+}) async {
+  for (final dir in await _chapterDirsOnDisk(paths)) {
+    try {
+      await ChapterFileLock.run(dir.chapterId, () async {
+        final row = await db.chapterById(dir.chapterId);
+        // Never resurrect: a `none` row is a delete the user made, and a
+        // missing row means nothing authorised these files (adoption above is
+        // the one sanctioned exception, and it has already run).
+        if (row == null || row.deviceState == OfflineDeviceState.none) {
+          await store.deleteChapter(dir.mangaId, dir.chapterId);
+          return;
+        }
+
+        if (dir.hasFinal) {
+          final committed =
+              await store.inspectCommitted(dir.mangaId, dir.chapterId);
+          switch (committed.state) {
+            case ChapterDirState.complete:
+              // Already settled, or the rename landed and the catalog write
+              // didn't — either way the rows are cheap to reassert.
+              if (row.deviceState != OfflineDeviceState.downloaded) {
+                await db.commitDownloadedChapter(
+                  chapterId: dir.chapterId,
+                  pages: committed.pages,
+                  downloadedAt: row.downloadedAt ?? DateTime.now(),
+                );
+                logger.i('Offline: adopted committed chapter '
+                    '${dir.chapterId} (${committed.pages.length} pages)');
+              }
+              // Staging alongside a complete final dir is a superseded attempt.
+              await store.deleteStaging(dir.mangaId, dir.chapterId);
+              return;
+            case ChapterDirState.legacy:
+              if (row.deviceState == OfflineDeviceState.downloaded) {
+                // Downloaded before chapters were atomic. Nothing on disk can
+                // prove it whole, and re-fetching everyone's library to find
+                // out is not a trade worth making — trust it.
+                return;
+              }
+              // Interrupted under the old scheme, so its pages can't be
+              // verified or safely resumed. One re-download, once, on upgrade.
+              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
+            case ChapterDirState.incomplete:
+              await _clearForRefetch(db, store, dir.mangaId, dir.chapterId);
+            case ChapterDirState.absent:
+              break;
+          }
+        }
+
+        if (dir.hasStaging) {
+          await commitStagedChapterHoldingLock(
+            db: db,
+            store: store,
+            mangaId: dir.mangaId,
+            chapterId: dir.chapterId,
+          );
+        }
+      });
+    } catch (e) {
+      // One unreadable directory must not stop the rest of the library from
+      // being recovered.
+      logger.e('Offline: recovery skipped for chapter ${dir.chapterId}: $e');
+    }
+  }
+}
+
+/// Drop a chapter's unusable files and rows, leaving the state that makes the
+/// downloader pick it up again.
+Future<void> _clearForRefetch(
+  OfflineDatabase db,
+  OfflinePageStore store,
+  int mangaId,
+  int chapterId,
+) async {
+  await store.deleteChapter(mangaId, chapterId);
+  await db.transaction(() async {
+    await (db.delete(db.offlinePages)
+          ..where((t) => t.chapterId.equals(chapterId)))
+        .go();
+    await db.setChapterDeviceState(chapterId, OfflineDeviceState.queued,
+        bytes: 0);
+  });
+}
+
+/// Apply the workers' failure records, scoped to the newest generation seen per
+/// chapter so an entry from before a delete can't mark a re-queued chapter
+/// failed.
+Future<void> _applyTerminalEntries({
+  required OfflineDatabase db,
+  required List<LogEntry> entries,
+}) async {
   final terminal = <int, String>{};
-  final terminalPages = <int, int>{}; // expected page count from the entry
-  final gen = <int, int>{}; // highest generation seen per chapter
+  final gen = <int, int>{};
 
-  // Advance a chapter to a newer generation, wiping everything accumulated for
-  // older ones.
   void advance(int chapterId, int g) {
     if (g > (gen[chapterId] ?? 0)) {
       gen[chapterId] = g;
-      touched.remove(chapterId);
       terminal.remove(chapterId);
-      terminalPages.remove(chapterId);
     }
   }
 
   for (final e in entries) {
     switch (e) {
-      case PageEntry(:final chapterId, :final mangaId, :final generation):
-        advance(chapterId, generation);
-        if (generation < (gen[chapterId] ?? 0)) break; // stale generation
-        touched[chapterId] = mangaId;
-      case ChapterEntry(:final chapterId, :final status, :final pages,
-            :final generation):
+      case ChapterEntry(:final chapterId, :final status, :final generation):
         advance(chapterId, generation);
         if (generation < (gen[chapterId] ?? 0)) break; // stale generation
         terminal[chapterId] = status;
-        terminalPages[chapterId] = pages;
-        // mangaId for a chapter-only entry comes from drift below
       case DeletedEntry(:final chapterId, :final generation):
-        // Advance to the delete's new generation and wipe prior accumulation; a
-        // re-download at that generation re-accumulates on later iterations.
         advance(chapterId, generation);
-        touched.remove(chapterId);
         terminal.remove(chapterId);
-        terminalPages.remove(chapterId);
       case DrainedEntry():
-        break;
       case AdoptChapterEntry():
-        break; // handled in the adoption pass above
+        break;
     }
   }
 
-  for (final chapterId in {...touched.keys, ...terminal.keys}) {
-    final ch = await db.chapterById(chapterId);
-    // Skip deleted/cleared chapters — never resurrect (design: filesystem is
-    // subordinate to drift authority here).
-    if (ch == null || ch.deviceState == OfflineDeviceState.none) continue;
-    // drift's persisted generation is authority: if it's advanced past
-    // everything in the log (e.g. tombstone truncated across a restart), the
-    // log is stale for this chapter.
-    if ((gen[chapterId] ?? 0) < ch.downloadGeneration) continue;
-    final mangaId = touched[chapterId] ?? ch.mangaId;
-
-    // Enumerate final on-disk pages (filesystem is truth) and measure bytes
-    // BEFORE the transaction, so the DB write stays atomic and serializes with
-    // a delete.
-    final rowsByIndex = await _pagesOnDisk(paths, mangaId, chapterId);
-    final status = terminal[chapterId];
-    final bytes =
-        status == 'downloaded' ? await measureBytes(mangaId, chapterId) : 0;
-
-    // Recheck state, then upsert rows + apply terminal state atomically: a
-    // delete that commits after the check above must win, not be overwritten.
-    await db.transaction(() async {
-      final c = await db.chapterById(chapterId);
-      if (c == null || c.deviceState == OfflineDeviceState.none) return;
-      for (final entry in rowsByIndex.entries) {
-        await db.into(db.offlinePages).insertOnConflictUpdate(
-              OfflinePagesCompanion.insert(
-                  chapterId: chapterId,
-                  pageIndex: entry.key,
-                  relativePath: entry.value),
-            );
-      }
-      switch (status) {
-        case 'downloaded':
-          // Verify against files actually on disk, not log metadata: a stale
-          // `downloaded` racing a delete/re-queue finds too few pages and must
-          // not complete the chapter. Requires the full expected page set, not
-          // just a partial.
-          final expected = terminalPages[chapterId] ?? 0;
-          final complete = expected > 0
-              ? List.generate(expected, (i) => i).every(rowsByIndex.containsKey)
-              : rowsByIndex.isNotEmpty;
-          if (!complete) break;
-          await db.setChapterDeviceState(
-              chapterId, OfflineDeviceState.downloaded,
-              bytes: bytes, downloadedAt: DateTime.now());
-        case 'error':
-        case 'authFailed':
-          await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
-        case 'offline':
-        case null:
-          break; // leave downloading — resumed later by the pump/worker
-      }
-    });
+  for (final entry in terminal.entries) {
+    await applyBackgroundTerminalState(
+      db: db,
+      chapterId: entry.key,
+      status: entry.value,
+      eventGeneration: gen[entry.key] ?? 0,
+    );
   }
+}
 
-  await log.truncate();
+/// Every chapter directory under the offline base dir, final and staging.
+Future<List<({int mangaId, int chapterId, bool hasFinal, bool hasStaging})>>
+    _chapterDirsOnDisk(OfflinePaths paths) async {
+  final found = <int, ({int mangaId, bool hasFinal, bool hasStaging})>{};
+  final base = Directory(paths.baseDir);
+  if (!await base.exists()) return const [];
+  await for (final mangaEntity in base.list()) {
+    if (mangaEntity is! Directory) continue;
+    // Skips `covers` and anything else that isn't a manga id.
+    final mangaId = int.tryParse(p.basename(mangaEntity.path));
+    if (mangaId == null) continue;
+    await for (final chapterEntity in mangaEntity.list()) {
+      if (chapterEntity is! Directory) continue;
+      final name = p.basename(chapterEntity.path);
+      final staging = name.endsWith('.part');
+      final chapterId = int.tryParse(
+          staging ? name.substring(0, name.length - '.part'.length) : name);
+      if (chapterId == null) continue;
+      final prior = found[chapterId];
+      found[chapterId] = (
+        mangaId: mangaId,
+        hasFinal: (prior?.hasFinal ?? false) || !staging,
+        hasStaging: (prior?.hasStaging ?? false) || staging,
+      );
+    }
+  }
+  return [
+    for (final e in found.entries)
+      (
+        mangaId: e.value.mangaId,
+        chapterId: e.key,
+        hasFinal: e.value.hasFinal,
+        hasStaging: e.value.hasStaging,
+      ),
+  ];
 }

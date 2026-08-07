@@ -715,6 +715,44 @@ class OfflineDatabase extends _$OfflineDatabase {
     }
   });
 
+  /// Record a chapter whose staging directory was just promoted: its page rows
+  /// and its `downloaded` state land in ONE transaction, so the catalog never
+  /// half-knows about a chapter.
+  ///
+  /// Page rows are written here and nowhere else during a download — they point
+  /// at the final directory, which only exists once the rename has happened.
+  /// [pageCount] is set from what was actually committed rather than left to
+  /// the server's value, so the row describes the copy on this device.
+  Future<void> commitDownloadedChapter({
+    required int chapterId,
+    required List<({int pageIndex, String relPath, int bytes})> pages,
+    required DateTime downloadedAt,
+  }) =>
+      transaction(() async {
+        await (delete(
+          offlinePages,
+        )..where((t) => t.chapterId.equals(chapterId))).go();
+        for (final pg in pages) {
+          await into(offlinePages).insertOnConflictUpdate(
+            OfflinePagesCompanion.insert(
+              chapterId: chapterId,
+              pageIndex: pg.pageIndex,
+              relativePath: pg.relPath,
+            ),
+          );
+        }
+        await (update(
+          offlineChapters,
+        )..where((t) => t.id.equals(chapterId))).write(
+          OfflineChaptersCompanion(
+            deviceState: const Value(OfflineDeviceState.downloaded),
+            bytes: Value(pages.fold<int>(0, (s, p) => s + p.bytes)),
+            pageCount: Value(pages.length),
+            downloadedAt: Value(downloadedAt),
+          ),
+        );
+      });
+
   /// Unpin every chapter of a manga — used on Migrate so the source's kept
   /// chapters aren't held back from the post-removal purge reconcile.
   Future<void> unpinChaptersForManga(int mangaId) =>

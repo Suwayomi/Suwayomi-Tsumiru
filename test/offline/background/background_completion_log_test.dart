@@ -11,31 +11,42 @@ void main() {
   });
   tearDown(() async => tmp.delete(recursive: true));
 
-  test('append + parse round-trips pages, chapter, drained', () async {
+  test('append + parse round-trips chapter, deleted, drained', () async {
     final log = BackgroundCompletionLog(logFile);
-    await log.appendPage(chapterId: 5, mangaId: 1, pageIndex: 0, relPath: '1/5/000.jpg', bytes: 1234);
-    await log.appendPage(chapterId: 5, mangaId: 1, pageIndex: 1, relPath: '1/5/001.jpg', bytes: 2345);
-    await log.appendChapter(chapterId: 5, status: 'downloaded', pages: 2, bytes: 3579);
+    await log.appendChapter(chapterId: 5, status: 'error', pages: 2, bytes: 0);
+    await log.appendDeleted(7, 3);
     await log.appendDrained();
 
     final entries = await log.parse();
-    expect(entries.length, 4);
-    expect(entries[0], isA<PageEntry>());
-    expect((entries[0] as PageEntry).relPath, '1/5/000.jpg');
-    expect((entries[2] as ChapterEntry).status, 'downloaded');
-    expect(entries[3], isA<DrainedEntry>());
+    expect(entries.length, 3);
+    expect((entries[0] as ChapterEntry).status, 'error');
+    expect((entries[1] as DeletedEntry).generation, 3);
+    expect(entries[2], isA<DrainedEntry>());
+  });
+
+  test('per-page lines from an older build are ignored, not parsed', () async {
+    // Page lines were dropped when chapters became atomic; a log left by the
+    // previous build must still parse, minus them.
+    final log = BackgroundCompletionLog(logFile);
+    await logFile.writeAsString(
+        '{"t":"page","c":5,"m":1,"i":0,"p":"1/5/000.jpg","b":10,"g":0}\n',
+        mode: FileMode.append);
+    await log.appendDrained();
+
+    final entries = await log.parse();
+    expect(entries.single, isA<DrainedEntry>());
   });
 
   test('a torn final line (crash mid-write) is discarded, earlier lines kept',
       () async {
     final log = BackgroundCompletionLog(logFile);
-    await log.appendPage(chapterId: 5, mangaId: 1, pageIndex: 0, relPath: '1/5/000.jpg', bytes: 1234);
+    await log.appendChapter(chapterId: 5, status: 'error', pages: 1, bytes: 0);
     // simulate a partial trailing write (no newline, invalid json)
-    await logFile.writeAsString('{"t":"page","c":5,"m":1,"i":1,"p":"1/5/0',
+    await logFile.writeAsString('{"t":"chapter","c":5,"s":"err',
         mode: FileMode.append);
     final entries = await log.parse();
     expect(entries.length, 1);
-    expect((entries.single as PageEntry).pageIndex, 0);
+    expect((entries.single as ChapterEntry).chapterId, 5);
   });
 
   test('parse on a missing file returns empty', () async {

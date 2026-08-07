@@ -17,48 +17,7 @@ import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../../../helpers/offline_test_db.dart';
-
-/// Records transfer calls; returns fixed pages, or throws for the failure case.
-class FakePageStore implements OfflinePageStore {
-  final List<({int fromM, int fromC, int toM, int toC, bool keepSource})> calls =
-      [];
-  Set<int> failFromChapters = {};
-
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) async {
-    calls.add((
-      fromM: fromMangaId,
-      fromC: fromChapterId,
-      toM: toMangaId,
-      toC: toChapterId,
-      keepSource: keepSource
-    ));
-    if (failFromChapters.contains(fromChapterId)) {
-      throw const OfflineTransferException('boom');
-    }
-    return [
-      (pageIndex: 0, relPath: '$toMangaId/$toChapterId/000.jpg', bytes: 50),
-      (pageIndex: 1, relPath: '$toMangaId/$toChapterId/001.jpg', bytes: 50),
-    ];
-  }
-
-  @override
-  Future<void> deleteChapter(int mangaId, int chapterId) async {}
-  @override
-  Future<int> chapterBytes(int mangaId, int chapterId) async => 0;
-  @override
-  Future<({String relPath, int bytes})> writePage(
-          int m, int c, int i, List<int> b, String e) async =>
-      (relPath: '', bytes: 0);
-  @override
-  Future<void> clearAll() async {}
-}
+import '../../../helpers/fake_page_store.dart';
 
 MangaDto mangaDto(int id) => Fragment$MangaDto(
       id: id,
@@ -131,6 +90,9 @@ void main() {
     );
     await db.setChapterDeviceState(101, OfflineDeviceState.downloaded,
         bytes: 100);
+    // The transfer copies real page files, so the source has to actually have
+    // some — a store that invented them would hide a broken transfer.
+    store.seedCommitted(101, {0: 50, 1: 50});
     if (targetAlreadyDownloaded) {
       await db.upsertChapterMetadata(
         id: 201, mangaId: 2, name: 'a', chapterIndex: 0, isRead: false,
@@ -139,6 +101,7 @@ void main() {
       );
       await db.setChapterDeviceState(201, OfflineDeviceState.downloaded,
           bytes: 100);
+      store.seedCommitted(201, {0: 50, 1: 50});
     }
     return OfflineMigrationService(
       db: db,
@@ -160,7 +123,10 @@ void main() {
     final svc = await seed();
     final res = await svc.migrate(fromMangaId: 1, toMangaId: 2, options: migrate);
     expect(res.movedDownloads, 1);
-    expect(store.calls.single.keepSource, isFalse); // moved, not copied
+    expect(store.calls.single.toChapterId, 201);
+    // Always a copy now; a Migrate is the copy plus dropping the source
+    // afterwards, so a crash mid-transfer can't destroy the only copy.
+    expect(store.deletedChapters, contains(101));
     final target = (await db.chapterById(201))!;
     expect(target.deviceState, OfflineDeviceState.downloaded);
     expect(target.pinned, isTrue); // pinned so reconcile can't evict the move
@@ -173,7 +139,8 @@ void main() {
     final svc = await seed();
     final res = await svc.migrate(fromMangaId: 1, toMangaId: 2, options: copy);
     expect(res.movedDownloads, 1);
-    expect(store.calls.single.keepSource, isTrue); // copied
+    expect(store.calls.single.toChapterId, 201);
+    expect(store.deletedChapters, isNot(contains(101))); // source kept
     expect((await db.chapterById(201))!.deviceState,
         OfflineDeviceState.downloaded);
     expect((await db.chapterById(101))!.deviceState,

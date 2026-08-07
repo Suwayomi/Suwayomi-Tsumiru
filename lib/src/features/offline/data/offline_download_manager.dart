@@ -5,6 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../utils/logger/logger.dart';
+import 'chapter_commit.dart';
+import 'chapter_manifest.dart';
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 
@@ -35,6 +37,10 @@ class OfflineDownloadManager {
   /// server-downloaded (product policy); on any failure, partial files/rows
   /// are removed, the chapter is marked `error`, and the error rethrows so
   /// the queue/UI can surface it.
+  ///
+  /// Serial and unbatched — the queue-driven downloaders are what the app
+  /// actually runs. This publishes through the same staging-then-commit path
+  /// they do, so a chapter it downloads is either whole or absent.
   Future<void> downloadChapter(OfflineChapter chapter, {bool force = false}) async {
     if (!force && !chapter.serverIsDownloaded) {
       throw StateError(
@@ -48,25 +54,28 @@ class OfflineDownloadManager {
       pageCount = urls.length;
       logger.i('Offline: downloading chapter ${chapter.id} '
           '(manga ${chapter.mangaId}, $pageCount pages)');
-      var totalBytes = 0;
+      final generation =
+          (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
+      await store.beginChapter(
+        chapter.mangaId,
+        chapter.id,
+        ChapterManifest(
+          generation: generation,
+          indices: [for (var i = 0; i < urls.length; i++) i],
+        ),
+      );
       for (var i = 0; i < urls.length; i++) {
         atPage = i;
         final page = await fetchBytes(urls[i]);
-        final stored = await store.writePage(
+        await store.writePage(
             chapter.mangaId, chapter.id, i, page.bytes, page.ext);
-        totalBytes += stored.bytes;
-        await db.into(db.offlinePages).insertOnConflictUpdate(
-              OfflinePagesCompanion.insert(
-                chapterId: chapter.id,
-                pageIndex: i,
-                relativePath: stored.relPath,
-              ),
-            );
       }
-      await db.setChapterDeviceState(chapter.id, OfflineDeviceState.downloaded,
-          bytes: totalBytes);
-      logger.i('Offline: chapter ${chapter.id} downloaded '
-          '($pageCount pages, $totalBytes bytes)');
+      await commitStagedChapter(
+        db: db,
+        store: store,
+        mangaId: chapter.mangaId,
+        chapterId: chapter.id,
+      );
     } catch (e, st) {
       logger.e(
           'Offline: download FAILED for chapter ${chapter.id} '

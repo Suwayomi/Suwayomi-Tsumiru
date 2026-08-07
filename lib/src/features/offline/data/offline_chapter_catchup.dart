@@ -315,11 +315,9 @@ Future<bool> _reconcileTracked(
         rethrow;
       }
     },
-    removeFromWorker: (id) async {
+    removeFromWorker: (id, gen) async {
       final ctrl = container.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
-      final gen =
-          await container.read(offlineDatabaseProvider).bumpChapterGeneration(id);
       await ctrl.recordChapterDeleted(id, gen);
     },
   );

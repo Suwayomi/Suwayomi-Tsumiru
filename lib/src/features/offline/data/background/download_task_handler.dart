@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
 import '../chapter_download_engine.dart';
+import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
@@ -272,33 +273,33 @@ class DownloadTaskHandler extends TaskHandler {
       'total': urls.length,
     });
 
+    final generation = _genOf[chapterId] ?? 0;
+    final indices = [for (var i = 0; i < urls.length; i++) i];
+    final staged =
+        await _openStaging(mangaId, chapterId, indices, generation);
+
     final engine = _buildEngine();
     final pages = [
-      for (var i = 0; i < urls.length; i++) (index: i, url: urls[i]),
+      for (var i = 0; i < urls.length; i++)
+        if (!staged.contains(i)) (index: i, url: urls[i]),
     ];
+    var done = staged.length;
     final outcome = await engine.download(
       mangaId: mangaId,
       chapterId: chapterId,
       pages: pages,
       isCancelled: () => _cancelled.contains(chapterId) || _stopping || _paused,
-      onPageStored: (i, rel, bytes) {
-        // Live per-page progress for the foreground UI (drift row applied by the
-        // main isolate). The durable record is still the completion log.
+      onPageStored: (i, rel, bytes) async {
+        // Progress only. Pages sit in staging until the MAIN isolate commits
+        // the chapter, so there is no row for this isolate to write — and no
+        // per-page log line either, which was a second fsync on every page.
         FlutterForegroundTask.sendDataToMain({
           'kind': 'page',
           'chapterId': chapterId,
-          'gen': _genOf[chapterId] ?? 0,
-          'pageIndex': i,
-          'relPath': rel,
+          'gen': generation,
+          'done': ++done,
+          'total': urls.length,
         });
-        return _log.appendPage(
-          chapterId: chapterId,
-          mangaId: mangaId,
-          pageIndex: i,
-          relPath: rel,
-          bytes: bytes,
-          generation: _genOf[chapterId] ?? 0,
-        );
       },
     );
 
@@ -315,13 +316,14 @@ class DownloadTaskHandler extends TaskHandler {
                     : 'error';
 
     if (status != null) {
-      final bytes = await _store.chapterBytes(mangaId, chapterId);
+      // Bytes are measured by whoever commits, after the rename — nothing is in
+      // the chapter's final directory yet, so there is nothing to weigh here.
       await _log.appendChapter(
         chapterId: chapterId,
         status: status,
         pages: urls.length,
-        bytes: bytes,
-        generation: _genOf[chapterId] ?? 0,
+        bytes: 0,
+        generation: generation,
       );
       _done++;
     }
@@ -329,6 +331,31 @@ class DownloadTaskHandler extends TaskHandler {
     // Network died mid-download: the chapter is recorded `offline` (resumable),
     // so park rather than churn every remaining chapter through the same drop.
     return status == 'offline';
+  }
+
+  /// Open (or adopt) the chapter's staging directory, returning the pages
+  /// already there. Staging from a different page list or an older generation
+  /// belongs to a download this one supersedes, so it is dropped rather than
+  /// merged into.
+  Future<Set<int>> _openStaging(
+    int mangaId,
+    int chapterId,
+    List<int> indices,
+    int generation,
+  ) async {
+    final existing = await _store.readManifest(mangaId, chapterId);
+    if (existing != null &&
+        existing.generation == generation &&
+        existing.coversSameIndices(indices)) {
+      return _store.stagedPageIndices(mangaId, chapterId);
+    }
+    if (existing != null) await _store.deleteStaging(mangaId, chapterId);
+    await _store.beginChapter(
+      mangaId,
+      chapterId,
+      ChapterManifest(generation: generation, indices: indices),
+    );
+    return const {};
   }
 
   /// Notification + main-isolate notification after each chapter settles.

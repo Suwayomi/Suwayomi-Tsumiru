@@ -8,14 +8,19 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/is_android_native.dart';
+import 'chapter_commit.dart';
 import 'chapter_download_engine.dart';
+import 'chapter_manifest.dart';
 import 'offline_database.dart';
+import 'offline_page_store.dart';
 
 /// Resolves a chapter's page URLs (wraps the GraphQL fetchChapterPages call).
 typedef PageUrlsResolver = Future<List<String>> Function(int chapterId);
 
-/// Measures the total on-disk bytes of a downloaded chapter's pages.
-typedef ChapterBytesMeasurer = Future<int> Function(int mangaId, int chapterId);
+/// Reports a chapter's live page progress upward (the arc can't be counted from
+/// the catalog any more — page rows only appear at commit).
+typedef DownloadProgressSink = void Function(
+    int chapterId, int done, int total);
 
 /// Orchestrates background chapter downloads on top of [ChapterDownloadEngine],
 /// one chapter at a time (page-level parallelism lives in the engine) since
@@ -28,15 +33,23 @@ class OfflineDownloadCoordinator {
     required this.db,
     required this.resolvePages,
     required this.engine,
-    required this.measureChapterBytes,
+    required this.store,
     this.persistedPaused,
     this.onServerUnreachable,
+    this.onProgress,
+    this.onProgressDone,
   });
 
   final OfflineDatabase db;
   final PageUrlsResolver resolvePages;
   final ChapterDownloadEngine engine;
-  final ChapterBytesMeasurer measureChapterBytes;
+  final OfflinePageStore store;
+
+  /// Live page progress for the UI arc. Null in tests.
+  final DownloadProgressSink? onProgress;
+
+  /// The chapter stopped being live — committed, failed or cancelled.
+  final void Function(int chapterId)? onProgressDone;
 
   /// Reports "the server is unreachable" upward when a resolve fails on a
   /// connection error. Without it the pump can park during a background-only
@@ -210,14 +223,27 @@ class OfflineDownloadCoordinator {
         await _applyTerminalError(chapter.id);
         return;
       }
-      final stored = (await (db.select(db.offlinePages)
-                ..where((t) => t.chapterId.equals(chapter.id)))
-              .get())
-          .map((p) => p.pageIndex)
-          .toSet();
+      final indices = [for (var i = 0; i < urls.length; i++) i];
+      // The generation is read fresh (not taken from the possibly-stale row we
+      // were handed) and stamped into staging, so commit can tell whether this
+      // download still belongs to the chapter it started on.
+      final generation =
+          (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
+      final staged = await _openStaging(
+        chapter.mangaId,
+        chapter.id,
+        indices,
+        generation,
+      );
+      // A determinate arc from the first frame — webtoon chapters only learn
+      // their page total here, when the list resolves.
+      await db.setChapterPageCount(chapter.id, urls.length);
+      var done = staged.length;
+      onProgress?.call(chapter.id, done, urls.length);
+
       final pages = <PageRef>[
         for (var i = 0; i < urls.length; i++)
-          if (!stored.contains(i)) (index: i, url: urls[i]),
+          if (!staged.contains(i)) (index: i, url: urls[i]),
       ];
 
       final outcome = await engine.download(
@@ -226,25 +252,13 @@ class OfflineDownloadCoordinator {
         pages: pages,
         isCancelled: () => _cancelled.contains(chapter.id),
         onPageStored: (pageIndex, relPath, bytes) async {
-          if (_deleting.containsKey(chapter.id)) return;
-          // Atomic state-check + insert: deleteChapter flips state=none and
-          // drops rows in one transaction, so this either commits first (and
-          // gets deleted there) or reads none and skips — no orphan row survives.
-          await db.transaction(() async {
-            final c = await db.chapterById(chapter.id);
-            if (c == null || c.deviceState == OfflineDeviceState.none) return;
-            await db.into(db.offlinePages).insertOnConflictUpdate(
-                  OfflinePagesCompanion.insert(
-                    chapterId: chapter.id,
-                    pageIndex: pageIndex,
-                    relativePath: relPath,
-                  ),
-                );
-          });
+          // Pages live in staging until the chapter commits, so there is no
+          // catalog row to write here — only progress to report.
+          onProgress?.call(chapter.id, ++done, urls.length);
         },
       );
 
-      if (outcome.cancelled) return; // leave partial; resume later
+      if (outcome.cancelled) return; // leave staging; resume later
       if (outcome.offline) {
         // No network / Wi-Fi-only blocked it — leave the chapter `downloading`
         // so it resumes on reconnect, NOT `error`. Stop the pump too: the
@@ -267,7 +281,12 @@ class OfflineDownloadCoordinator {
       }
       logger.i('Offline: enqueued ${pages.length} page tasks for chapter '
           '${chapter.id} (manga ${chapter.mangaId})');
-      await _finalizeIfComplete(chapter.mangaId, chapter.id, urls.length);
+      await commitStagedChapter(
+        db: db,
+        store: store,
+        mangaId: chapter.mangaId,
+        chapterId: chapter.id,
+      );
     } catch (e) {
       final cause = e is OperationMessageException ? e.exception : e;
       if (isConnectionError(cause)) {
@@ -286,10 +305,44 @@ class OfflineDownloadCoordinator {
       }
     } finally {
       _active.remove(chapter.id);
+      onProgressDone?.call(chapter.id);
       // Keep the cancel set while a delete still holds a claim — endDelete owns
       // clearing it once the last claimant exits.
       if (!_deleting.containsKey(chapter.id)) _cancelled.remove(chapter.id);
     }
+  }
+
+  /// Open (or adopt) the chapter's staging directory and report which pages are
+  /// already there.
+  ///
+  /// Staging survives an interrupted run, which is what makes a resume cheap.
+  /// It is dropped and restarted when it describes a different chapter than the
+  /// one we just resolved — a different page set, or a generation from before a
+  /// delete — because mixing two page sets in one directory would commit a
+  /// chapter assembled from both.
+  Future<Set<int>> _openStaging(
+    int mangaId,
+    int chapterId,
+    List<int> indices,
+    int generation,
+  ) async {
+    final existing = await store.readManifest(mangaId, chapterId);
+    if (existing != null &&
+        existing.generation == generation &&
+        existing.coversSameIndices(indices)) {
+      return store.stagedPageIndices(mangaId, chapterId);
+    }
+    if (existing != null) {
+      logger.i('Offline: restarting staging for chapter $chapterId '
+          '(page list or generation changed)');
+      await store.deleteStaging(mangaId, chapterId);
+    }
+    await store.beginChapter(
+      mangaId,
+      chapterId,
+      ChapterManifest(generation: generation, indices: indices),
+    );
+    return const {};
   }
 
   /// Write a terminal error state only if the chapter is still ours. beginDelete
@@ -302,42 +355,6 @@ class OfflineDownloadCoordinator {
       if (c == null || c.deviceState == OfflineDeviceState.none) return;
       await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
     });
-  }
-
-  /// Mark a chapter `downloaded` (with measured bytes) once all its pages are on
-  /// disk. [expectedPages] is the resolved page count when known, else the
-  /// catalog's `pageCount`.
-  Future<bool> _finalizeIfComplete(
-      int mangaId, int chapterId, int? expectedPages) async {
-    final chapter = await db.chapterById(chapterId);
-    if (chapter == null) return false;
-    if (chapter.deviceState == OfflineDeviceState.downloaded) return true;
-    // Deleted mid-download: never resurrect as `downloaded`.
-    if (chapter.deviceState == OfflineDeviceState.none ||
-        _deleting.containsKey(chapterId)) {
-      return false;
-    }
-    final target = expectedPages ?? chapter.pageCount;
-    if (target <= 0) return false;
-    if (await db.downloadedPageCount(chapterId) < target) return false;
-    final bytes = await measureChapterBytes(mangaId, chapterId);
-    // Re-check and write atomically (serialized with deleteChapter): a delete
-    // that landed during the async count/measure must win over this completion.
-    final finalized = await db.transaction(() async {
-      if (_deleting.containsKey(chapterId)) return false;
-      final fresh = await db.chapterById(chapterId);
-      if (fresh == null || fresh.deviceState == OfflineDeviceState.none) {
-        return false;
-      }
-      await db.setChapterDeviceState(chapterId, OfflineDeviceState.downloaded,
-          bytes: bytes, downloadedAt: DateTime.now());
-      return true;
-    });
-    if (finalized) {
-      logger.i('Offline: chapter $chapterId downloaded ($target pages, '
-          '$bytes bytes)');
-    }
-    return finalized;
   }
 
   /// Drain the queue one chapter at a time: resume any chapter left
