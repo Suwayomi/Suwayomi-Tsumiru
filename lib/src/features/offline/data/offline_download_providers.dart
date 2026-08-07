@@ -1337,6 +1337,16 @@ Future<void> reconcileMangaContainer(
 }
 
 /// Launch entry point (main.dart holds a ProviderContainer, not a Ref).
+///
+/// Deliberately passes no `enqueueServerDownload`: asking the server for a
+/// chapter it doesn't have sends it out to the source, and doing that for the
+/// whole library on every start re-issued the same request forever whenever the
+/// server was behind — a permanent CPU load and an endless challenge-solving
+/// storm for sources the reader never opened (#354). Filling the server is the
+/// server's own job (`autoDownloadNewChapters`, bounded by
+/// `autoDownloadNewChaptersLimit`); the request belongs to the moment a reader
+/// asks for a series, not to the app starting. Everything else here is local:
+/// evicting orphans and pulling chapters the server already holds.
 Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
   final manager = container.read(offlineDownloadManagerProvider);
@@ -1355,9 +1365,6 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
         mangaId: m.id,
         deleteWhileReadingSlots:
             container.read(localDeleteSettingsProvider).deleteWhileReading,
-        enqueueServerDownload: (ids) => container
-            .read(downloadsRepositoryProvider)
-            .addChaptersBatchToDownloadQueue(ids),
         removeFromWorker: (id) async {
           final ctrl = container.read(backgroundDownloadControllerProvider);
           await ctrl.onRemoved(id);
