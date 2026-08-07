@@ -14,14 +14,10 @@ void main() {
       finish: () => events.add('finish'),
     );
 
-    expect(events, [
-      'background',
-      'main',
-      'database',
-      'files',
-      'identity',
-      'finish',
-    ]);
+    expect(
+      events,
+      ['background', 'main', 'database', 'files', 'identity', 'finish'],
+    );
   });
 
   test('restart suppression is released when a wipe fails', () async {

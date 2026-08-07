@@ -12,53 +12,55 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 MangaDto _manga(int id, {int? rating}) => Fragment$MangaDto(
-  id: id,
-  title: 'M$id',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: rating == null
-      ? const []
-      : [Fragment$MangaDto$meta(key: 'flutter_rating', value: '$rating')],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: 0,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/$id',
-);
+      id: id,
+      title: 'M$id',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 0),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: rating == null
+          ? const []
+          : [Fragment$MangaDto$meta(key: 'flutter_rating', value: '$rating')],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 0,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/$id',
+    );
 
 List<MangaDto> _run(
   List<MangaDto> input, {
   MangaSort sort = MangaSort.alphabetical,
   bool asc = true,
   int minRating = 0,
-}) => applyLibraryFilterSort(
-  input,
-  query: null,
-  mangaFilterUnread: null,
-  mangaFilterDownloaded: null,
-  mangaFilterCompleted: null,
-  mangaFilterStarted: null,
-  mangaFilterBookmarked: null,
-  mangaFilterOffline: null,
-  offlineMangaIds: const {},
-  mangaFilterLewd: null,
-  mangaFilterMinRating: minRating,
-  filterCategories: false,
-  filterCategoriesInclude: const {},
-  filterCategoriesExclude: const {},
-  filterTags: false,
-  filterTagsInclude: const {},
-  filterTagsExclude: const {},
-  sortedBy: sort,
-  sortedDirection: asc,
-);
+}) =>
+    applyLibraryFilterSort(
+      input,
+      query: null,
+      mangaFilterUnread: null,
+      mangaFilterDownloaded: null,
+      mangaFilterCompleted: null,
+      mangaFilterStarted: null,
+      mangaFilterBookmarked: null,
+      mangaFilterOffline: null,
+      offlineMangaIds: const {},
+      mangaFilterLewd: null,
+      mangaFilterMinRating: minRating,
+      filterCategories: false,
+      filterCategoriesInclude: const {},
+      filterCategoriesExclude: const {},
+      filterTags: false,
+      filterTagsInclude: const {},
+      filterTagsExclude: const {},
+      sortedBy: sort,
+      sortedDirection: asc,
+    );
 
 void main() {
   final items = [
@@ -68,19 +70,13 @@ void main() {
   ];
 
   test('sort by rating ascending puts unrated first, highest last', () {
-    expect(_run(items, sort: MangaSort.rating, asc: true).map((m) => m.id), [
-      3,
-      2,
-      1,
-    ]);
+    expect(_run(items, sort: MangaSort.rating, asc: true).map((m) => m.id),
+        [3, 2, 1]);
   });
 
   test('sort by rating descending puts highest first', () {
-    expect(_run(items, sort: MangaSort.rating, asc: false).map((m) => m.id), [
-      1,
-      2,
-      3,
-    ]);
+    expect(_run(items, sort: MangaSort.rating, asc: false).map((m) => m.id),
+        [1, 2, 3]);
   });
 
   test('minimum-rating filter excludes lower-rated and unrated', () {

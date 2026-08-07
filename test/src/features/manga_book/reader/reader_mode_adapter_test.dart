@@ -19,30 +19,18 @@ const orphans = {
 void main() {
   group('ReaderModeAdapter', () {
     test('locked chip↔mode mapping', () {
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.defaultReader),
-        ReadingModeChip.defaultChip,
-      );
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.singleHorizontalLTR),
-        ReadingModeChip.pagedLTR,
-      );
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.singleHorizontalRTL),
-        ReadingModeChip.pagedRTL,
-      );
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.singleVertical),
-        ReadingModeChip.pagedVertical,
-      );
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.webtoon),
-        ReadingModeChip.longStrip,
-      );
-      expect(
-        ReaderModeAdapter.toChip(ReaderMode.continuousVertical),
-        ReadingModeChip.longStripGaps,
-      );
+      expect(ReaderModeAdapter.toChip(ReaderMode.defaultReader),
+          ReadingModeChip.defaultChip);
+      expect(ReaderModeAdapter.toChip(ReaderMode.singleHorizontalLTR),
+          ReadingModeChip.pagedLTR);
+      expect(ReaderModeAdapter.toChip(ReaderMode.singleHorizontalRTL),
+          ReadingModeChip.pagedRTL);
+      expect(ReaderModeAdapter.toChip(ReaderMode.singleVertical),
+          ReadingModeChip.pagedVertical);
+      expect(ReaderModeAdapter.toChip(ReaderMode.webtoon),
+          ReadingModeChip.longStrip);
+      expect(ReaderModeAdapter.toChip(ReaderMode.continuousVertical),
+          ReadingModeChip.longStripGaps);
     });
 
     test('fromChip(toChip(x)) == x for every mapped mode', () {
@@ -55,10 +43,8 @@ void main() {
 
     test('toChip(fromChip(chip)) == chip for every chip', () {
       for (final chip in ReadingModeChip.values) {
-        expect(
-          ReaderModeAdapter.toChip(ReaderModeAdapter.fromChip(chip)),
-          chip,
-        );
+        expect(ReaderModeAdapter.toChip(ReaderModeAdapter.fromChip(chip)),
+            chip);
       }
     });
 

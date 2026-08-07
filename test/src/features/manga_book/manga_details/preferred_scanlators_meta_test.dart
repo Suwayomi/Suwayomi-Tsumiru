@@ -11,38 +11,29 @@ void main() {
   group('MangaMeta.preferredScanlators parse', () {
     test('decodes a JSON string array', () {
       expect(
-        MangaMeta.fromJson({
-          'flutter_preferredScanlators': '["A","B"]',
-        }).preferredScanlators,
+        MangaMeta.fromJson({'flutter_preferredScanlators': '["A","B"]'})
+            .preferredScanlators,
         ['A', 'B'],
       );
     });
     test('null on empty / non-JSON / non-list', () {
       expect(MangaMeta.fromJson(const {}).preferredScanlators, isNull);
       expect(
-        MangaMeta.fromJson({
-          'flutter_preferredScanlators': '',
-        }).preferredScanlators,
-        isNull,
-      );
+          MangaMeta.fromJson({'flutter_preferredScanlators': ''})
+              .preferredScanlators,
+          isNull);
       expect(
-        MangaMeta.fromJson({
-          'flutter_preferredScanlators': 'nope',
-        }).preferredScanlators,
-        isNull,
-      );
+          MangaMeta.fromJson({'flutter_preferredScanlators': 'nope'})
+              .preferredScanlators,
+          isNull);
       expect(
-        MangaMeta.fromJson({
-          'flutter_preferredScanlators': '{}',
-        }).preferredScanlators,
-        isNull,
-      );
+          MangaMeta.fromJson({'flutter_preferredScanlators': '{}'})
+              .preferredScanlators,
+          isNull);
     });
     test('enum key matches', () {
-      expect(
-        MangaMetaKeys.preferredScanlators.key,
-        'flutter_preferredScanlators',
-      );
+      expect(MangaMetaKeys.preferredScanlators.key,
+          'flutter_preferredScanlators');
     });
   });
 }

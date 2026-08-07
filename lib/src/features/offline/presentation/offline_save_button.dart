@@ -34,11 +34,6 @@ class OfflineSaveButton extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
 
     return switch (state) {
-      // A queued chapter is waiting its turn, not working. It used to render
-      // the same spinner as a live download, and a spinner animates every
-      // frame — so a few hundred queued chapters repainted the entire list at
-      // 60fps for as long as the queue lasted, whether or not anything was
-      // actually being fetched. Waiting looks like waiting now.
       OfflineDeviceState.queued => const _QueuedIndicator(),
       OfflineDeviceState.downloading => _DownloadingIndicator(
         chapterId: chapterId,
@@ -98,9 +93,9 @@ class _QueuedIndicator extends StatelessWidget {
   }
 }
 
-/// Determinate download arc for a chapter, showing how many of its pages are
-/// on disk. Falls back to an indeterminate
-/// spinner until the page total is known.
+/// Determinate download arc for the chapter being fetched right now, showing
+/// how many of its pages are on disk. Only ever one row at a time, so it can
+/// afford to animate.
 class _DownloadingIndicator extends ConsumerWidget {
   const _DownloadingIndicator({required this.chapterId});
 
@@ -109,8 +104,7 @@ class _DownloadingIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(offlineChapterProgressProvider(chapterId));
-    // Spin (indeterminate) while queued or at 0% so the icon is
-    // never invisible; switch to a determinate fill only once pages land.
+    // Spin until the first page lands, so the icon is never invisible.
     final value = (progress == null || progress <= 0.0) ? null : progress;
     return SizedBox(
       width: 40,

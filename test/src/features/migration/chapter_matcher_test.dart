@@ -14,14 +14,15 @@ ChapterState ch({
   bool read = false,
   bool bookmark = false,
   int lastPage = 0,
-}) => ChapterState(
-  id: id,
-  chapterNumber: number,
-  name: name,
-  isRead: read,
-  isBookmarked: bookmark,
-  lastPageRead: lastPage,
-);
+}) =>
+    ChapterState(
+      id: id,
+      chapterNumber: number,
+      name: name,
+      isRead: read,
+      isBookmarked: bookmark,
+      lastPageRead: lastPage,
+    );
 
 void main() {
   group('matchChapterState — number matching', () {
@@ -44,19 +45,16 @@ void main() {
       expect(r.patches.single.id, 11);
     });
 
-    test(
-      '"Chapter 1" must NOT match "Chapter 10" (no substring collision)',
-      () {
-        final r = matchChapterState(
-          source: [ch(id: 1, number: 1, name: 'Chapter 1', read: true)],
-          target: [ch(id: 110, number: 10, name: 'Chapter 10')],
-        );
-        // 1 != 10 by number, and name fallback is disabled for recognized
-        // numbers, so this is unmatched — never a false read.
-        expect(r.patches, isEmpty);
-        expect(r.unmatchedState, 1);
-      },
-    );
+    test('"Chapter 1" must NOT match "Chapter 10" (no substring collision)', () {
+      final r = matchChapterState(
+        source: [ch(id: 1, number: 1, name: 'Chapter 1', read: true)],
+        target: [ch(id: 110, number: 10, name: 'Chapter 10')],
+      );
+      // 1 != 10 by number, and name fallback is disabled for recognized
+      // numbers, so this is unmatched — never a false read.
+      expect(r.patches, isEmpty);
+      expect(r.unmatchedState, 1);
+    });
 
     test('distinct numbers do not collide even with similar names', () {
       final r = matchChapterState(

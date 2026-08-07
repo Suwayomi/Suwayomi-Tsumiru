@@ -26,40 +26,42 @@ Fragment$MangaDto _manga({
   int unread = 4,
   int downloads = 3,
   String lang = 'ja',
-}) => Fragment$MangaDto(
-  id: _kMangaId,
-  title: 'Test Manga',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 10),
-  downloadCount: downloads,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  source: Fragment$SourceDto(
-    id: '1',
-    name: 'Test Source',
-    displayName: 'Test Source',
-    lang: lang,
-    iconUrl: '/icon.png',
-    contentWarning: Enum$ContentWarning.SAFE,
-    isConfigurable: false,
-    supportsLatest: true,
-    meta: const [],
-    $extension: Fragment$SourceDto$extension(
-      pkgName: 'test',
-      isObsolete: false,
-    ),
-  ),
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: unread,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/7',
-);
+}) =>
+    Fragment$MangaDto(
+      id: _kMangaId,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 10),
+      downloadCount: downloads,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: const [],
+      source: Fragment$SourceDto(
+        id: '1',
+        name: 'Test Source',
+        displayName: 'Test Source',
+        lang: lang,
+        iconUrl: '/icon.png',
+        contentWarning: Enum$ContentWarning.SAFE,
+        isConfigurable: false,
+        supportsLatest: true,
+        meta: const [],
+        $extension: Fragment$SourceDto$extension(
+          pkgName: 'test',
+          isObsolete: false,
+        ),
+      ),
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: unread,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/7',
+    );
 
 Future<void> _pumpBadges(
   WidgetTester tester, {
@@ -82,34 +84,31 @@ Future<void> _pumpBadges(
   // Stand in for the boot-time upgrade path, so a test can seed the pre-revamp
   // keys and assert on what the user ends up seeing.
   if (migrate) await migrateBadgePreferences(sp);
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sp),
-        offlineDeviceMangaIdsProvider.overrideWith(
-          (ref) async => onDevice ? {_kMangaId} : <int>{},
-        ),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        home: Directionality(
-          textDirection: textDirection,
-          child: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: 160,
-                child: MangaBadgesRow(
-                  manga: manga ?? _manga(),
-                  showCountBadges: showCountBadges,
-                ),
+  await tester.pumpWidget(ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
+      offlineDeviceMangaIdsProvider
+          .overrideWith((ref) async => onDevice ? {_kMangaId} : <int>{}),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: Directionality(
+        textDirection: textDirection,
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 160,
+              child: MangaBadgesRow(
+                manga: manga ?? _manga(),
+                showCountBadges: showCountBadges,
               ),
             ),
           ),
         ),
       ),
     ),
-  );
+  ));
   await tester.pump();
 }
 
@@ -140,9 +139,8 @@ void main() {
       expect(find.text('3'), findsOneWidget);
     });
 
-    testWidgets('the retired unreadBadge bool is no longer consulted', (
-      tester,
-    ) async {
+    testWidgets('the retired unreadBadge bool is no longer consulted',
+        (tester) async {
       // unreadBadgeMode is the single source of truth.
       await _pumpBadges(tester, prefs: {'unreadBadge': false});
       expect(find.text('4'), findsOneWidget);
@@ -150,45 +148,38 @@ void main() {
   });
 
   group('badge sides', () {
-    testWidgets('on-device renders when the manga has device downloads', (
-      tester,
-    ) async {
+    testWidgets('on-device renders when the manga has device downloads',
+        (tester) async {
       await _pumpBadges(tester);
       expect(find.byIcon(Icons.offline_pin_rounded), findsOneWidget);
     });
 
-    testWidgets('on-device is absent when nothing is downloaded here', (
-      tester,
-    ) async {
+    testWidgets('on-device is absent when nothing is downloaded here',
+        (tester) async {
       await _pumpBadges(tester, onDevice: false);
       expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
     });
 
-    testWidgets(
-      'on-device is absent when the setting is off, even if downloaded',
-      (tester) async {
-        await _pumpBadges(tester, prefs: {'onDeviceBadge': false});
-        expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
-      },
-    );
+    testWidgets('on-device is absent when the setting is off, even if downloaded',
+        (tester) async {
+      await _pumpBadges(tester, prefs: {'onDeviceBadge': false});
+      expect(find.byIcon(Icons.offline_pin_rounded), findsNothing);
+    });
 
-    testWidgets('the language flag renders for a mapped source language', (
-      tester,
-    ) async {
+    testWidgets('the language flag renders for a mapped source language',
+        (tester) async {
       await _pumpBadges(tester);
       expect(find.text('🇯🇵'), findsOneWidget);
     });
 
-    testWidgets('an unmapped language falls back to the uppercase code', (
-      tester,
-    ) async {
+    testWidgets('an unmapped language falls back to the uppercase code',
+        (tester) async {
       await _pumpBadges(tester, manga: _manga(lang: 'xx'));
       expect(find.text('XX'), findsOneWidget);
     });
 
-    testWidgets('the source badge draws a folder for the local source', (
-      tester,
-    ) async {
+    testWidgets('the source badge draws a folder for the local source',
+        (tester) async {
       // Local Source is just a source with no extension icon to fetch, so the
       // one source badge covers it — this is what `localBadge` used to draw.
       await _pumpBadges(
@@ -199,16 +190,14 @@ void main() {
       expect(find.byIcon(Icons.folder_rounded), findsOneWidget);
     });
 
-    testWidgets('the source badge draws the extension icon otherwise', (
-      tester,
-    ) async {
+    testWidgets('the source badge draws the extension icon otherwise',
+        (tester) async {
       await _pumpBadges(tester, prefs: {'sourceBadge': true});
       expect(find.byIcon(Icons.folder_rounded), findsNothing);
     });
 
-    testWidgets('no source badge means no folder for the local source either', (
-      tester,
-    ) async {
+    testWidgets('no source badge means no folder for the local source either',
+        (tester) async {
       await _pumpBadges(
         tester,
         prefs: {'sourceBadge': false},
@@ -226,9 +215,8 @@ void main() {
       expect(find.text('LOCALSOURCELANG'), findsNothing);
     });
 
-    testWidgets('moving a badge to the other side keeps it rendered', (
-      tester,
-    ) async {
+    testWidgets('moving a badge to the other side keeps it rendered',
+        (tester) async {
       // Everything on the LEFT: the strip still draws all four segments.
       await _pumpBadges(tester, prefs: {'badgeRightSide': <String>[]});
       expect(find.text('4'), findsOneWidget);
@@ -238,9 +226,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('an RTL locale still reaches both physical corners', (
-      tester,
-    ) async {
+    testWidgets('an RTL locale still reaches both physical corners',
+        (tester) async {
       await _pumpBadges(tester, textDirection: TextDirection.rtl);
       final row = tester.getRect(find.byType(MangaBadgesRow));
       // Each cluster hugs its own corner, inside the row's 8px padding.
@@ -251,9 +238,8 @@ void main() {
       );
     });
 
-    testWidgets('the Browse in-library marker stays left in an RTL locale', (
-      tester,
-    ) async {
+    testWidgets('the Browse in-library marker stays left in an RTL locale',
+        (tester) async {
       // Browse and global-search covers take their own path through the row.
       await _pumpBadges(
         tester,
@@ -270,17 +256,18 @@ void main() {
       // Pre-revamp keys in, the same cover out.
       await _pumpBadges(
         tester,
-        prefs: {'unreadBadge': false, 'localBadge': true, 'sourceBadge': false},
+        prefs: {
+          'unreadBadge': false,
+          'localBadge': true,
+          'sourceBadge': false,
+        },
         migrate: true,
         manga: _manga(lang: 'localsourcelang'),
       );
 
       expect(find.text('4'), findsNothing, reason: 'unread badge stayed off');
-      expect(
-        find.byIcon(Icons.folder_rounded),
-        findsOneWidget,
-        reason: 'the Local Source badge survived as the source badge',
-      );
+      expect(find.byIcon(Icons.folder_rounded), findsOneWidget,
+          reason: 'the Local Source badge survived as the source badge');
     });
 
     testWidgets('nothing enabled renders nothing at all', (tester) async {
@@ -294,49 +281,46 @@ void main() {
         },
       );
       // No phantom padding either.
-      expect(tester.getSize(find.byType(MangaBadgesRow)), const Size(160, 0));
+      expect(
+        tester.getSize(find.byType(MangaBadgesRow)),
+        const Size(160, 0),
+      );
     });
 
-    testWidgets('survives an unbounded width (the list tiles give none)', (
-      tester,
-    ) async {
+    testWidgets('survives an unbounded width (the list tiles give none)',
+        (tester) async {
       SharedPreferences.setMockInitialValues({
         'onDeviceBadge': true,
         'downloadedBadge': true,
         'languageBadge': true,
       });
       final sp = await SharedPreferences.getInstance();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sp),
-            offlineDeviceMangaIdsProvider.overrideWith(
-              (ref) async => {_kMangaId},
-            ),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            home: Scaffold(
-              // A Row lays non-flex children out with unbounded width — exactly
-              // what MangaCoverListTile does.
-              body: Row(
-                children: [
-                  MangaBadgesRow(manga: _manga(), showCountBadges: true),
-                ],
-              ),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            // A Row lays non-flex children out with unbounded width — exactly
+            // what MangaCoverListTile does.
+            body: Row(
+              children: [
+                MangaBadgesRow(manga: _manga(), showCountBadges: true),
+              ],
             ),
           ),
         ),
-      );
+      ));
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(find.text('4'), findsOneWidget);
       expect(find.text('🇯🇵'), findsOneWidget);
     });
 
-    testWidgets('the unbounded path keeps its cluster order in RTL', (
-      tester,
-    ) async {
+    testWidgets('the unbounded path keeps its cluster order in RTL',
+        (tester) async {
       // The list tiles take the min-width branch, which orders the two clusters
       // itself rather than pinning them to corners — RTL would swap them.
       SharedPreferences.setMockInitialValues({
@@ -345,29 +329,25 @@ void main() {
         'languageBadge': true,
       });
       final sp = await SharedPreferences.getInstance();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sp),
-            offlineDeviceMangaIdsProvider.overrideWith(
-              (ref) async => {_kMangaId},
-            ),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            home: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Scaffold(
-                body: Row(
-                  children: [
-                    MangaBadgesRow(manga: _manga(), showCountBadges: true),
-                  ],
-                ),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: Row(
+                children: [
+                  MangaBadgesRow(manga: _manga(), showCountBadges: true),
+                ],
               ),
             ),
           ),
         ),
-      );
+      ));
       await tester.pump();
       expect(
         tester.getCenter(find.text('4')).dx,
@@ -418,61 +398,48 @@ void main() {
     const strip = 20.0;
     const cell = strip * .8;
 
-    testWidgets(
-      'the flag segment fills the strip, so it cannot sit off centre',
-      (tester) async {
-        await _pumpBadges(
-          tester,
-          prefs: {
-            'unreadBadgeMode': UnreadBadgeMode.hidden.index,
-            'downloadedBadge': false,
-            'onDeviceBadge': false,
-            'languageBadge': true,
-          },
-        );
+    testWidgets('the flag segment fills the strip, so it cannot sit off centre',
+        (tester) async {
+      await _pumpBadges(tester, prefs: {
+        'unreadBadgeMode': UnreadBadgeMode.hidden.index,
+        'downloadedBadge': false,
+        'onDeviceBadge': false,
+        'languageBadge': true,
+      });
 
-        // The regression this pins: `height: 1` pinned the line box to ONE EM
-        // (14dp in a 20dp strip) and left Center() to place it. Because a font's
-        // ascent:descent split is lopsided, squeezing the box to 1em put the
-        // glyph ~1dp above the strip's centre line. A line box of exactly one
-        // strip leaves no room to be off-centre — and still bounds the emoji's
-        // line spacing, which is what `height: 1` was there for.
-        // Font-independent: fontSize x (1 / ratio) == strip for any font.
-        final text = tester.getRect(find.text('🇯🇵'));
-        expect(text.height, closeTo(strip, 0.01));
-        expect(
-          text.center.dy,
-          closeTo(tester.getRect(find.byType(ClipRRect).first).center.dy, 0.01),
-        );
-      },
-    );
+      // The regression this pins: `height: 1` pinned the line box to ONE EM
+      // (14dp in a 20dp strip) and left Center() to place it. Because a font's
+      // ascent:descent split is lopsided, squeezing the box to 1em put the
+      // glyph ~1dp above the strip's centre line. A line box of exactly one
+      // strip leaves no room to be off-centre — and still bounds the emoji's
+      // line spacing, which is what `height: 1` was there for.
+      // Font-independent: fontSize x (1 / ratio) == strip for any font.
+      final text = tester.getRect(find.text('🇯🇵'));
+      expect(text.height, closeTo(strip, 0.01));
+      expect(
+        text.center.dy,
+        closeTo(tester.getRect(find.byType(ClipRRect).first).center.dy, 0.01),
+      );
+    });
 
     testWidgets('every badge segment centres its text', (tester) async {
       await _pumpBadges(tester, manga: _manga(lang: 'xx'));
       final texts = tester.widgetList<Text>(find.byType(Text));
       expect(texts, isNotEmpty);
       for (final text in texts) {
-        expect(
-          text.textAlign,
-          TextAlign.center,
-          reason: 'segment "${text.data}"',
-        );
+        expect(text.textAlign, TextAlign.center, reason: 'segment "${text.data}"');
       }
     });
 
-    testWidgets('the source icon and its stand-in stay inside the badge cell', (
-      tester,
-    ) async {
-      await _pumpBadges(
-        tester,
-        prefs: {
-          'unreadBadgeMode': UnreadBadgeMode.hidden.index,
-          'downloadedBadge': false,
-          'onDeviceBadge': false,
-          'languageBadge': false,
-          'sourceBadge': true,
-        },
-      );
+    testWidgets('the source icon and its stand-in stay inside the badge cell',
+        (tester) async {
+      await _pumpBadges(tester, prefs: {
+        'unreadBadgeMode': UnreadBadgeMode.hidden.index,
+        'downloadedBadge': false,
+        'onDeviceBadge': false,
+        'languageBadge': false,
+        'sourceBadge': true,
+      });
       expect(tester.takeException(), isNull);
       expect(tester.getSize(find.byType(ServerImage)), const Size(cell, cell));
 
@@ -484,7 +451,10 @@ void main() {
       expect(placeholder.width, lessThanOrEqualTo(cell));
       expect(placeholder.height, lessThanOrEqualTo(cell));
       // ...and an IconTheme caps whatever unsized icon it falls back to.
-      expect(IconTheme.of(tester.element(find.byType(ServerImage))).size, cell);
+      expect(
+        IconTheme.of(tester.element(find.byType(ServerImage))).size,
+        cell,
+      );
     });
   });
 
@@ -507,42 +477,43 @@ void main() {
       expect(layout[0].badge, LibraryBadge.source);
       expect(layout[1].badge, LibraryBadge.unread);
       // Never-mentioned badges follow in declaration order.
-      expect(layout.skip(2).map((p) => p.badge).toList(), [
-        LibraryBadge.downloaded,
-        LibraryBadge.onDevice,
-        LibraryBadge.language,
-      ]);
+      expect(
+        layout.skip(2).map((p) => p.badge).toList(),
+        [
+          LibraryBadge.downloaded,
+          LibraryBadge.onDevice,
+          LibraryBadge.language,
+        ],
+      );
       // Side comes from badgeRightSide, not from the order.
       expect(layout[1].side, BadgeSide.right);
       expect(layout[0].side, BadgeSide.left);
     });
 
-    test(
-      'the shipped default reproduces the previous fixed arrangement',
-      () async {
-        SharedPreferences.setMockInitialValues(const {});
-        final sp = await SharedPreferences.getInstance();
-        final container = ProviderContainer(
-          overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-        );
-        addTearDown(container.dispose);
+    test('the shipped default reproduces the previous fixed arrangement',
+        () async {
+      SharedPreferences.setMockInitialValues(const {});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+      );
+      addTearDown(container.dispose);
 
-        final layout = container.read(libraryBadgeLayoutProvider);
-        final left = layout
-            .where((p) => p.side == BadgeSide.left)
-            .map((p) => p.badge)
-            .toList();
-        final right = layout
-            .where((p) => p.side == BadgeSide.right)
-            .map((p) => p.badge)
-            .toList();
-        expect(left, [LibraryBadge.unread, LibraryBadge.downloaded]);
-        expect(right, [
-          LibraryBadge.onDevice,
-          LibraryBadge.language,
-          LibraryBadge.source,
-        ]);
-      },
-    );
+      final layout = container.read(libraryBadgeLayoutProvider);
+      final left = layout
+          .where((p) => p.side == BadgeSide.left)
+          .map((p) => p.badge)
+          .toList();
+      final right = layout
+          .where((p) => p.side == BadgeSide.right)
+          .map((p) => p.badge)
+          .toList();
+      expect(left, [LibraryBadge.unread, LibraryBadge.downloaded]);
+      expect(right, [
+        LibraryBadge.onDevice,
+        LibraryBadge.language,
+        LibraryBadge.source,
+      ]);
+    });
   });
 }

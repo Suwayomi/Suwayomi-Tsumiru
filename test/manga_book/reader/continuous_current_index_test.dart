@@ -8,18 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/infinity_continuous_utils.dart';
 
-ItemPosition _p(int index, double leading, double trailing) => ItemPosition(
-  index: index,
-  itemLeadingEdge: leading,
-  itemTrailingEdge: trailing,
-);
+ItemPosition _p(int index, double leading, double trailing) =>
+    ItemPosition(index: index, itemLeadingEdge: leading, itemTrailingEdge: trailing);
 
 int? _select(List<ItemPosition> positions, int total) =>
-    InfinityContinuousUtils.selectCurrentIndex(
-      positions,
-      total,
-      minVisibleAreaThreshold: 0.05,
-    );
+    InfinityContinuousUtils.selectCurrentIndex(positions, total,
+        minVisibleAreaThreshold: 0.05);
 
 void main() {
   group('selectCurrentIndex', () {
@@ -69,7 +63,11 @@ void main() {
     test('scrolled to the end of a short chapter (page 0 leaving) completes', () {
       // Same short chapter, but now scrolled: page 0 has slid above the viewport
       // top (leadingEdge < 0) — the user reached the end, so it completes.
-      final positions = [_p(0, -0.5, 0.2), _p(1, 0.2, 0.6), _p(2, 0.6, 0.9)];
+      final positions = [
+        _p(0, -0.5, 0.2),
+        _p(1, 0.2, 0.6),
+        _p(2, 0.6, 0.9),
+      ];
       expect(_select(positions, 3), 2);
     });
 

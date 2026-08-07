@@ -94,11 +94,9 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final r = runner.value;
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          r == null || r.entries.isEmpty
-              ? l10n.migrationListTitle
-              : l10n.migrationListTitleProgress(_finished(r), r.entries.length),
-        ),
+        title: Text(r == null || r.entries.isEmpty
+            ? l10n.migrationListTitle
+            : l10n.migrationListTitleProgress(_finished(r), r.entries.length)),
         actions: r == null
             ? null
             : [
@@ -114,19 +112,13 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                           tooltip: l10n.migrationSettings,
                           icon: const Icon(Icons.settings_outlined),
                           onPressed: () => _openSettings(
-                            context,
-                            r,
-                            hideUnmatched,
-                            hideWithoutUpdates,
-                          ),
+                              context, r, hideUnmatched, hideWithoutUpdates),
                         ),
                         IconButton(
                           tooltip: l10n.migrationActionCopy,
-                          icon: Icon(
-                            single
-                                ? Icons.content_copy_outlined
-                                : Icons.copy_all_outlined,
-                          ),
+                          icon: Icon(single
+                              ? Icons.content_copy_outlined
+                              : Icons.copy_all_outlined),
                           onPressed: complete
                               ? () => _confirm(context, r, deleteSource: false)
                               : null,
@@ -134,10 +126,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                         IconButton(
                           tooltip: l10n.migrationActionMigrate,
                           icon: Icon(
-                            single
-                                ? Icons.done_outlined
-                                : Icons.done_all_outlined,
-                          ),
+                              single ? Icons.done_outlined : Icons.done_all_outlined),
                           onPressed: complete
                               ? () => _confirm(context, r, deleteSource: true)
                               : null,
@@ -166,18 +155,11 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                   itemBuilder: (context, i) => _Row(
                     entry: visible[i],
                     runner: r,
-                    onSearchManually: () => _searchManually(
-                      context,
-                      r,
-                      visible[i].fromMangaId,
-                      sourceById[visible[i].fromMangaId],
-                    ),
+                    onSearchManually: () => _searchManually(context, r,
+                        visible[i].fromMangaId, sourceById[visible[i].fromMangaId]),
                     onCommitRow: (deleteSource) => _commitRow(
-                      context,
-                      r,
-                      visible[i].fromMangaId,
-                      deleteSource: deleteSource,
-                    ),
+                        context, r, visible[i].fromMangaId,
+                        deleteSource: deleteSource),
                   ),
                 );
               },
@@ -196,26 +178,18 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
   }
 
   int _finished(BulkMigrationRunner r) => r.entries
-      .where(
-        (e) =>
-            e.phase != BulkEntryPhase.queued &&
-            e.phase != BulkEntryPhase.searching,
-      )
+      .where((e) =>
+          e.phase != BulkEntryPhase.queued &&
+          e.phase != BulkEntryPhase.searching)
       .length;
 
-  bool _complete(BulkMigrationRunner r) => r.entries.every(
-    (e) =>
-        e.phase != BulkEntryPhase.queued && e.phase != BulkEntryPhase.searching,
-  );
+  bool _complete(BulkMigrationRunner r) => r.entries.every((e) =>
+      e.phase != BulkEntryPhase.queued && e.phase != BulkEntryPhase.searching);
 
   /// Manual target search for one row — pops back the chosen target and sets it
   /// on the runner (Komikku parity), instead of launching a separate migration.
-  Future<void> _searchManually(
-    BuildContext context,
-    BulkMigrationRunner r,
-    int fromMangaId,
-    MangaDto? source,
-  ) async {
+  Future<void> _searchManually(BuildContext context, BulkMigrationRunner r,
+      int fromMangaId, MangaDto? source) async {
     if (source == null) return;
     final picked = await MigrationGlobalSearchRoute(
       $extra: MigrationRouteData(sourceManga: source),
@@ -254,11 +228,8 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     );
   }
 
-  Future<void> _confirm(
-    BuildContext context,
-    BulkMigrationRunner r, {
-    required bool deleteSource,
-  }) async {
+  Future<void> _confirm(BuildContext context, BulkMigrationRunner r,
+      {required bool deleteSource}) async {
     final l10n = context.l10n;
     final committing = {
       for (final e in r.entries)
@@ -269,16 +240,12 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          deleteSource
-              ? l10n.migrateSeriesCount(committing.length)
-              : l10n.copySeriesCount(committing.length),
-        ),
-        content: Text(
-          deleteSource
-              ? l10n.migrationActionMigrateDescription
-              : l10n.migrationActionCopyDescription,
-        ),
+        title: Text(deleteSource
+            ? l10n.migrateSeriesCount(committing.length)
+            : l10n.copySeriesCount(committing.length)),
+        content: Text(deleteSource
+            ? l10n.migrationActionMigrateDescription
+            : l10n.migrationActionCopyDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -295,57 +262,44 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
 
     final messenger = ScaffoldMessenger.of(context);
     // Blocking progress while copying/removing (Komikku MigrationProgressDialog).
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => _MigrationProgressDialog(
-          runner: r,
-          committing: committing,
-          onCancel: r.cancel,
-        ),
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _MigrationProgressDialog(
+        runner: r,
+        committing: committing,
+        onCancel: r.cancel,
       ),
-    );
+    ));
     await r.commit(deleteSource: deleteSource);
     if (context.mounted) Navigator.of(context).pop(); // dismiss progress dialog
     if (r.isCancelled) return; // cancelled: stay on the list (Komikku parity)
 
-    final migrated = committing.where((id) => _committed(r, id)).length;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          deleteSource
-              ? l10n.migrationDoneMigrated(migrated)
-              : l10n.migrationDoneCopied(migrated),
-        ),
-      ),
-    );
+    final migrated =
+        committing.where((id) => _committed(r, id)).length;
+    messenger.showSnackBar(SnackBar(
+      content: Text(deleteSource
+          ? l10n.migrationDoneMigrated(migrated)
+          : l10n.migrationDoneCopied(migrated)),
+    ));
     if (context.mounted) context.pop(); // back to the library
   }
 
   /// Per-row Migrate/Copy: commit the one entry, drop it, and pop to the library
   /// once the list empties (Komikku `migrateNow` → `removeManga`).
-  Future<void> _commitRow(
-    BuildContext context,
-    BulkMigrationRunner r,
-    int fromMangaId, {
-    required bool deleteSource,
-  }) async {
+  Future<void> _commitRow(BuildContext context, BulkMigrationRunner r,
+      int fromMangaId, {required bool deleteSource}) async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     await r.commitOne(fromMangaId, deleteSource: deleteSource);
     final ok = _committed(r, fromMangaId);
     r.remove(fromMangaId);
     if (ok) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            deleteSource
-                ? l10n.migrationDoneMigrated(1)
-                : l10n.migrationDoneCopied(1),
-          ),
-        ),
-      );
+      messenger.showSnackBar(SnackBar(
+        content: Text(deleteSource
+            ? l10n.migrationDoneMigrated(1)
+            : l10n.migrationDoneCopied(1)),
+      ));
     }
     if (r.entries.isEmpty && context.mounted) context.pop();
   }
@@ -446,18 +400,14 @@ class _ResultCard extends StatelessWidget {
                   color: context.theme.colorScheme.surfaceContainerHighest,
                   borderRadius: KBorderRadius.r8.radius,
                 ),
-                child: Icon(
-                  Icons.broken_image_outlined,
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                ),
+                child: Icon(Icons.broken_image_outlined,
+                    color: context.theme.colorScheme.onSurfaceVariant),
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(4),
-              child: Text(
-                context.l10n.migrationListNoMatch,
-                style: context.theme.textTheme.titleSmall,
-              ),
+              child: Text(context.l10n.migrationListNoMatch,
+                  style: context.theme.textTheme.titleSmall),
             ),
           ],
         );
@@ -528,9 +478,8 @@ class _MangaCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.white,
-                    ),
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: Colors.white),
                   ),
                 ),
               ),
@@ -539,36 +488,28 @@ class _MangaCard extends StatelessWidget {
                   top: 4,
                   left: 4,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
-                      '$chapterCount',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                    ),
+                    child: Text('$chapterCount',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: theme.colorScheme.onPrimary)),
                   ),
                 ),
             ],
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          source ?? '',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall,
-        ),
+        Text(source ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall),
         Text(
           context.l10n.migrationLatestChapter(
-            latestChapter == null ? '?' : _fmt(latestChapter!),
-          ),
+              latestChapter == null ? '?' : _fmt(latestChapter!)),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodyMedium,
@@ -626,15 +567,11 @@ class _ActionMenu extends StatelessWidget {
       },
       itemBuilder: (context) => [
         PopupMenuItem(
-          value: 'search',
-          child: Text(l10n.migrationSearchManually),
-        ),
+            value: 'search', child: Text(l10n.migrationSearchManually)),
         PopupMenuItem(value: 'skip', child: Text(l10n.migrationSkip)),
         if (hasMatch) ...[
           PopupMenuItem(
-            value: 'migrate',
-            child: Text(l10n.migrationMigrateNow),
-          ),
+              value: 'migrate', child: Text(l10n.migrationMigrateNow)),
           PopupMenuItem(value: 'copy', child: Text(l10n.migrationCopyNow)),
         ],
       ],
@@ -662,13 +599,11 @@ class _MigrationProgressDialog extends StatelessWidget {
         animation: runner,
         builder: (context, _) {
           final done = runner.entries
-              .where(
-                (e) =>
-                    committing.contains(e.fromMangaId) &&
-                    (e.phase == BulkEntryPhase.done ||
-                        e.phase == BulkEntryPhase.failed ||
-                        e.phase == BulkEntryPhase.dirtyBlocked),
-              )
+              .where((e) =>
+                  committing.contains(e.fromMangaId) &&
+                  (e.phase == BulkEntryPhase.done ||
+                      e.phase == BulkEntryPhase.failed ||
+                      e.phase == BulkEntryPhase.dirtyBlocked))
               .length;
           final value = committing.isEmpty ? null : done / committing.length;
           return LinearProgressIndicator(value: value);

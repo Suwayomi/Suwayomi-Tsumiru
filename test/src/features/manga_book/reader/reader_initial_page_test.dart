@@ -14,28 +14,34 @@ ChapterDto _chapter({
   bool isRead = false,
   int lastPageRead = 0,
   int pageCount = 5,
-}) => Fragment$ChapterDto(
-  chapterNumber: 1,
-  fetchedAt: '0',
-  id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: isRead,
-  lastPageRead: lastPageRead,
-  lastReadAt: '0',
-  mangaId: 1,
-  name: 'Chapter 1',
-  pageCount: pageCount,
-  sourceOrder: 1,
-  uploadDate: '0',
-  url: '/chapter/1',
-  meta: const [],
-);
+}) =>
+    Fragment$ChapterDto(
+      chapterNumber: 1,
+      fetchedAt: '0',
+      id: 1,
+      isBookmarked: false,
+      isDownloaded: false,
+      isRead: isRead,
+      lastPageRead: lastPageRead,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: 'Chapter 1',
+      pageCount: pageCount,
+      sourceOrder: 1,
+      uploadDate: '0',
+      url: '/chapter/1',
+      meta: const [],
+    );
 
-ChapterPagesDto _pages({int loadedCount = 5, int pageCount = 5}) =>
+ChapterPagesDto _pages({
+  int loadedCount = 5,
+  int pageCount = 5,
+}) =>
     ChapterPagesDto(
       chapter: ChapterPagesChapterDto(id: 1, pageCount: pageCount),
-      pages: [for (var index = 0; index < loadedCount; index++) '/page/$index'],
+      pages: [
+        for (var index = 0; index < loadedCount; index++) '/page/$index',
+      ],
     );
 
 void main() {

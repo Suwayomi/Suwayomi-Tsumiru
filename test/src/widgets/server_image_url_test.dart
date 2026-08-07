@@ -9,11 +9,14 @@ import 'package:tsumiru/src/widgets/server_image.dart';
 
 // Representative server-emitted paths: root-relative and already carrying the
 // `/api/v1` prefix.
-const _icon =
-    '/api/v1/extension/icon/eu.kanade.tachiyomi.extension.en.mangadex';
+const _icon = '/api/v1/extension/icon/eu.kanade.tachiyomi.extension.en.mangadex';
 const _page = '/api/v1/manga/7/chapter/2/page/0';
 
-String _build(String serverUrl, String path, {bool appendApiToUrl = false}) =>
+String _build(
+  String serverUrl,
+  String path, {
+  bool appendApiToUrl = false,
+}) =>
     serverFileUrl(
       path: path,
       baseUrl: serverUrl,
@@ -52,36 +55,24 @@ void main() {
 
     test('still appends /api/v1 for a path the server did not prefix', () {
       expect(
-        _build(
-          'http://127.0.0.1:4567',
-          '/manga/7/thumbnail',
-          appendApiToUrl: true,
-        ),
+        _build('http://127.0.0.1:4567', '/manga/7/thumbnail',
+            appendApiToUrl: true),
         'http://127.0.0.1:4567/api/v1/manga/7/thumbnail',
       );
     });
 
     test('treats a bare "api/" prefix as already prefixed', () {
       expect(
-        _build(
-          'http://127.0.0.1:4567',
-          'api/v1/manga/7/thumbnail',
-          appendApiToUrl: true,
-        ),
+        _build('http://127.0.0.1:4567', 'api/v1/manga/7/thumbnail',
+            appendApiToUrl: true),
         'http://127.0.0.1:4567/api/v1/manga/7/thumbnail',
       );
     });
 
     test('keeps a reverse-proxy subpath intact', () {
-      for (final url in [
-        'https://host.tld/suwayomi',
-        'https://host.tld/suwayomi/',
-      ]) {
-        expect(
-          _build(url, _icon),
-          'https://host.tld/suwayomi$_icon',
-          reason: url,
-        );
+      for (final url in ['https://host.tld/suwayomi', 'https://host.tld/suwayomi/']) {
+        expect(_build(url, _icon), 'https://host.tld/suwayomi$_icon',
+            reason: url);
       }
     });
 

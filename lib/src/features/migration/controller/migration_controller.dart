@@ -19,7 +19,7 @@ part 'migration_controller.g.dart';
 // Migration Quick Search Results similar to regular global search
 typedef MigrationQuickSearchResults = ({
   SourceDto source,
-  AsyncValue<List<MangaDto>> mangaList,
+  AsyncValue<List<MangaDto>> mangaList
 });
 
 @riverpod
@@ -31,22 +31,20 @@ Future<List<MangaDto>> migrationSourceQuickSearchMangaList(
   final rateLimiterQueue = ref.watch(rateLimitQueueProvider(query));
   // Capture now — ref access after the gap may throw once disposed.
   final sourceRepository = ref.watch(sourceRepositoryProvider);
-  final mangaPage = await rateLimiterQueue.add(
-    () => sourceRepository.fetchSourceManga(
-      page: 1,
-      sourceId: sourceId,
-      sourceType: SourceType.SEARCH,
-      query: query,
-    ),
-  );
+  final mangaPage = await rateLimiterQueue
+      .add(() => sourceRepository.fetchSourceManga(
+            page: 1,
+            sourceId: sourceId,
+            sourceType: SourceType.SEARCH,
+            query: query,
+          ));
   return [...?(mangaPage?.mangas)];
 }
 
 @riverpod
 AsyncValue<List<MigrationQuickSearchResults>> migrationGlobalSearchResults(
-  Ref ref, {
-  String? query,
-}) {
+    Ref ref,
+    {String? query}) {
   // Pinned-first list of every searchable source (shared with global search;
   // pinned sources are otherwise excluded from the grouped map).
   final sourcesData = ref.watch(searchableSourcesProvider);

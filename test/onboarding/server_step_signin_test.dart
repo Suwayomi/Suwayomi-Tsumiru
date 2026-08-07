@@ -23,19 +23,17 @@ const _authUnauthorized = '{"data":null,"errors":[{"message":"Unauthorized"}]}';
 /// A server that confirms via aboutServer but gates the @RequireAuth probe →
 /// Test connection should report "needs a login" and reveal the auth sub-form.
 http.Client _gatedServerClient() => MockClient.streaming((request, body) async {
-  final q =
-      ((jsonDecode(await body.bytesToString()) as Map)['query'] as String);
-  final isAbout = q.contains('aboutServer');
-  return http.StreamedResponse(
-    Stream.value(utf8.encode(isAbout ? _aboutOk : _authUnauthorized)),
-    200,
-  );
-});
+      final q = ((jsonDecode(await body.bytesToString()) as Map)['query']
+          as String);
+      final isAbout = q.contains('aboutServer');
+      return http.StreamedResponse(
+          Stream.value(utf8.encode(isAbout ? _aboutOk : _authUnauthorized)),
+          200);
+    });
 
 void main() {
-  testWidgets('Test connection on a gated server reveals the auth sub-form', (
-    tester,
-  ) async {
+  testWidgets('Test connection on a gated server reveals the auth sub-form',
+      (tester) async {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
 
@@ -77,7 +75,8 @@ void main() {
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
   });
 
-  testWidgets('wrong auth type / credentials must NOT report connected — they are '
+  testWidgets(
+      'wrong auth type / credentials must NOT report connected — they are '
       'rejected and Next stays gated', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
@@ -114,34 +113,21 @@ void main() {
 
     // Enter credentials with the default (Basic) auth type and Sign in.
     await tester.enterText(
-      find.widgetWithText(TextField, 'User Name'),
-      'whoever',
-    );
+        find.widgetWithText(TextField, 'User Name'), 'whoever');
     await tester.enterText(
-      find.widgetWithText(TextField, 'Password'),
-      'whatever',
-    );
+        find.widgetWithText(TextField, 'Password'), 'whatever');
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
     // The credentials are rejected — NOT a false "Connected".
-    expect(
-      find.text(
-        "Those credentials didn't work. Double-check your "
-        'username, password, and sign-in method.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text("Those credentials didn't work. Double-check your "
+        'username, password, and sign-in method.'), findsOneWidget);
     expect(find.textContaining('Connected'), findsNothing);
 
     // Next is still gated (onboarding can't be finished with a broken config).
     final nextButton = tester.widget<BrandButton>(
-      find.widgetWithText(BrandButton, 'Next'),
-    );
-    expect(
-      nextButton.onPressed,
-      isNull,
-      reason: 'Next must stay disabled when sign-in was rejected',
-    );
+        find.widgetWithText(BrandButton, 'Next'));
+    expect(nextButton.onPressed, isNull,
+        reason: 'Next must stay disabled when sign-in was rejected');
   });
 }

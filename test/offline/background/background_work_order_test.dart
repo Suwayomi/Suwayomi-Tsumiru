@@ -12,11 +12,7 @@ void main() {
       addPort: false,
       wifiOnly: true,
       auth: const BackgroundTokenRecord(
-        gen: 3,
-        authType: 'uiLogin',
-        accessToken: 'A',
-        refreshToken: 'R',
-      ),
+          gen: 3, authType: 'uiLogin', accessToken: 'A', refreshToken: 'R'),
       baseDir: '/data/app/offline',
       generationByChapter: const {5: 0, 6: 2, 7: 1},
       rootIsolateToken: 99887766,

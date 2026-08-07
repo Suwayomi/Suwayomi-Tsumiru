@@ -42,7 +42,9 @@ void main() {
     });
 
     test('unauthorized → invalidCredentials', () {
-      final result = classifyAuthError(Exception('401 Unauthorized'));
+      final result = classifyAuthError(
+        Exception('401 Unauthorized'),
+      );
       expect(result.kind, TestConnectionFailureKind.invalidCredentials);
     });
 

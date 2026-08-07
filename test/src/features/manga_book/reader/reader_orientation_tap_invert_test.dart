@@ -19,27 +19,18 @@ void main() {
     });
 
     test('locked mappings match Komikku', () {
-      expect(
-        ReaderOrientation.free.deviceOrientations,
-        DeviceOrientation.values,
-      );
-      expect(ReaderOrientation.portrait.deviceOrientations, [
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ]);
-      expect(ReaderOrientation.landscape.deviceOrientations, [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      expect(ReaderOrientation.lockedPortrait.deviceOrientations, [
-        DeviceOrientation.portraitUp,
-      ]);
-      expect(ReaderOrientation.lockedLandscape.deviceOrientations, [
-        DeviceOrientation.landscapeLeft,
-      ]);
-      expect(ReaderOrientation.reversePortrait.deviceOrientations, [
-        DeviceOrientation.portraitDown,
-      ]);
+      expect(ReaderOrientation.free.deviceOrientations,
+          DeviceOrientation.values);
+      expect(ReaderOrientation.portrait.deviceOrientations,
+          [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+      expect(ReaderOrientation.landscape.deviceOrientations,
+          [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+      expect(ReaderOrientation.lockedPortrait.deviceOrientations,
+          [DeviceOrientation.portraitUp]);
+      expect(ReaderOrientation.lockedLandscape.deviceOrientations,
+          [DeviceOrientation.landscapeLeft]);
+      expect(ReaderOrientation.reversePortrait.deviceOrientations,
+          [DeviceOrientation.portraitDown]);
     });
 
     test('7 values in Komikku chip order', () {

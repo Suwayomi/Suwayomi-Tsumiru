@@ -35,24 +35,25 @@ class _FakeMangaWithId extends MangaWithId {
 }
 
 MangaDto _manga() => Fragment$MangaDto(
-  id: 1,
-  title: 'Test Manga',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: 0,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/1',
-);
+      id: 1,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 0),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: const [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 0,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/1',
+    );
 
 void main() {
   Future<void> pumpTab(
@@ -70,9 +71,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -94,9 +94,8 @@ void main() {
   ProviderContainer container(WidgetTester tester) =>
       ProviderScope.containerOf(tester.element(find.byType(GeneralTab)));
 
-  testWidgets('controls follow the Komikku GeneralSettingsPage order', (
-    tester,
-  ) async {
+  testWidgets('controls follow the Komikku GeneralSettingsPage order',
+      (tester) async {
     await pumpTab(tester);
 
     await tester.scrollUntilVisible(
@@ -158,9 +157,8 @@ void main() {
     expect(find.text('Left-handed vertical seekbar'), findsNothing);
   });
 
-  testWidgets('landscape seekbar sub-toggle writes its global provider', (
-    tester,
-  ) async {
+  testWidgets('landscape seekbar sub-toggle writes its global provider',
+      (tester) async {
     await pumpTab(tester);
 
     await tester.tap(find.text('Show vertical seekbar in landscape'));
@@ -168,9 +166,8 @@ void main() {
     expect(container(tester).read(landscapeVerticalSeekbarProvider), isTrue);
   });
 
-  testWidgets('cutout sub-toggle only shown while fullscreen is ON', (
-    tester,
-  ) async {
+  testWidgets('cutout sub-toggle only shown while fullscreen is ON',
+      (tester) async {
     await pumpTab(tester);
 
     // Fullscreen defaults ON → cutout row present.
@@ -208,8 +205,14 @@ void main() {
   });
 
   test('fullscreen OFF keeps edgeToEdge when the chrome hides', () {
-    expect(hiddenChromeUiMode(fullscreen: false), SystemUiMode.edgeToEdge);
-    expect(hiddenChromeUiMode(fullscreen: true), SystemUiMode.immersiveSticky);
+    expect(
+      hiddenChromeUiMode(fullscreen: false),
+      SystemUiMode.edgeToEdge,
+    );
+    expect(
+      hiddenChromeUiMode(fullscreen: true),
+      SystemUiMode.immersiveSticky,
+    );
   });
 
   group('ReaderFlashOverlay', () {
@@ -248,13 +251,12 @@ void main() {
       return tester.widget<ColoredBox>(boxes.first).color;
     }
 
-    testWidgets('flashes black for duration×100 ms on a page change', (
-      tester,
-    ) async {
-      final index = await pumpOverlay(
-        tester,
-        prefValues: {'flashOnPageChange': true, 'flashDuration': 2},
-      );
+    testWidgets('flashes black for duration×100 ms on a page change',
+        (tester) async {
+      final index = await pumpOverlay(tester, prefValues: {
+        'flashOnPageChange': true,
+        'flashDuration': 2,
+      });
       expect(overlayColor(tester), isNull);
 
       index.value = 1;
@@ -269,17 +271,13 @@ void main() {
       expect(overlayColor(tester), isNull, reason: 'flash over after 200 ms');
     });
 
-    testWidgets('whiteBlack switches white→black at the halfway point', (
-      tester,
-    ) async {
-      final index = await pumpOverlay(
-        tester,
-        prefValues: {
-          'flashOnPageChange': true,
-          'flashDuration': 2,
-          'flashColor': FlashColor.whiteBlack.index,
-        },
-      );
+    testWidgets('whiteBlack switches white→black at the halfway point',
+        (tester) async {
+      final index = await pumpOverlay(tester, prefValues: {
+        'flashOnPageChange': true,
+        'flashDuration': 2,
+        'flashColor': FlashColor.whiteBlack.index,
+      });
 
       index.value = 1;
       await tester.pump();
@@ -294,13 +292,12 @@ void main() {
       expect(overlayColor(tester), isNull);
     });
 
-    testWidgets('interval N flashes the 1st change then skips N-1', (
-      tester,
-    ) async {
-      final index = await pumpOverlay(
-        tester,
-        prefValues: {'flashOnPageChange': true, 'flashPageInterval': 2},
-      );
+    testWidgets('interval N flashes the 1st change then skips N-1',
+        (tester) async {
+      final index = await pumpOverlay(tester, prefValues: {
+        'flashOnPageChange': true,
+        'flashPageInterval': 2,
+      });
 
       index.value = 1;
       await tester.pump();

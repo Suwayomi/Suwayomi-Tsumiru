@@ -32,10 +32,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 1,
-          ).overrideWithValue(null),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -64,9 +62,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('prefetches adjacent paged chapters through retained listeners', (
-    tester,
-  ) async {
+  testWidgets('prefetches adjacent paged chapters through retained listeners',
+      (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -80,13 +77,10 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 1,
-          ).overrideWithValue((
-            first: testChapter(id: 2, name: 'Chapter 2'),
-            second: null,
-          )),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(
+            (first: testChapter(id: 2, name: 'Chapter 2'), second: null),
+          ),
           chapterProvider(chapterId: 2).overrideWith((ref) {
             chapterFetches += 1;
             return testChapter(id: 2, name: 'Chapter 2');
@@ -141,10 +135,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 1,
-          ).overrideWithValue(null),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

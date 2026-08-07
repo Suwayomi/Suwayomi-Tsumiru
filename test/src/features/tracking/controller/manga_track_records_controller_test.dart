@@ -83,5 +83,6 @@ class _StubTrackerRepository extends TrackerRepository {
   @override
   Future<List<Fragment$TrackRecordDto>?> getMangaTrackRecords(
     int mangaId,
-  ) async => records;
+  ) async =>
+      records;
 }

@@ -42,15 +42,15 @@ class _Category {
 // typedefs, but for this test we define local helpers.
 
 MangaProxy _proxy(_Manga m) => (
-  id: m.id,
-  sourceId: m.sourceId,
-  sourceName: m.sourceName,
-  sourceLang: m.sourceLang,
-  status: m.status,
-  categoryIds: m.categoryIds,
-  trackStatuses: const [],
-  tags: m.tags,
-);
+      id: m.id,
+      sourceId: m.sourceId,
+      sourceName: m.sourceName,
+      sourceLang: m.sourceLang,
+      status: m.status,
+      categoryIds: m.categoryIds,
+      trackStatuses: const [],
+      tags: m.tags,
+    );
 
 CategoryProxy _catProxy(_Category c) => (id: c.id, name: c.name);
 
@@ -60,15 +60,9 @@ void main() {
   group('groupLibrary — BY_SOURCE', () {
     test('buckets manga by sourceId', () {
       final mangas = [
-        _proxy(
-          _Manga(id: 1, sourceId: 'a', sourceName: 'Zebra', sourceLang: 'en'),
-        ),
-        _proxy(
-          _Manga(id: 2, sourceId: 'b', sourceName: 'Alpha', sourceLang: 'en'),
-        ),
-        _proxy(
-          _Manga(id: 3, sourceId: 'a', sourceName: 'Zebra', sourceLang: 'en'),
-        ),
+        _proxy(_Manga(id: 1, sourceId: 'a', sourceName: 'Zebra', sourceLang: 'en')),
+        _proxy(_Manga(id: 2, sourceId: 'b', sourceName: 'Alpha', sourceLang: 'en')),
+        _proxy(_Manga(id: 3, sourceId: 'a', sourceName: 'Zebra', sourceLang: 'en')),
       ];
       final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
       // Two distinct sources
@@ -80,65 +74,52 @@ void main() {
 
     test('sorts source tabs case-insensitively by name', () {
       final mangas = [
-        _proxy(
-          _Manga(id: 1, sourceId: 'z', sourceName: 'zebra', sourceLang: 'en'),
-        ),
-        _proxy(
-          _Manga(id: 2, sourceId: 'a', sourceName: 'Alpha', sourceLang: 'en'),
-        ),
-        _proxy(
-          _Manga(id: 3, sourceId: 'm', sourceName: 'middle', sourceLang: 'en'),
-        ),
+        _proxy(_Manga(id: 1, sourceId: 'z', sourceName: 'zebra', sourceLang: 'en')),
+        _proxy(_Manga(id: 2, sourceId: 'a', sourceName: 'Alpha', sourceLang: 'en')),
+        _proxy(_Manga(id: 3, sourceId: 'm', sourceName: 'middle', sourceLang: 'en')),
       ];
       final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
-      expect(tabs.map((t) => t.name).toList(), ['Alpha', 'middle', 'zebra']);
+      expect(tabs.map((t) => t.name).toList(),
+          ['Alpha', 'middle', 'zebra']);
     });
 
     test('local source named "Local source"', () {
       final mangas = [
-        _proxy(
-          _Manga(
-            id: 1,
-            sourceId: 'local1',
-            sourceName: 'Local',
-            sourceLang: 'localsourcelang',
-          ),
-        ),
+        _proxy(_Manga(
+          id: 1,
+          sourceId: 'local1',
+          sourceName: 'Local',
+          sourceLang: 'localsourcelang',
+        )),
       ];
       final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
       expect(tabs.single.name, 'Local source');
     });
 
-    test(
-      'a source shared across languages is tagged with its language code',
-      () {
-        final mangas = [
-          _proxy(
-            _Manga(
-              id: 1,
-              sourceId: 'md-en',
-              sourceName: 'MangaDex',
-              sourceLang: 'en',
-            ),
-          ),
-          _proxy(
-            _Manga(
-              id: 2,
-              sourceId: 'md-es',
-              sourceName: 'MangaDex',
-              sourceLang: 'es',
-            ),
-          ),
-        ];
-        final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
-        // Same name, so relative order between the two isn't guaranteed — only
-        // that both are present and disambiguated by language.
-        expect(tabs.map((t) => t.name).toSet(), {
-          'MangaDex (EN)',
-          'MangaDex (ES)',
-        });
-      },
-    );
+    test('a source shared across languages is tagged with its language code',
+        () {
+      final mangas = [
+        _proxy(_Manga(
+          id: 1,
+          sourceId: 'md-en',
+          sourceName: 'MangaDex',
+          sourceLang: 'en',
+        )),
+        _proxy(_Manga(
+          id: 2,
+          sourceId: 'md-es',
+          sourceName: 'MangaDex',
+          sourceLang: 'es',
+        )),
+      ];
+      final tabs = groupLibrary(mangas, LibraryGroup.bySource, []);
+      // Same name, so relative order between the two isn't guaranteed — only
+      // that both are present and disambiguated by language.
+      expect(
+        tabs.map((t) => t.name).toSet(),
+        {'MangaDex (EN)', 'MangaDex (ES)'},
+      );
+    });
 
     test('a source with only one language keeps its plain name', () {
       final mangas = [
@@ -159,16 +140,14 @@ void main() {
         _proxy(_Manga(id: 4, status: 'ON_HIATUS')),
       ];
       final tabs = groupLibrary(mangas, LibraryGroup.byStatus, []);
-      expect(tabs.map((t) => t.name).toList(), [
-        'Ongoing',
-        'Completed',
-        'On hiatus',
-        'Unknown',
-      ]);
+      expect(tabs.map((t) => t.name).toList(),
+          ['Ongoing', 'Completed', 'On hiatus', 'Unknown']);
     });
 
     test('unknown status falls back to UNKNOWN bucket', () {
-      final mangas = [_proxy(_Manga(id: 1, status: 'SOME_WEIRD_STATUS'))];
+      final mangas = [
+        _proxy(_Manga(id: 1, status: 'SOME_WEIRD_STATUS')),
+      ];
       final tabs = groupLibrary(mangas, LibraryGroup.byStatus, []);
       expect(tabs.single.name, 'Unknown');
     });
@@ -192,8 +171,12 @@ void main() {
     });
 
     test('no-category manga appears under id 0', () {
-      final cats = [_catProxy(_Category(id: 1, name: 'Cat A'))];
-      final mangas = [_proxy(_Manga(id: 7, categoryIds: []))];
+      final cats = [
+        _catProxy(_Category(id: 1, name: 'Cat A')),
+      ];
+      final mangas = [
+        _proxy(_Manga(id: 7, categoryIds: [])),
+      ];
       final tabs = groupLibrary(mangas, LibraryGroup.byDefault, cats);
       final defaultTab = tabs.firstWhere((t) => t.id == 0);
       expect(defaultTab.mangaIds, contains(7));
@@ -238,9 +221,7 @@ void main() {
 
     test('a tag repeated on one manga still buckets it once', () {
       // A source genre that is ALSO a user tag must not double-count.
-      final mangas = [
-        _proxy(_Manga(id: 1, tags: ['Action', 'action'])),
-      ];
+      final mangas = [_proxy(_Manga(id: 1, tags: ['Action', 'action']))];
       final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
       expect(tabs.single.mangaIds, [1]);
     });
@@ -261,9 +242,7 @@ void main() {
     });
 
     test('omits the untagged bucket when every manga has a tag', () {
-      final mangas = [
-        _proxy(_Manga(id: 1, tags: ['Action'])),
-      ];
+      final mangas = [_proxy(_Manga(id: 1, tags: ['Action']))];
       final tabs = groupLibrary(mangas, LibraryGroup.byTag, []);
       expect(tabs.map((t) => t.name), ['Action']);
     });

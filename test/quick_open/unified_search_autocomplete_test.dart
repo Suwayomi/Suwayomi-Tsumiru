@@ -11,8 +11,7 @@ const _facets = LibraryFacets(
   artist: [],
 );
 
-List<String> _displays(List<SearchSuggestion> s) =>
-    s.map((e) => e.display).toList();
+List<String> _displays(List<SearchSuggestion> s) => s.map((e) => e.display).toList();
 
 void main() {
   group('activeTokenAt', () {
@@ -87,13 +86,10 @@ void main() {
     });
 
     test('boolean operators suggest true/false', () {
-      expect(_displays(suggestFor(activeTokenAt('unread:', 7), _facets)), [
-        'unread:true',
-        'unread:false',
-      ]);
-      expect(_displays(suggestFor(activeTokenAt('unread:t', 8), _facets)), [
-        'unread:true',
-      ]);
+      expect(_displays(suggestFor(activeTokenAt('unread:', 7), _facets)),
+          ['unread:true', 'unread:false']);
+      expect(_displays(suggestFor(activeTokenAt('unread:t', 8), _facets)),
+          ['unread:true']);
     });
 
     test('rating is free-form — no value suggestions', () {
@@ -115,10 +111,7 @@ void main() {
   group('applySuggestion', () {
     test('key completion inserts key: and leaves caret after the colon', () {
       final t = activeTokenAt('sou', 3);
-      final s = suggestFor(
-        t,
-        _facets,
-      ).firstWhere((e) => e.display == 'source:');
+      final s = suggestFor(t, _facets).firstWhere((e) => e.display == 'source:');
       final r = applySuggestion('sou', t, s);
       expect(r.text, 'source:');
       expect(r.caret, 7);
@@ -135,10 +128,7 @@ void main() {
     test('completing a token mid-line preserves the tail', () {
       const text = 'sou leveling';
       final t = activeTokenAt(text, 3);
-      final s = suggestFor(
-        t,
-        _facets,
-      ).firstWhere((e) => e.display == 'source:');
+      final s = suggestFor(t, _facets).firstWhere((e) => e.display == 'source:');
       final r = applySuggestion(text, t, s);
       expect(r.text, 'source: leveling');
       expect(r.caret, 7);

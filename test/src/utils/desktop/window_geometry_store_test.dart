@@ -32,9 +32,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     await saveWindowGeometry(
-      prefs,
-      const WindowGeometry(size: Size(1024, 768), maximized: true),
-    );
+        prefs, const WindowGeometry(size: Size(1024, 768), maximized: true));
     final g = loadWindowGeometry(prefs);
     expect(g.size, const Size(1024, 768));
     expect(g.maximized, isTrue);

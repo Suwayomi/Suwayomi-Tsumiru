@@ -18,16 +18,18 @@ import '../../controller/migration_controller.dart';
 import '../widgets/migration_source_short_search.dart';
 
 class MigrationGlobalSearchScreen extends HookConsumerWidget {
-  const MigrationGlobalSearchScreen({super.key, required this.sourceManga});
+  const MigrationGlobalSearchScreen({
+    super.key,
+    required this.sourceManga,
+  });
 
   final MangaDto sourceManga;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final query = useState<String?>(sourceManga.title);
-    final migrationSearchResult = ref.watch(
-      migrationGlobalSearchResultsProvider(query: query.value),
-    );
+    final migrationSearchResult =
+        ref.watch(migrationGlobalSearchResultsProvider(query: query.value));
 
     // Auto-search with source manga title on screen load
     useEffect(() {

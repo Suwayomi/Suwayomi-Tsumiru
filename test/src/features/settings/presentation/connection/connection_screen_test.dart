@@ -7,15 +7,15 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 void main() {
-  testWidgets('ConnectionScreen shows the Server address section', (
-    tester,
-  ) async {
+  testWidgets('ConnectionScreen shows the Server address section', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+        ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

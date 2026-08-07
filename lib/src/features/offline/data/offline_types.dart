@@ -16,7 +16,7 @@ enum OfflineDeviceState {
   downloading,
   downloaded,
   error,
-  orphaned,
+  orphaned
 }
 
 /// How many of a series' chapters to keep on this device automatically.

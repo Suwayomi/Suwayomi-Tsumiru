@@ -11,108 +11,53 @@ void main() {
   // Expected declaration order (by name) for each index-persisted enum.
   const expected = <String, List<String>>{
     'AppTheme': [
-      'indigoNight',
-      'carbon',
-      'plum',
-      'custom',
-      'regression',
-      'ember',
-      'synthwave',
-      'terminal',
-      'catppuccin',
-      'nord',
-      'gruvbox',
-      'dracula',
-      'mono',
-      'royal',
+      'indigoNight', 'carbon', 'plum', 'custom', 'regression', 'ember',
+      'synthwave', 'terminal', 'catppuccin', 'nord', 'gruvbox', 'dracula',
+      'mono', 'royal'
     ],
     'AuthType': ['none', 'basic', 'simpleLogin', 'uiLogin'],
     'CenterMarginType': ['none', 'doublePage', 'widePage', 'doubleAndWide'],
     'ChapterDisplay': ['sourceTitle', 'chapterNumber'],
     'ChapterSort': [
-      'source',
-      'uploadDate',
-      'fetchedDate',
-      'chapterNumber',
-      'alphabetical',
+      'source', 'uploadDate', 'fetchedDate', 'chapterNumber', 'alphabetical'
     ],
     'ColorFilterBlendMode': [
-      'defaultBlend',
-      'multiply',
-      'screen',
-      'overlay',
-      'lighten',
-      'darken',
+      'defaultBlend', 'multiply', 'screen', 'overlay', 'lighten', 'darken'
     ],
     'DisplayMode': [
-      'grid',
-      'list',
-      'descriptiveList',
-      'coverOnly',
-      'comfortableGrid',
+      'grid', 'list', 'descriptiveList', 'coverOnly', 'comfortableGrid'
     ],
     'FlashColor': ['black', 'white', 'whiteBlack'],
     'GlobalSearchSourceFilter': ['pinned', 'all'],
     'ImageScaleType': [
-      'fitScreen',
-      'stretch',
-      'fitWidth',
-      'fitHeight',
-      'originalSize',
-      'smartFit',
+      'fitScreen', 'stretch', 'fitWidth', 'fitHeight', 'originalSize', 'smartFit'
     ],
     'MangaSort': [
-      'alphabetical',
-      'dateAdded',
-      'unread',
-      'lastUpdated',
-      'lastChapterDate',
-      'totalChapters',
-      'lastRead',
-      'random',
-      'trackerScore',
-      'lastUpdate',
-      'rating',
+      'alphabetical', 'dateAdded', 'unread', 'lastUpdated', 'lastChapterDate',
+      'totalChapters', 'lastRead', 'random', 'trackerScore', 'lastUpdate',
+      'rating'
     ],
     'PageLayout': ['singlePage', 'doublePages', 'automatic'],
     'ReaderBackgroundColor': ['white', 'black', 'gray', 'automatic'],
     'ReaderMode': [
-      'defaultReader',
-      'continuousVertical',
-      'singleHorizontalLTR',
-      'singleHorizontalRTL',
-      'continuousHorizontalLTR',
-      'continuousHorizontalRTL',
-      'singleVertical',
-      'webtoon',
+      'defaultReader', 'continuousVertical', 'singleHorizontalLTR',
+      'singleHorizontalRTL', 'continuousHorizontalLTR',
+      'continuousHorizontalRTL', 'singleVertical', 'webtoon'
     ],
     'ReaderNavigationLayout': [
-      'defaultNavigation',
-      'lShaped',
-      'rightAndLeft',
-      'edge',
-      'kindlish',
-      'disabled',
+      'defaultNavigation', 'lShaped', 'rightAndLeft', 'edge', 'kindlish',
+      'disabled'
     ],
     'ReaderOrientation': [
-      'defaultRotation',
-      'free',
-      'portrait',
-      'landscape',
-      'lockedPortrait',
-      'lockedLandscape',
-      'reversePortrait',
+      'defaultRotation', 'free', 'portrait', 'landscape', 'lockedPortrait',
+      'lockedLandscape', 'reversePortrait'
     ],
     'ReaderScrollAmount': ['tiny', 'small', 'medium', 'large'],
     'TapInvert': ['none', 'horizontal', 'vertical', 'both'],
     'ThemeMode': ['system', 'light', 'dark'],
     'WebtoonScaleType': [
-      'fitScreen',
-      'ratio4to3',
-      'ratio3to2',
-      'ratio16to9',
-      'ratio20to9',
-      'originalSize',
+      'fitScreen', 'ratio4to3', 'ratio3to2', 'ratio16to9', 'ratio20to9',
+      'originalSize'
     ],
     'ZoomStart': ['automatic', 'left', 'right', 'center'],
   };
@@ -123,24 +68,20 @@ void main() {
     'CenterMarginType': CenterMarginType.values.map((e) => e.name).toList(),
     'ChapterDisplay': ChapterDisplay.values.map((e) => e.name).toList(),
     'ChapterSort': ChapterSort.values.map((e) => e.name).toList(),
-    'ColorFilterBlendMode': ColorFilterBlendMode.values
-        .map((e) => e.name)
-        .toList(),
+    'ColorFilterBlendMode':
+        ColorFilterBlendMode.values.map((e) => e.name).toList(),
     'DisplayMode': DisplayMode.values.map((e) => e.name).toList(),
     'FlashColor': FlashColor.values.map((e) => e.name).toList(),
-    'GlobalSearchSourceFilter': GlobalSearchSourceFilter.values
-        .map((e) => e.name)
-        .toList(),
+    'GlobalSearchSourceFilter':
+        GlobalSearchSourceFilter.values.map((e) => e.name).toList(),
     'ImageScaleType': ImageScaleType.values.map((e) => e.name).toList(),
     'MangaSort': MangaSort.values.map((e) => e.name).toList(),
     'PageLayout': PageLayout.values.map((e) => e.name).toList(),
-    'ReaderBackgroundColor': ReaderBackgroundColor.values
-        .map((e) => e.name)
-        .toList(),
+    'ReaderBackgroundColor':
+        ReaderBackgroundColor.values.map((e) => e.name).toList(),
     'ReaderMode': ReaderMode.values.map((e) => e.name).toList(),
-    'ReaderNavigationLayout': ReaderNavigationLayout.values
-        .map((e) => e.name)
-        .toList(),
+    'ReaderNavigationLayout':
+        ReaderNavigationLayout.values.map((e) => e.name).toList(),
     'ReaderOrientation': ReaderOrientation.values.map((e) => e.name).toList(),
     'ReaderScrollAmount': ReaderScrollAmount.values.map((e) => e.name).toList(),
     'TapInvert': TapInvert.values.map((e) => e.name).toList(),
@@ -151,13 +92,9 @@ void main() {
 
   for (final name in expected.keys) {
     test('$name index-persistence order is unchanged (append-only)', () {
-      expect(
-        actual[name],
-        expected[name],
-        reason:
-            'Reordering/inserting a value in $name remaps every saved '
-            'preference. Append new values at the end instead.',
-      );
+      expect(actual[name], expected[name],
+          reason: 'Reordering/inserting a value in $name remaps every saved '
+              'preference. Append new values at the end instead.');
     });
   }
 }

@@ -8,13 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/migration/domain/chapter_matcher.dart';
 
 ChapterState cs(int id, double number, {String name = ''}) => ChapterState(
-  id: id,
-  chapterNumber: number,
-  name: name.isEmpty ? 'Chapter $number' : name,
-  isRead: false,
-  isBookmarked: false,
-  lastPageRead: 0,
-);
+      id: id,
+      chapterNumber: number,
+      name: name.isEmpty ? 'Chapter $number' : name,
+      isRead: false,
+      isBookmarked: false,
+      lastPageRead: 0,
+    );
 
 void main() {
   test('pairs source ids to target ids by chapter number', () {
@@ -48,10 +48,7 @@ void main() {
   test('oneshots (negative number) match by exact lowercased name', () {
     final pairs = matchChaptersByNumber(
       source: [cs(101, -1, name: 'Oneshot')],
-      target: [
-        cs(201, -1, name: 'oneshot'),
-        cs(202, -1, name: 'Extra'),
-      ],
+      target: [cs(201, -1, name: 'oneshot'), cs(202, -1, name: 'Extra')],
     );
     expect(pairs, [(fromId: 101, toId: 201)]);
   });

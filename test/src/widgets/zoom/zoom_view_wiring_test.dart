@@ -57,8 +57,10 @@ Future<void> _pumpZoomWrappedList(
             child: ScrollablePositionedList.builder(
               scrollOffsetController: scrollOffsetController,
               itemCount: 50,
-              itemBuilder: (context, index) =>
-                  SizedBox(height: _itemHeight, child: Text('Item $index')),
+              itemBuilder: (context, index) => SizedBox(
+                height: _itemHeight,
+                child: Text('Item $index'),
+              ),
             ),
           ),
         ),
@@ -93,179 +95,154 @@ Future<void> _simulatePinchOut(WidgetTester tester) async {
 void main() {
   group('ZoomView + ScrollablePositionedList pinch wiring', () {
     testWidgets(
-      'WITH forceHoldOnPointerDown=true (our fix): pinch fires the scale '
-      'callback with scale > 1.0',
-      (tester) async {
-        double? lastScale;
-        await _pumpZoomWrappedList(
-          tester,
-          forceHoldOnPointerDown: true,
-          onScaleChanged: (scale) => lastScale = scale,
-        );
+        'WITH forceHoldOnPointerDown=true (our fix): pinch fires the scale '
+        'callback with scale > 1.0', (tester) async {
+      double? lastScale;
+      await _pumpZoomWrappedList(
+        tester,
+        forceHoldOnPointerDown: true,
+        onScaleChanged: (scale) => lastScale = scale,
+      );
 
-        await _simulatePinchOut(tester);
+      await _simulatePinchOut(tester);
 
-        expect(
-          lastScale,
-          isNotNull,
-          reason:
-              'onScaleChanged should fire when forceHoldOnPointerDown '
-              'is set — that is the whole point of the flag for SPL',
-        );
-        expect(
-          lastScale!,
-          greaterThan(1.0),
-          reason: 'pinch-out should produce a scale > 1.0',
-        );
-      },
-    );
+      expect(lastScale, isNotNull,
+          reason: 'onScaleChanged should fire when forceHoldOnPointerDown '
+              'is set — that is the whole point of the flag for SPL');
+      expect(lastScale!, greaterThan(1.0),
+          reason: 'pinch-out should produce a scale > 1.0');
+    });
 
     testWidgets(
-      'WITH pinchEnabled=false: a two-finger pinch does NOT change the scale '
-      '(so double-tap zoom can work without pinch)',
-      (tester) async {
-        double? lastScale;
-        await _pumpZoomWrappedList(
-          tester,
-          forceHoldOnPointerDown: true,
-          pinchEnabled: false,
-          onScaleChanged: (scale) => lastScale = scale,
-        );
+        'WITH pinchEnabled=false: a two-finger pinch does NOT change the scale '
+        '(so double-tap zoom can work without pinch)', (tester) async {
+      double? lastScale;
+      await _pumpZoomWrappedList(
+        tester,
+        forceHoldOnPointerDown: true,
+        pinchEnabled: false,
+        onScaleChanged: (scale) => lastScale = scale,
+      );
 
-        await _simulatePinchOut(tester);
+      await _simulatePinchOut(tester);
 
-        expect(
-          lastScale,
-          isNull,
-          reason: 'with pinch disabled the scale gesture must be ignored',
-        );
-      },
-    );
+      expect(lastScale, isNull,
+          reason: 'with pinch disabled the scale gesture must be ignored');
+    });
 
     testWidgets(
-      'single-finger drag still scrolls the underlying list through the '
-      'ZoomView wrapper (does not block normal scrolling)',
-      (tester) async {
-        await _pumpZoomWrappedList(
-          tester,
-          forceHoldOnPointerDown: true,
-          onScaleChanged: (_) {},
-        );
+        'single-finger drag still scrolls the underlying list through the '
+        'ZoomView wrapper (does not block normal scrolling)', (tester) async {
+      await _pumpZoomWrappedList(
+        tester,
+        forceHoldOnPointerDown: true,
+        onScaleChanged: (_) {},
+      );
 
-        // Item 0 should be at the top of the viewport initially.
-        expect(
-          tester.getTopLeft(find.text('Item 0')).dy,
-          closeTo(0.0, 0.5),
-          reason: 'sanity: list starts at the top',
-        );
+      // Item 0 should be at the top of the viewport initially.
+      expect(tester.getTopLeft(find.text('Item 0')).dy, closeTo(0.0, 0.5),
+          reason: 'sanity: list starts at the top');
 
-        // One-finger drag upward through the ZoomView wrapper.
-        await tester.drag(
-          find.byType(ScrollablePositionedList),
-          const Offset(0, -400),
-        );
-        await tester.pumpAndSettle();
+      // One-finger drag upward through the ZoomView wrapper.
+      await tester.drag(
+        find.byType(ScrollablePositionedList),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
 
-        // Item 0 should have scrolled out of view (above the viewport).
-        final item0Finder = find.text('Item 0');
-        if (item0Finder.evaluate().isNotEmpty) {
-          final item0Y = tester.getTopLeft(item0Finder).dy;
-          expect(
-            item0Y,
-            lessThan(-50.0),
-            reason:
-                'after a single-finger drag, Item 0 should have moved '
+      // Item 0 should have scrolled out of view (above the viewport).
+      final item0Finder = find.text('Item 0');
+      if (item0Finder.evaluate().isNotEmpty) {
+        final item0Y = tester.getTopLeft(item0Finder).dy;
+        expect(item0Y, lessThan(-50.0),
+            reason: 'after a single-finger drag, Item 0 should have moved '
                 'off the top of the viewport — ZoomView must not block '
-                'normal scrolling',
-          );
-        }
-        // If Item 0 isn't found at all, that's also evidence the list scrolled.
-      },
-    );
+                'normal scrolling');
+      }
+      // If Item 0 isn't found at all, that's also evidence the list scrolled.
+    });
   });
 
   group('reproducing the reader\'s real gesture stack', () {
     testWidgets(
-      'GestureDetector(onPanEnd + onLongPress + onTap) wrapping ZoomView: '
-      'does the outer pan recognizer eat the pinch?',
-      (tester) async {
-        tester.view.devicePixelRatio = 1.0;
-        tester.view.physicalSize = const Size(_viewportWidth, _viewportHeight);
-        addTearDown(() {
-          tester.view.resetDevicePixelRatio();
-          tester.view.resetPhysicalSize();
-        });
+        'GestureDetector(onPanEnd + onLongPress + onTap) wrapping ZoomView: '
+        'does the outer pan recognizer eat the pinch?', (tester) async {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(_viewportWidth, _viewportHeight);
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+      });
 
-        double? lastScale;
-        var outerPanEnds = 0;
-        final scrollOffsetController = ScrollOffsetController();
+      double? lastScale;
+      var outerPanEnds = 0;
+      final scrollOffsetController = ScrollOffsetController();
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                width: _viewportWidth,
-                height: _viewportHeight,
-                // This mimics the structure inside ReaderWrapper:
-                // DirectionalSwipeGestureHandler wraps everything in a
-                // GestureDetector with onPanEnd, onTap, onLongPress*. That
-                // GestureDetector sits ABOVE ZoomView in the widget tree.
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () {},
-                  onLongPressStart: (_) {},
-                  onLongPressEnd: (_) {},
-                  onLongPressMoveUpdate: (_) {},
-                  onPanEnd: (_) => outerPanEnds++,
-                  child: ZoomView(
-                    controller: ScrollOffsetToScrollController(
-                      scrollOffsetController: scrollOffsetController,
-                    ),
-                    scrollAxis: Axis.vertical,
-                    maxScale: 5,
-                    forceHoldOnPointerDown: true,
-                    onScaleChanged: (s) => lastScale = s,
-                    child: ScrollablePositionedList.builder(
-                      scrollOffsetController: scrollOffsetController,
-                      itemCount: 50,
-                      itemBuilder: (context, index) => SizedBox(
-                        height: _itemHeight,
-                        child: Text('Item $index'),
-                      ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: _viewportWidth,
+              height: _viewportHeight,
+              // This mimics the structure inside ReaderWrapper:
+              // DirectionalSwipeGestureHandler wraps everything in a
+              // GestureDetector with onPanEnd, onTap, onLongPress*. That
+              // GestureDetector sits ABOVE ZoomView in the widget tree.
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {},
+                onLongPressStart: (_) {},
+                onLongPressEnd: (_) {},
+                onLongPressMoveUpdate: (_) {},
+                onPanEnd: (_) => outerPanEnds++,
+                child: ZoomView(
+                  controller: ScrollOffsetToScrollController(
+                    scrollOffsetController: scrollOffsetController,
+                  ),
+                  scrollAxis: Axis.vertical,
+                  maxScale: 5,
+                  forceHoldOnPointerDown: true,
+                  onScaleChanged: (s) => lastScale = s,
+                  child: ScrollablePositionedList.builder(
+                    scrollOffsetController: scrollOffsetController,
+                    itemCount: 50,
+                    itemBuilder: (context, index) => SizedBox(
+                      height: _itemHeight,
+                      child: Text('Item $index'),
                     ),
                   ),
                 ),
               ),
             ),
           ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _simulatePinchOut(tester);
+
+      printOnFailure('lastScale: $lastScale');
+      printOnFailure('outerPanEnds: $outerPanEnds');
+
+      // If the outer GestureDetector eats the pinch (the device-side
+      // hypothesis), lastScale stays null and outerPanEnds increments.
+      // If ZoomView still wins, lastScale is non-null.
+      if (lastScale == null && outerPanEnds > 0) {
+        fail(
+          'OUTER GESTURE DETECTOR ATE THE PINCH (reproduced in test env). '
+          'lastScale=$lastScale, outerPanEnds=$outerPanEnds. This is '
+          'the device-side bug.',
         );
-        await tester.pumpAndSettle();
-
-        await _simulatePinchOut(tester);
-
-        printOnFailure('lastScale: $lastScale');
-        printOnFailure('outerPanEnds: $outerPanEnds');
-
-        // If the outer GestureDetector eats the pinch (the device-side
-        // hypothesis), lastScale stays null and outerPanEnds increments.
-        // If ZoomView still wins, lastScale is non-null.
-        if (lastScale == null && outerPanEnds > 0) {
-          fail(
-            'OUTER GESTURE DETECTOR ATE THE PINCH (reproduced in test env). '
-            'lastScale=$lastScale, outerPanEnds=$outerPanEnds. This is '
-            'the device-side bug.',
-          );
-        } else if (lastScale == null) {
-          fail(
-            'pinch did not fire scale but the outer GestureDetector also '
-            'did not see a pan-end. Some other recognizer is eating the '
-            'gesture. lastScale=$lastScale, outerPanEnds=$outerPanEnds.',
-          );
-        }
-        // If we reach here, scale fired despite the outer wrapper — the
-        // outer-GD-eats-pinch hypothesis is wrong (in test env at least).
-        expect(lastScale, greaterThan(1.0));
-      },
-    );
+      } else if (lastScale == null) {
+        fail(
+          'pinch did not fire scale but the outer GestureDetector also '
+          'did not see a pan-end. Some other recognizer is eating the '
+          'gesture. lastScale=$lastScale, outerPanEnds=$outerPanEnds.',
+        );
+      }
+      // If we reach here, scale fired despite the outer wrapper — the
+      // outer-GD-eats-pinch hypothesis is wrong (in test env at least).
+      expect(lastScale, greaterThan(1.0));
+    });
   });
 }

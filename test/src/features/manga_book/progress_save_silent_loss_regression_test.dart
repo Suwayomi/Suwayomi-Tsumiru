@@ -56,26 +56,20 @@ void main() {
   });
 
   group('a failed online progress push is surfaced, not swallowed', () {
-    test(
-      'online-only + failing push -> returns an error (not silently lost)',
-      () async {
-        final result = await recordReadingProgressWithDependencies(
-          offlineEnabled: false, // no dirty row to retry — the online-only case
-          offlineDatabase: null,
-          repository: _ThrowingRepository(),
-          chapterId: 42,
-          lastPageRead: 7,
-          isRead: false,
-        );
-        expect(
-          result.hasError,
-          isTrue,
-          reason:
-              'a failed online push must reach the caller so the reader can '
-              'show it, instead of vanishing',
-        );
-      },
-    );
+    test('online-only + failing push -> returns an error (not silently lost)',
+        () async {
+      final result = await recordReadingProgressWithDependencies(
+        offlineEnabled: false, // no dirty row to retry — the online-only case
+        offlineDatabase: null,
+        repository: _ThrowingRepository(),
+        chapterId: 42,
+        lastPageRead: 7,
+        isRead: false,
+      );
+      expect(result.hasError, isTrue,
+          reason: 'a failed online push must reach the caller so the reader can '
+              'show it, instead of vanishing');
+    });
 
     test('online-only + successful push -> no error', () async {
       final result = await recordReadingProgressWithDependencies(

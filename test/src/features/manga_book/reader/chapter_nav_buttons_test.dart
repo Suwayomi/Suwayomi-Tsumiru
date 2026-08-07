@@ -30,11 +30,8 @@ void main() {
         onNextChapter: next,
       );
 
-      expect(
-        mapped.leading,
-        same(next),
-        reason: 'in RTL the left-pointing arrow advances the story',
-      );
+      expect(mapped.leading, same(next),
+          reason: 'in RTL the left-pointing arrow advances the story');
       expect(mapped.trailing, same(previous));
     });
 
@@ -45,11 +42,8 @@ void main() {
         onNextChapter: null,
       );
 
-      expect(
-        mapped.leading,
-        isNull,
-        reason: 'no next chapter must disable whichever button targets it',
-      );
+      expect(mapped.leading, isNull,
+          reason: 'no next chapter must disable whichever button targets it');
       expect(mapped.trailing, same(previous));
     });
   });

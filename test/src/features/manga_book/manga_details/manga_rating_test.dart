@@ -11,8 +11,10 @@ import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repos
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 
-GraphQLClient _dummyClient() =>
-    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
+GraphQLClient _dummyClient() => GraphQLClient(
+      link: HttpLink('http://localhost:0'),
+      cache: GraphQLCache(),
+    );
 
 class _RecordingRepo extends MangaBookRepository {
   _RecordingRepo() : super(_dummyClient());
@@ -45,27 +47,19 @@ void main() {
 
   group('mangaRatingProvider', () {
     test('unrated manga reads 0', () {
-      final c = ProviderContainer(
-        overrides: [
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId()),
-        ],
-      );
+      final c = ProviderContainer(overrides: [
+        mangaWithIdProvider(mangaId: 1).overrideWith(() => _FakeMangaWithId()),
+      ]);
       addTearDown(c.dispose);
       expect(c.read(mangaRatingProvider(mangaId: 1)), 0);
     });
 
     test('update persists the clamped rating to the meta store', () async {
       final repo = _RecordingRepo();
-      final c = ProviderContainer(
-        overrides: [
-          mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId()),
-        ],
-      );
+      final c = ProviderContainer(overrides: [
+        mangaBookRepositoryProvider.overrideWithValue(repo),
+        mangaWithIdProvider(mangaId: 1).overrideWith(() => _FakeMangaWithId()),
+      ]);
       addTearDown(c.dispose);
 
       await c.read(mangaRatingProvider(mangaId: 1).notifier).update(3);

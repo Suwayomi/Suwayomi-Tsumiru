@@ -32,51 +32,52 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 /// Applies a 4x5 color matrix to an RGBA pixel (0..255 scale), like Skia.
 List<double> _apply(List<double> m, List<double> p) => [
-  for (var r = 0; r < 4; r++)
-    m[r * 5] * p[0] +
-        m[r * 5 + 1] * p[1] +
-        m[r * 5 + 2] * p[2] +
-        m[r * 5 + 3] * p[3] +
-        m[r * 5 + 4],
-];
+      for (var r = 0; r < 4; r++)
+        m[r * 5] * p[0] +
+            m[r * 5 + 1] * p[1] +
+            m[r * 5 + 2] * p[2] +
+            m[r * 5 + 3] * p[3] +
+            m[r * 5 + 4],
+    ];
 
 MangaDto _manga() => Fragment$MangaDto(
-  id: 1,
-  title: 'Test Manga',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: 0,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/1',
-);
+      id: 1,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 0),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: const [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 0,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/1',
+    );
 
 ChapterDto _chapter() => Fragment$ChapterDto(
-  chapterNumber: 1,
-  fetchedAt: '0',
-  id: 1,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
-  mangaId: 1,
-  name: 'Chapter 1',
-  pageCount: 3,
-  sourceOrder: 1,
-  uploadDate: '0',
-  url: '/chapter/1',
-  meta: const [],
-);
+      chapterNumber: 1,
+      fetchedAt: '0',
+      id: 1,
+      isBookmarked: false,
+      isDownloaded: false,
+      isRead: false,
+      lastPageRead: 0,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: 'Chapter 1',
+      pageCount: 3,
+      sourceOrder: 1,
+      uploadDate: '0',
+      url: '/chapter/1',
+      meta: const [],
+    );
 
 /// Viewer stand-in that counts its own builds.
 class _Probe extends StatefulWidget {
@@ -182,9 +183,9 @@ void main() {
     }
 
     Finder inOverlays(Type type) => find.descendant(
-      of: find.byType(ReaderColorOverlays),
-      matching: find.byType(type),
-    );
+          of: find.byType(ReaderColorOverlays),
+          matching: find.byType(type),
+        );
 
     Color? dimColor(WidgetTester tester) {
       final boxes = inOverlays(ColoredBox);
@@ -199,32 +200,30 @@ void main() {
     });
 
     testWidgets('committed -50 brightness → black dim at 0.5', (tester) async {
-      await pumpOverlays(
-        tester,
-        prefValues: {'customBrightness': true, 'customBrightnessValue': -50},
-      );
+      await pumpOverlays(tester, prefValues: {
+        'customBrightness': true,
+        'customBrightnessValue': -50,
+      });
       final color = dimColor(tester);
       expect(color, isNotNull);
       expect(color!.a, closeTo(0.5, 0.005));
     });
 
-    testWidgets('positive committed brightness is inert (no overlay)', (
-      tester,
-    ) async {
-      await pumpOverlays(
-        tester,
-        prefValues: {'customBrightness': true, 'customBrightnessValue': 60},
-      );
+    testWidgets('positive committed brightness is inert (no overlay)',
+        (tester) async {
+      await pumpOverlays(tester, prefValues: {
+        'customBrightness': true,
+        'customBrightnessValue': 60,
+      });
       expect(dimColor(tester), isNull);
     });
 
-    testWidgets('brightness draft overrides committed; clearing falls back', (
-      tester,
-    ) async {
-      await pumpOverlays(
-        tester,
-        prefValues: {'customBrightness': true, 'customBrightnessValue': -20},
-      );
+    testWidgets('brightness draft overrides committed; clearing falls back',
+        (tester) async {
+      await pumpOverlays(tester, prefValues: {
+        'customBrightness': true,
+        'customBrightnessValue': -20,
+      });
       expect(dimColor(tester)!.a, closeTo(0.2, 0.005));
 
       readerBrightnessPreview.value = -75;
@@ -236,9 +235,8 @@ void main() {
       expect(dimColor(tester)!.a, closeTo(0.2, 0.005));
     });
 
-    testWidgets('grayscale/invert mount one matrix BackdropFilter', (
-      tester,
-    ) async {
+    testWidgets('grayscale/invert mount one matrix BackdropFilter',
+        (tester) async {
       await pumpOverlays(tester, prefValues: {'grayscale': true});
       expect(inOverlays(BackdropFilter), findsOneWidget);
       expect(
@@ -251,14 +249,11 @@ void main() {
 
     testWidgets('color filter blends draft ?? committed ARGB', (tester) async {
       const committed = 0x80FF0000; // half-alpha red
-      await pumpOverlays(
-        tester,
-        prefValues: {
-          'customColorFilter': true,
-          'colorFilterValue': committed,
-          'colorFilterBlendMode': ColorFilterBlendMode.multiply.index,
-        },
-      );
+      await pumpOverlays(tester, prefValues: {
+        'customColorFilter': true,
+        'colorFilterValue': committed,
+        'colorFilterBlendMode': ColorFilterBlendMode.multiply.index,
+      });
       BackdropFilter filterWidget() =>
           tester.widget<BackdropFilter>(inOverlays(BackdropFilter));
       expect(
@@ -275,9 +270,8 @@ void main() {
       );
     });
 
-    testWidgets('preview drag repaints ONLY the overlay: zero probe rebuilds', (
-      tester,
-    ) async {
+    testWidgets('preview drag repaints ONLY the overlay: zero probe rebuilds',
+        (tester) async {
       var probeBuilds = 0;
       await pumpOverlays(
         tester,
@@ -291,18 +285,14 @@ void main() {
         await tester.pump();
       }
       expect(dimColor(tester)!.a, closeTo(0.7, 0.005));
-      expect(
-        probeBuilds,
-        1,
-        reason: 'slider-drag preview must never rebuild the viewer',
-      );
+      expect(probeBuilds, 1,
+          reason: 'slider-drag preview must never rebuild the viewer');
     });
   });
 
   group('chrome z-order', () {
-    testWidgets('filters < flash < top bar / bottom bar in the chrome Stack', (
-      tester,
-    ) async {
+    testWidgets('filters < flash < top bar / bottom bar in the chrome Stack',
+        (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -355,9 +345,7 @@ void main() {
 
       final stackFinder = find
           .descendant(
-            of: find.byType(ReaderChrome),
-            matching: find.byType(Stack),
-          )
+              of: find.byType(ReaderChrome), matching: find.byType(Stack))
           .first;
       final stack = tester.widget<Stack>(stackFinder);
       final stackElement = tester.element(stackFinder);
@@ -384,18 +372,12 @@ void main() {
       final bottomBar = childIndexOf(ReaderBottomControls);
 
       expect(filters, isNonNegative);
-      expect(
-        filters,
-        lessThan(flash),
-        reason: 'flash must stay visible over active filters',
-      );
+      expect(filters, lessThan(flash),
+          reason: 'flash must stay visible over active filters');
       expect(flash, lessThan(topBar), reason: 'bars paint above the flash');
       expect(flash, lessThan(bottomBar));
-      expect(
-        filters,
-        lessThan(topBar),
-        reason: 'chrome bars must never get tinted by the filters',
-      );
+      expect(filters, lessThan(topBar),
+          reason: 'chrome bars must never get tinted by the filters');
       expect(filters, lessThan(bottomBar));
     });
   });

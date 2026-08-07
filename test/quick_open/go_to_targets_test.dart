@@ -23,16 +23,8 @@ void main() {
 
   test('extra targets (categories) are matched and appended', () {
     final cat = GoToTarget(
-      label: (_) => 'Seinen',
-      icon: Icons.folder,
-      navigate: (_) {},
-    );
-    final hits = matchGoToTargets(
-      'sein',
-      l,
-      includeHotkeys: true,
-      extra: [cat],
-    );
+        label: (_) => 'Seinen', icon: Icons.folder, navigate: (_) {});
+    final hits = matchGoToTargets('sein', l, includeHotkeys: true, extra: [cat]);
     expect(hits, contains(cat));
   });
 }

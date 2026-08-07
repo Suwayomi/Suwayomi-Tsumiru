@@ -42,18 +42,8 @@ void main() {
     });
 
     test('single series → true/false, never mixed', () {
-      expect(
-        categoryMembership([
-          {5},
-        ], 5),
-        isTrue,
-      );
-      expect(
-        categoryMembership([
-          {5},
-        ], 6),
-        isFalse,
-      );
+      expect(categoryMembership([{5}], 5), isTrue);
+      expect(categoryMembership([{5}], 6), isFalse);
     });
 
     test('empty selection → false (nothing is "in")', () {

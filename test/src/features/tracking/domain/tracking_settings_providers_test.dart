@@ -16,8 +16,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
     final c = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-    );
+        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
     addTearDown(c.dispose);
     expect(c.read(updateProgressAfterReadingProvider).ifNull(), isTrue);
   });
@@ -26,8 +25,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
     final c = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-    );
+        overrides: [sharedPreferencesProvider.overrideWithValue(sp)]);
     addTearDown(c.dispose);
     c.read(updateProgressAfterReadingProvider.notifier).update(false);
     expect(c.read(updateProgressAfterReadingProvider).ifNull(), isFalse);

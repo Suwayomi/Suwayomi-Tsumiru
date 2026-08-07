@@ -22,22 +22,13 @@ void main() {
         writeCrashLog(path, 'line $i with some padding to add a few bytes\n');
       }
 
-      expect(
-        File(path).lengthSync(),
-        lessThanOrEqualTo(256 * 1024),
-        reason: 'the log must stay bounded',
-      );
+      expect(File(path).lengthSync(), lessThanOrEqualTo(256 * 1024),
+          reason: 'the log must stay bounded');
       final content = File(path).readAsStringSync();
-      expect(
-        content,
-        contains('line 11999'),
-        reason: 'the newest entry must survive the trim',
-      );
-      expect(
-        content,
-        isNot(contains('line 0 with')),
-        reason: 'the oldest entries must be dropped',
-      );
+      expect(content, contains('line 11999'),
+          reason: 'the newest entry must survive the trim');
+      expect(content, isNot(contains('line 0 with')),
+          reason: 'the oldest entries must be dropped');
       // Trim starts on a line boundary — no half entry at the top.
       expect(content.startsWith('line '), isTrue);
     });

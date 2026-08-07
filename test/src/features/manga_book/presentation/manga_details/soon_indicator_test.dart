@@ -32,22 +32,19 @@ Fragment$MangaDto _minimalManga({String title = 'Test Manga'}) =>
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(
-        totalCount: 0,
-        nodes: const [],
-      ),
+      trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
       unreadCount: 0,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/1',
     );
 
 Widget _app(Widget child) => ProviderScope(
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(body: child),
-  ),
-);
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: child),
+      ),
+    );
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -58,74 +55,63 @@ void main() {
     testWidgets('renders belowStatus widget when provided', (tester) async {
       const soonKey = Key('soon-indicator');
 
-      await tester.pumpWidget(
-        _app(
-          MangaCoverDescriptiveListTile(
-            manga: _minimalManga(),
-            showBadges: false,
-            belowStatus: const Text('Coming soon', key: soonKey),
-          ),
+      await tester.pumpWidget(_app(
+        MangaCoverDescriptiveListTile(
+          manga: _minimalManga(),
+          showBadges: false,
+          belowStatus: const Text('Coming soon', key: soonKey),
         ),
-      );
+      ));
       await tester.pump();
 
       expect(find.byKey(soonKey), findsOneWidget);
       expect(find.text('Coming soon'), findsOneWidget);
     });
 
-    testWidgets('renders nothing below status when belowStatus is null', (
-      tester,
-    ) async {
+    testWidgets('renders nothing below status when belowStatus is null',
+        (tester) async {
       const soonKey = Key('soon-indicator');
 
-      await tester.pumpWidget(
-        _app(
-          MangaCoverDescriptiveListTile(
-            manga: _minimalManga(),
-            showBadges: false,
-            // belowStatus defaults to null
-          ),
+      await tester.pumpWidget(_app(
+        MangaCoverDescriptiveListTile(
+          manga: _minimalManga(),
+          showBadges: false,
+          // belowStatus defaults to null
         ),
-      );
+      ));
       await tester.pump();
 
       expect(find.byKey(soonKey), findsNothing);
     });
 
-    testWidgets('library/browse callers are visually unchanged (null default)', (
-      tester,
-    ) async {
+    testWidgets('library/browse callers are visually unchanged (null default)',
+        (tester) async {
       // Simulates a library list call: no belowStatus passed.
       // showBadges: false avoids Riverpod deps in MangaBadgesRow/MangaChipsRow.
-      await tester.pumpWidget(
-        _app(
-          MangaCoverDescriptiveListTile(
-            manga: _minimalManga(title: 'Library Manga'),
-            showBadges: false,
-          ),
+      await tester.pumpWidget(_app(
+        MangaCoverDescriptiveListTile(
+          manga: _minimalManga(title: 'Library Manga'),
+          showBadges: false,
         ),
-      );
+      ));
       await tester.pump();
 
       expect(find.text('Library Manga'), findsOneWidget);
     });
 
-    testWidgets('tapping soon indicator triggers the provided onTap', (
-      tester,
-    ) async {
+    testWidgets('tapping soon indicator triggers the provided onTap',
+        (tester) async {
       var tapped = false;
-      await tester.pumpWidget(
-        _app(
-          MangaCoverDescriptiveListTile(
-            manga: _minimalManga(),
-            showBadges: false,
-            belowStatus: GestureDetector(
-              onTap: () => tapped = true,
-              child: const Text('Soon'),
-            ),
+      await tester.pumpWidget(_app(
+        MangaCoverDescriptiveListTile(
+          manga: _minimalManga(),
+          showBadges: false,
+          belowStatus: GestureDetector(
+            onTap: () => tapped = true,
+            child: const Text('Soon'),
           ),
         ),
-      );
+      ));
       await tester.pump();
 
       await tester.tap(find.text('Soon'));

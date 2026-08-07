@@ -13,10 +13,8 @@ void main() {
 
   test('restores a saved size', () {
     final g = WindowGeometry(size: const Size(1000, 700));
-    expect(
-      resolveRestoreSize(g, fallback: fallback, min: min),
-      const Size(1000, 700),
-    );
+    expect(resolveRestoreSize(g, fallback: fallback, min: min),
+        const Size(1000, 700));
   });
 
   test('clamps a too-small saved size up to the minimum', () {
@@ -33,26 +31,21 @@ void main() {
     expect(clampToMin(const Size(300, 900), min), const Size(800, 900));
   });
 
-  test(
-    'corrupt saved sizes fall back instead of reaching the window layer',
-    () {
-      for (final bad in [
-        const Size(double.nan, 700),
-        const Size(1000, double.infinity),
-        const Size(-100, 700),
-        const Size(0, 0),
-        const Size(100000, 700),
-      ]) {
-        expect(
-          resolveRestoreSize(
-            WindowGeometry(size: bad),
-            fallback: fallback,
-            min: min,
-          ),
-          fallback,
-          reason: 'expected fallback for $bad',
-        );
-      }
-    },
-  );
+  test('corrupt saved sizes fall back instead of reaching the window layer',
+      () {
+    for (final bad in [
+      const Size(double.nan, 700),
+      const Size(1000, double.infinity),
+      const Size(-100, 700),
+      const Size(0, 0),
+      const Size(100000, 700),
+    ]) {
+      expect(
+        resolveRestoreSize(WindowGeometry(size: bad),
+            fallback: fallback, min: min),
+        fallback,
+        reason: 'expected fallback for $bad',
+      );
+    }
+  });
 }

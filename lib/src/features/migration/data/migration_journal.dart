@@ -63,23 +63,25 @@ class MigrationJournalEntry {
     MigrationPairState? state,
     List<int>? copiedSourceRecordIds,
     String? failureReason,
-  }) => MigrationJournalEntry(
-    fromMangaId: fromMangaId,
-    toMangaId: toMangaId,
-    state: state ?? this.state,
-    options: options,
-    copiedSourceRecordIds: copiedSourceRecordIds ?? this.copiedSourceRecordIds,
-    failureReason: failureReason ?? this.failureReason,
-  );
+  }) =>
+      MigrationJournalEntry(
+        fromMangaId: fromMangaId,
+        toMangaId: toMangaId,
+        state: state ?? this.state,
+        options: options,
+        copiedSourceRecordIds:
+            copiedSourceRecordIds ?? this.copiedSourceRecordIds,
+        failureReason: failureReason ?? this.failureReason,
+      );
 
   Map<String, dynamic> toJson() => {
-    'from': fromMangaId,
-    'to': toMangaId,
-    'state': state.name,
-    'opts': options.toJson(),
-    'recs': copiedSourceRecordIds,
-    if (failureReason != null) 'err': failureReason,
-  };
+        'from': fromMangaId,
+        'to': toMangaId,
+        'state': state.name,
+        'opts': options.toJson(),
+        'recs': copiedSourceRecordIds,
+        if (failureReason != null) 'err': failureReason,
+      };
 
   factory MigrationJournalEntry.fromJson(Map<String, dynamic> j) =>
       MigrationJournalEntry(

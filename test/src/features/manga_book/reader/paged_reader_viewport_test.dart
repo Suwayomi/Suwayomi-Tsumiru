@@ -1144,11 +1144,8 @@ void main() {
       ))
         transform.transform.storage[12],
     ];
-    expect(
-      offsets.every((dx) => dx.abs() >= 0.1),
-      isTrue,
-      reason: 'the guard snapped the pager while a finger was down',
-    );
+    expect(offsets.every((dx) => dx.abs() >= 0.1), isTrue,
+        reason: 'the guard snapped the pager while a finger was down');
 
     await drag.up();
     await tester.pumpAndSettle();

@@ -37,7 +37,10 @@ Future<ProviderContainer> _pumpBar(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: ReaderUtilsBar(expanded: expanded, readerMode: readerMode),
+              body: ReaderUtilsBar(
+                expanded: expanded,
+                readerMode: readerMode,
+              ),
             ),
           );
         },
@@ -57,9 +60,8 @@ void main() {
     expect(find.byType(Switch), findsNothing);
   });
 
-  testWidgets('expanded shows the auto-scroll switch and toggles it', (
-    tester,
-  ) async {
+  testWidgets('expanded shows the auto-scroll switch and toggles it',
+      (tester) async {
     final expanded = ValueNotifier(true);
     addTearDown(expanded.dispose);
     final container = await _pumpBar(tester, expanded);
@@ -94,9 +96,8 @@ void main() {
     expect(container.read(autoScrollIntervalSecondsProvider), 12);
   });
 
-  testWidgets('paged mode surfaces Auto advance with its own interval', (
-    tester,
-  ) async {
+  testWidgets('paged mode surfaces Auto advance with its own interval',
+      (tester) async {
     final expanded = ValueNotifier(true);
     addTearDown(expanded.dispose);
     final container = await _pumpBar(

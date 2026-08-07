@@ -20,11 +20,8 @@ void main() {
     final readerModes = Directory(
       'lib/src/features/manga_book/presentation/reader/widgets/reader_mode',
     );
-    expect(
-      readerModes.existsSync(),
-      isTrue,
-      reason: 'reader_mode directory moved — update this test',
-    );
+    expect(readerModes.existsSync(), isTrue,
+        reason: 'reader_mode directory moved — update this test');
 
     final offenders = <String>[];
     for (final entity in readerModes.listSync(recursive: true)) {
@@ -42,8 +39,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason:
-          'Use the paged*/longStrip* providers instead:\n'
+      reason: 'Use the paged*/longStrip* providers instead:\n'
           '${offenders.join('\n')}',
     );
   });

@@ -78,43 +78,44 @@ Widget _viewport({
   required PagedDisplayWindow window,
   int initialDisplayIndex = 0,
   void Function(int chapterId, int raw)? onChapterPageChanged,
-}) => Directionality(
-  textDirection: TextDirection.ltr,
-  child: ReaderInputScope(
-    callbacks: _callbacks(),
-    child: Center(
-      child: SizedBox(
-        width: 300,
-        height: 500,
-        child: PagedReaderViewport(
-          controller: controller,
-          window: window,
-          initialDisplayIndex: initialDisplayIndex,
-          axis: Axis.horizontal,
-          reverse: false,
-          animateTransitions: true,
-          pageFit: BoxFit.contain,
-          pageSize: null,
-          pagesAtNaturalSize: false,
-          mouseScrollSpeed: 1.7,
-          centerMargin: CenterMarginType.none,
-          rotateWide: false,
-          rotateWideInvert: false,
-          reversePair: false,
-          cropBorders: false,
-          onPageWide: (_, __, ___) {},
-          onChapterPageChanged: onChapterPageChanged ?? (_, __) {},
-          transitionBuilder: (_) => const SizedBox.shrink(),
-          pinchEnabled: true,
-          doubleTapToZoom: true,
-          disableZoomIn: false,
-          disableZoomOut: false,
-          navigateToPan: true,
+}) =>
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: ReaderInputScope(
+        callbacks: _callbacks(),
+        child: Center(
+          child: SizedBox(
+            width: 300,
+            height: 500,
+            child: PagedReaderViewport(
+              controller: controller,
+              window: window,
+              initialDisplayIndex: initialDisplayIndex,
+              axis: Axis.horizontal,
+              reverse: false,
+              animateTransitions: true,
+              pageFit: BoxFit.contain,
+              pageSize: null,
+              pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
+              centerMargin: CenterMarginType.none,
+              rotateWide: false,
+              rotateWideInvert: false,
+              reversePair: false,
+              cropBorders: false,
+              onPageWide: (_, __, ___) {},
+              onChapterPageChanged: onChapterPageChanged ?? (_, __) {},
+              transitionBuilder: (_) => const SizedBox.shrink(),
+              pinchEnabled: true,
+              doubleTapToZoom: true,
+              disableZoomIn: false,
+              disableZoomOut: false,
+              navigateToPan: true,
+            ),
+          ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 /// Pages must sit a whole screen apart; a leftover offset parks the pager
 /// between two, showing half of each.
@@ -126,11 +127,8 @@ void _expectPagesAligned(WidgetTester tester) {
     final dx = tester.getTopLeft(pages.at(i)).dx - box.left;
     final steps = dx / box.width;
     final offBy = (steps - steps.roundToDouble()).abs() * box.width;
-    expect(
-      offBy,
-      lessThan(1.0),
-      reason: 'page $i parked between pages at dx=$dx',
-    );
+    expect(offBy, lessThan(1.0),
+        reason: 'page $i parked between pages at dx=$dx');
   }
 }
 
@@ -355,47 +353,46 @@ void main() {
     );
   });
 
-  testWidgets('a chapter loading mid page-turn keeps the page you were on', (
-    tester,
-  ) async {
+  testWidgets('a chapter loading mid page-turn keeps the page you were on',
+      (tester) async {
     final reported = <({int chapterId, int raw})>[];
     final controller = PagedReaderController();
 
     Widget viewportWith(PagedDisplayWindow window) => ReaderInputScope(
-      callbacks: _callbacks(),
-      child: Center(
-        child: SizedBox(
-          width: 300,
-          height: 500,
-          child: PagedReaderViewport(
-            controller: controller,
-            window: window,
-            initialDisplayIndex: 0,
-            axis: Axis.horizontal,
-            reverse: false,
-            animateTransitions: true,
-            pageFit: BoxFit.contain,
-            pageSize: null,
-            pagesAtNaturalSize: false,
-            mouseScrollSpeed: 1.7,
-            centerMargin: CenterMarginType.none,
-            rotateWide: false,
-            rotateWideInvert: false,
-            reversePair: false,
-            cropBorders: false,
-            onPageWide: (_, __, ___) {},
-            onChapterPageChanged: (chapterId, raw) =>
-                reported.add((chapterId: chapterId, raw: raw)),
-            transitionBuilder: (_) => const SizedBox.shrink(),
-            pinchEnabled: true,
-            doubleTapToZoom: true,
-            disableZoomIn: false,
-            disableZoomOut: false,
-            navigateToPan: true,
+          callbacks: _callbacks(),
+          child: Center(
+            child: SizedBox(
+              width: 300,
+              height: 500,
+              child: PagedReaderViewport(
+                controller: controller,
+                window: window,
+                initialDisplayIndex: 0,
+                axis: Axis.horizontal,
+                reverse: false,
+                animateTransitions: true,
+                pageFit: BoxFit.contain,
+                pageSize: null,
+                pagesAtNaturalSize: false,
+              mouseScrollSpeed: 1.7,
+                centerMargin: CenterMarginType.none,
+                rotateWide: false,
+                rotateWideInvert: false,
+                reversePair: false,
+                cropBorders: false,
+                onPageWide: (_, __, ___) {},
+                onChapterPageChanged: (chapterId, raw) =>
+                    reported.add((chapterId: chapterId, raw: raw)),
+                transitionBuilder: (_) => const SizedBox.shrink(),
+                pinchEnabled: true,
+                doubleTapToZoom: true,
+                disableZoomIn: false,
+                disableZoomOut: false,
+                navigateToPan: true,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
 
     // Reading chapter 2 alone; chapter 1 loads in behind us, which shifts every
     // display index by a chapter.
@@ -405,9 +402,7 @@ void main() {
     );
     await tester.pumpWidget(
       Directionality(
-        textDirection: TextDirection.ltr,
-        child: viewportWith(window1),
-      ),
+          textDirection: TextDirection.ltr, child: viewportWith(window1)),
     );
     await tester.pump();
 
@@ -426,25 +421,19 @@ void main() {
     );
     await tester.pumpWidget(
       Directionality(
-        textDirection: TextDirection.ltr,
-        child: viewportWith(window2),
-      ),
+          textDirection: TextDirection.ltr, child: viewportWith(window2)),
     );
     await tester.pumpAndSettle();
 
     // The in-flight turn was aimed at the old window; committing it now would
     // land on whatever chapter 1 page happens to share that index.
     expect(reported.isNotEmpty, isTrue);
-    expect(
-      reported.last.chapterId,
-      2,
-      reason: 'landed outside the chapter being read; reported=$reported',
-    );
+    expect(reported.last.chapterId, 2,
+        reason: 'landed outside the chapter being read; reported=$reported');
   });
 
-  testWidgets('jumping while a page turn is still settling lands on the jump', (
-    tester,
-  ) async {
+  testWidgets('jumping while a page turn is still settling lands on the jump',
+      (tester) async {
     final reported = <({int chapterId, int raw})>[];
     final controller = PagedReaderController();
 
@@ -453,14 +442,12 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      _viewport(
-        controller: controller,
-        window: window,
-        onChapterPageChanged: (chapterId, raw) =>
-            reported.add((chapterId: chapterId, raw: raw)),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
     await tester.pump();
 
     // Turn a page, then jump the seekbar elsewhere before the turn settles.
@@ -477,25 +464,23 @@ void main() {
 
     // The abandoned turn must not commit page 1 on top of the jump.
     expect(reported.isNotEmpty, isTrue);
-    expect(
-      reported.last.raw,
-      5,
-      reason: 'the in-flight turn overrode the jump; reported=$reported',
-    );
+    expect(reported.last.raw, 5,
+        reason: 'the in-flight turn overrode the jump; reported=$reported');
   });
 
-  testWidgets('a drag that follows a pinch still settles when you let go', (
-    tester,
-  ) async {
+  testWidgets('a drag that follows a pinch still settles when you let go',
+      (tester) async {
     final controller = PagedReaderController();
     final window = buildPagedDisplayWindow(
       chapters: [_chapter(1, 6)],
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      _viewport(controller: controller, window: window, initialDisplayIndex: 1),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      initialDisplayIndex: 1,
+    ));
     await tester.pump();
 
     final box = tester.getRect(find.byType(PagedReaderViewport));
@@ -526,18 +511,19 @@ void main() {
     _expectPagesAligned(tester);
   });
 
-  testWidgets('a second finger mid-turn cannot hijack the turn into a zoom', (
-    tester,
-  ) async {
+  testWidgets('a second finger mid-turn cannot hijack the turn into a zoom',
+      (tester) async {
     final controller = PagedReaderController();
     final window = buildPagedDisplayWindow(
       chapters: [_chapter(1, 6)],
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      _viewport(controller: controller, window: window, initialDisplayIndex: 1),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      initialDisplayIndex: 1,
+    ));
     await tester.pump();
 
     final box = tester.getRect(find.byType(PagedReaderViewport));
@@ -550,10 +536,8 @@ void main() {
     }
 
     // ...then drop a second finger and spread, as if pinching to zoom.
-    final p2 = await tester.startGesture(
-      box.center + const Offset(40, 0),
-      pointer: 2,
-    );
+    final p2 = await tester.startGesture(box.center + const Offset(40, 0),
+        pointer: 2);
     await tester.pump();
     for (var i = 0; i < 4; i++) {
       await p2.moveBy(const Offset(25, 0));
@@ -561,11 +545,8 @@ void main() {
     }
 
     // Komikku doesn't zoom while a page is turning, and neither do we.
-    expect(
-      _largestScale(tester),
-      closeTo(1.0, 0.01),
-      reason: 'the pinch hijacked a turn in progress',
-    );
+    expect(_largestScale(tester), closeTo(1.0, 0.01),
+        reason: 'the pinch hijacked a turn in progress');
 
     await p2.up();
     await p1.up();
@@ -615,7 +596,7 @@ void main() {
                 pageFit: BoxFit.contain,
                 pageSize: null,
                 pagesAtNaturalSize: false,
-                mouseScrollSpeed: 1.7,
+              mouseScrollSpeed: 1.7,
                 centerMargin: CenterMarginType.none,
                 rotateWide: false,
                 rotateWideInvert: false,
@@ -642,10 +623,8 @@ void main() {
     // Two fingers down, one cancelled, then the other lifts without moving.
     // The survivor must not be read as a fresh tap.
     final p1 = await tester.startGesture(box.center, pointer: 1);
-    final p2 = await tester.startGesture(
-      box.center + const Offset(40, 0),
-      pointer: 2,
-    );
+    final p2 = await tester.startGesture(box.center + const Offset(40, 0),
+        pointer: 2);
     await tester.pump();
     await p2.cancel();
     await tester.pump();
@@ -664,14 +643,12 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      _viewport(
-        controller: controller,
-        window: window,
-        onChapterPageChanged: (chapterId, raw) =>
-            reported.add((chapterId: chapterId, raw: raw)),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
     await tester.pump();
 
     final box = tester.getRect(find.byType(PagedReaderViewport));
@@ -697,16 +674,10 @@ void main() {
     await tester.sendEventToBinding(pointer.scroll(const Offset(0, 53)));
     await tester.pumpAndSettle();
 
-    expect(
-      scaleOffset(),
-      isNot(closeTo(before, 0.001)),
-      reason: 'the wheel did not pan the zoomed page',
-    );
-    expect(
-      reported,
-      isEmpty,
-      reason: 'the wheel turned the page while it still had room to pan',
-    );
+    expect(scaleOffset(), isNot(closeTo(before, 0.001)),
+        reason: 'the wheel did not pan the zoomed page');
+    expect(reported, isEmpty,
+        reason: 'the wheel turned the page while it still had room to pan');
   });
 
   testWidgets('the wheel turns a page that has nowhere to pan', (tester) async {
@@ -717,14 +688,12 @@ void main() {
       forceTransition: false,
     );
 
-    await tester.pumpWidget(
-      _viewport(
-        controller: controller,
-        window: window,
-        onChapterPageChanged: (chapterId, raw) =>
-            reported.add((chapterId: chapterId, raw: raw)),
-      ),
-    );
+    await tester.pumpWidget(_viewport(
+      controller: controller,
+      window: window,
+      onChapterPageChanged: (chapterId, raw) =>
+          reported.add((chapterId: chapterId, raw: raw)),
+    ));
     await tester.pump();
     reported.clear();
 
@@ -735,10 +704,7 @@ void main() {
     await tester.sendEventToBinding(pointer.scroll(const Offset(0, 53)));
     await tester.pumpAndSettle();
 
-    expect(
-      reported.map((r) => r.raw),
-      contains(1),
-      reason: 'the wheel did not turn a page it could not pan',
-    );
+    expect(reported.map((r) => r.raw), contains(1),
+        reason: 'the wheel did not turn a page it could not pan');
   });
 }

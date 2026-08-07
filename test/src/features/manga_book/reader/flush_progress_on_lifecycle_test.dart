@@ -12,9 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/utils/flush_progress_on_lifecycle.dart';
 
 void main() {
-  testWidgets('flushes pending progress when the app is hidden', (
-    tester,
-  ) async {
+  testWidgets('flushes pending progress when the app is hidden',
+      (tester) async {
     var flushes = 0;
     await tester.pumpWidget(
       HookBuilder(
@@ -38,9 +37,8 @@ void main() {
     expect(flushes, 1);
   });
 
-  testWidgets('flushes pending progress when the app is asked to exit', (
-    tester,
-  ) async {
+  testWidgets('flushes pending progress when the app is asked to exit',
+      (tester) async {
     var flushes = 0;
     await tester.pumpWidget(
       HookBuilder(

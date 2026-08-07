@@ -54,9 +54,8 @@ void main() {
         ProviderScope(
           overrides: [
             trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(
-              mangaId: 1,
-            ).overrideWith((ref) async => []),
+            mangaTrackRecordsProvider(mangaId: 1)
+                .overrideWith((ref) async => []),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -83,9 +82,8 @@ void main() {
         ProviderScope(
           overrides: [
             trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(
-              mangaId: 1,
-            ).overrideWith((ref) async => []),
+            mangaTrackRecordsProvider(mangaId: 1)
+                .overrideWith((ref) async => []),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -112,9 +110,8 @@ void main() {
         ProviderScope(
           overrides: [
             trackersProvider.overrideWith((ref) async => [tracker]),
-            mangaTrackRecordsProvider(
-              mangaId: 1,
-            ).overrideWith((ref) async => [record]),
+            mangaTrackRecordsProvider(mangaId: 1)
+                .overrideWith((ref) async => [record]),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -145,9 +142,8 @@ void main() {
             trackersProvider.overrideWith(
               (ref) async => throw Exception('network error'),
             ),
-            mangaTrackRecordsProvider(
-              mangaId: 1,
-            ).overrideWith((ref) async => []),
+            mangaTrackRecordsProvider(mangaId: 1)
+                .overrideWith((ref) async => []),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -44,16 +44,6 @@ class OfflineDownloadProgress
   static int _percent(int done, int total) =>
       total <= 0 ? 0 : (done * 100) ~/ total;
 
-  /// One more page landed.
-  void advance(int chapterId) {
-    final current = state[chapterId];
-    if (current == null) return;
-    final done = current.done + 1 > current.total
-        ? current.total
-        : current.done + 1;
-    state = {...state, chapterId: (done: done, total: current.total)};
-  }
-
   /// The chapter settled (committed, failed, cancelled or deleted) — the arc
   /// stops being live and the row's device state takes over.
   void clear(int chapterId) {

@@ -46,70 +46,70 @@ class _FakeRepo extends DownloadsRepository {
 }
 
 Map<String, dynamic> _dequeued(Map<String, dynamic> item) => {
-  'type': 'DEQUEUED',
-  'download': item,
-  '__typename': 'DownloadUpdate',
-};
+      'type': 'DEQUEUED',
+      'download': item,
+      '__typename': 'DownloadUpdate',
+    };
 
 DownloadUpdatesDto _feedMessage({
   bool omitted = false,
   List<Map<String, dynamic>> updates = const [],
-}) => DownloadUpdatesDto.fromJson({
-  'state': 'STARTED',
-  'omittedUpdates': omitted,
-  'updates': updates,
-  'initial': null,
-  '__typename': 'DownloadUpdates',
-});
+}) =>
+    DownloadUpdatesDto.fromJson({
+      'state': 'STARTED',
+      'omittedUpdates': omitted,
+      'updates': updates,
+      'initial': null,
+      '__typename': 'DownloadUpdates',
+    });
 
 Map<String, dynamic> _queueItem({
   required int chapterId,
   required int position,
   String state = 'QUEUED',
   int tries = 0,
-}) => {
-  'chapter': {
-    'id': chapterId,
-    'name': 'Ch. $chapterId',
-    'sourceOrder': position,
-    'isDownloaded': false,
-    '__typename': 'ChapterType',
-  },
-  'manga': {
-    'id': 1,
-    'title': 'Series',
-    'downloadCount': 0,
-    'thumbnailUrl': null,
-    '__typename': 'MangaType',
-  },
-  'progress': 0.0,
-  'state': state,
-  'tries': tries,
-  'position': position,
-  '__typename': 'DownloadType',
-};
+}) =>
+    {
+      'chapter': {
+        'id': chapterId,
+        'name': 'Ch. $chapterId',
+        'sourceOrder': position,
+        'isDownloaded': false,
+        '__typename': 'ChapterType',
+      },
+      'manga': {
+        'id': 1,
+        'title': 'Series',
+        'downloadCount': 0,
+        'thumbnailUrl': null,
+        '__typename': 'MangaType',
+      },
+      'progress': 0.0,
+      'state': state,
+      'tries': tries,
+      'position': position,
+      '__typename': 'DownloadType',
+    };
 
 DownloadStatusDto _status(
   String downloaderState,
   List<Map<String, dynamic>> queue,
-) => DownloadStatusDto.fromJson({
-  'state': downloaderState,
-  'queue': queue,
-  '__typename': 'DownloadStatus',
-});
+) =>
+    DownloadStatusDto.fromJson({
+      'state': downloaderState,
+      'queue': queue,
+      '__typename': 'DownloadStatus',
+    });
 
 /// A container where the live download feed never speaks — the real shape when
 /// the queue is paused (nothing changes, so no deltas) or when the server drops
 /// updates under a mass enqueue.
 Future<ProviderContainer> _silentFeed(DownloadStatusDto status) async {
-  final container = ProviderContainer(
-    overrides: [
-      downloadStatusProvider.overrideWith((ref) => Future.value(status)),
-      downloadUpdatesProvider.overrideWith(
-        (ref) => const Stream<DownloadUpdatesDto?>.empty(),
-      ),
-    ],
-  );
+  final container = ProviderContainer(overrides: [
+    downloadStatusProvider.overrideWith((ref) => Future.value(status)),
+    downloadUpdatesProvider
+        .overrideWith((ref) => const Stream<DownloadUpdatesDto?>.empty()),
+  ]);
   addTearDown(container.dispose);
   await container.read(downloadStatusProvider.future);
   return container;
@@ -121,12 +121,10 @@ void main() {
       // The regression (#313): the queue arrives via the subscription's
       // `initial` snapshot with an empty delta list, and the old gate read only
       // the deltas — so a paused queue rendered rows with no way to restart it.
-      final container = await _silentFeed(
-        _status('STOPPED', [
-          _queueItem(chapterId: 10, position: 0),
-          _queueItem(chapterId: 11, position: 1),
-        ]),
-      );
+      final container = await _silentFeed(_status('STOPPED', [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ]));
 
       expect(container.read(downloadsChapterIdsProvider), [10, 11]);
       expect(container.read(showDownloadsFABProvider), isTrue);
@@ -135,12 +133,10 @@ void main() {
     test('shows when every item has permanently failed', () async {
       // The old gate excluded items errored at tries == 3, hiding the control
       // for a wholly-failed queue — the case where restarting matters most.
-      final container = await _silentFeed(
-        _status('STOPPED', [
-          _queueItem(chapterId: 10, position: 0, state: 'ERROR', tries: 3),
-          _queueItem(chapterId: 11, position: 1, state: 'ERROR', tries: 3),
-        ]),
-      );
+      final container = await _silentFeed(_status('STOPPED', [
+        _queueItem(chapterId: 10, position: 0, state: 'ERROR', tries: 3),
+        _queueItem(chapterId: 11, position: 1, state: 'ERROR', tries: 3),
+      ]));
 
       expect(container.read(showDownloadsFABProvider), isTrue);
     });
@@ -160,24 +156,22 @@ void main() {
       // tell "applied" apart from "fetched and thrown away".
       final repo = _FakeRepo.scripted([
         () async => _status('STARTED', [
-          _queueItem(chapterId: 10, position: 0),
-          _queueItem(chapterId: 11, position: 1),
-        ]),
+              _queueItem(chapterId: 10, position: 0),
+              _queueItem(chapterId: 11, position: 1),
+            ]),
         () async => _status('STARTED', [
-          _queueItem(chapterId: 10, position: 0),
-          _queueItem(chapterId: 11, position: 1),
-          _queueItem(chapterId: 12, position: 2),
-        ]),
+              _queueItem(chapterId: 10, position: 0),
+              _queueItem(chapterId: 11, position: 1),
+              _queueItem(chapterId: 12, position: 2),
+            ]),
       ]);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
       addTearDown(container.dispose);
 
       container.listen(downloadsChapterIdsProvider, (_, _) {});
@@ -193,28 +187,20 @@ void main() {
         (_, next) => seen.add(next.length),
       );
 
-      feed.add(
-        DownloadUpdatesDto.fromJson({
-          'state': 'STARTED',
-          'omittedUpdates': true,
-          'updates': const [],
-          'initial': null,
-          '__typename': 'DownloadUpdates',
-        }),
-      );
+      feed.add(DownloadUpdatesDto.fromJson({
+        'state': 'STARTED',
+        'omittedUpdates': true,
+        'updates': const [],
+        'initial': null,
+        '__typename': 'DownloadUpdates',
+      }));
       await pumpEventQueue();
 
       expect(repo.fetches, 2, reason: 'the dropped batch forces a re-fetch');
-      expect(
-        container.read(downloadsChapterIdsProvider),
-        [10, 11, 12],
-        reason: 'the re-read is applied, not discarded',
-      );
-      expect(
-        seen,
-        isNot(contains(0)),
-        reason: 'the queue never went empty mid-reload',
-      );
+      expect(container.read(downloadsChapterIdsProvider), [10, 11, 12],
+          reason: 'the re-read is applied, not discarded');
+      expect(seen, isNot(contains(0)),
+          reason: 'the queue never went empty mid-reload');
     });
 
     test('a progress tick does not outrank an in-flight re-read', () async {
@@ -230,12 +216,10 @@ void main() {
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
       addTearDown(container.dispose);
       container.listen(downloadsChapterIdsProvider, (_, _) {});
       await container.read(downloadStatusProvider.future);
@@ -243,101 +227,85 @@ void main() {
       feed.add(_feedMessage(omitted: true));
       await pumpEventQueue();
 
-      feed.add(
-        _feedMessage(
-          updates: [
-            {
-              'type': 'PROGRESS',
-              'download': _queueItem(chapterId: 10, position: 0),
-              '__typename': 'DownloadUpdate',
-            },
-          ],
-        ),
-      );
+      feed.add(_feedMessage(updates: [
+        {
+          'type': 'PROGRESS',
+          'download': _queueItem(chapterId: 10, position: 0),
+          '__typename': 'DownloadUpdate',
+        }
+      ]));
       await pumpEventQueue();
 
-      slow.complete(
-        _status('STARTED', [one, _queueItem(chapterId: 11, position: 1)]),
-      );
+      slow.complete(_status('STARTED', [
+        one,
+        _queueItem(chapterId: 11, position: 1),
+      ]));
       await pumpEventQueue();
 
-      expect(
-        container.read(downloadsChapterIdsProvider),
-        [10, 11],
-        reason: 'the re-read still lands despite the progress tick',
-      );
+      expect(container.read(downloadsChapterIdsProvider), [10, 11],
+          reason: 'the re-read still lands despite the progress tick');
       expect(repo.fetches, 2, reason: 'no pointless second re-read');
     });
 
-    test(
-      'a progress tick that adds a chapter does outrank the re-read',
-      () async {
-        // PROGRESS is an upsert: a tick for a chapter we don't have adds it. That
-        // is a membership change, so a snapshot taken before it must not win.
-        final one = _queueItem(chapterId: 10, position: 0);
-        final slow = Completer<DownloadStatusDto?>();
-        final repo = _FakeRepo.scripted([
-          () async => _status('STARTED', [one]),
-          () => slow.future,
-          () async =>
-              _status('STARTED', [one, _queueItem(chapterId: 11, position: 1)]),
-        ]);
-        final feed = StreamController<DownloadUpdatesDto?>();
-        addTearDown(feed.close);
+    test('a progress tick that adds a chapter does outrank the re-read',
+        () async {
+      // PROGRESS is an upsert: a tick for a chapter we don't have adds it. That
+      // is a membership change, so a snapshot taken before it must not win.
+      final one = _queueItem(chapterId: 10, position: 0);
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', [one]),
+        () => slow.future,
+        () async => _status('STARTED', [
+              one,
+              _queueItem(chapterId: 11, position: 1),
+            ]),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
 
-        final container = ProviderContainer(
-          overrides: [
-            downloadsRepositoryProvider.overrideWithValue(repo),
-            downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.listen(downloadsChapterIdsProvider, (_, _) {});
-        await container.read(downloadStatusProvider.future);
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
 
-        feed.add(_feedMessage(omitted: true));
-        await pumpEventQueue();
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
 
-        feed.add(
-          _feedMessage(
-            updates: [
-              {
-                'type': 'PROGRESS',
-                'download': _queueItem(chapterId: 11, position: 1),
-                '__typename': 'DownloadUpdate',
-              },
-            ],
-          ),
-        );
-        await pumpEventQueue();
-        expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+      feed.add(_feedMessage(updates: [
+        {
+          'type': 'PROGRESS',
+          'download': _queueItem(chapterId: 11, position: 1),
+          '__typename': 'DownloadUpdate',
+        }
+      ]));
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
 
-        slow.complete(_status('STARTED', [one]));
-        await pumpEventQueue();
+      slow.complete(_status('STARTED', [one]));
+      await pumpEventQueue();
 
-        expect(
-          container.read(downloadsChapterIdsProvider),
-          [10, 11],
-          reason: 'the older snapshot must not drop chapter 11 again',
-        );
-      },
-    );
+      expect(container.read(downloadsChapterIdsProvider), [10, 11],
+          reason: 'the older snapshot must not drop chapter 11 again');
+    });
 
     test('a server that keeps refusing the read is left alone', () async {
       final repo = _FakeRepo.scripted([
-        () async =>
-            _status('STARTED', [_queueItem(chapterId: 10, position: 0)]),
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+            ]),
         () async => throw Exception('server unreachable'),
       ]);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
       addTearDown(container.dispose);
       container.listen(downloadsChapterIdsProvider, (_, _) {});
       await container.read(downloadStatusProvider.future);
@@ -354,82 +322,67 @@ void main() {
       }
 
       expect(repo.fetches, greaterThan(1), reason: 'it does retry at first');
-      expect(
-        repo.fetches,
-        lessThanOrEqualTo(1 + _FakeRepo.maxFailures),
-        reason: 'but stops rather than issuing one per feed message',
-      );
+      expect(repo.fetches, lessThanOrEqualTo(1 + _FakeRepo.maxFailures),
+          reason: 'but stops rather than issuing one per feed message');
     });
 
-    test(
-      'a slow re-fetch cannot resurrect a chapter dequeued mid-flight',
-      () async {
-        // Refetch goes out holding [10, 11]; a DEQUEUED delta drops 11 while it
-        // is still in the air. Applying the stale snapshot on arrival would put
-        // 11 back — so the snapshot is discarded and the queue re-read.
-        final both = [
-          _queueItem(chapterId: 10, position: 0),
-          _queueItem(chapterId: 11, position: 1),
-        ];
-        final slow = Completer<DownloadStatusDto?>();
-        final repo = _FakeRepo.scripted([
-          () async => _status('STARTED', both),
-          () => slow.future,
-          () async => _status('STARTED', [both.first]),
-        ]);
-        final feed = StreamController<DownloadUpdatesDto?>();
-        addTearDown(feed.close);
+    test('a slow re-fetch cannot resurrect a chapter dequeued mid-flight',
+        () async {
+      // Refetch goes out holding [10, 11]; a DEQUEUED delta drops 11 while it
+      // is still in the air. Applying the stale snapshot on arrival would put
+      // 11 back — so the snapshot is discarded and the queue re-read.
+      final both = [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ];
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', both),
+        () => slow.future,
+        () async => _status('STARTED', [both.first]),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
 
-        final container = ProviderContainer(
-          overrides: [
-            downloadsRepositoryProvider.overrideWithValue(repo),
-            downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.listen(downloadsChapterIdsProvider, (_, _) {});
-        await container.read(downloadStatusProvider.future);
-        expect(container.read(downloadsChapterIdsProvider), [10, 11]);
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
+      expect(container.read(downloadsChapterIdsProvider), [10, 11]);
 
-        feed.add(_feedMessage(omitted: true));
-        await pumpEventQueue();
-        expect(repo.fetches, 2, reason: 'the re-fetch is in flight');
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
+      expect(repo.fetches, 2, reason: 'the re-fetch is in flight');
 
-        feed.add(_feedMessage(updates: [_dequeued(both[1])]));
-        await pumpEventQueue();
-        expect(container.read(downloadsChapterIdsProvider), [10]);
+      feed.add(_feedMessage(updates: [_dequeued(both[1])]));
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), [10]);
 
-        slow.complete(_status('STARTED', both));
-        await pumpEventQueue();
+      slow.complete(_status('STARTED', both));
+      await pumpEventQueue();
 
-        expect(
-          container.read(downloadsChapterIdsProvider),
-          [10],
-          reason: 'the stale snapshot must not bring chapter 11 back',
-        );
-        expect(
-          repo.fetches,
-          3,
-          reason: 'it re-reads instead of applying stale',
-        );
-      },
-    );
+      expect(container.read(downloadsChapterIdsProvider), [10],
+          reason: 'the stale snapshot must not bring chapter 11 back');
+      expect(repo.fetches, 3, reason: 'it re-reads instead of applying stale');
+    });
 
     test('a failed re-fetch leaves the queue intact', () async {
       final repo = _FakeRepo.scripted([
-        () async =>
-            _status('STARTED', [_queueItem(chapterId: 10, position: 0)]),
+        () async => _status('STARTED', [
+              _queueItem(chapterId: 10, position: 0),
+            ]),
         () async => throw Exception('server unreachable'),
       ]);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
       addTearDown(container.dispose);
       container.listen(downloadsChapterIdsProvider, (_, _) {});
       await container.read(downloadStatusProvider.future);
@@ -458,16 +411,15 @@ void main() {
         () async => _status('STARTED', both),
         () => slow.future,
         () async => _status('STARTED', swapped),
-      ])..reorderResult = _status('STARTED', swapped);
+      ])
+        ..reorderResult = _status('STARTED', swapped);
       final feed = StreamController<DownloadUpdatesDto?>();
       addTearDown(feed.close);
 
-      final container = ProviderContainer(
-        overrides: [
-          downloadsRepositoryProvider.overrideWithValue(repo),
-          downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
       addTearDown(container.dispose);
       container.listen(downloadsChapterIdsProvider, (_, _) {});
       await container.read(downloadStatusProvider.future);
@@ -483,93 +435,75 @@ void main() {
       slow.complete(_status('STARTED', both));
       await pumpEventQueue();
 
-      expect(
-        container.read(downloadsChapterIdsProvider),
-        [11, 10],
-        reason: 'the stale snapshot must not undo the reorder',
-      );
+      expect(container.read(downloadsChapterIdsProvider), [11, 10],
+          reason: 'the stale snapshot must not undo the reorder');
     });
 
-    test(
-      'clearing the queue mid-flight is not undone by the re-fetch',
-      () async {
-        // #73 all over again if this breaks: the user empties the queue, the
-        // in-flight snapshot lands, and all of it comes back. (clearAll also
-        // invalidates the status query, so the rebuild guards this too.)
-        final both = [
-          _queueItem(chapterId: 10, position: 0),
-          _queueItem(chapterId: 11, position: 1),
-        ];
-        final slow = Completer<DownloadStatusDto?>();
-        final repo = _FakeRepo.scripted([
-          () async => _status('STARTED', both),
-          () => slow.future,
-          () async => _status('STOPPED', const []),
-        ]);
-        final feed = StreamController<DownloadUpdatesDto?>();
-        addTearDown(feed.close);
+    test('clearing the queue mid-flight is not undone by the re-fetch',
+        () async {
+      // #73 all over again if this breaks: the user empties the queue, the
+      // in-flight snapshot lands, and all of it comes back. (clearAll also
+      // invalidates the status query, so the rebuild guards this too.)
+      final both = [
+        _queueItem(chapterId: 10, position: 0),
+        _queueItem(chapterId: 11, position: 1),
+      ];
+      final slow = Completer<DownloadStatusDto?>();
+      final repo = _FakeRepo.scripted([
+        () async => _status('STARTED', both),
+        () => slow.future,
+        () async => _status('STOPPED', const []),
+      ]);
+      final feed = StreamController<DownloadUpdatesDto?>();
+      addTearDown(feed.close);
 
-        final container = ProviderContainer(
-          overrides: [
-            downloadsRepositoryProvider.overrideWithValue(repo),
-            downloadUpdatesProvider.overrideWith((ref) => feed.stream),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.listen(downloadsChapterIdsProvider, (_, _) {});
-        await container.read(downloadStatusProvider.future);
+      final container = ProviderContainer(overrides: [
+        downloadsRepositoryProvider.overrideWithValue(repo),
+        downloadUpdatesProvider.overrideWith((ref) => feed.stream),
+      ]);
+      addTearDown(container.dispose);
+      container.listen(downloadsChapterIdsProvider, (_, _) {});
+      await container.read(downloadStatusProvider.future);
 
-        feed.add(_feedMessage(omitted: true));
-        await pumpEventQueue();
+      feed.add(_feedMessage(omitted: true));
+      await pumpEventQueue();
 
-        await container.read(downloadsMapProvider.notifier).clearAll();
-        await pumpEventQueue();
-        expect(container.read(downloadsChapterIdsProvider), isEmpty);
+      await container.read(downloadsMapProvider.notifier).clearAll();
+      await pumpEventQueue();
+      expect(container.read(downloadsChapterIdsProvider), isEmpty);
 
-        slow.complete(_status('STARTED', both));
-        await pumpEventQueue();
+      slow.complete(_status('STARTED', both));
+      await pumpEventQueue();
 
-        expect(
-          container.read(downloadsChapterIdsProvider),
-          isEmpty,
-          reason: 'the cleared queue must stay cleared',
-        );
-      },
-    );
+      expect(container.read(downloadsChapterIdsProvider), isEmpty,
+          reason: 'the cleared queue must stay cleared');
+    });
   });
 
   group('downloaderRunState', () {
     test('falls back to the queue query when the feed is silent', () async {
-      final container = await _silentFeed(
-        _status('STOPPED', [_queueItem(chapterId: 10, position: 0)]),
-      );
+      final container = await _silentFeed(_status('STOPPED', [
+        _queueItem(chapterId: 10, position: 0),
+      ]));
 
-      expect(
-        container.read(downloaderRunStateProvider),
-        DownloaderState.STOPPED,
-      );
+      expect(container.read(downloaderRunStateProvider),
+          DownloaderState.STOPPED);
     });
 
     test('prefers the live feed once it speaks', () async {
-      final container = ProviderContainer(
-        overrides: [
-          // Query says stopped, feed says started: the feed is newer.
-          downloadStatusProvider.overrideWith(
-            (ref) => Future.value(_status('STOPPED', const [])),
-          ),
-          downloadUpdatesProvider.overrideWith(
-            (ref) => Stream.value(
-              DownloadUpdatesDto.fromJson({
-                'state': 'STARTED',
-                'omittedUpdates': false,
-                'updates': const [],
-                'initial': const [],
-                '__typename': 'DownloadUpdates',
-              }),
-            ),
-          ),
-        ],
-      );
+      final container = ProviderContainer(overrides: [
+        // Query says stopped, feed says started: the feed is newer.
+        downloadStatusProvider.overrideWith(
+            (ref) => Future.value(_status('STOPPED', const []))),
+        downloadUpdatesProvider.overrideWith((ref) =>
+            Stream.value(DownloadUpdatesDto.fromJson({
+              'state': 'STARTED',
+              'omittedUpdates': false,
+              'updates': const [],
+              'initial': const [],
+              '__typename': 'DownloadUpdates',
+            }))),
+      ]);
       addTearDown(container.dispose);
       // Hold both alive across the awaits; they're autoDispose, and in the app
       // the screen is what keeps them subscribed.
@@ -578,10 +512,8 @@ void main() {
       await container.read(downloadStatusProvider.future);
       await container.read(downloadUpdatesProvider.future);
 
-      expect(
-        container.read(downloaderRunStateProvider),
-        DownloaderState.STARTED,
-      );
+      expect(container.read(downloaderRunStateProvider),
+          DownloaderState.STARTED);
     });
   });
 }

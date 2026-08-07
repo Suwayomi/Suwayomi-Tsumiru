@@ -27,18 +27,17 @@ const _kMangaId = 7;
 /// Stands in for the server being unreachable.
 class _OfflineRepo extends MangaBookRepository {
   _OfflineRepo()
-    : super(
-        GraphQLClient(
+      : super(GraphQLClient(
           link: HttpLink('http://localhost:0'),
           cache: GraphQLCache(),
-        ),
-      );
+        ));
 
   @override
   Future<void> putChapter({
     required int chapterId,
     required ChapterChange patch,
-  }) async => throw Exception('connection refused');
+  }) async =>
+      throw Exception('connection refused');
 }
 
 ChapterWithMangaDto _row({required int id, bool isRead = false}) =>
@@ -79,21 +78,25 @@ Future<void> _putChapter(
   OfflineDatabase db, {
   required int id,
   bool isRead = false,
-}) => db.upsertChapterMetadata(
-  id: id,
-  mangaId: _kMangaId,
-  name: 'Chapter $id',
-  chapterIndex: id,
-  isRead: isRead,
-  lastPageRead: 0,
-  isBookmarked: false,
-  serverIsDownloaded: true,
-  pageCount: 10,
-  updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
-);
+}) =>
+    db.upsertChapterMetadata(
+      id: id,
+      mangaId: _kMangaId,
+      name: 'Chapter $id',
+      chapterIndex: id,
+      isRead: isRead,
+      lastPageRead: 0,
+      isBookmarked: false,
+      serverIsDownloaded: true,
+      pageCount: 10,
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+    );
 
 /// What the Updates screen does on return, with the server down.
-Future<List<ChapterDto>> _refreshOffline(OfflineDatabase db, List<int> ids) =>
+Future<List<ChapterDto>> _refreshOffline(
+  OfflineDatabase db,
+  List<int> ids,
+) =>
     fetchChaptersInBatches(
       ids: ids,
       fetch: (id) => chapterMetaWithOfflineFallback(
@@ -134,24 +137,22 @@ void main() {
       expect(rows.map((e) => e.isRead), [true, false]);
     });
 
-    test(
-      'a chapter missing from the catalog does not hide the read one',
-      () async {
-        final db = testOfflineDatabase();
-        addTearDown(db.close);
-        await _putChapter(db, id: 1, isRead: true);
+    test('a chapter missing from the catalog does not hide the read one',
+        () async {
+      final db = testOfflineDatabase();
+      addTearDown(db.close);
+      await _putChapter(db, id: 1, isRead: true);
 
-        // Chapter 2 was never downloaded, so offline it cannot be resolved at
-        // all — it must not cost chapter 1 its refresh.
-        final chapters = await _refreshOffline(db, [1, 2]);
-        final rows = patchRowsForManga(
-          rows: [_row(id: 1), _row(id: 2)],
-          mangaId: _kMangaId,
-          chapters: chapters,
-        );
+      // Chapter 2 was never downloaded, so offline it cannot be resolved at
+      // all — it must not cost chapter 1 its refresh.
+      final chapters = await _refreshOffline(db, [1, 2]);
+      final rows = patchRowsForManga(
+        rows: [_row(id: 1), _row(id: 2)],
+        mangaId: _kMangaId,
+        chapters: chapters,
+      );
 
-        expect(rows.map((e) => e.isRead), [true, false]);
-      },
-    );
+      expect(rows.map((e) => e.isRead), [true, false]);
+    });
   });
 }

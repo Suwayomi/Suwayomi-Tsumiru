@@ -17,19 +17,13 @@ void main() {
     });
 
     test('stops at value delimiters and preserves the rest', () {
-      expect(
-        redactTokens('a?token=ABC&width=100'),
-        'a?token=<redacted>&width=100',
-      );
-      expect(
-        redactTokens('a?width=100&token=ABC'),
-        'a?width=100&token=<redacted>',
-      );
+      expect(redactTokens('a?token=ABC&width=100'),
+          'a?token=<redacted>&width=100');
+      expect(redactTokens('a?width=100&token=ABC'),
+          'a?width=100&token=<redacted>');
       expect(redactTokens('a?token=ABC;b=2'), 'a?token=<redacted>;b=2');
-      expect(
-        redactTokens('GET http://h/img?token=ey.J.Z failed'),
-        'GET http://h/img?token=<redacted> failed',
-      );
+      expect(redactTokens('GET http://h/img?token=ey.J.Z failed'),
+          'GET http://h/img?token=<redacted> failed');
     });
 
     test('does not over-redact non-token params or plain text', () {
@@ -40,16 +34,13 @@ void main() {
     });
 
     test('redacts every occurrence', () {
-      expect(
-        redactTokens('a?token=X then b?token=Y'),
-        'a?token=<redacted> then b?token=<redacted>',
-      );
+      expect(redactTokens('a?token=X then b?token=Y'),
+          'a?token=<redacted> then b?token=<redacted>');
     });
 
     test('redacts token-bearing entries in a multi-line historical log', () {
       // Simulates a pre-redaction crash log entry still on disk.
-      const log =
-          '[2026-01-01] Exception: http://h/img?token=OLD.secret x\n\n'
+      const log = '[2026-01-01] Exception: http://h/img?token=OLD.secret x\n\n'
           '[2026-02-01] StateError: unrelated failure\n\n';
       final out = redactTokens(log);
       expect(out.contains('OLD.secret'), isFalse);

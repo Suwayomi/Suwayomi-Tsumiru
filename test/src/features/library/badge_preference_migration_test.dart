@@ -25,13 +25,11 @@ void main() {
       expect(prefs.getInt('unreadBadgeMode'), UnreadBadgeMode.hidden.index);
     });
 
-    test(
-      'on leaves the new key alone, so it keeps its Count default',
-      () async {
-        final prefs = await _migrated({'unreadBadge': true});
-        expect(prefs.getInt('unreadBadgeMode'), isNull);
-      },
-    );
+    test('on leaves the new key alone, so it keeps its Count default',
+        () async {
+      final prefs = await _migrated({'unreadBadge': true});
+      expect(prefs.getInt('unreadBadgeMode'), isNull);
+    });
 
     test('never set leaves the new key alone', () async {
       final prefs = await _migrated({});
@@ -54,10 +52,7 @@ void main() {
     });
 
     test('Local Source badge off changes nothing', () async {
-      final prefs = await _migrated({
-        'localBadge': false,
-        'sourceBadge': false,
-      });
+      final prefs = await _migrated({'localBadge': false, 'sourceBadge': false});
       expect(prefs.getBool('sourceBadge'), isFalse);
     });
   });

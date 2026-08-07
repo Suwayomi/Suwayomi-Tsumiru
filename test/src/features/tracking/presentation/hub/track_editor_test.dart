@@ -28,43 +28,45 @@ Fragment$TrackerDto _fakeTracker({
   bool supportsReadingDates = false,
   bool supportsTrackDeletion = false,
   bool supportsPrivateTracking = false,
-}) => Fragment$TrackerDto(
-  id: 1,
-  name: 'MyAnimeList',
-  icon: 'https://example.com/mal.png',
-  isLoggedIn: true,
-  isTokenExpired: false,
-  supportsTrackDeletion: supportsTrackDeletion,
-  supportsPrivateTracking: supportsPrivateTracking,
-  supportsReadingDates: supportsReadingDates,
-  scores: const ['0.0', '1.0', '5.0', '10.0'],
-  statuses: [
-    Fragment$TrackerDto$statuses(name: 'Reading', value: 1),
-    Fragment$TrackerDto$statuses(name: 'Completed', value: 2),
-    Fragment$TrackerDto$statuses(name: 'On Hold', value: 3),
-  ],
-);
+}) =>
+    Fragment$TrackerDto(
+      id: 1,
+      name: 'MyAnimeList',
+      icon: 'https://example.com/mal.png',
+      isLoggedIn: true,
+      isTokenExpired: false,
+      supportsTrackDeletion: supportsTrackDeletion,
+      supportsPrivateTracking: supportsPrivateTracking,
+      supportsReadingDates: supportsReadingDates,
+      scores: const ['0.0', '1.0', '5.0', '10.0'],
+      statuses: [
+        Fragment$TrackerDto$statuses(name: 'Reading', value: 1),
+        Fragment$TrackerDto$statuses(name: 'Completed', value: 2),
+        Fragment$TrackerDto$statuses(name: 'On Hold', value: 3),
+      ],
+    );
 
 Fragment$TrackRecordDto _fakeRecord({
   int status = 1,
   double lastChapterRead = 5.0,
   int totalChapters = 100,
   bool private = false,
-}) => Fragment$TrackRecordDto(
-  id: 10,
-  trackerId: 1,
-  remoteId: '42',
-  title: 'Test Manga',
-  remoteUrl: 'https://myanimelist.net/manga/42',
-  status: status,
-  lastChapterRead: lastChapterRead,
-  totalChapters: totalChapters,
-  score: 0.0,
-  displayScore: '0.0',
-  startDate: '0',
-  finishDate: '0',
-  private: private,
-);
+}) =>
+    Fragment$TrackRecordDto(
+      id: 10,
+      trackerId: 1,
+      remoteId: '42',
+      title: 'Test Manga',
+      remoteUrl: 'https://myanimelist.net/manga/42',
+      status: status,
+      lastChapterRead: lastChapterRead,
+      totalChapters: totalChapters,
+      score: 0.0,
+      displayScore: '0.0',
+      startDate: '0',
+      finishDate: '0',
+      private: private,
+    );
 
 /// Stub repository — all mutations are no-ops by default.
 class _StubTrackerRepository extends TrackerRepository {
@@ -82,7 +84,10 @@ class _StubTrackerRepository extends TrackerRepository {
   }) async {}
 
   @override
-  Future<void> unbind({required int recordId, bool? deleteRemoteTrack}) async {}
+  Future<void> unbind({
+    required int recordId,
+    bool? deleteRemoteTrack,
+  }) async {}
 }
 
 Widget _testApp({
@@ -95,15 +100,18 @@ Widget _testApp({
     overrides: [
       trackerRepositoryProvider.overrideWith((ref) => stubRepo),
       toastProvider.overrideWithValue(null),
-      mangaTrackRecordsProvider(
-        mangaId: 1,
-      ).overrideWith((ref) async => [record]),
+      mangaTrackRecordsProvider(mangaId: 1)
+          .overrideWith((ref) async => [record]),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
-        body: TrackEditor(tracker: tracker, trackRecord: record, mangaId: 1),
+        body: TrackEditor(
+          tracker: tracker,
+          trackRecord: record,
+          mangaId: 1,
+        ),
       ),
     ),
   );
@@ -178,23 +186,24 @@ void main() {
     },
   );
 
-  testWidgets('Tapping the chapters value opens a number dialog to edit it', (
-    tester,
-  ) async {
-    final tracker = _fakeTracker();
-    final record = _fakeRecord(lastChapterRead: 5.0, totalChapters: 100);
+  testWidgets(
+    'Tapping the chapters value opens a number dialog to edit it',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final record = _fakeRecord(lastChapterRead: 5.0, totalChapters: 100);
 
-    await tester.pumpWidget(_testApp(tracker: tracker, record: record));
-    await tester.pump();
-    await tester.pump();
+      await tester.pumpWidget(_testApp(tracker: tracker, record: record));
+      await tester.pump();
+      await tester.pump();
 
-    await tester.tap(find.text('5 / 100'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('5 / 100'));
+      await tester.pumpAndSettle();
 
-    // A dialog with an editable field and Save/Cancel actions appears.
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('Save'), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
-  });
+      // A dialog with an editable field and Save/Cancel actions appears.
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    },
+  );
 }

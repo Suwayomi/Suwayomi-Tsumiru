@@ -91,11 +91,9 @@ ChapterMatchResult matchChapterState({
     ChapterState? match;
     if (s.chapterNumber >= 0) {
       match = target
-          .where(
-            (t) =>
-                t.chapterNumber >= 0 &&
-                (t.chapterNumber - s.chapterNumber).abs() < numberTolerance,
-          )
+          .where((t) =>
+              t.chapterNumber >= 0 &&
+              (t.chapterNumber - s.chapterNumber).abs() < numberTolerance)
           .firstOrNull;
     } else if (s.name.trim().isNotEmpty) {
       final sourceName = s.name.toLowerCase().trim();
@@ -109,13 +107,8 @@ ChapterMatchResult matchChapterState({
       continue;
     }
 
-    final prev =
-        merged[match.id] ??
-        (
-          read: match.isRead,
-          bookmark: match.isBookmarked,
-          lastPage: match.lastPageRead,
-        );
+    final prev = merged[match.id] ??
+        (read: match.isRead, bookmark: match.isBookmarked, lastPage: match.lastPageRead);
     merged[match.id] = (
       read: prev.read || s.isRead,
       bookmark: prev.bookmark || s.isBookmarked,
@@ -133,14 +126,12 @@ ChapterMatchResult matchChapterState({
     // can still record where it was left off.
     final setPosition = m.lastPage > original.lastPageRead;
     if (setRead || setBookmark || setPosition) {
-      patches.add(
-        ChapterPatch(
-          id: entry.key,
-          isRead: setRead ? true : null,
-          isBookmarked: setBookmark ? true : null,
-          lastPageRead: setPosition ? m.lastPage : null,
-        ),
-      );
+      patches.add(ChapterPatch(
+        id: entry.key,
+        isRead: setRead ? true : null,
+        isBookmarked: setBookmark ? true : null,
+        lastPageRead: setPosition ? m.lastPage : null,
+      ));
     }
   }
 
@@ -163,21 +154,17 @@ List<({int fromId, int toId})> matchChaptersByNumber({
     ChapterState? match;
     if (s.chapterNumber >= 0) {
       match = target
-          .where(
-            (t) =>
-                t.chapterNumber >= 0 &&
-                !claimed.contains(t.id) &&
-                (t.chapterNumber - s.chapterNumber).abs() < numberTolerance,
-          )
+          .where((t) =>
+              t.chapterNumber >= 0 &&
+              !claimed.contains(t.id) &&
+              (t.chapterNumber - s.chapterNumber).abs() < numberTolerance)
           .firstOrNull;
     } else if (s.name.trim().isNotEmpty) {
       final sourceName = s.name.toLowerCase().trim();
       match = target
-          .where(
-            (t) =>
-                !claimed.contains(t.id) &&
-                t.name.toLowerCase().trim() == sourceName,
-          )
+          .where((t) =>
+              !claimed.contains(t.id) &&
+              t.name.toLowerCase().trim() == sourceName)
           .firstOrNull;
     }
     if (match == null) continue;

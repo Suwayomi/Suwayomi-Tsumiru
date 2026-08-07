@@ -16,51 +16,54 @@ MangaDto _manga(
   required String title,
   int unreadCount = 0,
   int totalChapters = 5,
-}) => Fragment$MangaDto(
-  id: id,
-  title: title,
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: totalChapters),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: unreadCount,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/$id',
-);
+}) =>
+    Fragment$MangaDto(
+      id: id,
+      title: title,
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: totalChapters),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: const [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: unreadCount,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/$id',
+    );
 
 List<int> _sorted(
   List<MangaDto> input, {
   required MangaSort by,
   required bool ascending,
-}) => applyLibraryFilterSort(
-  input,
-  query: null,
-  mangaFilterUnread: null,
-  mangaFilterDownloaded: null,
-  mangaFilterCompleted: null,
-  mangaFilterStarted: null,
-  mangaFilterBookmarked: null,
-  mangaFilterOffline: null,
-  offlineMangaIds: const {},
-  mangaFilterLewd: null,
-  mangaFilterMinRating: 0,
-  filterCategories: false,
-  filterCategoriesInclude: const {},
-  filterCategoriesExclude: const {},
-  filterTags: false,
-  filterTagsInclude: const {},
-  filterTagsExclude: const {},
-  sortedBy: by,
-  sortedDirection: ascending,
-).map((m) => m.id).toList();
+}) =>
+    applyLibraryFilterSort(
+      input,
+      query: null,
+      mangaFilterUnread: null,
+      mangaFilterDownloaded: null,
+      mangaFilterCompleted: null,
+      mangaFilterStarted: null,
+      mangaFilterBookmarked: null,
+      mangaFilterOffline: null,
+      offlineMangaIds: const {},
+      mangaFilterLewd: null,
+      mangaFilterMinRating: 0,
+      filterCategories: false,
+      filterCategoriesInclude: const {},
+      filterCategoriesExclude: const {},
+      filterTags: false,
+      filterTagsInclude: const {},
+      filterTagsExclude: const {},
+      sortedBy: by,
+      sortedDirection: ascending,
+    ).map((m) => m.id).toList();
 
 void main() {
   group('alphabetical sort folds case and accents', () {
@@ -74,19 +77,13 @@ void main() {
     ];
 
     test('ascending orders by base letter, not by code unit', () {
-      expect(_sorted(items, by: MangaSort.alphabetical, ascending: true), [
-        2,
-        3,
-        1,
-      ]);
+      expect(_sorted(items, by: MangaSort.alphabetical, ascending: true),
+          [2, 3, 1]);
     });
 
     test('descending is the exact reverse', () {
-      expect(_sorted(items, by: MangaSort.alphabetical, ascending: false), [
-        1,
-        3,
-        2,
-      ]);
+      expect(_sorted(items, by: MangaSort.alphabetical, ascending: false),
+          [1, 3, 2]);
     });
   });
 
@@ -128,17 +125,13 @@ void main() {
     ];
 
     test('equal keys fall back to title', () {
-      expect(_sorted(items, by: MangaSort.totalChapters, ascending: true), [
-        2,
-        1,
-      ]);
+      expect(_sorted(items, by: MangaSort.totalChapters, ascending: true),
+          [2, 1]);
     });
 
     test('tie-break is not inverted by descending', () {
-      expect(_sorted(items, by: MangaSort.totalChapters, ascending: false), [
-        2,
-        1,
-      ]);
+      expect(_sorted(items, by: MangaSort.totalChapters, ascending: false),
+          [2, 1]);
     });
   });
 }

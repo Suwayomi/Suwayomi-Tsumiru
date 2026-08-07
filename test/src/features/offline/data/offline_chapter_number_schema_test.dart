@@ -38,9 +38,8 @@ void main() {
       chapterNumber: number,
       scanlator: scanlator,
     );
-    return (db.select(
-      db.offlineChapters,
-    )..where((t) => t.id.equals(id))).getSingle();
+    return (db.select(db.offlineChapters)..where((t) => t.id.equals(id)))
+        .getSingle();
   }
 
   test('chapterNumber and scanlator persist through the upsert', () async {
@@ -54,23 +53,19 @@ void main() {
     expect((dto.chapterNumber, dto.scanlator, dto.sourceOrder), (2.0, 'A', 11));
   });
 
-  test(
-    'mapper falls back to the index for pre-v9 rows (null number)',
-    () async {
-      final c = await upsert(id: 12);
-      final dto = offlineChapterToDto(c);
-      expect((dto.chapterNumber, dto.scanlator), (12.0, null));
-    },
-  );
+  test('mapper falls back to the index for pre-v9 rows (null number)',
+      () async {
+    final c = await upsert(id: 12);
+    final dto = offlineChapterToDto(c);
+    expect((dto.chapterNumber, dto.scanlator), (12.0, null));
+  });
 
-  test(
-    'omitting the fields on a later upsert preserves synced values',
-    () async {
-      await upsert(id: 13, number: 4, scanlator: 'B');
-      final c = await upsert(id: 13); // e.g. a caller without the new fields
-      expect((c.chapterNumber, c.scanlator), (4.0, 'B'));
-    },
-  );
+  test('omitting the fields on a later upsert preserves synced values',
+      () async {
+    await upsert(id: 13, number: 4, scanlator: 'B');
+    final c = await upsert(id: 13); // e.g. a caller without the new fields
+    expect((c.chapterNumber, c.scanlator), (4.0, 'B'));
+  });
 
   group('v8 -> v9 upgrade (real fixture, columns genuinely absent)', () {
     late Directory tmp;
@@ -109,9 +104,8 @@ void main() {
         );
       ''');
       v8.execute(
-        "INSERT INTO offline_chapters (id, manga_id, name, chapter_index, "
-        "is_read, updated_at) VALUES (10, 1, 'c10', 9, 1, 0)",
-      );
+          "INSERT INTO offline_chapters (id, manga_id, name, chapter_index, "
+          "is_read, updated_at) VALUES (10, 1, 'c10', 9, 1, 0)");
       // A real v8 file always has the manga table too — the v10 step alters
       // it, so the fixture must carry it or the upgrade dies on ALTER.
       v8.execute('''
@@ -138,16 +132,15 @@ void main() {
         );
       ''');
       v8.execute(
-        "INSERT INTO offline_mangas (id, title, updated_at, in_library_at) "
-        "VALUES (1, 'M1', 0, '100')",
-      );
+          "INSERT INTO offline_mangas (id, title, updated_at, in_library_at) "
+          "VALUES (1, 'M1', 0, '100')");
       v8.execute('PRAGMA user_version = 8');
       v8.dispose();
 
       final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(
-        db.offlineChapters,
-      )..where((t) => t.id.equals(10))).getSingle();
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
       // Old data survived; the new columns exist and read as null.
       expect((c.name, c.chapterIndex, c.isRead), ('c10', 9, true));
       expect((c.chapterNumber, c.scanlator), (null, null));

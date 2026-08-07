@@ -111,15 +111,17 @@ abstract class MangaSearchResult with _$MangaSearchResult {
 // Nav route data classes — no JSON serialization needed, navigation-only.
 @freezed
 abstract class MigrationRouteData with _$MigrationRouteData {
-  const factory MigrationRouteData({required Fragment$MangaDto sourceManga}) =
-      _MigrationRouteData;
+  const factory MigrationRouteData({
+    required Fragment$MangaDto sourceManga,
+  }) = _MigrationRouteData;
 }
 
 /// Nav payload for the bulk config screen — the set of library manga to migrate.
 @freezed
 abstract class MigrationBulkConfigData with _$MigrationBulkConfigData {
-  const factory MigrationBulkConfigData({required List<int> mangaIds}) =
-      _MigrationBulkConfigData;
+  const factory MigrationBulkConfigData({
+    required List<int> mangaIds,
+  }) = _MigrationBulkConfigData;
 }
 
 /// Nav payload for the bulk run screen — the configured batch, ready to search

@@ -21,8 +21,7 @@ import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.
 
 /// A title long enough to need several lines at any sane column width, so the
 /// line-cap tests have something to actually cap.
-const _longTitle =
-    'A Really Quite Extraordinarily Long Manga Title That Needs '
+const _longTitle = 'A Really Quite Extraordinarily Long Manga Title That Needs '
     'Several Lines To Show In Full Without Any Truncation At All';
 
 /// Minimal MangaDto — [thumbnailUrl] null exercises the deterministic
@@ -43,10 +42,8 @@ Fragment$MangaDto _manga(int id, {String? thumbnailUrl, String? title}) =>
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(
-        totalCount: 0,
-        nodes: const [],
-      ),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
       unreadCount: 2,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/$id',
@@ -75,32 +72,29 @@ Future<void> _pump(
   });
   final sp = await SharedPreferences.getInstance();
 
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
-          builder: (context) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: Scaffold(
-              body: LibraryMangaGridView(
-                items: [
-                  for (var i = 1; i <= 7; i++)
-                    _manga(i, title: longTitles ? _longTitle : null),
-                ],
-                onOpen: (_) {},
-                onLongPress: (_) {},
-              ),
+  await tester.pumpWidget(ProviderScope(
+    overrides: [sharedPreferencesProvider.overrideWithValue(sp)],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: Scaffold(
+            body: LibraryMangaGridView(
+              items: [
+                for (var i = 1; i <= 7; i++)
+                  _manga(i, title: longTitles ? _longTitle : null),
+              ],
+              onOpen: (_) {},
+              onLongPress: (_) {},
             ),
           ),
         ),
       ),
     ),
-  );
+  ));
   await tester.pump();
 }
 
@@ -112,14 +106,12 @@ void main() {
       DisplayMode.coverOnly,
     ]) {
       for (final style in LibraryGridStyle.values) {
-        testWidgets(
-          '${mode.name} + ${style.name} lays out without exceptions',
-          (tester) async {
-            await _pump(tester, mode: mode, style: style);
-            expect(tester.takeException(), isNull);
-            expect(find.byType(MangaCoverGridTile), findsWidgets);
-          },
-        );
+        testWidgets('${mode.name} + ${style.name} lays out without exceptions',
+            (tester) async {
+          await _pump(tester, mode: mode, style: style);
+          expect(tester.takeException(), isNull);
+          expect(find.byType(MangaCoverGridTile), findsWidgets);
+        });
       }
     }
 
@@ -131,7 +123,8 @@ void main() {
       for (final style in LibraryGridStyle.values) {
         for (final columns in [1, 8]) {
           for (final limit in [true, false]) {
-            testWidgets('comfortable ${style.name} survives scale $scale, '
+            testWidgets(
+                'comfortable ${style.name} survives scale $scale, '
                 '$columns cols, limit=$limit', (tester) async {
               await _pump(
                 tester,
@@ -223,15 +216,10 @@ void main() {
     // both the platform text scale and the user's list-size slider.
     for (final mode in [DisplayMode.list, DisplayMode.descriptiveList]) {
       for (final scale in [1.0, 1.5, 2.0, 3.0]) {
-        testWidgets('${mode.name} rows fit at text scale $scale', (
-          tester,
-        ) async {
-          await _pump(
-            tester,
-            mode: mode,
-            style: LibraryGridStyle.uniform,
-            textScale: scale,
-          );
+        testWidgets('${mode.name} rows fit at text scale $scale',
+            (tester) async {
+          await _pump(tester, mode: mode, style: LibraryGridStyle.uniform,
+              textScale: scale);
           expect(tester.takeException(), isNull);
         });
       }
@@ -260,9 +248,8 @@ void main() {
     const line = 18.0;
 
     for (final style in LibraryGridStyle.values) {
-      testWidgets('comfortable ${style.name} caps at 2 lines when limited', (
-        tester,
-      ) async {
+      testWidgets('comfortable ${style.name} caps at 2 lines when limited',
+          (tester) async {
         await _pump(
           tester,
           mode: DisplayMode.comfortableGrid,
@@ -280,9 +267,8 @@ void main() {
       LibraryGridStyle.nonUniform,
       LibraryGridStyle.staggered,
     ]) {
-      testWidgets('comfortable ${style.name} wraps in full when unlimited', (
-        tester,
-      ) async {
+      testWidgets('comfortable ${style.name} wraps in full when unlimited',
+          (tester) async {
         // A self-sizing tile can grow, so the whole title must show — and Skia
         // collapses `ellipsis + maxLines: null` back to one line.
         await _pump(
@@ -294,17 +280,13 @@ void main() {
         );
         final t = title(tester);
         expect(t.maxLines, isNull);
-        expect(
-          t.height,
-          greaterThan(line * 2),
-          reason: 'unlimited must wrap past the 2-line cap',
-        );
+        expect(t.height, greaterThan(line * 2),
+            reason: 'unlimited must wrap past the 2-line cap');
       });
     }
 
-    testWidgets('comfortable uniform grows to the cell cap when unlimited', (
-      tester,
-    ) async {
+    testWidgets('comfortable uniform grows to the cell cap when unlimited',
+        (tester) async {
       // A uniform cell's height is fixed by its aspect ratio, so the title takes
       // as many whole lines as its slot holds rather than wrapping unbounded.
       await _pump(
@@ -344,7 +326,8 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('${mode.name} rows self-size when unlimited', (tester) async {
+      testWidgets('${mode.name} rows self-size when unlimited',
+          (tester) async {
         // A fixed extent would clip the very lines the setting reveals.
         await _pump(
           tester,
@@ -366,24 +349,22 @@ void main() {
       WidgetTester tester,
       LibraryGridStyle style,
     ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: 120,
-                height: 400,
-                child: MangaCoverGridTile(
-                  manga: _manga(1),
-                  showBadges: false,
-                  gridStyle: style,
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 120,
+              height: 400,
+              child: MangaCoverGridTile(
+                manga: _manga(1),
+                showBadges: false,
+                gridStyle: style,
               ),
             ),
           ),
         ),
-      );
+      ));
       await tester.pump();
       return tester.getSize(find.byType(Card)).height;
     }
@@ -400,25 +381,23 @@ void main() {
       LibraryGridStyle style, {
       bool titleBelow = false,
     }) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: 120,
-                height: 400,
-                child: MangaCoverGridTile(
-                  manga: _manga(1),
-                  showBadges: false,
-                  titleBelow: titleBelow,
-                  gridStyle: style,
-                ),
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 120,
+              height: 400,
+              child: MangaCoverGridTile(
+                manga: _manga(1),
+                showBadges: false,
+                titleBelow: titleBelow,
+                gridStyle: style,
               ),
             ),
           ),
         ),
-      );
+      ));
       await tester.pump();
       return tester.getRect(find.byType(Card));
     }
@@ -429,32 +408,25 @@ void main() {
       expect(rect.top, greaterThan(0));
     });
 
-    testWidgets('non-uniform bottom-aligns the cover+title block too', (
-      tester,
-    ) async {
-      final rect = await cardRect(
-        tester,
-        LibraryGridStyle.nonUniform,
-        titleBelow: true,
-      );
+    testWidgets('non-uniform bottom-aligns the cover+title block too',
+        (tester) async {
+      final rect =
+          await cardRect(tester, LibraryGridStyle.nonUniform, titleBelow: true);
       // The title sits under the card, so the CARD stops short of the baseline —
       // but the block as a whole is still anchored to the bottom.
       expect(rect.bottom, lessThan(400));
       expect(rect.top, greaterThan(0));
       final column = tester.getRect(
-        find
-            .descendant(
-              of: find.byType(MangaCoverGridTile),
-              matching: find.byType(Column),
-            )
-            .first,
+        find.descendant(
+          of: find.byType(MangaCoverGridTile),
+          matching: find.byType(Column),
+        ).first,
       );
       expect(column.bottom, 400);
     });
 
-    testWidgets('staggered top-aligns (its tiles are never stretched)', (
-      tester,
-    ) async {
+    testWidgets('staggered top-aligns (its tiles are never stretched)',
+        (tester) async {
       final rect = await cardRect(tester, LibraryGridStyle.staggered);
       expect(rect.top, 0);
       expect(rect.bottom, lessThan(400));
@@ -464,9 +436,8 @@ void main() {
       LibraryGridStyle.nonUniform,
       LibraryGridStyle.staggered,
     ]) {
-      testWidgets('a ${style.name} tile sizes itself from the cover', (
-        tester,
-      ) async {
+      testWidgets('a ${style.name} tile sizes itself from the cover',
+          (tester) async {
         final height = await cardHeight(tester, style);
         // Card margin is 4dp per side, so the cover is 112 wide and — with no
         // art to measure — falls back to the 2:3 book ratio.
@@ -485,34 +456,31 @@ void main() {
       required bool limitLines,
       double cellHeight = 218,
     }) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          // Inside MaterialApp so the real surface size is kept — only the text
-          // scale is overridden.
-          home: Builder(
-            builder: (context) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(textScale)),
-              child: Scaffold(
-                body: Align(
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    width: 135,
-                    height: cellHeight,
-                    child: MangaCoverGridTile(
-                      manga: _manga(1),
-                      showBadges: false,
-                      titleBelow: true,
-                      limitTitleLines: limitLines,
-                    ),
+      await tester.pumpWidget(MaterialApp(
+        // Inside MaterialApp so the real surface size is kept — only the text
+        // scale is overridden.
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 135,
+                  height: cellHeight,
+                  child: MangaCoverGridTile(
+                    manga: _manga(1),
+                    showBadges: false,
+                    titleBelow: true,
+                    limitTitleLines: limitLines,
                   ),
                 ),
               ),
             ),
           ),
         ),
-      );
+      ));
       await tester.pump();
     }
 

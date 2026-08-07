@@ -21,9 +21,7 @@ import 'package:tsumiru/src/sorayomi.dart';
 /// root-build crash (e.g. `context.l10n` read above the `MaterialApp` that
 /// installs localizations) passes every unit test but only surfaces here.
 void main() {
-  const notifChannel = MethodChannel(
-    'dexterous.com/flutter/local_notifications',
-  );
+  const notifChannel = MethodChannel('dexterous.com/flutter/local_notifications');
 
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,11 +30,11 @@ void main() {
         AndroidFlutterLocalNotificationsPlugin();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(notifChannel, (call) async {
-          if (call.method == 'getNotificationAppLaunchDetails') {
-            return <String, Object?>{'notificationLaunchedApp': false};
-          }
-          return true;
-        });
+      if (call.method == 'getNotificationAppLaunchDetails') {
+        return <String, Object?>{'notificationLaunchedApp': false};
+      }
+      return true;
+    });
   });
 
   tearDown(() {
@@ -69,9 +67,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             routerConfigProvider.overrideWith((ref) => router),
-            graphQlClientHolderProvider.overrideWithValue(
-              ValueNotifier(client),
-            ),
+            graphQlClientHolderProvider.overrideWithValue(ValueNotifier(client)),
           ],
           child: const Sorayomi(),
         ),

@@ -112,10 +112,7 @@ void main() {
       });
 
       test('comic source name', () {
-        expect(
-          resolve(genres: const [], sourceName: 'ReadComicOnline'),
-          isNull,
-        );
+        expect(resolve(genres: const [], sourceName: 'ReadComicOnline'), isNull);
       });
     });
   });

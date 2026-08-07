@@ -28,36 +28,24 @@ void main() {
       expect(serverConfiguredForOnboarding('http://127.0.0.1'), isFalse);
     });
 
-    test(
-      'a real server URL → configured (existing installs skip the wizard)',
-      () {
-        expect(
-          serverConfiguredForOnboarding('http://192.168.0.10:4567'),
-          isTrue,
-        );
-        expect(
-          serverConfiguredForOnboarding('https://suwayomi.example.com'),
-          isTrue,
-        );
-      },
-    );
+    test('a real server URL → configured (existing installs skip the wizard)',
+        () {
+      expect(serverConfiguredForOnboarding('http://192.168.0.10:4567'), isTrue);
+      expect(
+          serverConfiguredForOnboarding('https://suwayomi.example.com'), isTrue);
+    });
   });
 
   group('onboardingCompleteProvider', () {
-    test(
-      'defaults to false on a fresh install (so the wizard shows)',
-      () async {
-        final c = await _container({});
-        expect(c.read(onboardingCompleteProvider) ?? false, isFalse);
-      },
-    );
+    test('defaults to false on a fresh install (so the wizard shows)', () async {
+      final c = await _container({});
+      expect(c.read(onboardingCompleteProvider) ?? false, isFalse);
+    });
 
-    test(
-      'reads a persisted true (finished / migrated installs skip it)',
-      () async {
-        final c = await _container({'flutter.onboardingComplete': true});
-        expect(c.read(onboardingCompleteProvider), isTrue);
-      },
-    );
+    test('reads a persisted true (finished / migrated installs skip it)',
+        () async {
+      final c = await _container({'flutter.onboardingComplete': true});
+      expect(c.read(onboardingCompleteProvider), isTrue);
+    });
   });
 }

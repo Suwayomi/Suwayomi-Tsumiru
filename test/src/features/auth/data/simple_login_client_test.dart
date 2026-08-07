@@ -10,17 +10,16 @@ void main() {
     test('login returns cookie value on 303', () async {
       final mock = MockClient((request) async {
         expect(request.url.toString(), 'https://server.test/login.html');
-        expect(
-          request.headers['Content-Type'],
-          'application/x-www-form-urlencoded; charset=utf-8',
-        );
+        expect(request.headers['Content-Type'],
+            'application/x-www-form-urlencoded; charset=utf-8');
         expect(request.bodyFields, {'user': 'aaron', 'pass': 'hunter2'});
         return http.Response(
           '',
           303,
           headers: {
             'location': '/',
-            'set-cookie': 'JSESSIONID=abc.123; Path=/; HttpOnly',
+            'set-cookie':
+                'JSESSIONID=abc.123; Path=/; HttpOnly',
           },
         );
       });
@@ -34,27 +33,26 @@ void main() {
       expect(cookie, 'JSESSIONID=abc.123');
     });
 
-    test(
-      'login throws SimpleLoginAuthFailure on 200 (re-rendered form)',
-      () async {
-        final mock = MockClient(
-          (request) async =>
-              http.Response('<html>Invalid username or password</html>', 200),
-        );
-        final client = SimpleLoginClient(httpClient: mock);
+    test('login throws SimpleLoginAuthFailure on 200 (re-rendered form)',
+        () async {
+      final mock = MockClient((request) async => http.Response(
+            '<html>Invalid username or password</html>',
+            200,
+          ));
+      final client = SimpleLoginClient(httpClient: mock);
 
-        expect(
-          () => client.login(
-            serverBaseUrl: 'https://server.test',
-            username: 'aaron',
-            password: 'wrong',
-          ),
-          throwsA(isA<SimpleLoginAuthFailure>()),
-        );
-      },
-    );
+      expect(
+        () => client.login(
+          serverBaseUrl: 'https://server.test',
+          username: 'aaron',
+          password: 'wrong',
+        ),
+        throwsA(isA<SimpleLoginAuthFailure>()),
+      );
+    });
 
-    test('login throws SimpleLoginShapeFailure on unexpected status', () async {
+    test('login throws SimpleLoginShapeFailure on unexpected status',
+        () async {
       final mock = MockClient((request) async => http.Response('', 500));
       final client = SimpleLoginClient(httpClient: mock);
 
@@ -68,23 +66,23 @@ void main() {
       );
     });
 
-    test(
-      'login throws SimpleLoginShapeFailure when 303 has no Set-Cookie',
-      () async {
-        final mock = MockClient(
-          (request) async => http.Response('', 303, headers: {'location': '/'}),
-        );
-        final client = SimpleLoginClient(httpClient: mock);
+    test('login throws SimpleLoginShapeFailure when 303 has no Set-Cookie',
+        () async {
+      final mock = MockClient((request) async => http.Response(
+            '',
+            303,
+            headers: {'location': '/'},
+          ));
+      final client = SimpleLoginClient(httpClient: mock);
 
-        expect(
-          () => client.login(
-            serverBaseUrl: 'https://server.test',
-            username: 'aaron',
-            password: 'hunter2',
-          ),
-          throwsA(isA<SimpleLoginShapeFailure>()),
-        );
-      },
-    );
+      expect(
+        () => client.login(
+          serverBaseUrl: 'https://server.test',
+          username: 'aaron',
+          password: 'hunter2',
+        ),
+        throwsA(isA<SimpleLoginShapeFailure>()),
+      );
+    });
   });
 }

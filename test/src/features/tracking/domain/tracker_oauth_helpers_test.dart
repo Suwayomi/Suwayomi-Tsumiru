@@ -60,11 +60,8 @@ void main() {
     }
 
     test('returns correct int trackerId from valid callback', () {
-      final uri = makeUri({
-        'redirectUrl': redirectUrl,
-        'trackerId': 1,
-        'trackerName': 'MAL',
-      });
+      final uri = makeUri(
+          {'redirectUrl': redirectUrl, 'trackerId': 1, 'trackerName': 'MAL'});
       expect(parseTrackerIdFromCallback(uri), equals(1));
     });
 
@@ -75,8 +72,7 @@ void main() {
 
     test('returns null for malformed JSON in state', () {
       final uri = Uri.parse(
-        'tsumiru://tracker-oauth?state=${Uri.encodeComponent('not-json')}',
-      );
+          'tsumiru://tracker-oauth?state=${Uri.encodeComponent('not-json')}');
       expect(parseTrackerIdFromCallback(uri), isNull);
     });
 

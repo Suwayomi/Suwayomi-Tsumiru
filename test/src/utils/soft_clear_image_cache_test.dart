@@ -50,19 +50,17 @@ void main() {
     expect(cache.maximumSizeBytes, perImage * 10);
   });
 
-  test(
-    'clear empties fully when the budget is at or below the floor',
-    () async {
-      final image = await _decodeOnePixel();
-      final perImage = image.height * image.width * 4;
-      final cache = SoftClearImageCache(floorBytes: perImage * 10)
-        ..maximumSizeBytes = perImage * 4;
-      await put(cache, 1, image);
-      expect(cache.currentSize, 1);
+  test('clear empties fully when the budget is at or below the floor',
+      () async {
+    final image = await _decodeOnePixel();
+    final perImage = image.height * image.width * 4;
+    final cache = SoftClearImageCache(floorBytes: perImage * 10)
+      ..maximumSizeBytes = perImage * 4;
+    await put(cache, 1, image);
+    expect(cache.currentSize, 1);
 
-      cache.clear();
+    cache.clear();
 
-      expect(cache.currentSize, 0);
-    },
-  );
+    expect(cache.currentSize, 0);
+  });
 }

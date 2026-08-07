@@ -7,19 +7,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/app_sizes.dart';
 
 SliverConstraints _constraints(double crossAxisExtent) => SliverConstraints(
-  axisDirection: AxisDirection.down,
-  growthDirection: GrowthDirection.forward,
-  userScrollDirection: ScrollDirection.idle,
-  scrollOffset: 0,
-  precedingScrollExtent: 0,
-  overlap: 0,
-  remainingPaintExtent: 1000,
-  crossAxisExtent: crossAxisExtent,
-  crossAxisDirection: AxisDirection.right,
-  viewportMainAxisExtent: 1000,
-  remainingCacheExtent: 1000,
-  cacheOrigin: 0,
-);
+      axisDirection: AxisDirection.down,
+      growthDirection: GrowthDirection.forward,
+      userScrollDirection: ScrollDirection.idle,
+      scrollOffset: 0,
+      precedingScrollExtent: 0,
+      overlap: 0,
+      remainingPaintExtent: 1000,
+      crossAxisExtent: crossAxisExtent,
+      crossAxisDirection: AxisDirection.right,
+      viewportMainAxisExtent: 1000,
+      remainingCacheExtent: 1000,
+      cacheOrigin: 0,
+    );
 
 /// Ratio of the artwork as it actually renders: the cell minus the title block
 /// and minus the card margin that insets the image inside the cell. Measuring
@@ -81,11 +81,8 @@ void main() {
         );
         final layout = delegate.getLayout(_constraints(width));
         expect(
-          _coverRatio(
-            layout,
-            titleExtent: kRecommendsTitleExtent,
-            coverInset: 0,
-          ),
+          _coverRatio(layout,
+              titleExtent: kRecommendsTitleExtent, coverInset: 0),
           closeTo(kMangaCoverAspectRatio, 0.0001),
           reason: 'viewport ${width}px',
         );
@@ -97,11 +94,8 @@ void main() {
     test('card-less boxes are 2:3 with no inset to compensate for', () {
       for (final width in [kCompactCoverWidth, 96.0, 144.0]) {
         final boxHeight = mangaCoverBoxHeight(width, coverInset: 0);
-        expect(
-          width / boxHeight,
-          closeTo(kMangaCoverAspectRatio, 0.0001),
-          reason: '${width}px wide box',
-        );
+        expect(width / boxHeight, closeTo(kMangaCoverAspectRatio, 0.0001),
+            reason: '${width}px wide box');
       }
     });
 
@@ -131,13 +125,10 @@ void main() {
         200.0,
       ]) {
         final boxHeight = mangaCoverBoxHeight(width);
-        final artRatio =
-            (width - kMangaCoverCardInset) / (boxHeight - kMangaCoverCardInset);
-        expect(
-          artRatio,
-          closeTo(kMangaCoverAspectRatio, 0.0001),
-          reason: '${width}px wide box',
-        );
+        final artRatio = (width - kMangaCoverCardInset) /
+            (boxHeight - kMangaCoverCardInset);
+        expect(artRatio, closeTo(kMangaCoverAspectRatio, 0.0001),
+            reason: '${width}px wide box');
       }
     });
   });
@@ -161,17 +152,12 @@ void main() {
     });
 
     test('cell is exactly the title block taller than the cover-only cell', () {
-      final bare =
-          const MangaCoverFixedCountGridDelegate(
-                crossAxisCount: 3,
-              ).getLayout(_constraints(411))
-              as SliverGridRegularTileLayout;
-      final withTitle =
-          const MangaCoverFixedCountGridDelegate(
-                crossAxisCount: 3,
-                titleExtent: kGridTitleExtent,
-              ).getLayout(_constraints(411))
-              as SliverGridRegularTileLayout;
+      final bare = const MangaCoverFixedCountGridDelegate(crossAxisCount: 3)
+          .getLayout(_constraints(411)) as SliverGridRegularTileLayout;
+      final withTitle = const MangaCoverFixedCountGridDelegate(
+        crossAxisCount: 3,
+        titleExtent: kGridTitleExtent,
+      ).getLayout(_constraints(411)) as SliverGridRegularTileLayout;
 
       expect(
         withTitle.childMainAxisExtent - bare.childMainAxisExtent,

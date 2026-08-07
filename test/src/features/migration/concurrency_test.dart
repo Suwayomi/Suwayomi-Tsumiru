@@ -18,13 +18,13 @@ void main() {
       final gates = <Completer<void>>[];
 
       Future<void> task() => sem.withPermit(() async {
-        active++;
-        peak = active > peak ? active : peak;
-        final gate = Completer<void>();
-        gates.add(gate);
-        await gate.future;
-        active--;
-      });
+            active++;
+            peak = active > peak ? active : peak;
+            final gate = Completer<void>();
+            gates.add(gate);
+            await gate.future;
+            active--;
+          });
 
       final futures = List.generate(10, (_) => task());
       // Let scheduling settle, then confirm no more than 3 ran at once.
@@ -73,9 +73,8 @@ void main() {
 
   group('RateLimiter', () {
     test('spaces successive acquisitions by at least minInterval', () async {
-      final limiter = RateLimiter(
-        minInterval: const Duration(milliseconds: 50),
-      );
+      final limiter =
+          RateLimiter(minInterval: const Duration(milliseconds: 50));
       final sw = Stopwatch()..start();
       await limiter.acquire();
       await limiter.acquire();
@@ -86,23 +85,17 @@ void main() {
     });
 
     test('concurrent callers are still serialized and paced', () async {
-      final limiter = RateLimiter(
-        minInterval: const Duration(milliseconds: 30),
-      );
+      final limiter =
+          RateLimiter(minInterval: const Duration(milliseconds: 30));
       final sw = Stopwatch()..start();
-      await Future.wait([
-        limiter.acquire(),
-        limiter.acquire(),
-        limiter.acquire(),
-      ]);
+      await Future.wait([limiter.acquire(), limiter.acquire(), limiter.acquire()]);
       sw.stop();
       expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(55));
     });
 
     test('a cancelled wait throws without stalling the queue', () async {
-      final limiter = RateLimiter(
-        minInterval: const Duration(milliseconds: 200),
-      );
+      final limiter =
+          RateLimiter(minInterval: const Duration(milliseconds: 200));
       await limiter.acquire(); // first grant is immediate
       final token = CancelToken();
       final blocked = limiter.acquire(token); // must wait ~200ms

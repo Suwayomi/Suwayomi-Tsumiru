@@ -24,13 +24,13 @@ const _w = 300.0;
 const _h = 600.0;
 
 Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
-  Directionality(
-    textDirection: TextDirection.ltr,
-    child: Center(
-      child: SizedBox(width: _w, height: _h, child: child),
-    ),
-  ),
-);
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: SizedBox(width: _w, height: _h, child: child),
+        ),
+      ),
+    );
 
 /// First GestureDetector = the leading edge zone in every layout.
 Size _firstZone(WidgetTester tester) =>
@@ -72,7 +72,10 @@ void main() {
   });
 
   group('smaller tap zones — provider threading', () {
-    Future<void> pumpWidget(WidgetTester tester, {required bool pref}) async {
+    Future<void> pumpWidget(
+      WidgetTester tester, {
+      required bool pref,
+    }) async {
       SharedPreferences.setMockInitialValues(
         pref ? {'smallerTapZones': true} : const {},
       );

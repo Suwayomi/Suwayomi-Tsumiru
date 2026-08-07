@@ -75,15 +75,12 @@ void main() {
     extensions = _FakeExtensionRepository();
     sources = _CountingSourceRepository();
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    container = ProviderContainer(
-      overrides: [
-        extensionRepositoryProvider.overrideWithValue(extensions),
-        sourceRepositoryProvider.overrideWithValue(sources),
-        sharedPreferencesProvider.overrideWithValue(
-          await SharedPreferences.getInstance(),
-        ),
-      ],
-    );
+    container = ProviderContainer(overrides: [
+      extensionRepositoryProvider.overrideWithValue(extensions),
+      sourceRepositoryProvider.overrideWithValue(sources),
+      sharedPreferencesProvider
+          .overrideWithValue(await SharedPreferences.getInstance()),
+    ]);
     // Browse keeps the Sources tab alive behind the Extensions tab, so the
     // source list holds a listener for the whole session. That's what made the
     // stale list survive every tab switch (#344).
@@ -103,63 +100,46 @@ void main() {
 
   test('installing an extension refetches the source list', () async {
     final actions = container.read(extensionActionsProvider);
-    final refetches = await sourceFetchesAfter(
-      () => actions.install('com.example.ext'),
-    );
+    final refetches =
+        await sourceFetchesAfter(() => actions.install('com.example.ext'));
 
     expect(extensions.installed, <String>['com.example.ext']);
-    expect(
-      refetches,
-      1,
-      reason: 'the installed extension registers new sources server-side',
-    );
+    expect(refetches, 1,
+        reason: 'the installed extension registers new sources server-side');
   });
 
   test('uninstalling an extension refetches the source list', () async {
     final actions = container.read(extensionActionsProvider);
-    final refetches = await sourceFetchesAfter(
-      () => actions.uninstall('com.example.ext'),
-    );
+    final refetches =
+        await sourceFetchesAfter(() => actions.uninstall('com.example.ext'));
 
     expect(extensions.uninstalled, <String>['com.example.ext']);
-    expect(
-      refetches,
-      1,
-      reason: "the removed extension's sources have to disappear too",
-    );
+    expect(refetches, 1,
+        reason: "the removed extension's sources have to disappear too");
   });
 
   test('updating an extension refetches the source list', () async {
     final actions = container.read(extensionActionsProvider);
-    final refetches = await sourceFetchesAfter(
-      () => actions.update('com.example.ext'),
-    );
+    final refetches =
+        await sourceFetchesAfter(() => actions.update('com.example.ext'));
 
     expect(extensions.updated, <String>['com.example.ext']);
-    expect(
-      refetches,
-      1,
-      reason: 'an update can add or drop sources within the extension',
-    );
+    expect(refetches, 1,
+        reason: 'an update can add or drop sources within the extension');
   });
 
-  test(
-    "installing enables the extension's language in the source filter",
-    () async {
-      expect(
-        container.read(sourceLanguageFilterProvider),
-        isNot(contains('ko')),
-      );
+  test("installing enables the extension's language in the source filter",
+      () async {
+    expect(container.read(sourceLanguageFilterProvider), isNot(contains('ko')));
 
-      await container
-          .read(extensionActionsProvider)
-          .install('com.example.ext', languageCode: 'ko');
+    await container
+        .read(extensionActionsProvider)
+        .install('com.example.ext', languageCode: 'ko');
 
-      // Without this the new sources land in a language group the Sources tab is
-      // filtering out, so the fix would look like it hadn't worked.
-      expect(container.read(sourceLanguageFilterProvider), contains('ko'));
-    },
-  );
+    // Without this the new sources land in a language group the Sources tab is
+    // filtering out, so the fix would look like it hadn't worked.
+    expect(container.read(sourceLanguageFilterProvider), contains('ko'));
+  });
 
   test('installing leaves an emptied language filter empty', () async {
     container.read(sourceLanguageFilterProvider.notifier).update(<String>[]);
@@ -172,12 +152,10 @@ void main() {
   });
 
   test('a failed install leaves the source list alone', () async {
-    final failing = ProviderContainer(
-      overrides: [
-        extensionRepositoryProvider.overrideWithValue(_ThrowingRepository()),
-        sourceRepositoryProvider.overrideWithValue(sources),
-      ],
-    );
+    final failing = ProviderContainer(overrides: [
+      extensionRepositoryProvider.overrideWithValue(_ThrowingRepository()),
+      sourceRepositoryProvider.overrideWithValue(sources),
+    ]);
     addTearDown(failing.dispose);
     failing.listen(sourceListProvider, (previous, next) {});
     await failing.read(sourceListProvider.future);
@@ -191,9 +169,8 @@ void main() {
     expect(sources.listCalls, before);
   });
 
-  testWidgets('installing from a file refetches the source list', (
-    tester,
-  ) async {
+  testWidgets('installing from a file refetches the source list',
+      (tester) async {
     // Only a BuildContext to hand to the picker call. The container stays
     // detached from the tree: attaching it makes Riverpod defer refreshes to a
     // frame that a bare `await` never pumps.
@@ -201,12 +178,10 @@ void main() {
     late BuildContext capturedContext;
     await tester.pumpWidget(
       MaterialApp(
-        home: Builder(
-          builder: (context) {
-            capturedContext = context;
-            return const SizedBox.shrink();
-          },
-        ),
+        home: Builder(builder: (context) {
+          capturedContext = context;
+          return const SizedBox.shrink();
+        }),
       ),
     );
 

@@ -39,18 +39,17 @@ Fragment$TrackerDto _fakeTracker({bool supportsPrivate = false}) =>
       statuses: const [],
     );
 
-Fragment$TrackSearchDto _fakeResult({
-  required String remoteId,
-  required String title,
-}) => Fragment$TrackSearchDto(
-  remoteId: remoteId,
-  title: title,
-  coverUrl: 'https://example.com/cover.jpg',
-  publishingType: 'Manga',
-  publishingStatus: 'Publishing',
-  summary: 'A test manga summary.',
-  trackingUrl: 'https://myanimelist.net/manga/$remoteId',
-);
+Fragment$TrackSearchDto _fakeResult(
+        {required String remoteId, required String title}) =>
+    Fragment$TrackSearchDto(
+      remoteId: remoteId,
+      title: title,
+      coverUrl: 'https://example.com/cover.jpg',
+      publishingType: 'Manga',
+      publishingStatus: 'Publishing',
+      summary: 'A test manga summary.',
+      trackingUrl: 'https://myanimelist.net/manga/$remoteId',
+    );
 
 /// Stub repository whose [bind] either completes normally or throws.
 class _StubTrackerRepository extends TrackerRepository {
@@ -90,32 +89,30 @@ Widget _testApp({
   required List<Fragment$TrackSearchDto> results,
   required _StubTrackerRepository repo,
   required VoidCallback onBound,
-}) => ProviderScope(
-  overrides: [
-    searchTrackerProvider(
-      trackerId: tracker.id,
-      query: 'test manga',
-    ).overrideWith((ref) async => results),
-    trackerRepositoryProvider.overrideWith((ref) => repo),
-    // Supply null toast — Toast? is always nullable in the provider contract.
-    toastProvider.overrideWithValue(null),
-    mangaTrackRecordsProvider(
-      mangaId: 42,
-    ).overrideWith((ref) async => const []),
-  ],
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(
-      body: TrackerSearch(
-        mangaId: 42,
-        mangaTitle: 'test manga',
-        tracker: tracker,
-        onBound: onBound,
+}) =>
+    ProviderScope(
+      overrides: [
+        searchTrackerProvider(trackerId: tracker.id, query: 'test manga')
+            .overrideWith((ref) async => results),
+        trackerRepositoryProvider.overrideWith((ref) => repo),
+        // Supply null toast — Toast? is always nullable in the provider contract.
+        toastProvider.overrideWithValue(null),
+        mangaTrackRecordsProvider(mangaId: 42)
+            .overrideWith((ref) async => const []),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: TrackerSearch(
+            mangaId: 42,
+            mangaTitle: 'test manga',
+            tracker: tracker,
+            onBound: onBound,
+          ),
+        ),
       ),
-    ),
-  ),
-);
+    );
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -134,10 +131,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            searchTrackerProvider(
-              trackerId: 1,
-              query: 'test manga',
-            ).overrideWith((ref) async => results),
+            searchTrackerProvider(trackerId: 1, query: 'test manga')
+                .overrideWith((ref) async => results),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -163,65 +158,62 @@ void main() {
     },
   );
 
-  testWidgets('bind — success: calls onBound', (tester) async {
-    final tracker = _fakeTracker();
-    final results = [_fakeResult(remoteId: '42', title: 'Success Manga')];
-    final stubRepo = _StubTrackerRepository(_fakeClient);
-    bool onBoundCalled = false;
+  testWidgets(
+    'bind — success: calls onBound',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final results = [_fakeResult(remoteId: '42', title: 'Success Manga')];
+      final stubRepo = _StubTrackerRepository(_fakeClient);
+      bool onBoundCalled = false;
 
-    await tester.pumpWidget(
-      _testApp(
+      await tester.pumpWidget(_testApp(
         tracker: tracker,
         results: results,
         repo: stubRepo,
         onBound: () => onBoundCalled = true,
-      ),
-    );
+      ));
 
-    await tester.pump();
-    await tester.pump();
+      await tester.pump();
+      await tester.pump();
 
-    await tester.tap(find.text('Success Manga'));
-    await tester.pump();
+      await tester.tap(find.text('Success Manga'));
+      await tester.pump();
 
-    await tester.tap(find.text('Track'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
 
-    expect(
-      onBoundCalled,
-      isTrue,
-      reason: 'onBound must fire when bind succeeds',
-    );
-  });
+      expect(onBoundCalled, isTrue,
+          reason: 'onBound must fire when bind succeeds');
+    },
+  );
 
-  testWidgets('bind — failure: does NOT call onBound', (tester) async {
-    final tracker = _fakeTracker();
-    final results = [_fakeResult(remoteId: '99', title: 'Error Manga')];
-    final stubRepo = _StubTrackerRepository(_fakeClient, bindShouldThrow: true);
-    bool onBoundCalled = false;
+  testWidgets(
+    'bind — failure: does NOT call onBound',
+    (tester) async {
+      final tracker = _fakeTracker();
+      final results = [_fakeResult(remoteId: '99', title: 'Error Manga')];
+      final stubRepo =
+          _StubTrackerRepository(_fakeClient, bindShouldThrow: true);
+      bool onBoundCalled = false;
 
-    await tester.pumpWidget(
-      _testApp(
+      await tester.pumpWidget(_testApp(
         tracker: tracker,
         results: results,
         repo: stubRepo,
         onBound: () => onBoundCalled = true,
-      ),
-    );
+      ));
 
-    await tester.pump();
-    await tester.pump();
+      await tester.pump();
+      await tester.pump();
 
-    await tester.tap(find.text('Error Manga'));
-    await tester.pump();
+      await tester.tap(find.text('Error Manga'));
+      await tester.pump();
 
-    await tester.tap(find.text('Track'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
 
-    expect(
-      onBoundCalled,
-      isFalse,
-      reason: 'onBound must NOT fire when the mutation fails',
-    );
-  });
+      expect(onBoundCalled, isFalse,
+          reason: 'onBound must NOT fire when the mutation fails');
+    },
+  );
 }

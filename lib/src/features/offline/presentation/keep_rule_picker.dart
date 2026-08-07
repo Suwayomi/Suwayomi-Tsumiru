@@ -36,26 +36,20 @@ Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
               ListTile(
                 leading: const Icon(Icons.bookmark_add_outlined),
                 title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                onTap: () => Navigator.pop(sheetContext, (
-                  rule: OfflineKeepRule.nUnread,
-                  count: n,
-                )),
+                onTap: () => Navigator.pop(
+                    sheetContext, (rule: OfflineKeepRule.nUnread, count: n)),
               ),
             ListTile(
               leading: const Icon(Icons.menu_book_outlined),
               title: Text(sheetContext.l10n.keepOfflineAllUnread),
-              onTap: () => Navigator.pop(sheetContext, (
-                rule: OfflineKeepRule.allUnread,
-                count: 3,
-              )),
+              onTap: () => Navigator.pop(
+                  sheetContext, (rule: OfflineKeepRule.allUnread, count: 3)),
             ),
             ListTile(
               leading: const Icon(Icons.library_books_outlined),
               title: Text(sheetContext.l10n.keepOfflineAll),
-              onTap: () => Navigator.pop(sheetContext, (
-                rule: OfflineKeepRule.all,
-                count: 3,
-              )),
+              onTap: () => Navigator.pop(
+                  sheetContext, (rule: OfflineKeepRule.all, count: 3)),
             ),
           ],
         ),

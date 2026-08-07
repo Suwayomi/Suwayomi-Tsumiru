@@ -15,45 +15,43 @@ SourceDto _src({
   String lang = 'en',
   bool pinned = false,
   bool hidden = false,
-}) => SourceDto.fromJson({
-  'displayName': name,
-  'iconUrl': '',
-  'id': id,
-  'isConfigurable': false,
-  'contentWarning': 'SAFE',
-  'lang': lang,
-  'name': name,
-  'supportsLatest': true,
-  '__typename': 'SourceType',
-  'meta': [
-    if (pinned)
-      {
-        'key': 'webUI_isPinned',
-        'value': 'true',
-        '__typename': 'SourceMetaType',
+}) =>
+    SourceDto.fromJson({
+      'displayName': name,
+      'iconUrl': '',
+      'id': id,
+      'isConfigurable': false,
+      'contentWarning': 'SAFE',
+      'lang': lang,
+      'name': name,
+      'supportsLatest': true,
+      '__typename': 'SourceType',
+      'meta': [
+        if (pinned)
+          {
+            'key': 'webUI_isPinned',
+            'value': 'true',
+            '__typename': 'SourceMetaType',
+          },
+        if (hidden)
+          {
+            'key': 'tsumiru_isHidden',
+            'value': 'true',
+            '__typename': 'SourceMetaType',
+          },
+      ],
+      'extension': {
+        'pkgName': 'pkg',
+        'repo': 'repo',
+        'isObsolete': false,
+        '__typename': 'ExtensionType',
       },
-    if (hidden)
-      {
-        'key': 'tsumiru_isHidden',
-        'value': 'true',
-        '__typename': 'SourceMetaType',
-      },
-  ],
-  'extension': {
-    'pkgName': 'pkg',
-    'repo': 'repo',
-    'isObsolete': false,
-    '__typename': 'ExtensionType',
-  },
-});
+    });
 
 void main() {
   // Out of install order on purpose, to prove we sort.
   final mangaDex = _src(id: '1', name: 'MangaDex');
-  final allManga = _src(
-    id: '2',
-    name: 'allmanga',
-  ); // lowercase -> case-insensitive
+  final allManga = _src(id: '2', name: 'allmanga'); // lowercase -> case-insensitive
   final asura = _src(id: '3', name: 'Asura Scans', pinned: true);
   final bato = _src(id: '4', name: 'Bato', lang: 'ko');
   final sources = [mangaDex, allManga, asura, bato];
@@ -63,7 +61,10 @@ void main() {
       expect(asura.isPinned, isTrue);
       expect(mangaDex.isPinned, isFalse);
       // value "false" is not pinned
-      expect(_src(id: '9', name: 'x').isPinned, isFalse);
+      expect(
+        _src(id: '9', name: 'x').isPinned,
+        isFalse,
+      );
     });
   });
 
@@ -82,12 +83,8 @@ void main() {
       final map = groupAllSourcesByLanguage([...sources, hiddenSrc]);
       // Asura is pinned but must still appear (unlike groupSourcesByLanguage);
       // hidden Comick sorts after the shown sources.
-      expect(map['en']!.map((e) => e.name), [
-        'allmanga',
-        'Asura Scans',
-        'MangaDex',
-        'Comick',
-      ]);
+      expect(map['en']!.map((e) => e.name),
+          ['allmanga', 'Asura Scans', 'MangaDex', 'Comick']);
       expect(map['ko']!.map((e) => e.name), ['Bato']);
     });
   });
@@ -95,13 +92,10 @@ void main() {
   group('browsableSourceList (hidden sources dropped from browse)', () {
     test('removes hidden sources, keeps the rest', () {
       final hiddenSrc = _src(id: '5', name: 'Comick', hidden: true);
-      final c = ProviderContainer(
-        overrides: [
-          visibleSourceListProvider.overrideWith(
-            (ref) => AsyncData([...sources, hiddenSrc]),
-          ),
-        ],
-      );
+      final c = ProviderContainer(overrides: [
+        visibleSourceListProvider
+            .overrideWith((ref) => AsyncData([...sources, hiddenSrc])),
+      ]);
       addTearDown(c.dispose);
       final out = c.read(browsableSourceListProvider).value!;
       expect(out.map((e) => e.name), isNot(contains('Comick')));
@@ -135,11 +129,9 @@ void main() {
 
   group('sourceMapFilteredAndQueried (Sources tab name filter)', () {
     ProviderContainer containerWith(Map<String, List<SourceDto>> map) {
-      final c = ProviderContainer(
-        overrides: [
-          sourceMapFilteredProvider.overrideWith((ref) => AsyncData(map)),
-        ],
-      );
+      final c = ProviderContainer(overrides: [
+        sourceMapFilteredProvider.overrideWith((ref) => AsyncData(map)),
+      ]);
       addTearDown(c.dispose);
       return c;
     }

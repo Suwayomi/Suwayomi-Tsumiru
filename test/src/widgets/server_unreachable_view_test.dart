@@ -12,17 +12,13 @@ import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
 
-Future<ProviderContainer> _pump(
-  WidgetTester tester, {
-  VoidCallback? onRetry,
-  bool hasCatalog = false,
-  bool offlineEscape = true,
-}) async {
-  final container = ProviderContainer(
-    overrides: [
-      offlineCatalogAvailableProvider.overrideWith((ref) async => hasCatalog),
-    ],
-  );
+Future<ProviderContainer> _pump(WidgetTester tester,
+    {VoidCallback? onRetry,
+    bool hasCatalog = false,
+    bool offlineEscape = true}) async {
+  final container = ProviderContainer(overrides: [
+    offlineCatalogAvailableProvider.overrideWith((ref) async => hasCatalog),
+  ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -31,11 +27,8 @@ Future<ProviderContainer> _pump(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: ServerUnreachableView(
-            onRetry: onRetry,
-            offlineEscape: offlineEscape,
-          ),
-        ),
+            body: ServerUnreachableView(
+                onRetry: onRetry, offlineEscape: offlineEscape)),
       ),
     ),
   );
@@ -51,16 +44,14 @@ Future<void> _unmount(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets(
-    'shows the unreachable message and a Connection settings action',
-    (tester) async {
-      await _pump(tester);
+  testWidgets('shows the unreachable message and a Connection settings action',
+      (tester) async {
+    await _pump(tester);
 
-      expect(find.text("Can't reach your server"), findsOneWidget);
-      expect(find.text('Connection settings'), findsOneWidget);
-      await _unmount(tester);
-    },
-  );
+    expect(find.text("Can't reach your server"), findsOneWidget);
+    expect(find.text('Connection settings'), findsOneWidget);
+    await _unmount(tester);
+  });
 
   testWidgets('no retry button without a retry callback', (tester) async {
     await _pump(tester);
@@ -85,15 +76,15 @@ void main() {
     await _unmount(tester);
   });
 
-  testWidgets('no View offline on screens that ignore the pin', (tester) async {
+  testWidgets('no View offline on screens that ignore the pin',
+      (tester) async {
     await _pump(tester, hasCatalog: true, offlineEscape: false);
     expect(find.text('View offline'), findsNothing);
     await _unmount(tester);
   });
 
-  testWidgets('View offline shows with a catalog and sets the pin', (
-    tester,
-  ) async {
+  testWidgets('View offline shows with a catalog and sets the pin',
+      (tester) async {
     final container = await _pump(tester, hasCatalog: true);
     expect(find.text('View offline'), findsOneWidget);
 

@@ -40,8 +40,10 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-GraphQLClient _dummyClient() =>
-    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
+GraphQLClient _dummyClient() => GraphQLClient(
+      link: HttpLink('http://localhost:0'),
+      cache: GraphQLCache(),
+    );
 
 class _FakeTrackerRepository extends TrackerRepository {
   _FakeTrackerRepository() : super(_dummyClient());
@@ -80,61 +82,62 @@ List<String> _localPages(int count, String tag) {
 }
 
 MangaDto _manga() => Fragment$MangaDto(
-  id: 1,
-  title: 'Test Manga',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 2),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: [
-    Fragment$MangaDto$meta(
-      key: MangaMetaKeys.readerMode.key,
-      value: ReaderMode.singleHorizontalLTR.name,
-    ),
-  ],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: 2,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/1',
-);
+      id: 1,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 2),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: [
+        Fragment$MangaDto$meta(
+          key: MangaMetaKeys.readerMode.key,
+          value: ReaderMode.singleHorizontalLTR.name,
+        ),
+      ],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 2,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/1',
+    );
 
 ChapterDto _chapter({
   required int id,
   required int sourceOrder,
   required int pageCount,
-}) => Fragment$ChapterDto(
-  chapterNumber: sourceOrder.toDouble(),
-  fetchedAt: '0',
-  id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
-  mangaId: 1,
-  name: 'Chapter $id',
-  pageCount: pageCount,
-  sourceOrder: sourceOrder,
-  uploadDate: '0',
-  url: '/chapter/$id',
-  meta: const [],
-);
+}) =>
+    Fragment$ChapterDto(
+      chapterNumber: sourceOrder.toDouble(),
+      fetchedAt: '0',
+      id: id,
+      isBookmarked: false,
+      isDownloaded: false,
+      isRead: false,
+      lastPageRead: 0,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: 'Chapter $id',
+      pageCount: pageCount,
+      sourceOrder: sourceOrder,
+      uploadDate: '0',
+      url: '/chapter/$id',
+      meta: const [],
+    );
 
 ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
-  chapter: ChapterPagesChapterDto(id: id, pageCount: count),
-  pages: _localPages(count, 'c$id'),
-);
+      chapter: ChapterPagesChapterDto(id: id, pageCount: count),
+      pages: _localPages(count, 'c$id'),
+    );
 
 void main() {
-  testWidgets('paged reader loads and crosses into the next chapter in-place', (
-    tester,
-  ) async {
+  testWidgets('paged reader loads and crosses into the next chapter in-place',
+      (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -151,31 +154,22 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
           chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
-          chapterPagesProvider(
-            chapterId: 1,
-          ).overrideWith((ref) => _pages(1, 3)),
-          chapterPagesProvider(
-            chapterId: 2,
-          ).overrideWith((ref) => _pages(2, 2)),
+          chapterPagesProvider(chapterId: 1)
+              .overrideWith((ref) => _pages(1, 3)),
+          chapterPagesProvider(chapterId: 2)
+              .overrideWith((ref) => _pages(2, 2)),
           // Chapter 1 has a next (chapter 2); chapter 2 has a previous (1).
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 1,
-          ).overrideWithValue((first: ch2, second: null)),
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 2,
-          ).overrideWithValue((first: null, second: ch1)),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue((first: ch2, second: null)),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
+              .overrideWithValue((first: null, second: ch1)),
           // Keep the external tracker path inert in the test.
           trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
-          updateProgressAfterReadingProvider.overrideWith(
-            () => _FixedToggle(false),
-          ),
+          updateProgressAfterReadingProvider.overrideWith(() => _FixedToggle(false)),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -207,17 +201,12 @@ void main() {
 
     // We must have crossed into chapter 2 — its page count (2) now drives the
     // seekbar, which never shows "/ 2" while reading the 3-page chapter 1.
-    expect(
-      find.textContaining('/ 2'),
-      findsOneWidget,
-      reason: 'reader never crossed into chapter 2',
-    );
+    expect(find.textContaining('/ 2'), findsOneWidget,
+        reason: 'reader never crossed into chapter 2');
 
     // Crossing the boundary forward marks chapter 1 read.
     expect(
-      repo.putChapterCalls.any(
-        (c) => c.chapterId == 1 && c.patch.isRead == true,
-      ),
+      repo.putChapterCalls.any((c) => c.chapterId == 1 && c.patch.isRead == true),
       isTrue,
       reason: 'chapter 1 was not marked read on the forward crossing',
     );
@@ -238,21 +227,16 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           mangaBookRepositoryProvider.overrideWithValue(repo),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
           chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
-          chapterPagesProvider(
-            chapterId: 1,
-          ).overrideWith((ref) => _pages(1, 3)),
-          getNextAndPreviousChaptersProvider(
-            mangaId: 1,
-            chapterId: 1,
-          ).overrideWithValue(null),
+          chapterPagesProvider(chapterId: 1)
+              .overrideWith((ref) => _pages(1, 3)),
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+              .overrideWithValue(null),
           trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
-          updateProgressAfterReadingProvider.overrideWith(
-            () => _FixedToggle(false),
-          ),
+          updateProgressAfterReadingProvider
+              .overrideWith(() => _FixedToggle(false)),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -269,11 +253,8 @@ void main() {
     final repo = await _pumpSingleChapter(tester);
 
     // Turn to page 2 (index 1).
-    await tester.timedDrag(
-      find.byType(PagedReaderViewport),
-      const Offset(-400, 0),
-      const Duration(milliseconds: 80),
-    );
+    await tester.timedDrag(find.byType(PagedReaderViewport),
+        const Offset(-400, 0), const Duration(milliseconds: 80));
     await tester.pumpAndSettle();
     expect(find.text('2 / 3'), findsOneWidget);
 
@@ -282,28 +263,19 @@ void main() {
 
     expect(
       // Partial read: position is saved, read-state is omitted (never un-reads).
-      repo.putChapterCalls.any(
-        (c) =>
-            c.chapterId == 1 &&
-            c.patch.lastPageRead == 1 &&
-            c.patch.isRead == null,
-      ),
+      repo.putChapterCalls.any((c) =>
+          c.chapterId == 1 && c.patch.lastPageRead == 1 && c.patch.isRead == null),
       isTrue,
-      reason:
-          'debounced progress for page 2 was not saved; ${repo.putChapterCalls}',
+      reason: 'debounced progress for page 2 was not saved; ${repo.putChapterCalls}',
     );
   });
 
-  testWidgets('flushes the visible page on exit before the debounce fires', (
-    tester,
-  ) async {
+  testWidgets('flushes the visible page on exit before the debounce fires',
+      (tester) async {
     final repo = await _pumpSingleChapter(tester);
 
-    await tester.timedDrag(
-      find.byType(PagedReaderViewport),
-      const Offset(-400, 0),
-      const Duration(milliseconds: 80),
-    );
+    await tester.timedDrag(find.byType(PagedReaderViewport),
+        const Offset(-400, 0), const Duration(milliseconds: 80));
     await tester.pumpAndSettle();
     expect(find.text('2 / 3'), findsOneWidget);
 
@@ -312,9 +284,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(
-      repo.putChapterCalls.any(
-        (c) => c.chapterId == 1 && c.patch.lastPageRead == 1,
-      ),
+      repo.putChapterCalls.any((c) => c.chapterId == 1 && c.patch.lastPageRead == 1),
       isTrue,
       reason: 'progress was not flushed on exit; ${repo.putChapterCalls}',
     );

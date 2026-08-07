@@ -80,17 +80,13 @@ void main() {
 
     test('returns null for non-JSON payload', () {
       // base64url-encoded "not json" — decodes to non-JSON text.
-      final notJson = base64Url
-          .encode(utf8.encode('not json'))
-          .replaceAll('=', '');
+      final notJson = base64Url.encode(utf8.encode('not json')).replaceAll('=', '');
       expect(decodeJwtExp('header.$notJson.sig'), isNull);
     });
 
     test('returns null when payload is JSON but not an object', () {
       // Top-level JSON array isn't a JWT payload object.
-      final arrayBody = base64Url
-          .encode(utf8.encode('[1,2,3]'))
-          .replaceAll('=', '');
+      final arrayBody = base64Url.encode(utf8.encode('[1,2,3]')).replaceAll('=', '');
       expect(decodeJwtExp('header.$arrayBody.sig'), isNull);
     });
 
@@ -129,5 +125,6 @@ void main() {
     test('returns null for whitespace-only string', () {
       expect(decodeJwtExp('   '), isNull);
     });
+
   });
 }

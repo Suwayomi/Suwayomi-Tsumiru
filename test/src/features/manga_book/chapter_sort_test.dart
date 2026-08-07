@@ -17,23 +17,24 @@ ChapterDto _chapter({
   int sourceOrder = 0,
   String uploadDate = '0',
   double chapterNumber = 0,
-}) => Fragment$ChapterDto(
-  chapterNumber: chapterNumber,
-  fetchedAt: '0',
-  id: id,
-  isBookmarked: false,
-  isDownloaded: false,
-  isRead: false,
-  lastPageRead: 0,
-  lastReadAt: '0',
-  mangaId: 1,
-  name: name,
-  pageCount: 0,
-  sourceOrder: sourceOrder,
-  uploadDate: uploadDate,
-  url: '',
-  meta: const [],
-);
+}) =>
+    Fragment$ChapterDto(
+      chapterNumber: chapterNumber,
+      fetchedAt: '0',
+      id: id,
+      isBookmarked: false,
+      isDownloaded: false,
+      isRead: false,
+      lastPageRead: 0,
+      lastReadAt: '0',
+      mangaId: 1,
+      name: name,
+      pageCount: 0,
+      sourceOrder: sourceOrder,
+      uploadDate: uploadDate,
+      url: '',
+      meta: const [],
+    );
 
 class _FakeChapterList extends MangaChapterList {
   _FakeChapterList(this.chapters);
@@ -49,9 +50,8 @@ Future<ProviderContainer> _container(List<ChapterDto> chapters) async {
   final c = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
-      mangaChapterListProvider(
-        mangaId: 1,
-      ).overrideWith(() => _FakeChapterList(chapters)),
+      mangaChapterListProvider(mangaId: 1)
+          .overrideWith(() => _FakeChapterList(chapters)),
     ],
   );
   addTearDown(c.dispose);
@@ -69,26 +69,11 @@ void main() {
   // are distinguishable.
   final chapters = [
     _chapter(
-      id: 1,
-      name: 'Gamma',
-      sourceOrder: 1,
-      uploadDate: '300',
-      chapterNumber: 2.5,
-    ),
+        id: 1, name: 'Gamma', sourceOrder: 1, uploadDate: '300', chapterNumber: 2.5),
     _chapter(
-      id: 2,
-      name: 'alpha',
-      sourceOrder: 2,
-      uploadDate: '100',
-      chapterNumber: 10,
-    ),
+        id: 2, name: 'alpha', sourceOrder: 2, uploadDate: '100', chapterNumber: 10),
     _chapter(
-      id: 3,
-      name: 'Beta',
-      sourceOrder: 3,
-      uploadDate: '200',
-      chapterNumber: 1,
-    ),
+        id: 3, name: 'Beta', sourceOrder: 3, uploadDate: '200', chapterNumber: 1),
   ];
 
   test('default sort is by source order, newest (descending) first', () async {
@@ -103,17 +88,13 @@ void main() {
     expect(_names(c), ['alpha', 'Beta', 'Gamma']);
   });
 
-  test(
-    'chapter number sort orders by parsed number, not source order',
-    () async {
-      final c = await _container(chapters);
-      c
-          .read(mangaChapterSortProvider.notifier)
-          .update(ChapterSort.chapterNumber);
-      c.read(mangaChapterSortDirectionProvider.notifier).update(true);
-      expect(_names(c), ['Beta', 'Gamma', 'alpha']);
-    },
-  );
+  test('chapter number sort orders by parsed number, not source order',
+      () async {
+    final c = await _container(chapters);
+    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
+    c.read(mangaChapterSortDirectionProvider.notifier).update(true);
+    expect(_names(c), ['Beta', 'Gamma', 'alpha']);
+  });
 
   test('tied chapter numbers fall back to source order', () async {
     final tied = [
@@ -132,31 +113,13 @@ void main() {
 
   group('formattedChapterNumber', () {
     test('drops trailing zeros and keeps up to 3 decimals', () {
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: 218).formattedChapterNumber,
-        '218',
-      );
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: 218.5).formattedChapterNumber,
-        '218.5',
-      );
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: 12.345).formattedChapterNumber,
-        '12.345',
-      );
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: 0).formattedChapterNumber,
-        '0',
-      );
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: 0.5).formattedChapterNumber,
-        '0.5',
-      );
+      expect(_chapter(id: 1, name: '', chapterNumber: 218).formattedChapterNumber, '218');
+      expect(_chapter(id: 1, name: '', chapterNumber: 218.5).formattedChapterNumber, '218.5');
+      expect(_chapter(id: 1, name: '', chapterNumber: 12.345).formattedChapterNumber, '12.345');
+      expect(_chapter(id: 1, name: '', chapterNumber: 0).formattedChapterNumber, '0');
+      expect(_chapter(id: 1, name: '', chapterNumber: 0.5).formattedChapterNumber, '0.5');
       // Unparsed numbers come through as -1; shown as-is (matches Komikku).
-      expect(
-        _chapter(id: 1, name: '', chapterNumber: -1).formattedChapterNumber,
-        '-1',
-      );
+      expect(_chapter(id: 1, name: '', chapterNumber: -1).formattedChapterNumber, '-1');
     });
   });
 }

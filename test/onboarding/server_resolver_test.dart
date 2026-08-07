@@ -16,7 +16,8 @@ import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
 const _aboutOk =
     '{"data":{"aboutServer":{"name":"Suwayomi-Server","version":"1.0.0"}}}';
 const _authOpen = '{"data":{"downloadStatus":{"__typename":"DownloadStatus"}}}';
-const _authUnauthorized = '{"data":null,"errors":[{"message":"Unauthorized"}]}';
+const _authUnauthorized =
+    '{"data":null,"errors":[{"message":"Unauthorized"}]}';
 
 /// The null-bubbling case the recon warned about: a COMBINED query would null
 /// the entire `data` object because the non-null @RequireAuth field's error
@@ -57,9 +58,8 @@ void main() {
     });
 
     test('explicit scheme WITH port → single candidate (fully specified)', () {
-      expect(connectionCandidates('http://10.0.0.5:4567'), [
-        'http://10.0.0.5:4567',
-      ]);
+      expect(connectionCandidates('http://10.0.0.5:4567'),
+          ['http://10.0.0.5:4567']);
     });
 
     test('explicit http scheme, NO port → still tries the default :4567', () {
@@ -106,27 +106,22 @@ void main() {
       expect(connectionCandidates('myhost/'), connectionCandidates('myhost'));
     });
 
-    test(
-      'explicit scheme + port + base path → single candidate, path kept',
-      () {
-        expect(connectionCandidates('https://host.example:8080/suwayomi/'), [
-          'https://host.example:8080/suwayomi',
-        ]);
-      },
-    );
+    test('explicit scheme + port + base path → single candidate, path kept', () {
+      expect(connectionCandidates('https://host.example:8080/suwayomi/'),
+          ['https://host.example:8080/suwayomi']);
+    });
 
     test('blank input yields no candidates', () {
       expect(connectionCandidates('   '), isEmpty);
     });
 
-    test('explicit scheme-default port (:80) reads as no port → fans to :4567', () {
+    test('explicit scheme-default port (:80) reads as no port → fans to :4567',
+        () {
       // Dart's Uri treats a scheme-default port as "no port", so http://host:80
       // is indistinguishable from http://host — we fan out to the default :4567
       // first (a server is rarely on :80), then bare.
-      expect(connectionCandidates('http://host.example:80'), [
-        'http://host.example:4567',
-        'http://host.example',
-      ]);
+      expect(connectionCandidates('http://host.example:80'),
+          ['http://host.example:4567', 'http://host.example']);
     });
   });
 
@@ -168,19 +163,17 @@ void main() {
       expect(r.serverVersion, '9');
     });
 
-    test(
-      'null-bubbled combined response does NOT confirm (no aboutServer)',
-      () {
-        // If the about request itself came back null-bubbled, there's no
-        // aboutServer object → not confirmed.
-        final r = classifyProbeBody(
-          url: 'http://h',
-          aboutBody: _nullBubbledCombined,
-          authBody: _authUnauthorized,
-        );
-        expect(r, isNull);
-      },
-    );
+    test('null-bubbled combined response does NOT confirm (no aboutServer)',
+        () {
+      // If the about request itself came back null-bubbled, there's no
+      // aboutServer object → not confirmed.
+      final r = classifyProbeBody(
+        url: 'http://h',
+        aboutBody: _nullBubbledCombined,
+        authBody: _authUnauthorized,
+      );
+      expect(r, isNull);
+    });
 
     test('case-insensitive "unauthor" substring trips authRequired', () {
       const weird = '{"errors":[{"message":"UNAUTHORISED access denied"}]}';
@@ -302,45 +295,37 @@ void main() {
 
   group('displayAddress — always shows the explicit host:port', () {
     test('non-default port is kept', () {
-      expect(
-        displayAddress('http://192.168.0.10:4567'),
-        'http://192.168.0.10:4567',
-      );
+      expect(displayAddress('http://192.168.0.10:4567'),
+          'http://192.168.0.10:4567');
     });
     test('http default :80 is made explicit (not hidden)', () {
       expect(displayAddress('http://192.168.0.10'), 'http://192.168.0.10:80');
     });
     test('https default :443 is made explicit', () {
-      expect(
-        displayAddress('https://suwayomi.example.com'),
-        'https://suwayomi.example.com:443',
-      );
+      expect(displayAddress('https://suwayomi.example.com'),
+          'https://suwayomi.example.com:443');
     });
     test('base path is preserved after the port', () {
-      expect(
-        displayAddress('http://host.example/suwayomi'),
-        'http://host.example:80/suwayomi',
-      );
+      expect(displayAddress('http://host.example/suwayomi'),
+          'http://host.example:80/suwayomi');
     });
     test('IPv6 host is bracketed', () {
       expect(displayAddress('http://[::1]:4567'), 'http://[::1]:4567');
     });
   });
 
-  group(
-    'normalisedFallbackUrl — use-this-address-anyway always has a scheme',
-    () {
-      test('bare host gets http:// + default port', () {
-        expect(normalisedFallbackUrl('192.168.0.10'), startsWith('http://'));
-      });
-      test('explicit scheme is preserved', () {
-        expect(normalisedFallbackUrl('https://x.example'), 'https://x.example');
-      });
-      test('malformed input still gets a scheme', () {
-        expect(normalisedFallbackUrl('weird input'), startsWith('http://'));
-      });
-    },
-  );
+  group('normalisedFallbackUrl — use-this-address-anyway always has a scheme',
+      () {
+    test('bare host gets http:// + default port', () {
+      expect(normalisedFallbackUrl('192.168.0.10'), startsWith('http://'));
+    });
+    test('explicit scheme is preserved', () {
+      expect(normalisedFallbackUrl('https://x.example'), 'https://x.example');
+    });
+    test('malformed input still gets a scheme', () {
+      expect(normalisedFallbackUrl('weird input'), startsWith('http://'));
+    });
+  });
 
   group('probeServer — wire behaviour via MockClient', () {
     test('confirms a Suwayomi server and reads auth mode', () async {
@@ -350,15 +335,11 @@ void main() {
         expect(request.url.path, '/api/graphql');
         if (query.contains('aboutServer')) {
           return http.StreamedResponse(
-            Stream.value(utf8.encode(_aboutOk)),
-            200,
-          );
+              Stream.value(utf8.encode(_aboutOk)), 200);
         }
         // auth probe → unauthorized
         return http.StreamedResponse(
-          Stream.value(utf8.encode(_authUnauthorized)),
-          200,
-        );
+            Stream.value(utf8.encode(_authUnauthorized)), 200);
       });
       final r = await probeServer('http://h:4567', client: mock);
       expect(r.confirmed, isTrue);
@@ -378,146 +359,126 @@ void main() {
       expect(r.confirmed, isFalse);
     });
 
-    test(
-      'https→http downgrade redirect is NOT followed → reachedUnconfirmed',
-      () async {
-        final mock = MockClient.streaming((request, bodyStream) async {
-          return http.StreamedResponse(
-            Stream.value(utf8.encode('')),
-            302,
-            headers: {'location': 'http://h:4567/login'},
-          );
-        });
-        final r = await probeServer('https://h:4567', client: mock);
-        expect(r.reached, isTrue);
-        expect(r.confirmed, isFalse);
-        expect(r.basicGated, isFalse);
-      },
-    );
+    test('https→http downgrade redirect is NOT followed → reachedUnconfirmed',
+        () async {
+      final mock = MockClient.streaming((request, bodyStream) async {
+        return http.StreamedResponse(
+          Stream.value(utf8.encode('')),
+          302,
+          headers: {'location': 'http://h:4567/login'},
+        );
+      });
+      final r = await probeServer('https://h:4567', client: mock);
+      expect(r.reached, isTrue);
+      expect(r.confirmed, isFalse);
+      expect(r.basicGated, isFalse);
+    });
 
-    test(
-      'single-hop redirect to a confirmable endpoint → found at destination',
-      () async {
-        final mock = MockClient.streaming((request, bodyStream) async {
-          if (request.url.host == 'proxy.example') {
-            // The proxy bounces /api/graphql to the real origin (same scheme).
-            return http.StreamedResponse(
-              Stream.value(utf8.encode('')),
-              302,
-              headers: {'location': 'https://real.example/api/graphql'},
-            );
-          }
-          final body = await bodyStream.bytesToString();
-          final isAbout = ((jsonDecode(body) as Map)['query'] as String)
-              .contains('aboutServer');
-          return http.StreamedResponse(
-            Stream.value(utf8.encode(isAbout ? _aboutOk : _authOpen)),
-            200,
-          );
-        });
-        final r = await probeServer('https://proxy.example', client: mock);
-        expect(r.confirmed, isTrue);
-        expect(r.url, 'https://real.example'); // persists the DESTINATION base
-      },
-    );
+    test('single-hop redirect to a confirmable endpoint → found at destination',
+        () async {
+      final mock = MockClient.streaming((request, bodyStream) async {
+        if (request.url.host == 'proxy.example') {
+          // The proxy bounces /api/graphql to the real origin (same scheme).
+          return http.StreamedResponse(Stream.value(utf8.encode('')), 302,
+              headers: {'location': 'https://real.example/api/graphql'});
+        }
+        final body = await bodyStream.bytesToString();
+        final isAbout =
+            ((jsonDecode(body) as Map)['query'] as String).contains('aboutServer');
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(isAbout ? _aboutOk : _authOpen)), 200);
+      });
+      final r = await probeServer('https://proxy.example', client: mock);
+      expect(r.confirmed, isTrue);
+      expect(r.url, 'https://real.example'); // persists the DESTINATION base
+    });
 
     test('a second redirect is not chased → reachedUnconfirmed', () async {
       final mock = MockClient.streaming((request, bodyStream) async {
         // Every request redirects again (same scheme, no downgrade).
-        return http.StreamedResponse(
-          Stream.value(utf8.encode('')),
-          302,
-          headers: {'location': 'https://${request.url.host}x/api/graphql'},
-        );
+        return http.StreamedResponse(Stream.value(utf8.encode('')), 302, headers: {
+          'location': 'https://${request.url.host}x/api/graphql',
+        });
       });
       final r = await probeServer('https://loop.example', client: mock);
       expect(r.confirmed, isFalse);
       expect(r.reached, isTrue);
     });
 
-    test(
-      'auth probe unreadable (request throws) → assume authRequired',
-      () async {
-        // The doc contract: "assume auth-required if B is unreadable". An open
-        // read here onboards an auth server with no login step → Unauthorized
-        // on first real query.
-        var calls = 0;
-        final mock = MockClient.streaming((request, bodyStream) async {
-          calls++;
-          if (calls == 1) {
-            return http.StreamedResponse(
-              Stream.value(utf8.encode(_aboutOk)),
-              200,
-            );
-          }
-          throw http.ClientException('boom');
-        });
-        final r = await probeServer('http://h:4567', client: mock);
-        expect(r.confirmed, isTrue);
-        expect(r.authMode, ProbeAuthMode.authRequired);
-      },
-    );
+    test('auth probe unreadable (request throws) → assume authRequired',
+        () async {
+      // The doc contract: "assume auth-required if B is unreadable". An open
+      // read here onboards an auth server with no login step → Unauthorized
+      // on first real query.
+      var calls = 0;
+      final mock = MockClient.streaming((request, bodyStream) async {
+        calls++;
+        if (calls == 1) {
+          return http.StreamedResponse(
+              Stream.value(utf8.encode(_aboutOk)), 200);
+        }
+        throw http.ClientException('boom');
+      });
+      final r = await probeServer('http://h:4567', client: mock);
+      expect(r.confirmed, isTrue);
+      expect(r.authMode, ProbeAuthMode.authRequired);
+    });
   });
 
   group('webAuthRequired — the web Test-connection auth probe', () {
     test('unauthorized errors body → true', () async {
-      final mock = MockClient(
-        (_) async => http.Response(_authUnauthorized, 200),
-      );
-      expect(await webAuthRequired('http://h:4568', client: mock), isTrue);
+      final mock = MockClient((_) async =>
+          http.Response(_authUnauthorized, 200));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
     });
 
     test('open data body → false', () async {
       final mock = MockClient((_) async => http.Response(_authOpen, 200));
-      expect(await webAuthRequired('http://h:4568', client: mock), isFalse);
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isFalse);
     });
 
     test('401 status → true', () async {
       final mock = MockClient((_) async => http.Response('', 401));
-      expect(await webAuthRequired('http://h:4568', client: mock), isTrue);
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
     });
 
-    test(
-      'transport failure → true (safe default; about already confirmed)',
-      () async {
-        final mock = MockClient(
-          (_) async => throw http.ClientException('network'),
-        );
-        expect(await webAuthRequired('http://h:4568', client: mock), isTrue);
-      },
-    );
+    test('transport failure → true (safe default; about already confirmed)',
+        () async {
+      final mock = MockClient((_) async =>
+          throw http.ClientException('network'));
+      expect(
+          await webAuthRequired('http://h:4568', client: mock), isTrue);
+    });
 
-    test(
-      'posts the @RequireAuth probe to /api/graphql with redirects ON',
-      () async {
-        late http.Request seen;
-        final mock = MockClient((req) async {
-          seen = req;
-          return http.Response(_authOpen, 200);
-        });
-        await webAuthRequired('http://h:4568/base', client: mock);
-        expect(seen.url.toString(), 'http://h:4568/base/api/graphql');
-        expect(seen.body, contains('downloadStatus'));
-        // Browsers cannot disable redirect-following; the web probe must not try.
-        expect(seen.followRedirects, isTrue);
-      },
-    );
+    test('posts the @RequireAuth probe to /api/graphql with redirects ON',
+        () async {
+      late http.Request seen;
+      final mock = MockClient((req) async {
+        seen = req;
+        return http.Response(_authOpen, 200);
+      });
+      await webAuthRequired('http://h:4568/base', client: mock);
+      expect(seen.url.toString(), 'http://h:4568/base/api/graphql');
+      expect(seen.body, contains('downloadStatus'));
+      // Browsers cannot disable redirect-following; the web probe must not try.
+      expect(seen.followRedirects, isTrue);
+    });
   });
 
-  group(
-    'shouldSuggestHttps — reverse-proxy hint only when https not tried',
-    () {
-      test('explicit http:// → https was never tried → suggest https', () {
-        expect(shouldSuggestHttps('http://192.168.0.10:4567'), isTrue);
-      });
-      test('bare host → https IS a candidate → do NOT suggest', () {
-        expect(shouldSuggestHttps('192.168.0.10'), isFalse);
-      });
-      test('explicit https:// → already https → do NOT suggest', () {
-        expect(shouldSuggestHttps('https://suwayomi.example.com'), isFalse);
-      });
-    },
-  );
+  group('shouldSuggestHttps — reverse-proxy hint only when https not tried', () {
+    test('explicit http:// → https was never tried → suggest https', () {
+      expect(shouldSuggestHttps('http://192.168.0.10:4567'), isTrue);
+    });
+    test('bare host → https IS a candidate → do NOT suggest', () {
+      expect(shouldSuggestHttps('192.168.0.10'), isFalse);
+    });
+    test('explicit https:// → already https → do NOT suggest', () {
+      expect(shouldSuggestHttps('https://suwayomi.example.com'), isFalse);
+    });
+  });
 
   group('basicAuthConfirms — verifies Basic creds against aboutServer', () {
     test('valid Basic creds → aboutServer confirms → true', () async {
@@ -525,107 +486,66 @@ void main() {
         final auth = request.headers['authorization'] ?? '';
         if (auth.startsWith('Basic ')) {
           return http.StreamedResponse(
-            Stream.value(utf8.encode(_aboutOk)),
-            200,
-          );
+              Stream.value(utf8.encode(_aboutOk)), 200);
         }
-        return http.StreamedResponse(
-          Stream.value(utf8.encode('')),
-          401,
-          headers: {'www-authenticate': 'Basic'},
-        );
+        return http.StreamedResponse(Stream.value(utf8.encode('')), 401,
+            headers: {'www-authenticate': 'Basic'});
       });
       expect(
-        await basicAuthConfirms(
-          'http://h:4567',
-          client: mock,
-          username: 'u',
-          password: 'p',
-        ),
-        isTrue,
-      );
+          await basicAuthConfirms('http://h:4567',
+              client: mock, username: 'u', password: 'p'),
+          isTrue);
     });
 
     test('wrong Basic creds → 401 → false', () async {
-      final mock = MockClient.streaming(
-        (_, __) async => http.StreamedResponse(
-          Stream.value(utf8.encode('')),
-          401,
-          headers: {'www-authenticate': 'Basic'},
-        ),
-      );
+      final mock = MockClient.streaming((_, __) async => http.StreamedResponse(
+          Stream.value(utf8.encode('')), 401,
+          headers: {'www-authenticate': 'Basic'}));
       expect(
-        await basicAuthConfirms(
-          'http://h:4567',
-          client: mock,
-          username: 'u',
-          password: 'x',
-        ),
-        isFalse,
-      );
+          await basicAuthConfirms('http://h:4567',
+              client: mock, username: 'u', password: 'x'),
+          isFalse);
     });
 
     test('reached but not Suwayomi (200 non-JSON) → false', () async {
-      final mock = MockClient.streaming(
-        (_, __) async =>
-            http.StreamedResponse(Stream.value(utf8.encode('<html>')), 200),
-      );
+      final mock = MockClient.streaming((_, __) async =>
+          http.StreamedResponse(Stream.value(utf8.encode('<html>')), 200));
       expect(
-        await basicAuthConfirms(
-          'http://h:4567',
-          client: mock,
-          username: 'u',
-          password: 'p',
-        ),
-        isFalse,
-      );
+          await basicAuthConfirms('http://h:4567',
+              client: mock, username: 'u', password: 'p'),
+          isFalse);
     });
   });
 
   group('authProbeAuthorized — verifies a credential against @RequireAuth', () {
-    test(
-      'a credential the @RequireAuth gate rejects → not authorised',
-      () async {
-        // Server honours ONLY the bearer (models ui_login): a cookie gets
-        // Unauthorized, a bearer gets data.
-        final mock = MockClient.streaming((request, _) async {
-          final hasBearer =
-              request.headers['authorization']?.startsWith('Bearer ') ?? false;
-          return http.StreamedResponse(
-            Stream.value(
-              utf8.encode(hasBearer ? _authOpen : _authUnauthorized),
-            ),
-            200,
-          );
-        });
-        expect(
-          await authProbeAuthorized(
-            'http://h:4567',
-            client: mock,
-            cookie: 'JSESSIONID=abc',
-          ),
-          isFalse,
-        );
-        expect(
-          await authProbeAuthorized(
-            'http://h:4567',
-            client: mock,
-            bearer: 'jwt.token',
-          ),
-          isTrue,
-        );
-      },
-    );
+    test('a credential the @RequireAuth gate rejects → not authorised',
+        () async {
+      // Server honours ONLY the bearer (models ui_login): a cookie gets
+      // Unauthorized, a bearer gets data.
+      final mock = MockClient.streaming((request, _) async {
+        final hasBearer =
+            request.headers['authorization']?.startsWith('Bearer ') ?? false;
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(hasBearer ? _authOpen : _authUnauthorized)),
+            200);
+      });
+      expect(
+          await authProbeAuthorized('http://h:4567',
+              client: mock, cookie: 'JSESSIONID=abc'),
+          isFalse);
+      expect(
+          await authProbeAuthorized('http://h:4567',
+              client: mock, bearer: 'jwt.token'),
+          isTrue);
+    });
 
     test('a 401 status reads as not authorised', () async {
-      final mock = MockClient.streaming(
-        (_, __) async =>
-            http.StreamedResponse(Stream.value(utf8.encode('')), 401),
-      );
+      final mock = MockClient.streaming((_, __) async =>
+          http.StreamedResponse(Stream.value(utf8.encode('')), 401));
       expect(
-        await authProbeAuthorized('http://h:4567', client: mock, cookie: 'x'),
-        isFalse,
-      );
+          await authProbeAuthorized('http://h:4567',
+              client: mock, cookie: 'x'),
+          isFalse);
     });
 
     test('basic credential the @RequireAuth gate authorises → true', () async {
@@ -635,39 +555,28 @@ void main() {
         final hasBasic =
             request.headers['authorization']?.startsWith('Basic ') ?? false;
         return http.StreamedResponse(
-          Stream.value(utf8.encode(hasBasic ? _authOpen : _authUnauthorized)),
-          200,
-        );
+            Stream.value(utf8.encode(hasBasic ? _authOpen : _authUnauthorized)),
+            200);
       });
       expect(
-        await authProbeAuthorized('http://h:4567', client: mock, basic: 'u:p'),
-        isTrue,
-      );
+          await authProbeAuthorized('http://h:4567',
+              client: mock, basic: 'u:p'),
+          isTrue);
     });
 
-    test(
-      'basic credential on a server that ignores it → not authorised',
-      () async {
-        // Models picking "Basic" on a ui_login/simple_login server: the public
-        // surface answers, but the @RequireAuth probe stays Unauthorized because
-        // a Basic header is meaningless to that server. THIS is the bug guard —
-        // a wrong auth type must NOT read as authorised.
-        final mock = MockClient.streaming(
-          (_, __) async => http.StreamedResponse(
-            Stream.value(utf8.encode(_authUnauthorized)),
-            200,
-          ),
-        );
-        expect(
-          await authProbeAuthorized(
-            'http://h:4567',
-            client: mock,
-            basic: 'u:wrong',
-          ),
-          isFalse,
-        );
-      },
-    );
+    test('basic credential on a server that ignores it → not authorised',
+        () async {
+      // Models picking "Basic" on a ui_login/simple_login server: the public
+      // surface answers, but the @RequireAuth probe stays Unauthorized because
+      // a Basic header is meaningless to that server. THIS is the bug guard —
+      // a wrong auth type must NOT read as authorised.
+      final mock = MockClient.streaming((_, __) async => http.StreamedResponse(
+          Stream.value(utf8.encode(_authUnauthorized)), 200));
+      expect(
+          await authProbeAuthorized('http://h:4567',
+              client: mock, basic: 'u:wrong'),
+          isFalse);
+    });
   });
 
   group('verifyAuthMode — the VERIFIED submit-time try-both', () {
@@ -681,9 +590,8 @@ void main() {
         final hasBearer =
             request.headers['authorization']?.startsWith('Bearer ') ?? false;
         return http.StreamedResponse(
-          Stream.value(utf8.encode(hasBearer ? _authOpen : _authUnauthorized)),
-          200,
-        );
+            Stream.value(utf8.encode(hasBearer ? _authOpen : _authUnauthorized)),
+            200);
       });
       final mode = await verifyAuthMode(
         baseUrl: 'http://h:4567',
@@ -694,44 +602,34 @@ void main() {
       expect(mode, VerifiedAuthMode.uiLogin);
     });
 
-    test(
-      'simple_login server: cookie authorises → simpleLogin, ui not tried',
-      () async {
-        var uiTried = false;
-        final mock = MockClient.streaming((request, _) async {
-          final hasCookie = (request.headers['cookie']?.isNotEmpty) ?? false;
-          return http.StreamedResponse(
-            Stream.value(
-              utf8.encode(hasCookie ? _authOpen : _authUnauthorized),
-            ),
-            200,
-          );
-        });
-        final mode = await verifyAuthMode(
-          baseUrl: 'http://h:4567',
-          client: mock,
-          obtainSimpleCookie: () async => 'JSESSIONID=abc',
-          obtainUiBearer: () async {
-            uiTried = true;
-            return 'jwt';
-          },
-        );
-        expect(mode, VerifiedAuthMode.simpleLogin);
-        expect(
-          uiTried,
-          isFalse,
-          reason: 'simple verified first → ui-login never attempted',
-        );
-      },
-    );
+    test('simple_login server: cookie authorises → simpleLogin, ui not tried',
+        () async {
+      var uiTried = false;
+      final mock = MockClient.streaming((request, _) async {
+        final hasCookie =
+            (request.headers['cookie']?.isNotEmpty) ?? false;
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(hasCookie ? _authOpen : _authUnauthorized)),
+            200);
+      });
+      final mode = await verifyAuthMode(
+        baseUrl: 'http://h:4567',
+        client: mock,
+        obtainSimpleCookie: () async => 'JSESSIONID=abc',
+        obtainUiBearer: () async {
+          uiTried = true;
+          return 'jwt';
+        },
+      );
+      expect(mode, VerifiedAuthMode.simpleLogin);
+      expect(uiTried, isFalse,
+          reason: 'simple verified first → ui-login never attempted');
+    });
 
     test('wrong credentials (neither authorises) → null', () async {
-      final mock = MockClient.streaming(
-        (_, __) async => http.StreamedResponse(
-          Stream.value(utf8.encode(_authUnauthorized)),
-          200,
-        ),
-      );
+      final mock = MockClient.streaming((_, __) async =>
+          http.StreamedResponse(
+              Stream.value(utf8.encode(_authUnauthorized)), 200));
       final mode = await verifyAuthMode(
         baseUrl: 'http://h:4567',
         client: mock,
@@ -741,27 +639,22 @@ void main() {
       expect(mode, isNull);
     });
 
-    test(
-      'simple-login throwing (bad simple creds) falls through to ui',
-      () async {
-        final mock = MockClient.streaming((request, _) async {
-          final hasBearer =
-              request.headers['authorization']?.startsWith('Bearer ') ?? false;
-          return http.StreamedResponse(
-            Stream.value(
-              utf8.encode(hasBearer ? _authOpen : _authUnauthorized),
-            ),
-            200,
-          );
-        });
-        final mode = await verifyAuthMode(
-          baseUrl: 'http://h:4567',
-          client: mock,
-          obtainSimpleCookie: () async => throw Exception('bad simple creds'),
-          obtainUiBearer: () async => 'jwt',
-        );
-        expect(mode, VerifiedAuthMode.uiLogin);
-      },
-    );
+    test('simple-login throwing (bad simple creds) falls through to ui',
+        () async {
+      final mock = MockClient.streaming((request, _) async {
+        final hasBearer =
+            request.headers['authorization']?.startsWith('Bearer ') ?? false;
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(hasBearer ? _authOpen : _authUnauthorized)),
+            200);
+      });
+      final mode = await verifyAuthMode(
+        baseUrl: 'http://h:4567',
+        client: mock,
+        obtainSimpleCookie: () async => throw Exception('bad simple creds'),
+        obtainUiBearer: () async => 'jwt',
+      );
+      expect(mode, VerifiedAuthMode.uiLogin);
+    });
   });
 }

@@ -43,14 +43,10 @@ DirectionalSwipeGestureHandler _realHandler(Axis axis) =>
 bool _hasSingleTouchRecognizer(WidgetTester tester) {
   return tester
       .widgetList<RawGestureDetector>(find.byType(RawGestureDetector))
-      .any(
-        (r) => r.gestures.keys.any(
-          (t) =>
-              t == SingleTouchPanGestureRecognizer ||
-              t == SingleTouchHorizontalDragGestureRecognizer ||
-              t == SingleTouchVerticalDragGestureRecognizer,
-        ),
-      );
+      .any((r) => r.gestures.keys.any((t) =>
+          t == SingleTouchPanGestureRecognizer ||
+          t == SingleTouchHorizontalDragGestureRecognizer ||
+          t == SingleTouchVerticalDragGestureRecognizer));
 }
 
 void main() {
@@ -58,29 +54,19 @@ void main() {
   // asserts it installs NONE of our SingleTouch* drag recognizers in vertical
   // mode (the fix) but DOES in horizontal mode.
   group('DirectionalSwipeGestureHandler vertical-mode recognizer guard', () {
-    testWidgets('vertical mode installs NO SingleTouch* recognizer (the fix)', (
-      tester,
-    ) async {
+    testWidgets('vertical mode installs NO SingleTouch* recognizer (the fix)',
+        (tester) async {
       await tester.pumpWidget(MaterialApp(home: _realHandler(Axis.vertical)));
-      expect(
-        _hasSingleTouchRecognizer(tester),
-        isFalse,
-        reason:
-            'vertical mode must not register the swipe recognizers — they '
-            'steal the single-finger drag from ZoomView and freeze iOS scroll',
-      );
+      expect(_hasSingleTouchRecognizer(tester), isFalse,
+          reason: 'vertical mode must not register the swipe recognizers — they '
+              'steal the single-finger drag from ZoomView and freeze iOS scroll');
     });
-    testWidgets('horizontal mode DOES install a SingleTouch* recognizer', (
-      tester,
-    ) async {
+    testWidgets('horizontal mode DOES install a SingleTouch* recognizer',
+        (tester) async {
       await tester.pumpWidget(MaterialApp(home: _realHandler(Axis.horizontal)));
-      expect(
-        _hasSingleTouchRecognizer(tester),
-        isTrue,
-        reason:
-            'horizontal/paged modes keep the swipe recognizers for '
-            'chapter-boundary navigation',
-      );
+      expect(_hasSingleTouchRecognizer(tester), isTrue,
+          reason: 'horizontal/paged modes keep the swipe recognizers for '
+              'chapter-boundary navigation');
     });
   });
 }

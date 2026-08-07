@@ -65,24 +65,18 @@ void main() {
       expect(readChaptersInDeleteWindow([_ch(1, isRead: true)], 0), isEmpty);
     });
 
-    test(
-      'dipping back to an early chapter keeps that one, not the furthest',
-      () {
-        final chapters = [
-          _ch(1, isRead: true, readAt: '2000'),
-          _ch(2, isRead: true, readAt: '3000'),
-          _ch(50, isRead: true, readAt: '1000'),
-        ];
+    test('dipping back to an early chapter keeps that one, not the furthest',
+        () {
+      final chapters = [
+        _ch(1, isRead: true, readAt: '2000'),
+        _ch(2, isRead: true, readAt: '3000'),
+        _ch(50, isRead: true, readAt: '1000'),
+      ];
 
-        expect(
-          readChaptersInDeleteWindow(chapters, 2),
-          {2},
-          reason:
-              'chapter 2 was read most recently even though 50 is further '
-              'along',
-        );
-      },
-    );
+      expect(readChaptersInDeleteWindow(chapters, 2), {2},
+          reason: 'chapter 2 was read most recently even though 50 is further '
+              'along');
+    });
 
     test('chapters with no read timestamp fall back to reading order', () {
       final chapters = [_ch(1, isRead: true), _ch(9, isRead: true)];
@@ -110,12 +104,8 @@ void main() {
       protected: readChaptersInDeleteWindow(chapters, 2),
     );
 
-    expect(
-      r.evict,
-      {1},
-      reason:
-          'chapter 2 is inside the keep window and must survive '
-          'regardless of which device read it',
-    );
+    expect(r.evict, {1},
+        reason: 'chapter 2 is inside the keep window and must survive '
+            'regardless of which device read it');
   });
 }

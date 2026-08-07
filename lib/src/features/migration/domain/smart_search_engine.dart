@@ -18,8 +18,8 @@ import 'string_similarity.dart';
 typedef SearchCandidate = ({int id, String title, String? thumbnailUrl});
 
 /// Searches one source for [query], returning its candidates.
-typedef SourceSearch =
-    Future<List<SearchCandidate>> Function(String sourceId, String query);
+typedef SourceSearch = Future<List<SearchCandidate>> Function(
+    String sourceId, String query);
 
 /// Best regular-search match for one title.
 class SmartSearchResult {
@@ -67,9 +67,8 @@ class SmartSearchEngine {
     int? excludeId,
   }) async {
     final extra = extraSearchParams?.trim();
-    final builtQuery = (extra != null && extra.isNotEmpty)
-        ? '$title $extra'
-        : title;
+    final builtQuery =
+        (extra != null && extra.isNotEmpty) ? '$title $extra' : title;
     final candidates = await search(sanitizeQuery(builtQuery));
     if (candidates.isEmpty) return const SmartSearchResult();
 

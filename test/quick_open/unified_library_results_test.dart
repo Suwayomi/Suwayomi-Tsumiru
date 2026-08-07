@@ -13,11 +13,8 @@ void main() {
   });
 
   test('filters by the provided predicate', () {
-    final hits = matchLibraryTitles(
-      const ['Naruto', 'Bleach'],
-      'nar',
-      (s, q) => s == 'Naruto',
-    );
+    final hits =
+        matchLibraryTitles(const ['Naruto', 'Bleach'], 'nar', (s, q) => s == 'Naruto');
     expect(hits, ['Naruto']);
   });
 
@@ -51,20 +48,15 @@ void main() {
       expect(queryUsesOperator('Source:mangadex'), isTrue);
     });
 
-    test(
-      'an unknown key is NOT an operator (titles like Re:Zero search plainly)',
-      () {
-        expect(queryUsesOperator('Re:Zero'), isFalse);
-        expect(queryUsesOperator('chapter:1 club'), isFalse);
-      },
-    );
+    test('an unknown key is NOT an operator (titles like Re:Zero search plainly)',
+        () {
+      expect(queryUsesOperator('Re:Zero'), isFalse);
+      expect(queryUsesOperator('chapter:1 club'), isFalse);
+    });
 
-    test(
-      'a {a|b} group counts as an operator (parity with the library bar)',
-      () {
-        expect(queryUsesOperator('{genre:action|genre:romance}'), isTrue);
-      },
-    );
+    test('a {a|b} group counts as an operator (parity with the library bar)', () {
+      expect(queryUsesOperator('{genre:action|genre:romance}'), isTrue);
+    });
 
     test('operators inside quoted values are not confused for plain text', () {
       // The quoted value contains a space but is one operator token.
@@ -73,14 +65,12 @@ void main() {
   });
 
   group('plainQueryText', () {
-    test(
-      'a pure operator query has no plain text (nothing to search sources for)',
-      () {
-        expect(plainQueryText('unread:true'), '');
-        expect(plainQueryText('source:x unread:true'), '');
-        expect(plainQueryText('-status:completed'), '');
-      },
-    );
+    test('a pure operator query has no plain text (nothing to search sources for)',
+        () {
+      expect(plainQueryText('unread:true'), '');
+      expect(plainQueryText('source:x unread:true'), '');
+      expect(plainQueryText('-status:completed'), '');
+    });
 
     test('plain words survive; operator tokens are stripped', () {
       expect(plainQueryText('bad'), 'bad');
@@ -88,14 +78,12 @@ void main() {
       expect(plainQueryText('the player, unread:true'), 'the player');
     });
 
-    test(
-      'quoted multi-word values stay whole and are not leaked as fragments',
-      () {
-        // Regression: a naive space-split leaked `of life"` to source search.
-        expect(plainQueryText('tag:"slice of life"'), '');
-        expect(plainQueryText('author:"Kubo Tite" bleach'), 'bleach');
-      },
-    );
+    test('quoted multi-word values stay whole and are not leaked as fragments',
+        () {
+      // Regression: a naive space-split leaked `of life"` to source search.
+      expect(plainQueryText('tag:"slice of life"'), '');
+      expect(plainQueryText('author:"Kubo Tite" bleach'), 'bleach');
+    });
 
     test('comma-separated operators are stripped, plain words kept', () {
       expect(plainQueryText('author:oda,naruto'), 'naruto');

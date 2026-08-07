@@ -9,149 +9,83 @@ import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_logic.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 
-OfflineChapter dl(
-  int id, {
-  int bytes = 100,
-  DateTime? at,
-  bool pinned = false,
-}) => OfflineChapter(
-  id: id,
-  mangaId: 1,
-  name: 'c$id',
-  chapterIndex: id,
-  isRead: false,
-  lastPageRead: 0,
-  isBookmarked: false,
-  serverIsDownloaded: true,
-  deviceState: OfflineDeviceState.downloaded,
-  pageCount: 1,
-  bytes: bytes,
-  pinned: pinned,
-  downloadedAt: at ?? DateTime(2026, 1, id),
-  progressDirty: false,
-  bookmarkDirty: false,
-  readStateDirty: false,
-  syncedIsRead: false,
-  updatedAt: DateTime(2026),
-  downloadGeneration: 0,
-);
+OfflineChapter dl(int id, {int bytes = 100, DateTime? at, bool pinned = false}) =>
+    OfflineChapter(
+      id: id, mangaId: 1, name: 'c$id', chapterIndex: id, isRead: false,
+      lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+      deviceState: OfflineDeviceState.downloaded, pageCount: 1, bytes: bytes,
+      pinned: pinned, downloadedAt: at ?? DateTime(2026, 1, id),
+      progressDirty: false, bookmarkDirty: false, readStateDirty: false,
+      syncedIsRead: false,
+      updatedAt: DateTime(2026), downloadGeneration: 0,
+    );
 
 void main() {
   final now = DateTime(2026, 3, 1);
 
   test('evicts downloaded chapters not in the desired set (non-pinned)', () {
     final r = applySafetyNets(
-      downloaded: [dl(1), dl(2)],
-      desired: {1},
-      nets: SafetyNetConfig.off,
-      now: now,
-    );
+      downloaded: [dl(1), dl(2)], desired: {1}, nets: SafetyNetConfig.off, now: now);
     expect(r.evict, {2});
     expect(r.overCapWarning, false);
   });
 
   test('session-read chapters dodge rule eviction', () {
     final r = applySafetyNets(
-      downloaded: [dl(1), dl(2)],
-      desired: {1},
-      nets: SafetyNetConfig.off,
-      now: now,
-      protected: {2},
-    );
-    expect(
-      r.evict,
-      isEmpty,
-      reason:
-          'a chapter read this session must survive its manga\'s '
-          'keep-rule until the next launch',
-    );
+      downloaded: [dl(1), dl(2)], desired: {1}, nets: SafetyNetConfig.off,
+      now: now, protected: {2});
+    expect(r.evict, isEmpty,
+        reason: 'a chapter read this session must survive its manga\'s '
+            'keep-rule until the next launch');
   });
 
   test('storage cap still evicts session-read chapters', () {
-    final nets = SafetyNetConfig(
-      timeEvictEnabled: false,
-      keepDays: 30,
-      storageCapEnabled: true,
-      storageCapBytes: 150,
-    );
+    final nets = SafetyNetConfig(timeEvictEnabled: false, keepDays: 30,
+        storageCapEnabled: true, storageCapBytes: 150);
     final r = applySafetyNets(
       downloaded: [
         dl(1, bytes: 100, at: DateTime(2026, 1, 1)),
         dl(2, bytes: 100, at: DateTime(2026, 1, 2)),
       ],
-      desired: {2},
-      nets: nets,
-      now: now,
-      protected: {1},
-    );
-    expect(r.evict, {1}, reason: 'session protection yields to space pressure');
+      desired: {2}, nets: nets, now: now, protected: {1});
+    expect(r.evict, {1},
+        reason: 'session protection yields to space pressure');
   });
 
   test('never evicts pinned, even if not desired', () {
     final r = applySafetyNets(
-      downloaded: [dl(1, pinned: true)],
-      desired: {},
-      nets: SafetyNetConfig.off,
-      now: now,
-    );
+      downloaded: [dl(1, pinned: true)], desired: {}, nets: SafetyNetConfig.off, now: now);
     expect(r.evict, isEmpty);
   });
 
   test('time-net evicts non-pinned older than keepDays', () {
-    final nets = SafetyNetConfig(
-      timeEvictEnabled: true,
-      keepDays: 10,
-      storageCapEnabled: false,
-      storageCapBytes: 0,
-    );
+    final nets = SafetyNetConfig(timeEvictEnabled: true, keepDays: 10,
+        storageCapEnabled: false, storageCapBytes: 0);
     final r = applySafetyNets(
-      downloaded: [
-        dl(1, at: DateTime(2026, 1, 1)),
-        dl(2, at: now),
-      ],
-      desired: {1, 2},
-      nets: nets,
-      now: now,
-    );
+      downloaded: [dl(1, at: DateTime(2026, 1, 1)), dl(2, at: now)],
+      desired: {1, 2}, nets: nets, now: now);
     expect(r.evict, {1}); // ch1 ~59 days old > 10
   });
 
-  test(
-    'storage cap evicts oldest non-pinned first; warns if only pinned remain',
-    () {
-      final nets = SafetyNetConfig(
-        timeEvictEnabled: false,
-        keepDays: 30,
-        storageCapEnabled: true,
-        storageCapBytes: 150,
-      );
-      final r = applySafetyNets(
-        downloaded: [
-          dl(1, bytes: 100, at: DateTime(2026, 1, 1)),
-          dl(2, bytes: 100, at: DateTime(2026, 1, 2), pinned: true),
-        ],
-        desired: {1, 2},
-        nets: nets,
-        now: now,
-      );
-      expect(r.evict, {1}); // evict oldest non-pinned to get under 150
-      expect(r.overCapWarning, false);
-    },
-  );
+  test('storage cap evicts oldest non-pinned first; warns if only pinned remain', () {
+    final nets = SafetyNetConfig(timeEvictEnabled: false, keepDays: 30,
+        storageCapEnabled: true, storageCapBytes: 150);
+    final r = applySafetyNets(
+      downloaded: [
+        dl(1, bytes: 100, at: DateTime(2026, 1, 1)),
+        dl(2, bytes: 100, at: DateTime(2026, 1, 2), pinned: true),
+      ],
+      desired: {1, 2}, nets: nets, now: now);
+    expect(r.evict, {1});          // evict oldest non-pinned to get under 150
+    expect(r.overCapWarning, false);
+  });
 
   test('over cap with only pinned left -> warning, no eviction', () {
-    final nets = SafetyNetConfig(
-      timeEvictEnabled: false,
-      keepDays: 30,
-      storageCapEnabled: true,
-      storageCapBytes: 50,
-    );
+    final nets = SafetyNetConfig(timeEvictEnabled: false, keepDays: 30,
+        storageCapEnabled: true, storageCapBytes: 50);
     final r = applySafetyNets(
       downloaded: [dl(1, bytes: 100, pinned: true)],
-      desired: {1},
-      nets: nets,
-      now: now,
-    );
+      desired: {1}, nets: nets, now: now);
     expect(r.evict, isEmpty);
     expect(r.overCapWarning, true);
   });

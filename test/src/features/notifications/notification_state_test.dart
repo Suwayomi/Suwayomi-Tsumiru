@@ -12,22 +12,19 @@ import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.
 NotificationWorkerConfig config({
   Set<int> include = const {},
   Set<int> exclude = const {},
-}) => NotificationWorkerConfig(
-  serverId: 's',
-  endpoint: const NotificationEndpoint(baseUrl: 'http://x'),
-  newChaptersEnabled: true,
-  includedCategoryIds: include,
-  excludedCategoryIds: exclude,
-  hideContent: false,
-);
+}) =>
+    NotificationWorkerConfig(
+      serverId: 's',
+      endpoint: const NotificationEndpoint(baseUrl: 'http://x'),
+      newChaptersEnabled: true,
+      includedCategoryIds: include,
+      excludedCategoryIds: exclude,
+      hideContent: false,
+    );
 
 void main() {
   group('category scope', () {
-    final mangaCats = {
-      10: {1},
-      20: {2},
-      30: {1, 2},
-    };
+    final mangaCats = {10: {1}, 20: {2}, 30: {1, 2}};
 
     test('no include/exclude -> null (all series)', () {
       expect(config().allowedMangaIds(mangaCats), isNull);
@@ -42,9 +39,7 @@ void main() {
     });
 
     test('exclude wins over include', () {
-      expect(config(include: {1}, exclude: {2}).allowedMangaIds(mangaCats), {
-        10,
-      });
+      expect(config(include: {1}, exclude: {2}).allowedMangaIds(mangaCats), {10});
     });
   });
 

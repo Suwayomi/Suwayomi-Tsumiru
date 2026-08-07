@@ -12,8 +12,8 @@ import 'concurrency.dart';
 import 'migration_models.dart';
 
 /// Finds a target for one source, through the runner's rate limiter.
-typedef BulkMatcher =
-    Future<MatchOutcome> Function(BulkMigrationEntry entry, CancelToken token);
+typedef BulkMatcher = Future<MatchOutcome> Function(
+    BulkMigrationEntry entry, CancelToken token);
 
 /// Flushes a source's unsynced offline reads and reports whether it's now safe
 /// to remove (clean + reachable). Injected so the offline specifics live in the

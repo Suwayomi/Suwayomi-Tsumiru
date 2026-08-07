@@ -36,27 +36,22 @@ void main() {
       final ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
       List<int> sortedWith(int seed) =>
-          [...ids]
-            ..sort((a, b) => randomKey(a, seed).compareTo(randomKey(b, seed)));
+          [...ids]..sort((a, b) => randomKey(a, seed).compareTo(randomKey(b, seed)));
 
       final order0 = sortedWith(0);
       final order1 = sortedWith(1);
 
       // The two orderings must differ (with overwhelmingly high probability for
       // the Knuth-multiplicative hash used; the ids 1..10 are known to differ).
-      expect(
-        order0,
-        isNot(equals(order1)),
-        reason: 'seed 0 and seed 1 should produce different orderings',
-      );
+      expect(order0, isNot(equals(order1)),
+          reason: 'seed 0 and seed 1 should produce different orderings');
     });
 
     test('same seed reproduces the same ordering', () {
       final ids = [10, 20, 30, 40, 50];
 
       List<int> sortedWith(int seed) =>
-          [...ids]
-            ..sort((a, b) => randomKey(a, seed).compareTo(randomKey(b, seed)));
+          [...ids]..sort((a, b) => randomKey(a, seed).compareTo(randomKey(b, seed)));
 
       expect(sortedWith(7), equals(sortedWith(7)));
       expect(sortedWith(42), equals(sortedWith(42)));

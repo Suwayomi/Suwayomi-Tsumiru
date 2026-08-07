@@ -34,24 +34,25 @@ class _FakeMangaWithId extends MangaWithId {
 }
 
 MangaDto _manga() => Fragment$MangaDto(
-  id: 1,
-  title: 'Test Manga',
-  bookmarkCount: 0,
-  chapters: Fragment$MangaDto$chapters(totalCount: 0),
-  downloadCount: 0,
-  genre: const [],
-  inLibrary: true,
-  inLibraryAt: '0',
-  initialized: true,
-  meta: const [],
-  sourceId: '1',
-  status: Enum$MangaStatus.ONGOING,
-  categories: Fragment$MangaDto$categories(nodes: const []),
-  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-  unreadCount: 0,
-  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-  url: '/manga/1',
-);
+      id: 1,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 0),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: const [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 0,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/1',
+    );
 
 /// Mimics ReaderWrapper's gear tap for the dismiss-flush test.
 class _SheetHost extends ConsumerWidget {
@@ -100,9 +101,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -124,9 +124,8 @@ void main() {
       )
       .first;
 
-  testWidgets('defaults: 4 toggles in Komikku order, no sliders, no chips', (
-    tester,
-  ) async {
+  testWidgets('defaults: 4 toggles in Komikku order, no sliders, no chips',
+      (tester) async {
     await pumpTab(tester);
 
     double dy(String text) => tester.getTopLeft(find.text(text)).dy;
@@ -138,9 +137,8 @@ void main() {
     expect(find.byType(FilterChip), findsNothing);
   });
 
-  testWidgets('brightness toggle writes the provider and reveals its slider', (
-    tester,
-  ) async {
+  testWidgets('brightness toggle writes the provider and reveals its slider',
+      (tester) async {
     await pumpTab(tester);
 
     await tester.tap(find.text('Custom brightness'));
@@ -150,40 +148,33 @@ void main() {
     expect(find.byType(Slider), findsOneWidget);
   });
 
-  testWidgets('brightness drag: mid-drag writes ONLY the preview channel; '
+  testWidgets(
+      'brightness drag: mid-drag writes ONLY the preview channel; '
       'onChangeEnd commits and clears it', (tester) async {
     await pumpTab(tester, prefValues: {'customBrightness': true});
     expect(find.byType(Slider), findsOneWidget);
 
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(Slider)),
-    );
+    final gesture =
+        await tester.startGesture(tester.getCenter(find.byType(Slider)));
     await tester.pump();
     await gesture.moveBy(const Offset(80, 0));
     await tester.pump();
 
     final draft = readerBrightnessPreview.value;
     expect(draft, isNotNull, reason: 'drag previews through the channel');
-    expect(
-      container(tester).read(customBrightnessValueProvider) ?? 0,
-      0,
-      reason: 'no riverpod write mid-drag',
-    );
+    expect(container(tester).read(customBrightnessValueProvider) ?? 0, 0,
+        reason: 'no riverpod write mid-drag');
 
     await gesture.up();
     await tester.pumpAndSettle();
 
-    expect(
-      container(tester).read(customBrightnessValueProvider),
-      draft,
-      reason: 'onChangeEnd commits the final draft',
-    );
+    expect(container(tester).read(customBrightnessValueProvider), draft,
+        reason: 'onChangeEnd commits the final draft');
     expect(readerBrightnessPreview.value, isNull);
   });
 
-  testWidgets('color filter toggle reveals RGBA sliders + 6 blend chips', (
-    tester,
-  ) async {
+  testWidgets('color filter toggle reveals RGBA sliders + 6 blend chips',
+      (tester) async {
     await pumpTab(tester, prefValues: {'customColorFilter': true});
 
     double dy(String text) => tester.getTopLeft(find.text(text)).dy;
@@ -205,11 +196,8 @@ void main() {
       'Dodge / Lighten',
       'Burn / Darken',
     ]) {
-      expect(
-        find.widgetWithText(FilterChip, label),
-        findsOneWidget,
-        reason: 'all 6 blend chips ship ungated',
-      );
+      expect(find.widgetWithText(FilterChip, label), findsOneWidget,
+          reason: 'all 6 blend chips ship ungated');
     }
   });
 
@@ -230,13 +218,14 @@ void main() {
     );
   });
 
-  testWidgets('red slider commit packs the R channel into the ARGB pref, '
+  testWidgets(
+      'red slider commit packs the R channel into the ARGB pref, '
       'preserving the other channels', (tester) async {
     const committed = 0xFF000010; // alpha 255, blue 16
-    await pumpTab(
-      tester,
-      prefValues: {'customColorFilter': true, 'colorFilterValue': committed},
-    );
+    await pumpTab(tester, prefValues: {
+      'customColorFilter': true,
+      'colorFilterValue': committed,
+    });
 
     // First slider is Red (order R/G/B/A).
     final red = find.byType(Slider).first;
@@ -247,16 +236,11 @@ void main() {
 
     final draft = readerColorFilterPreview.value;
     expect(draft, isNotNull);
-    expect(
-      draft! & 0xFF00FFFF,
-      committed,
-      reason: 'draft only replaces the red byte',
-    );
-    expect(
-      container(tester).read(colorFilterValueProvider) ?? committed,
-      committed,
-      reason: 'no riverpod write mid-drag',
-    );
+    expect(draft! & 0xFF00FFFF, committed,
+        reason: 'draft only replaces the red byte');
+    expect(container(tester).read(colorFilterValueProvider) ?? committed,
+        committed,
+        reason: 'no riverpod write mid-drag');
 
     await gesture.up();
     await tester.pumpAndSettle();
@@ -265,9 +249,8 @@ void main() {
     expect(readerColorFilterPreview.value, isNull);
   });
 
-  testWidgets('grayscale + inverted toggles write their providers', (
-    tester,
-  ) async {
+  testWidgets('grayscale + inverted toggles write their providers',
+      (tester) async {
     await pumpTab(tester);
 
     await tester.tap(find.text('Grayscale'));
@@ -279,9 +262,8 @@ void main() {
     expect(container(tester).read(invertedColorsProvider), isTrue);
   });
 
-  testWidgets('sheet dismissal flushes a live draft to the provider', (
-    tester,
-  ) async {
+  testWidgets('sheet dismissal flushes a live draft to the provider',
+      (tester) async {
     SharedPreferences.setMockInitialValues({'customBrightness': true});
     final prefs = await SharedPreferences.getInstance();
     final visibility = ValueNotifier(true);
@@ -291,9 +273,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          mangaWithIdProvider(
-            mangaId: 1,
-          ).overrideWith(() => _FakeMangaWithId(_manga())),
+          mangaWithIdProvider(mangaId: 1)
+              .overrideWith(() => _FakeMangaWithId(_manga())),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -316,11 +297,8 @@ void main() {
     final scope = ProviderScope.containerOf(
       tester.element(find.byType(_SheetHost)),
     );
-    expect(
-      scope.read(customBrightnessValueProvider),
-      -30,
-      reason: 'dismiss flushes the interrupted draft',
-    );
+    expect(scope.read(customBrightnessValueProvider), -30,
+        reason: 'dismiss flushes the interrupted draft');
     expect(readerBrightnessPreview.value, isNull);
   });
 }

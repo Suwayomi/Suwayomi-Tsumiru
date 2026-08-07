@@ -14,13 +14,14 @@ TapAction _at(
   required ReaderNavigationLayout layout,
   TapInvert tapInvert = TapInvert.none,
   bool smaller = false,
-}) => tapActionForZone(
-  position: Offset(x, y),
-  size: _size,
-  layout: layout,
-  tapInvert: tapInvert,
-  smallerTapZones: smaller,
-);
+}) =>
+    tapActionForZone(
+      position: Offset(x, y),
+      size: _size,
+      layout: layout,
+      tapInvert: tapInvert,
+      smallerTapZones: smaller,
+    );
 
 void main() {
   group('Kindle-ish', () {
@@ -42,10 +43,8 @@ void main() {
     test('smaller tap zones shrink the menu band, growing the active area', () {
       // y = 180 is inside the default 200px menu band but outside the 150px one.
       expect(_at(150, 180, layout: layout), TapAction.menu);
-      expect(
-        _at(150, 180, layout: layout, smaller: true),
-        isNot(TapAction.menu),
-      );
+      expect(_at(150, 180, layout: layout, smaller: true),
+          isNot(TapAction.menu));
     });
   });
 
@@ -74,14 +73,10 @@ void main() {
     });
 
     test('horizontal inversion swaps the two edges', () {
-      expect(
-        _at(20, 300, layout: layout, tapInvert: TapInvert.horizontal),
-        TapAction.next,
-      );
-      expect(
-        _at(280, 300, layout: layout, tapInvert: TapInvert.horizontal),
-        TapAction.previous,
-      );
+      expect(_at(20, 300, layout: layout, tapInvert: TapInvert.horizontal),
+          TapAction.next);
+      expect(_at(280, 300, layout: layout, tapInvert: TapInvert.horizontal),
+          TapAction.previous);
     });
   });
 
@@ -89,14 +84,10 @@ void main() {
     test('disabled and an unresolved default both just open the menu', () {
       for (final x in [20.0, 150.0, 280.0]) {
         for (final y in [20.0, 300.0, 580.0]) {
-          expect(
-            _at(x, y, layout: ReaderNavigationLayout.disabled),
-            TapAction.menu,
-          );
-          expect(
-            _at(x, y, layout: ReaderNavigationLayout.defaultNavigation),
-            TapAction.menu,
-          );
+          expect(_at(x, y, layout: ReaderNavigationLayout.disabled),
+              TapAction.menu);
+          expect(_at(x, y, layout: ReaderNavigationLayout.defaultNavigation),
+              TapAction.menu);
         }
       }
     });
