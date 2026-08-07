@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.dart';
@@ -105,5 +107,30 @@ void main() {
     expect(s.readSpec(), isNull);
     expect(s.readLedger('srv-1').cursor.fetchedAt, 0);
     expect(s.enabled, isTrue);
+  });
+
+  test('chapter generations survive the spec round-trip', () {
+    // A chapter deleted once carries a bumped generation. Staging written at
+    // the wrong one is rejected at launch AFTER the obligation has been struck
+    // off the ledger, so the download is simply lost.
+    const spec = CatchupMangaSpec(
+      mangaId: 1,
+      keepRule: OfflineKeepRule.all,
+      keepUnreadCount: 3,
+      onDeviceChapterIds: {},
+      pinnedChapterIds: {},
+      chapterGenerations: {42: 3},
+    );
+
+    final restored = CatchupMangaSpec.fromJson(
+      jsonDecode(jsonEncode(spec.toJson())) as Map<String, Object?>,
+    );
+
+    expect(restored.generationOf(42), 3);
+    expect(
+      restored.generationOf(99),
+      0,
+      reason: 'a chapter nobody deleted defaults to 0',
+    );
   });
 }

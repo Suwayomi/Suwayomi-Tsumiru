@@ -161,6 +161,7 @@ Future<bool> runCatchupDownloads({
           spec: spec,
           row: row,
           mangaId: mangaId,
+          generation: mangaSpec.generationOf(chapterId),
         );
         if (staged > 0) {
           downloaded++;
@@ -330,6 +331,7 @@ Future<int> _downloadOneChapter({
   required CatchupWorkSpec spec,
   required OfflineChapter row,
   required int mangaId,
+  required int generation,
 }) async {
   final urls = await resolveChapterPageUrls(
     target: target,
@@ -340,9 +342,11 @@ Future<int> _downloadOneChapter({
   if (urls == null || urls.isEmpty) return 0;
 
   final indices = [for (var i = 0; i < urls.length; i++) i];
-  // Generation 0: the row doesn't exist yet, so it will be created at
-  // generation 0 by the adoption pass. A chapter drift already knows about is
-  // never routed here — it is `present` and skipped.
+  // The generation comes from the spec, not a hardcoded 0: a chapter that was
+  // deleted once and re-queued keeps a bumped generation on its row, and
+  // staging stamped 0 would be rejected at launch — after this run had already
+  // struck the obligation off the ledger. A chapter drift has never seen has
+  // no entry, so it gets 0, matching the row adoption creates.
   //
   // Reuse staging that matches, the way the foreground downloaders do. These
   // runs are cut short constantly — the WorkManager budget, a dropped
@@ -351,7 +355,7 @@ Future<int> _downloadOneChapter({
   final existing = await store.readManifest(mangaId, row.id);
   var staged = const <int>{};
   if (existing != null &&
-      existing.generation == 0 &&
+      existing.generation == generation &&
       existing.coversSameIndices(indices)) {
     staged = await store.stagedPageIndices(mangaId, row.id);
   } else {
@@ -359,7 +363,7 @@ Future<int> _downloadOneChapter({
     await store.beginChapter(
       mangaId,
       row.id,
-      ChapterManifest(generation: 0, indices: indices),
+      ChapterManifest(generation: generation, indices: indices),
     );
   }
 

@@ -57,6 +57,11 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) async {
             for (final c in chapters)
               if (c.pinned) c.id,
           },
+          // Only the deleted-at-least-once chapters; everything else is 0.
+          chapterGenerations: {
+            for (final c in chapters)
+              if (c.downloadGeneration != 0) c.id: c.downloadGeneration,
+          },
         ),
       );
     }

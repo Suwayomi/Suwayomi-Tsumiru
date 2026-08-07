@@ -21,6 +21,7 @@ class CatchupMangaSpec {
     required this.keepUnreadCount,
     required this.onDeviceChapterIds,
     required this.pinnedChapterIds,
+    this.chapterGenerations = const {},
   });
 
   final int mangaId;
@@ -28,6 +29,17 @@ class CatchupMangaSpec {
   final int keepUnreadCount;
   final Set<int> onDeviceChapterIds;
   final Set<int> pinnedChapterIds;
+
+  /// Download generation per chapter, for the ones that have been deleted at
+  /// least once. Staging the worker writes has to carry the generation its row
+  /// actually holds, or the commit at launch rejects it as belonging to a
+  /// download that was superseded — and the work is thrown away after the
+  /// obligation has already been marked done. Absent means 0, the default for
+  /// a chapter nobody has deleted.
+  final Map<int, int> chapterGenerations;
+
+  /// The generation to stamp on a download of [chapterId].
+  int generationOf(int chapterId) => chapterGenerations[chapterId] ?? 0;
 
   Map<String, Object?> toJson() => {
     'mangaId': mangaId,
@@ -37,6 +49,7 @@ class CatchupMangaSpec {
     'keepUnreadCount': keepUnreadCount,
     'onDevice': onDeviceChapterIds.toList(),
     'pinned': pinnedChapterIds.toList(),
+    'gens': {for (final e in chapterGenerations.entries) '${e.key}': e.value},
   };
 
   factory CatchupMangaSpec.fromJson(Map<String, Object?> j) => CatchupMangaSpec(
@@ -51,6 +64,11 @@ class CatchupMangaSpec {
     },
     pinnedChapterIds: {
       for (final id in (j['pinned'] as List? ?? const [])) (id as num).toInt(),
+    },
+    chapterGenerations: {
+      for (final e in (j['gens'] as Map? ?? const {}).entries)
+        if (int.tryParse('${e.key}') case final id?)
+          id: (e.value as num).toInt(),
     },
   );
 }
