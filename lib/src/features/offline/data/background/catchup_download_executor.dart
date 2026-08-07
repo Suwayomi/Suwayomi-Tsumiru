@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../notifications/data/notification_state_store.dart';
 import '../chapter_manifest.dart';
 import '../offline_database.dart';
+import '../offline_page_store.dart';
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
 import '../offline_types.dart';
@@ -26,11 +27,6 @@ import 'catchup_work_spec.dart';
 /// headroom rather than get killed mid-write.
 const _maxChaptersPerRun = 10;
 const _runBudget = Duration(minutes: 7);
-
-// A sentinel file used to stand in for "this chapter finished", because bare
-// page files proved nothing about completeness. The staging manifest records
-// the expected page set now, so completeness is a property of the directory
-// itself and the sentinel has nothing left to say.
 
 /// Download the ledger's obligations inside the WorkManager task. Returns
 /// false only on transient failure (scheduler retries).
@@ -120,7 +116,7 @@ Future<bool> runCatchupDownloads({
       // Present = every truth the executor can see without drift.
       final present = <int>{
         ...mangaSpec.onDeviceChapterIds,
-        ...await _loggedOrStaged(log, store, mangaId, desired),
+        ...await _loggedOrCommitted(log, store, mangaId, desired),
       };
 
       final serverFetch = {...ledger.pendingServerFetch};
@@ -196,9 +192,17 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) => ledger.copyWith(
       },
     );
 
-/// Chapters already recorded in the un-replayed log, or sitting in staging
-/// fully downloaded — work the spec's snapshot can't know about yet.
-Future<Set<int>> _loggedOrStaged(
+/// Chapters already recorded in the un-replayed log, or already committed on
+/// disk — work the spec's snapshot can't know about yet.
+///
+/// Deliberately NOT "staging looks complete". Staging fills before the adoption
+/// record is written, so a worker killed in that window would leave a directory
+/// that satisfies the obligation while nothing durable claims it: the ledger
+/// entry would be dropped here, and replay — finding files with no row and no
+/// record — would delete them. The chapter would simply vanish from the queue.
+/// A committed directory is the safe equivalent, because only an adoption that
+/// already replayed could have produced one.
+Future<Set<int>> _loggedOrCommitted(
   BackgroundCompletionLog log,
   IoOfflinePageStore store,
   int mangaId,
@@ -211,10 +215,11 @@ Future<Set<int>> _loggedOrStaged(
   }
   for (final chapterId in candidates) {
     if (present.contains(chapterId)) continue;
-    final manifest = await store.readManifest(mangaId, chapterId);
-    if (manifest == null) continue;
-    final staged = await store.stagedPageIndices(mangaId, chapterId);
-    if (manifest.indices.every(staged.contains)) present.add(chapterId);
+    final committed = await store.inspectCommitted(mangaId, chapterId);
+    if (committed.state == ChapterDirState.complete ||
+        committed.state == ChapterDirState.legacy) {
+      present.add(chapterId);
+    }
   }
   return present;
 }
