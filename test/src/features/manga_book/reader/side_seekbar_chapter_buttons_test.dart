@@ -4,10 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
-// The vertical side seekbar's two buttons used to jump to the first/last page
-// of the chapter, while the paged reader's identical glyphs changed chapter.
-// Same icon, two meanings. Both now change chapter, matching Komikku's
-// ChapterNavigatorVert.
+// Regression guard for #348: these buttons used to seek within the chapter.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

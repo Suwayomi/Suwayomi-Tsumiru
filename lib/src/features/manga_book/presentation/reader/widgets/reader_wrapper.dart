@@ -427,10 +427,10 @@ class ReaderWrapper extends HookConsumerWidget {
       return true;
     }
 
-    /// [openAtEnd] belongs to backward boundary crossings, where the reader is
-    /// still moving through the story and the last page is the next thing they
-    /// should see. An explicit "previous chapter" command resumes that chapter
-    /// instead, matching Komikku's loadPreviousChapter.
+    // openAtEnd belongs to backward boundary crossings, where the reader is
+    // still moving through the story and the last page is the next thing they
+    // should see. An explicit "previous chapter" command resumes that chapter
+    // instead, matching Komikku's loadPreviousChapter.
     bool pushPreviousChapter({bool openAtEnd = false}) {
       if (nextPrevChapterPair?.second == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
