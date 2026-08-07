@@ -334,9 +334,10 @@ class DownloadTaskHandler extends TaskHandler {
   }
 
   /// Open (or adopt) the chapter's staging directory, returning the pages
-  /// already there. Staging from a different page list or an older generation
-  /// belongs to a download this one supersedes, so it is dropped rather than
-  /// merged into.
+  /// already there. Only staging that positively matches this download is
+  /// reused; a different page list, an older generation, or an unreadable
+  /// manifest all mean the files belong to some other attempt, so they are
+  /// wiped rather than merged into.
   Future<Set<int>> _openStaging(
     int mangaId,
     int chapterId,
@@ -349,7 +350,7 @@ class DownloadTaskHandler extends TaskHandler {
         existing.coversSameIndices(indices)) {
       return _store.stagedPageIndices(mangaId, chapterId);
     }
-    if (existing != null) await _store.deleteStaging(mangaId, chapterId);
+    await _store.deleteStaging(mangaId, chapterId);
     await _store.beginChapter(
       mangaId,
       chapterId,

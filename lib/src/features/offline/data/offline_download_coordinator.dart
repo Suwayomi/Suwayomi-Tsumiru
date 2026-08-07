@@ -316,10 +316,11 @@ class OfflineDownloadCoordinator {
   /// already there.
   ///
   /// Staging survives an interrupted run, which is what makes a resume cheap.
-  /// It is dropped and restarted when it describes a different chapter than the
-  /// one we just resolved — a different page set, or a generation from before a
-  /// delete — because mixing two page sets in one directory would commit a
-  /// chapter assembled from both.
+  /// Anything we can't positively identify as this exact download is wiped
+  /// first: a different page set, a generation from before a delete, or a
+  /// manifest too damaged to read. Adopting files on any weaker evidence would
+  /// let a later resume count them as ours and commit a chapter assembled from
+  /// two different downloads.
   Future<Set<int>> _openStaging(
     int mangaId,
     int chapterId,
@@ -335,8 +336,8 @@ class OfflineDownloadCoordinator {
     if (existing != null) {
       logger.i('Offline: restarting staging for chapter $chapterId '
           '(page list or generation changed)');
-      await store.deleteStaging(mangaId, chapterId);
     }
+    await store.deleteStaging(mangaId, chapterId);
     await store.beginChapter(
       mangaId,
       chapterId,

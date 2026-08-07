@@ -111,6 +111,23 @@ void main() {
         reason: 'every page re-fetched against the fresh list');
   });
 
+  test('staging with an unreadable manifest is wiped, never adopted', () async {
+    await seedChapter(1, 7, 3);
+    // Page files survived but the manifest didn't (torn on the crash that
+    // ended the last run). Nothing identifies which download they belong to,
+    // so they must not be counted as already-downloaded.
+    store.staged[1] = {0: 99, 1: 99};
+
+    await coord().enqueueChapter((await db.chapterById(1))!);
+
+    expect(store.pages.keys.toSet(), {'1/0', '1/1', '1/2'},
+        reason: 'every page re-fetched rather than trusting orphaned files');
+    expect((await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloaded);
+    expect(store.committed[1]!.values, everyElement(3),
+        reason: 'committed bytes are this run\'s pages, not the orphans');
+  });
+
   test('a chapter left incomplete publishes nothing', () async {
     await seedChapter(1, 7, 3);
     // Cancelled once the download is under way, so pages are missing when the
