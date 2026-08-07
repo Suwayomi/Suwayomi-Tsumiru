@@ -2634,12 +2634,12 @@
     "@serverUnreachableAction": {
         "description": "Button that opens the connection settings screen"
     },
-    "clearCrashLog": "Clear crash log",
-    "copyCrashLog": "Copy crash log",
-    "copyCrashLogSubtitle": "For bug reports — copies the latest error log to the clipboard",
-    "crashLogCleared": "Crash log cleared",
-    "crashLogCopied": "Crash log copied to clipboard",
-    "noCrashLog": "No crash log found",
+    "clearCrashLog": "Clear debug log",
+    "copyCrashLog": "Copy debug log",
+    "copyCrashLogSubtitle": "For bug reports — copies recent errors and reader diagnostics",
+    "crashLogCleared": "Debug log cleared",
+    "crashLogCopied": "Debug log copied to clipboard",
+    "noCrashLog": "No debug log found",
     "serverUrl": "Server URL",
     "serverUrlHintText": "Server url",
     "serverVersion": "Server version",

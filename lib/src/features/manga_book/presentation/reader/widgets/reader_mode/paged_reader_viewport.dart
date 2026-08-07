@@ -13,6 +13,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../../constants/enum.dart';
+import '../../../../../../utils/crash/diagnostics.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../reader_wrapper.dart';
 import 'double_page_view.dart';
@@ -20,6 +21,39 @@ import 'paged_display_window.dart';
 import 'paged_spread_mapping.dart';
 
 enum _DragOwner { page, pager }
+
+/// Captured at the drop, not reconstructed later: a settle writes its
+/// intermediate positions into `_dragOffset`, so the resting offset alone can't
+/// tell an abandoned turn from an unsettled drag.
+class _StrandRecord {
+  const _StrandRecord({
+    required this.target,
+    required this.offset,
+    required this.extent,
+    required this.generation,
+    required this.owner,
+    required this.stop,
+    required this.interrupted,
+    required this.at,
+  });
+
+  final double target;
+  final double offset;
+  final double extent;
+  final int generation;
+  final String owner;
+  final String stop;
+  final bool interrupted;
+  final DateTime at;
+
+  String describe() {
+    final fraction = extent > 0 ? (target / extent) : 0;
+    return 'stop=$stop owner=$owner gen=$generation '
+        'targetPages=${fraction.toStringAsFixed(2)} '
+        'atProgress=${(extent > 0 ? offset / extent : 0).toStringAsFixed(3)} '
+        'interrupted=$interrupted';
+  }
+}
 
 enum _PanDirection { left, right, up, down }
 
@@ -44,6 +78,12 @@ class PagedReaderController {
   bool get isAtFirst => _state?.isAtFirstDisplay ?? false;
 
   bool get isAtLast => _state?.isAtLastDisplay ?? false;
+
+  /// Strands the pager [progress] of a turn from its slot. Test-only, and the
+  /// only way in: every reachable path that abandons a turn now re-rests the
+  /// pager, which is why the reported stranding has never been traced.
+  @visibleForTesting
+  void debugStrand(double progress) => _state?._debugStrand(progress);
 }
 
 /// Continuous multi-chapter paged viewport.
@@ -168,6 +208,14 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   static const Duration _doubleTapZoomDuration = Duration(milliseconds: 200);
   static const Curve _settleCurve = Curves.easeOutCubic;
 
+  /// Far above [_pageTurnThreshold] on purpose: that one reads release intent,
+  /// which a stranding gives no evidence of. Below this we snap back — repeating
+  /// a page is recoverable, skipping one is not.
+  static const double _restCommitThreshold = 0.9;
+
+  static const Duration _diagnosticInterval = Duration(seconds: 5);
+  static const int _maxDiagnosticsPerSession = 20;
+
   late int _displayIndex;
   late final AnimationController _pageAnimation;
   late final AnimationController _panAnimation;
@@ -178,6 +226,18 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// Bumped whenever a turn in flight is abandoned, so its completion can't
   /// commit a target that no longer matches where the pager ended up.
   int _motionGeneration = 0;
+
+  /// Set while a settle owes a completion. Between an animation ending and its
+  /// completion microtask the pager legitimately sits a full page from its slot,
+  /// and the rest guard would pre-empt the commit.
+  bool _commitPending = false;
+
+  /// Recorded at each stop rather than inferred: the touch path stops the
+  /// animation directly, not via [_abandonMotion], so one guess goes stale.
+  String _lastMotionStop = 'none';
+  _StrandRecord? _strand;
+  DateTime? _lastDiagnosticAt;
+  int _diagnosticCount = 0;
   Size _viewportSize = Size.zero;
   final Map<int, Offset> _pointers = {};
   // Keyed by (chapterId, page identity), not display index — a late wide page
@@ -306,7 +366,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void _reanchor(PagedDisplayWindow oldWindow) {
     // In-flight motion still targets the OLD window.
-    _abandonMotion();
+    _abandonMotion('reanchor');
 
     final item = (_displayIndex >= 0 && _displayIndex < oldWindow.length)
         ? oldWindow.items[_displayIndex]
@@ -344,8 +404,12 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   /// left running writes its old position over wherever we land next, then
   /// finishes by committing the page IT was aiming at; a zoom left running
   /// keeps scaling a page that is no longer the one on screen.
-  void _abandonMotion() {
+  void _abandonMotion(String reason) {
     _motionGeneration++;
+    // Nothing takes over here, so no completion is owed — leaving this set would
+    // mute the rest guard for good.
+    _commitPending = false;
+    _lastMotionStop = reason;
     _pageAnimation.stop();
     _pageTween = null;
     _stopPanAnimation();
@@ -353,7 +417,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
   }
 
   void jumpToRaw(int rawIndex) {
-    _abandonMotion();
+    _abandonMotion('seek');
     final chapterId = _currentChapterId();
     final target = chapterId == null
         ? -1
@@ -375,7 +439,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
 
   void moveByCommand(int delta) {
     if (delta == 0 || _pageAnimation.isAnimating) return;
-    _abandonMotion();
+    _abandonMotion('command');
     if (widget.navigateToPan && _panCurrentPage(_commandPanDirection(delta))) {
       return;
     }
@@ -484,6 +548,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
           _panAnimation.isAnimating ||
           _zoomAnimation.isAnimating;
     }
+    if (_pageAnimation.isAnimating) _lastMotionStop = 'touch';
     _pageAnimation.stop();
     _stopPanAnimation();
     _stopZoomAnimation();
@@ -598,6 +663,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _pointers.remove(event.pointer);
     if (_longPressActive) {
       _finishLongPress();
+      // This return skips the displaced-pager net further down.
+      _enforcePagerRest();
       return;
     }
     _longPressTimer?.cancel();
@@ -1033,14 +1100,103 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
       begin: _dragOffset,
       end: target,
     ).animate(CurvedAnimation(parent: _pageAnimation, curve: _settleCurve));
+    _commitPending = true;
     _pageAnimation.forward().whenCompleteOrCancel(() {
-      if (!mounted || generation != _motionGeneration) return;
+      if (generation != _motionGeneration) {
+        // Only a strand if nothing took over: a turn superseded by the next one
+        // is ordinary, and logging it would bury the real event.
+        if (!_commitPending && _dragOffset != 0) {
+          _recordStrand(target: target, generation: generation);
+          _scheduleRestCheck();
+        }
+        return;
+      }
+      _commitPending = false;
+      if (!mounted) return;
       onComplete?.call();
       if (target == 0) {
         setState(() => _dragOffset = 0);
         _notifyIdle();
       }
     });
+  }
+
+  @visibleForTesting
+  void _debugStrand(double progress) {
+    _motionGeneration++;
+    _commitPending = false;
+    _lastMotionStop = 'debug';
+    _pageAnimation.stop();
+    _pageTween = null;
+    setState(() => _dragOffset = -progress * _axisSign * _axisExtent);
+  }
+
+  void _recordStrand({required double target, required int generation}) {
+    _strand = _StrandRecord(
+      target: target,
+      offset: _dragOffset,
+      extent: _axisExtent,
+      generation: generation,
+      owner: _dragOwner?.name ?? 'none',
+      stop: _lastMotionStop,
+      interrupted: _interruptedByAnimation,
+      at: DateTime.now(),
+    );
+  }
+
+  void _scheduleRestCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _enforcePagerRest();
+    });
+  }
+
+  /// The pager must never come to rest between two slots. Enforced here rather
+  /// than at each site that can abandon a turn, so a stranding heals whatever
+  /// caused it — including causes we have not found.
+  void _enforcePagerRest() {
+    if (_dragOffset == 0) return;
+    if (_pointers.isNotEmpty) return;
+    if (_pageAnimation.isAnimating) return;
+    if (_commitPending) return;
+
+    if (_axisExtent <= 0) {
+      // Keeping a pixel offset with no extent lets a later, narrower layout read
+      // it as a much larger fraction of a page.
+      _logRestRecovery(progress: 0, action: 'zero-extent');
+      setState(() => _dragOffset = 0);
+      return;
+    }
+
+    final progress = -_dragOffset * _axisSign / _axisExtent;
+    if (progress.abs() >= _restCommitThreshold) {
+      _logRestRecovery(progress: progress, action: 'commit');
+      _animateToDisplay(_displayIndex + (progress > 0 ? 1 : -1));
+      return;
+    }
+    _logRestRecovery(progress: progress, action: 'snapback');
+    _animateOffsetTo(0);
+  }
+
+  void _logRestRecovery({required double progress, required String action}) {
+    final now = DateTime.now();
+    final last = _lastDiagnosticAt;
+    if (_diagnosticCount >= _maxDiagnosticsPerSession) return;
+    if (last != null && now.difference(last) < _diagnosticInterval) return;
+    _lastDiagnosticAt = now;
+    _diagnosticCount++;
+
+    final strand = _strand;
+    final held = strand == null
+        ? -1
+        : now.difference(strand.at).inMilliseconds;
+    recordDiagnostic(
+      '[${now.toIso8601String()}] reader-rest: action=$action '
+      'progress=${progress.toStringAsFixed(3)} '
+      'index=$_displayIndex axis=${widget.axis.name} '
+      'reverse=${widget.reverse} zoom=${_currentZoomOrNull?.isActive ?? false} '
+      'spread=${widget.window.items[_clampDisplay(_displayIndex)] is SpreadDisplay} '
+      'heldMs=$held ${strand?.describe() ?? 'strand=none'}\n',
+    );
   }
 
   Duration _settleDuration(double target) {
@@ -1085,6 +1241,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         _viewportSize = nextViewport;
         _syncZoomBounds();
         if (resized) _republishVisibleMetrics();
+        // Catch-all: a stranding from a path we never found heals next frame.
+        if (_dragOffset != 0) _scheduleRestCheck();
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onLongPress: _claimLongPressArena,
