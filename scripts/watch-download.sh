@@ -11,7 +11,10 @@
 
 set -euo pipefail
 DURATION="${1:-90}"
-APP_DATA="$HOME/.var/app/io.github.aaronbamblett.tsumiru/data/tsumiru/offline"
+# Point at whichever install is actually running. A profile/native build uses
+# XDG_DATA_HOME; the flatpak keeps its own tree. Watching the wrong one reports
+# a perfectly steady zero for an app that is working hard.
+APP_DATA="${TSUMIRU_DATA:-$HOME/.var/app/io.github.aaronbamblett.tsumiru/data/tsumiru/offline}"
 DB="$APP_DATA/catalog.sqlite"
 
 pid="$(pgrep -x tsumiru | head -1 || true)"
@@ -22,7 +25,11 @@ fi
 
 # Read a copy: the app holds the live DB and sqlite would block on its lock.
 snapshot_counts() {
+  # Copy the WAL and index too: drift runs in WAL mode, so recent commits live
+  # beside the main file and a lone .sqlite copy reads as frozen in the past.
   cp -f "$DB" /tmp/tsumiru-catalog-peek.sqlite 2>/dev/null || return
+  cp -f "$DB-wal" /tmp/tsumiru-catalog-peek.sqlite-wal 2>/dev/null || true
+  cp -f "$DB-shm" /tmp/tsumiru-catalog-peek.sqlite-shm 2>/dev/null || true
   python3 - <<'PY' 2>/dev/null || true
 import sqlite3
 c = sqlite3.connect('/tmp/tsumiru-catalog-peek.sqlite')
