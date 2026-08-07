@@ -55,16 +55,20 @@ void main() {
         progress.start(1, total: 1000, done: page);
       }
     });
-    expect(n, lessThanOrEqualTo(101),
-        reason: 'one per visible percent, not one per page');
+    expect(
+      n,
+      lessThanOrEqualTo(101),
+      reason: 'one per visible percent, not one per page',
+    );
     expect(n, greaterThan(50), reason: 'the arc must still actually move');
   });
 
   test('the final page always publishes, however long the chapter', () {
     // Otherwise a chapter can finish showing 99% forever.
     progress.start(1, total: 1000, done: 999);
-    final n =
-        countNotifications(() => progress.start(1, total: 1000, done: 1000));
+    final n = countNotifications(
+      () => progress.start(1, total: 1000, done: 1000),
+    );
     expect(n, 1);
     expect(container.read(offlineDownloadProgressProvider)[1]!.done, 1000);
   });
@@ -72,7 +76,9 @@ void main() {
   test('a changed page total always publishes', () {
     // A re-resolved page list can land on the same percent as the old one.
     progress.start(1, total: 100, done: 50);
-    final n = countNotifications(() => progress.start(1, total: 200, done: 100));
+    final n = countNotifications(
+      () => progress.start(1, total: 200, done: 100),
+    );
     expect(n, 1);
     expect(container.read(offlineDownloadProgressProvider)[1]!.total, 200);
   });

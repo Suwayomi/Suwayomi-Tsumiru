@@ -46,7 +46,10 @@ void main() {
         paths.absolute('117/2000/000.jpg'),
         p.join(base, '117', '2000', '000.jpg'),
       );
-      expect(paths.absolute('covers/552.jpg'), p.join(base, 'covers', '552.jpg'));
+      expect(
+        paths.absolute('covers/552.jpg'),
+        p.join(base, 'covers', '552.jpg'),
+      );
     });
   });
 }

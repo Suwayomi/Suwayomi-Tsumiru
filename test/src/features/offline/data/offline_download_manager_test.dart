@@ -194,4 +194,23 @@ void main() {
     final c = (await db.chaptersForManga(552)).single;
     expect(c.deviceState, OfflineDeviceState.none);
   });
+
+  test(
+    'a retry does not carry a previous attempt\'s pages into the chapter',
+    () async {
+      // beginChapter only replaces the manifest, so stale pages left underneath
+      // would ride the commit rename into the finished chapter.
+      final chapter = await seedChapter();
+      store.seedStaged(2000, {7: 999}, indices: [7]);
+
+      await managerWith().downloadChapter(chapter);
+
+      expect(store.committed[2000]!.keys.toSet(), {
+        0,
+        1,
+        2,
+      }, reason: 'only this run\'s pages');
+      expect(store.committed[2000]!.containsKey(7), isFalse);
+    },
+  );
 }

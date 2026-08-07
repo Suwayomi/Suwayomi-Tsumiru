@@ -62,6 +62,11 @@ class OfflineDownloadManager {
       );
       final generation =
           (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
+      // Start clean. `beginChapter` only replaces the manifest, so a previous
+      // attempt's pages would survive underneath it — and the commit renames
+      // the whole directory, carrying files the new manifest never listed into
+      // the finished chapter.
+      await store.deleteStaging(chapter.mangaId, chapter.id);
       await store.beginChapter(
         chapter.mangaId,
         chapter.id,

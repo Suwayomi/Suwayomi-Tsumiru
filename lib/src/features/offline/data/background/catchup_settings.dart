@@ -16,7 +16,8 @@ import 'catchup_work_spec.dart';
 /// OR this are on) plus the worker's planning snapshot.
 final backgroundCatchupEnabledProvider =
     NotifierProvider<BackgroundCatchupEnabled, bool>(
-        BackgroundCatchupEnabled.new);
+      BackgroundCatchupEnabled.new,
+    );
 
 class BackgroundCatchupEnabled extends Notifier<bool> {
   @override
@@ -24,8 +25,9 @@ class BackgroundCatchupEnabled extends Notifier<bool> {
       CatchupStateStore(ref.read(sharedPreferencesProvider)).enabled;
 
   Future<void> setEnabled(bool value) async {
-    await CatchupStateStore(ref.read(sharedPreferencesProvider))
-        .setEnabled(value);
+    await CatchupStateStore(
+      ref.read(sharedPreferencesProvider),
+    ).setEnabled(value);
     state = value;
     // Seed the worker's config + token and (re)schedule or cancel the job —
     // sync() owns that arbitration for both features.

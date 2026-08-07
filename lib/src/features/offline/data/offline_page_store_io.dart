@@ -33,6 +33,13 @@ class IoOfflinePageStore implements OfflinePageStore {
   Directory _finalDir(int mangaId, int chapterId) =>
       Directory(paths.absolute(paths.chapterDirRel(mangaId, chapterId)));
 
+  /// Where a committed copy waits while its replacement is renamed into place.
+  /// Not a chapter id and not `.part`, so the recovery scan ignores it; a crash
+  /// mid-swap leaves one behind, cleared by this chapter's next commit or
+  /// delete.
+  Directory _superseded(int mangaId, int chapterId) =>
+      Directory('${_finalDir(mangaId, chapterId).path}.superseded');
+
   @override
   Future<void> beginChapter(
     int mangaId,
@@ -127,12 +134,26 @@ class IoOfflinePageStore implements OfflinePageStore {
     if (!manifest.indices.every(staged.containsKey)) return null;
 
     final finalDir = _finalDir(mangaId, chapterId);
-    // Rename cannot land on a populated directory, and whatever is sitting
-    // there is this same chapter's earlier attempt — superseded by the verified
-    // set we're about to publish.
-    if (await finalDir.exists()) await finalDir.delete(recursive: true);
     await finalDir.parent.create(recursive: true);
-    await _staging(mangaId, chapterId).rename(finalDir.path);
+    // A rename can't land on a populated directory, so an existing copy has to
+    // move first — but it is moved aside, not deleted. Deleting it left a
+    // window with no readable copy at all, and a rename that then failed took
+    // the old chapter with it: the caller's failure path purges staging, so
+    // both copies would be gone for good.
+    final superseded = _superseded(mangaId, chapterId);
+    await _quietDeleteDir(superseded);
+    final hadCommitted = await finalDir.exists();
+    if (hadCommitted) await finalDir.rename(superseded.path);
+    try {
+      await _staging(mangaId, chapterId).rename(finalDir.path);
+    } catch (_) {
+      // Put the old chapter back rather than leave the reader with nothing.
+      if (hadCommitted && !await finalDir.exists()) {
+        await superseded.rename(finalDir.path);
+      }
+      rethrow;
+    }
+    if (hadCommitted) await _quietDeleteDir(superseded);
 
     final finalRel = paths.chapterDirRel(mangaId, chapterId);
     final pages = <CommittedPage>[];
@@ -276,6 +297,7 @@ class IoOfflinePageStore implements OfflinePageStore {
   Future<void> deleteChapter(int mangaId, int chapterId) async {
     await _quietDeleteDir(_finalDir(mangaId, chapterId));
     await _quietDeleteDir(_staging(mangaId, chapterId));
+    await _quietDeleteDir(_superseded(mangaId, chapterId));
   }
 
   @override

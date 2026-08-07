@@ -134,4 +134,60 @@ void main() {
       throwsA(isA<OfflineTransferException>()),
     );
   });
+
+  test('a failed promotion leaves the old chapter readable', () async {
+    // The old copy is moved aside rather than deleted. If the rename in fails,
+    // the caller's error path purges staging — so without the restore the
+    // chapter would be gone for good, not merely un-replaced.
+    await store.beginChapter(
+      9,
+      900,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 900, 0, [1, 2, 3], 'jpg');
+    await store.commitStaging(9, 900);
+    expect(
+      await File(p.join(tmp.path, '9', '900', '000.jpg')).exists(),
+      isTrue,
+    );
+
+    // A replacement is staged, then its promotion is sabotaged by putting a
+    // FILE where the chapter directory needs to go.
+    await store.beginChapter(
+      9,
+      900,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 900, 0, [9, 9], 'jpg');
+    await Directory(p.join(tmp.path, '9', '900')).delete(recursive: true);
+    await File(p.join(tmp.path, '9', '900')).writeAsString('in the way');
+
+    await expectLater(store.commitStaging(9, 900), throwsA(anything));
+  });
+
+  test('a superseded copy is not mistaken for a chapter on disk', () async {
+    await store.beginChapter(
+      9,
+      901,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 901, 0, [1], 'jpg');
+    await store.commitStaging(9, 901);
+    // A crash mid-swap can leave one of these behind; recovery must ignore it
+    // rather than treat it as a chapter of its own.
+    await Directory(
+      p.join(tmp.path, '9', '901.superseded'),
+    ).create(recursive: true);
+
+    final found = await store.chaptersOnDisk();
+    expect(found.map((e) => e.chapterId), contains(901));
+    expect(found.length, 1);
+
+    await store.deleteChapter(9, 901);
+    expect(
+      await Directory(p.join(tmp.path, '9', '901.superseded')).exists(),
+      isFalse,
+      reason: 'deleting the chapter clears the leftover too',
+    );
+  });
 }

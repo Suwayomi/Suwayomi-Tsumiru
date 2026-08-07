@@ -38,7 +38,8 @@ class BackgroundDownloadController {
 /// Web no-op mirror of the native provider.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>(
-        (Ref ref) => BackgroundDownloadController(ref));
+      (Ref ref) => BackgroundDownloadController(ref),
+    );
 
 /// Web no-op: there is no foreground task service to initialise.
 void initForegroundTaskService() {}
