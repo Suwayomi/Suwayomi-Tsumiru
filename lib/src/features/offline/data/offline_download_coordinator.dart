@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
-
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
 import '../../../utils/network/graphql_errors.dart';
@@ -390,14 +388,6 @@ class OfflineDownloadCoordinator {
     // this pump must never run there; BackgroundDownloadController drives
     // Android instead.
     if (isAndroidNative) return;
-    // DIAGNOSTIC (temporary): the queue has twice been left full with nothing
-    // downloading and the app idle, recoverable only by a restart. Report which
-    // guard actually stopped the pump.
-    debugPrint(
-      'PUMPDIAG enter paused=$isPaused pumping=$_pumping '
-      'active=${_active.length} deleting=${_deleting.length} '
-      'cancelled=${_cancelled.length}',
-    );
     if (isPaused) return;
     if (_pumping) return;
     _pumping = true;
@@ -406,21 +396,9 @@ class OfflineDownloadCoordinator {
     _pausedForOffline = false;
     try {
       while (true) {
-        if (isPaused || _pausedForOffline) {
-          debugPrint(
-            'PUMPDIAG break paused=$isPaused '
-            'pausedForOffline=$_pausedForOffline',
-          );
-          break;
-        }
+        if (isPaused || _pausedForOffline) break;
         final next = await _nextChapter();
-        if (next == null) {
-          debugPrint(
-            'PUMPDIAG no-next deleting=${_deleting.length} '
-            'active=${_active.length}',
-          );
-          break;
-        }
+        if (next == null) break;
         await enqueueChapter(next);
       }
     } finally {
@@ -432,10 +410,6 @@ class OfflineDownloadCoordinator {
   /// downloading but nothing is in flight — left over from a kill), else the
   /// head of the `queued` backlog. Null when there's nothing to do.
   Future<OfflineChapter?> _nextChapter() async {
-    // DIAGNOSTIC (temporary)
-    final q = await db.chaptersInState(OfflineDeviceState.queued);
-    final blocked = q.where((c) => _deleting.containsKey(c.id)).length;
-    debugPrint('PUMPDIAG next queued=${q.length} blockedByDeleting=$blocked');
     final downloading = await db.chaptersInState(
       OfflineDeviceState.downloading,
     );
