@@ -158,6 +158,23 @@ void main() {
     expect(target.deviceState, isNot(OfflineDeviceState.downloaded));
   });
 
+  test('a target owned by another download is re-fetched, never dropped',
+      () async {
+    // A live (or stale) download holds the target's staging, so migration may
+    // not commit on top of it. The chapter must still end up on the device.
+    final svc = await seed();
+    // Staging on the target belongs to a download of its own; committing the
+    // copy on top of it would publish a chapter assembled from both.
+    store.seedStaged(201, {0: 10}, indices: [0, 1]);
+    final res =
+        await svc.migrate(fromMangaId: 1, toMangaId: 2, options: migrate);
+
+    expect(res.movedDownloads, 0);
+    expect(res.refetchedDownloads, 1,
+        reason: 'refused transfers are re-downloaded, not silently lost');
+    expect((await db.chapterById(201))!.pinned, isTrue);
+  });
+
   test('an unmatched source download is neither moved nor refetched', () async {
     final svc = await seed(sourceNumber: 1, targetNumber: 9);
     final res = await svc.migrate(fromMangaId: 1, toMangaId: 2, options: migrate);
