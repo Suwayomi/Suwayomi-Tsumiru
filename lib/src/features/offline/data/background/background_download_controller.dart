@@ -467,14 +467,19 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       // staging directory into place and writes the rows for it.
       if (status == 'downloaded') {
         final ch = await _db.chapterById(chapterId);
-        if (ch != null) {
-          await commitStagedChapter(
-            db: _db,
-            store: _store,
-            mangaId: ch.mangaId,
-            chapterId: chapterId,
-          );
-        }
+        final result = ch == null
+            ? ChapterCommitResult.refused
+            : await commitStagedChapter(
+                db: _db,
+                store: _store,
+                mangaId: ch.mangaId,
+                chapterId: chapterId,
+              );
+        // The worker saying "done" isn't the same as the chapter landing: a
+        // stale event, a delete, or short staging all end here without
+        // publishing anything, and counting those would have the completion
+        // notification claim chapters the user doesn't have.
+        if (result == ChapterCommitResult.committed) _sessionDownloaded++;
       } else {
         await applyBackgroundTerminalState(
           db: _db,
@@ -482,9 +487,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           status: status,
           eventGeneration: data['gen'] as int? ?? 0,
         );
+        if (status == 'error') _sessionFailed++;
       }
-      if (status == 'downloaded') _sessionDownloaded++;
-      if (status == 'error') _sessionFailed++;
     }
 
     // Drain handshake: if the worker just self-stopped, do post-stop
