@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../routes/router_config.dart';
+import '../../../../routes/navigation.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../data/recommendations/recommendation_provider.dart';
 
@@ -26,7 +26,7 @@ class RecommendationCard extends StatelessWidget {
       width: 96,
       child: InkWell(
         borderRadius: KBorderRadius.r8.radius,
-        onTap: () => GlobalSearchRoute(query: rec.title).push(context),
+        onTap: () => openGlobalSearch(context, query: rec.title),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
@@ -161,7 +162,7 @@ class UnifiedSearchScreen extends HookConsumerWidget {
                         } else if (goToHits.isNotEmpty) {
                           goToHits.first.navigate(context);
                         } else if (plainQuery.isNotEmpty) {
-                          GlobalSearchRoute(query: plainQuery).push(context);
+                          openGlobalSearch(context, query: plainQuery);
                         } else {
                           return; // pure operator query, nothing typed to hand off
                         }
@@ -234,7 +235,7 @@ class UnifiedSearchScreen extends HookConsumerWidget {
                             leading: const Icon(Icons.travel_explore_rounded),
                             title: Text(l.unifiedSearchAllSources(plainQuery)),
                             onTap: () {
-                              GlobalSearchRoute(query: plainQuery).push(context);
+                              openGlobalSearch(context, query: plainQuery);
                               close();
                             },
                           ),

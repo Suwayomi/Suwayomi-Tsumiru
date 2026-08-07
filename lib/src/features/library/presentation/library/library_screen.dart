@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/enum.dart';
+import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -299,9 +300,10 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                   tooltip: context.l10n.globalSearch,
                                   onPressed:
                                       ref.watch(libraryQueryProvider).isNotBlank
-                                      ? () => GlobalSearchRoute(
+                                      ? () => openGlobalSearch(
+                                          context,
                                           query: ref.read(libraryQueryProvider),
-                                        ).go(context)
+                                        )
                                       : null,
                                 ),
                               ),
@@ -1123,7 +1125,7 @@ class _LibrarySearchBar extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.travel_explore_rounded),
             tooltip: context.l10n.globalSearch,
-            onPressed: () => GlobalSearchRoute(query: query).push(context),
+            onPressed: () => openGlobalSearch(context, query: query),
           ),
       ],
       highlightDsl: true,
