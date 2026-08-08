@@ -86,8 +86,11 @@ Future<bool> runCatchupDownloads({
         spec.storageCapEnabled &&
         spec.usedBytes + runBytes >= spec.storageCapBytes;
 
-    // Read once for the whole run: it was re-parsed per manga, and the answer
-    // can't change while we hold the lock.
+    // Read once for the whole run. Safe not because the log is frozen — this
+    // executor appends to it below — but because each manga is visited exactly
+    // once and the only entries written meanwhile belong to the manga being
+    // processed, which the filter below drops anyway. A retry loop or a second
+    // pass would break that.
     final logEntries = await log.parse();
     final mangaIds = {
       ...ledger.pendingDownloads.values,

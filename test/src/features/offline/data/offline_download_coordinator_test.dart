@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_coordinator.dart';
@@ -18,7 +19,6 @@ import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 
 import '../../../../helpers/offline_test_db.dart';
 import '../../../../helpers/fake_page_store.dart';
-import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 
 void main() {
   late OfflineDatabase db;

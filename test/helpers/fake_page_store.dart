@@ -101,10 +101,22 @@ class FakePageStore implements OfflinePageStore {
     if (manifest == null) return null;
     final pages = staged[chapterId] ?? const {};
     if (!manifest.indices.every(pages.containsKey)) return null;
+    // Set the existing copy aside before promoting, as the real store does.
+    final previous = committed.remove(chapterId);
+    if (previous != null) {
+      superseded[chapterId] = previous;
+      final previousManifest = committedManifests.remove(chapterId);
+      if (previousManifest != null) {
+        supersededManifests[chapterId] = previousManifest;
+      }
+    }
     committed[chapterId] = {for (final i in manifest.indices) i: pages[i]!};
     committedManifests[chapterId] = manifest;
     staged.remove(chapterId);
     manifests.remove(chapterId);
+    // Promotion landed, so the set-aside copy is superseded.
+    superseded.remove(chapterId);
+    supersededManifests.remove(chapterId);
     return [
       for (final i in manifest.indices)
         (
@@ -117,7 +129,7 @@ class FakePageStore implements OfflinePageStore {
 
   @override
   Future<List<StoredChapter>> chaptersOnDisk() async {
-    final ids = {...committed.keys, ...staged.keys, ...superseded};
+    final ids = {...committed.keys, ...staged.keys, ...superseded.keys};
     return [
       for (final id in ids)
         (
@@ -125,7 +137,7 @@ class FakePageStore implements OfflinePageStore {
           chapterId: id,
           hasFinal: committed.containsKey(id),
           hasStaging: staged.containsKey(id),
-          hasSuperseded: superseded.contains(id),
+          hasSuperseded: superseded.containsKey(id),
         ),
     ];
   }
@@ -174,24 +186,27 @@ class FakePageStore implements OfflinePageStore {
     committedManifests.remove(chapterId);
   }
 
-  /// Chapters with a copy set aside by an interrupted replacement.
-  final superseded = <int>{};
+  /// The copy set aside during a replacement, mirroring the real store's
+  /// `<chapterId>.superseded` directory: real pages and their real manifest, so
+  /// restoring one lands on whatever state it actually had rather than a
+  /// fabricated complete chapter.
+  final superseded = <int, Map<int, int>>{};
+  final supersededManifests = <int, ChapterManifest>{};
 
   @override
   Future<void> deleteSuperseded(int mangaId, int chapterId) async {
     superseded.remove(chapterId);
+    supersededManifests.remove(chapterId);
   }
 
   @override
   Future<bool> restoreSuperseded(int mangaId, int chapterId) async {
-    if (committed.containsKey(chapterId) || !superseded.remove(chapterId)) {
-      return false;
-    }
-    committed[chapterId] = {0: 1};
-    committedManifests[chapterId] = const ChapterManifest(
-      generation: 0,
-      indices: [0],
-    );
+    if (committed.containsKey(chapterId)) return false;
+    final pages = superseded.remove(chapterId);
+    if (pages == null) return false;
+    committed[chapterId] = pages;
+    final manifest = supersededManifests.remove(chapterId);
+    if (manifest != null) committedManifests[chapterId] = manifest;
     return true;
   }
 
@@ -206,6 +221,8 @@ class FakePageStore implements OfflinePageStore {
     deletedChapters.add(chapterId);
     committed.remove(chapterId);
     committedManifests.remove(chapterId);
+    superseded.remove(chapterId);
+    supersededManifests.remove(chapterId);
     staged.remove(chapterId);
     manifests.remove(chapterId);
     _ext.remove(chapterId);
@@ -248,6 +265,8 @@ class FakePageStore implements OfflinePageStore {
     staged.clear();
     manifests.clear();
     committedManifests.clear();
+    superseded.clear();
+    supersededManifests.clear();
     _ext.clear();
   }
 
@@ -276,6 +295,16 @@ class FakePageStore implements OfflinePageStore {
         indices: pageBytes.keys.toList()..sort(),
       );
     }
+  }
+
+  /// Move a committed chapter into the set-aside slot, as a kill between the
+  /// two renames of a replacement leaves it.
+  void setAside(int chapterId) {
+    final pages = committed.remove(chapterId);
+    if (pages == null) return;
+    superseded[chapterId] = pages;
+    final manifest = committedManifests.remove(chapterId);
+    if (manifest != null) supersededManifests[chapterId] = manifest;
   }
 
   /// Seed staging as if a download had been interrupted partway.

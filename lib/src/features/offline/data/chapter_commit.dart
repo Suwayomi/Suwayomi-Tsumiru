@@ -165,8 +165,11 @@ Future<void> recoverChaptersOnDisk({
 
         // The only surviving copy after a kill mid-replacement — restore it
         // before treating this chapter as having no final directory.
+        // Only when there is no staging: staging was verified complete before
+        // the swap that set this copy aside, so it is the newer of the two and
+        // restoring over it would throw a finished download away.
         var hasFinal = dir.hasFinal;
-        if (!hasFinal && dir.hasSuperseded) {
+        if (!hasFinal && !dir.hasStaging && dir.hasSuperseded) {
           hasFinal = await store.restoreSuperseded(dir.mangaId, dir.chapterId);
           if (hasFinal) {
             logger.i(
@@ -193,6 +196,22 @@ Future<void> recoverChaptersOnDisk({
                 'vs ${row.downloadGeneration})',
               );
               await store.deleteCommitted(dir.mangaId, dir.chapterId);
+              // The row can still say `downloaded` (a kill between the
+              // generation bump and the state flip), and nothing else revisits
+              // a chapter with no directory — so it would claim forever to
+              // have files that are gone.
+              if (row.deviceState == OfflineDeviceState.downloaded) {
+                await db.transaction(() async {
+                  await (db.delete(
+                    db.offlinePages,
+                  )..where((t) => t.chapterId.equals(dir.chapterId))).go();
+                  await db.setChapterDeviceState(
+                    dir.chapterId,
+                    OfflineDeviceState.queued,
+                    bytes: 0,
+                  );
+                });
+              }
             case ChapterDirState.complete:
               // Already settled, or the rename landed and the catalog write
               // didn't — either way the rows are cheap to reassert.

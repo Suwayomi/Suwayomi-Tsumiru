@@ -11,13 +11,13 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/migration/data/offline_migration_service.dart';
 import 'package:tsumiru/src/features/migration/domain/migration_models.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../../../helpers/offline_test_db.dart';
 import '../../../helpers/fake_page_store.dart';
-import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 
 MangaDto mangaDto(int id) => Fragment$MangaDto(
   id: id,

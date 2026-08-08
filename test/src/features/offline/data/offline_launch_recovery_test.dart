@@ -106,4 +106,51 @@ void main() {
     expect(store.deletedChapters, contains(1));
     expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.none);
   });
+
+  test('a chapter left only in the set-aside slot comes back', () async {
+    // A kill mid-replacement parks the old copy aside; a failed download then
+    // clears the staging that was going to replace it. The set-aside copy is
+    // now the only one, under a row still saying downloaded — so recovery has
+    // to restore it, not ignore it.
+    await seedChapter(1, 7);
+    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded);
+    store.seedCommitted(1, {0: 5, 1: 5});
+    store.setAside(1);
+
+    await initOfflineDownloads(await container());
+
+    expect(
+      store.committed.containsKey(1),
+      isTrue,
+      reason: 'the only copy is put back',
+    );
+    expect(store.superseded.containsKey(1), isFalse);
+    expect(
+      (await db.chapterById(1))!.deviceState,
+      OfflineDeviceState.downloaded,
+    );
+  });
+
+  test('a set-aside copy never outranks a complete staging', () async {
+    // Both present means the kill landed between the two renames: staging was
+    // verified complete a moment earlier, so it is the newer copy and the one
+    // that must land.
+    await seedChapter(1, 7);
+    await db.setChapterDeviceState(1, OfflineDeviceState.downloading);
+    store.seedCommitted(1, {0: 5, 1: 5});
+    store.setAside(1);
+    store.seedStaged(1, {0: 9, 1: 9, 2: 9}, indices: [0, 1, 2]);
+
+    await initOfflineDownloads(await container());
+
+    expect(
+      await db.downloadedPageCount(1),
+      3,
+      reason: 'the newer download landed, not the set-aside copy',
+    );
+    expect(
+      (await db.chapterById(1))!.deviceState,
+      OfflineDeviceState.downloaded,
+    );
+  });
 }
