@@ -4,14 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../notifications/data/notification_state_store.dart';
+import '../chapter_manifest.dart';
 import '../offline_database.dart';
+import '../offline_page_store.dart';
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
 import '../offline_types.dart';
@@ -26,11 +27,6 @@ import 'catchup_work_spec.dart';
 /// headroom rather than get killed mid-write.
 const _maxChaptersPerRun = 10;
 const _runBudget = Duration(minutes: 7);
-
-/// Name of the per-chapter sentinel the executor writes at completion. Bare
-/// page files are never proof of completeness (nothing on disk records the
-/// expected count); the sentinel is.
-const kCatchupSentinelName = '.complete';
 
 /// Download the ledger's obligations inside the WorkManager task. Returns
 /// false only on transient failure (scheduler retries).
@@ -57,7 +53,8 @@ Future<bool> runCatchupDownloads({
   // those would silently stop the notification check on cellular.
   if (spec.wifiOnly) {
     final net = await Connectivity().checkConnectivity();
-    final unmetered = net.contains(ConnectivityResult.wifi) ||
+    final unmetered =
+        net.contains(ConnectivityResult.wifi) ||
         net.contains(ConnectivityResult.ethernet);
     if (!unmetered) return true; // not an error — just not now
   }
@@ -65,8 +62,9 @@ Future<bool> runCatchupDownloads({
   final support = await getApplicationSupportDirectory();
   final paths = OfflinePaths('${support.path}${Platform.pathSeparator}offline');
   final store = IoOfflinePageStore(paths);
-  final log =
-      BackgroundCompletionLog(File('${paths.baseDir}/.bg_completion.log'));
+  final log = BackgroundCompletionLog(
+    File('${paths.baseDir}/.bg_completion.log'),
+  );
   final lock = BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
 
   // The FGS may legitimately own the log right now; skip the run rather than
@@ -88,6 +86,12 @@ Future<bool> runCatchupDownloads({
         spec.storageCapEnabled &&
         spec.usedBytes + runBytes >= spec.storageCapBytes;
 
+    // Read once for the whole run. Safe not because the log is frozen — this
+    // executor appends to it below — but because each manga is visited exactly
+    // once and the only entries written meanwhile belong to the manga being
+    // processed, which the filter below drops anyway. A retry loop or a second
+    // pass would break that.
+    final logEntries = await log.parse();
     final mangaIds = {
       ...ledger.pendingDownloads.values,
       ...ledger.pendingServerFetch.values,
@@ -96,8 +100,9 @@ Future<bool> runCatchupDownloads({
       if (downloaded >= _maxChaptersPerRun) break;
       if (DateTime.now().isAfter(deadline)) break;
       if (await lock.yieldRequested()) break;
-      final mangaSpec =
-          spec.manga.where((m) => m.mangaId == mangaId).firstOrNull;
+      final mangaSpec = spec.manga
+          .where((m) => m.mangaId == mangaId)
+          .firstOrNull;
       if (mangaSpec == null) {
         // Rule removed since resolution: drop the obligations.
         ledger = _dropManga(ledger, mangaId);
@@ -105,7 +110,12 @@ Future<bool> runCatchupDownloads({
         continue;
       }
 
-      final chapters = await _fetchMangaChapters(target, record, broker, mangaId);
+      final chapters = await _fetchMangaChapters(
+        target,
+        record,
+        broker,
+        mangaId,
+      );
       if (chapters == null) return false; // transient — retry next wake
 
       // Pinned chapters are always desired; the server rows can't know about
@@ -120,7 +130,7 @@ Future<bool> runCatchupDownloads({
       // Present = every truth the executor can see without drift.
       final present = <int>{
         ...mangaSpec.onDeviceChapterIds,
-        ...await _loggedOrSentineled(log, paths, mangaId, desired),
+        ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
 
       final serverFetch = {...ledger.pendingServerFetch};
@@ -148,20 +158,20 @@ Future<bool> runCatchupDownloads({
           continue;
         }
 
-        final done = await _downloadOneChapter(
+        final staged = await _downloadOneChapter(
           target: target,
           record: record,
           broker: broker,
           store: store,
-          paths: paths,
           log: log,
           spec: spec,
           row: row,
           mangaId: mangaId,
+          generation: mangaSpec.generationOf(chapterId),
         );
-        if (done) {
+        if (staged > 0) {
           downloaded++;
-          runBytes += await store.chapterBytes(mangaId, chapterId);
+          runBytes += staged;
           pending.remove(chapterId);
           serverFetch.remove(chapterId);
           retries.remove(chapterId);
@@ -171,7 +181,8 @@ Future<bool> runCatchupDownloads({
       // Drop obligations that are satisfied (present) or no longer desired
       // (rule window moved on) — either way there is nothing left to do.
       pending.removeWhere(
-          (c, m) => m == mangaId && (!desired.contains(c) || present.contains(c)));
+        (c, m) => m == mangaId && (!desired.contains(c) || present.contains(c)),
+      );
 
       ledger = ledger.copyWith(
         pendingDownloads: pending,
@@ -187,34 +198,45 @@ Future<bool> runCatchupDownloads({
 }
 
 CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) => ledger.copyWith(
-      pendingDownloads: {
-        for (final e in ledger.pendingDownloads.entries)
-          if (e.value != mangaId) e.key: e.value,
-      },
-      pendingServerFetch: {
-        for (final e in ledger.pendingServerFetch.entries)
-          if (e.value != mangaId) e.key: e.value,
-      },
-    );
+  pendingDownloads: {
+    for (final e in ledger.pendingDownloads.entries)
+      if (e.value != mangaId) e.key: e.value,
+  },
+  pendingServerFetch: {
+    for (final e in ledger.pendingServerFetch.entries)
+      if (e.value != mangaId) e.key: e.value,
+  },
+);
 
-/// Chapters already recorded in the un-replayed log or holding a completion
-/// sentinel — downloads the spec can't know about yet.
-Future<Set<int>> _loggedOrSentineled(
-  BackgroundCompletionLog log,
-  OfflinePaths paths,
+/// Chapters already recorded in the un-replayed log, or already committed on
+/// disk — work the spec's snapshot can't know about yet.
+///
+/// Deliberately NOT "staging looks complete". Staging fills before the adoption
+/// record is written, so a worker killed in that window would leave a directory
+/// that satisfies the obligation while nothing durable claims it: the ledger
+/// entry would be dropped here, and replay — finding files with no row and no
+/// record — would delete them. The chapter would simply vanish from the queue.
+/// A committed directory is the safe equivalent, because only an adoption that
+/// already replayed could have produced one.
+Future<Set<int>> _loggedOrCommitted(
+  List<LogEntry> logEntries,
+  IoOfflinePageStore store,
   int mangaId,
   Set<int> candidates,
 ) async {
   final present = <int>{};
-  for (final e in await log.parse()) {
-    if (e is AdoptChapterEntry && e.mangaId == mangaId) present.add(e.chapterId);
+  for (final e in logEntries) {
+    if (e is AdoptChapterEntry && e.mangaId == mangaId)
+      present.add(e.chapterId);
     if (e is ChapterEntry && e.status == 'downloaded') present.add(e.chapterId);
   }
   for (final chapterId in candidates) {
     if (present.contains(chapterId)) continue;
-    final sentinel = File(
-        '${paths.absolute(paths.chapterDirRel(mangaId, chapterId))}/$kCatchupSentinelName');
-    if (await sentinel.exists()) present.add(chapterId);
+    final committed = await store.inspectCommitted(mangaId, chapterId);
+    if (committed.state == ChapterDirState.complete ||
+        committed.state == ChapterDirState.legacy) {
+      present.add(chapterId);
+    }
   }
   return present;
 }
@@ -236,12 +258,12 @@ Future<_MangaChapters?> _fetchMangaChapters(
   const query =
       'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber isRead isBookmarked isDownloaded pageCount } } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
-        target: target,
-        record: record(),
-        query: query,
-        variables: {'id': mangaId},
-        accessToken: accessToken,
-      );
+    target: target,
+    record: record(),
+    query: query,
+    variables: {'id': mangaId},
+    accessToken: accessToken,
+  );
   var result = await post(null);
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
@@ -251,7 +273,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
   if (result is! Map<String, Object?>) return _MangaChapters(const []);
   final nodes =
       ((result['chapters'] as Map<String, Object?>?)?['nodes'] as List? ??
-          const []);
+      const []);
   final now = DateTime.now();
   return _MangaChapters([
     for (final n in nodes.cast<Map<String, Object?>>())
@@ -291,22 +313,31 @@ Future<bool> _enqueueServerDownload(
     record: record(),
     query: query,
     variables: {
-      'input': {'ids': [chapterId]},
+      'input': {
+        'ids': [chapterId],
+      },
     },
   );
   return result is Map<String, Object?>;
 }
 
-Future<bool> _downloadOneChapter({
+/// Download one chapter into staging, returning the bytes staged (0 when it
+/// didn't finish).
+///
+/// This worker never publishes a chapter — it has no drift access, so it cannot
+/// check the row the way a commit must. It fills staging and leaves an adoption
+/// record; the next launch commits it on the main isolate. Timing is unchanged
+/// for the user: adoption already happened at replay.
+Future<int> _downloadOneChapter({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord Function() record,
   required TokenBroker broker,
   required IoOfflinePageStore store,
-  required OfflinePaths paths,
   required BackgroundCompletionLog log,
   required CatchupWorkSpec spec,
   required OfflineChapter row,
   required int mangaId,
+  required int generation,
 }) async {
   final urls = await resolveChapterPageUrls(
     target: target,
@@ -314,7 +345,33 @@ Future<bool> _downloadOneChapter({
     broker: broker,
     chapterId: row.id,
   );
-  if (urls == null || urls.isEmpty) return false;
+  if (urls == null || urls.isEmpty) return 0;
+
+  final indices = [for (var i = 0; i < urls.length; i++) i];
+  // The generation comes from the spec, not a hardcoded 0: a chapter that was
+  // deleted once and re-queued keeps a bumped generation on its row, and
+  // staging stamped 0 would be rejected at launch — after this run had already
+  // struck the obligation off the ledger. A chapter drift has never seen has
+  // no entry, so it gets 0, matching the row adoption creates.
+  //
+  // Reuse staging that matches, the way the foreground downloaders do. These
+  // runs are cut short constantly — the WorkManager budget, a dropped
+  // connection, a yield to the foreground service — and a big chapter that
+  // restarted from page zero every time might never finish at all.
+  final existing = await store.readManifest(mangaId, row.id);
+  var staged = const <int>{};
+  if (existing != null &&
+      existing.generation == generation &&
+      existing.coversSameIndices(indices)) {
+    staged = await store.stagedPageIndices(mangaId, row.id);
+  } else {
+    await store.deleteStaging(mangaId, row.id);
+    await store.beginChapter(
+      mangaId,
+      row.id,
+      ChapterManifest(generation: generation, indices: indices),
+    );
+  }
 
   final engine = buildBackgroundEngine(
     store: store,
@@ -325,34 +382,31 @@ Future<bool> _downloadOneChapter({
   final outcome = await engine.download(
     mangaId: mangaId,
     chapterId: row.id,
-    pages: [for (var i = 0; i < urls.length; i++) (index: i, url: urls[i])],
+    pages: [
+      for (var i = 0; i < urls.length; i++)
+        if (!staged.contains(i)) (index: i, url: urls[i]),
+    ],
     isCancelled: () => false,
-    // No live UI to feed and the adopt record is the durable truth, so page
-    // progress isn't logged per page here.
     onPageStored: (_, __, ___) async {},
   );
-  if (!outcome.succeeded) return false;
+  if (!outcome.succeeded) return 0;
 
-  final bytes = await store.chapterBytes(mangaId, row.id);
-  // Log first, sentinel second: the log is the durable truth replay adopts
-  // from; the sentinel only short-circuits re-scans. The reverse order could
-  // crash into a sentinel with no adoption record — present on disk, unknown
-  // to drift, retried by nothing.
-  await log.appendAdopt(AdoptChapterEntry(
-    chapterId: row.id,
-    mangaId: mangaId,
-    serverId: spec.serverId,
-    name: row.name,
-    chapterIndex: row.chapterIndex,
-    chapterNumber: row.chapterNumber ?? -1,
-    pageCount: urls.length,
-    bytes: bytes,
-    isRead: row.isRead,
-  ));
-  final dir = paths.absolute(paths.chapterDirRel(mangaId, row.id));
-  await File('$dir/$kCatchupSentinelName').writeAsString(
-    jsonEncode({'pages': urls.length, 'bytes': bytes, 'srv': spec.serverId}),
-    flush: true,
+  // Measured off staging rather than this run's writes: a resumed chapter
+  // fetched only what was missing, and the ledger's cap accounting wants the
+  // whole chapter.
+  final bytes = await store.stagedBytes(mangaId, row.id);
+  await log.appendAdopt(
+    AdoptChapterEntry(
+      chapterId: row.id,
+      mangaId: mangaId,
+      serverId: spec.serverId,
+      name: row.name,
+      chapterIndex: row.chapterIndex,
+      chapterNumber: row.chapterNumber ?? -1,
+      pageCount: urls.length,
+      bytes: bytes,
+      isRead: row.isRead,
+    ),
   );
-  return true;
+  return bytes;
 }

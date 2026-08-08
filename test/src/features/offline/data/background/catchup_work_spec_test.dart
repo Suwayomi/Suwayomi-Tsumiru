@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.dart';
@@ -20,21 +22,23 @@ void main() {
 
   test('spec round-trips through the store', () async {
     final s = await store();
-    await s.writeSpec(CatchupWorkSpec(
-      serverId: 'srv-1',
-      wifiOnly: true,
-      storageCapEnabled: true,
-      storageCapBytes: 5000,
-      manga: [
-        const CatchupMangaSpec(
-          mangaId: 7,
-          keepRule: OfflineKeepRule.nUnread,
-          keepUnreadCount: 3,
-          onDeviceChapterIds: {1, 2},
-          pinnedChapterIds: {2},
-        ),
-      ],
-    ));
+    await s.writeSpec(
+      CatchupWorkSpec(
+        serverId: 'srv-1',
+        wifiOnly: true,
+        storageCapEnabled: true,
+        storageCapBytes: 5000,
+        manga: [
+          const CatchupMangaSpec(
+            mangaId: 7,
+            keepRule: OfflineKeepRule.nUnread,
+            keepUnreadCount: 3,
+            onDeviceChapterIds: {1, 2},
+            pinnedChapterIds: {2},
+          ),
+        ],
+      ),
+    );
 
     final back = s.readSpec()!;
     expect(back.serverId, 'srv-1');
@@ -51,8 +55,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'catchup_work_spec':
           '{"serverId":"srv-1","wifiOnly":true,"storageCapEnabled":false,'
-              '"storageCapBytes":0,"manga":[{"mangaId":1,"keepRule":"someFutureRule",'
-              '"keepUnreadCount":0,"onDevice":[],"pinned":[]}]}',
+          '"storageCapBytes":0,"manga":[{"mangaId":1,"keepRule":"someFutureRule",'
+          '"keepUnreadCount":0,"onDevice":[],"pinned":[]}]}',
     });
     final s2 = CatchupStateStore(await SharedPreferences.getInstance());
     expect(s2.readSpec()!.manga.single.keepRule, OfflineKeepRule.off);
@@ -88,17 +92,45 @@ void main() {
   test('clearState drops spec and ledger but keeps the user toggle', () async {
     final s = await store();
     await s.setEnabled(true);
-    await s.writeSpec(CatchupWorkSpec(
+    await s.writeSpec(
+      CatchupWorkSpec(
         serverId: 'srv-1',
         wifiOnly: true,
         storageCapEnabled: false,
         storageCapBytes: 0,
-        manga: const []));
+        manga: const [],
+      ),
+    );
     await s.writeLedger('srv-1', const CatchupLedger());
 
     await s.clearState();
     expect(s.readSpec(), isNull);
     expect(s.readLedger('srv-1').cursor.fetchedAt, 0);
     expect(s.enabled, isTrue);
+  });
+
+  test('chapter generations survive the spec round-trip', () {
+    // A chapter deleted once carries a bumped generation. Staging written at
+    // the wrong one is rejected at launch AFTER the obligation has been struck
+    // off the ledger, so the download is simply lost.
+    const spec = CatchupMangaSpec(
+      mangaId: 1,
+      keepRule: OfflineKeepRule.all,
+      keepUnreadCount: 3,
+      onDeviceChapterIds: {},
+      pinnedChapterIds: {},
+      chapterGenerations: {42: 3},
+    );
+
+    final restored = CatchupMangaSpec.fromJson(
+      jsonDecode(jsonEncode(spec.toJson())) as Map<String, Object?>,
+    );
+
+    expect(restored.generationOf(42), 3);
+    expect(
+      restored.generationOf(99),
+      0,
+      reason: 'a chapter nobody deleted defaults to 0',
+    );
   });
 }

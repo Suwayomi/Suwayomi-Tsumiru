@@ -81,15 +81,24 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
           // The button must never be a dead end. For a known credential mode
           // pop the quick login dialog; otherwise send the user to the
           // Connection screen, where they can set the mode and sign in.
+          //
+          // The dialog is pushed onto the ROUTER's navigator, not ours. This
+          // banner is hosted in `MaterialApp.builder`, which sits above the
+          // navigator, so `showDialog` with our own context finds nothing to
+          // push onto and throws — leaving the only way back into the app
+          // doing nothing at all when you click it.
           onPressed: () {
+            final navigatorContext =
+                rootNavigatorKey.currentState?.overlay?.context;
+            if (navigatorContext == null) return;
             if (authType == AuthType.simpleLogin ||
                 authType == AuthType.uiLogin) {
               showDialog(
-                context: context,
+                context: navigatorContext,
                 builder: (_) => LoginCredentialsPopup(authType: authType),
               );
             } else {
-              const ConnectionRoute().push(context);
+              const ConnectionRoute().push(navigatorContext);
             }
           },
           child: Text(context.l10n.authReauthenticate),

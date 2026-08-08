@@ -6,46 +6,17 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
-import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
+import '../../../helpers/fake_page_store.dart';
 
-/// In-memory page store — records what was "written".
-class _FakeStore implements OfflinePageStore {
-  final written = <int, int>{}; // pageIndex -> bytes
-  @override
-  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
-      int pageIndex, List<int> bytes, String ext) async {
-    written[pageIndex] = bytes.length;
-    return (
-      relPath: '$mangaId/$chapterId/$pageIndex.$ext',
-      bytes: bytes.length
-    );
-  }
-
-  @override
-  Future<void> deleteChapter(int mangaId, int chapterId) async {}
-  @override
-  Future<int> chapterBytes(int mangaId, int chapterId) async => 0;
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
-
-List<PageRef> _pages(int n) =>
-    [for (var i = 0; i < n; i++) (index: i, url: 'http://s/p$i')];
+List<PageRef> _pages(int n) => [
+  for (var i = 0; i < n; i++) (index: i, url: 'http://s/p$i'),
+];
 
 void main() {
   const noBackoff = Duration.zero;
 
   test('downloads all pages and reports each stored', () async {
-    final store = _FakeStore();
+    final store = FakePageStore();
     final engine = ChapterDownloadEngine(
       fetchPage: (url) async => (bytes: [1, 2, 3], ext: 'jpg'),
       writePage: store,
@@ -67,11 +38,12 @@ void main() {
   });
 
   test('a cancel landing during the fetch prevents the page write', () async {
-    final store = _FakeStore();
+    final store = FakePageStore();
     var cancelled = false;
     final engine = ChapterDownloadEngine(
       fetchPage: (url) async {
-        cancelled = true; // a delete/pause lands while this request was in flight
+        cancelled =
+            true; // a delete/pause lands while this request was in flight
         return (bytes: [1, 2, 3], ext: 'jpg');
       },
       writePage: store,
@@ -84,8 +56,11 @@ void main() {
       pages: _pages(1),
       isCancelled: () => cancelled,
     );
-    expect(store.written, isEmpty,
-        reason: 'no file may be written for a chapter cancelled mid-fetch');
+    expect(
+      store.written,
+      isEmpty,
+      reason: 'no file may be written for a chapter cancelled mid-fetch',
+    );
     expect(out.cancelled, isTrue);
   });
 
@@ -101,7 +76,7 @@ void main() {
         }
         return (bytes: [0], ext: 'jpg');
       },
-      writePage: _FakeStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async {
         refreshes++;
         return true;
@@ -109,7 +84,11 @@ void main() {
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-        mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
+      mangaId: 1,
+      chapterId: 1,
+      pages: _pages(1),
+      isCancelled: () => false,
+    );
     expect(out.succeeded, true);
     expect(refreshes, 1);
   });
@@ -117,12 +96,16 @@ void main() {
   test('gives up with authFailed when refresh says auth is dead', () async {
     final engine = ChapterDownloadEngine(
       fetchPage: (url) async => throw const PageAuthException(),
-      writePage: _FakeStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => false, // auth dead
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-        mangaId: 1, chapterId: 1, pages: _pages(3), isCancelled: () => false);
+      mangaId: 1,
+      chapterId: 1,
+      pages: _pages(3),
+      isCancelled: () => false,
+    );
     expect(out.authFailed, true);
     expect(out.succeeded, false);
   });
@@ -134,13 +117,17 @@ void main() {
         calls++;
         throw Exception('boom');
       },
-      writePage: _FakeStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => true,
       maxAttempts: 3,
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-        mangaId: 1, chapterId: 1, pages: _pages(1), isCancelled: () => false);
+      mangaId: 1,
+      chapterId: 1,
+      pages: _pages(1),
+      isCancelled: () => false,
+    );
     expect(out.succeeded, false);
     expect(out.error, isNotNull);
     expect(calls, 3); // 3 attempts for the single page
@@ -158,12 +145,16 @@ void main() {
         inFlight--;
         return (bytes: [0], ext: 'jpg');
       },
-      writePage: _FakeStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => true,
       backoff: (_) => noBackoff,
     );
     await engine.download(
-        mangaId: 1, chapterId: 1, pages: _pages(30), isCancelled: () => false);
+      mangaId: 1,
+      chapterId: 1,
+      pages: _pages(30),
+      isCancelled: () => false,
+    );
     expect(peak, lessThanOrEqualTo(5));
     expect(peak, greaterThan(1)); // actually parallel
   });
@@ -178,15 +169,16 @@ void main() {
         if (fetched >= 4) cancel = true;
         return (bytes: [0], ext: 'jpg');
       },
-      writePage: _FakeStore(),
+      writePage: FakePageStore(),
       refreshAuth: () async => true,
       backoff: (_) => noBackoff,
     );
     final out = await engine.download(
-        mangaId: 1,
-        chapterId: 1,
-        pages: _pages(100),
-        isCancelled: () => cancel);
+      mangaId: 1,
+      chapterId: 1,
+      pages: _pages(100),
+      isCancelled: () => cancel,
+    );
     expect(out.cancelled, true);
     expect(fetched, lessThan(100));
   });

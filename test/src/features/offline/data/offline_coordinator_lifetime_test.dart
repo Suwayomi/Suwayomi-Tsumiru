@@ -16,34 +16,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_background_downloads.dart';
-import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
+import '../../../../helpers/fake_page_store.dart';
 import '../../../../helpers/offline_test_db.dart';
-
-class _FakeStore implements OfflinePageStore {
-  @override
-  Future<({String relPath, int bytes})> writePage(
-          int m, int c, int i, List<int> b, String e) async =>
-      (relPath: '$m/$c/$i.$e', bytes: b.length);
-  @override
-  Future<void> deleteChapter(int m, int c) async {}
-  @override
-  Future<int> chapterBytes(int m, int c) async => 0;
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
 
 /// Let the auto-dispose scheduler run: an unlistened auto-dispose element is
 /// disposed asynchronously, so identity/liveness checks need real event-loop
@@ -62,22 +40,26 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final db = testOfflineDatabase();
     addTearDown(db.close);
-    final container = ProviderContainer(overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      offlineEnabledProvider.overrideWithValue(true),
-      offlineActiveProvider.overrideWithValue(true),
-      offlineDatabaseProvider.overrideWithValue(db),
-      offlinePathsProvider.overrideWithValue(const OfflinePaths('/tmp/x')),
-      offlinePageStoreProvider.overrideWithValue(_FakeStore()),
-      // A repo with a dummy client: never called here, but building the real
-      // one pulls the auth/Hive chain that tests don't have.
-      mangaBookRepositoryProvider.overrideWithValue(MangaBookRepository(
-        GraphQLClient(
-          link: HttpLink('http://127.0.0.1:1'),
-          cache: GraphQLCache(),
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        offlineEnabledProvider.overrideWithValue(true),
+        offlineActiveProvider.overrideWithValue(true),
+        offlineDatabaseProvider.overrideWithValue(db),
+        offlinePathsProvider.overrideWithValue(const OfflinePaths('/tmp/x')),
+        offlinePageStoreProvider.overrideWithValue(FakePageStore()),
+        // A repo with a dummy client: never called here, but building the real
+        // one pulls the auth/Hive chain that tests don't have.
+        mangaBookRepositoryProvider.overrideWithValue(
+          MangaBookRepository(
+            GraphQLClient(
+              link: HttpLink('http://127.0.0.1:1'),
+              cache: GraphQLCache(),
+            ),
+          ),
         ),
-      )),
-    ]);
+      ],
+    );
     addTearDown(container.dispose);
     return container;
   }

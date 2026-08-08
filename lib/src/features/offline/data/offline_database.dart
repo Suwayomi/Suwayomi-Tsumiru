@@ -336,8 +336,10 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineMangas.sourceContentWarning,
         );
         await _addColumnIfMissing(m, offlineMangas, offlineMangas.genre);
-        final hadSyncedIsRead =
-            await _hasColumn(offlineChapters, 'synced_is_read');
+        final hadSyncedIsRead = await _hasColumn(
+          offlineChapters,
+          'synced_is_read',
+        );
         await _addColumnIfMissing(
           m,
           offlineChapters,
@@ -521,15 +523,14 @@ class OfflineDatabase extends _$OfflineDatabase {
     String name,
     int sortOrder, {
     required bool isHidden,
-  }) =>
-      into(offlineCategories).insertOnConflictUpdate(
-        OfflineCategoriesCompanion(
-          id: Value(id),
-          name: Value(name),
-          sortOrder: Value(sortOrder),
-          isHidden: Value(isHidden),
-        ),
-      );
+  }) => into(offlineCategories).insertOnConflictUpdate(
+    OfflineCategoriesCompanion(
+      id: Value(id),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      isHidden: Value(isHidden),
+    ),
+  );
 
   /// Device-local visibility override while offline. The next online
   /// [OfflineSync.syncCategories] reasserts the server's flag. False when no
@@ -537,24 +538,23 @@ class OfflineDatabase extends _$OfflineDatabase {
   Future<bool> setCategoryHidden(int id, bool hidden) async {
     final rows =
         await (update(offlineCategories)..where((t) => t.id.equals(id))).write(
-      OfflineCategoriesCompanion(isHidden: Value(hidden)),
-    );
+          OfflineCategoriesCompanion(isHidden: Value(hidden)),
+        );
     return rows > 0;
   }
 
   /// Drop categories the server no longer has, membership rows included.
   /// Callers guard against an empty [serverIds] — a failed fetch must never
   /// wipe the mirror.
-  Future<void> pruneRemovedCategories(Set<int> serverIds) => transaction(
-        () async {
-          await (delete(offlineMangaCategories)
-                ..where((t) => t.categoryId.isNotIn(serverIds)))
-              .go();
-          await (delete(offlineCategories)
-                ..where((t) => t.id.isNotIn(serverIds)))
-              .go();
-        },
-      );
+  Future<void> pruneRemovedCategories(Set<int> serverIds) =>
+      transaction(() async {
+        await (delete(
+          offlineMangaCategories,
+        )..where((t) => t.categoryId.isNotIn(serverIds))).go();
+        await (delete(
+          offlineCategories,
+        )..where((t) => t.id.isNotIn(serverIds))).go();
+      });
 
   /// Downloaded-library manga per category, for the offline tab counts.
   /// Membership rows outside [mangaIds] don't count.
@@ -578,8 +578,7 @@ class OfflineDatabase extends _$OfflineDatabase {
         offlineCategories,
         offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
       ),
-    ]))
-        .get();
+    ])).get();
     final categorized = {
       for (final row in rows) row.readTable(offlineMangaCategories).mangaId,
     };
@@ -715,6 +714,41 @@ class OfflineDatabase extends _$OfflineDatabase {
     }
   });
 
+  /// Record a chapter whose staging directory was just promoted: its page rows
+  /// and its `downloaded` state land in ONE transaction, so the catalog never
+  /// half-knows about a chapter.
+  ///
+  /// Page rows are written here and nowhere else during a download — they point
+  /// at the final directory, which only exists once the rename has happened.
+  /// [pageCount] is set from what was actually committed rather than left to
+  /// the server's value, so the row describes the copy on this device.
+  Future<void> commitDownloadedChapter({
+    required int chapterId,
+    required List<({int pageIndex, String relPath, int bytes})> pages,
+    required DateTime downloadedAt,
+  }) => transaction(() async {
+    await (delete(
+      offlinePages,
+    )..where((t) => t.chapterId.equals(chapterId))).go();
+    for (final pg in pages) {
+      await into(offlinePages).insertOnConflictUpdate(
+        OfflinePagesCompanion.insert(
+          chapterId: chapterId,
+          pageIndex: pg.pageIndex,
+          relativePath: pg.relPath,
+        ),
+      );
+    }
+    await (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+      OfflineChaptersCompanion(
+        deviceState: const Value(OfflineDeviceState.downloaded),
+        bytes: Value(pages.fold<int>(0, (s, p) => s + p.bytes)),
+        pageCount: Value(pages.length),
+        downloadedAt: Value(downloadedAt),
+      ),
+    );
+  });
+
   /// Unpin every chapter of a manga — used on Migrate so the source's kept
   /// chapters aren't held back from the post-removal purge reconcile.
   Future<void> unpinChaptersForManga(int mangaId) =>
@@ -767,8 +801,7 @@ class OfflineDatabase extends _$OfflineDatabase {
           readStateDirty: const Value(true),
           // Marking read counts as reading activity for the Last Read sort;
           // un-reading is bookkeeping and leaves the timestamp alone.
-          lastReadAt:
-              isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
+          lastReadAt: isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
         ),
       );
 
@@ -999,12 +1032,15 @@ class OfflineDatabase extends _$OfflineDatabase {
     offlineChapters,
   )..where((t) => t.id.equals(chapterId))).getSingleOrNull();
 
-  Future<List<OfflineManga>> libraryManga() => (select(offlineMangas)
-        // '0' means explicitly removed (see markNotInLibrary) — those rows
-        // survive only for their downloads and must not resurface here.
-        ..where((t) => t.inLibraryAt.equals('0').not() | t.inLibraryAt.isNull())
-        ..orderBy([(t) => OrderingTerm(expression: t.title)]))
-      .get();
+  Future<List<OfflineManga>> libraryManga() =>
+      (select(offlineMangas)
+            // '0' means explicitly removed (see markNotInLibrary) — those rows
+            // survive only for their downloads and must not resurface here.
+            ..where(
+              (t) => t.inLibraryAt.equals('0').not() | t.inLibraryAt.isNull(),
+            )
+            ..orderBy([(t) => OrderingTerm(expression: t.title)]))
+          .get();
 
   Future<bool> hasCatalogData() async =>
       (await (select(offlineMangas)..limit(1)).get()).isNotEmpty;
@@ -1023,36 +1059,39 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// downloaded. Distinct from NULL, which means "synced before the column
   /// existed" and must keep counting as a library entry.
   Future<int> markNotInLibrary(Set<int> libraryIds) =>
-      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds)))
-          .write(const OfflineMangasCompanion(inLibraryAt: Value('0')));
+      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds))).write(
+        const OfflineMangasCompanion(inLibraryAt: Value('0')),
+      );
 
   /// Deletes explicitly-removed manga with nothing downloaded. Scoped to the
   /// '0' mark so it can run concurrently with the per-manga metadata upserts
   /// of the same sync pass without racing legacy NULL rows they haven't
   /// stamped yet.
   Future<int> purgeRemovedLibraryManga() => transaction(() async {
-        final withDeviceContent = selectOnly(offlineChapters)
-          ..addColumns([offlineChapters.mangaId])
-          ..where(offlineChapters.deviceState
-              .equalsValue(OfflineDeviceState.none)
-              .not());
-        final doomed = await (selectOnly(offlineMangas)
+    final withDeviceContent = selectOnly(offlineChapters)
+      ..addColumns([offlineChapters.mangaId])
+      ..where(
+        offlineChapters.deviceState.equalsValue(OfflineDeviceState.none).not(),
+      );
+    final doomed =
+        await (selectOnly(offlineMangas)
               ..addColumns([offlineMangas.id])
-              ..where(offlineMangas.inLibraryAt.equals('0') &
-                  offlineMangas.id.isNotInQuery(withDeviceContent)))
+              ..where(
+                offlineMangas.inLibraryAt.equals('0') &
+                    offlineMangas.id.isNotInQuery(withDeviceContent),
+              ))
             .map((r) => r.read(offlineMangas.id)!)
             .get();
-        if (doomed.isEmpty) return 0;
-        // Rows being deleted have no device content, so their chapter and
-        // category rows are metadata-only — sweep them too or the catalog
-        // grows forever.
-        await (delete(offlineChapters)..where((t) => t.mangaId.isIn(doomed)))
-            .go();
-        await (delete(offlineMangaCategories)
-              ..where((t) => t.mangaId.isIn(doomed)))
-            .go();
-        return (delete(offlineMangas)..where((t) => t.id.isIn(doomed))).go();
-      });
+    if (doomed.isEmpty) return 0;
+    // Rows being deleted have no device content, so their chapter and
+    // category rows are metadata-only — sweep them too or the catalog
+    // grows forever.
+    await (delete(offlineChapters)..where((t) => t.mangaId.isIn(doomed))).go();
+    await (delete(
+      offlineMangaCategories,
+    )..where((t) => t.mangaId.isIn(doomed))).go();
+    return (delete(offlineMangas)..where((t) => t.id.isIn(doomed))).go();
+  });
 
   /// Sweep browsed-not-added manga a past bug wrote here: no library timestamp
   /// and nothing downloaded. Never touches downloads — a swept stray row just

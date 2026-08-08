@@ -19,10 +19,7 @@ import '../data/offline_repository.dart';
 /// fetches the source), then pulls the device copy — we never scrape sources
 /// ourselves (see [saveChapterToDevice]).
 class OfflineSaveButton extends ConsumerWidget {
-  const OfflineSaveButton({
-    super.key,
-    required this.chapterId,
-  });
+  const OfflineSaveButton({super.key, required this.chapterId});
 
   final int chapterId;
 
@@ -31,31 +28,32 @@ class OfflineSaveButton extends ConsumerWidget {
     if (!ref.watch(offlineEnabledProvider)) {
       return const SizedBox.shrink();
     }
-    final state = ref
-        .watch(offlineChapterStateProvider(chapterId))
-        .value ??
+    final state =
+        ref.watch(offlineChapterStateProvider(chapterId)).value ??
         OfflineDeviceState.none;
     final cs = Theme.of(context).colorScheme;
 
     return switch (state) {
-      OfflineDeviceState.queued || OfflineDeviceState.downloading =>
-        _DownloadingIndicator(chapterId: chapterId),
+      OfflineDeviceState.queued => const _QueuedIndicator(),
+      OfflineDeviceState.downloading => _DownloadingIndicator(
+        chapterId: chapterId,
+      ),
       OfflineDeviceState.downloaded => IconButton(
-          tooltip: 'Remove from device',
-          icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
-          onPressed: () => deleteChapterFromDevice(ref, chapterId),
-        ),
+        tooltip: 'Remove from device',
+        icon: Icon(Icons.offline_pin_rounded, color: cs.primary),
+        onPressed: () => deleteChapterFromDevice(ref, chapterId),
+      ),
       OfflineDeviceState.error => IconButton(
-          tooltip: 'Save failed — retry',
-          icon: Icon(Icons.error_outline_rounded, color: cs.error),
-          onPressed: () => _save(context, ref),
-        ),
+        tooltip: 'Save failed — retry',
+        icon: Icon(Icons.error_outline_rounded, color: cs.error),
+        onPressed: () => _save(context, ref),
+      ),
       OfflineDeviceState.none || OfflineDeviceState.orphaned => IconButton(
-          tooltip: 'Save to device',
-          // Muted = a "get it" button (vs the solid-indigo "on device" badge).
-          icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
-          onPressed: () => _save(context, ref),
-        ),
+        tooltip: 'Save to device',
+        // Muted = a "get it" button (vs the solid-indigo "on device" badge).
+        icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
+        onPressed: () => _save(context, ref),
+      ),
     };
   }
 
@@ -73,9 +71,31 @@ class OfflineSaveButton extends ConsumerWidget {
   }
 }
 
-/// Determinate download arc for a chapter, showing how many of its pages are
-/// on disk. Falls back to an indeterminate
-/// spinner until the page total is known.
+/// A chapter waiting its turn in the queue. Deliberately static: this is the
+/// state hundreds of rows sit in at once, so anything that animates here costs
+/// a full-list repaint every frame for the life of the queue.
+class _QueuedIndicator extends StatelessWidget {
+  const _QueuedIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Center(
+        child: Icon(
+          Icons.schedule_rounded,
+          size: 18,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// Determinate download arc for the chapter being fetched right now, showing
+/// how many of its pages are on disk. Only ever one row at a time, so it can
+/// afford to animate.
 class _DownloadingIndicator extends ConsumerWidget {
   const _DownloadingIndicator({required this.chapterId});
 
@@ -83,10 +103,8 @@ class _DownloadingIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progress =
-        ref.watch(offlineChapterProgressProvider(chapterId)).value;
-    // Spin (indeterminate) while queued or at 0% so the icon is
-    // never invisible; switch to a determinate fill only once pages land.
+    final progress = ref.watch(offlineChapterProgressProvider(chapterId));
+    // Spin until the first page lands, so the icon is never invisible.
     final value = (progress == null || progress <= 0.0) ? null : progress;
     return SizedBox(
       width: 40,

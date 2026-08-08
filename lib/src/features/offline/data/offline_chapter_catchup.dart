@@ -49,12 +49,14 @@ final Set<int> _awaitingServerDownloads = {};
 void initChapterCatchUp(ProviderContainer container) {
   // Restore the second-hop obligations — the watermark has already moved past
   // these manga, so losing the set to a restart would strand their pulls.
-  _awaitingServerDownloads.addAll(container
-          .read(sharedPreferencesProvider)
-          .getStringList(DBKeys.offlineCatchUpAwaitingPull.name)
-          ?.map(int.tryParse)
-          .whereType<int>() ??
-      const []);
+  _awaitingServerDownloads.addAll(
+    container
+            .read(sharedPreferencesProvider)
+            .getStringList(DBKeys.offlineCatchUpAwaitingPull.name)
+            ?.map(int.tryParse)
+            .whereType<int>() ??
+        const [],
+  );
   // Adopt the background worker's second-hop obligations: chapters it queued
   // server-side get pulled by the foreground machinery now instead of waiting
   // for the next background wake. Exhausted retries hand off the same way —
@@ -93,8 +95,7 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
     if (ledger.pendingServerFetch.isEmpty) return;
 
     final paths = container.read(offlinePathsProvider);
-    final lock =
-        BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
+    final lock = BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
     if (!await lock.acquire('handoff')) return;
     try {
       // Re-open INSIDE the lock: open() reloads the prefs cache, so the read
@@ -128,7 +129,8 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
   _running = true;
   try {
     final keepRuleManga = {
-      for (final m in await container.read(offlineDatabaseProvider).libraryManga())
+      for (final m
+          in await container.read(offlineDatabaseProvider).libraryManga())
         if (m.keepRule != OfflineKeepRule.off) m.id,
     };
     if (keepRuleManga.isEmpty) return;
@@ -161,7 +163,9 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     // idempotent, so re-processing the rest is just cheap.
     if (allSynced && scan.newestFetchedAt > watermark) {
       await prefs.setInt(
-          DBKeys.offlineCatchUpWatermark.name, scan.newestFetchedAt);
+        DBKeys.offlineCatchUpWatermark.name,
+        scan.newestFetchedAt,
+      );
     }
     if (touched.isNotEmpty) {
       await container.read(downloadStarterProvider)();
@@ -211,9 +215,9 @@ Future<void> _pullAwaiting(ProviderContainer container) async {
 
 Future<void> _persistAwaiting(ProviderContainer container) =>
     container.read(sharedPreferencesProvider).setStringList(
-          DBKeys.offlineCatchUpAwaitingPull.name,
-          [for (final id in _awaitingServerDownloads) '$id'],
-        );
+      DBKeys.offlineCatchUpAwaitingPull.name,
+      [for (final id in _awaitingServerDownloads) '$id'],
+    );
 
 /// Scans the feed for keep-rule manga touched since [watermark]. Boundary
 /// entries (same second as watermark) are re-included since a resync is
@@ -221,9 +225,9 @@ Future<void> _persistAwaiting(ProviderContainer container) =>
 /// scan hit its page budget first, so the tail is unknown, not empty.
 @visibleForTesting
 Future<({Set<int> touched, int newestFetchedAt, bool sawWatermark})>
-    touchedSinceWatermark({
+touchedSinceWatermark({
   required Future<List<({int mangaId, int fetchedAt})>?> Function(int pageNo)
-      fetchPage,
+  fetchPage,
   required Set<int> keepRuleManga,
   required int watermark,
 }) async {
@@ -258,7 +262,9 @@ Future<({Set<int> touched, int newestFetchedAt, bool sawWatermark})>
 /// mirrored into drift, then reconciled. Sequential on purpose — an update can
 /// touch much of a library, and this runs behind the UI.
 Future<bool> _syncAndReconcile(
-    ProviderContainer container, Set<int> mangaIds) async {
+  ProviderContainer container,
+  Set<int> mangaIds,
+) async {
   var allSynced = true;
   for (final mangaId in mangaIds) {
     try {
@@ -286,8 +292,7 @@ Future<bool> _syncAndReconcile(
 /// so the queue-drain trigger knows which manga still owe a device pull.
 /// Returns false on a failed enqueue (reconcileMangaCore swallows the error)
 /// so the pass won't advance the watermark past an unqueued chapter.
-Future<bool> _reconcileTracked(
-    ProviderContainer container, int mangaId) async {
+Future<bool> _reconcileTracked(ProviderContainer container, int mangaId) async {
   final manager = container.read(offlineDownloadManagerProvider);
   final coordinator = container.read(offlineDownloadCoordinatorProvider);
   if (manager == null || coordinator == null) return false;
@@ -300,8 +305,9 @@ Future<bool> _reconcileTracked(
     nets: container.read(safetyNetConfigProvider),
     mangaId: mangaId,
     sessionProtected: container.read(sessionReadChaptersProvider),
-    deleteWhileReadingSlots:
-        container.read(localDeleteSettingsProvider).deleteWhileReading,
+    deleteWhileReadingSlots: container
+        .read(localDeleteSettingsProvider)
+        .deleteWhileReading,
     enqueueServerDownload: (ids) async {
       try {
         await container
@@ -315,11 +321,9 @@ Future<bool> _reconcileTracked(
         rethrow;
       }
     },
-    removeFromWorker: (id) async {
+    removeFromWorker: (id, gen) async {
       final ctrl = container.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
-      final gen =
-          await container.read(offlineDatabaseProvider).bumpChapterGeneration(id);
       await ctrl.recordChapterDeleted(id, gen);
     },
   );

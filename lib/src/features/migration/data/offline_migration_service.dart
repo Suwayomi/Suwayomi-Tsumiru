@@ -6,6 +6,7 @@
 
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
+import '../../offline/data/chapter_commit.dart';
 import '../../offline/data/offline_database.dart';
 import '../../offline/data/offline_page_store.dart';
 import '../../offline/data/offline_sync.dart';
@@ -28,6 +29,19 @@ class OfflineMigrationResult {
   /// move and nothing to refetch (the chapter simply doesn't exist on B).
   final int unmatchedDownloads;
   final List<String> warnings;
+}
+
+/// What happened when one chapter's downloaded pages were carried across.
+enum _TransferOutcome {
+  /// The bytes were reused on the target.
+  moved,
+
+  /// The target already had this chapter downloaded — nothing to do.
+  alreadyPresent,
+
+  /// The bytes couldn't be reused. The caller pins the target so the reconcile
+  /// pass re-downloads it, rather than leaving the chapter quietly missing.
+  refused,
 }
 
 /// Carries device-local offline state (keep-rule + downloaded files) across a
@@ -86,7 +100,10 @@ class OfflineMigrationService {
       final source = await db.mangaById(fromMangaId);
       if (source != null && source.keepRule != OfflineKeepRule.off) {
         await db.setKeepRule(
-            toMangaId, source.keepRule, source.keepUnreadCount);
+          toMangaId,
+          source.keepRule,
+          source.keepUnreadCount,
+        );
       }
     }
 
@@ -112,8 +129,11 @@ class OfflineMigrationService {
     // Migrate: drop the source's keep-rule and pins so the runner's post-removal
     // reconcile evicts every remaining source download. Copy leaves it untouched.
     if (options.deleteSource) {
-      await db.setKeepRule(fromMangaId, OfflineKeepRule.off,
-          (await db.mangaById(fromMangaId))?.keepUnreadCount ?? 3);
+      await db.setKeepRule(
+        fromMangaId,
+        OfflineKeepRule.off,
+        (await db.mangaById(fromMangaId))?.keepUnreadCount ?? 3,
+      );
       await db.unpinChaptersForManga(fromMangaId);
     }
 
@@ -153,46 +173,112 @@ class OfflineMigrationService {
     var moved = 0;
     var refetched = 0;
     for (final pair in pairs) {
-      // Don't clobber a copy the target already has.
-      final existing = await db.chapterById(pair.toId);
-      if (existing?.deviceState == OfflineDeviceState.downloaded) continue;
       final src = sourceOfflineById[pair.fromId];
+      var outcome = _TransferOutcome.refused;
       try {
-        final pages = await pageStore.transferChapter(
-          fromMangaId,
-          pair.fromId,
-          toMangaId,
-          pair.toId,
+        outcome = await _transferOne(
+          fromMangaId: fromMangaId,
+          fromChapterId: pair.fromId,
+          toMangaId: toMangaId,
+          toChapterId: pair.toId,
+          downloadedAt: src?.downloadedAt ?? DateTime.now(),
           keepSource: keepSource,
         );
-        await db.commitTransferredChapter(
-          toChapterId: pair.toId,
-          pages: pages,
-          downloadedAt: src?.downloadedAt ?? DateTime.now(),
-          // Pin so the move survives regardless of the target's keep-rule.
-          pinned: true,
-          clearSourceChapterId: keepSource ? null : pair.fromId,
-        );
-        moved++;
-      } catch (e) {
-        // Couldn't reuse the bytes — pin the target so the reconcile pass
-        // re-fetches it from the server.
-        await db.setChapterPinned(pair.toId, true);
-        refetched++;
-        warnings.add('Re-downloading "${targetById[pair.toId]?.name ?? pair.toId}" '
-            '(couldn\'t move the existing copy).');
+      } catch (_) {
+        outcome = _TransferOutcome.refused;
+      }
+      switch (outcome) {
+        case _TransferOutcome.moved:
+          moved++;
+        case _TransferOutcome.alreadyPresent:
+          break; // the target already has it; nothing to carry or re-fetch
+        case _TransferOutcome.refused:
+          // Couldn't reuse the bytes — pin the target so the reconcile pass
+          // re-fetches it from the server. Anything short of this loses the
+          // chapter silently: it is neither carried across nor re-downloaded.
+          await db.setChapterPinned(pair.toId, true);
+          refetched++;
+          warnings.add(
+            'Re-downloading "${targetById[pair.toId]?.name ?? pair.toId}" '
+            '(couldn\'t move the existing copy).',
+          );
       }
     }
     final unmatched = downloadedIds.length - pairs.length;
     return (moved: moved, refetched: refetched, unmatched: unmatched);
   }
 
+  /// Carry one chapter's downloaded pages onto the target: copy into the
+  /// target's staging area, commit it, then drop the source.
+  ///
+  /// Never a bare rename. A rename destroys the source before the target's
+  /// catalog write lands, and a crash in that window leaves a complete
+  /// directory under a `none` row — which recovery would rightly delete as a
+  /// delete the user made, taking the only copy with it. Copying costs a
+  /// duplicate of one chapter during a rare, user-initiated operation; the
+  /// rename costs the chapter.
+  ///
+  /// Both chapters are held for the whole sequence, so a download or an
+  /// eviction can't publish into either one halfway through.
+  Future<_TransferOutcome> _transferOne({
+    required int fromMangaId,
+    required int fromChapterId,
+    required int toMangaId,
+    required int toChapterId,
+    required DateTime downloadedAt,
+    required bool keepSource,
+  }) => ChapterFileLock.runPair(fromChapterId, toChapterId, () async {
+    final target = await db.chapterById(toChapterId);
+    if (target == null) return _TransferOutcome.refused;
+    // Don't clobber a copy the target already has.
+    if (target.deviceState == OfflineDeviceState.downloaded) {
+      return _TransferOutcome.alreadyPresent;
+    }
+    // Only an empty target is safe to write over. A queued/downloading one
+    // has a producer of its own holding staging, and migration is not
+    // entitled to commit on top of it — so hand it to the re-fetch path
+    // rather than dropping it.
+    if (target.deviceState != OfflineDeviceState.none) {
+      return _TransferOutcome.refused;
+    }
+    if (await pageStore.readManifest(toMangaId, toChapterId) != null) {
+      return _TransferOutcome.refused; // staging is spoken for
+    }
+
+    await pageStore.stageChapterCopy(
+      fromMangaId,
+      fromChapterId,
+      toMangaId,
+      toChapterId,
+      generation: target.downloadGeneration,
+    );
+    final pages = await pageStore.commitStaging(toMangaId, toChapterId);
+    if (pages == null) {
+      await pageStore.deleteStaging(toMangaId, toChapterId);
+      return _TransferOutcome.refused;
+    }
+    await db.commitTransferredChapter(
+      toChapterId: toChapterId,
+      pages: pages,
+      downloadedAt: downloadedAt,
+      // Pin so the move survives regardless of the target's keep-rule.
+      pinned: true,
+      clearSourceChapterId: keepSource ? null : fromChapterId,
+    );
+    // The target owns the bytes now, so the source can go. Until this line
+    // a crash leaves both copies, which recovery settles.
+    if (!keepSource) {
+      await pageStore.deleteChapter(fromMangaId, fromChapterId);
+    }
+    return _TransferOutcome.moved;
+  });
+
   ChapterState _state(ChapterDto c) => ChapterState(
-        id: c.id,
-        chapterNumber: c.chapterNumber,
-        name: c.name,
-        isRead: c.isRead,
-        isBookmarked: c.isBookmarked,
-        lastPageRead: c.lastPageRead,
-      );
+    id: c.id,
+    chapterNumber: c.chapterNumber,
+    name: c.name,
+    isRead: c.isRead,
+    isBookmarked: c.isBookmarked,
+    lastPageRead: c.lastPageRead,
+  );
 }

@@ -7,54 +7,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_manager.dart';
-import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 
+import '../../../../helpers/fake_page_store.dart';
 import '../../../../helpers/offline_test_db.dart';
-
-/// In-memory page store: records writes/deletes, no real file IO.
-class _FakeStore implements OfflinePageStore {
-  final Map<String, int> written = {};
-  final List<int> deletedChapters = [];
-
-  @override
-  Future<({String relPath, int bytes})> writePage(int mangaId, int chapterId,
-      int pageIndex, List<int> bytes, String ext) async {
-    final rel =
-        '$mangaId/$chapterId/${pageIndex.toString().padLeft(3, '0')}.$ext';
-    written[rel] = bytes.length;
-    return (relPath: rel, bytes: bytes.length);
-  }
-
-  @override
-  Future<void> deleteChapter(int mangaId, int chapterId) async {
-    deletedChapters.add(chapterId);
-    written.removeWhere((k, _) => k.startsWith('$mangaId/$chapterId/'));
-  }
-
-  @override
-  Future<int> chapterBytes(int mangaId, int chapterId) async => written.entries
-      .where((e) => e.key.startsWith('$mangaId/$chapterId/'))
-      .fold<int>(0, (s, e) => s + e.value);
-  @override
-  Future<void> clearAll() async {}
-  @override
-  Future<List<({int pageIndex, String relPath, int bytes})>> transferChapter(
-    int fromMangaId,
-    int fromChapterId,
-    int toMangaId,
-    int toChapterId, {
-    required bool keepSource,
-  }) =>
-      throw UnimplementedError();
-}
 
 void main() {
   late OfflineDatabase db;
-  late _FakeStore store;
+  late FakePageStore store;
 
   setUp(() {
     db = testOfflineDatabase();
-    store = _FakeStore();
+    store = FakePageStore();
   });
   tearDown(() => db.close());
 
@@ -77,58 +40,74 @@ void main() {
   OfflineDownloadManager managerWith({
     PageUrlsFetcher? urls,
     PageBytesFetcher? bytes,
-  }) =>
-      OfflineDownloadManager(
-        db: db,
-        store: store,
-        fetchPageUrls: urls ?? (id) async => ['u0', 'u1', 'u2'],
-        fetchBytes: bytes ?? (url) async => (bytes: [1, 2, 3], ext: 'jpg'),
+  }) => OfflineDownloadManager(
+    db: db,
+    store: store,
+    fetchPageUrls: urls ?? (id) async => ['u0', 'u1', 'u2'],
+    fetchBytes: bytes ?? (url) async => (bytes: [1, 2, 3], ext: 'jpg'),
+  );
+
+  test(
+    'downloadChapter stores all pages, records them, marks downloaded',
+    () async {
+      final chapter = await seedChapter();
+      await managerWith().downloadChapter(chapter);
+
+      expect(store.written.length, 3);
+      final pages = await (db.select(
+        db.offlinePages,
+      )..where((t) => t.chapterId.equals(2000))).get();
+      expect(pages.length, 3);
+      expect(
+        pages.map((p) => p.relativePath),
+        ['552/2000/0.jpg', '552/2000/1.jpg', '552/2000/2.jpg'],
+        reason: 'rows point at the committed directory, never at staging',
       );
 
-  test('downloadChapter stores all pages, records them, marks downloaded',
-      () async {
-    final chapter = await seedChapter();
-    await managerWith().downloadChapter(chapter);
+      final c = (await db.chaptersForManga(552)).single;
+      expect(c.deviceState, OfflineDeviceState.downloaded);
+      expect(c.bytes, 9); // 3 pages * 3 bytes
+    },
+  );
 
-    expect(store.written.length, 3);
-    final pages = await (db.select(db.offlinePages)
-          ..where((t) => t.chapterId.equals(2000)))
-        .get();
-    expect(pages.length, 3);
-    expect(pages.map((p) => p.relativePath),
-        ['552/2000/000.jpg', '552/2000/001.jpg', '552/2000/002.jpg']);
-
-    final c = (await db.chaptersForManga(552)).single;
-    expect(c.deviceState, OfflineDeviceState.downloaded);
-    expect(c.bytes, 9); // 3 pages * 3 bytes
-  });
-
-  test('downloadChapter refuses a chapter not downloaded server-side',
-      () async {
-    final chapter = await seedChapter(serverDownloaded: false);
-    expect(() => managerWith().downloadChapter(chapter), throwsStateError);
-    final c = (await db.chaptersForManga(552)).single;
-    expect(c.deviceState, OfflineDeviceState.none);
-  });
+  test(
+    'downloadChapter refuses a chapter not downloaded server-side',
+    () async {
+      final chapter = await seedChapter(serverDownloaded: false);
+      expect(() => managerWith().downloadChapter(chapter), throwsStateError);
+      final c = (await db.chaptersForManga(552)).single;
+      expect(c.deviceState, OfflineDeviceState.none);
+    },
+  );
 
   test('a failure mid-download cleans up and marks error', () async {
     final chapter = await seedChapter();
     var calls = 0;
-    final mgr = managerWith(bytes: (url) async {
-      if (calls++ == 1) throw Exception('network blip');
-      return (bytes: [1, 2, 3], ext: 'jpg');
-    });
+    final mgr = managerWith(
+      bytes: (url) async {
+        if (calls++ == 1) throw Exception('network blip');
+        return (bytes: [1, 2, 3], ext: 'jpg');
+      },
+    );
 
     await expectLater(mgr.downloadChapter(chapter), throwsException);
 
     final c = (await db.chaptersForManga(552)).single;
     expect(c.deviceState, OfflineDeviceState.error);
-    final pages = await (db.select(db.offlinePages)
-          ..where((t) => t.chapterId.equals(2000)))
-        .get();
-    expect(pages, isEmpty, reason: 'partial page rows purged');
-    expect(store.deletedChapters, contains(2000),
-        reason: 'partial files purged');
+    final pages = await (db.select(
+      db.offlinePages,
+    )..where((t) => t.chapterId.equals(2000))).get();
+    expect(pages, isEmpty, reason: 'nothing published');
+    expect(
+      store.manifests.containsKey(2000),
+      isFalse,
+      reason: 'the half-built staging area is dropped',
+    );
+    expect(
+      store.deletedChapters,
+      isNot(contains(2000)),
+      reason: 'a failed attempt never removes the chapter itself',
+    );
   });
 
   test('deleteChapter removes files, page rows, and resets state', () async {
@@ -141,9 +120,9 @@ void main() {
     final c = (await db.chaptersForManga(552)).single;
     expect(c.deviceState, OfflineDeviceState.none);
     expect(c.bytes, 0);
-    final pages = await (db.select(db.offlinePages)
-          ..where((t) => t.chapterId.equals(2000)))
-        .get();
+    final pages = await (db.select(
+      db.offlinePages,
+    )..where((t) => t.chapterId.equals(2000))).get();
     expect(pages, isEmpty);
   });
 
@@ -153,29 +132,39 @@ void main() {
       db.transaction(() async {
         final c = await db.chapterById(chapterId);
         if (c == null || c.deviceState == OfflineDeviceState.none) return;
-        await db.into(db.offlinePages).insertOnConflictUpdate(
+        await db
+            .into(db.offlinePages)
+            .insertOnConflictUpdate(
               OfflinePagesCompanion.insert(
-                  chapterId: chapterId,
-                  pageIndex: pageIndex,
-                  relativePath: rel),
+                chapterId: chapterId,
+                pageIndex: pageIndex,
+                relativePath: rel,
+              ),
             );
       });
 
-  test('a page stored after deleteChapter is rejected (state is none)',
-      () async {
-    final chapter = await seedChapter();
-    await managerWith().downloadChapter(chapter);
+  test(
+    'a page stored after deleteChapter is rejected (state is none)',
+    () async {
+      final chapter = await seedChapter();
+      await managerWith().downloadChapter(chapter);
 
-    await managerWith().deleteChapter((await db.chaptersForManga(552)).single);
-    // A page callback that fired just before the delete finally lands.
-    await storePageIfLive(2000, 5, '552/2000/005.jpg');
+      await managerWith().deleteChapter(
+        (await db.chaptersForManga(552)).single,
+      );
+      // A page callback that fired just before the delete finally lands.
+      await storePageIfLive(2000, 5, '552/2000/005.jpg');
 
-    final rows = await (db.select(db.offlinePages)
-          ..where((t) => t.chapterId.equals(2000)))
-        .get();
-    expect(rows, isEmpty,
-        reason: 'the insert reads state=none and skips — no resurrected row');
-  });
+      final rows = await (db.select(
+        db.offlinePages,
+      )..where((t) => t.chapterId.equals(2000))).get();
+      expect(
+        rows,
+        isEmpty,
+        reason: 'the insert reads state=none and skips — no resurrected row',
+      );
+    },
+  );
 
   test('a page store racing deleteChapter leaves no orphan row', () async {
     final chapter = await seedChapter();
@@ -187,13 +176,18 @@ void main() {
       storePageIfLive(2000, 5, '552/2000/005.jpg'),
     ]);
 
-    expect((await db.chaptersForManga(552)).single.deviceState,
-        OfflineDeviceState.none);
-    final rows = await (db.select(db.offlinePages)
-          ..where((t) => t.chapterId.equals(2000)))
-        .get();
-    expect(rows, isEmpty,
-        reason: 'state=none + row purge is one transaction — nothing survives');
+    expect(
+      (await db.chaptersForManga(552)).single.deviceState,
+      OfflineDeviceState.none,
+    );
+    final rows = await (db.select(
+      db.offlinePages,
+    )..where((t) => t.chapterId.equals(2000))).get();
+    expect(
+      rows,
+      isEmpty,
+      reason: 'state=none + row purge is one transaction — nothing survives',
+    );
   });
 
   test('sweepInterrupted resets chapters stuck downloading', () async {
@@ -205,4 +199,48 @@ void main() {
     final c = (await db.chaptersForManga(552)).single;
     expect(c.deviceState, OfflineDeviceState.none);
   });
+
+  test(
+    'a retry does not carry a previous attempt\'s pages into the chapter',
+    () async {
+      // beginChapter only replaces the manifest, so stale pages left underneath
+      // would ride the commit rename into the finished chapter.
+      final chapter = await seedChapter();
+      store.seedStaged(2000, {7: 999}, indices: [7]);
+
+      await managerWith().downloadChapter(chapter);
+
+      expect(store.committed[2000]!.keys.toSet(), {
+        0,
+        1,
+        2,
+      }, reason: 'only this run\'s pages');
+      expect(store.committed[2000]!.containsKey(7), isFalse);
+    },
+  );
+
+  test(
+    'a failed re-download does not delete the chapter already on device',
+    () async {
+      // The failure says nothing about the copy already there. Wiping it turned
+      // "the re-download didn't work" into "your chapter is gone".
+      final chapter = await seedChapter();
+      store.seedCommitted(2000, {0: 10, 1: 10, 2: 10});
+      final mgr = OfflineDownloadManager(
+        db: db,
+        store: store,
+        fetchPageUrls: (_) async => ['/a', '/b', '/c'],
+        fetchBytes: (_) async => throw Exception('network died'),
+      );
+
+      await expectLater(mgr.downloadChapter(chapter), throwsException);
+
+      expect(
+        store.committed.containsKey(2000),
+        isTrue,
+        reason: 'the previous copy survives a failed attempt',
+      );
+      expect(store.deletedChapters, isNot(contains(2000)));
+    },
+  );
 }

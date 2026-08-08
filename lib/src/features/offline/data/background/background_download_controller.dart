@@ -25,7 +25,9 @@ import '../../../notifications/data/local_notification_service.dart';
 import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import '../chapter_commit.dart';
 import '../offline_database.dart';
+import '../offline_download_progress.dart';
 import '../offline_page_store.dart';
 import '../offline_paths.dart';
 import '../offline_repository.dart';
@@ -83,8 +85,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _workerEventCallback ??= _onWorkerEvent;
     FlutterForegroundTask.addTaskDataCallback(_workerEventCallback!);
-    _connSub ??=
-        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+    _connSub ??= Connectivity().onConnectivityChanged.listen(
+      _onConnectivityChanged,
+    );
   }
 
   void dispose() {
@@ -148,8 +151,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         notificationText: 'Starting…',
         // Explicit monochrome icon: the fallback is the launcher icon, which
         // Android alpha-masks into an unrecognizable blob in the status bar.
-        notificationIcon:
-            const NotificationIcon(metaDataName: kNotificationIconMetaData),
+        notificationIcon: const NotificationIcon(
+          metaDataName: kNotificationIconMetaData,
+        ),
         callback: backgroundDownloadCallback,
       );
       if (res is ServiceRequestFailure) {
@@ -163,8 +167,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// drift is queue authority: queued + (resumable) downloading chapters.
   Future<List<OfflineChapter>> _pendingChapters() async {
     final queued = await _db.chaptersInState(OfflineDeviceState.queued);
-    final downloading =
-        await _db.chaptersInState(OfflineDeviceState.downloading);
+    final downloading = await _db.chaptersInState(
+      OfflineDeviceState.downloading,
+    );
     return [...queued, ...downloading];
   }
 
@@ -226,8 +231,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> onRemoved(int chapterId) async {
     if (!Platform.isAndroid) return;
     if (await FlutterForegroundTask.isRunningService) {
-      FlutterForegroundTask.sendDataToTask(
-          {'op': 'remove', 'chapterId': chapterId});
+      FlutterForegroundTask.sendDataToTask({
+        'op': 'remove',
+        'chapterId': chapterId,
+      });
     }
   }
 
@@ -244,8 +251,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> onWifiOnlyChanged(bool value) async {
     if (!Platform.isAndroid) return;
     if (await FlutterForegroundTask.isRunningService) {
-      FlutterForegroundTask.sendDataToTask(
-          {'op': 'setWifiOnly', 'value': value});
+      FlutterForegroundTask.sendDataToTask({
+        'op': 'setWifiOnly',
+        'value': value,
+      });
       if (value && await _isMetered()) {
         await FlutterForegroundTask.stopService();
       }
@@ -315,10 +324,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     try {
       await replayCompletionLog(
         db: _db,
-        paths: _paths,
+        store: _store,
         log: _log,
-        measureBytes: (mangaId, chapterId) =>
-            _store.chapterBytes(mangaId, chapterId),
         // Gates catch-up adoptions: a record from another server's catalog is
         // refused (and its files cleaned up), never adopted across identities.
         catalogServerId: _ref
@@ -345,8 +352,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       // the progress arc animates; the durable record is the completion log,
       // replayed on resume.
       case 'chapterStart':
-        unawaited(_applyChapterStart(data['chapterId'] as int,
-            data['total'] as int?, data['gen'] as int? ?? 0));
+        unawaited(
+          _applyChapterStart(
+            data['chapterId'] as int,
+            data['total'] as int?,
+            data['gen'] as int? ?? 0,
+          ),
+        );
       case 'page':
         unawaited(_applyPageEvent(data));
       case 'chapterDone':
@@ -374,21 +386,22 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     });
   }
 
+  /// A page landed in the worker's staging area. Nothing is written to the
+  /// catalog — the chapter isn't published until it commits — so this only
+  /// moves the progress arc.
   Future<void> _applyPageEvent(Map data) async {
+    final total = data['total'] as int? ?? 0;
+    if (total <= 0) return;
     final id = data['chapterId'] as int;
-    final eventGen = data['gen'] as int? ?? 0;
-    await _db.transaction(() async {
-      final c = await _db.chapterById(id);
-      if (c == null || c.deviceState == OfflineDeviceState.none) return;
-      if (eventGen < c.downloadGeneration) return; // stale generation
-      await _db.into(_db.offlinePages).insertOnConflictUpdate(
-            OfflinePagesCompanion.insert(
-              chapterId: id,
-              pageIndex: data['pageIndex'] as int,
-              relativePath: data['relPath'] as String,
-            ),
-          );
-    });
+    // Same staleness guard as chapterStart and the terminal apply: an event
+    // already in the port when a delete lands must not re-enter the map for a
+    // chapter that no longer exists.
+    final c = await _db.chapterById(id);
+    if (c == null || c.deviceState == OfflineDeviceState.none) return;
+    if ((data['gen'] as int? ?? 0) < c.downloadGeneration) return;
+    _ref
+        .read(offlineDownloadProgressProvider.notifier)
+        .start(id, total: total, done: data['done'] as int? ?? 0);
   }
 
   /// The worker drained and is self-stopping. Anything queued during that
@@ -426,7 +439,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     try {
       final locales = WidgetsBinding.instance.platformDispatcher.locales;
       final l10n = lookupAppLocalizations(
-          locales.isNotEmpty ? locales.first : const Locale('en'));
+        locales.isNotEmpty ? locales.first : const Locale('en'),
+      );
       final service = LocalNotificationService();
       await service.init();
       if (done > 0) {
@@ -449,23 +463,40 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _onChapterDone(Map data) async {
     final chapterId = data['chapterId'] as int?;
     final status = data['status'] as String?;
+    // Outside the status guard: a cancel (pause, delete, Wi-Fi drop) reports a
+    // null status, and leaving those entries behind grows the map for the life
+    // of the process and shows a re-queued chapter the last attempt's percent.
+    if (chapterId != null) {
+      _ref.read(offlineDownloadProgressProvider.notifier).clear(chapterId);
+    }
     if (chapterId != null && status != null) {
-      // Measure bytes outside the transaction (filesystem read); the
-      // terminal-state apply rechecks so a chapterDone landing after a delete
-      // can't flip a `none` chapter back to downloaded/error.
-      int bytes = 0;
+      // SINGLE COMMITTER: the worker only fills staging. Publishing the chapter
+      // happens here, on the main isolate, so exactly one party ever renames a
+      // staging directory into place and writes the rows for it.
       if (status == 'downloaded') {
         final ch = await _db.chapterById(chapterId);
-        if (ch != null) bytes = await _store.chapterBytes(ch.mangaId, chapterId);
-      }
-      await applyBackgroundTerminalState(
+        final result = ch == null
+            ? ChapterCommitResult.refused
+            : await commitStagedChapter(
+                db: _db,
+                store: _store,
+                mangaId: ch.mangaId,
+                chapterId: chapterId,
+              );
+        // The worker saying "done" isn't the same as the chapter landing: a
+        // stale event, a delete, or short staging all end here without
+        // publishing anything, and counting those would have the completion
+        // notification claim chapters the user doesn't have.
+        if (result == ChapterCommitResult.committed) _sessionDownloaded++;
+      } else {
+        await applyBackgroundTerminalState(
           db: _db,
           chapterId: chapterId,
           status: status,
-          bytes: bytes,
-          eventGeneration: data['gen'] as int? ?? 0);
-      if (status == 'downloaded') _sessionDownloaded++;
-      if (status == 'error') _sessionFailed++;
+          eventGeneration: data['gen'] as int? ?? 0,
+        );
+        if (status == 'error') _sessionFailed++;
+      }
     }
 
     // Drain handshake: if the worker just self-stopped, do post-stop
@@ -502,11 +533,15 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       baseDir: _paths.baseDir,
     );
     await FlutterForegroundTask.saveData(
-        key: kWorkOrderKey, value: jsonEncode(order.toJson()));
+      key: kWorkOrderKey,
+      value: jsonEncode(order.toJson()),
+    );
     // Seed the shared token record so the worker's broker reads/writes the same
     // gen-versioned record we'll read back on stop.
     await FlutterForegroundTask.saveData(
-        key: kTokenRecordKey, value: jsonEncode(auth.toJson()));
+      key: kTokenRecordKey,
+      value: jsonEncode(auth.toJson()),
+    );
   }
 
   /// Snapshot the current auth into the cross-isolate record. The worker uses
@@ -537,12 +572,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// [AuthCredentialsStore], then clear the FFT auth keys so a stale snapshot
   /// doesn't linger in plugin storage.
   Future<void> _wipeWorkOrderAuth() async {
-    final raw =
-        await FlutterForegroundTask.getData<String>(key: kTokenRecordKey);
+    final raw = await FlutterForegroundTask.getData<String>(
+      key: kTokenRecordKey,
+    );
     if (raw != null) {
       try {
         final record = BackgroundTokenRecord.fromJson(
-            jsonDecode(raw) as Map<String, Object?>);
+          jsonDecode(raw) as Map<String, Object?>,
+        );
         // gen > 0 means the worker rotated the token at least once. Endpoint
         // check skips writeback if the user switched servers meanwhile.
         if (record.gen > 0 &&
@@ -559,8 +596,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
               forEpoch: epoch,
             );
           } else {
-            await store.updateUiLoginAccessToken(record.accessToken!,
-                forEpoch: epoch);
+            await store.updateUiLoginAccessToken(
+              record.accessToken!,
+              forEpoch: epoch,
+            );
           }
         }
       } catch (e) {
@@ -587,7 +626,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// so a wifi-only batch doesn't start.
   Future<bool> _isMetered() async {
     final result = await Connectivity().checkConnectivity();
-    final hasUnmetered = result.contains(ConnectivityResult.wifi) ||
+    final hasUnmetered =
+        result.contains(ConnectivityResult.wifi) ||
         result.contains(ConnectivityResult.ethernet);
     return !hasUnmetered;
   }
@@ -600,7 +640,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   void _onConnectivityChanged(List<ConnectivityResult> result) {
     if (!Platform.isAndroid) return;
     final wifiOnly = _ref.read(offlineWifiOnlyProvider) ?? true;
-    final hasUnmetered = result.contains(ConnectivityResult.wifi) ||
+    final hasUnmetered =
+        result.contains(ConnectivityResult.wifi) ||
         result.contains(ConnectivityResult.ethernet);
     final hasConnection =
         result.any((r) => r != ConnectivityResult.none) && result.isNotEmpty;
@@ -609,8 +650,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         // Wi-Fi-only and dropped to metered: stop the running service (chapters
         // stay `downloading` and resume on Wi-Fi).
         if (await FlutterForegroundTask.isRunningService) {
-          logger
-              .i('Offline: dropped to metered with Wi-Fi-only — stopping FGS');
+          logger.i(
+            'Offline: dropped to metered with Wi-Fi-only — stopping FGS',
+          );
           await FlutterForegroundTask.stopService();
         }
         return;
@@ -650,21 +692,24 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Only ui_login refreshes; network refresh is delegated to [refreshFn].
   TokenBroker mainSideBroker({
     required Future<RefreshResult?> Function(String refreshToken) refreshFn,
-  }) =>
-      TokenBroker(
-        read: () async {
-          final raw =
-              await FlutterForegroundTask.getData<String>(key: kTokenRecordKey);
-          if (raw != null) {
-            return BackgroundTokenRecord.fromJson(
-                jsonDecode(raw) as Map<String, Object?>);
-          }
-          return _snapshotAuth();
-        },
-        write: (r) => FlutterForegroundTask.saveData(
-            key: kTokenRecordKey, value: jsonEncode(r.toJson())),
-        refreshFn: refreshFn,
+  }) => TokenBroker(
+    read: () async {
+      final raw = await FlutterForegroundTask.getData<String>(
+        key: kTokenRecordKey,
       );
+      if (raw != null) {
+        return BackgroundTokenRecord.fromJson(
+          jsonDecode(raw) as Map<String, Object?>,
+        );
+      }
+      return _snapshotAuth();
+    },
+    write: (r) => FlutterForegroundTask.saveData(
+      key: kTokenRecordKey,
+      value: jsonEncode(r.toJson()),
+    ),
+    refreshFn: refreshFn,
+  );
 }
 
 /// App-lifetime singleton driving the foreground-service downloads on
@@ -673,7 +718,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 /// `background_download_controller_shim.dart` swaps in a stub.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>(
-        (Ref ref) => BackgroundDownloadController(ref));
+      (Ref ref) => BackgroundDownloadController(ref),
+    );
 
 /// Initialise `flutter_foreground_task` (communication port + notification
 /// channel/options). Call once early in `main()`. Android-only; no-op elsewhere.

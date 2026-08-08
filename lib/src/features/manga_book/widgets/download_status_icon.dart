@@ -36,7 +36,9 @@ class DownloadStatusIcon extends HookConsumerWidget {
   final bool isDownloaded;
 
   Future<void> newUpdatePair(
-      WidgetRef ref, ValueSetter<bool> setIsLoading) async {
+    WidgetRef ref,
+    ValueSetter<bool> setIsLoading,
+  ) async {
     try {
       setIsLoading(true);
       await updateData();
@@ -62,8 +64,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
         if (isAdd || isError) {
           await repo.addChaptersBatchToDownloadQueue([chapter.id]);
         }
-      }))
-          .showToastOnError(toast);
+      })).showToastOnError(toast);
     } catch (e) {
       //
     }
@@ -78,7 +79,8 @@ class DownloadStatusIcon extends HookConsumerWidget {
     useEffect(() {
       if (downloadUpdate?.state == DownloadState.FINISHED) {
         Future.microtask(
-            () => newUpdatePair(ref, (value) => isLoading.value = value));
+          () => newUpdatePair(ref, (value) => isLoading.value = value),
+        );
       }
       return;
     }, [downloadUpdate?.state]);
@@ -95,12 +97,27 @@ class DownloadStatusIcon extends HookConsumerWidget {
             onPressed: () => toggleChapterToQueue(toast, ref, isError: true),
             icon: const Icon(Icons.replay_rounded),
           );
+        } else if (downloadUpdate.state == DownloadState.QUEUED) {
+          // Waiting its turn, not downloading. An indeterminate spinner here
+          // repaints every frame, so queueing a series set every visible row
+          // animating until its turn came. A determinate ring doesn't animate
+          // at all, so a chapter paused partway keeps showing how far it got.
+          return IconButton(
+            onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
+            icon: downloadUpdate.progress > 0
+                ? MiniCircularProgressIndicator(
+                    value: downloadUpdate.progress,
+                    color: context.iconColor,
+                  )
+                : Icon(Icons.schedule_rounded, color: context.iconColor),
+          );
         } else {
           return IconButton(
             onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
             icon: MiniCircularProgressIndicator(
-              value:
-                  downloadUpdate.progress == 0 ? null : downloadUpdate.progress,
+              value: downloadUpdate.progress == 0
+                  ? null
+                  : downloadUpdate.progress,
               color: context.iconColor,
             ),
           );
@@ -111,8 +128,11 @@ class DownloadStatusIcon extends HookConsumerWidget {
             // Cloud = the SERVER copy; solid indigo = "you have it".
             icon: brandGradientIcon(context, Icons.cloud_done_rounded),
             onPressed: () async {
-              final deleteIds = expandIdsAcrossScanlators(ref,
-                  mangaId: chapter.mangaId, chapterIds: [chapter.id]);
+              final deleteIds = expandIdsAcrossScanlators(
+                ref,
+                mangaId: chapter.mangaId,
+                chapterIds: [chapter.id],
+              );
               final result = await AsyncValue.guard(
                 () => ref
                     .read(mangaBookRepositoryProvider)
@@ -129,8 +149,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
         } else {
           return IconButton(
             // Muted outline = a "get it on the server" button.
-            icon: Icon(Icons.cloud_download_outlined,
-                color: context.theme.colorScheme.onSurfaceVariant),
+            icon: Icon(
+              Icons.cloud_download_outlined,
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
             onPressed: () {
               toggleChapterToQueue(toast, ref, isAdd: true);
             },

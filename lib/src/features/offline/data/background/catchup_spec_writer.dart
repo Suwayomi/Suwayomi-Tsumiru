@@ -27,8 +27,9 @@ typedef CatchupRead = T Function<T>(ProviderListenable<T> provider);
 Future<void> writeCatchupWorkSpec(CatchupRead read) async {
   try {
     if (!read(offlineActiveProvider)) return;
-    final serverId = read(sharedPreferencesProvider)
-        .getString(DBKeys.offlineCatalogServerId.name);
+    final serverId = read(
+      sharedPreferencesProvider,
+    ).getString(DBKeys.offlineCatalogServerId.name);
     if (serverId == null) return;
 
     final db = read(offlineDatabaseProvider);
@@ -38,34 +39,44 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) async {
     for (final m in await db.libraryManga()) {
       final all = await db.chaptersForManga(m.id);
       for (final c in all) {
-        if (c.deviceState == OfflineDeviceState.downloaded) usedBytes += c.bytes;
+        if (c.deviceState == OfflineDeviceState.downloaded)
+          usedBytes += c.bytes;
       }
       if (m.keepRule == OfflineKeepRule.off) continue;
       final chapters = all;
-      specs.add(CatchupMangaSpec(
-        mangaId: m.id,
-        keepRule: m.keepRule,
-        keepUnreadCount: m.keepUnreadCount,
-        onDeviceChapterIds: {
-          for (final c in chapters)
-            if (c.deviceState == OfflineDeviceState.downloaded) c.id,
-        },
-        pinnedChapterIds: {
-          for (final c in chapters)
-            if (c.pinned) c.id,
-        },
-      ));
+      specs.add(
+        CatchupMangaSpec(
+          mangaId: m.id,
+          keepRule: m.keepRule,
+          keepUnreadCount: m.keepUnreadCount,
+          onDeviceChapterIds: {
+            for (final c in chapters)
+              if (c.deviceState == OfflineDeviceState.downloaded) c.id,
+          },
+          pinnedChapterIds: {
+            for (final c in chapters)
+              if (c.pinned) c.id,
+          },
+          // Only the deleted-at-least-once chapters; everything else is 0.
+          chapterGenerations: {
+            for (final c in chapters)
+              if (c.downloadGeneration != 0) c.id: c.downloadGeneration,
+          },
+        ),
+      );
     }
 
     final store = CatchupStateStore(read(sharedPreferencesProvider));
-    await store.writeSpec(CatchupWorkSpec(
-      serverId: serverId,
-      wifiOnly: read(offlineWifiOnlyProvider) ?? true,
-      storageCapEnabled: nets.storageCapEnabled,
-      storageCapBytes: nets.storageCapBytes,
-      usedBytes: usedBytes,
-      manga: specs,
-    ));
+    await store.writeSpec(
+      CatchupWorkSpec(
+        serverId: serverId,
+        wifiOnly: read(offlineWifiOnlyProvider) ?? true,
+        storageCapEnabled: nets.storageCapEnabled,
+        storageCapBytes: nets.storageCapBytes,
+        usedBytes: usedBytes,
+        manga: specs,
+      ),
+    );
   } catch (e) {
     // A stale spec beats a crashed caller — the worker treats staleness as
     // normal and the next foreground pass rewrites it.
