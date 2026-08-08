@@ -106,8 +106,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     SettingsPropTile(
       title: context.l10n.offlineConcurrencyLabel,
       subtitle: context.l10n.offlineConcurrencyValue(
-        ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
-      ),
+          ref.watch(offlineDownloadConcurrencyProvider) ?? 2),
       type: SettingsPropType.numberSlider(
         min: 1,
         max: 8,
@@ -131,9 +130,8 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ),
     SettingsPropTile(
       title: context.l10n.offlineStorageCapLimit,
-      subtitle: context.l10n.offlineMegabytes(
-        ref.watch(offlineStorageCapMbProvider) ?? 2000,
-      ),
+      subtitle: context.l10n
+          .offlineMegabytes(ref.watch(offlineStorageCapMbProvider) ?? 2000),
       type: SettingsPropType.numberSlider(
         min: 100,
         max: 50000,
@@ -156,9 +154,8 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ),
     SettingsPropTile(
       title: context.l10n.offlineKeepDaysLabel,
-      subtitle: context.l10n.offlineDays(
-        ref.watch(offlineKeepDaysProvider) ?? 30,
-      ),
+      subtitle:
+          context.l10n.offlineDays(ref.watch(offlineKeepDaysProvider) ?? 30),
       type: SettingsPropType.numberSlider(
         min: 1,
         max: 365,

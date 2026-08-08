@@ -13,8 +13,10 @@ import 'package:tsumiru/src/features/offline/data/offline_download_providers.dar
 
 import '../../../../helpers/offline_test_db.dart';
 
-GraphQLClient _dummyClient() =>
-    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
+GraphQLClient _dummyClient() => GraphQLClient(
+      link: HttpLink('http://localhost:0'),
+      cache: GraphQLCache(),
+    );
 
 /// modifyBulkChapters succeeds — mimics an online mark-read.
 class _OkRepo extends MangaBookRepository {
@@ -40,22 +42,13 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  Future<void> seedChapter(
-    int id, {
-    bool isRead = false,
-    int lastPageRead = 0,
-  }) => db.upsertChapterMetadata(
-    id: id,
-    mangaId: 1,
-    name: 'c$id',
-    chapterIndex: id,
-    isRead: isRead,
-    lastPageRead: lastPageRead,
-    isBookmarked: false,
-    serverIsDownloaded: true,
-    pageCount: 30,
-    updatedAt: DateTime(2026),
-  );
+  Future<void> seedChapter(int id,
+          {bool isRead = false, int lastPageRead = 0}) =>
+      db.upsertChapterMetadata(
+        id: id, mangaId: 1, name: 'c$id', chapterIndex: id, isRead: isRead,
+        lastPageRead: lastPageRead, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 30, updatedAt: DateTime(2026),
+      );
 
   test('offline mark-read lands locally and stays queued for sync', () async {
     await seedChapter(10);
@@ -105,21 +98,19 @@ void main() {
     expect(c.lastPageRead, 7); // resetPosition:false → position untouched
   });
 
-  test(
-    'mark-read patch carries the position reset the server expects',
-    () async {
-      await seedChapter(10);
-      final repo = _OkRepo();
-      await recordReadStateWithDependencies(
-        offlineEnabled: true,
-        offlineDatabase: db,
-        repository: repo,
-        chapterIds: [10],
-        isRead: true,
-        resetPosition: true,
-      );
-      expect(repo.batches.single.patch.isRead, isTrue);
-      expect(repo.batches.single.patch.lastPageRead, 0);
-    },
-  );
+  test('mark-read patch carries the position reset the server expects',
+      () async {
+    await seedChapter(10);
+    final repo = _OkRepo();
+    await recordReadStateWithDependencies(
+      offlineEnabled: true,
+      offlineDatabase: db,
+      repository: repo,
+      chapterIds: [10],
+      isRead: true,
+      resetPosition: true,
+    );
+    expect(repo.batches.single.patch.isRead, isTrue);
+    expect(repo.batches.single.patch.lastPageRead, 0);
+  });
 }

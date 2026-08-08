@@ -53,9 +53,9 @@ class OfflineReconciler {
   final Future<void> Function(Set<int> chapterIds)? onServerDownload;
 
   Future<ReconcilePlan> reconcileManga(int mangaId) async {
-    final manga = await (db.select(
-      db.offlineMangas,
-    )..where((t) => t.id.equals(mangaId))).getSingleOrNull();
+    final manga = await (db.select(db.offlineMangas)
+          ..where((t) => t.id.equals(mangaId)))
+        .getSingleOrNull();
     if (manga == null) return ReconcilePlan.empty;
 
     final chapters = await db.chaptersForManga(mangaId);
@@ -71,11 +71,8 @@ class OfflineReconciler {
         .where((c) => c.deviceState == OfflineDeviceState.downloaded)
         .toList();
 
-    final desired = desiredChapterIds(
-      chapters,
-      manga.keepRule,
-      manga.keepUnreadCount,
-    );
+    final desired =
+        desiredChapterIds(chapters, manga.keepRule, manga.keepUnreadCount);
 
     final ev = applySafetyNets(
       downloaded: downloaded,

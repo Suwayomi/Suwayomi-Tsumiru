@@ -64,10 +64,8 @@ MangaDto offlineMangaToDto(
           isConfigurable: false,
           supportsLatest: false,
           meta: const <Fragment$SourceDto$meta>[],
-          $extension: Fragment$SourceDto$extension(
-            pkgName: '',
-            isObsolete: false,
-          ),
+          $extension:
+              Fragment$SourceDto$extension(pkgName: '', isObsolete: false),
         );
 
   // Restore status (stored as the enum name string)
@@ -133,9 +131,8 @@ MangaDto offlineMangaToDto(
     // The next unread chapter that's downloaded on this device, if any. Drives
     // the offline "continue reading" button — left null (button hidden) when
     // the next unread chapter isn't on the device, so it's never a dead end.
-    firstUnreadChapter: firstUnread == null
-        ? null
-        : offlineChapterToDto(firstUnread),
+    firstUnreadChapter:
+        firstUnread == null ? null : offlineChapterToDto(firstUnread),
     genre: offlineGenre(m.genre),
     inLibrary: true,
     inLibraryAt: m.inLibraryAt ?? '0',
@@ -172,10 +169,7 @@ MangaDto offlineMangaToDto(
     sourceId: m.sourceId ?? '0',
     status: status,
     categories: Fragment$MangaDto$categories(nodes: categoryNodes),
-    trackRecords: Fragment$MangaDto$trackRecords(
-      totalCount: 0,
-      nodes: const [],
-    ),
+    trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
     // The stored count is the server's, so it does not move when you read
     // offline. Add back what this device has changed since the server last
     // reported, measured per chapter against its synced baseline — exact in
@@ -198,37 +192,37 @@ Map<String, String> _decodeMeta(String? metaJson) {
 
 /// Build a [ChapterDto] from an on-device catalog row (offline fallback).
 ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
-  id: c.id,
-  mangaId: c.mangaId,
-  name: c.name,
-  // Real number when synced (lets dedup group duplicates offline, #141);
-  // index fallback for pre-v9 rows keeps numbers unique = no collapse.
-  chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
-  sourceOrder: c.chapterIndex,
-  isRead: c.isRead,
-  isBookmarked: c.isBookmarked,
-  isDownloaded: c.serverIsDownloaded,
-  lastPageRead: c.lastPageRead,
-  pageCount: c.pageCount,
-  fetchedAt: '0',
-  uploadDate: '0',
-  lastReadAt: '0',
-  url: '',
-  scanlator: c.scanlator,
-  meta: const <Fragment$ChapterDto$meta>[],
-);
+      id: c.id,
+      mangaId: c.mangaId,
+      name: c.name,
+      // Real number when synced (lets dedup group duplicates offline, #141);
+      // index fallback for pre-v9 rows keeps numbers unique = no collapse.
+      chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
+      sourceOrder: c.chapterIndex,
+      isRead: c.isRead,
+      isBookmarked: c.isBookmarked,
+      isDownloaded: c.serverIsDownloaded,
+      lastPageRead: c.lastPageRead,
+      pageCount: c.pageCount,
+      fetchedAt: '0',
+      uploadDate: '0',
+      lastReadAt: '0',
+      url: '',
+      scanlator: c.scanlator,
+      meta: const <Fragment$ChapterDto$meta>[],
+    );
 
 /// A synthetic "Default" category used offline, when the server's category list
 /// is unreachable. Carries [mangaCount] so it survives the `mangas.totalCount >
 /// 0` filter (`nonZeroCategoryList`) and the library renders one flat tab of the
 /// on-device catalog.
 CategoryDto offlineDefaultCategoryDto(int mangaCount) => Fragment$CategoryDto(
-  defaultCategory: true,
-  id: 0,
-  includeInDownload: Enum$IncludeOrExclude.UNSET,
-  includeInUpdate: Enum$IncludeOrExclude.UNSET,
-  name: 'Default',
-  order: 0,
-  mangas: Fragment$CategoryDto$mangas(totalCount: mangaCount),
-  meta: const <Fragment$CategoryDto$meta>[],
-);
+      defaultCategory: true,
+      id: 0,
+      includeInDownload: Enum$IncludeOrExclude.UNSET,
+      includeInUpdate: Enum$IncludeOrExclude.UNSET,
+      name: 'Default',
+      order: 0,
+      mangas: Fragment$CategoryDto$mangas(totalCount: mangaCount),
+      meta: const <Fragment$CategoryDto$meta>[],
+    );

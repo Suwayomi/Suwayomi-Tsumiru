@@ -38,7 +38,8 @@ class _FixedRepo extends OfflineServerIdentityRepository {
 }
 
 void main() {
-  test('serverInstanceId returns the cached id instantly for a known address, '
+  test(
+      'serverInstanceId returns the cached id instantly for a known address, '
       'without waiting on the network (offline-first, #145 fix)', () async {
     const address = 'http://host:4567';
     SharedPreferences.setMockInitialValues({
@@ -47,13 +48,11 @@ void main() {
     });
     final prefs = await SharedPreferences.getInstance();
     final repo = _HangingRepo();
-    final c = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        currentServerAddressProvider.overrideWith((ref) => address),
-        offlineServerIdentityRepositoryProvider.overrideWithValue(repo),
-      ],
-    );
+    final c = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      currentServerAddressProvider.overrideWith((ref) => address),
+      offlineServerIdentityRepositoryProvider.overrideWithValue(repo),
+    ]);
     addTearDown(() {
       if (!repo.completer.isCompleted) repo.completer.complete('late');
       c.dispose();
@@ -63,40 +62,29 @@ void main() {
         .read(serverInstanceIdProvider.future)
         .timeout(const Duration(seconds: 2));
 
-    expect(
-      id,
-      'cached-id',
-      reason: 'must resolve from cache even though the network hangs',
-    );
-    expect(
-      repo.resolveCalls,
-      1,
-      reason: 'the online verify still fires in the background',
-    );
+    expect(id, 'cached-id',
+        reason: 'must resolve from cache even though the network hangs');
+    expect(repo.resolveCalls, 1,
+        reason: 'the online verify still fires in the background');
   });
 
-  test(
-    'serverInstanceId resolves online and caches on a first-seen address',
-    () async {
-      const address = 'http://new-server:4567';
-      SharedPreferences.setMockInitialValues(const {});
-      final prefs = await SharedPreferences.getInstance();
-      final c = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          currentServerAddressProvider.overrideWith((ref) => address),
-          offlineServerIdentityRepositoryProvider.overrideWithValue(
-            _FixedRepo('fresh-id'),
-          ),
-        ],
-      );
-      addTearDown(c.dispose);
+  test('serverInstanceId resolves online and caches on a first-seen address',
+      () async {
+    const address = 'http://new-server:4567';
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      currentServerAddressProvider.overrideWith((ref) => address),
+      offlineServerIdentityRepositoryProvider
+          .overrideWithValue(_FixedRepo('fresh-id')),
+    ]);
+    addTearDown(c.dispose);
 
-      final id = await c.read(serverInstanceIdProvider.future);
+    final id = await c.read(serverInstanceIdProvider.future);
 
-      expect(id, 'fresh-id');
-      expect(prefs.getString(DBKeys.offlineLastServerId.name), 'fresh-id');
-      expect(prefs.getString(DBKeys.offlineLastServerAddress.name), address);
-    },
-  );
+    expect(id, 'fresh-id');
+    expect(prefs.getString(DBKeys.offlineLastServerId.name), 'fresh-id');
+    expect(prefs.getString(DBKeys.offlineLastServerAddress.name), address);
+  });
 }

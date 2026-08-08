@@ -4,11 +4,7 @@ import 'package:tsumiru/src/features/offline/data/background/background_token_re
 void main() {
   test('a newer record gen is used WITHOUT calling refresh', () async {
     var record = const BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      accessToken: 'OLD',
-      refreshToken: 'R0',
-    );
+        gen: 1, authType: 'uiLogin', accessToken: 'OLD', refreshToken: 'R0');
     var refreshCalls = 0;
     final broker = TokenBroker(
       read: () async => record,
@@ -20,11 +16,7 @@ void main() {
     );
     // someone else already advanced the record:
     record = const BackgroundTokenRecord(
-      gen: 2,
-      authType: 'uiLogin',
-      accessToken: 'NEWER',
-      refreshToken: 'R9',
-    );
+        gen: 2, authType: 'uiLogin', accessToken: 'NEWER', refreshToken: 'R9');
     final token = await broker.resolveAfter401('OLD');
     expect(token, 'NEWER');
     expect(refreshCalls, 0);
@@ -32,11 +24,7 @@ void main() {
 
   test('refresh rotates BOTH tokens and bumps gen', () async {
     var record = const BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      accessToken: 'OLD',
-      refreshToken: 'R0',
-    );
+        gen: 1, authType: 'uiLogin', accessToken: 'OLD', refreshToken: 'R0');
     final broker = TokenBroker(
       read: () async => record,
       write: (r) async => record = r,
@@ -54,11 +42,7 @@ void main() {
 
   test('a dead refresh returns null', () async {
     var record = const BackgroundTokenRecord(
-      gen: 1,
-      authType: 'uiLogin',
-      accessToken: 'OLD',
-      refreshToken: 'R0',
-    );
+        gen: 1, authType: 'uiLogin', accessToken: 'OLD', refreshToken: 'R0');
     final broker = TokenBroker(
       read: () async => record,
       write: (r) async => record = r,

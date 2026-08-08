@@ -26,100 +26,81 @@ void main() {
   });
 
   test(
-    'v2 schema persists keep-rule + pinned + downloadedAt across close/reopen',
-    () async {
-      final dbPath = p.join(tmp.path, 'test.db');
+      'v2 schema persists keep-rule + pinned + downloadedAt across close/reopen',
+      () async {
+    final dbPath = p.join(tmp.path, 'test.db');
 
-      // Open, populate, close.
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'M',
-          updatedAt: DateTime(2026),
-        );
-        await db.upsertChapterMetadata(
-          id: 10,
-          mangaId: 1,
-          name: 'c',
-          chapterIndex: 1,
-          isRead: false,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 3,
-          updatedAt: DateTime(2026),
-        );
-        await db.setKeepRule(1, OfflineKeepRule.allUnread, 7);
-        await db.setChapterPinned(10, true);
-        await db.setChapterDeviceState(
-          10,
-          OfflineDeviceState.downloaded,
-          bytes: 512,
-          downloadedAt: DateTime(2026, 3, 15),
-        );
-        await db.close();
-      }
+    // Open, populate, close.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 3,
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.allUnread, 7);
+      await db.setChapterPinned(10, true);
+      await db.setChapterDeviceState(10, OfflineDeviceState.downloaded,
+          bytes: 512, downloadedAt: DateTime(2026, 3, 15));
+      await db.close();
+    }
 
-      // Reopen and assert the v2 columns persisted with the values we wrote.
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        final m = await (db.select(
-          db.offlineMangas,
-        )..where((t) => t.id.equals(1))).getSingle();
-        expect(m.keepRule, OfflineKeepRule.allUnread);
-        expect(m.keepUnreadCount, 7);
+    // Reopen and assert the v2 columns persisted with the values we wrote.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final m = await (db.select(db.offlineMangas)
+            ..where((t) => t.id.equals(1)))
+          .getSingle();
+      expect(m.keepRule, OfflineKeepRule.allUnread);
+      expect(m.keepUnreadCount, 7);
 
-        final c = await (db.select(
-          db.offlineChapters,
-        )..where((t) => t.id.equals(10))).getSingle();
-        expect(c.pinned, true);
-        expect(c.downloadedAt, DateTime(2026, 3, 15));
-        await db.close();
-      }
-    },
-  );
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(c.pinned, true);
+      expect(c.downloadedAt, DateTime(2026, 3, 15));
+      await db.close();
+    }
+  });
 
-  test(
-    'migration is idempotent: re-adding existing columns does not crash',
-    () async {
-      final dbPath = p.join(tmp.path, 'test.db');
+  test('migration is idempotent: re-adding existing columns does not crash',
+      () async {
+    final dbPath = p.join(tmp.path, 'test.db');
 
-      // Create a fresh DB (all current columns present), then force the recorded
-      // schema version back to 1 — exactly the inconsistent state a device left
-      // by an intermediate/dev build can end up in (column present, old version).
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        await db.customStatement('PRAGMA user_version = 1');
-        await db.close();
-      }
+    // Create a fresh DB (all current columns present), then force the recorded
+    // schema version back to 1 — exactly the inconsistent state a device left
+    // by an intermediate/dev build can end up in (column present, old version).
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.customStatement('PRAGMA user_version = 1');
+      await db.close();
+    }
 
-      // Reopen: onUpgrade(from: 1) runs every `from < N` branch and would re-add
-      // already-present columns. The idempotent guard must skip them instead of
-      // throwing "duplicate column" — so the DB opens and is usable.
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'M',
-          updatedAt: DateTime(2026),
-        );
-        expect(await db.select(db.offlineChapters).get(), isEmpty);
-        await db.close();
-      }
-    },
-  );
+    // Reopen: onUpgrade(from: 1) runs every `from < N` branch and would re-add
+    // already-present columns. The idempotent guard must skip them instead of
+    // throwing "duplicate column" — so the DB opens and is usable.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      expect(await db.select(db.offlineChapters).get(), isEmpty);
+      await db.close();
+    }
+  });
 
   test('v4 lastReadAt persists across close/reopen', () async {
     final dbPath = p.join(tmp.path, 'test.db');
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(
-        id: 1,
-        title: 'M',
-        updatedAt: DateTime(2026),
-      );
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
       await db.upsertChapterMetadata(
         id: 10,
         mangaId: 1,
@@ -138,9 +119,9 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(
-        db.offlineChapters,
-      )..where((t) => t.id.equals(10))).getSingle();
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
       expect(c.lastReadAt, '1700000000000');
       expect(await db.lastReadAtByManga(), {1: '1700000000000'});
       await db.close();

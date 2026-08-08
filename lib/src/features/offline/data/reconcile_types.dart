@@ -39,9 +39,6 @@ class ReconcilePlan {
   final Set<int> toEvict;
   final bool overCapWarning;
 
-  static const empty = ReconcilePlan(
-    toDownload: {},
-    toEvict: {},
-    overCapWarning: false,
-  );
+  static const empty =
+      ReconcilePlan(toDownload: {}, toEvict: {}, overCapWarning: false);
 }
