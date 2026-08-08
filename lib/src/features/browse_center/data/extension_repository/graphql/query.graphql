@@ -19,3 +19,12 @@ mutation InstallExternalExtension($extensionFile: Upload!) {
     }
   }
 }
+
+# Read-only count for the Browse nav badge. Deliberately NOT the fetchExtensions
+# mutation the extensions screen uses: that sends the server out to the repos,
+# and the nav shell is built on every launch.
+query ExtensionUpdateCount {
+  extensions(condition: {hasUpdate: true, isInstalled: true}) {
+    totalCount
+  }
+}

@@ -9,17 +9,20 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../constants/gen/assets.gen.dart';
 import '../../constants/navigation_bar_data.dart';
+import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import 'animated_nav_icon.dart';
+import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
 class BigScreenNavigationBar extends ConsumerWidget {
-  const BigScreenNavigationBar(
-      {super.key,
-      required this.selectedIndex,
-      required this.onDestinationSelected});
+  const BigScreenNavigationBar({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -29,12 +32,16 @@ class BigScreenNavigationBar extends ConsumerWidget {
   /// left-align (the rail's Column centers a narrower leading child).
   static const double _extendedWidth = 256;
 
-  NavigationRailDestination getNavigationRailDestination(BuildContext context,
-      NavigationBarData data, bool selected, bool downloadsPaused) {
-    final badged = downloadsPaused && data.icon == Icons.download_outlined;
+  NavigationRailDestination getNavigationRailDestination(
+    BuildContext context,
+    NavigationBarData data,
+    bool selected,
+    bool downloadsPaused,
+    int extensionUpdates,
+  ) {
     final icon = AnimatedNavIcon(vector: data.animatedIcon, selected: selected);
     return NavigationRailDestination(
-      icon: badged ? Badge(child: icon) : icon,
+      icon: badgedNavIcon(icon, data, downloadsPaused, extensionUpdates),
       label: Text(data.label(context)),
     );
   }
@@ -42,6 +49,8 @@ class BigScreenNavigationBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
+    final extensionUpdates =
+        ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
     // The rail shows on any wide screen (width >= 600), which includes a phone
     // in landscape (short side < 600). There the height is tight, so drop the
@@ -56,7 +65,10 @@ class BigScreenNavigationBar extends ConsumerWidget {
     void toggleSidebar() =>
         ref.read(sidebarExpandedProvider.notifier).update(!expanded);
 
-    final logoIcon = ImageIcon(AssetImage(Assets.icons.darkIcon.path), size: 48);
+    final logoIcon = ImageIcon(
+      AssetImage(Assets.icons.darkIcon.path),
+      size: 48,
+    );
 
     final Widget leadingIcon;
     if (showExtended) {
@@ -121,21 +133,26 @@ class BigScreenNavigationBar extends ConsumerWidget {
             child: NavigationRail(
               useIndicator: true,
               elevation: 5,
-      extended: showExtended,
-      minExtendedWidth: _extendedWidth,
-      // Extended shows labels beside icons; otherwise keep them UNDER the icons
-      // (collapsed desktop + tablet) rather than dropping them.
-      labelType: showExtended
-          ? NavigationRailLabelType.none
-          : NavigationRailLabelType.all,
-      leading: isPhone ? null : leadingIcon,
-      destinations: [
-        for (var i = 0; i < navList.length; i++)
-          getNavigationRailDestination(
-              context, navList[i], i == selectedIndex, downloadsPaused),
-      ],
-      selectedIndex: selectedIndex,
-      onDestinationSelected: onDestinationSelected,
+              extended: showExtended,
+              minExtendedWidth: _extendedWidth,
+              // Extended shows labels beside icons; otherwise keep them UNDER the icons
+              // (collapsed desktop + tablet) rather than dropping them.
+              labelType: showExtended
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
+              leading: isPhone ? null : leadingIcon,
+              destinations: [
+                for (var i = 0; i < navList.length; i++)
+                  getNavigationRailDestination(
+                    context,
+                    navList[i],
+                    i == selectedIndex,
+                    downloadsPaused,
+                    extensionUpdates,
+                  ),
+              ],
+              selectedIndex: selectedIndex,
+              onDestinationSelected: onDestinationSelected,
             ),
           ),
         ),
