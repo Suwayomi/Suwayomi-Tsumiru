@@ -17,8 +17,8 @@ import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 
-import '../../../../helpers/offline_test_db.dart';
 import '../../../../helpers/fake_page_store.dart';
+import '../../../../helpers/offline_test_db.dart';
 
 void main() {
   late OfflineDatabase db;

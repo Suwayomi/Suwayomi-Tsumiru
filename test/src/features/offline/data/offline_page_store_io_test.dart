@@ -8,10 +8,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
-import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 
 void main() {
   late Directory tmp;

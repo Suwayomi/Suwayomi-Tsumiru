@@ -8,8 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_manager.dart';
 
-import '../../../../helpers/offline_test_db.dart';
 import '../../../../helpers/fake_page_store.dart';
+import '../../../../helpers/offline_test_db.dart';
 
 void main() {
   late OfflineDatabase db;

@@ -20,8 +20,8 @@ import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
-import '../../../../helpers/offline_test_db.dart';
 import '../../../../helpers/fake_page_store.dart';
+import '../../../../helpers/offline_test_db.dart';
 
 /// Let the auto-dispose scheduler run: an unlistened auto-dispose element is
 /// disposed asynchronously, so identity/liveness checks need real event-loop

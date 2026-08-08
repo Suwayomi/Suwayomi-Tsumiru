@@ -16,8 +16,8 @@ import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
-import '../../../helpers/offline_test_db.dart';
 import '../../../helpers/fake_page_store.dart';
+import '../../../helpers/offline_test_db.dart';
 
 MangaDto mangaDto(int id) => Fragment$MangaDto(
   id: id,
