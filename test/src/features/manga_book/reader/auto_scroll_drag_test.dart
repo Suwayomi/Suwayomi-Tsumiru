@@ -119,7 +119,11 @@ Future<ProviderContainer> _pumpReader(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  SharedPreferences.setMockInitialValues(const {});
+  // Chrome visible on purpose. The step-based auto-scroll timer only runs while
+  // chrome is hidden, and it stops at the last loaded page — with a 12-page
+  // fixture that fires immediately and ends auto-scroll for a reason that has
+  // nothing to do with the drag this test is about.
+  SharedPreferences.setMockInitialValues(const {'flutter.readerOverlay': true});
   final prefs = await SharedPreferences.getInstance();
   final chapter = _chapter();
 

@@ -102,7 +102,10 @@ enum DBKeys {
   sourceDisplayMode(DisplayMode.grid),
   globalSearchSourceFilter(GlobalSearchSourceFilter.pinned),
   gridMangaCoverWidth(192.0),
-  readerOverlay(true),
+  // Off, like Mihon/Komikku (ReaderViewModel: `menuVisible = false`): a reader
+  // opens on the page, not on the chrome. Anyone who wants the title and quick
+  // settings up front can turn it back on in Settings > Reader.
+  readerOverlay(false),
   // Show the continuous-reader feedback snackbars ("loading next chapter",
   // "no more chapters", etc.). Off = a quiet reading experience.
   readerFeedbackToasts(true),

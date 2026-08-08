@@ -8,8 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../constants/navigation_bar_data.dart';
+import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import 'animated_nav_icon.dart';
+import 'nav_badges.dart';
 
 class SmallScreenNavigationBar extends ConsumerWidget {
   const SmallScreenNavigationBar({
@@ -21,12 +23,16 @@ class SmallScreenNavigationBar extends ConsumerWidget {
   final int selectedIndex;
   final void Function(int) onDestinationSelected;
 
-  NavigationDestination getNavigationDestination(BuildContext context,
-      NavigationBarData data, bool selected, bool downloadsPaused) {
-    final badged = downloadsPaused && data.icon == Icons.download_outlined;
+  NavigationDestination getNavigationDestination(
+    BuildContext context,
+    NavigationBarData data,
+    bool selected,
+    bool downloadsPaused,
+    int extensionUpdates,
+  ) {
     final icon = AnimatedNavIcon(vector: data.animatedIcon, selected: selected);
     return NavigationDestination(
-      icon: badged ? Badge(child: icon) : icon,
+      icon: badgedNavIcon(icon, data, downloadsPaused, extensionUpdates),
       label: data.label(context),
       tooltip: data.label(context),
     );
@@ -35,6 +41,8 @@ class SmallScreenNavigationBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
+    final extensionUpdates =
+        ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final navList = NavigationBarData.getNavList(context);
     return NavigationBarTheme(
       data: NavigationBarThemeData(
@@ -48,7 +56,12 @@ class SmallScreenNavigationBar extends ConsumerWidget {
         destinations: [
           for (var i = 0; i < navList.length; i++)
             getNavigationDestination(
-                context, navList[i], i == selectedIndex, downloadsPaused),
+              context,
+              navList[i],
+              i == selectedIndex,
+              downloadsPaused,
+              extensionUpdates,
+            ),
         ],
       ),
     );
