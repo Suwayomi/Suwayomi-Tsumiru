@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_color_utilities/material_color_utilities.dart';
 
 import '../../widgets/custom_circular_progress_indicator.dart';
 
@@ -297,7 +298,41 @@ class BrandFilledCircleButton extends StatelessWidget {
   }
 }
 
-/// Genre / tag chip — glass fill tinted with a UNIQUE per-label color
+typedef ChipColors = ({Color fill, Color border, Color text});
+
+final _lightChipColors = <int, ChipColors>{};
+
+/// Fill / border / text for a genre chip at [hue].
+///
+/// Light mode uses HCT rather than HSL because HSL lightness is not perceived
+/// lightness: one value that suits blue leaves yellow and cyan at ~1:1 against
+/// a light surface. HCT tone holds every hue at the same contrast (~6.5:1).
+ChipColors brandChipColors(double hue, Brightness brightness) {
+  if (brightness == Brightness.dark) {
+    return (
+      fill: HSLColor.fromAHSL(0.16, hue, 0.70, 0.55).toColor(),
+      border: HSLColor.fromAHSL(0.45, hue, 0.70, 0.60).toColor(),
+      text: HSLColor.fromAHSL(1, hue, 0.85, 0.78).toColor(),
+    );
+  }
+  // Hct.from runs a solver per call, so memoize — brandHueFor yields whole
+  // degrees, capping this at 360 entries.
+  return _lightChipColors.putIfAbsent(hue.round(), () {
+    // Hue read back from the dark chip's color so a genre keeps its color
+    // family across modes.
+    final hct = Hct.fromInt(
+      HSLColor.fromAHSL(1, hue, 0.85, 0.55).toColor().toARGB32(),
+    ).hue;
+    return (
+      // Opaque, so contrast holds whichever light theme's surface is behind.
+      fill: Color(Hct.from(hct, 40, 92).toInt()),
+      border: Color(Hct.from(hct, 40, 80).toInt()),
+      text: Color(Hct.from(hct, 50, 34).toInt()),
+    );
+  });
+}
+
+/// Genre / tag chip — fill tinted with a UNIQUE per-label color
 /// (hue derived from the label, so every genre is visually distinct).
 class BrandChip extends StatelessWidget {
   const BrandChip({super.key, required this.label, this.onTap});
@@ -307,20 +342,24 @@ class BrandChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hue = brandHueFor(label);
-    final bg = HSLColor.fromAHSL(0.16, hue, 0.70, 0.55).toColor();
-    final border = HSLColor.fromAHSL(0.45, hue, 0.70, 0.60).toColor();
-    final fg = HSLColor.fromAHSL(1, hue, 0.85, 0.78).toColor();
+    final colors = brandChipColors(
+      brandHueFor(label),
+      Theme.of(context).colorScheme.brightness,
+    );
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.fill,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
+        border: Border.all(color: colors.border),
       ),
       child: Text(
         label,
-        style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 12),
+        style: TextStyle(
+          color: colors.text,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
       ),
     );
     if (onTap == null) return chip;
