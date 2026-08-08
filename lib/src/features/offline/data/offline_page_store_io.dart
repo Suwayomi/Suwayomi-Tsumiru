@@ -133,27 +133,36 @@ class IoOfflinePageStore implements OfflinePageStore {
     final staged = await _stagedPages(mangaId, chapterId);
     if (!manifest.indices.every(staged.containsKey)) return null;
 
+    // INVARIANT: a complete copy of this chapter exists at every instant, in a
+    // place that survives a kill. Staging has just been verified whole, so it
+    // counts; the committed directory counts; the set-aside copy counts. The
+    // rule is only ever to remove one while another is known to exist.
+    //
+    // A rename can't land on a populated directory, so an existing copy is
+    // moved aside rather than deleted — and NOT deleted up front, because a
+    // kill during a previous swap leaves it as the only copy there is.
     final finalDir = _finalDir(mangaId, chapterId);
-    await finalDir.parent.create(recursive: true);
-    // A rename can't land on a populated directory, so an existing copy has to
-    // move first — but it is moved aside, not deleted. Deleting it left a
-    // window with no readable copy at all, and a rename that then failed took
-    // the old chapter with it: the caller's failure path purges staging, so
-    // both copies would be gone for good.
     final superseded = _superseded(mangaId, chapterId);
-    await _quietDeleteDir(superseded);
-    final hadCommitted = await finalDir.exists();
-    if (hadCommitted) await finalDir.rename(superseded.path);
+    await finalDir.parent.create(recursive: true);
+    if (await finalDir.exists()) {
+      // The committed copy is live, so anything set aside earlier is stale.
+      await _quietDeleteDir(superseded);
+      await finalDir.rename(superseded.path);
+    }
     try {
       await _staging(mangaId, chapterId).rename(finalDir.path);
     } catch (_) {
-      // Put the old chapter back rather than leave the reader with nothing.
-      if (hadCommitted && !await finalDir.exists()) {
+      // Promotion failed. Put the previous chapter back rather than leave the
+      // reader with nothing — the caller's failure path purges staging, so
+      // without this both copies would be gone.
+      if (!await finalDir.exists() && await superseded.exists()) {
         await superseded.rename(finalDir.path);
       }
       rethrow;
     }
-    if (hadCommitted) await _quietDeleteDir(superseded);
+    // Safe now, and unconditional: the promotion landed, so whatever is set
+    // aside is superseded no matter which run put it there.
+    await _quietDeleteDir(superseded);
 
     final finalRel = paths.chapterDirRel(mangaId, chapterId);
     final pages = <CommittedPage>[];

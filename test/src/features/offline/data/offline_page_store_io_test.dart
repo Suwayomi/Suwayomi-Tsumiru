@@ -190,4 +190,82 @@ void main() {
       reason: 'deleting the chapter clears the leftover too',
     );
   });
+
+  group('promotion keeps one complete copy at every instant', () {
+    // Three directories can hold a chapter: the committed one, staging, and a
+    // copy set aside mid-swap. Each crash point below leaves at least one of
+    // them whole, because the alternative is a chapter the catalog claims to
+    // have and cannot read.
+
+    Future<void> commitOnePage(int chapterId, List<int> bytes) async {
+      await store.beginChapter(
+        9,
+        chapterId,
+        const ChapterManifest(generation: 0, indices: [0]),
+      );
+      await store.writePage(9, chapterId, 0, bytes, 'jpg');
+      await store.commitStaging(9, chapterId);
+    }
+
+    test(
+      'a kill mid-swap leaves the set-aside copy for the next commit',
+      () async {
+        await commitOnePage(902, [1, 1, 1]);
+        // Recreate the on-disk state of a kill between "move the old copy aside"
+        // and "rename the new one in": no committed dir, a set-aside copy, and
+        // complete staging.
+        await Directory(
+          p.join(tmp.path, '9', '902'),
+        ).rename(p.join(tmp.path, '9', '902.superseded'));
+        await store.beginChapter(
+          9,
+          902,
+          const ChapterManifest(generation: 0, indices: [0]),
+        );
+        await store.writePage(9, 902, 0, [2, 2], 'jpg');
+
+        final pages = await store.commitStaging(9, 902);
+
+        expect(pages, isNotNull, reason: 'the replacement lands');
+        expect(
+          await File(p.join(tmp.path, '9', '902', '000.jpg')).readAsBytes(),
+          [2, 2],
+        );
+        expect(
+          await Directory(p.join(tmp.path, '9', '902.superseded')).exists(),
+          isFalse,
+          reason: 'the set-aside copy is cleared once the new one is in place',
+        );
+      },
+    );
+
+    test(
+      'a failed promotion after a kill mid-swap restores the old chapter',
+      () async {
+        await commitOnePage(903, [1, 1, 1]);
+        await Directory(
+          p.join(tmp.path, '9', '903'),
+        ).rename(p.join(tmp.path, '9', '903.superseded'));
+        await store.beginChapter(
+          9,
+          903,
+          const ChapterManifest(generation: 0, indices: [0]),
+        );
+        await store.writePage(9, 903, 0, [2, 2], 'jpg');
+        // Block the promotion: a file where the chapter directory must go.
+        await File(p.join(tmp.path, '9', '903')).writeAsString('in the way');
+
+        await expectLater(store.commitStaging(9, 903), throwsA(anything));
+
+        // The set-aside copy is the only complete one left, so it must survive.
+        expect(
+          await File(
+            p.join(tmp.path, '9', '903.superseded', '000.jpg'),
+          ).readAsBytes(),
+          [1, 1, 1],
+          reason: 'the previous chapter is still recoverable',
+        );
+      },
+    );
+  });
 }
