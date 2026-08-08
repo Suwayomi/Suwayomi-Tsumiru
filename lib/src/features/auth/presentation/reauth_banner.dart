@@ -88,17 +88,20 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
           // push onto and throws — leaving the only way back into the app
           // doing nothing at all when you click it.
           onPressed: () {
+            // BOTH branches need the router's context, not ours: pushing a
+            // route reads the router from the tree just as showDialog reads
+            // the navigator, and neither is above us.
             final navigatorContext =
                 rootNavigatorKey.currentState?.overlay?.context;
-            if (navigatorContext != null &&
-                (authType == AuthType.simpleLogin ||
-                    authType == AuthType.uiLogin)) {
+            if (navigatorContext == null) return;
+            if (authType == AuthType.simpleLogin ||
+                authType == AuthType.uiLogin) {
               showDialog(
                 context: navigatorContext,
                 builder: (_) => LoginCredentialsPopup(authType: authType),
               );
             } else {
-              const ConnectionRoute().push(context);
+              const ConnectionRoute().push(navigatorContext);
             }
           },
           child: Text(context.l10n.authReauthenticate),

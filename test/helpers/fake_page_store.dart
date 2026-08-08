@@ -21,7 +21,13 @@ class FakePageStore implements OfflinePageStore {
   /// Staged (not yet published) pages, same shape.
   final staged = <int, Map<int, int>>{};
 
+  /// Staging manifests, as `readManifest` reports them.
   final manifests = <int, ChapterManifest>{};
+
+  /// Manifests that rode a commit into the finished chapter — a separate map,
+  /// because the real store keeps them in separate directories and conflating
+  /// them let a test drive a code path production never takes.
+  final committedManifests = <int, ChapterManifest>{};
 
   /// Extension recorded per staged page, so committed paths look real.
   final _ext = <int, Map<int, String>>{};
@@ -96,7 +102,9 @@ class FakePageStore implements OfflinePageStore {
     final pages = staged[chapterId] ?? const {};
     if (!manifest.indices.every(pages.containsKey)) return null;
     committed[chapterId] = {for (final i in manifest.indices) i: pages[i]!};
+    committedManifests[chapterId] = manifest;
     staged.remove(chapterId);
+    manifests.remove(chapterId);
     return [
       for (final i in manifest.indices)
         (
@@ -125,39 +133,34 @@ class FakePageStore implements OfflinePageStore {
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId) async {
     final pages = committed[chapterId];
     if (pages == null) {
-      return (
-        state: ChapterDirState.absent,
-        generation: 0,
-        pages: const <CommittedPage>[],
-      );
+      return (state: ChapterDirState.absent, generation: 0);
     }
-    final manifest = manifests[chapterId];
+    final manifest = committedManifests[chapterId];
     if (manifest == null) {
-      return (
-        state: ChapterDirState.legacy,
-        generation: 0,
-        pages: const <CommittedPage>[],
-      );
-    }
-    if (!manifest.indices.every(pages.containsKey)) {
-      return (
-        state: ChapterDirState.incomplete,
-        generation: manifest.generation,
-        pages: const <CommittedPage>[],
-      );
+      return (state: ChapterDirState.legacy, generation: 0);
     }
     return (
-      state: ChapterDirState.complete,
+      state: manifest.indices.every(pages.containsKey)
+          ? ChapterDirState.complete
+          : ChapterDirState.incomplete,
       generation: manifest.generation,
-      pages: [
-        for (final i in manifest.indices)
+    );
+  }
+
+  @override
+  Future<List<CommittedPage>> committedPages(int mangaId, int chapterId) async {
+    final pages = committed[chapterId] ?? const {};
+    final manifest = committedManifests[chapterId];
+    if (manifest == null) return const [];
+    return [
+      for (final i in manifest.indices)
+        if (pages.containsKey(i))
           (
             pageIndex: i,
             relPath: '$mangaId/$chapterId/$i.${_ext[chapterId]?[i] ?? 'jpg'}',
             bytes: pages[i]!,
           ),
-      ]..sort((a, b) => a.pageIndex.compareTo(b.pageIndex)),
-    );
+    ]..sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
   }
 
   @override
@@ -167,6 +170,7 @@ class FakePageStore implements OfflinePageStore {
   @override
   Future<void> deleteCommitted(int mangaId, int chapterId) async {
     committed.remove(chapterId);
+    committedManifests.remove(chapterId);
   }
 
   @override
@@ -182,6 +186,7 @@ class FakePageStore implements OfflinePageStore {
   Future<void> deleteChapter(int mangaId, int chapterId) async {
     deletedChapters.add(chapterId);
     committed.remove(chapterId);
+    committedManifests.remove(chapterId);
     staged.remove(chapterId);
     manifests.remove(chapterId);
     _ext.remove(chapterId);
@@ -223,6 +228,7 @@ class FakePageStore implements OfflinePageStore {
     committed.clear();
     staged.clear();
     manifests.clear();
+    committedManifests.clear();
     _ext.clear();
   }
 
@@ -246,7 +252,7 @@ class FakePageStore implements OfflinePageStore {
     committed[chapterId] = {...pageBytes};
     _ext[chapterId] = {for (final i in pageBytes.keys) i: 'jpg'};
     if (!legacy) {
-      manifests[chapterId] = ChapterManifest(
+      committedManifests[chapterId] = ChapterManifest(
         generation: generation,
         indices: pageBytes.keys.toList()..sort(),
       );

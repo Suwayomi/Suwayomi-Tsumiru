@@ -13,12 +13,8 @@ void main() {
   tearDown(() => db.close());
 
   test('offlineMangaToDto maps id/title/thumbnail and safe defaults', () async {
-    await db.upsertMangaMetadata(
-      id: 7,
-      title: 'Solo',
-      thumbnailUrl: '/t.jpg',
-      updatedAt: DateTime(2026),
-    );
+    await db.upsertMangaMetadata(id: 7, title: 'Solo', thumbnailUrl: '/t.jpg',
+        updatedAt: DateTime(2026));
     final m = await db.mangaById(7);
     final dto = offlineMangaToDto(m!, chapterCount: 12);
     expect(dto.id, 7);
@@ -34,43 +30,24 @@ void main() {
     expect(await db.mangaById(999), isNull);
   });
 
-  test(
-    'offlineMangaToDto carries lastReadAt for the "Last Read" sort',
-    () async {
-      await db.upsertMangaMetadata(
-        id: 7,
-        title: 'Solo',
-        updatedAt: DateTime(2026),
-      );
-      final m = (await db.mangaById(7))!;
+  test('offlineMangaToDto carries lastReadAt for the "Last Read" sort',
+      () async {
+    await db.upsertMangaMetadata(id: 7, title: 'Solo', updatedAt: DateTime(2026));
+    final m = (await db.mangaById(7))!;
 
-      final withRead = offlineMangaToDto(m, lastReadAt: '1700000000000');
-      expect(withRead.lastReadChapter?.lastReadAt, '1700000000000');
+    final withRead = offlineMangaToDto(m, lastReadAt: '1700000000000');
+    expect(withRead.lastReadChapter?.lastReadAt, '1700000000000');
 
-      final neverRead = offlineMangaToDto(m);
-      expect(neverRead.lastReadChapter, isNull);
-    },
-  );
+    final neverRead = offlineMangaToDto(m);
+    expect(neverRead.lastReadChapter, isNull);
+  });
 
   test('offlineMangaToDto carries firstUnreadChapter when supplied', () async {
-    await db.upsertMangaMetadata(
-      id: 7,
-      title: 'Solo',
-      updatedAt: DateTime(2026),
-    );
+    await db.upsertMangaMetadata(id: 7, title: 'Solo', updatedAt: DateTime(2026));
     final m = (await db.mangaById(7))!;
-    await db.upsertChapterMetadata(
-      id: 42,
-      mangaId: 7,
-      name: 'Ch 5',
-      chapterIndex: 5,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 18,
-      updatedAt: DateTime(2026),
-    );
+    await db.upsertChapterMetadata(id: 42, mangaId: 7, name: 'Ch 5',
+        chapterIndex: 5, isRead: false, lastPageRead: 0, isBookmarked: false,
+        serverIsDownloaded: true, pageCount: 18, updatedAt: DateTime(2026));
     final chapter = (await db.chaptersForManga(7)).single;
 
     final withTarget = offlineMangaToDto(m, firstUnread: chapter);
@@ -82,18 +59,9 @@ void main() {
   });
 
   test('offlineChapterToDto maps fields from a catalog row', () async {
-    await db.upsertChapterMetadata(
-      id: 3,
-      mangaId: 7,
-      name: 'Ch 3',
-      chapterIndex: 3,
-      isRead: true,
-      lastPageRead: 4,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 20,
-      updatedAt: DateTime(2026),
-    );
+    await db.upsertChapterMetadata(id: 3, mangaId: 7, name: 'Ch 3',
+        chapterIndex: 3, isRead: true, lastPageRead: 4, isBookmarked: false,
+        serverIsDownloaded: true, pageCount: 20, updatedAt: DateTime(2026));
     final rows = await db.chaptersForManga(7);
     final dto = offlineChapterToDto(rows.single);
     expect(dto.id, 3);
@@ -122,24 +90,19 @@ void main() {
     expect(isAdultManga(dto.source?.contentWarning, dto.genre), true);
   });
 
-  test(
-    'genre survives the JSON round-trip; junk degrades to no tags',
-    () async {
-      await db.upsertMangaMetadata(
-        id: 78,
-        title: 'Tagged',
-        updatedAt: DateTime(2026, 1, 1),
-        genre: jsonEncode(['Action', 'Drama']),
-      );
-      expect(offlineMangaToDto((await db.mangaById(78))!).genre, [
-        'Action',
-        'Drama',
-      ]);
-      expect(offlineGenre('not json'), isEmpty);
-      expect(offlineGenre('{"a":1}'), isEmpty);
-      expect(offlineGenre(null), isEmpty);
-    },
-  );
+  test('genre survives the JSON round-trip; junk degrades to no tags', () async {
+    await db.upsertMangaMetadata(
+      id: 78,
+      title: 'Tagged',
+      updatedAt: DateTime(2026, 1, 1),
+      genre: jsonEncode(['Action', 'Drama']),
+    );
+    expect(offlineMangaToDto((await db.mangaById(78))!).genre,
+        ['Action', 'Drama']);
+    expect(offlineGenre('not json'), isEmpty);
+    expect(offlineGenre('{"a":1}'), isEmpty);
+    expect(offlineGenre(null), isEmpty);
+  });
 
   test('full metadata survives upsert → read', () async {
     // Arrange – persist categories first (FK-free but order matters semantically)

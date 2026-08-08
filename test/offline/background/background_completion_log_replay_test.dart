@@ -140,6 +140,47 @@ void main() {
   );
 
   test(
+    'a chapter the server dropped is left for eviction, not adopted',
+    () async {
+      // A sync marks a server-deleted chapter `orphaned` and leaves its files
+      // alone; the reconcile pass evicts it. Recovery sees a complete directory
+      // and must NOT read that as an interrupted download — adopting it flips the
+      // row back to downloaded, after which nothing evicts it and the device
+      // keeps a chapter the server no longer has, permanently.
+      await stage(1, 5, [0, 1], [0, 1]);
+      await store.commitStaging(1, 5);
+      await db.markChaptersOrphaned([5]);
+
+      await replay();
+
+      expect(
+        (await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.orphaned,
+        reason: 'still pending eviction',
+      );
+      expect(
+        finalDirExists(1, 5),
+        isTrue,
+        reason: 'files stay until the reconcile pass removes them',
+      );
+    },
+  );
+
+  test('an orphaned chapter is not re-queued for download', () async {
+    // The other direction: a legacy or short directory under an orphaned row
+    // must not be cleared-and-requeued, or the app spends every launch trying
+    // to download a chapter the server has deleted.
+    final dir = Directory(paths.absolute(paths.chapterDirRel(1, 5)));
+    await dir.create(recursive: true);
+    await File('${dir.path}/000.jpg').writeAsBytes(List.filled(10, 0));
+    await db.markChaptersOrphaned([5]);
+
+    await replay();
+
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.orphaned);
+  });
+
+  test(
     'a deleted chapter is not resurrected and its files are swept',
     () async {
       await stage(1, 5, [0, 1], [0, 1]);

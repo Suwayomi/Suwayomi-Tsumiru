@@ -76,62 +76,42 @@ void main() {
   });
 
   testWidgets(
-    'finishing a chapter queues the RESOLVED delete target, not the finished '
-    'chapter',
-    (tester) async {
-      final (captured, container) = await _pumpFinishHarness(tester);
+      'finishing a chapter queues the RESOLVED delete target, not the finished '
+      'chapter', (tester) async {
+    final (captured, container) = await _pumpFinishHarness(tester);
 
-      await noteChapterFinishedInReader(captured, mangaId: 1, chapterId: 3);
+    await noteChapterFinishedInReader(captured, mangaId: 1, chapterId: 3);
 
-      expect(
-        container.read(sessionReadChaptersProvider),
-        {3},
-        reason: 'the finished chapter is shielded from rule eviction',
-      );
-      final queued = container.read(pendingReadDeletesProvider);
-      expect(
-        queued.where((p) => !p.server).map((p) => p.chapterId),
-        [2],
-        reason: 'the device delete stores the resolved 2-slots-back target',
-      );
-    },
-  );
+    expect(container.read(sessionReadChaptersProvider), {3},
+        reason: 'the finished chapter is shielded from rule eviction');
+    final queued = container.read(pendingReadDeletesProvider);
+    expect(queued.where((p) => !p.server).map((p) => p.chapterId), [2],
+        reason: 'the device delete stores the resolved 2-slots-back target');
+  });
 
-  testWidgets('exit flush waits for a resolution still in flight', (
-    tester,
-  ) async {
+  testWidgets('exit flush waits for a resolution still in flight',
+      (tester) async {
     final (captured, container) = await _pumpFinishHarness(tester);
 
     // Deliberately NOT awaited — the reader's call sites fire and forget, and
     // exiting right after a finish must not strand the late entry.
-    final resolution = noteChapterFinishedInReader(
-      captured,
-      mangaId: 1,
-      chapterId: 3,
-    );
+    final resolution =
+        noteChapterFinishedInReader(captured, mangaId: 1, chapterId: 3);
     await flushPendingReadDeletes(container);
 
-    expect(
-      container.read(pendingReadDeletesProvider),
-      isEmpty,
-      reason:
-          'the flush drained the entry the resolution added, so nothing '
-          'is left for a future session',
-    );
+    expect(container.read(pendingReadDeletesProvider), isEmpty,
+        reason: 'the flush drained the entry the resolution added, so nothing '
+            'is left for a future session');
     await resolution;
-    expect(
-      container.read(pendingReadDeletesProvider),
-      isEmpty,
-      reason: 'nothing lands after the flush that waited',
-    );
+    expect(container.read(pendingReadDeletesProvider), isEmpty,
+        reason: 'nothing lands after the flush that waited');
   });
 }
 
 /// Chapters 1..3 in reading order, delete-while-reading at 2 slots, offline
 /// active: finishing chapter 3 resolves a device delete for chapter 2.
 Future<(WidgetRef, ProviderContainer)> _pumpFinishHarness(
-  WidgetTester tester,
-) async {
+    WidgetTester tester) async {
   SharedPreferences.setMockInitialValues(const {});
   final prefs = await SharedPreferences.getInstance();
   final chapters = [
@@ -153,9 +133,8 @@ Future<(WidgetRef, ProviderContainer)> _pumpFinishHarness(
             deleteWithBookmark: false,
           ),
         ),
-        mangaChapterListProvider(
-          mangaId: 1,
-        ).overrideWith(() => _FixedChapterList(chapters)),
+        mangaChapterListProvider(mangaId: 1)
+            .overrideWith(() => _FixedChapterList(chapters)),
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -165,8 +144,7 @@ Future<(WidgetRef, ProviderContainer)> _pumpFinishHarness(
       ),
     ),
   );
-  final container = ProviderScope.containerOf(
-    tester.element(find.byType(SizedBox)),
-  );
+  final container =
+      ProviderScope.containerOf(tester.element(find.byType(SizedBox)));
   return (captured, container);
 }

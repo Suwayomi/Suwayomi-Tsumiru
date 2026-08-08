@@ -106,12 +106,13 @@ Future<ChapterCommitResult> commitStagedChapterHoldingLock({
   // A `none` row is a delete the user made and we must honour; a bumped
   // generation means this chapter was deleted and re-queued, so these pages
   // belong to a download nobody is waiting for any more.
-  if (row == null || row.deviceState == OfflineDeviceState.none) {
+  if (row == null ||
+      row.deviceState == OfflineDeviceState.none ||
+      manifest.generation != row.downloadGeneration) {
     await store.deleteStaging(mangaId, chapterId);
-    return ChapterCommitResult.refused;
-  }
-  if (manifest.generation != row.downloadGeneration) {
-    await store.deleteStaging(mangaId, chapterId);
+    // Any copy set aside by an interrupted replacement of this chapter is
+    // unreachable once we refuse — nothing else would ever clear it.
+    await store.deleteSuperseded(mangaId, chapterId);
     return ChapterCommitResult.refused;
   }
 
@@ -157,6 +158,12 @@ Future<void> recoverChaptersOnDisk({
           await store.deleteChapter(dir.mangaId, dir.chapterId);
           return;
         }
+        // An orphaned row is a pending delete, not an interrupted download —
+        // the server no longer lists this chapter and the reconcile pass will
+        // evict it. Everything below treats a complete directory as a download
+        // to adopt, which here would flip it back to `downloaded` and strand a
+        // chapter the server deleted on the device for good.
+        if (row.deviceState == OfflineDeviceState.orphaned) return;
 
         if (dir.hasFinal) {
           final committed = await store.inspectCommitted(
@@ -180,15 +187,15 @@ Future<void> recoverChaptersOnDisk({
               // Already settled, or the rename landed and the catalog write
               // didn't — either way the rows are cheap to reassert.
               if (row.deviceState != OfflineDeviceState.downloaded) {
+                // Measured only here — the settled case is the overwhelming
+                // majority and asking for page sizes there meant a stat per
+                // page of the whole downloaded library, every launch.
                 await db.commitDownloadedChapter(
                   chapterId: dir.chapterId,
-                  pages: committed.pages,
+                  pages: await store.committedPages(dir.mangaId, dir.chapterId),
                   downloadedAt: row.downloadedAt ?? DateTime.now(),
                 );
-                logger.i(
-                  'Offline: adopted committed chapter '
-                  '${dir.chapterId} (${committed.pages.length} pages)',
-                );
+                logger.i('Offline: adopted committed chapter ${dir.chapterId}');
               }
               // Staging alongside a complete final dir is a superseded attempt,
               // and so is a copy left set aside by a kill mid-replacement.

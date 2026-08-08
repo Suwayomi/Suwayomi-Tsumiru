@@ -360,7 +360,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           ),
         );
       case 'page':
-        _applyPageEvent(data);
+        unawaited(_applyPageEvent(data));
       case 'chapterDone':
         unawaited(_onChapterDone(data));
       case 'drained':
@@ -389,16 +389,19 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// A page landed in the worker's staging area. Nothing is written to the
   /// catalog — the chapter isn't published until it commits — so this only
   /// moves the progress arc.
-  void _applyPageEvent(Map data) {
+  Future<void> _applyPageEvent(Map data) async {
     final total = data['total'] as int? ?? 0;
     if (total <= 0) return;
+    final id = data['chapterId'] as int;
+    // Same staleness guard as chapterStart and the terminal apply: an event
+    // already in the port when a delete lands must not re-enter the map for a
+    // chapter that no longer exists.
+    final c = await _db.chapterById(id);
+    if (c == null || c.deviceState == OfflineDeviceState.none) return;
+    if ((data['gen'] as int? ?? 0) < c.downloadGeneration) return;
     _ref
         .read(offlineDownloadProgressProvider.notifier)
-        .start(
-          data['chapterId'] as int,
-          total: total,
-          done: data['done'] as int? ?? 0,
-        );
+        .start(id, total: total, done: data['done'] as int? ?? 0);
   }
 
   /// The worker drained and is self-stopping. Anything queued during that
@@ -460,8 +463,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _onChapterDone(Map data) async {
     final chapterId = data['chapterId'] as int?;
     final status = data['status'] as String?;
-    if (chapterId != null && status != null) {
+    // Outside the status guard: a cancel (pause, delete, Wi-Fi drop) reports a
+    // null status, and leaving those entries behind grows the map for the life
+    // of the process and shows a re-queued chapter the last attempt's percent.
+    if (chapterId != null) {
       _ref.read(offlineDownloadProgressProvider.notifier).clear(chapterId);
+    }
+    if (chapterId != null && status != null) {
       // SINGLE COMMITTER: the worker only fills staging. Publishing the chapter
       // happens here, on the main isolate, so exactly one party ever renames a
       // staging directory into place and writes the rows for it.

@@ -14,30 +14,12 @@ void main() {
   tearDown(() => db.close());
 
   test('returns manga ids with at least one downloaded chapter', () async {
-    await db.upsertChapterMetadata(
-      id: 1,
-      mangaId: 10,
-      name: 'a',
-      chapterIndex: 1,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 1,
-      updatedAt: DateTime(2026),
-    );
-    await db.upsertChapterMetadata(
-      id: 2,
-      mangaId: 20,
-      name: 'b',
-      chapterIndex: 1,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      pageCount: 1,
-      updatedAt: DateTime(2026),
-    );
+    await db.upsertChapterMetadata(id: 1, mangaId: 10, name: 'a', chapterIndex: 1,
+      isRead: false, lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+      pageCount: 1, updatedAt: DateTime(2026));
+    await db.upsertChapterMetadata(id: 2, mangaId: 20, name: 'b', chapterIndex: 1,
+      isRead: false, lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+      pageCount: 1, updatedAt: DateTime(2026));
     await db.setChapterDeviceState(1, OfflineDeviceState.downloaded, bytes: 5);
     expect(await db.mangaIdsWithDeviceDownloads(), {10});
   });

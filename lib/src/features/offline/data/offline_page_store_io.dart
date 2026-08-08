@@ -229,34 +229,58 @@ class IoOfflinePageStore implements OfflinePageStore {
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId) async {
     final dir = _finalDir(mangaId, chapterId);
     if (!await dir.exists()) {
-      return (
-        state: ChapterDirState.absent,
-        generation: 0,
-        pages: const <CommittedPage>[],
-      );
+      return (state: ChapterDirState.absent, generation: 0);
     }
     // The manifest rides along in the commit rename, so a committed chapter
     // carries the record of what it should contain. Its absence dates the
     // directory to before atomic commits.
     final manifestFile = File(p.join(dir.path, kChapterManifestName));
     if (!await manifestFile.exists()) {
-      return (
-        state: ChapterDirState.legacy,
-        generation: 0,
-        pages: const <CommittedPage>[],
-      );
+      return (state: ChapterDirState.legacy, generation: 0);
     }
     final manifest = ChapterManifest.tryParse(
       await manifestFile.readAsString(),
     );
     if (manifest == null) {
-      return (
-        state: ChapterDirState.legacy,
-        generation: 0,
-        pages: const <CommittedPage>[],
-      );
+      return (state: ChapterDirState.legacy, generation: 0);
     }
+    final present = await _committedNames(dir);
+    return (
+      state: manifest.indices.every(present.containsKey)
+          ? ChapterDirState.complete
+          : ChapterDirState.incomplete,
+      generation: manifest.generation,
+    );
+  }
 
+  @override
+  Future<List<CommittedPage>> committedPages(int mangaId, int chapterId) async {
+    final dir = _finalDir(mangaId, chapterId);
+    final manifestFile = File(p.join(dir.path, kChapterManifestName));
+    if (!await manifestFile.exists()) return const [];
+    final manifest = ChapterManifest.tryParse(
+      await manifestFile.readAsString(),
+    );
+    if (manifest == null) return const [];
+    final present = await _committedNames(dir);
+    final rel = paths.chapterDirRel(mangaId, chapterId);
+    final pages = <CommittedPage>[];
+    for (final index in manifest.indices) {
+      final name = present[index];
+      if (name == null) continue;
+      pages.add((
+        pageIndex: index,
+        relPath: '$rel/$name',
+        bytes: await File(p.join(dir.path, name)).length(),
+      ));
+    }
+    pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
+    return pages;
+  }
+
+  /// Page-file names in a committed directory, by index. Names only — naming a
+  /// file is a directory read, measuring it is a stat apiece.
+  Future<Map<int, String>> _committedNames(Directory dir) async {
     final byIndex = <int, String>{};
     await for (final entity in dir.list()) {
       if (entity is! File) continue;
@@ -267,30 +291,7 @@ class IoOfflinePageStore implements OfflinePageStore {
       final index = int.tryParse(name.substring(0, dot));
       if (index != null) byIndex[index] = name;
     }
-    if (!manifest.indices.every(byIndex.containsKey)) {
-      return (
-        state: ChapterDirState.incomplete,
-        generation: manifest.generation,
-        pages: const <CommittedPage>[],
-      );
-    }
-
-    final rel = paths.chapterDirRel(mangaId, chapterId);
-    final pages = <CommittedPage>[];
-    for (final index in manifest.indices) {
-      final name = byIndex[index]!;
-      pages.add((
-        pageIndex: index,
-        relPath: '$rel/$name',
-        bytes: await File(p.join(dir.path, name)).length(),
-      ));
-    }
-    pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
-    return (
-      state: ChapterDirState.complete,
-      generation: manifest.generation,
-      pages: pages,
-    );
+    return byIndex;
   }
 
   @override

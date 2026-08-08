@@ -44,38 +44,34 @@ class BackgroundWorkOrder {
   final int rootIsolateToken;
 
   Map<String, Object?> toJson() => {
-    'chapterIds': chapterIds,
-    'mangaIdByChapter': mangaIdByChapter.map(
-      (k, v) => MapEntry(k.toString(), v),
-    ),
-    'generationByChapter': generationByChapter.map(
-      (k, v) => MapEntry(k.toString(), v),
-    ),
-    'serverBase': serverBase,
-    'port': port,
-    'addPort': addPort,
-    'wifiOnly': wifiOnly,
-    'auth': auth.toJson(),
-    'baseDir': baseDir,
-    'rootIsolateToken': rootIsolateToken,
-  };
+        'chapterIds': chapterIds,
+        'mangaIdByChapter':
+            mangaIdByChapter.map((k, v) => MapEntry(k.toString(), v)),
+        'generationByChapter':
+            generationByChapter.map((k, v) => MapEntry(k.toString(), v)),
+        'serverBase': serverBase,
+        'port': port,
+        'addPort': addPort,
+        'wifiOnly': wifiOnly,
+        'auth': auth.toJson(),
+        'baseDir': baseDir,
+        'rootIsolateToken': rootIsolateToken,
+      };
 
   factory BackgroundWorkOrder.fromJson(Map<String, Object?> j) =>
       BackgroundWorkOrder(
         chapterIds: (j['chapterIds'] as List).cast<int>(),
-        mangaIdByChapter: (j['mangaIdByChapter'] as Map).map(
-          (k, v) => MapEntry(int.parse(k as String), v as int),
-        ),
-        generationByChapter:
-            (j['generationByChapter'] as Map?)?.map(
-              (k, v) => MapEntry(int.parse(k as String), v as int),
-            ) ??
+        mangaIdByChapter: (j['mangaIdByChapter'] as Map)
+            .map((k, v) => MapEntry(int.parse(k as String), v as int)),
+        generationByChapter: (j['generationByChapter'] as Map?)
+                ?.map((k, v) => MapEntry(int.parse(k as String), v as int)) ??
             const {},
         serverBase: j['serverBase'] as String,
         port: j['port'] as int?,
         addPort: j['addPort'] as bool,
         wifiOnly: j['wifiOnly'] as bool,
-        auth: BackgroundTokenRecord.fromJson(j['auth'] as Map<String, Object?>),
+        auth: BackgroundTokenRecord.fromJson(
+            j['auth'] as Map<String, Object?>),
         baseDir: j['baseDir'] as String? ?? '',
         rootIsolateToken: j['rootIsolateToken'] as int? ?? 0,
       );

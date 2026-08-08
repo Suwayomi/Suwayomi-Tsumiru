@@ -26,8 +26,8 @@ String serverAddress({
   final effectivePort = uri.hasPort
       ? uri.port
       : uri.scheme == 'https'
-      ? 443
-      : 80;
+          ? 443
+          : 80;
   final host = uri.host.contains(':') ? '[${uri.host}]' : uri.host;
   return '${uri.scheme.toLowerCase()}://$host:$effectivePort';
 }

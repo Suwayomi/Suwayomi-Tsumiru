@@ -27,14 +27,9 @@ enum ChapterDirState {
   complete,
 }
 
-/// A chapter's final directory: what shape it is in, which download generation
-/// produced it (0 when its manifest predates them), and its pages when
-/// complete.
-typedef CommittedChapter = ({
-  ChapterDirState state,
-  int generation,
-  List<CommittedPage> pages,
-});
+/// A chapter's final directory: what shape it is in, and which download
+/// generation produced it (0 when its manifest predates them).
+typedef CommittedChapter = ({ChapterDirState state, int generation});
 
 /// A chapter that has files on disk, and which of its two directories exist.
 typedef StoredChapter = ({
@@ -98,8 +93,15 @@ abstract class OfflinePageStore {
   Future<List<StoredChapter>> chaptersOnDisk();
 
   /// Inspect a chapter's committed directory — what recovery reads to decide
-  /// between adopting it, grandfathering it, and rebuilding it.
+  /// between adopting it, grandfathering it, and rebuilding it. Deliberately
+  /// does NOT measure the pages: recovery asks this of every downloaded chapter
+  /// on every launch and resume, and almost all of them need no more than the
+  /// shape.
   Future<CommittedChapter> inspectCommitted(int mangaId, int chapterId);
+
+  /// The committed pages of a chapter, measured. Only the adopt path needs
+  /// this — one chapter, not the whole library.
+  Future<List<CommittedPage>> committedPages(int mangaId, int chapterId);
 
   /// Total bytes currently staged for a chapter. Unlike [chapterBytes] this
   /// covers a chapter that hasn't been published yet.

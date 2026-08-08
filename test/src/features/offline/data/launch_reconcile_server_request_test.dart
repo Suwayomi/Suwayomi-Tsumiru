@@ -26,16 +26,9 @@ void main() {
     await db.setKeepRule(1, OfflineKeepRule.all, 3);
     // Wanted by the rule, but the server hasn't fetched it from the source yet.
     await db.upsertChapterMetadata(
-      id: 1,
-      mangaId: 1,
-      name: 'c1',
-      chapterIndex: 1,
-      isRead: false,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: false,
-      pageCount: 1,
-      updatedAt: DateTime(2026),
+      id: 1, mangaId: 1, name: 'c1', chapterIndex: 1, isRead: false,
+      lastPageRead: 0, isBookmarked: false, serverIsDownloaded: false,
+      pageCount: 1, updatedAt: DateTime(2026),
     );
   }
 
@@ -67,8 +60,7 @@ void main() {
       onServerDownload: (ids) async => asked.addAll(ids),
     ).reconcileManga(1);
 
-    expect(asked, [
-      1,
-    ], reason: 'setting a keep rule must still top up the server');
+    expect(asked, [1],
+        reason: 'setting a keep rule must still top up the server');
   });
 }

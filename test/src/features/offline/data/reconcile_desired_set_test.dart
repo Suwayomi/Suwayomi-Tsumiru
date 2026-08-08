@@ -4,23 +4,11 @@ import 'package:tsumiru/src/features/offline/data/reconcile_logic.dart';
 
 OfflineChapter ch(int id, int idx, {bool read = false, bool pinned = false}) =>
     OfflineChapter(
-      id: id,
-      mangaId: 1,
-      name: 'c$id',
-      chapterIndex: idx,
-      isRead: read,
-      lastPageRead: 0,
-      isBookmarked: false,
-      serverIsDownloaded: true,
-      deviceState: OfflineDeviceState.none,
-      pageCount: 1,
-      bytes: 0,
-      pinned: pinned,
-      downloadedAt: null,
-      progressDirty: false,
-      bookmarkDirty: false,
-      readStateDirty: false,
-      syncedIsRead: false,
+      id: id, mangaId: 1, name: 'c$id', chapterIndex: idx, isRead: read,
+      lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+      deviceState: OfflineDeviceState.none, pageCount: 1, bytes: 0,
+      pinned: pinned, downloadedAt: null, progressDirty: false,
+      bookmarkDirty: false, readStateDirty: false, syncedIsRead: false,
       updatedAt: DateTime(2026),
       downloadGeneration: 0,
     );
@@ -29,9 +17,9 @@ void main() {
   final chapters = [
     ch(1, 1, read: true),
     ch(2, 2, read: true),
-    ch(3, 3), // unread
-    ch(4, 4), // unread
-    ch(5, 5), // unread
+    ch(3, 3),            // unread
+    ch(4, 4),            // unread
+    ch(5, 5),            // unread
   ];
 
   test('off keeps nothing (except pinned)', () {
@@ -41,21 +29,11 @@ void main() {
   });
 
   test('all keeps every chapter', () {
-    expect(desiredChapterIds(chapters, OfflineKeepRule.all, 3), {
-      1,
-      2,
-      3,
-      4,
-      5,
-    });
+    expect(desiredChapterIds(chapters, OfflineKeepRule.all, 3), {1, 2, 3, 4, 5});
   });
 
   test('allUnread keeps only unread', () {
-    expect(desiredChapterIds(chapters, OfflineKeepRule.allUnread, 3), {
-      3,
-      4,
-      5,
-    });
+    expect(desiredChapterIds(chapters, OfflineKeepRule.allUnread, 3), {3, 4, 5});
   });
 
   test('nUnread keeps the N lowest-index unread', () {
