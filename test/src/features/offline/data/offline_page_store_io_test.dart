@@ -300,4 +300,54 @@ void main() {
       },
     );
   });
+
+  test('a set-aside copy left alone is restored, not discarded', () async {
+    // Crash mid-replacement leaves the old copy aside; a failed download then
+    // clears the staging that was going to replace it. That set-aside copy is
+    // now the only one there is, and the catalog still calls the chapter
+    // downloaded — so it has to come back, not be swept as junk.
+    await store.beginChapter(
+      9,
+      905,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 905, 0, [4, 5, 6], 'jpg');
+    await store.commitStaging(9, 905);
+    await Directory(
+      p.join(tmp.path, '9', '905'),
+    ).rename(p.join(tmp.path, '9', '905.superseded'));
+
+    final found = await store.chaptersOnDisk();
+    expect(found.single.hasFinal, isFalse);
+    expect(found.single.hasSuperseded, isTrue);
+
+    expect(await store.restoreSuperseded(9, 905), isTrue);
+    expect(await File(p.join(tmp.path, '9', '905', '000.jpg')).readAsBytes(), [
+      4,
+      5,
+      6,
+    ]);
+    expect(
+      (await store.inspectCommitted(9, 905)).state,
+      ChapterDirState.complete,
+    );
+  });
+
+  test('a live chapter is never overwritten by a set-aside copy', () async {
+    await store.beginChapter(
+      9,
+      906,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 906, 0, [7], 'jpg');
+    await store.commitStaging(9, 906);
+    await Directory(
+      p.join(tmp.path, '9', '906.superseded'),
+    ).create(recursive: true);
+
+    expect(await store.restoreSuperseded(9, 906), isFalse);
+    expect(await File(p.join(tmp.path, '9', '906', '000.jpg')).readAsBytes(), [
+      7,
+    ]);
+  });
 }

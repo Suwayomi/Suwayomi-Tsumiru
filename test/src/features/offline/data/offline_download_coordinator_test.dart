@@ -18,11 +18,13 @@ import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 
 import '../../../../helpers/offline_test_db.dart';
 import '../../../../helpers/fake_page_store.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 
 void main() {
   late OfflineDatabase db;
   late FakePageStore store;
   setUp(() {
+    ChapterFileLock.resetForTest();
     OfflineDownloadCoordinator.resetSharedStateForTest();
     db = testOfflineDatabase();
     store = FakePageStore();

@@ -86,6 +86,9 @@ Future<bool> runCatchupDownloads({
         spec.storageCapEnabled &&
         spec.usedBytes + runBytes >= spec.storageCapBytes;
 
+    // Read once for the whole run: it was re-parsed per manga, and the answer
+    // can't change while we hold the lock.
+    final logEntries = await log.parse();
     final mangaIds = {
       ...ledger.pendingDownloads.values,
       ...ledger.pendingServerFetch.values,
@@ -124,7 +127,7 @@ Future<bool> runCatchupDownloads({
       // Present = every truth the executor can see without drift.
       final present = <int>{
         ...mangaSpec.onDeviceChapterIds,
-        ...await _loggedOrCommitted(log, store, mangaId, desired),
+        ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
 
       final serverFetch = {...ledger.pendingServerFetch};
@@ -213,13 +216,13 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) => ledger.copyWith(
 /// A committed directory is the safe equivalent, because only an adoption that
 /// already replayed could have produced one.
 Future<Set<int>> _loggedOrCommitted(
-  BackgroundCompletionLog log,
+  List<LogEntry> logEntries,
   IoOfflinePageStore store,
   int mangaId,
   Set<int> candidates,
 ) async {
   final present = <int>{};
-  for (final e in await log.parse()) {
+  for (final e in logEntries) {
     if (e is AdoptChapterEntry && e.mangaId == mangaId)
       present.add(e.chapterId);
     if (e is ChapterEntry && e.status == 'downloaded') present.add(e.chapterId);

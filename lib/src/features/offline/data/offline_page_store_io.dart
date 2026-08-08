@@ -184,7 +184,11 @@ class IoOfflinePageStore implements OfflinePageStore {
 
   @override
   Future<List<StoredChapter>> chaptersOnDisk() async {
-    final found = <int, ({int mangaId, bool hasFinal, bool hasStaging})>{};
+    final found =
+        <
+          int,
+          ({int mangaId, bool hasFinal, bool hasStaging, bool hasSuperseded})
+        >{};
     final base = Directory(paths.baseDir);
     if (!await base.exists()) return const [];
     await for (final mangaEntity in base.list()) {
@@ -205,12 +209,11 @@ class IoOfflinePageStore implements OfflinePageStore {
         final chapterId = int.tryParse(stem);
         if (chapterId == null) continue;
         final prior = found[chapterId];
-        // A set-aside copy counts as a reason to visit the chapter, so a
-        // leftover one gets cleaned up instead of sitting there forever.
         found[chapterId] = (
           mangaId: mangaId,
           hasFinal: (prior?.hasFinal ?? false) || (!staging && !aside),
           hasStaging: (prior?.hasStaging ?? false) || staging,
+          hasSuperseded: (prior?.hasSuperseded ?? false) || aside,
         );
       }
     }
@@ -221,6 +224,7 @@ class IoOfflinePageStore implements OfflinePageStore {
           chapterId: e.key,
           hasFinal: e.value.hasFinal,
           hasStaging: e.value.hasStaging,
+          hasSuperseded: e.value.hasSuperseded,
         ),
     ];
   }
@@ -310,6 +314,15 @@ class IoOfflinePageStore implements OfflinePageStore {
   @override
   Future<void> deleteSuperseded(int mangaId, int chapterId) =>
       _quietDeleteDir(_superseded(mangaId, chapterId));
+
+  @override
+  Future<bool> restoreSuperseded(int mangaId, int chapterId) async {
+    final finalDir = _finalDir(mangaId, chapterId);
+    final superseded = _superseded(mangaId, chapterId);
+    if (await finalDir.exists() || !await superseded.exists()) return false;
+    await superseded.rename(finalDir.path);
+    return true;
+  }
 
   @override
   Future<void> deleteStaging(int mangaId, int chapterId) =>

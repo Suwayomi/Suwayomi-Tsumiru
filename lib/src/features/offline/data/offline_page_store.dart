@@ -31,12 +31,13 @@ enum ChapterDirState {
 /// generation produced it (0 when its manifest predates them).
 typedef CommittedChapter = ({ChapterDirState state, int generation});
 
-/// A chapter that has files on disk, and which of its two directories exist.
+/// A chapter that has files on disk, and which of its directories exist.
 typedef StoredChapter = ({
   int mangaId,
   int chapterId,
   bool hasFinal,
   bool hasStaging,
+  bool hasSuperseded,
 });
 
 /// Stores/removes a chapter's page image files on the device.
@@ -115,6 +116,12 @@ abstract class OfflinePageStore {
   /// the new chapter and clearing the old one leaves it behind, where nothing
   /// reads it and it costs a whole chapter of storage.
   Future<void> deleteSuperseded(int mangaId, int chapterId);
+
+  /// Put a set-aside copy back as the chapter, when nothing else is there.
+  /// True if it was restored. A kill mid-replacement followed by a failed
+  /// download can leave that copy as the ONLY one, and the catalog still
+  /// calling the chapter downloaded — deleting it then is data loss.
+  Future<bool> restoreSuperseded(int mangaId, int chapterId);
 
   /// Discard a chapter's staging directory (delete, or a producer that lost its
   /// claim cleaning up after itself).

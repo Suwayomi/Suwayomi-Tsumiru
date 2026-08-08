@@ -17,6 +17,7 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 import '../../../helpers/offline_test_db.dart';
 import '../../../helpers/fake_page_store.dart';
+import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 
 MangaDto mangaDto(int id) => Fragment$MangaDto(
   id: id,
@@ -63,6 +64,7 @@ void main() {
   late List<int> reconciled;
 
   setUp(() {
+    ChapterFileLock.resetForTest();
     db = testOfflineDatabase();
     store = FakePageStore();
     reconciled = [];

@@ -117,7 +117,7 @@ class FakePageStore implements OfflinePageStore {
 
   @override
   Future<List<StoredChapter>> chaptersOnDisk() async {
-    final ids = {...committed.keys, ...staged.keys};
+    final ids = {...committed.keys, ...staged.keys, ...superseded};
     return [
       for (final id in ids)
         (
@@ -125,6 +125,7 @@ class FakePageStore implements OfflinePageStore {
           chapterId: id,
           hasFinal: committed.containsKey(id),
           hasStaging: staged.containsKey(id),
+          hasSuperseded: superseded.contains(id),
         ),
     ];
   }
@@ -173,8 +174,26 @@ class FakePageStore implements OfflinePageStore {
     committedManifests.remove(chapterId);
   }
 
+  /// Chapters with a copy set aside by an interrupted replacement.
+  final superseded = <int>{};
+
   @override
-  Future<void> deleteSuperseded(int mangaId, int chapterId) async {}
+  Future<void> deleteSuperseded(int mangaId, int chapterId) async {
+    superseded.remove(chapterId);
+  }
+
+  @override
+  Future<bool> restoreSuperseded(int mangaId, int chapterId) async {
+    if (committed.containsKey(chapterId) || !superseded.remove(chapterId)) {
+      return false;
+    }
+    committed[chapterId] = {0: 1};
+    committedManifests[chapterId] = const ChapterManifest(
+      generation: 0,
+      indices: [0],
+    );
+    return true;
+  }
 
   @override
   Future<void> deleteStaging(int mangaId, int chapterId) async {

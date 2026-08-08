@@ -165,7 +165,21 @@ Future<void> recoverChaptersOnDisk({
         // chapter the server deleted on the device for good.
         if (row.deviceState == OfflineDeviceState.orphaned) return;
 
-        if (dir.hasFinal) {
+        // A copy set aside mid-replacement, with no chapter left beside it: a
+        // failed download cleared the staging that was going to replace it, so
+        // this is the chapter. Put it back rather than leave the catalog
+        // pointing at files nothing can read.
+        var hasFinal = dir.hasFinal;
+        if (!hasFinal && dir.hasSuperseded) {
+          hasFinal = await store.restoreSuperseded(dir.mangaId, dir.chapterId);
+          if (hasFinal) {
+            logger.i(
+              'Offline: restored the set-aside copy of ${dir.chapterId}',
+            );
+          }
+        }
+
+        if (hasFinal) {
           final committed = await store.inspectCommitted(
             dir.mangaId,
             dir.chapterId,
