@@ -19,6 +19,9 @@ const String _pageTempSuffix = '.tmp';
 /// Directory-name suffix marking a chapter's staging area.
 const String _stagingSuffix = '.part';
 
+/// Directory-name suffix of a committed copy set aside during a replacement.
+const String _supersededSuffix = '.superseded';
+
 /// Native (mobile + desktop) page store: writes page files under the app-support
 /// offline dir. dart:io — only constructed on native platforms (via the
 /// conditional-import bootstrap), never on web.
@@ -38,7 +41,7 @@ class IoOfflinePageStore implements OfflinePageStore {
   /// mid-swap leaves one behind, cleared by this chapter's next commit or
   /// delete.
   Directory _superseded(int mangaId, int chapterId) =>
-      Directory('${_finalDir(mangaId, chapterId).path}.superseded');
+      Directory('${_finalDir(mangaId, chapterId).path}$_supersededSuffix');
 
   @override
   Future<void> beginChapter(
@@ -193,16 +196,20 @@ class IoOfflinePageStore implements OfflinePageStore {
         if (chapterEntity is! Directory) continue;
         final name = p.basename(chapterEntity.path);
         final staging = name.endsWith(_stagingSuffix);
-        final chapterId = int.tryParse(
-          staging
-              ? name.substring(0, name.length - _stagingSuffix.length)
-              : name,
-        );
+        final aside = name.endsWith(_supersededSuffix);
+        final stem = staging
+            ? name.substring(0, name.length - _stagingSuffix.length)
+            : aside
+            ? name.substring(0, name.length - _supersededSuffix.length)
+            : name;
+        final chapterId = int.tryParse(stem);
         if (chapterId == null) continue;
         final prior = found[chapterId];
+        // A set-aside copy counts as a reason to visit the chapter, so a
+        // leftover one gets cleaned up instead of sitting there forever.
         found[chapterId] = (
           mangaId: mangaId,
-          hasFinal: (prior?.hasFinal ?? false) || !staging,
+          hasFinal: (prior?.hasFinal ?? false) || (!staging && !aside),
           hasStaging: (prior?.hasStaging ?? false) || staging,
         );
       }
@@ -298,6 +305,10 @@ class IoOfflinePageStore implements OfflinePageStore {
   @override
   Future<void> deleteCommitted(int mangaId, int chapterId) =>
       _quietDeleteDir(_finalDir(mangaId, chapterId));
+
+  @override
+  Future<void> deleteSuperseded(int mangaId, int chapterId) =>
+      _quietDeleteDir(_superseded(mangaId, chapterId));
 
   @override
   Future<void> deleteStaging(int mangaId, int chapterId) =>

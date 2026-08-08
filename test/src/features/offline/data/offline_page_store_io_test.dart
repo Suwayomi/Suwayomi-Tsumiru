@@ -165,6 +165,38 @@ void main() {
     await expectLater(store.commitStaging(9, 900), throwsA(anything));
   });
 
+  test('a copy left behind by an interrupted swap is cleaned up', () async {
+    // A kill between promoting the new chapter and clearing the old one leaves
+    // a full duplicate that nothing reads. Recovery must reach it, or it costs
+    // a chapter of storage on every launch, forever.
+    await store.beginChapter(
+      9,
+      904,
+      const ChapterManifest(generation: 0, indices: [0]),
+    );
+    await store.writePage(9, 904, 0, [1, 2, 3], 'jpg');
+    await store.commitStaging(9, 904);
+    await Directory(
+      p.join(tmp.path, '9', '904.superseded'),
+    ).create(recursive: true);
+
+    // The scan must surface the chapter so recovery visits it at all.
+    final found = await store.chaptersOnDisk();
+    expect(found.single.chapterId, 904);
+    expect(found.single.hasFinal, isTrue);
+
+    await store.deleteSuperseded(9, 904);
+    expect(
+      await Directory(p.join(tmp.path, '9', '904.superseded')).exists(),
+      isFalse,
+    );
+    expect(
+      await File(p.join(tmp.path, '9', '904', '000.jpg')).exists(),
+      isTrue,
+      reason: 'the live chapter is untouched',
+    );
+  });
+
   test('a superseded copy is not mistaken for a chapter on disk', () async {
     await store.beginChapter(
       9,

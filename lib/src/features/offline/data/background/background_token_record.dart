@@ -22,26 +22,37 @@ class BackgroundTokenRecord {
   final String authType; // basic | simpleLogin | uiLogin | none
   // Endpoint these creds belong to, checked before writeback after a switch.
   final String? endpoint;
-  final String? accessToken, refreshToken, password, basicCredential, simpleCookie;
+  final String? accessToken,
+      refreshToken,
+      password,
+      basicCredential,
+      simpleCookie;
 
-  BackgroundTokenRecord copyWith({int? gen, String? accessToken, String? refreshToken}) =>
-      BackgroundTokenRecord(
-        gen: gen ?? this.gen,
-        authType: authType,
-        endpoint: endpoint,
-        accessToken: accessToken ?? this.accessToken,
-        refreshToken: refreshToken ?? this.refreshToken,
-        password: password,
-        basicCredential: basicCredential,
-        simpleCookie: simpleCookie,
-      );
+  BackgroundTokenRecord copyWith({
+    int? gen,
+    String? accessToken,
+    String? refreshToken,
+  }) => BackgroundTokenRecord(
+    gen: gen ?? this.gen,
+    authType: authType,
+    endpoint: endpoint,
+    accessToken: accessToken ?? this.accessToken,
+    refreshToken: refreshToken ?? this.refreshToken,
+    password: password,
+    basicCredential: basicCredential,
+    simpleCookie: simpleCookie,
+  );
 
   Map<String, Object?> toJson() => {
-        'gen': gen, 'authType': authType, 'endpoint': endpoint,
-        'accessToken': accessToken, 'refreshToken': refreshToken,
-        'password': password, 'basicCredential': basicCredential,
-        'simpleCookie': simpleCookie,
-      };
+    'gen': gen,
+    'authType': authType,
+    'endpoint': endpoint,
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'password': password,
+    'basicCredential': basicCredential,
+    'simpleCookie': simpleCookie,
+  };
 
   factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) =>
       BackgroundTokenRecord(
@@ -60,7 +71,11 @@ class BackgroundTokenRecord {
 /// gen-versioned record, so a rotating refresh token is never lost-updated by two
 /// holders. Pure logic: storage + the actual refresh network call are injected.
 class TokenBroker {
-  TokenBroker({required this.read, required this.write, required this.refreshFn});
+  TokenBroker({
+    required this.read,
+    required this.write,
+    required this.refreshFn,
+  });
   final Future<BackgroundTokenRecord> Function() read;
   final Future<void> Function(BackgroundTokenRecord) write;
   final Future<RefreshResult?> Function(String refreshToken) refreshFn;
@@ -76,8 +91,13 @@ class TokenBroker {
     if (rt == null) return null;
     final res = await refreshFn(rt);
     if (res == null) return null;
-    await write(current.copyWith(
-        gen: current.gen + 1, accessToken: res.access, refreshToken: res.refresh));
+    await write(
+      current.copyWith(
+        gen: current.gen + 1,
+        accessToken: res.access,
+        refreshToken: res.refresh,
+      ),
+    );
     return res.access;
   }
 }

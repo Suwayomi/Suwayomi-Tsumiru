@@ -97,11 +97,16 @@ void main() {
     final pages = await (db.select(
       db.offlinePages,
     )..where((t) => t.chapterId.equals(2000))).get();
-    expect(pages, isEmpty, reason: 'partial page rows purged');
+    expect(pages, isEmpty, reason: 'nothing published');
+    expect(
+      store.manifests.containsKey(2000),
+      isFalse,
+      reason: 'the half-built staging area is dropped',
+    );
     expect(
       store.deletedChapters,
-      contains(2000),
-      reason: 'partial files purged',
+      isNot(contains(2000)),
+      reason: 'a failed attempt never removes the chapter itself',
     );
   });
 
@@ -211,6 +216,31 @@ void main() {
         2,
       }, reason: 'only this run\'s pages');
       expect(store.committed[2000]!.containsKey(7), isFalse);
+    },
+  );
+
+  test(
+    'a failed re-download does not delete the chapter already on device',
+    () async {
+      // The failure says nothing about the copy already there. Wiping it turned
+      // "the re-download didn't work" into "your chapter is gone".
+      final chapter = await seedChapter();
+      store.seedCommitted(2000, {0: 10, 1: 10, 2: 10});
+      final mgr = OfflineDownloadManager(
+        db: db,
+        store: store,
+        fetchPageUrls: (_) async => ['/a', '/b', '/c'],
+        fetchBytes: (_) async => throw Exception('network died'),
+      );
+
+      await expectLater(mgr.downloadChapter(chapter), throwsException);
+
+      expect(
+        store.committed.containsKey(2000),
+        isTrue,
+        reason: 'the previous copy survives a failed attempt',
+      );
+      expect(store.deletedChapters, isNot(contains(2000)));
     },
   );
 }

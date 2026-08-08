@@ -52,7 +52,8 @@ class BackgroundDownloadLock {
         await lockFile.delete();
       } catch (_) {}
       await Future<void>.delayed(
-          Duration(milliseconds: 50 + Random().nextInt(200)));
+        Duration(milliseconds: 50 + Random().nextInt(200)),
+      );
       if (!await _tryCreate(identity)) return false;
     }
     // The write after the exclusive create isn't atomic with it; verify the

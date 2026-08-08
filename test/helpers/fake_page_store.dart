@@ -170,6 +170,9 @@ class FakePageStore implements OfflinePageStore {
   }
 
   @override
+  Future<void> deleteSuperseded(int mangaId, int chapterId) async {}
+
+  @override
   Future<void> deleteStaging(int mangaId, int chapterId) async {
     staged.remove(chapterId);
     manifests.remove(chapterId);

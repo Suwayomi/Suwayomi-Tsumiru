@@ -39,8 +39,11 @@ void main() {
     expect(await holder.yieldRequested(), isFalse);
 
     await replay.requestYield();
-    expect(await holder.yieldRequested(), isTrue,
-        reason: 'the flag is a marker file — no renewal can clobber it');
+    expect(
+      await holder.yieldRequested(),
+      isTrue,
+      reason: 'the flag is a marker file — no renewal can clobber it',
+    );
     await holder.release();
   });
 
@@ -51,8 +54,11 @@ void main() {
     a.lockFile.writeAsStringSync('replay#123');
 
     await a.release();
-    expect(a.lockFile.existsSync(), isTrue,
-        reason: 'release is owner-only — the stolen lock must survive');
+    expect(
+      a.lockFile.existsSync(),
+      isTrue,
+      reason: 'release is owner-only — the stolen lock must survive',
+    );
   });
 
   test('a stale lock is broken and re-acquired', () async {
@@ -60,11 +66,15 @@ void main() {
     anchor.parent.createSync(recursive: true);
     anchor.writeAsStringSync('fgs#999');
     anchor.setLastModifiedSync(
-        DateTime.now().subtract(const Duration(minutes: 5)));
+      DateTime.now().subtract(const Duration(minutes: 5)),
+    );
 
     final claimant = BackgroundDownloadLock(anchor);
-    expect(await claimant.acquire('wm-catchup'), isTrue,
-        reason: 'heartbeat age past staleAfter means the holder is dead');
+    expect(
+      await claimant.acquire('wm-catchup'),
+      isTrue,
+      reason: 'heartbeat age past staleAfter means the holder is dead',
+    );
     await claimant.release();
     expect(anchor.existsSync(), isFalse);
   });

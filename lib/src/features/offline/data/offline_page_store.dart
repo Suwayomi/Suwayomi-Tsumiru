@@ -109,6 +109,11 @@ abstract class OfflinePageStore {
   /// for content a delete was supposed to remove and didn't.
   Future<void> deleteCommitted(int mangaId, int chapterId);
 
+  /// Discard the copy set aside during a replacement. A kill between promoting
+  /// the new chapter and clearing the old one leaves it behind, where nothing
+  /// reads it and it costs a whole chapter of storage.
+  Future<void> deleteSuperseded(int mangaId, int chapterId);
+
   /// Discard a chapter's staging directory (delete, or a producer that lost its
   /// claim cleaning up after itself).
   Future<void> deleteStaging(int mangaId, int chapterId);

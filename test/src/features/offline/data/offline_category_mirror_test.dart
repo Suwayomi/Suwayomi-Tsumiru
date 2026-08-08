@@ -27,10 +27,7 @@ CategoryDto cat(int id, String name, {int order = 0, bool hidden = false}) =>
       mangas: Fragment$CategoryDto$mangas(totalCount: 0),
       meta: [
         if (hidden)
-          Fragment$CategoryDto$meta(
-            key: kCategoryHiddenMetaKey,
-            value: 'true',
-          ),
+          Fragment$CategoryDto$meta(key: kCategoryHiddenMetaKey, value: 'true'),
       ],
     );
 
@@ -97,26 +94,27 @@ void main() {
       expect((await db.allOfflineCategories()).single.isHidden, isFalse);
     });
 
-    test('a device-local visibility flip yields to the server on re-sync',
-        () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A', hidden: true)]);
+    test(
+      'a device-local visibility flip yields to the server on re-sync',
+      () async {
+        final sync = OfflineSync(db);
+        await sync.syncCategories([cat(1, 'A', hidden: true)]);
 
-      // Offline unhide: the mirror flips so downloads stay reachable...
-      await db.setCategoryHidden(1, false);
-      expect((await db.allOfflineCategories()).single.isHidden, isFalse);
+        // Offline unhide: the mirror flips so downloads stay reachable...
+        await db.setCategoryHidden(1, false);
+        expect((await db.allOfflineCategories()).single.isHidden, isFalse);
 
-      // ...and the server's flag reasserts on the next online sync.
-      await sync.syncCategories([cat(1, 'A', hidden: true)]);
-      expect((await db.allOfflineCategories()).single.isHidden, isTrue);
-    });
+        // ...and the server's flag reasserts on the next online sync.
+        await sync.syncCategories([cat(1, 'A', hidden: true)]);
+        expect((await db.allOfflineCategories()).single.isHidden, isTrue);
+      },
+    );
   });
 
   group('categoriesWithOfflineFallback catalog serve', () {
     Future<Never> boom() async => throw const SocketException('unreachable');
 
-    test(
-        'serves per-category counts, keeps hidden meta, drops empty tabs, '
+    test('serves per-category counts, keeps hidden meta, drops empty tabs, '
         'and homes uncategorized manga in Default', () async {
       final sync = OfflineSync(db);
       await sync.syncCategories([
@@ -145,8 +143,7 @@ void main() {
       expect(byId[3]?.isHidden, isTrue);
     });
 
-    test(
-        'orphaned membership rows (category never mirrored or pruned '
+    test('orphaned membership rows (category never mirrored or pruned '
         'mid-state) still count their manga into Default', () async {
       final sync = OfflineSync(db);
       await sync.syncCategories([cat(1, 'A')]);

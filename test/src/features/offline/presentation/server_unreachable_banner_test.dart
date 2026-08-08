@@ -12,8 +12,9 @@ import 'package:tsumiru/src/features/offline/presentation/server_unreachable_ban
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 void main() {
-  testWidgets('shows a banner only while the server is unreachable',
-      (tester) async {
+  testWidgets('shows a banner only while the server is unreachable', (
+    tester,
+  ) async {
     late ProviderContainer container;
     await tester.pumpWidget(
       ProviderScope(

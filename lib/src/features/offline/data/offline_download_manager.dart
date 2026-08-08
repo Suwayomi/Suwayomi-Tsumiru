@@ -137,10 +137,10 @@ class OfflineDownloadManager {
     }
   }
 
-  Future<void> _purge(OfflineChapter chapter) async {
-    await store.deleteChapter(chapter.mangaId, chapter.id);
-    await (db.delete(
-      db.offlinePages,
-    )..where((t) => t.chapterId.equals(chapter.id))).go();
-  }
+  /// Drop what this attempt was building. Staging only: a download that failed
+  /// says nothing about the copy already on the device, and wiping the chapter
+  /// here turned "the re-download didn't work" into "your chapter is gone".
+  /// Removing a chapter for real is [deleteChapter]'s job.
+  Future<void> _purge(OfflineChapter chapter) =>
+      store.deleteStaging(chapter.mangaId, chapter.id);
 }

@@ -190,8 +190,10 @@ Future<void> recoverChaptersOnDisk({
                   '${dir.chapterId} (${committed.pages.length} pages)',
                 );
               }
-              // Staging alongside a complete final dir is a superseded attempt.
+              // Staging alongside a complete final dir is a superseded attempt,
+              // and so is a copy left set aside by a kill mid-replacement.
               await store.deleteStaging(dir.mangaId, dir.chapterId);
+              await store.deleteSuperseded(dir.mangaId, dir.chapterId);
               return;
             case ChapterDirState.legacy:
               if (row.deviceState == OfflineDeviceState.downloaded) {

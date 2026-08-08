@@ -27,8 +27,7 @@ class SeriesOfflineButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!ref.watch(offlineEnabledProvider)) return const SizedBox.shrink();
-    final progress =
-        ref.watch(mangaOfflineProgressProvider(mangaId)).value;
+    final progress = ref.watch(mangaOfflineProgressProvider(mangaId)).value;
     final downloaded = progress?.downloaded ?? 0;
     final inFlight = progress?.inFlight ?? 0;
     final onDevice = downloaded > 0;
@@ -42,16 +41,19 @@ class SeriesOfflineButton extends ConsumerWidget {
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(onDevice
-              ? Icons.offline_pin_rounded
-              : Icons.download_for_offline_outlined),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              onDevice
+                  ? Icons.offline_pin_rounded
+                  : Icons.download_for_offline_outlined,
+            ),
       label: downloading
           ? context.l10n.offlineDownloadingCount(inFlight)
           : _ruleLabel(context, config?.rule, config?.count) ??
-              (onDevice
-                  ? context.l10n.offlineOnDevice
-                  : context.l10n.offlineDownloadAction),
+                (onDevice
+                    ? context.l10n.offlineOnDevice
+                    : context.l10n.offlineDownloadAction),
       onPressed: () => _openSheet(context, ref, onDevice),
     );
   }
@@ -62,13 +64,15 @@ class SeriesOfflineButton extends ConsumerWidget {
       switch (rule) {
         OfflineKeepRule.all => context.l10n.keepOfflineAll,
         OfflineKeepRule.allUnread => context.l10n.keepOfflineAllUnread,
-        OfflineKeepRule.nUnread =>
-          context.l10n.keepOfflineNextUnread(count ?? 5),
+        OfflineKeepRule.nUnread => context.l10n.keepOfflineNextUnread(
+          count ?? 5,
+        ),
         OfflineKeepRule.off || null => null,
       };
 
   void _openSheet(BuildContext context, WidgetRef ref, bool onDevice) {
-    final config = ref.read(mangaKeepConfigProvider(mangaId)).value ??
+    final config =
+        ref.read(mangaKeepConfigProvider(mangaId)).value ??
         (rule: OfflineKeepRule.off, count: 5);
     final rule = config.rule;
     showModalBottomSheet<void>(
@@ -93,8 +97,9 @@ class SeriesOfflineButton extends ConsumerWidget {
                   children: [
                     Text(
                       sheetContext.l10n.offlineSheetTitle,
-                      style: sheetContext.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: sheetContext.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -115,7 +120,8 @@ class SeriesOfflineButton extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.bookmark_add_outlined),
                   title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                  trailing: (rule == OfflineKeepRule.nUnread && config.count == n)
+                  trailing:
+                      (rule == OfflineKeepRule.nUnread && config.count == n)
                       ? const Icon(Icons.check_rounded)
                       : null,
                   onTap: () =>
@@ -128,7 +134,11 @@ class SeriesOfflineButton extends ConsumerWidget {
                     ? const Icon(Icons.check_rounded)
                     : null,
                 onTap: () => _apply(
-                    sheetContext, ref, OfflineKeepRule.allUnread, config.count),
+                  sheetContext,
+                  ref,
+                  OfflineKeepRule.allUnread,
+                  config.count,
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.library_books_outlined),
@@ -136,18 +146,25 @@ class SeriesOfflineButton extends ConsumerWidget {
                 trailing: rule == OfflineKeepRule.all
                     ? const Icon(Icons.check_rounded)
                     : null,
-                onTap: () =>
-                    _apply(sheetContext, ref, OfflineKeepRule.all, config.count),
+                onTap: () => _apply(
+                  sheetContext,
+                  ref,
+                  OfflineKeepRule.all,
+                  config.count,
+                ),
               ),
               if (onDevice || rule != OfflineKeepRule.off) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: Icon(Icons.delete_outline_rounded,
-                      color: sheetContext.theme.colorScheme.error),
+                  leading: Icon(
+                    Icons.delete_outline_rounded,
+                    color: sheetContext.theme.colorScheme.error,
+                  ),
                   title: Text(
                     sheetContext.l10n.offlineRemoveSeries,
                     style: TextStyle(
-                        color: sheetContext.theme.colorScheme.error),
+                      color: sheetContext.theme.colorScheme.error,
+                    ),
                   ),
                   onTap: () => _removeAll(sheetContext, ref),
                 ),
@@ -159,8 +176,12 @@ class SeriesOfflineButton extends ConsumerWidget {
     );
   }
 
-  Future<void> _apply(BuildContext sheetContext, WidgetRef ref,
-      OfflineKeepRule rule, int count) async {
+  Future<void> _apply(
+    BuildContext sheetContext,
+    WidgetRef ref,
+    OfflineKeepRule rule,
+    int count,
+  ) async {
     final messenger = ScaffoldMessenger.of(sheetContext);
     final toast = sheetContext.l10n.offlineDownloadingToast;
     Navigator.of(sheetContext).pop();
@@ -171,10 +192,15 @@ class SeriesOfflineButton extends ConsumerWidget {
     // The reconcile may pull many chapters; run it in the background and refresh
     // the on-device count when it settles — even on failure, so the badge can't
     // get stuck, and swallow the error (best-effort background work).
-    unawaited(reconcileMangaWidget(ref, mangaId)
-        .whenComplete(
-            () => ref.invalidate(mangaDownloadedCountProvider(mangaId)))
-        .catchError((_) {/* best-effort */}));
+    unawaited(
+      reconcileMangaWidget(ref, mangaId)
+          .whenComplete(
+            () => ref.invalidate(mangaDownloadedCountProvider(mangaId)),
+          )
+          .catchError((_) {
+            /* best-effort */
+          }),
+    );
   }
 
   Future<void> _removeAll(BuildContext sheetContext, WidgetRef ref) async {
