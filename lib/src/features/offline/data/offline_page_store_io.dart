@@ -160,10 +160,6 @@ class IoOfflinePageStore implements OfflinePageStore {
       }
       rethrow;
     }
-    // Safe now, and unconditional: the promotion landed, so whatever is set
-    // aside is superseded no matter which run put it there.
-    await _quietDeleteDir(superseded);
-
     final finalRel = paths.chapterDirRel(mangaId, chapterId);
     final pages = <CommittedPage>[];
     for (final index in manifest.indices) {
@@ -175,6 +171,11 @@ class IoOfflinePageStore implements OfflinePageStore {
       ));
     }
     pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
+    // Only now, with the promoted files measured and the list built. Anything
+    // above here can still throw, and the caller's failure path purges what it
+    // just promoted — so the previous chapter has to outlive every step that
+    // might fail, not merely the rename.
+    await _quietDeleteDir(superseded);
     return pages;
   }
 
