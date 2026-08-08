@@ -174,10 +174,9 @@ class IoOfflinePageStore implements OfflinePageStore {
       ));
     }
     pages.sort((a, b) => a.pageIndex.compareTo(b.pageIndex));
-    // Only now, with the promoted files measured and the list built. Anything
-    // above here can still throw, and the caller's failure path purges what it
-    // just promoted — so the previous chapter has to outlive every step that
-    // might fail, not merely the rename.
+    // Deferred past the measurement loop above, which can still throw — the
+    // previous chapter must outlive every step that might fail, not just the
+    // rename.
     await _quietDeleteDir(superseded);
     return pages;
   }

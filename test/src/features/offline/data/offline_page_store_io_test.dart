@@ -166,9 +166,6 @@ void main() {
   });
 
   test('a copy left behind by an interrupted swap is cleaned up', () async {
-    // A kill between promoting the new chapter and clearing the old one leaves
-    // a full duplicate that nothing reads. Recovery must reach it, or it costs
-    // a chapter of storage on every launch, forever.
     await store.beginChapter(
       9,
       904,
@@ -302,10 +299,6 @@ void main() {
   });
 
   test('a set-aside copy left alone is restored, not discarded', () async {
-    // Crash mid-replacement leaves the old copy aside; a failed download then
-    // clears the staging that was going to replace it. That set-aside copy is
-    // now the only one there is, and the catalog still calls the chapter
-    // downloaded — so it has to come back, not be swept as junk.
     await store.beginChapter(
       9,
       905,

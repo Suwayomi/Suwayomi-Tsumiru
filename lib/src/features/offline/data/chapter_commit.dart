@@ -158,17 +158,13 @@ Future<void> recoverChaptersOnDisk({
           await store.deleteChapter(dir.mangaId, dir.chapterId);
           return;
         }
-        // An orphaned row is a pending delete, not an interrupted download —
-        // the server no longer lists this chapter and the reconcile pass will
-        // evict it. Everything below treats a complete directory as a download
-        // to adopt, which here would flip it back to `downloaded` and strand a
-        // chapter the server deleted on the device for good.
+        // A pending delete, not an interrupted download — adopting it below
+        // would flip it back to `downloaded` and the reconcile pass would
+        // never evict it.
         if (row.deviceState == OfflineDeviceState.orphaned) return;
 
-        // A copy set aside mid-replacement, with no chapter left beside it: a
-        // failed download cleared the staging that was going to replace it, so
-        // this is the chapter. Put it back rather than leave the catalog
-        // pointing at files nothing can read.
+        // The only surviving copy after a kill mid-replacement — restore it
+        // before treating this chapter as having no final directory.
         var hasFinal = dir.hasFinal;
         if (!hasFinal && dir.hasSuperseded) {
           hasFinal = await store.restoreSuperseded(dir.mangaId, dir.chapterId);
@@ -201,9 +197,6 @@ Future<void> recoverChaptersOnDisk({
               // Already settled, or the rename landed and the catalog write
               // didn't — either way the rows are cheap to reassert.
               if (row.deviceState != OfflineDeviceState.downloaded) {
-                // Measured only here — the settled case is the overwhelming
-                // majority and asking for page sizes there meant a stat per
-                // page of the whole downloaded library, every launch.
                 await db.commitDownloadedChapter(
                   chapterId: dir.chapterId,
                   pages: await store.committedPages(dir.mangaId, dir.chapterId),

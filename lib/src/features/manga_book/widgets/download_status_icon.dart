@@ -95,6 +95,15 @@ class DownloadStatusIcon extends HookConsumerWidget {
             onPressed: () => toggleChapterToQueue(toast, ref, isError: true),
             icon: const Icon(Icons.replay_rounded),
           );
+        } else if (downloadUpdate.state == DownloadState.QUEUED) {
+          // Waiting its turn on the server, not downloading. This used to be
+          // the same indeterminate spinner as an active download, and a
+          // spinner repaints every frame — so queueing a series set every
+          // visible row animating until its turn came, however long that was.
+          return IconButton(
+            onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
+            icon: Icon(Icons.schedule_rounded, color: context.iconColor),
+          );
         } else {
           return IconButton(
             onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
