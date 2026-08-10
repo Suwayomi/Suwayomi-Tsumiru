@@ -62,7 +62,7 @@ dependencies:
   # HCT (perceived-lightness) color space for the light-mode genre chips. Ships
   # with Flutter itself; declared here because we import it directly.
   material_color_utilities: ^0.13.0
-  network_info_plus: ^6.0.0
+  network_info_plus: ^8.0.0
   package_info_plus: ^8.0.0
   path: ^1.8.3
   path_provider: ^2.0.11
