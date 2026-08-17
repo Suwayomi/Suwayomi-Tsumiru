@@ -8,6 +8,17 @@
 //   * Added `pinchEnabled`: when false the pinch/scale gesture is ignored (so
 //     double-tap-to-zoom still works with pinch turned off), and the zoom level
 //     resets to 1x when it flips off.
+//   * Pinch-scale now re-centers on the live `details.localFocalPoint` on every
+//     update instead of the point frozen at `onScaleStart` (upstream bug: that
+//     point is whichever finger touches down FIRST, since Flutter doesn't
+//     restart the gesture when the second one joins, so the zoom drifted away
+//     from the actual pinch center — #372).
+//   * Every computed scroll target is clamped to `[minScrollExtent,
+//     maxScrollExtent]` before `jumpTo` (upstream bug: near a content edge,
+//     the target could exceed the scrollable range; `jumpTo` doesn't clamp,
+//     so Flutter's own out-of-range correction only kicked in on a later
+//     frame and snapped straight to the boundary with no regard for the
+//     tapped/pinched focal point — #372).
 //
 // Upstream license (MIT):
 //   Copyright 2024
@@ -76,10 +87,14 @@ class ZoomViewController {
 
     final effectiveVerticalPixels = state._verticalController.position.pixels;
 
-    final newHorizontalPixels =
-        effectiveHorizontalPixels + (currentInternalScale - internalNewScale) * focus.dx;
-    final newVerticalPixels =
-        effectiveVerticalPixels + (currentInternalScale - internalNewScale) * focus.dy;
+    final newHorizontalPixels = _clampToScrollExtent(
+      state._horizontalController,
+      effectiveHorizontalPixels + (currentInternalScale - internalNewScale) * focus.dx,
+    );
+    final newVerticalPixels = _clampToScrollExtent(
+      state._verticalController,
+      effectiveVerticalPixels + (currentInternalScale - internalNewScale) * focus.dy,
+    );
 
     state._updateScale(internalNewScale);
     state._verticalController.jumpTo(newVerticalPixels);
@@ -135,10 +150,16 @@ class ZoomViewController {
       final double newAnimatedInternalScale = scaleAnimation.value;
       final double previousAnimatedInternalScale = state._scale;
 
-      currentEffectiveHorizontalPixels +=
-          (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dx;
-      currentEffectiveVerticalPixels +=
-          (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dy;
+      currentEffectiveHorizontalPixels = _clampToScrollExtent(
+        state._horizontalController,
+        currentEffectiveHorizontalPixels +
+            (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dx,
+      );
+      currentEffectiveVerticalPixels = _clampToScrollExtent(
+        state._verticalController,
+        currentEffectiveVerticalPixels +
+            (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dy,
+      );
       state._updateScale(newAnimatedInternalScale);
 
       if (!firstFrame && !secondFrame) {
@@ -487,9 +508,6 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
     PointerDeviceKind.touch,
   );
 
-  ///The focal point of pointers at the start of a scale event
-  late Offset _localFocalPoint;
-
   void _updateScale(double scale) {
     setState(() {
       _scale = scale;
@@ -533,7 +551,6 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onScaleStart: (ScaleStartDetails details) {
-              _localFocalPoint = details.localFocalPoint;
               _clearScaleAnimationListeners();
               _masterAnimationController.stop();
               _trackPadState = details.kind == PointerDeviceKind.trackpad
@@ -594,10 +611,16 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     _minInternalScale,
                     _maxInternalScale,
                   );
-                  final verticalOffset = _verticalController.position.pixels +
-                      (_scale - newScale) * details.localFocalPoint.dy;
-                  final horizontalOffset = _horizontalController.position.pixels +
-                      (_scale - newScale) * details.localFocalPoint.dx;
+                  final verticalOffset = _clampToScrollExtent(
+                    _verticalController,
+                    _verticalController.position.pixels +
+                        (_scale - newScale) * details.localFocalPoint.dy,
+                  );
+                  final horizontalOffset = _clampToScrollExtent(
+                    _horizontalController,
+                    _horizontalController.position.pixels +
+                        (_scale - newScale) * details.localFocalPoint.dx,
+                  );
 
                   _updateScale(newScale);
 
@@ -634,10 +657,29 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     _minInternalScale,
                     _maxInternalScale,
                   );
-                  final verticalOffset = _verticalController.position.pixels +
-                      (_scale - newScale) * _localFocalPoint.dy;
-                  final horizontalOffset = _horizontalController.position.pixels +
-                      (_scale - newScale) * _localFocalPoint.dx;
+                  // Live focal point, not the one captured at onScaleStart: a
+                  // pinch's midpoint drifts as the two fingers move (rarely
+                  // perfectly static), and onScaleStart itself fires off
+                  // whichever finger touches down FIRST — Flutter doesn't
+                  // restart the gesture when the second one joins — so a
+                  // frozen point anchors the zoom whenever the fingers'
+                  // midpoint moves from where the first finger happened to
+                  // land, rather than the actual pinch center (#372). Also
+                  // clamped to what's actually scrollable right now: near a
+                  // content edge, jumpTo would otherwise accept an offset
+                  // beyond the available range and let Flutter's own,
+                  // unrelated-to-the-focal-point correction snap it back on
+                  // a later frame (#372).
+                  final verticalOffset = _clampToScrollExtent(
+                    _verticalController,
+                    _verticalController.position.pixels +
+                        (_scale - newScale) * details.localFocalPoint.dy,
+                  );
+                  final horizontalOffset = _clampToScrollExtent(
+                    _horizontalController,
+                    _horizontalController.position.pixels +
+                        (_scale - newScale) * details.localFocalPoint.dx,
+                  );
                   //This is the main logic to actually perform the scaling
                   _updateScale(newScale);
                   _verticalController.jumpTo(verticalOffset);
@@ -843,4 +885,18 @@ double _clampDouble(double x, double min, double max) {
     return max;
   }
   return x;
+}
+
+/// Clamps a computed scroll target to what [controller] can actually scroll
+/// to right now, so a zoom step near a content edge can't request an offset
+/// beyond the available range. Without this, `jumpTo` would still accept the
+/// out-of-range value (it forces `pixels` directly, no clamping), and
+/// Flutter's own scroll-position correction only snaps it back on a later
+/// layout pass — with no regard for the focal point the zoom was trying to
+/// keep in place. That delayed, uncontrolled correction is what let a zoom
+/// near a top/bottom (or left/right) edge drift the tapped/pinched content
+/// out from under the finger instead of staying put (#372).
+double _clampToScrollExtent(ScrollController controller, double value) {
+  final position = controller.position;
+  return _clampDouble(value, position.minScrollExtent, position.maxScrollExtent);
 }
