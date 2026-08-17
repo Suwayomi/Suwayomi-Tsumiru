@@ -40,6 +40,13 @@ const _maxCatchUpPages = 3;
 
 bool _running = false;
 
+/// Set by the [downloadsMapProvider] drain listener when a drain event fires
+/// while a catch-up pass holds [_running]. Rather than dropping the event, we
+/// record it here and replay [_pullAwaiting] at the tail of the current pass so
+/// chapters that became serverIsDownloaded during the pass are not stranded
+/// until the next update cycle.
+bool _drainMissedDuringPass = false;
+
 /// Manga whose reconcile had to ask the SERVER to download chapters first.
 /// Their device pull can only happen after those finish — see
 /// [pullAfterServerDownloads].
@@ -74,7 +81,13 @@ void initChapterCatchUp(ProviderContainer container) {
   // catch-up reconcile become pullable to the device.
   container.listen(downloadsMapProvider, (previous, next) {
     if ((previous?.isNotEmpty ?? false) && next.isEmpty) {
-      unawaited(pullAfterServerDownloads(container));
+      if (_running) {
+        // A catch-up pass is in flight — defer rather than drop. The pass's
+        // own tail will call _pullAwaiting again with fresh server state.
+        _drainMissedDuringPass = true;
+      } else {
+        unawaited(pullAfterServerDownloads(container));
+      }
     }
   });
   // Catch anything the server found while the app was closed.
@@ -120,9 +133,10 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
   }
 }
 
-/// Single-flight: a trigger landing mid-pass is dropped, since its chapters
-/// are newer than the watermark and the next pass (launch or update-finish)
-/// will pick them up.
+/// Single-flight: an update trigger landing mid-pass is dropped, since its
+/// chapters are newer than the watermark and will be picked up by the next
+/// pass. A server-download drain event landing mid-pass is instead deferred
+/// via [_drainMissedDuringPass] and replayed at the tail of the current pass.
 Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
   if (_running) return;
   if (!container.read(offlineActiveProvider)) return;
@@ -155,7 +169,15 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     );
     // Didn't reach the watermark (or this is the first pass, with none yet)?
     // Fall back to every keep-rule manga instead of skipping the tail.
-    final touched = scan.sawWatermark ? scan.touched : keepRuleManga;
+    final feedTouched = scan.sawWatermark ? scan.touched : keepRuleManga;
+    // Also include manga still awaiting a server-side download. Their
+    // serverIsDownloaded flag can flip without generating a new feed entry
+    // (e.g. a manual re-download via the WebUI), so the watermark scan would
+    // miss them — always give them a fresh sync attempt.
+    final touched = {
+      ...feedTouched,
+      ..._awaitingServerDownloads.where(keepRuleManga.contains),
+    };
     final allSynced = await _syncAndReconcile(container, touched);
 
     // Only a fully-processed pass may advance the watermark — a skipped manga
@@ -174,6 +196,14 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     // queue-drain edge alone can be missed when downloads finish faster than
     // the subscription reports them.
     await _pullAwaiting(container);
+    // If a drain event arrived while this pass was in flight, the listener
+    // deferred it instead of dropping it. Re-run the pull now so chapters that
+    // became serverIsDownloaded during the pass are not stranded until the next
+    // update cycle.
+    if (_drainMissedDuringPass) {
+      _drainMissedDuringPass = false;
+      await _pullAwaiting(container);
+    }
     // Freshest device-state snapshot for the background worker.
     await writeCatchupWorkSpec(container.read);
   } catch (e) {
@@ -185,8 +215,9 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
 
 /// Second hop: chapters the server had to download from the source first.
 /// Once its queue drains, re-run the chain for the manga that were waiting so
-/// the device copies get pulled. Single-flight with the catch-up pass, whose
-/// own tail retry covers a drain edge that lands mid-pass.
+/// the device copies get pulled. Single-flight with the catch-up pass; a drain
+/// event landing mid-pass sets [_drainMissedDuringPass] instead of being
+/// dropped, and is replayed at the pass's tail.
 Future<void> pullAfterServerDownloads(ProviderContainer container) async {
   if (_running) return;
   _running = true;
