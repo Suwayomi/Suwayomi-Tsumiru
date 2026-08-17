@@ -693,21 +693,42 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         final newPageCount = pages.pages.length;
 
         // Capture the page currently anchoring the viewport so we can
-        // re-pin it after every index shifts up by ``newPageCount``.
+        // re-pin it after every index shifts up by ``newPageCount``. The
+        // leading edge is kept UNCLAMPED for that purpose: jumpTo's
+        // alignment only supports [0, 1] (it aligns the item's top edge to
+        // a point within the viewport — see ItemScrollController.jumpTo),
+        // so a tall page we're deep inside of — routine on long-strip
+        // webtoon content — has a leading edge far below -1.0. Clamping
+        // that into range used to silently discard how far into the page
+        // we'd scrolled, so the re-anchor landed on the page's TOP instead
+        // of where we actually were. We jump to the top (alignment 0, the
+        // one value the API guarantees) and then nudge down by the exact
+        // pixel depth separately below.
         final positions = positionsListener.itemPositions.value.toList()
           ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
         int? anchorIndex;
-        double anchorAlignment = 0.0;
+        double anchorLeadingEdge = 0.0;
         for (final p in positions) {
           // First item whose top edge is at/below the viewport top is the
           // natural anchor; fall back to the first reported position.
           if (p.itemTrailingEdge > 0) {
             anchorIndex = p.index;
-            anchorAlignment = p.itemLeadingEdge.clamp(-1.0, 1.0);
+            anchorLeadingEdge = p.itemLeadingEdge;
             break;
           }
         }
         anchorIndex ??= positions.isNotEmpty ? positions.first.index : null;
+        // Pixels already scrolled past the anchor's top edge (0 if its top
+        // is still at/below the viewport top — nothing to restore then).
+        double intoAnchorPixels = 0;
+        try {
+          if (anchorLeadingEdge < 0) {
+            intoAnchorPixels = -anchorLeadingEdge *
+                scrollOffsetController.position.viewportDimension;
+          }
+        } catch (_) {
+          // Not laid out yet — landing on the item's top is the best we can do.
+        }
 
         loadedChapters.value = [
           (pages: pages, chapter: prev, chapterId: prev.id),
@@ -717,15 +738,30 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // direction sample so the next tick re-derives it cleanly.
         lastTop.value = null;
 
-        // Re-anchor on the next frame (the rebuilt SPL must register the
-        // new itemCount first). One frame, no animation, no second defer.
+        // Re-anchor across two frames: the first lands the shifted item's
+        // top edge at the viewport top (the only alignment jumpTo actually
+        // supports); the second — once that layout has settled and pixels
+        // reflects it — nudges down by the exact depth we'd read into it,
+        // so a tall page lands back at precisely the same visual spot
+        // instead of resetting to its top. No animation either frame.
         if (anchorIndex != null) {
           final target = anchorIndex + newPageCount;
           // Guard the re-anchor jump too: its settle motion must not be read
           // as a scroll back to the top that prepends yet another chapter.
           markScrollAdjusting();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            jumpToIndex(index: target, alignment: anchorAlignment);
+            jumpToIndex(index: target, alignment: 0.0);
+            if (intoAnchorPixels > 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                try {
+                  final pos = scrollOffsetController.position;
+                  pos.jumpTo(
+                    (pos.pixels + intoAnchorPixels)
+                        .clamp(pos.minScrollExtent, pos.maxScrollExtent),
+                  );
+                } catch (_) {}
+              });
+            }
           });
         }
 
@@ -816,10 +852,27 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // opening a chapter (at page 0, or a short chapter) never auto-
         // loads a neighbour. A neighbour loads only when the user is
         // actively scrolling toward that edge.
-        final minIdx = positions
+        //
+        // minIdx/maxIdx use a stricter visibility floor than the raw
+        // sliver filter above: a page whose edge has only just grazed the
+        // viewport (as little as one rendered pixel) otherwise counts as
+        // "on screen" here, so a fast fling through a long chapter — more
+        // scrolling per gesture — can transiently report the tail page
+        // while the reader, by the 40%-visible standard selectCurrentIndex
+        // uses for progress, is still several pages behind. Falls back to
+        // the raw list if nothing clears the floor (e.g. several short
+        // pages sharing the screen, none individually over threshold).
+        final strictlyVisible = positions
+            .where((p) =>
+                InfinityContinuousUtils.calculateVisibleArea(p) >=
+                InfinityContinuousConfig.boundaryVisibleAreaThreshold)
+            .toList();
+        final boundaryPositions =
+            strictlyVisible.isNotEmpty ? strictlyVisible : positions;
+        final minIdx = boundaryPositions
             .map((p) => p.index)
             .reduce((a, b) => a < b ? a : b);
-        final maxIdx = positions
+        final maxIdx = boundaryPositions
             .map((p) => p.index)
             .reduce((a, b) => a > b ? a : b);
 
@@ -829,7 +882,23 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         bool scrollingUp = false;
         bool scrollingDown = false;
         if (prevTop != null) {
-          const eps = 0.0015;
+          // A fixed viewport-fraction epsilon (the previous 0.0015, ~1px on
+          // a typical phone) shrinks to nothing on tall viewports, letting
+          // ordinary sub-pixel layout jitter — e.g. a page-height
+          // correction landing while that page sits at the viewport top —
+          // masquerade as a deliberate scroll. Measure in real pixels
+          // instead, converting to the viewport-fraction units itemLeadingEdge
+          // uses.
+          double viewportHeight = 0;
+          try {
+            viewportHeight = scrollOffsetController.position.viewportDimension;
+          } catch (_) {
+            // Not laid out yet — fall back to a small-but-safe fraction.
+          }
+          final double eps = viewportHeight > 0
+              ? InfinityContinuousConfig.boundaryScrollDirectionEpsilonPx /
+                  viewportHeight
+              : 0.03;
           if (top.index < prevTop.index) {
             scrollingUp = true;
           } else if (top.index > prevTop.index) {
