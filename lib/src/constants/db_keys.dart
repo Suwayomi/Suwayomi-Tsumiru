@@ -87,6 +87,7 @@ enum DBKeys {
   updatesFilterUnread(null),
   updatesFilterStarted(null),
   updatesFilterBookmarked(null),
+  updatesGroupingMode(null),
   historyFilterUnfinishedSeries(null),
   historyFilterUnread(null),
   historyFilterInLibrary(null),

@@ -24,8 +24,241 @@ import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
 import '../reader/controller/reader_controller.dart';
 import 'controller/updates_filter_controller.dart';
+import 'controller/updates_grouping_controller.dart';
+import 'widgets/chapter_manga_grouped_tile.dart';
 import 'widgets/chapter_manga_list_tile.dart';
 import 'widgets/updates_filter.dart';
+
+// ---------------------------------------------------------------------------
+// Grouping helpers
+// ---------------------------------------------------------------------------
+
+/// Groups consecutive chapters that share the same manga and the same calendar
+/// day into [_GroupedEntry] records. Ungrouped chapters become a [_GroupedEntry]
+/// with an empty [tail].
+List<_GroupedEntry> _groupItems(List<ChapterWithMangaDto> items) {
+  final result = <_GroupedEntry>[];
+  for (final item in items) {
+    final itemDate = int.tryParse(item.fetchedAt);
+    final last = result.lastOrNull;
+    if (last != null &&
+        last.head.mangaId == item.mangaId &&
+        itemDate.isSameDayAs(int.tryParse(last.head.fetchedAt))) {
+      result[result.length - 1] = last.copyWithTail(item);
+    } else {
+      result.add(_GroupedEntry(head: item, tail: const []));
+    }
+  }
+  return result;
+}
+
+/// Picks the representative chapter for a group: the last unread chapter,
+/// or the first chapter if all are already read — matching WebUI behaviour.
+ChapterWithMangaDto _pickHead(List<ChapterWithMangaDto> chapters) {
+  assert(chapters.isNotEmpty);
+  return chapters.lastWhere(
+    (c) => !c.isRead,
+    orElse: () => chapters.first,
+  );
+}
+
+class _GroupedEntry {
+  const _GroupedEntry({required this.head, required this.tail});
+
+  final ChapterWithMangaDto head;
+  final List<ChapterWithMangaDto> tail;
+
+  _GroupedEntry copyWithTail(ChapterWithMangaDto extra) {
+    final all = [head, ...tail, extra];
+    final newHead = _pickHead(all);
+    final newTail = [...all]..remove(newHead);
+    return _GroupedEntry(head: newHead, tail: newTail);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paged list widget
+// ---------------------------------------------------------------------------
+
+class _UpdatesPagedList extends StatelessWidget {
+  const _UpdatesPagedList({
+    required this.controller,
+    required this.groupingMode,
+    required this.selectedChapters,
+    required this.getGeneration,
+    required this.screenContext,
+    required this.resetList,
+    required this.refetchChapter,
+  });
+
+  final PagingController<int, ChapterWithMangaDto> controller;
+  final UpdatesGroupingMode groupingMode;
+  final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
+  final ValueGetter<int> getGeneration;
+  final BuildContext screenContext;
+  final VoidCallback resetList;
+  final Future<ChapterDto?> Function(int chapterId) refetchChapter;
+
+  Future<void> _updatePair(ChapterWithMangaDto item) async {
+    final chapter = await refetchChapter(item.id);
+    final list = [...?controller.itemList];
+    final i = list.indexWhere((e) => e.id == item.id);
+    if (i < 0) return;
+    list[i] = list[i].copyWith(
+      isRead: (chapter?.isRead ?? false) || list[i].isRead,
+      isDownloaded: chapter?.isDownloaded,
+      lastPageRead: chapter?.lastPageRead,
+    );
+    controller.itemList = list;
+  }
+
+  Future<void> _refreshManga(int mangaId) async {
+    final startGeneration = getGeneration();
+    final ids = [
+      for (final row in [...?controller.itemList])
+        if (row.mangaId == mangaId) row.id,
+    ];
+    final chapters = await fetchChaptersInBatches(
+      ids: ids,
+      fetch: refetchChapter,
+    );
+    if (!screenContext.mounted || getGeneration() != startGeneration) return;
+    controller.itemList = patchRowsForManga(
+      rows: [...?controller.itemList],
+      mangaId: mangaId,
+      chapters: chapters,
+    );
+  }
+
+  void _toggleSelect(ChapterDto val) {
+    if ((val.id).isNull) return;
+    selectedChapters.value = selectedChapters.value.toggleKey(val.id, val);
+  }
+
+  Widget _buildItem(BuildContext context, ChapterWithMangaDto _, int flatIndex) {
+    final items = controller.itemList ?? [];
+    final isGrouped = groupingMode != UpdatesGroupingMode.disabled;
+
+    // Build the display list up to and including flatIndex to determine which
+    // group this flat index corresponds to, using a running fold.
+    final groups = isGrouped ? _groupItems(items) : null;
+
+    // Re-index: flatIndex is in the *original* flat list; find the group it
+    // belongs to and the display index.
+    if (groups != null) {
+      // Each group occupies exactly one display slot.
+      final displayIndex = _flatToDisplayIndex(items, groups, flatIndex);
+      if (displayIndex == null) return const SizedBox.shrink();
+
+      // Only render when flatIndex is the canonical "head" of the group to
+      // avoid duplicate rendering. The head's flat index is where the
+      // group's head item sits in the original list.
+      final group = groups[displayIndex];
+      if (items[flatIndex].id != group.head.id) return const SizedBox.shrink();
+
+      final tile = _buildGroupTile(context, group);
+      return _wrapWithDateHeader(context, items, flatIndex, tile);
+    }
+
+    // Ungrouped path — identical to the original flat behaviour.
+    final item = items[flatIndex];
+    final tile = ChapterMangaListTile(
+      chapterWithMangaDto: item,
+      updatePair: () => _updatePair(item),
+      refreshManga: () => _refreshManga(item.mangaId),
+      isSelected: selectedChapters.value.containsKey(item.id),
+      canTapSelect: selectedChapters.value.isNotEmpty,
+      toggleSelect: (val) => _toggleSelect(val),
+    );
+    return _wrapWithDateHeader(context, items, flatIndex, tile);
+  }
+
+  Widget _buildGroupTile(BuildContext context, _GroupedEntry group) {
+    return ChapterMangaGroupedTile(
+      head: group.head,
+      tail: group.tail,
+      updatePairFor: (chapter) => () => _updatePair(chapter),
+      refreshManga: () => _refreshManga(group.head.mangaId),
+      isSelected: selectedChapters.value.containsKey(group.head.id),
+      canTapSelect: selectedChapters.value.isNotEmpty,
+      toggleSelect: (val) => _toggleSelect(val),
+    );
+  }
+
+  Widget _wrapWithDateHeader(
+    BuildContext context,
+    List<ChapterWithMangaDto> items,
+    int flatIndex,
+    Widget tile,
+  ) {
+    int? previousDate;
+    try {
+      previousDate = int.tryParse(items[flatIndex - 1].fetchedAt);
+    } catch (_) {
+      previousDate = null;
+    }
+    final currentDate = int.tryParse(items[flatIndex].fetchedAt);
+    if (currentDate.isSameDayAs(previousDate)) return tile;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListTile(
+          title: Text(currentDate.toDaysAgoFromSeconds(context)),
+        ),
+        tile,
+      ],
+    );
+  }
+
+  /// Maps a flat list index to the display-group index, or null if this
+  /// flat item is not the group head and should be hidden.
+  int? _flatToDisplayIndex(
+    List<ChapterWithMangaDto> items,
+    List<_GroupedEntry> groups,
+    int flatIndex,
+  ) {
+    int flatCursor = 0;
+    for (int g = 0; g < groups.length; g++) {
+      final group = groups[g];
+      final groupSize = 1 + group.tail.length;
+      if (flatIndex >= flatCursor && flatIndex < flatCursor + groupSize) {
+        // Check if this flatIndex points to the head.
+        if (items[flatIndex].id == group.head.id) return g;
+        return null; // tail item — suppress rendering
+      }
+      flatCursor += groupSize;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PagedSliverList(
+      pagingController: controller,
+      builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
+        firstPageProgressIndicatorBuilder: (context) =>
+            const CenterSorayomiShimmerIndicator(),
+        firstPageErrorIndicatorBuilder: (context) => Emoticons(
+          title: controller.error.toString(),
+          button: TextButton(
+            onPressed: resetList,
+            child: Text(context.l10n.retry),
+          ),
+        ),
+        noItemsFoundIndicatorBuilder: (context) => Emoticons(
+          title: context.l10n.noUpdatesFound,
+          button: TextButton(
+            onPressed: resetList,
+            child: Text(context.l10n.refresh),
+          ),
+        ),
+        itemBuilder: _buildItem,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 /// Refetches one chapter, holding its autoDispose provider open so a bare
 /// refresh with nothing listening can't tear it down mid-fetch and throw.
@@ -97,6 +330,8 @@ class UpdatesScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final filter = ref.watch(updatesFilterProvider);
     final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
+    final groupingMode = ref.watch(updatesGroupingModeProvider) ??
+        UpdatesGroupingMode.disabled;
     // The page listener is registered once, so it can't close over `filter` —
     // it reads the latest value through this holder instead.
     final latestFilter = useRef(filter);
@@ -219,110 +454,14 @@ class UpdatesScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-            PagedSliverList(
-              pagingController: controller,
-              builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
-                firstPageProgressIndicatorBuilder: (context) =>
-                    const CenterSorayomiShimmerIndicator(),
-                firstPageErrorIndicatorBuilder: (context) => Emoticons(
-                  title: controller.error.toString(),
-                  button: TextButton(
-                    onPressed: () => resetList(),
-                    child: Text(context.l10n.retry),
-                  ),
-                ),
-                noItemsFoundIndicatorBuilder: (context) => Emoticons(
-                  title: context.l10n.noUpdatesFound,
-                  button: TextButton(
-                    onPressed: () => resetList(),
-                    child: Text(context.l10n.refresh),
-                  ),
-                ),
-                itemBuilder: (context, item, index) {
-                  int? previousDate;
-                  try {
-                    previousDate = int.tryParse(
-                      controller.itemList?[index - 1].fetchedAt ?? "",
-                    );
-                  } catch (e) {
-                    previousDate = null;
-                  }
-                  final chapterTile = ChapterMangaListTile(
-                    chapterWithMangaDto: item,
-                    updatePair: () async {
-                      final chapter = await refetchChapter(ref, item.id);
-                      // Locate the row by id, not the captured build-time index —
-                      // the list may have changed (paging/refresh) while the reader
-                      // was open, so an index-based patch could hit the wrong row.
-                      final list = [...?controller.itemList];
-                      final i = list.indexWhere((e) => e.id == item.id);
-                      if (i < 0) return;
-                      list[i] = list[i].copyWith(
-                        // Upgrade-only: reading never un-reads, so a stale/slow
-                        // refetch that still reports unread must not flip an
-                        // already-read row back. Only ever grey it out.
-                        isRead: (chapter?.isRead ?? false) || list[i].isRead,
-                        isDownloaded: chapter?.isDownloaded,
-                        lastPageRead: chapter?.lastPageRead,
-                      );
-                      controller.itemList = list;
-                    },
-                    refreshManga: () async {
-                      final mangaId = item.mangaId;
-                      final startGeneration = generation.value;
-                      final ids = [
-                        for (final row in [...?controller.itemList])
-                          if (row.mangaId == mangaId) row.id,
-                      ];
-                      // Per chapter rather than via mangaChapterList: refreshing
-                      // that one also runs the offline reconcile, and merely
-                      // coming back to this list must never delete a download.
-                      final chapters = await fetchChaptersInBatches(
-                        ids: ids,
-                        fetch: (id) => refetchChapter(ref, id),
-                      );
-                      // Same staleness rule as _fetchPage: a refresh or filter
-                      // change during the fetch leaves these rows describing a
-                      // list that no longer exists.
-                      if (!screenContext.mounted ||
-                          generation.value != startGeneration) {
-                        return;
-                      }
-                      controller.itemList = patchRowsForManga(
-                        rows: [...?controller.itemList],
-                        mangaId: mangaId,
-                        chapters: chapters,
-                      );
-                    },
-                    isSelected: selectedChapters.value.containsKey(item.id),
-                    canTapSelect: selectedChapters.value.isNotEmpty,
-                    toggleSelect: (ChapterDto val) {
-                      if ((val.id).isNull) return;
-                      selectedChapters.value = (selectedChapters.value
-                          .toggleKey(val.id, val));
-                    },
-                  );
-                  if ((int.tryParse(
-                    item.fetchedAt,
-                  )).isSameDayAs(previousDate)) {
-                    return chapterTile;
-                  } else {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          title: Text(
-                            int.tryParse(
-                              item.fetchedAt,
-                            ).toDaysAgoFromSeconds(context),
-                          ),
-                        ),
-                        chapterTile,
-                      ],
-                    );
-                  }
-                },
-              ),
+            _UpdatesPagedList(
+              controller: controller,
+              groupingMode: groupingMode,
+              selectedChapters: selectedChapters,
+              getGeneration: () => generation.value,
+              screenContext: screenContext,
+              resetList: resetList,
+              refetchChapter: (id) => refetchChapter(ref, id),
             ),
           ],
         ),
