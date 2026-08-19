@@ -147,7 +147,13 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
           in await container.read(offlineDatabaseProvider).libraryManga())
         if (m.keepRule != OfflineKeepRule.off) m.id,
     };
-    if (keepRuleManga.isEmpty) return;
+    if (keepRuleManga.isEmpty) {
+      if (_drainMissedDuringPass) {
+        _drainMissedDuringPass = false;
+        await _pullAwaiting(container);
+      }
+      return;
+    }
 
     final prefs = container.read(sharedPreferencesProvider);
     final watermark = prefs.getInt(DBKeys.offlineCatchUpWatermark.name) ?? 0;
@@ -223,6 +229,10 @@ Future<void> pullAfterServerDownloads(ProviderContainer container) async {
   _running = true;
   try {
     await _pullAwaiting(container);
+    if (_drainMissedDuringPass) {
+      _drainMissedDuringPass = false;
+      await _pullAwaiting(container);
+    }
   } finally {
     _running = false;
   }
