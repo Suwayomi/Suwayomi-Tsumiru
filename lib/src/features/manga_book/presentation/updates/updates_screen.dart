@@ -18,6 +18,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter/graphql/__generated__/fragment.graphql.dart';
+import '../../domain/updates/updates_grouping.dart';
 import '../../domain/updates/updates_row_patch.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import '../../widgets/update_status_fab.dart';
@@ -28,53 +29,6 @@ import 'controller/updates_grouping_controller.dart';
 import 'widgets/chapter_manga_grouped_tile.dart';
 import 'widgets/chapter_manga_list_tile.dart';
 import 'widgets/updates_filter.dart';
-
-// ---------------------------------------------------------------------------
-// Grouping helpers
-// ---------------------------------------------------------------------------
-
-/// Groups consecutive chapters that share the same manga and the same calendar
-/// day into [_GroupedEntry] records. Ungrouped chapters become a [_GroupedEntry]
-/// with an empty [tail].
-List<_GroupedEntry> _groupItems(List<ChapterWithMangaDto> items) {
-  final result = <_GroupedEntry>[];
-  for (final item in items) {
-    final itemDate = int.tryParse(item.fetchedAt);
-    final last = result.lastOrNull;
-    if (last != null &&
-        last.head.mangaId == item.mangaId &&
-        itemDate.isSameDayAs(int.tryParse(last.head.fetchedAt))) {
-      result[result.length - 1] = last.copyWithTail(item);
-    } else {
-      result.add(_GroupedEntry(head: item, tail: const []));
-    }
-  }
-  return result;
-}
-
-/// Picks the representative chapter for a group: the last unread chapter,
-/// or the first chapter if all are already read — matching WebUI behaviour.
-ChapterWithMangaDto _pickHead(List<ChapterWithMangaDto> chapters) {
-  assert(chapters.isNotEmpty);
-  return chapters.lastWhere(
-    (c) => !c.isRead,
-    orElse: () => chapters.first,
-  );
-}
-
-class _GroupedEntry {
-  const _GroupedEntry({required this.head, required this.tail});
-
-  final ChapterWithMangaDto head;
-  final List<ChapterWithMangaDto> tail;
-
-  _GroupedEntry copyWithTail(ChapterWithMangaDto extra) {
-    final all = [head, ...tail, extra];
-    final newHead = _pickHead(all);
-    final newTail = [...all]..remove(newHead);
-    return _GroupedEntry(head: newHead, tail: newTail);
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Paged list widget
@@ -141,7 +95,7 @@ class _UpdatesPagedList extends StatelessWidget {
 
     // Build the display list up to and including flatIndex to determine which
     // group this flat index corresponds to, using a running fold.
-    final groups = isGrouped ? _groupItems(items) : null;
+    final groups = isGrouped ? groupUpdatesForDisplay(items) : null;
 
     // Re-index: flatIndex is in the *original* flat list; find the group it
     // belongs to and the display index.
@@ -173,7 +127,7 @@ class _UpdatesPagedList extends StatelessWidget {
     return _wrapWithDateHeader(context, items, flatIndex, tile);
   }
 
-  Widget _buildGroupTile(BuildContext context, _GroupedEntry group) {
+  Widget _buildGroupTile(BuildContext context, UpdatesGroupedEntry group) {
     return ChapterMangaGroupedTile(
       head: group.head,
       tail: group.tail,
@@ -214,7 +168,7 @@ class _UpdatesPagedList extends StatelessWidget {
   /// flat item is not the group head and should be hidden.
   int? _flatToDisplayIndex(
     List<ChapterWithMangaDto> items,
-    List<_GroupedEntry> groups,
+    List<UpdatesGroupedEntry> groups,
     int flatIndex,
   ) {
     int flatCursor = 0;
