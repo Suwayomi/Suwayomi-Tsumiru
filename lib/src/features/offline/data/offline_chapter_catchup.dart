@@ -52,6 +52,35 @@ bool _drainMissedDuringPass = false;
 /// [pullAfterServerDownloads].
 final Set<int> _awaitingServerDownloads = {};
 
+/// Resets all module-private state. The three globals above persist across
+/// `test()` cases in the same file (one isolate per file), so every test
+/// exercising this module must call this in `setUp`.
+@visibleForTesting
+void resetChapterCatchUpStateForTest() {
+  _running = false;
+  _drainMissedDuringPass = false;
+  _awaitingServerDownloads.clear();
+}
+
+@visibleForTesting
+void seedAwaitingServerDownloadsForTest(Iterable<int> mangaIds) {
+  _awaitingServerDownloads
+    ..clear()
+    ..addAll(mangaIds);
+}
+
+/// Test-only mirror of the [downloadsMapProvider] drain listener installed by
+/// [initChapterCatchUp]. Lets a test simulate a queue-drain event landing at
+/// an arbitrary point in time without wiring up the full listener chain.
+@visibleForTesting
+void simulateQueueDrainForTest(ProviderContainer container) {
+  if (_running) {
+    _drainMissedDuringPass = true;
+  } else {
+    unawaited(pullAfterServerDownloads(container));
+  }
+}
+
 /// Called once from app bootstrap, after the offline engine is up.
 void initChapterCatchUp(ProviderContainer container) {
   // Restore the second-hop obligations — the watermark has already moved past
