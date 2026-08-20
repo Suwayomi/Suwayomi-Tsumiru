@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/organizer_heading.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../controller/updates_filter_controller.dart';
 import '../controller/updates_grouping_controller.dart';
@@ -27,35 +28,31 @@ class UpdatesFilterSheet extends ConsumerWidget {
       child: ListView(
         shrinkWrap: true,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Text(
-              context.l10n.display,
-              style: context.textTheme.titleMedium,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: SegmentedButton<UpdatesGroupingMode>(
-              segments: [
-                for (final mode in UpdatesGroupingMode.values)
-                  ButtonSegment(
-                    value: mode,
-                    label: Text(mode.toLocale(context)),
-                  ),
-              ],
-              selected: {groupingMode},
-              onSelectionChanged: (selection) => ref
-                  .read(updatesGroupingModeProvider.notifier)
-                  .update(selection.first),
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-          ),
-          const Divider(height: 24),
+          OrganizerHeading(context.l10n.updatesGroupingLabel),
+          OrganizerHint(context.l10n.updatesGroupingHint),
+          // A chip row, same visual language as every other tri-state /
+          // enum picker in the organizer sheets — not a SegmentedButton.
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final mode in UpdatesGroupingMode.values)
+                  FilterChip(
+                    selected: groupingMode == mode,
+                    showCheckmark: false,
+                    visualDensity: VisualDensity.compact,
+                    label: Text(mode.toLocale(context)),
+                    onSelected: (_) => ref
+                        .read(updatesGroupingModeProvider.notifier)
+                        .update(mode),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(
               context.l10n.filter,
               style: context.textTheme.titleMedium,
