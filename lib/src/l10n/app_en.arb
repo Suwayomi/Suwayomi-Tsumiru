@@ -3539,5 +3539,37 @@
         "type": "int"
       }
     }
+  },
+  "offlineChaptersScreenTitle": "Downloaded chapters",
+  "@offlineChaptersScreenTitle": {
+    "description": "AppBar title for the offline series drill-down chapter list"
+  },
+  "offlineChaptersActiveSection": "Downloading / Queued",
+  "@offlineChaptersActiveSection": {
+    "description": "Section header for chapters currently downloading or queued in the offline chapter list"
+  },
+  "offlineChaptersDownloadedSection": "Downloaded",
+  "@offlineChaptersDownloadedSection": {
+    "description": "Section header for fully downloaded chapters in the offline chapter list"
+  },
+  "offlineChaptersErrorSection": "Failed",
+  "@offlineChaptersErrorSection": {
+    "description": "Section header for chapters that failed to download"
+  },
+  "offlineChaptersEmpty": "No chapters saved on this device yet.",
+  "@offlineChaptersEmpty": {
+    "description": "Empty state for the offline chapter drill-down screen"
+  },
+  "offlineChapterRetry": "Retry",
+  "@offlineChapterRetry": {
+    "description": "Button to retry a failed chapter download"
+  },
+  "offlineChapterDelete": "Remove from device",
+  "@offlineChapterDelete": {
+    "description": "Button / tooltip to remove an on-device chapter"
+  },
+  "offlineChaptersQueued": "Queued",
+  "@offlineChaptersQueued": {
+    "description": "Status label for a chapter waiting in the download queue"
   }
 }

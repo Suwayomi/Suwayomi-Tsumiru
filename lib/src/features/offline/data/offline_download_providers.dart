@@ -186,9 +186,15 @@ Stream<bool> offlineHasPending(Ref ref) {
 
 /// Live on-device download state for a chapter (none / queued / downloading /
 /// downloaded / error). Always `none` when offline is unavailable.
+///
+/// Guards on [offlineEnabledProvider] (storage opened) rather than
+/// [offlineActiveProvider] (identity verified): this is a read-only stream of
+/// local DB state and does not require server-identity verification. On iOS
+/// (and other platforms) before the identity handshake completes, downloads
+/// can already be queued/downloading and the UI must reflect them.
 @riverpod
 Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
-  if (!ref.watch(offlineActiveProvider)) {
+  if (!ref.watch(offlineEnabledProvider)) {
     return Stream.value(OfflineDeviceState.none);
   }
   return ref.watch(offlineRepositoryProvider).watchChapterState(chapterId);
@@ -202,7 +208,9 @@ Stream<OfflineDeviceState> offlineChapterState(Ref ref, int chapterId) {
 /// count while the download is in flight.
 @riverpod
 double? offlineChapterProgress(Ref ref, int chapterId) {
-  if (!ref.watch(offlineActiveProvider)) return null;
+  // Same rationale as offlineChapterState: this is a read of in-memory
+  // progress state and does not require server-identity verification.
+  if (!ref.watch(offlineEnabledProvider)) return null;
   // Watch THIS chapter's entry, not the whole map. A chapter list holds a few
   // hundred of these, and reading the map wakes every one of them each time any
   // single chapter advances a page — so one download made the entire visible
@@ -1220,6 +1228,28 @@ Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
     return (downloaded: downloaded, inFlight: inFlight);
   }).distinct(); // only rebuild the button when the counts actually change
 }
+
+/// All chapter rows for [mangaId] that have any on-device footprint (queued,
+/// downloading, downloaded, error) — drives the offline series chapter drill-down
+/// screen. Guards on [offlineEnabledProvider] so it works before identity is
+/// verified (pure local-DB read).
+///
+/// Uses a manual StreamProvider.family because [OfflineChapter] is a
+/// drift-generated type that riverpod_generator cannot resolve at code-gen
+/// time (the drift part hasn't been generated yet in that build phase).
+/// This matches the pattern noted in the offline architecture doc.
+final offlineChaptersForMangaProvider =
+    StreamProvider.family<List<OfflineChapter>, int>((ref, mangaId) {
+  if (!ref.watch(offlineEnabledProvider)) return Stream.value(const []);
+  return ref
+      .watch(offlineDatabaseProvider)
+      .watchChaptersForManga(mangaId)
+      .map(
+        (rows) => rows
+            .where((c) => c.deviceState != OfflineDeviceState.none)
+            .toList(),
+      );
+});
 
 /// Every series with an offline footprint — chapters present OR an active
 /// keep-rule — with per-series counts, bytes, and the manga row. Single source
