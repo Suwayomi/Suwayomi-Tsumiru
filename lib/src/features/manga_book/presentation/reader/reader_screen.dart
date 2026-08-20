@@ -366,8 +366,7 @@ class ReaderScreen extends HookConsumerWidget {
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.singleHorizontalRTL ||
-                        ReaderMode.continuousHorizontalRTL =>
+                        ReaderMode.singleHorizontalRTL =>
                           MultiChapterPagedReaderMode(
                             chapter: chapterData,
                             manga: data,
@@ -378,12 +377,38 @@ class ReaderScreen extends HookConsumerWidget {
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                           ),
-                        ReaderMode.singleHorizontalLTR ||
-                        ReaderMode.continuousHorizontalLTR =>
+                        ReaderMode.singleHorizontalLTR =>
                           MultiChapterPagedReaderMode(
                             chapter: chapterData,
                             manga: data,
                             onPageChanged: onPageChanged,
+                            chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
+                          ),
+                        ReaderMode.continuousHorizontalRTL =>
+                          MultiChapterContinuousReaderMode(
+                            chapter: chapterData,
+                            manga: data,
+                            onPageChanged: onPageChanged,
+                            scrollDirection: Axis.horizontal,
+                            reverse: true,
+                            effectiveReaderMode:
+                                ReaderMode.continuousHorizontalRTL,
+                            showReaderLayoutAnimation:
+                                showReaderLayoutAnimation,
+                            chapterPages: chapterPagesData,
+                            openAtEnd: openAtEnd,
+                          ),
+                        ReaderMode.continuousHorizontalLTR =>
+                          MultiChapterContinuousReaderMode(
+                            chapter: chapterData,
+                            manga: data,
+                            onPageChanged: onPageChanged,
+                            scrollDirection: Axis.horizontal,
+                            effectiveReaderMode:
+                                ReaderMode.continuousHorizontalLTR,
+                            showReaderLayoutAnimation:
+                                showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
                           ),
@@ -408,8 +433,7 @@ class ReaderScreen extends HookConsumerWidget {
                           ),
                         ReaderMode.defaultReader || null => switch (
                               defaultReaderMode ?? ReaderMode.singleHorizontalRTL) {
-                            ReaderMode.singleHorizontalLTR ||
-                            ReaderMode.continuousHorizontalLTR =>
+                            ReaderMode.singleHorizontalLTR =>
                               MultiChapterPagedReaderMode(
                                 chapter: chapterData,
                                 manga: data,
@@ -417,13 +441,39 @@ class ReaderScreen extends HookConsumerWidget {
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
                               ),
-                            ReaderMode.singleHorizontalRTL ||
-                            ReaderMode.continuousHorizontalRTL =>
+                            ReaderMode.singleHorizontalRTL =>
                               MultiChapterPagedReaderMode(
                                 chapter: chapterData,
                                 manga: data,
                                 onPageChanged: onPageChanged,
                                 reverse: true,
+                                showReaderLayoutAnimation:
+                                    showReaderLayoutAnimation,
+                                chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
+                              ),
+                            ReaderMode.continuousHorizontalLTR =>
+                              MultiChapterContinuousReaderMode(
+                                chapter: chapterData,
+                                manga: data,
+                                onPageChanged: onPageChanged,
+                                scrollDirection: Axis.horizontal,
+                                effectiveReaderMode:
+                                    ReaderMode.continuousHorizontalLTR,
+                                showReaderLayoutAnimation:
+                                    showReaderLayoutAnimation,
+                                chapterPages: chapterPagesData,
+                                openAtEnd: openAtEnd,
+                              ),
+                            ReaderMode.continuousHorizontalRTL =>
+                              MultiChapterContinuousReaderMode(
+                                chapter: chapterData,
+                                manga: data,
+                                onPageChanged: onPageChanged,
+                                scrollDirection: Axis.horizontal,
+                                reverse: true,
+                                effectiveReaderMode:
+                                    ReaderMode.continuousHorizontalRTL,
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,

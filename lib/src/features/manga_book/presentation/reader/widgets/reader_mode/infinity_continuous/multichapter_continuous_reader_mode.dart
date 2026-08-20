@@ -498,14 +498,24 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       scaleType.maxContentWidth(context.width, context.height),
       widthLimit,
     );
+    final bool isHorizontal = scrollDirection == Axis.horizontal;
+    // The dimension along the scroll axis (height for a vertical strip,
+    // width for a horizontal one) — this is what a page reserves/grows along.
+    final double mainAxisExtent = isHorizontal ? context.width : context.height;
+    // The dimension a page is capped to across the scroll axis. The
+    // width-limit settings above are vertical-strip-specific (no per-mode
+    // settings surface exists for continuousHorizontalLTR/RTL, which are
+    // legacy-orphan modes), so a horizontal strip simply fills the full
+    // viewport height instead.
+    final double crossAxisExtent = isHorizontal ? context.height : maxContentWidth;
     // Read via ref (like loadedRef) so a once-bound closure — e.g. the
     // positions listener's loadNext/PreviousChapter — can't re-seed heights
     // at a width superseded by a later scale/limit change.
     final layoutParams =
         useRef<({bool naturalSize, double columnWidth})>(
-            (naturalSize: pagesAtNaturalSize, columnWidth: maxContentWidth));
+            (naturalSize: pagesAtNaturalSize, columnWidth: crossAxisExtent));
     layoutParams.value =
-        (naturalSize: pagesAtNaturalSize, columnWidth: maxContentWidth);
+        (naturalSize: pagesAtNaturalSize, columnWidth: crossAxisExtent);
     final ReaderScrollAmount scrollAmount =
         ref.watch(readerScrollAmountKeyProvider) ??
         DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
@@ -562,10 +572,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // Read via layoutParams, not closure capture, so a sweep started by
         // an old build still reserves at the current width.
         final layout = layoutParams.value;
-        final renderedWidth = layout.naturalSize
-            ? math.min(w.toDouble(), MediaQuery.sizeOf(context).width)
+        final crossAxisSize = isHorizontal
+            ? MediaQuery.sizeOf(context).height
+            : MediaQuery.sizeOf(context).width;
+        final renderedCrossAxis = layout.naturalSize
+            ? math.min(isHorizontal ? h.toDouble() : w.toDouble(), crossAxisSize)
             : layout.columnWidth;
-        pageHeights.value[url] = renderedWidth * h / w;
+        // Vertical: cross-axis is width(w), main-axis is height(h). Horizontal
+        // is the mirror image — cross-axis is height(h), main-axis is width(w).
+        pageHeights.value[url] = isHorizontal
+            ? renderedCrossAxis * w / h
+            : renderedCrossAxis * h / w;
       }
       info.dispose();
     }
@@ -641,7 +658,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // First build is the initial sweep's job, not this effect's.
     final lastLayoutKey = useRef<(WebtoonScaleType, double)?>(null);
     useEffect(() {
-      final key = (scaleType, maxContentWidth);
+      final key = (scaleType, crossAxisExtent);
       final previous = lastLayoutKey.value;
       lastLayoutKey.value = key;
       if (previous == null || previous == key) return null;
@@ -662,7 +679,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
       });
       return null;
-    }, [scaleType, maxContentWidth]);
+    }, [scaleType, crossAxisExtent]);
 
     // --- chapter loading -------------------------------------------------
 
@@ -1209,50 +1226,67 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
-    // Smart scale centres a narrower strip on wide screens.
-    Widget capWidth(Widget page) => maxContentWidth >= context.width
-        ? page
-        : Center(child: SizedBox(width: maxContentWidth, child: page));
+    // Smart scale centres a narrower strip on wide screens (cross-axis: width
+    // for a vertical strip, height for a horizontal one).
+    Widget capWidth(Widget page) {
+      final containerExtent = isHorizontal ? context.height : context.width;
+      if (crossAxisExtent >= containerExtent) return page;
+      return Center(
+        child: isHorizontal
+            ? SizedBox(height: crossAxisExtent, child: page)
+            : SizedBox(width: crossAxisExtent, child: page),
+      );
+    }
 
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
+      final fallbackMainAxisExtent = isHorizontal
+          ? mainAxisExtent * InfinityContinuousConfig.horizontalPageWidthRatio
+          : mainAxisExtent * InfinityContinuousConfig.verticalPageHeightRatio;
       if (loc == null) {
-        return SizedBox(
-          height:
-              context.height * InfinityContinuousConfig.verticalPageHeightRatio,
-        );
+        return isHorizontal
+            ? SizedBox(width: fallbackMainAxisExtent)
+            : SizedBox(height: fallbackMainAxisExtent);
       }
-      // Reserve the page's true height so a strip never grows on decode and
-      // shoves the scroll backward. Priority:
-      //   1. this exact page's measured height (re-entry), else
+      // Reserve the page's true main-axis extent so a strip never grows on
+      // decode and shoves the scroll backward. Priority:
+      //   1. this exact page's measured extent (re-entry), else
       //   2. the AVERAGE of pages already measured in this session — manhwa
       //      strips in a chapter are near-uniform, so this places an unloaded
-      //      page within a few px of its real height (the key fix: a page that
+      //      page within a few px of its real extent (the key fix: a page that
       //      loads while ABOVE the viewport barely changes size, so it doesn't
       //      push the reader back — the failure mode the 0.7-screen guess caused
       //      when real strips are 2-4 screens tall), else
       //   3. a one-screen fallback for the very first page (the anchor, which
-      //      grows downward and never jumps the reader).
+      //      grows forward and never jumps the reader).
       final measured = pageHeights.value;
-      final double? avgHeight = measured.isEmpty
+      final double? avgExtent = measured.isEmpty
           ? null
           : measured.values.reduce((a, b) => a + b) / measured.length;
-      final placeholderHeight =
-          measured[loc.imageUrl] ??
-          avgHeight ??
-          context.height * InfinityContinuousConfig.verticalPageHeightRatio;
+      final placeholderExtent =
+          measured[loc.imageUrl] ?? avgExtent ?? fallbackMainAxisExtent;
+      final fit = isHorizontal ? BoxFit.fitHeight : BoxFit.fitWidth;
+      Widget placeholderBox({Widget? child}) => isHorizontal
+          ? SizedBox(width: placeholderExtent, height: double.infinity, child: child)
+          : SizedBox(height: placeholderExtent, width: double.infinity, child: child);
       return ServerImage(
         showReloadButton: true,
-        fit: BoxFit.fitWidth,
+        fit: fit,
         appendApiToUrl: false,
         cropBorders: cropBorders,
-        // Decode at on-screen width, not the ~800×15000 source (#196 GPU cost).
-        memCacheWidth: (maxContentWidth * MediaQuery.devicePixelRatioOf(context))
-            .round()
-            .clamp(1, 1 << 20),
+        // Decode at on-screen size, not the ~800×15000 source (#196 GPU cost).
+        memCacheWidth: isHorizontal
+            ? null
+            : (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1 << 20),
+        memCacheHeight: isHorizontal
+            ? (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1 << 20)
+            : null,
         imageUrl: loc.imageUrl,
-        progressIndicatorBuilder: (_, __, progress) => SizedBox(
-          height: placeholderHeight,
+        progressIndicatorBuilder: (_, __, progress) => placeholderBox(
           child: Center(
             child: CircularProgressIndicator(value: progress.progress),
           ),
@@ -1261,46 +1295,47 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           final image = Image(
             image: imageProvider,
             // scaleDown = lay out at native size, shrink to fit, never enlarge.
-            fit: pagesAtNaturalSize ? BoxFit.scaleDown : BoxFit.fitWidth,
-            width: pagesAtNaturalSize ? null : double.infinity,
+            fit: pagesAtNaturalSize ? BoxFit.scaleDown : fit,
+            width: pagesAtNaturalSize
+                ? null
+                : (isHorizontal ? null : double.infinity),
+            height: pagesAtNaturalSize
+                ? null
+                : (isHorizontal ? double.infinity : null),
             // A page file deleted while still loaded (e.g. delete-on-read, then
             // scrolling back to it offline) would otherwise throw and paint
-            // Flutter's red error widget for every page. Show a stable-height
+            // Flutter's red error widget for every page. Show a stable-extent
             // broken-image placeholder instead.
-            errorBuilder: (context, error, stackTrace) => SizedBox(
-              height: placeholderHeight,
-              width: double.infinity,
+            errorBuilder: (context, error, stackTrace) => placeholderBox(
               child: const Center(
                 child: Icon(Icons.broken_image_rounded, color: Colors.grey),
               ),
             ),
-            // Reserve the page's height UNTIL the bitmap decodes. The network path
+            // Reserve the page's extent UNTIL the bitmap decodes. The network path
             // gets this for free via progressIndicatorBuilder, but the offline
             // (file://) ServerImage branch skips that and renders the bare Image —
-            // which is 0px tall until the local file decodes, then pops to full
-            // height. A wall of pages popping 0->real around a seek lands the jump
-            // on the wrong page (offline-only seek bug). Reserving placeholderHeight
+            // which is 0px until the local file decodes, then pops to full
+            // extent. A wall of pages popping 0->real around a seek lands the jump
+            // on the wrong page (offline-only seek bug). Reserving placeholderExtent
             // keeps every page size-stable, so jumpTo(index) lands true.
             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
               if (frame == null && !wasSynchronouslyLoaded) {
-                return SizedBox(
-                  height: placeholderHeight,
-                  width: double.infinity,
-                );
+                return placeholderBox();
               }
               // Only measure the REAL decoded image — never the placeholder — so a
-              // strip re-entering the viewport reserves its true height.
+              // strip re-entering the viewport reserves its true extent.
               return MeasureSize(
                 onChange: (size) {
-                  if (size.height <= 0) return;
-                  pageHeights.value[loc.imageUrl] = size.height;
+                  final extent = isHorizontal ? size.width : size.height;
+                  if (extent <= 0) return;
+                  pageHeights.value[loc.imageUrl] = extent;
                 },
                 child: child,
               );
             },
           );
-          // Load-bearing: without Center, the list's tight cross-axis width
-          // pins scaleDown's layout box at full width (letterboxed) instead
+          // Load-bearing: without Center, the list's tight cross-axis extent
+          // pins scaleDown's layout box at full size (letterboxed) instead
           // of letting it shrink to native.
           return pagesAtNaturalSize ? Center(child: image) : image;
         },
@@ -1308,6 +1343,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     // continuousVertical is the "Long strip with gaps" mode in settings.
+    // continuousHorizontalLTR/RTL have no equivalent gaps setting (they're
+    // legacy-orphan modes with no dedicated settings surface), so they follow
+    // webtoon's no-gap default.
     final pageGap = effectiveReaderMode == ReaderMode.continuousVertical
         ? const Gap(kLongStripPageGap)
         : const SizedBox.shrink();
@@ -1340,8 +1378,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       scrollDirection: scrollDirection,
       reverse: reverse,
       itemCount: total,
-      minCacheExtent:
-          context.height * InfinityContinuousConfig.verticalCacheMultiplier,
+      minCacheExtent: isHorizontal
+          ? context.width * InfinityContinuousConfig.horizontalCacheMultiplier
+          : context.height * InfinityContinuousConfig.verticalCacheMultiplier,
       itemBuilder: (context, index) => capWidth(buildItem(context, index)),
       // Transition cards follow the strip's column width — a full-width card
       // interrupting a 30% strip reads as a glitch.
