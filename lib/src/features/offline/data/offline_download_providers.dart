@@ -537,8 +537,9 @@ Future<DeleteChaptersSettings?> _serverDeleteSettings(_Read read) async {
 /// [ProviderContainer] at reader exit, where the route's ref is already gone.
 typedef _Read = T Function<T>(ProviderListenable<T> provider);
 
-/// Chapters finished this session — shields them from keep-rule eviction
-/// until next launch, so closing the reader doesn't yank one off the device.
+/// Chapters currently open in the reader — shields them from reconcile eviction
+/// while the reader is on screen. The reader records each chapter it opens and
+/// discards all of them on dispose, so the set is empty between reading sessions.
 final sessionReadChaptersProvider =
     NotifierProvider<SessionReadChapters, Set<int>>(SessionReadChapters.new);
 
@@ -549,6 +550,13 @@ class SessionReadChapters extends Notifier<Set<int>> {
   void record(int chapterId) {
     if (state.contains(chapterId)) return;
     state = {...state, chapterId};
+  }
+
+  /// Removes the given chapter IDs when their reader widget disposes.
+  void discard(Set<int> chapterIds) {
+    if (chapterIds.isEmpty) return;
+    final next = state.difference(chapterIds);
+    if (next.length != state.length) state = next;
   }
 }
 
@@ -589,15 +597,15 @@ class PendingReadDeletes extends Notifier<Set<PendingReadDelete>> {
   }
 }
 
-/// Shields the chapter from keep-rule eviction and queues its while-reading
-/// deletes. Targets resolve NOW, not at exit — the list/dedup state can shift
-/// by then and pick the wrong chapter.
+/// Queues while-reading deletes when a chapter is finished in the reader.
+/// Targets resolve NOW, not at exit — the list/dedup state can shift by then
+/// and pick the wrong chapter. Session protection is handled separately by the
+/// reader widget registering open chapters via [sessionReadChaptersProvider].
 Future<void> noteChapterFinishedInReader(
   WidgetRef ref, {
   required int mangaId,
   required int chapterId,
 }) {
-  ref.read(sessionReadChaptersProvider.notifier).record(chapterId);
   final pending = ref.read(pendingReadDeletesProvider.notifier);
   final work = _resolveReadDeletes(
     ref,
@@ -1327,12 +1335,16 @@ Future<void> reconcileMangaCore({
   Future<void> Function(int chapterId, int generation)? removeFromWorker,
   Set<int> sessionProtected = const {},
   int deleteWhileReadingSlots = 0,
+  Set<int> newlyReadChapterIds = const {},
+  bool downloadProtectionWindow = false,
 }) {
   return OfflineReconciler(
     db: db,
     nets: nets,
     sessionProtected: sessionProtected,
     deleteWhileReadingSlots: deleteWhileReadingSlots,
+    newlyReadChapterIds: newlyReadChapterIds,
+    downloadProtectionWindow: downloadProtectionWindow,
     now: DateTime.now(),
     // Only QUEUE chapters here; starting the download is the caller's job (via
     // downloadStarterProvider) so the Ref-less launch path and tests stay in
@@ -1382,7 +1394,11 @@ Future<void> reconcileMangaCore({
 }
 
 /// Controller / in-app entry point (generated Ref).
-Future<void> reconcileManga(Ref ref, int mangaId) async {
+Future<void> reconcileManga(
+  Ref ref,
+  int mangaId, {
+  Set<int> newlyReadChapterIds = const {},
+}) async {
   if (!ref.read(offlineActiveProvider)) return;
   final manager = ref.read(offlineDownloadManagerProvider);
   final coordinator = ref.read(offlineDownloadCoordinatorProvider);
@@ -1398,6 +1414,9 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     deleteWhileReadingSlots: ref
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
+    newlyReadChapterIds: newlyReadChapterIds,
+    downloadProtectionWindow:
+        ref.read(localDownloadProtectionWindowProvider) ?? false,
     // Registers this manga as owed a device pull once the server's queue
     // drains (only on success — a failed enqueue produced no queue activity,
     // so no drain edge would ever retry it). Without this, a manga-details-
@@ -1435,6 +1454,7 @@ Future<void> reconcileMangaWidget(
   WidgetRef ref,
   int mangaId, {
   bool startDownload = true,
+  Set<int> newlyReadChapterIds = const {},
 }) async {
   if (!ref.read(offlineActiveProvider)) return;
   final manager = ref.read(offlineDownloadManagerProvider);
@@ -1451,6 +1471,9 @@ Future<void> reconcileMangaWidget(
     deleteWhileReadingSlots: ref
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
+    newlyReadChapterIds: newlyReadChapterIds,
+    downloadProtectionWindow:
+        ref.read(localDownloadProtectionWindowProvider) ?? false,
     // See reconcileManga's matching comment: registers the second-hop pull
     // obligation so this manga isn't stranded until the next full-library
     // sync once the server finishes.
@@ -1496,6 +1519,8 @@ Future<void> reconcileMangaContainer(
     deleteWhileReadingSlots: container
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
+    downloadProtectionWindow:
+        container.read(localDownloadProtectionWindowProvider) ?? false,
     // See reconcileManga's matching comment: registers the second-hop pull
     // obligation so this manga isn't stranded until the next full-library
     // sync once the server finishes.

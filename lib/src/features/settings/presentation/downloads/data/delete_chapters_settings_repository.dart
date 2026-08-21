@@ -171,6 +171,16 @@ class LocalDeleteWithBookmark extends _$LocalDeleteWithBookmark
   bool? build() => initialize(DBKeys.localDeleteWithBookmark);
 }
 
+/// When enabled, the reconciler pulls down the slots-1 most recently read
+/// chapters if they are missing from the device, so the protection window is
+/// always populated. Off by default to preserve existing behavior.
+@riverpod
+class LocalDownloadProtectionWindow extends _$LocalDownloadProtectionWindow
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.localDownloadProtectionWindow);
+}
+
 /// The on-device delete settings as one value (defaults all off).
 @riverpod
 DeleteChaptersSettings localDeleteSettings(Ref ref) => DeleteChaptersSettings(

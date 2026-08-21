@@ -1692,6 +1692,8 @@
   "deleteChapterAfterManuallyMarkedRead": "Delete chapter after manually marking it as read",
   "deleteFinishedChaptersWhileReading": "Delete finished chapters while reading",
   "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
+  "downloadProtectionWindowTitle": "Keep recently-read chapters downloaded",
+  "downloadProtectionWindowDescription": "Re-download the keep-window chapters if they are missing from the device (requires delete-while-reading to be enabled).",
   "deleteWhileReadingDisabled": "Disabled",
   "deleteWhileReadingLastRead": "Last read chapter",
   "deleteWhileReadingSecondToLast": "Second to last read chapter",

@@ -29,6 +29,8 @@ class OfflineReconciler {
     this.onServerDownload,
     this.sessionProtected = const {},
     this.deleteWhileReadingSlots = 0,
+    this.newlyReadChapterIds = const {},
+    this.downloadProtectionWindow = false,
   });
 
   final OfflineDatabase db;
@@ -44,6 +46,17 @@ class OfflineReconciler {
   /// The user's "delete finished chapters while reading" slot count. Every path
   /// that deletes a download has to honour it, not just the reader.
   final int deleteWhileReadingSlots;
+
+  /// Chapter IDs that transitioned from unread → read during the most recent
+  /// server sync (e.g. read in WebUI). Used by RC7 to apply the local
+  /// delete-while-reading setting to externally-read chapters, exactly as if
+  /// each had been finished in the in-app reader.
+  final Set<int> newlyReadChapterIds;
+
+  /// When true, the reconciler ensures the slots-1 most recently read chapters
+  /// are present on device — downloading them if missing. Defaults to false to
+  /// preserve existing behavior; only meaningful when deleteWhileReadingSlots >= 2.
+  final bool downloadProtectionWindow;
 
   /// Called with chapters the keep-rule wants but the SERVER hasn't downloaded
   /// yet — enqueue a server download (server-client model: the server fetches
@@ -88,11 +101,45 @@ class OfflineReconciler {
     // Merge orphaned ids into the evict set.
     final toEvict = {...ev.evict, ...orphanedIds};
 
+    // RC7: Sync-read eviction — for chapters that transitioned from unread to
+    // read during this sync (e.g. read in WebUI), apply the local
+    // delete-while-reading setting exactly as if each had been finished in the
+    // in-app reader. Only newly-read chapters are considered, so old read
+    // chapters already on the device are never touched unexpectedly.
+    //
+    // slots >= 1: the slots − 1 most-recently-read chapters among the newly-read
+    //   batch are shielded by the same readChaptersInDeleteWindow window the
+    //   reader uses. slots = 1 → delete the chapter itself; slots = 2 → keep
+    //   the most recently read, delete the rest; etc.
+    if (deleteWhileReadingSlots >= 1 && newlyReadChapterIds.isNotEmpty) {
+      final newlyReadDownloaded = downloaded
+          .where((c) => newlyReadChapterIds.contains(c.id))
+          .toList();
+      final readProtected =
+          readChaptersInDeleteWindow(newlyReadDownloaded, deleteWhileReadingSlots);
+      for (final c in newlyReadDownloaded) {
+        if (!c.pinned &&
+            !sessionProtected.contains(c.id) &&
+            !readProtected.contains(c.id)) {
+          toEvict.add(c.id);
+        }
+      }
+    }
+
     // Build the toDownload set.
     // RC5: when the storage cap is active, do not emit downloads that would
     // push retained bytes over the cap — this ensures reconcile converges (a
     // fixed point) rather than triggering an evict→re-pull loop across passes.
     final byId = {for (final c in chapters) c.id: c};
+
+    // Protection-window download: ensure the slots-1 most recently read
+    // chapters are on-device when the user opted in. Meaningless for keep=off
+    // (nothing is kept) and requires slots >= 2 (slots=1 means delete-all).
+    final protectionWindowIds = downloadProtectionWindow &&
+            deleteWhileReadingSlots >= 2 &&
+            manga.keepRule != OfflineKeepRule.off
+        ? readChaptersInDeleteWindow(chapters, deleteWhileReadingSlots)
+        : const <int>{};
 
     // Retained bytes after evictions (downloaded chapters not in toEvict).
     final retainedBytes = downloaded
@@ -109,7 +156,7 @@ class OfflineReconciler {
     final toDownload = <int>{};
     final toServerDownload = <int>{};
 
-    for (final id in desired) {
+    for (final id in {...desired, ...protectionWindowIds}) {
       final c = byId[id];
       if (c == null) continue;
       // Wanted but the server hasn't downloaded it yet: ask the server to

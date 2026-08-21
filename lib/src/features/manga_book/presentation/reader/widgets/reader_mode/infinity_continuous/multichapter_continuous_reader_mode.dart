@@ -194,6 +194,57 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final lastEndFeedbackTime = useRef<DateTime?>(null);
     final lastStartFeedbackTime = useRef<DateTime?>(null);
     final completedChapterIds = useRef<Set<int>>({});
+
+    // Session protection: protect each chapter opened in this reader from
+    // reconcile eviction. Discarded on dispose; never accumulates across sessions.
+    final sessionChapterIds = useRef<Set<int>>({});
+    final sessionNotifier = ref.read(sessionReadChaptersProvider.notifier);
+    // Mirrored into a ref each build so the deferred callbacks below never
+    // have to touch `ref` themselves — `ref` throws if it outlives the widget.
+    final incognitoRef = useRef(ref.watch(incognitoModeProvider));
+    incognitoRef.value = ref.watch(incognitoModeProvider);
+    useEffect(() {
+      var active = true;
+      void doRecord(int id) {
+        if (!active || incognitoRef.value) return;
+        if (!sessionChapterIds.value.contains(id)) {
+          sessionChapterIds.value = {...sessionChapterIds.value, id};
+          // The provider container can be torn down (route pop racing app/test
+          // shutdown) between scheduling this microtask and it running; there is
+          // nothing left to protect at that point, so ignore the disposed-ref
+          // error rather than crash on a benign teardown race.
+          try {
+            sessionNotifier.record(id);
+          } catch (_) {
+            // UnmountedRefException (internal riverpod type, not exported):
+            // container disposed before this microtask ran.
+          }
+        }
+      }
+      // A microtask (unlike addPostFrameCallback) is guaranteed to drain
+      // before this build/dispose call stack unwinds, regardless of whether
+      // another frame gets scheduled.
+      Future.microtask(() => doRecord(currentVisibleChapter.value.id));
+      void onChanged() => doRecord(currentVisibleChapter.value.id);
+      currentVisibleChapter.addListener(onChanged);
+      return () {
+        active = false;
+        currentVisibleChapter.removeListener(onChanged);
+        // Disposal can occur during a build phase; defer the state change.
+        // Same teardown race as above: the container may already be gone by
+        // the time this runs (e.g. widget torn down at test/app shutdown with
+        // no further frame or microtask flush to run this sooner).
+        Future.microtask(() {
+          try {
+            sessionNotifier.discard(sessionChapterIds.value);
+          } catch (_) {
+            // UnmountedRefException (internal riverpod type, not exported):
+            // container disposed before this microtask ran.
+          }
+        });
+      };
+    }, const []);
+
     final lastVisibleChapterId = useRef<int>(chapter.id);
     // Top-most visible (index, leadingEdge) from the previous listener
     // tick, used to derive scroll direction so neighbour chapters load

@@ -75,6 +75,30 @@ void main() {
     expect(container.read(sessionReadChaptersProvider), {10, 11});
   });
 
+  test('discard removes specified chapter IDs from session set', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final session = container.read(sessionReadChaptersProvider.notifier);
+
+    session.record(10);
+    session.record(11);
+    session.record(12);
+    expect(container.read(sessionReadChaptersProvider), {10, 11, 12});
+
+    // Discarding a subset leaves the rest intact.
+    session.discard({10, 12});
+    expect(container.read(sessionReadChaptersProvider), {11});
+
+    // Discarding IDs absent from the set is a no-op.
+    session.discard({99});
+    expect(container.read(sessionReadChaptersProvider), {11},
+        reason: 'unknown id must not mutate state');
+
+    // Discarding empty set is a no-op.
+    session.discard({});
+    expect(container.read(sessionReadChaptersProvider), {11});
+  });
+
   testWidgets(
       'finishing a chapter queues the RESOLVED delete target, not the finished '
       'chapter', (tester) async {
@@ -82,8 +106,9 @@ void main() {
 
     await noteChapterFinishedInReader(captured, mangaId: 1, chapterId: 3);
 
-    expect(container.read(sessionReadChaptersProvider), {3},
-        reason: 'the finished chapter is shielded from rule eviction');
+    expect(container.read(sessionReadChaptersProvider), isEmpty,
+        reason: 'noteChapterFinishedInReader no longer records session '
+            'protection — the reader widget does that via its open/close hooks');
     final queued = container.read(pendingReadDeletesProvider);
     expect(queued.where((p) => !p.server).map((p) => p.chapterId), [2],
         reason: 'the device delete stores the resolved 2-slots-back target');

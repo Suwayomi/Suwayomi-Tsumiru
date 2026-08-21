@@ -117,8 +117,10 @@ class MangaChapterList extends _$MangaChapterList {
     );
     if (ref.mounted) ref.keepAlive();
     if (result != null && fromServer) {
-      unawaited((sync?.syncChapters(result) ?? Future.value()).then((_) {
-        if (ref.mounted) reconcileManga(ref, mangaId);
+      unawaited((sync?.syncChapters(result) ?? Future.value(<int>{})).then((nr) {
+        if (ref.mounted) {
+          reconcileManga(ref, mangaId, newlyReadChapterIds: nr);
+        }
       }));
     }
     if (didSourceFetch) {
@@ -200,8 +202,8 @@ class MangaChapterList extends _$MangaChapterList {
       // not only on a cold provider rebuild. Catalog-served lists are echoes
       // and never mirrored.
       unawaited((ref.read(offlineSyncProvider)?.syncChapters(chapters) ??
-              Future.value())
-          .then((_) => reconcileManga(ref, mangaId)));
+              Future.value(<int>{}))
+          .then((nr) => reconcileManga(ref, mangaId, newlyReadChapterIds: nr)));
     }
   }
 

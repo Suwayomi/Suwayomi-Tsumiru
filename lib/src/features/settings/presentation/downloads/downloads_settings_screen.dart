@@ -247,6 +247,17 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
           onBookmark: (v) async =>
               ref.read(localDeleteWithBookmarkProvider.notifier).update(v),
         ),
+        // Only meaningful when the keep window has at least 1 protected slot.
+        if (localDelete.deleteWhileReading >= 2)
+          SettingsPropTile(
+            title: context.l10n.downloadProtectionWindowTitle,
+            subtitle: context.l10n.downloadProtectionWindowDescription,
+            type: SettingsPropType.switchTile(
+              value: ref.watch(localDownloadProtectionWindowProvider) ?? false,
+              onChanged: (v) async =>
+                  ref.read(localDownloadProtectionWindowProvider.notifier).update(v),
+            ),
+          ),
         ...buildOnDeviceStorageTiles(context, ref),
       ],
     );

@@ -103,7 +103,11 @@ class OfflineSync {
     return row.isRead != row.syncedIsRead && row.isRead == server.isRead;
   }
 
-  Future<void> syncChapters(List<ChapterDto> chapters) async {
+  /// Returns the set of chapter IDs that transitioned from unread to read
+  /// during this sync (chapters the user read outside Tsumiru, e.g. in WebUI).
+  /// The caller passes these to the immediately-following reconcile so that the
+  /// local delete-while-reading setting fires for those chapters too.
+  Future<Set<int>> syncChapters(List<ChapterDto> chapters) async {
     final now = DateTime.now();
     // Preserve read progress that was updated locally but not yet pushed to the
     // server — otherwise a down-sync would overwrite it with the stale server
@@ -114,6 +118,17 @@ class OfflineSync {
     final existingRows = await _db.chaptersByIds([
       for (final c in chapters) c.id,
     ]);
+    // Collect IDs whose read state flips from false to true in this sync pass.
+    // Excludes locally-dirty chapters (their isRead is a pending local write,
+    // not a server-originated change) and brand-new rows (no prior local state).
+    final newlyRead = <int>{
+      for (final c in chapters)
+        if (!(dirty[c.id]?.readStateDirty ?? false) &&
+            existingRows[c.id] != null &&
+            !existingRows[c.id]!.isRead &&
+            c.isRead)
+          c.id,
+    };
     // One transaction per list: an interrupted sync must not leave a manga
     // with a mix of real and index-fallback chapter numbers — a legacy row at
     // index N would falsely dedup-merge with a real chapter N.
@@ -178,6 +193,7 @@ class OfflineSync {
       if (goneIds.isNotEmpty) await _db.markChaptersOrphaned(goneIds);
     }
     await onSynced?.call();
+    return newlyRead;
   }
 
   /// Removes manga that have left the server library from the offline catalog.
