@@ -61,6 +61,13 @@ class OfflineMangas extends Table {
 /// server-side is reconciled via [OfflineDeviceState.orphaned] and evicted on
 /// the next reconcile pass, not cascade-deleted.
 @TableIndex(name: 'idx_offline_chapter_manga', columns: {#mangaId})
+// deviceState is filtered on by chaptersInState/nextQueuedChapter/
+// watchOfflineChapters and the watchOfflineSeries join/aggregate — all
+// unindexed full scans without this, and (worse) drift's per-table .watch()
+// reruns watchOfflineSeries' whole join on every OfflineChapters write, so an
+// active download's per-page byte/pageCount updates were driving repeated
+// full-table scans of a table that can hold years of chapter metadata.
+@TableIndex(name: 'idx_offline_chapter_device_state', columns: {#deviceState})
 class OfflineChapters extends Table {
   IntColumn get id => integer()();
   IntColumn get mangaId => integer()();
@@ -399,6 +406,9 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.readStateManual,
         );
       }
+      if (from < 15 && !await _hasIndex('idx_offline_chapter_device_state')) {
+        await m.createIndex(idxOfflineChapterDeviceState);
+      }
     },
   );
 
@@ -408,6 +418,18 @@ class OfflineDatabase extends _$OfflineDatabase {
     final rows = await customSelect(
       "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
       variables: [Variable<String>(table.actualTableName)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  /// Same idempotency concern as [_hasTable]/[_addColumnIfMissing]: an
+  /// intermediate/dev build can leave an index present at an older recorded
+  /// schema version, and `CREATE INDEX` (unlike `addColumn`) has no built-in
+  /// "if missing" guard in drift's Migrator.
+  Future<bool> _hasIndex(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
+      variables: [Variable<String>(name)],
     ).get();
     return rows.isNotEmpty;
   }
@@ -577,12 +599,16 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// Downloaded-library manga per category, for the offline tab counts.
   /// Membership rows outside [mangaIds] don't count.
   Future<Map<int, int>> mangaCountByCategory(Set<int> mangaIds) async {
-    final rows = await select(offlineMangaCategories).get();
+    if (mangaIds.isEmpty) return {};
+    final categoryId = offlineMangaCategories.categoryId;
+    final mangaCount = offlineMangaCategories.mangaId.count();
+    final query = selectOnly(offlineMangaCategories)
+      ..addColumns([categoryId, mangaCount])
+      ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
+      ..groupBy([categoryId]);
     final counts = <int, int>{};
-    for (final row in rows) {
-      if (mangaIds.contains(row.mangaId)) {
-        counts[row.categoryId] = (counts[row.categoryId] ?? 0) + 1;
-      }
+    for (final row in await query.get()) {
+      counts[row.read(categoryId)!] = row.read(mangaCount) ?? 0;
     }
     return counts;
   }
@@ -591,12 +617,15 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// render under Default. A row pointing at a pruned/unmirrored category
   /// doesn't count either; the mapper's inner join drops it the same way.
   Future<Set<int>> uncategorizedOf(Set<int> mangaIds) async {
+    if (mangaIds.isEmpty) return {};
     final rows = await (select(offlineMangaCategories).join([
       innerJoin(
         offlineCategories,
         offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
       ),
-    ])).get();
+    ])
+          ..where(offlineMangaCategories.mangaId.isIn(mangaIds)))
+        .get();
     final categorized = {
       for (final row in rows) row.readTable(offlineMangaCategories).mangaId,
     };

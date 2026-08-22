@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -123,6 +124,48 @@ void main() {
             ..where((t) => t.id.equals(10)))
           .getSingle();
       expect(c.readStateManual, true);
+      await db.close();
+    }
+  });
+
+  Future<bool> hasIndex(OfflineDatabase db, String name) async {
+    final rows = await db
+        .customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
+          variables: [Variable<String>(name)],
+        )
+        .get();
+    return rows.isNotEmpty;
+  }
+
+  test('v15 creates idx_offline_chapter_device_state on a fresh database',
+      () async {
+    final db = testOfflineDatabaseFile(p.join(tmp.path, 'test.db'));
+    expect(await hasIndex(db, 'idx_offline_chapter_device_state'), isTrue);
+    await db.close();
+  });
+
+  test(
+      'v15 creates idx_offline_chapter_device_state when upgrading from an '
+      'older on-disk database', () async {
+    final dbPath = p.join(tmp.path, 'test.db');
+
+    // Open at the current schema (creating the index via onCreate), then
+    // force the recorded version back down — the same inconsistent state an
+    // existing install upgrading from before this index existed would be in.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.customStatement('DROP INDEX idx_offline_chapter_device_state');
+      await db.customStatement('PRAGMA user_version = 14');
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      // Touch the db to force it open (drift opens lazily).
+      await db.select(db.offlineMangas).get();
+      expect(await hasIndex(db, 'idx_offline_chapter_device_state'), isTrue);
       await db.close();
     }
   });
