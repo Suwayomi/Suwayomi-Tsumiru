@@ -19,6 +19,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/logger/logger.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../auth/data/auth_credentials_store.dart';
 import '../../../notifications/controller/notification_settings_providers.dart';
 import '../../../notifications/data/local_notification_service.dart';
@@ -184,6 +185,16 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       );
       if (res is ServiceRequestFailure) {
         logger.e('Offline: foreground service failed to start: ${res.error}');
+        // Previously silent: chapters stayed queued in drift with nothing
+        // downloading and no signal at all (e.g. notification permission
+        // denied). A toast is a best-effort surface only — it's a no-op
+        // when there's no active UI (background launch/replay), which still
+        // leaves that path silent; making it durably visible there needs a
+        // persisted banner, not attempted here.
+        _ref.read(toastProvider)?.showError(
+          'Downloads paused: couldn\'t start the download service '
+          '(${res.error})',
+        );
       }
     } finally {
       _ensuring = false;
