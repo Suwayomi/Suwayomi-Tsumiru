@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
@@ -32,12 +33,18 @@ class TimeoutHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     int attempt = 0;
     http.BaseRequest current = request;
+    // A GraphQL mutation isn't idempotent — a timeout doesn't mean the server
+    // didn't already apply it, so retrying can silently double an effect
+    // (re-enqueue a download, re-create a category, ...). This client is only
+    // ever used for the GraphQL HttpLink, so its body is always the standard
+    // `{"query": "...", ...}` shape when it parses as one.
+    final isMutation = _isMutationRequest(request);
 
     while (true) {
       try {
         return await _inner.send(current).timeout(timeout);
       } on TimeoutException {
-        if (attempt >= retries) rethrow;
+        if (isMutation || attempt >= retries) rethrow;
         // Streamed/multipart bodies are single-use and can't be safely retried.
         final retryClone = _cloneRequest(request);
         if (retryClone == null) rethrow;
@@ -45,6 +52,24 @@ class TimeoutHttpClient extends http.BaseClient {
         await Future.delayed(retryDelay);
         current = retryClone;
       }
+    }
+  }
+
+  /// True only when [request] is confidently identified as a GraphQL
+  /// mutation (a parseable `{"query": "mutation ..."}` body). Anything that
+  /// doesn't parse that way — a plain query, an anonymous/shorthand query, a
+  /// non-GraphQL body, no body at all — is treated as safe to retry, same as
+  /// before this check existed.
+  bool _isMutationRequest(http.BaseRequest request) {
+    if (request is! http.Request) return false;
+    try {
+      final decoded = jsonDecode(request.body);
+      if (decoded is! Map) return false;
+      final query = decoded['query'];
+      if (query is! String) return false;
+      return query.trimLeft().startsWith('mutation');
+    } catch (_) {
+      return false;
     }
   }
 
