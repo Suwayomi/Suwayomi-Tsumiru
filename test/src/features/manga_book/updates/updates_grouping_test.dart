@@ -184,4 +184,38 @@ void main() {
       expect(pickGroupHead(chapters).id, 1);
     });
   });
+
+  group('headFlatIndexToDisplayIndex', () {
+    test('empty groups produce an empty map', () {
+      expect(headFlatIndexToDisplayIndex(const []), isEmpty);
+    });
+
+    test('maps each group head to its flat index, skipping tail members', () {
+      final groups = groupUpdatesForDisplay([
+        _chapter(id: 1, mangaId: 1, day: 0), // group 0 head (flat 0)
+        _chapter(id: 2, mangaId: 1, day: 0), // group 0 tail (flat 1)
+        _chapter(id: 3, mangaId: 2, day: 0), // group 1 head (flat 2)
+        _chapter(id: 4, mangaId: 1, day: 1), // group 2 head (flat 3)
+        _chapter(id: 5, mangaId: 1, day: 1), // group 2 tail (flat 4)
+        _chapter(id: 6, mangaId: 1, day: 1), // group 2 tail (flat 5)
+      ]);
+      expect(groups, hasLength(3));
+
+      final map = headFlatIndexToDisplayIndex(groups);
+
+      expect(map, {0: 0, 2: 1, 3: 2});
+    });
+
+    test('a single all-ungrouped run maps every flat index to itself', () {
+      final groups = groupUpdatesForDisplay([
+        _chapter(id: 1, mangaId: 1, day: 0),
+        _chapter(id: 2, mangaId: 2, day: 1),
+        _chapter(id: 3, mangaId: 3, day: 2),
+      ]);
+
+      final map = headFlatIndexToDisplayIndex(groups);
+
+      expect(map, {0: 0, 1: 1, 2: 2});
+    });
+  });
 }

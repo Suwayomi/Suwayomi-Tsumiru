@@ -34,7 +34,7 @@ import 'widgets/updates_filter.dart';
 // Paged list widget
 // ---------------------------------------------------------------------------
 
-class _UpdatesPagedList extends StatelessWidget {
+class _UpdatesPagedList extends StatefulWidget {
   const _UpdatesPagedList({
     required this.controller,
     required this.groupingMode,
@@ -53,9 +53,42 @@ class _UpdatesPagedList extends StatelessWidget {
   final VoidCallback resetList;
   final Future<ChapterDto?> Function(int chapterId) refetchChapter;
 
+  @override
+  State<_UpdatesPagedList> createState() => _UpdatesPagedListState();
+}
+
+class _UpdatesPagedListState extends State<_UpdatesPagedList> {
+  // Memoizes the grouping pass per itemList instance instead of recomputing
+  // it once per visible row: PagedSliverList's itemBuilder calls _buildItem
+  // separately for every rendered row, and grouping/index-mapping re-walk
+  // the WHOLE loaded (all-pages-so-far) list each time they're asked. This
+  // State persists across those calls (only scrolling triggers them, not a
+  // rebuild of this widget), so caching on the itemList's identity is enough
+  // to turn an O(rows x loaded-items) pass back into one O(loaded-items) pass
+  // reused by every row. Requires State (not StatelessWidget) since Widget
+  // subclasses are @immutable — plain mutable fields on the widget itself
+  // would fail analysis (must_be_immutable / const_constructor_with_non_final_field).
+  List<ChapterWithMangaDto>? _memoItems;
+  List<UpdatesGroupedEntry>? _memoGroups;
+  Map<int, int>? _memoHeadIndex;
+
+  ({List<UpdatesGroupedEntry> groups, Map<int, int> headIndex}) _groupingFor(
+    List<ChapterWithMangaDto> items,
+  ) {
+    if (identical(_memoItems, items)) {
+      return (groups: _memoGroups!, headIndex: _memoHeadIndex!);
+    }
+    final groups = groupUpdatesForDisplay(items);
+    final headIndex = headFlatIndexToDisplayIndex(groups);
+    _memoItems = items;
+    _memoGroups = groups;
+    _memoHeadIndex = headIndex;
+    return (groups: groups, headIndex: headIndex);
+  }
+
   Future<void> _updatePair(ChapterWithMangaDto item) async {
-    final chapter = await refetchChapter(item.id);
-    final list = [...?controller.itemList];
+    final chapter = await widget.refetchChapter(item.id);
+    final list = [...?widget.controller.itemList];
     final i = list.indexWhere((e) => e.id == item.id);
     if (i < 0) return;
     list[i] = list[i].copyWith(
@@ -63,22 +96,25 @@ class _UpdatesPagedList extends StatelessWidget {
       isDownloaded: chapter?.isDownloaded,
       lastPageRead: chapter?.lastPageRead,
     );
-    controller.itemList = list;
+    widget.controller.itemList = list;
   }
 
   Future<void> _refreshManga(int mangaId) async {
-    final startGeneration = getGeneration();
+    final startGeneration = widget.getGeneration();
     final ids = [
-      for (final row in [...?controller.itemList])
+      for (final row in [...?widget.controller.itemList])
         if (row.mangaId == mangaId) row.id,
     ];
     final chapters = await fetchChaptersInBatches(
       ids: ids,
-      fetch: refetchChapter,
+      fetch: widget.refetchChapter,
     );
-    if (!screenContext.mounted || getGeneration() != startGeneration) return;
-    controller.itemList = patchRowsForManga(
-      rows: [...?controller.itemList],
+    if (!widget.screenContext.mounted ||
+        widget.getGeneration() != startGeneration) {
+      return;
+    }
+    widget.controller.itemList = patchRowsForManga(
+      rows: [...?widget.controller.itemList],
       mangaId: mangaId,
       chapters: chapters,
     );
@@ -86,30 +122,23 @@ class _UpdatesPagedList extends StatelessWidget {
 
   void _toggleSelect(ChapterDto val) {
     if ((val.id).isNull) return;
-    selectedChapters.value = selectedChapters.value.toggleKey(val.id, val);
+    widget.selectedChapters.value =
+        widget.selectedChapters.value.toggleKey(val.id, val);
   }
 
   Widget _buildItem(BuildContext context, ChapterWithMangaDto _, int flatIndex) {
-    final items = controller.itemList ?? [];
-    final isGrouped = groupingMode != UpdatesGroupingMode.disabled;
+    final items = widget.controller.itemList ?? [];
+    final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
 
-    // Build the display list up to and including flatIndex to determine which
-    // group this flat index corresponds to, using a running fold.
-    final groups = isGrouped ? groupUpdatesForDisplay(items) : null;
-
-    // Re-index: flatIndex is in the *original* flat list; find the group it
-    // belongs to and the display index.
-    if (groups != null) {
-      // Each group occupies exactly one display slot.
-      final displayIndex = _flatToDisplayIndex(items, groups, flatIndex);
+    if (isGrouped) {
+      // Memoized per itemList instance — see _groupingFor's doc comment.
+      // A flat index missing from headIndex is a tail member (or the head of
+      // a DIFFERENT group already rendered): suppress it either way.
+      final grouping = _groupingFor(items);
+      final displayIndex = grouping.headIndex[flatIndex];
       if (displayIndex == null) return const SizedBox.shrink();
 
-      // Only render when flatIndex is the canonical "head" of the group to
-      // avoid duplicate rendering. The head's flat index is where the
-      // group's head item sits in the original list.
-      final group = groups[displayIndex];
-      if (items[flatIndex].id != group.head.id) return const SizedBox.shrink();
-
+      final group = grouping.groups[displayIndex];
       final tile = _buildGroupTile(context, group);
       return _wrapWithDateHeader(context, items, flatIndex, tile);
     }
@@ -120,8 +149,8 @@ class _UpdatesPagedList extends StatelessWidget {
       chapterWithMangaDto: item,
       updatePair: () => _updatePair(item),
       refreshManga: () => _refreshManga(item.mangaId),
-      isSelected: selectedChapters.value.containsKey(item.id),
-      canTapSelect: selectedChapters.value.isNotEmpty,
+      isSelected: widget.selectedChapters.value.containsKey(item.id),
+      canTapSelect: widget.selectedChapters.value.isNotEmpty,
       toggleSelect: (val) => _toggleSelect(val),
     );
     return _wrapWithDateHeader(context, items, flatIndex, tile);
@@ -133,8 +162,8 @@ class _UpdatesPagedList extends StatelessWidget {
       tail: group.tail,
       updatePairFor: (chapter) => () => _updatePair(chapter),
       refreshManga: () => _refreshManga(group.head.mangaId),
-      isSelected: selectedChapters.value.containsKey(group.head.id),
-      canTapSelect: selectedChapters.value.isNotEmpty,
+      isSelected: widget.selectedChapters.value.containsKey(group.head.id),
+      canTapSelect: widget.selectedChapters.value.isNotEmpty,
       toggleSelect: (val) => _toggleSelect(val),
     );
   }
@@ -164,45 +193,24 @@ class _UpdatesPagedList extends StatelessWidget {
     );
   }
 
-  /// Maps a flat list index to the display-group index, or null if this
-  /// flat item is not the group head and should be hidden.
-  int? _flatToDisplayIndex(
-    List<ChapterWithMangaDto> items,
-    List<UpdatesGroupedEntry> groups,
-    int flatIndex,
-  ) {
-    int flatCursor = 0;
-    for (int g = 0; g < groups.length; g++) {
-      final group = groups[g];
-      final groupSize = 1 + group.tail.length;
-      if (flatIndex >= flatCursor && flatIndex < flatCursor + groupSize) {
-        // Check if this flatIndex points to the head.
-        if (items[flatIndex].id == group.head.id) return g;
-        return null; // tail item — suppress rendering
-      }
-      flatCursor += groupSize;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return PagedSliverList(
-      pagingController: controller,
+      pagingController: widget.controller,
       builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
         firstPageProgressIndicatorBuilder: (context) =>
             const CenterSorayomiShimmerIndicator(),
         firstPageErrorIndicatorBuilder: (context) => Emoticons(
-          title: controller.error.toString(),
+          title: widget.controller.error.toString(),
           button: TextButton(
-            onPressed: resetList,
+            onPressed: widget.resetList,
             child: Text(context.l10n.retry),
           ),
         ),
         noItemsFoundIndicatorBuilder: (context) => Emoticons(
           title: context.l10n.noUpdatesFound,
           button: TextButton(
-            onPressed: resetList,
+            onPressed: widget.resetList,
             child: Text(context.l10n.refresh),
           ),
         ),

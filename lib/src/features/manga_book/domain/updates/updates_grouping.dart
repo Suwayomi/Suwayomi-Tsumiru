@@ -63,3 +63,19 @@ ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
     orElse: () => chapters.first,
   );
 }
+
+/// Maps each group's head flat-list index to its position in [groups] —
+/// computed once for the whole result and shared, instead of every row's
+/// `itemBuilder` call doing its own O(groups) scan to answer "is this flat
+/// index a group head, and if so which group?" A flat index absent from the
+/// map is a tail member (or out of range): the caller should render nothing
+/// for it, since its group already rendered at the head's index.
+Map<int, int> headFlatIndexToDisplayIndex(List<UpdatesGroupedEntry> groups) {
+  final map = <int, int>{};
+  var flatCursor = 0;
+  for (var g = 0; g < groups.length; g++) {
+    map[flatCursor] = g;
+    flatCursor += 1 + groups[g].tail.length;
+  }
+  return map;
+}
