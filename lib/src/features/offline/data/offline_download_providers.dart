@@ -41,6 +41,7 @@ import 'background/catchup_spec_writer.dart';
 import 'background/catchup_work_spec.dart';
 import 'chapter_commit.dart';
 import 'chapter_download_engine.dart';
+import 'offline_awaiting_server_downloads.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_coordinator.dart';
@@ -1363,9 +1364,20 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
     deleteWhileReadingSlots: ref
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
-    enqueueServerDownload: (ids) => ref
-        .read(downloadsRepositoryProvider)
-        .addChaptersBatchToDownloadQueue(ids),
+    // Registers this manga as owed a device pull once the server's queue
+    // drains (only on success — a failed enqueue produced no queue activity,
+    // so no drain edge would ever retry it). Without this, a manga-details-
+    // triggered download that needed a server fetch first would silently miss
+    // the progressive pull-as-soon-as-the-server-finishes mechanism
+    // (offline_chapter_catchup.dart's downloadsMapProvider listener) and sit
+    // waiting for the next full-library sync instead.
+    enqueueServerDownload: (ids) async {
+      await ref
+          .read(downloadsRepositoryProvider)
+          .addChaptersBatchToDownloadQueue(ids);
+      awaitingServerDownloads.add(mangaId);
+      await persistAwaitingServerDownloads(ref.read);
+    },
     removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
@@ -1393,9 +1405,16 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
     deleteWhileReadingSlots: ref
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
-    enqueueServerDownload: (ids) => ref
-        .read(downloadsRepositoryProvider)
-        .addChaptersBatchToDownloadQueue(ids),
+    // See reconcileManga's matching comment: registers the second-hop pull
+    // obligation so this manga isn't stranded until the next full-library
+    // sync once the server finishes.
+    enqueueServerDownload: (ids) async {
+      await ref
+          .read(downloadsRepositoryProvider)
+          .addChaptersBatchToDownloadQueue(ids);
+      awaitingServerDownloads.add(mangaId);
+      await persistAwaitingServerDownloads(ref.read);
+    },
     removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
@@ -1429,9 +1448,16 @@ Future<void> reconcileMangaContainer(
     deleteWhileReadingSlots: container
         .read(localDeleteSettingsProvider)
         .deleteWhileReading,
-    enqueueServerDownload: (ids) => container
-        .read(downloadsRepositoryProvider)
-        .addChaptersBatchToDownloadQueue(ids),
+    // See reconcileManga's matching comment: registers the second-hop pull
+    // obligation so this manga isn't stranded until the next full-library
+    // sync once the server finishes.
+    enqueueServerDownload: (ids) async {
+      await container
+          .read(downloadsRepositoryProvider)
+          .addChaptersBatchToDownloadQueue(ids);
+      awaitingServerDownloads.add(mangaId);
+      await persistAwaitingServerDownloads(container.read);
+    },
     removeFromWorker: (id, gen) async {
       final ctrl = container.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);

@@ -23,6 +23,7 @@ import 'background/background_download_controller_shim.dart';
 import 'background/background_download_lock.dart';
 import 'background/catchup_spec_writer.dart';
 import 'background/catchup_work_spec.dart';
+import 'offline_awaiting_server_downloads.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_providers.dart';
@@ -47,24 +48,20 @@ bool _running = false;
 /// until the next update cycle.
 bool _drainMissedDuringPass = false;
 
-/// Manga whose reconcile had to ask the SERVER to download chapters first.
-/// Their device pull can only happen after those finish — see
-/// [pullAfterServerDownloads].
-final Set<int> _awaitingServerDownloads = {};
-
-/// Resets all module-private state. The three globals above persist across
-/// `test()` cases in the same file (one isolate per file), so every test
-/// exercising this module must call this in `setUp`.
+/// Resets all module-private state, PLUS the cross-module
+/// [awaitingServerDownloads] set. These globals persist across `test()` cases
+/// in the same file (one isolate per file), so every test exercising this
+/// module must call this in `setUp`.
 @visibleForTesting
 void resetChapterCatchUpStateForTest() {
   _running = false;
   _drainMissedDuringPass = false;
-  _awaitingServerDownloads.clear();
+  awaitingServerDownloads.clear();
 }
 
 @visibleForTesting
 void seedAwaitingServerDownloadsForTest(Iterable<int> mangaIds) {
-  _awaitingServerDownloads
+  awaitingServerDownloads
     ..clear()
     ..addAll(mangaIds);
 }
@@ -85,7 +82,7 @@ void simulateQueueDrainForTest(ProviderContainer container) {
 void initChapterCatchUp(ProviderContainer container) {
   // Restore the second-hop obligations — the watermark has already moved past
   // these manga, so losing the set to a restart would strand their pulls.
-  _awaitingServerDownloads.addAll(
+  awaitingServerDownloads.addAll(
     container
             .read(sharedPreferencesProvider)
             .getStringList(DBKeys.offlineCatchUpAwaitingPull.name)
@@ -145,8 +142,8 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
       final lockedStore = await CatchupStateStore.open();
       final fresh = lockedStore.readLedger(catalogServerId);
       if (fresh.pendingServerFetch.isEmpty) return;
-      _awaitingServerDownloads.addAll(fresh.pendingServerFetch.values);
-      await _persistAwaiting(container);
+      awaitingServerDownloads.addAll(fresh.pendingServerFetch.values);
+      await persistAwaitingServerDownloads(container.read);
       await lockedStore.writeLedger(
         catalogServerId,
         fresh.copyWith(
@@ -211,7 +208,7 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     // miss them — always give them a fresh sync attempt.
     final touched = {
       ...feedTouched,
-      ..._awaitingServerDownloads.where(keepRuleManga.contains),
+      ...awaitingServerDownloads.where(keepRuleManga.contains),
     };
     final allSynced = await _syncAndReconcile(container, touched);
 
@@ -268,26 +265,20 @@ Future<void> pullAfterServerDownloads(ProviderContainer container) async {
 }
 
 Future<void> _pullAwaiting(ProviderContainer container) async {
-  if (_awaitingServerDownloads.isEmpty) return;
+  if (awaitingServerDownloads.isEmpty) return;
   if (!container.read(offlineActiveProvider)) return;
   // One obligation at a time, persisted after each: a crash mid-loop keeps
   // the unprocessed rest, and a batch clear would lose them.
-  for (final mangaId in {..._awaitingServerDownloads}) {
-    _awaitingServerDownloads.remove(mangaId);
+  for (final mangaId in {...awaitingServerDownloads}) {
+    awaitingServerDownloads.remove(mangaId);
     // The reconcile may re-add this manga (a NEW server enqueue) — that is a
     // fresh obligation, not the one being consumed, so it must survive.
     final ok = await _syncAndReconcile(container, {mangaId});
-    if (!ok) _awaitingServerDownloads.add(mangaId);
-    await _persistAwaiting(container);
+    if (!ok) awaitingServerDownloads.add(mangaId);
+    await persistAwaitingServerDownloads(container.read);
   }
   await container.read(downloadStarterProvider)();
 }
-
-Future<void> _persistAwaiting(ProviderContainer container) =>
-    container.read(sharedPreferencesProvider).setStringList(
-      DBKeys.offlineCatchUpAwaitingPull.name,
-      [for (final id in _awaitingServerDownloads) '$id'],
-    );
 
 /// Scans the feed for keep-rule manga touched since [watermark]. Boundary
 /// entries (same second as watermark) are re-included since a resync is
@@ -385,7 +376,7 @@ Future<bool> _reconcileTracked(ProviderContainer container, int mangaId) async {
             .addChaptersBatchToDownloadQueue(ids);
         // Recorded only on success: a failed enqueue produces no queue
         // activity, so no drain edge would ever retry the waiting entry.
-        _awaitingServerDownloads.add(mangaId);
+        awaitingServerDownloads.add(mangaId);
       } catch (_) {
         enqueueFailed = true;
         rethrow;
@@ -397,6 +388,6 @@ Future<bool> _reconcileTracked(ProviderContainer container, int mangaId) async {
       await ctrl.recordChapterDeleted(id, gen);
     },
   );
-  await _persistAwaiting(container);
+  await persistAwaitingServerDownloads(container.read);
   return !enqueueFailed;
 }
