@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:diacritic/diacritic.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -277,7 +279,7 @@ class CategoryMangaListWithQueryAndFilter
   @override
   AsyncValue<List<MangaDto>?> build({required int categoryId}) {
     final mangaList = ref.watch(categoryMangaListProvider(categoryId));
-    final query = ref.watch(libraryQueryProvider);
+    final query = ref.watch(libraryQueryDebouncedProvider);
     final mangaFilterUnread = ref.watch(libraryMangaFilterUnreadProvider);
     final mangaFilterDownloaded =
         ref.watch(libraryMangaFilterDownloadedProvider);
@@ -355,6 +357,28 @@ class CategoryMangaListWithQueryAndFilter
 class LibraryQuery extends _$LibraryQuery with StateProviderMixin<String?> {
   @override
   String? build() => null;
+}
+
+/// [libraryQueryProvider], but only propagating a change once the query has
+/// held still for 300ms. The search field itself reads/writes the raw
+/// provider directly (so typing feels instant and the clear button reacts
+/// immediately) — this one exists purely so the two expensive
+/// filter/sort/group passes below don't re-run on every keystroke.
+@riverpod
+class LibraryQueryDebounced extends _$LibraryQueryDebounced {
+  Timer? _timer;
+
+  @override
+  String? build() {
+    ref.onDispose(() => _timer?.cancel());
+    ref.listen<String?>(libraryQueryProvider, (previous, next) {
+      _timer?.cancel();
+      _timer = Timer(const Duration(milliseconds: 300), () {
+        if (ref.mounted) state = next;
+      });
+    });
+    return ref.read(libraryQueryProvider);
+  }
 }
 
 @riverpod
@@ -664,7 +688,7 @@ class GroupedMangaListWithQueryAndFilter
       }
     }
     final allAsync = ref.watch(libraryMangaListProvider);
-    final query = ref.watch(libraryQueryProvider);
+    final query = ref.watch(libraryQueryDebouncedProvider);
     final mangaFilterUnread = ref.watch(libraryMangaFilterUnreadProvider);
     final mangaFilterDownloaded =
         ref.watch(libraryMangaFilterDownloadedProvider);
