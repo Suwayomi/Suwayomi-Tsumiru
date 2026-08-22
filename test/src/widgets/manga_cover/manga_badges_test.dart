@@ -87,8 +87,9 @@ Future<void> _pumpBadges(
   await tester.pumpWidget(ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(sp),
-      offlineDeviceMangaIdsProvider
-          .overrideWith((ref) async => onDevice ? {_kMangaId} : <int>{}),
+      offlineDeviceMangaIdsProvider.overrideWith(
+        (ref) => Stream.value(onDevice ? {_kMangaId} : <int>{}),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -298,7 +299,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sp),
-          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) => Stream.value({_kMangaId})),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -332,7 +333,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sp),
-          offlineDeviceMangaIdsProvider.overrideWith((ref) async => {_kMangaId}),
+          offlineDeviceMangaIdsProvider.overrideWith((ref) => Stream.value({_kMangaId})),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

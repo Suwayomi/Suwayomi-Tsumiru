@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -1113,10 +1114,22 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
 /// this device's disk is a purely local fact, so it must survive an unreachable
 /// server and the cold start before `serverInstanceId` resolves. Empty set on
 /// web / when init failed, so both callers no-op.
+///
+/// A live stream, not a one-shot read: the Library screen's on-device
+/// badge/filter previously only ever saw the snapshot from when this provider
+/// was first built, so a chapter finishing its download from the manga
+/// details page or the Downloads screen never showed up on Library until the
+/// next navigation or manual refresh. `distinct()` (by set content, not
+/// identity) keeps a per-page write during an in-progress download — which
+/// touches the same table but never changes which manga have a `downloaded`
+/// chapter — from re-notifying watchers with an unchanged value.
 @riverpod
-Future<Set<int>> offlineDeviceMangaIds(Ref ref) async {
-  if (!ref.watch(offlineEnabledProvider)) return const {};
-  return ref.watch(offlineRepositoryProvider).deviceDownloadedMangaIds();
+Stream<Set<int>> offlineDeviceMangaIds(Ref ref) {
+  if (!ref.watch(offlineEnabledProvider)) return Stream.value(const {});
+  return ref
+      .watch(offlineRepositoryProvider)
+      .watchDeviceDownloadedMangaIds()
+      .distinct(const SetEquality<int>().equals);
 }
 
 /// The keep-offline rule currently set for a manga — used by the popup button

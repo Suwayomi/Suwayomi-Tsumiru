@@ -130,6 +130,11 @@ class OfflineRepository {
   Future<Set<int>> deviceDownloadedMangaIds() =>
       db.mangaIdsWithDeviceDownloads();
 
+  /// Live version of [deviceDownloadedMangaIds] — see
+  /// [OfflineDatabase.watchMangaIdsWithDeviceDownloads].
+  Stream<Set<int>> watchDeviceDownloadedMangaIds() =>
+      db.watchMangaIdsWithDeviceDownloads();
+
   /// Total bytes used by all downloaded chapters — for the storage settings UI.
   Future<int> totalDownloadedBytes() => db.totalDownloadedBytes();
 }

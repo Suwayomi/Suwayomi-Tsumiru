@@ -1316,6 +1316,25 @@ class OfflineDatabase extends _$OfflineDatabase {
     return {for (final r in rows) r.read(offlineChapters.mangaId)!};
   }
 
+  /// Live version of [mangaIdsWithDeviceDownloads] — the Library screen's
+  /// on-device badge/filter previously only read this once (on provider
+  /// creation), so a chapter finishing its download elsewhere (manga details,
+  /// Downloads screen) never updated it until the next navigation/manual
+  /// refresh. Watching lets it update the moment a chapter's deviceState
+  /// flips to downloaded.
+  Stream<Set<int>> watchMangaIdsWithDeviceDownloads() {
+    final query = selectOnly(offlineChapters, distinct: true)
+      ..addColumns([offlineChapters.mangaId])
+      ..where(
+        offlineChapters.deviceState.equalsValue(
+          OfflineDeviceState.downloaded,
+        ),
+      );
+    return query.watch().map(
+      (rows) => {for (final r in rows) r.read(offlineChapters.mangaId)!},
+    );
+  }
+
   /// Total bytes used by downloaded chapters — for the storage UI, without a
   /// filesystem walk.
   Future<int> totalDownloadedBytes() async {
