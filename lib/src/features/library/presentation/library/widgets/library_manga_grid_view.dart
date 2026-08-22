@@ -137,12 +137,14 @@ class LibraryMangaSliver extends ConsumerWidget {
             maxCrossAxisExtent: gridWidth,
           );
 
-    // Preserves element state across re-orders for slivers that recalculate layout offsets.
-    int? findChildIndex(Key key) {
-      final id = (key as ValueKey<int>).value;
-      final index = items.indexWhere((m) => m.id == id);
-      return index < 0 ? null : index;
-    }
+    // Preserves element state across re-orders for slivers that recalculate
+    // layout offsets. Built once per build() (items.length lookups worth of
+    // work) instead of doing an O(items.length) indexWhere scan inside the
+    // callback itself — the callback is invoked once per child needing
+    // relocation, so a linear scan there turns a single reorder into an
+    // O(n^2) pass over the whole visible+cached range.
+    final idToIndex = {for (var i = 0; i < items.length; i++) items[i].id: i};
+    int? findChildIndex(Key key) => idToIndex[(key as ValueKey<int>).value];
 
     // Re-keys masonry on item order changes to prevent crashes from nulled child offsets.
     Key masonryOrderKey() => ValueKey(Object.hashAll(items.map((m) => m.id)));
