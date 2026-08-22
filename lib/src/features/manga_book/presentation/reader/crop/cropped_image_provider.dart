@@ -32,6 +32,8 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     this.localPath,
     this.threshold = 20,
     this.scale = 1.0,
+    this.targetWidth,
+    this.targetHeight,
   });
 
   /// URL fetched when the bytes aren't already cached (token-appended for
@@ -48,6 +50,15 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   final int threshold;
   final double scale;
 
+  /// Decode-size cap (display px; see [ServerImage.memCacheWidth] /
+  /// [memCacheHeight]), applied internally by this provider on both branches
+  /// of [_load] — wrapping this provider in `ResizeImage` (as the un-cropped
+  /// paths do) would silently do nothing here, because the cropped branch
+  /// never calls the `decode` callback `ResizeImage` relies on (it starts
+  /// from already-decoded raw pixels, not an encoded buffer).
+  final int? targetWidth;
+  final int? targetHeight;
+
   @override
   Future<CroppedImageProvider> obtainKey(ImageConfiguration configuration) =>
       SynchronousFuture<CroppedImageProvider>(this);
@@ -58,18 +69,23 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     ImageDecoderCallback decode,
   ) {
     return OneFrameImageStreamCompleter(
-      key._load(),
+      key._load(decode),
       informationCollector: () =>
           <DiagnosticsNode>[ErrorDescription('Crop source: ${key.cacheKey}')],
     );
   }
 
-  Future<ImageInfo> _load() async {
+  Future<ImageInfo> _load(ImageDecoderCallback decode) async {
     final bytes = await _fetchBytes();
-    final cropped = await cropImageBytes(bytes, threshold: threshold);
+    final cropped = await cropImageBytes(
+      bytes,
+      threshold: threshold,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+    );
     final ui.Image image = cropped != null
         ? await _decodeRgba(cropped)
-        : await _decodeEncoded(bytes);
+        : await _decodeEncoded(bytes, decode);
     return ImageInfo(image: image, scale: scale);
   }
 
@@ -95,8 +111,23 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     return completer.future;
   }
 
-  Future<ui.Image> _decodeEncoded(Uint8List bytes) async {
-    final codec = await ui.instantiateImageCodec(bytes);
+  /// No border was found (or none was needed) — decode via the callback the
+  /// engine handed [loadImage], so [targetWidth]/[targetHeight] still apply
+  /// through the engine's own decode-time downscale (what `ResizeImage`
+  /// itself builds on), instead of decoding at native resolution and never
+  /// shrinking it.
+  Future<ui.Image> _decodeEncoded(
+    Uint8List bytes,
+    ImageDecoderCallback decode,
+  ) async {
+    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    final codec = await decode(
+      buffer,
+      getTargetSize: (targetWidth == null && targetHeight == null)
+          ? null
+          : (int intrinsicWidth, int intrinsicHeight) =>
+                ui.TargetImageSize(width: targetWidth, height: targetHeight),
+    );
     final frame = await codec.getNextFrame();
     return frame.image;
   }
@@ -107,10 +138,19 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
       other.cacheKey == cacheKey &&
       other.localPath == localPath &&
       other.threshold == threshold &&
-      other.scale == scale;
+      other.scale == scale &&
+      other.targetWidth == targetWidth &&
+      other.targetHeight == targetHeight;
 
   @override
-  int get hashCode => Object.hash(cacheKey, localPath, threshold, scale);
+  int get hashCode => Object.hash(
+        cacheKey,
+        localPath,
+        threshold,
+        scale,
+        targetWidth,
+        targetHeight,
+      );
 
   @override
   String toString() => 'CroppedImageProvider($cacheKey, t:$threshold)';

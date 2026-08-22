@@ -159,8 +159,13 @@ class ServerImage extends HookConsumerWidget {
     // Renders a crop provider through the same imageBuilder/wrapper contract as
     // the normal paths (imageBuilder fires immediately with the provider, like
     // the offline branch; consumers show the frame once it decodes).
-    Widget renderCrop(ImageProvider rawProvider) {
-      final provider = _capDecode(rawProvider, cacheWidth, cacheHeight);
+    //
+    // No `_capDecode`/`ResizeImage` wrap here, unlike the other paths below:
+    // `CroppedImageProvider` takes the decode cap directly (targetWidth/
+    // targetHeight passed in at the call sites) and applies it itself, since
+    // wrapping it in `ResizeImage` would silently do nothing for the cropped
+    // branch (see the provider's own doc comment).
+    Widget renderCrop(ImageProvider provider) {
       if (imageBuilder != null) {
         return AppUtils.wrapOn(wrapper, imageBuilder!(context, provider));
       }
@@ -197,6 +202,8 @@ class ServerImage extends HookConsumerWidget {
           fetchUrl: imageUrl,
           cacheKey: localPath,
           localPath: localPath,
+          targetWidth: cacheWidth,
+          targetHeight: cacheHeight,
         ));
       }
       final ImageProvider provider =
@@ -382,6 +389,8 @@ class ServerImage extends HookConsumerWidget {
         fetchUrl: fetchUrl,
         cacheKey: baseApi,
         headers: httpHeaders,
+        targetWidth: cacheWidth,
+        targetHeight: cacheHeight,
       ));
     }
 
