@@ -83,22 +83,29 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
     }
   }
 
-  // 3) Storage cap: evict oldest non-pinned until under cap.
+  // 3) Storage cap: evict oldest non-pinned until under cap. Tracks the
+  // retained total as a running value instead of re-folding the whole
+  // (already-filtered) list on every iteration — same result, O(n log n)
+  // (the sort) instead of O(n^2) for a manga with many downloaded chapters.
   var overCapWarning = false;
   if (nets.storageCapEnabled) {
-    int total() => downloaded
-        .where((c) => !evict.contains(c.id))
-        .fold(0, (s, c) => s + c.bytes);
     final candidates = downloaded
         .where((c) => !c.pinned && !evict.contains(c.id))
         .toList()
       ..sort((a, b) => (a.downloadedAt ?? DateTime(0))
           .compareTo(b.downloadedAt ?? DateTime(0)));
+    var retainedBytes = downloaded
+        .where((c) => !evict.contains(c.id))
+        .fold(0, (s, c) => s + c.bytes);
     var i = 0;
-    while (total() > nets.storageCapBytes && i < candidates.length) {
-      evict.add(candidates[i++].id);
+    while (retainedBytes > nets.storageCapBytes && i < candidates.length) {
+      retainedBytes -= candidates[i].bytes;
+      evict.add(candidates[i].id);
+      i++;
     }
-    if (total() > nets.storageCapBytes) overCapWarning = true; // only pinned left
+    if (retainedBytes > nets.storageCapBytes) {
+      overCapWarning = true; // only pinned left
+    }
   }
 
   return (evict: evict, overCapWarning: overCapWarning);

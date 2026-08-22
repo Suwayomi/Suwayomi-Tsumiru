@@ -369,20 +369,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           );
         }
       }
-      if (from < 10) {
-        await _addColumnIfMissing(
-          m,
-          offlineChapters,
-          offlineChapters.syncedIsRead,
-        );
-        // Assume existing rows agree with the server: the correction then
-        // starts at zero and behaves exactly as it did before this column,
-        // until the next down-sync records real baselines. Guessing the other
-        // way would invent corrections for chapters nobody has touched.
-        await customStatement(
-          'UPDATE offline_chapters SET synced_is_read = is_read',
-        );
-      }
+      // NOTE: a second `if (from < 10)` step used to duplicate this exact
+      // add-column-then-backfill for synced_is_read. Removed (2026) — the
+      // `if (from < 12)` block above already covers every from<10 upgrade
+      // (12 > 10) with the SAME guarded backfill (only runs when the column
+      // was actually missing), so the second copy only ever re-ran a no-op
+      // unconditional UPDATE. Harmless today, but this invariant has broken
+      // from exactly this shape of duplicate writer before — don't re-add it.
       if (from < 14) {
         // onCreate only runs for brand-new databases, so an upgrade from a
         // version without these tables has to create them itself.

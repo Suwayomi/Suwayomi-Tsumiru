@@ -170,6 +170,54 @@ void main() {
     }
   });
 
+  test(
+      'an upgrade from < 10 does not clobber a synced_is_read value an '
+      'interim build already set (no more duplicate unconditional backfill)',
+      () async {
+    final dbPath = p.join(tmp.path, 'test.db');
+
+    // Simulates an interim/dev build: the column already physically exists
+    // (created by a prior run at the CURRENT schema) but the recorded version
+    // is forced back below 10 -- the exact inconsistent state the surrounding
+    // migration's own comments call out repeatedly. synced_is_read is set to
+    // something that deliberately does NOT match is_read, standing in for a
+    // real unsettled local correction this device is tracking.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+      );
+      await db.customStatement(
+        'UPDATE offline_chapters SET synced_is_read = 0 WHERE id = 10',
+      );
+      await db.customStatement('PRAGMA user_version = 9');
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(c.isRead, isTrue);
+      expect(c.syncedIsRead, isFalse,
+          reason: 'the from<12 guard already decided to preserve this value '
+              'because the column existed; a later duplicate unconditional '
+              'UPDATE synced_is_read = is_read must not override that');
+      await db.close();
+    }
+  });
+
   test('v4 lastReadAt persists across close/reopen', () async {
     final dbPath = p.join(tmp.path, 'test.db');
 
