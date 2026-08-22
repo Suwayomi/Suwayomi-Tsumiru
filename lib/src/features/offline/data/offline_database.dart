@@ -634,6 +634,30 @@ class OfflineDatabase extends _$OfflineDatabase {
         .toList();
   }
 
+  /// Batched form of [categoriesForManga]: one join query covering every id
+  /// in [mangaIds] instead of one round-trip per manga. A manga with no
+  /// entry in the result has no categories (same meaning as an empty list
+  /// from the single-id form).
+  Future<Map<int, List<OfflineCategory>>> categoriesForMangas(
+    Set<int> mangaIds,
+  ) async {
+    if (mangaIds.isEmpty) return {};
+    final query = select(offlineMangaCategories).join([
+      innerJoin(
+        offlineCategories,
+        offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
+      ),
+    ])
+      ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
+      ..orderBy([OrderingTerm(expression: offlineCategories.sortOrder)]);
+    final byManga = <int, List<OfflineCategory>>{};
+    for (final row in await query.get()) {
+      final mangaId = row.readTable(offlineMangaCategories).mangaId;
+      byManga.putIfAbsent(mangaId, () => []).add(row.readTable(offlineCategories));
+    }
+    return byManga;
+  }
+
   /// All persisted categories — for the offline category-list fallback.
   Future<List<OfflineCategory>> allOfflineCategories() => (select(
     offlineCategories,

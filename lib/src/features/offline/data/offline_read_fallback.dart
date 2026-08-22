@@ -78,11 +78,10 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     final lastReadByManga = await db.lastReadAtByManga();
     final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
     final readDelta = await db.unsyncedReadDeltaByManga();
-    // Load all category memberships in one pass keyed by mangaId
-    final categoryMap = <int, List<OfflineCategory>>{};
-    for (final m in rows) {
-      categoryMap[m.id] = await db.categoriesForManga(m.id);
-    }
+    // Load all category memberships in one query, keyed by mangaId.
+    final categoryMap = await db.categoriesForMangas({
+      for (final m in rows) m.id,
+    });
     // The manga column carries the server's Last-Read snapshot for every
     // library entry; a chapter-row max can be newer when something was read
     // offline since the last sync. Numeric max — both are epoch strings.

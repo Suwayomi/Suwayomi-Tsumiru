@@ -118,4 +118,55 @@ void main() {
     expect(await db.select(db.offlineMangaCategories).get(), isEmpty);
     expect(await db.select(db.offlinePages).get(), isEmpty);
   });
+
+  group('categoriesForMangas', () {
+    Future<void> seedManga(int id) => db.upsertMangaMetadata(
+          id: id,
+          title: 'M$id',
+          updatedAt: DateTime.utc(2026),
+        );
+
+    test('empty input short-circuits to an empty map', () async {
+      expect(await db.categoriesForMangas(const {}), isEmpty);
+    });
+
+    test('batches every id into one query, keyed by mangaId, ordered by '
+        "each category's sortOrder, and omits ids with no categories",
+        () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.upsertCategory(2, 'Plan to read', 1, isHidden: false);
+      await seedManga(10);
+      await seedManga(20);
+      await seedManga(30); // uncategorized
+      await db.replaceMangaCategories(10, [2, 1]); // inserted out of order
+      await db.replaceMangaCategories(20, [1]);
+
+      final result = await db.categoriesForMangas({10, 20, 30});
+
+      expect(result[10]!.map((c) => c.id).toList(), [1, 2],
+          reason: 'sortOrder governs, not insertion order');
+      expect(result[20]!.map((c) => c.id).toList(), [1]);
+      expect(result.containsKey(30), isFalse,
+          reason: 'no membership rows -> no entry, same as the single-id '
+              'form returning an empty list');
+    });
+
+    test('matches categoriesForManga(id) for each id in the batch', () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.upsertCategory(2, 'Plan to read', 1, isHidden: false);
+      await seedManga(10);
+      await seedManga(20);
+      await db.replaceMangaCategories(10, [1, 2]);
+      await db.replaceMangaCategories(20, [2]);
+
+      final batched = await db.categoriesForMangas({10, 20});
+      final single10 = await db.categoriesForManga(10);
+      final single20 = await db.categoriesForManga(20);
+
+      expect(batched[10]!.map((c) => c.id).toList(),
+          single10.map((c) => c.id).toList());
+      expect(batched[20]!.map((c) => c.id).toList(),
+          single20.map((c) => c.id).toList());
+    });
+  });
 }
