@@ -30,6 +30,11 @@ String _deleteWhileReadingLabel(BuildContext context, int value) =>
 
 /// One "Delete chapters" section (used for both the on-device and the server
 /// copies — identical controls, different backing settings).
+///
+/// [whileReadingSubOptions] renders directly below the "delete finished
+/// chapters while reading" row — the option that controls whether they're
+/// meaningful at all — rather than at the end of the section, so a
+/// dependent toggle stays visually attached to what governs it.
 List<Widget> _deleteSection(
   BuildContext context, {
   required String title,
@@ -38,6 +43,7 @@ List<Widget> _deleteSection(
   required Future<void> Function(bool) onManual,
   required void Function(int) onWhileReading,
   required Future<void> Function(bool) onBookmark,
+  List<Widget> whileReadingSubOptions = const [],
 }) =>
     [
       SectionTitle(title: title),
@@ -75,6 +81,7 @@ List<Widget> _deleteSection(
           ),
         ),
       ),
+      ...whileReadingSubOptions,
       SettingsPropTile(
         title: context.l10n.allowDeletingBookmarkedChapters,
         type: SettingsPropType.switchTile(
@@ -83,6 +90,36 @@ List<Widget> _deleteSection(
         ),
       ),
     ];
+
+/// Indented dependent toggle, shown only while its controlling option makes
+/// it meaningful — same treatment as the reader settings' sub-toggles (see
+/// `_SubSwitchTile` in reading_mode_tab.dart / general_tab.dart), so a
+/// dependent option doesn't read as a normal, independent one.
+class _SubSwitchTile extends StatelessWidget {
+  const _SubSwitchTile({
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      contentPadding: const EdgeInsetsDirectional.only(start: 32, end: 16),
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle!) : null,
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
 
 /// Downloads settings, split into two tabs:
 ///   * Server — what the Suwayomi server downloads from sources.
@@ -246,18 +283,23 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
               ref.read(localDeleteWhileReadingProvider.notifier).update(v),
           onBookmark: (v) async =>
               ref.read(localDeleteWithBookmarkProvider.notifier).update(v),
+          // Only meaningful when the keep window has at least 1 protected
+          // slot — rendered right under the option that controls it.
+          whileReadingSubOptions: localDelete.deleteWhileReading >= 2
+              ? [
+                  _SubSwitchTile(
+                    title: context.l10n.downloadProtectionWindowTitle,
+                    subtitle: context.l10n.downloadProtectionWindowDescription,
+                    value:
+                        ref.watch(localDownloadProtectionWindowProvider) ??
+                            false,
+                    onChanged: (v) async => ref
+                        .read(localDownloadProtectionWindowProvider.notifier)
+                        .update(v),
+                  ),
+                ]
+              : const [],
         ),
-        // Only meaningful when the keep window has at least 1 protected slot.
-        if (localDelete.deleteWhileReading >= 2)
-          SettingsPropTile(
-            title: context.l10n.downloadProtectionWindowTitle,
-            subtitle: context.l10n.downloadProtectionWindowDescription,
-            type: SettingsPropType.switchTile(
-              value: ref.watch(localDownloadProtectionWindowProvider) ?? false,
-              onChanged: (v) async =>
-                  ref.read(localDownloadProtectionWindowProvider.notifier).update(v),
-            ),
-          ),
         ...buildOnDeviceStorageTiles(context, ref),
       ],
     );
