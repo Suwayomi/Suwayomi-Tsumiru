@@ -15,8 +15,8 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  test('opens at schema version 14', () {
-    expect(db.schemaVersion, 14);
+  test('opens at schema version 15', () {
+    expect(db.schemaVersion, 15);
   });
 
   test('keepRule defaults to off, keepUnreadCount to 3; setKeepRule persists',

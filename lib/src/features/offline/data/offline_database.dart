@@ -103,6 +103,16 @@ class OfflineChapters extends Table {
   BoolColumn get readStateDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// Whether the pending [readStateDirty] change came from a manual mark-read
+  /// action (library/updates bulk "mark read") rather than ordinary reading.
+  /// Only meaningful while [readStateDirty] is true — read by
+  /// [pushPendingProgress] to pick the right tracker-sync gate
+  /// (updateProgressManualMarkRead vs updateProgressAfterReading) when
+  /// flushing a read-state change that was queued offline; a stale value left
+  /// over from a since-cleared write is never consulted.
+  BoolColumn get readStateManual =>
+      boolean().withDefault(const Constant(false))();
+
   /// The read state already reflected in the manga row's stored [OfflineMangas
   /// .unreadCount] — NOT simply "what the server last said". Invariant the
   /// offline view depends on: shown unread = stored count − Σ(isRead −
@@ -187,7 +197,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -381,6 +391,13 @@ class OfflineDatabase extends _$OfflineDatabase {
         if (!await _hasTable(offlineMangaCategories)) {
           await m.createTable(offlineMangaCategories);
         }
+      }
+      if (from < 15) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.readStateManual,
+        );
       }
     },
   );
@@ -784,10 +801,19 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   /// Record local reading progress (read offline / always). Marks it
   /// `progressDirty` so it's pushed to the server on the next online sync.
+  ///
+  /// [manual] records whether this read-state change came from a manual
+  /// mark-read action (bulk "mark read" with a position reset) rather than
+  /// ordinary reading — [pushPendingProgress] reads it back to pick the right
+  /// tracker-sync gate when flushing offline-queued read-state changes.
+  /// Ignored (never written) when [isRead] is null, matching [readStateDirty]
+  /// itself: a partial position-only write has no read-state provenance to
+  /// record.
   Future<void> setChapterProgress(
     int chapterId, {
     required int lastPageRead,
     bool? isRead,
+    bool manual = false,
   }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
     OfflineChaptersCompanion(
       lastPageRead: Value(lastPageRead),
@@ -800,6 +826,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       // writes can't push a stale isRead (the ch-99 loop).
       isRead: isRead == null ? const Value.absent() : Value(isRead),
       readStateDirty: isRead == null ? const Value.absent() : const Value(true),
+      readStateManual:
+          isRead == null ? const Value.absent() : Value(manual),
     ),
   );
 
@@ -808,11 +836,20 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   /// Record a local read/unread change (list actions, mark-read). Position
   /// untouched; pushed under its own flag on the next online sync.
-  Future<void> setChapterReadState(int chapterId, bool isRead) =>
-      (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+  ///
+  /// [manual] is true for every caller of this method today (it's only ever
+  /// invoked from the manual mark-read path — ordinary reading progress goes
+  /// through [setChapterProgress] instead) — see that method's doc comment
+  /// for what it's used for.
+  Future<void> setChapterReadState(
+    int chapterId,
+    bool isRead, {
+    bool manual = true,
+  }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
         OfflineChaptersCompanion(
           isRead: Value(isRead),
           readStateDirty: const Value(true),
+          readStateManual: Value(manual),
           // Marking read counts as reading activity for the Last Read sort;
           // un-reading is bookkeeping and leaves the timestamp alone.
           lastReadAt: isRead ? Value(_nowEpochSeconds()) : const Value.absent(),

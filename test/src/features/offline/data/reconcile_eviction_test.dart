@@ -16,6 +16,7 @@ OfflineChapter dl(int id, {int bytes = 100, DateTime? at, bool pinned = false}) 
       deviceState: OfflineDeviceState.downloaded, pageCount: 1, bytes: bytes,
       pinned: pinned, downloadedAt: at ?? DateTime(2026, 1, id),
       progressDirty: false, bookmarkDirty: false, readStateDirty: false,
+      readStateManual: false,
       syncedIsRead: false,
       updatedAt: DateTime(2026), downloadGeneration: 0,
     );

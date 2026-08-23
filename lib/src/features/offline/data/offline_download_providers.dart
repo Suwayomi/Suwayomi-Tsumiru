@@ -406,7 +406,12 @@ Future<bool> recordReadStateWithDependencies({
   if (offlineEnabled && db != null) {
     for (final id in chapterIds) {
       if (resetPosition) {
-        await db.setChapterProgress(id, lastPageRead: 0, isRead: isRead);
+        await db.setChapterProgress(
+          id,
+          lastPageRead: 0,
+          isRead: isRead,
+          manual: true,
+        );
       } else {
         await db.setChapterReadState(id, isRead);
       }
@@ -775,6 +780,11 @@ Future<void> pushPendingProgress(
   // Collect manga IDs where progress was pushed successfully AND the chapter
   // is marked read — deduplicated so we call trackProgress once per manga.
   final syncedReadMangaIds = <int>{};
+  // Whether ANY synced chapter for that manga this pass came from a manual
+  // mark-read action rather than ordinary reading — read back from
+  // readStateManual (see OfflineChapters' doc comment) so the tracker-sync
+  // gate below checks the same toggle the action would have used online.
+  final syncedReadIsManual = <int, bool>{};
 
   for (final c in await db.dirtyChapters()) {
     var pushProgress = c.progressDirty;
@@ -848,7 +858,11 @@ Future<void> pushPendingProgress(
           isBookmarked: c.isBookmarked,
         );
       }
-      if (c.readStateDirty && c.isRead) syncedReadMangaIds.add(c.mangaId);
+      if (c.readStateDirty && c.isRead) {
+        syncedReadMangaIds.add(c.mangaId);
+        syncedReadIsManual[c.mangaId] =
+            (syncedReadIsManual[c.mangaId] ?? false) || c.readStateManual;
+      }
     }
   }
 
@@ -862,6 +876,9 @@ Future<void> pushPendingProgress(
   final enabledAfterReading = container
       .read(updateProgressAfterReadingProvider)
       .ifNull();
+  final enabledManualMarkRead = container
+      .read(updateProgressManualMarkReadProvider)
+      .ifNull();
 
   for (final mangaId in syncedReadMangaIds) {
     try {
@@ -871,8 +888,8 @@ Future<void> pushPendingProgress(
       if (!shouldTrackProgress(
         isRead: true,
         enabledAfterReading: enabledAfterReading,
-        enabledManualMarkRead: false,
-        manual: false,
+        enabledManualMarkRead: enabledManualMarkRead,
+        manual: syncedReadIsManual[mangaId] ?? false,
         trackRecordCount: records.length,
       )) {
         continue;

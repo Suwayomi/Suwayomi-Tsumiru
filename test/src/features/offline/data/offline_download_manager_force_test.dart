@@ -33,6 +33,7 @@ void main() {
     progressDirty: false,
     bookmarkDirty: false,
     readStateDirty: false,
+    readStateManual: false,
     syncedIsRead: false,
     updatedAt: DateTime(2026),
     downloadGeneration: 0,

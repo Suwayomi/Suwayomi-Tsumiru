@@ -347,6 +347,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
         progressDirty: false,
         bookmarkDirty: false,
         readStateDirty: false,
+        readStateManual: false,
         syncedIsRead: n['isRead'] as bool? ?? false,
         updatedAt: now,
         downloadGeneration: 0,

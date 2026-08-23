@@ -143,6 +143,15 @@ class _FixedToggle extends UpdateProgressAfterReading {
   bool? build() => _value;
 }
 
+/// Same, for the manual-mark-read toggle.
+class _FixedManualToggle extends UpdateProgressManualMarkRead {
+  _FixedManualToggle(this._value);
+  final bool _value;
+
+  @override
+  bool? build() => _value;
+}
+
 // ---------------------------------------------------------------------------
 // Helper: seed a chapter row (optionally dirty)
 // ---------------------------------------------------------------------------
@@ -201,6 +210,7 @@ Future<
   required List<int> mangaIds,
   int trackRecordCount = 1,
   bool toggleOn = true,
+  bool manualToggleOn = false,
   MangaBookRepository? repository,
 }) async {
   SharedPreferences.setMockInitialValues({});
@@ -220,6 +230,8 @@ Future<
     trackerRepositoryProvider.overrideWithValue(fakeTracker),
     updateProgressAfterReadingProvider
         .overrideWith(() => _FixedToggle(toggleOn)),
+    updateProgressManualMarkReadProvider
+        .overrideWith(() => _FixedManualToggle(manualToggleOn)),
     for (final id in mangaIds)
       mangaTrackRecordsProvider(mangaId: id)
           .overrideWith((_) => Future.value(records)),
@@ -364,6 +376,103 @@ void main() {
 
       expect(tracker.trackProgressCalls, isEmpty,
           reason: 'isRead=false chapters must not trigger tracker');
+    });
+  });
+
+  group('pushPendingProgress → manual vs auto tracker gate', () {
+    test(
+        'a manual mark-read queued offline is gated on the MANUAL toggle, '
+        'not the after-reading toggle', () async {
+      // after-reading OFF, manual-mark-read ON: an offline manual mark-read
+      // must still reach the tracker once reconnected.
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        trackRecordCount: 1,
+        toggleOn: false,
+        manualToggleOn: true,
+      );
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await recordReadStateWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterIds: [10],
+        isRead: true,
+        resetPosition: true,
+      );
+
+      await pushPendingProgress(container);
+
+      expect(tracker.trackProgressCalls, [1],
+          reason: 'manual-mark-read toggle is ON — the flush must use it, '
+              'not the (OFF) after-reading toggle');
+    });
+
+    test(
+        'a manual mark-read queued offline is suppressed when the MANUAL '
+        'toggle is off, even with after-reading ON', () async {
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        trackRecordCount: 1,
+        toggleOn: true,
+        manualToggleOn: false,
+      );
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await recordReadStateWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterIds: [10],
+        isRead: true,
+        resetPosition: true,
+      );
+
+      await pushPendingProgress(container);
+
+      expect(tracker.trackProgressCalls, isEmpty,
+          reason: 'manual-mark-read toggle is OFF — a manual action must not '
+              'borrow the (ON) after-reading toggle');
+    });
+
+    test(
+        'ordinary offline reading progress still uses the after-reading '
+        'toggle, unaffected by the manual toggle', () async {
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        trackRecordCount: 1,
+        toggleOn: true,
+        manualToggleOn: false,
+      );
+      addTearDown(() {
+        container.dispose();
+        db.close();
+      });
+
+      await _seed(db, 10, mangaId: 1);
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: _FailingMangaBookRepository(),
+        chapterId: 10,
+        lastPageRead: 9,
+        isRead: true,
+      );
+
+      await pushPendingProgress(container);
+
+      expect(tracker.trackProgressCalls, [1],
+          reason: 'the auto/reading path is untouched by this fix — still '
+              'gated on after-reading alone');
     });
   });
 
