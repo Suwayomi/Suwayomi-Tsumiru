@@ -1,13 +1,16 @@
 // Diagnostic: verifies the zoom focal point stays anchored on screen through
-// a SINGLE zoom step, on both scrollAxis values, for BOTH axes at once (an
-// off-center local point has a nonzero component on each), and for both ways
-// a zoom step can happen: `setScaleWithAnimation` (double-tap-to-zoom) and a
-// live two-finger pinch (`DragMode.pinchScale` in ZoomView's own
-// `onScaleUpdate`) — two separate code paths with their own scroll-target
-// math. Round-trip tests (zoom in then back to 1x) can pass even with a
-// per-step anchor bug if the same wrong formula is applied symmetrically
-// forward and backward — this test checks the intermediate zoomed state
-// directly instead.
+// a SINGLE zoom step, on both scrollAxis values, EACH with reverse false and
+// true (an RTL manga's continuous-horizontal strip is scrollAxis: horizontal,
+// reverse: true — the exact combination that used to mirror pinch/double-tap
+// zoom on the main axis while the cross axis stayed correct), for BOTH axes
+// at once (an off-center local point has a nonzero component on each), and
+// for both ways a zoom step can happen: `setScaleWithAnimation`
+// (double-tap-to-zoom) and a live two-finger pinch (`DragMode.pinchScale` in
+// ZoomView's own `onScaleUpdate`) — two separate code paths with their own
+// scroll-target math. Round-trip tests (zoom in then back to 1x) can pass
+// even with a per-step anchor bug if the same wrong formula is applied
+// symmetrically forward and backward — this test checks the intermediate
+// zoomed state directly instead.
 //
 // Method: pick a fixed local point inside a list item that never changes its
 // own logical (pre-FittedBox) size when `_scale` changes — only the
@@ -36,6 +39,7 @@ Offset _globalPositionOf(Offset localPoint) {
 Future<ZoomViewController> _pumpHarness(
   WidgetTester tester, {
   required Axis scrollAxis,
+  bool reverse = false,
   bool pinchEnabled = true,
 }) async {
   tester.view.devicePixelRatio = 1.0;
@@ -58,12 +62,14 @@ Future<ZoomViewController> _pumpHarness(
             controller: mainController,
             zoomViewController: zoomController,
             scrollAxis: scrollAxis,
+            reverse: reverse,
             minScale: 1.0,
             maxScale: 4.0,
             pinchEnabled: pinchEnabled,
             child: ListView(
               controller: mainController,
               scrollDirection: scrollAxis,
+              reverse: reverse,
               children: [
                 for (var i = 0; i < 5; i++)
                   SizedBox(
@@ -95,55 +101,63 @@ const _localFocal = Offset(120, 250);
 
 void main() {
   for (final axis in [Axis.vertical, Axis.horizontal]) {
-    testWidgets(
-        'setScaleWithAnimation keeps an off-center focal point anchored on '
-        'screen — scrollAxis: $axis', (tester) async {
-      final zoomController = await _pumpHarness(tester, scrollAxis: axis);
+    for (final reverse in [false, true]) {
+      final label = 'scrollAxis: $axis, reverse: $reverse';
 
-      final focalBefore = _globalPositionOf(_localFocal);
-      zoomController.setScaleWithAnimation(2.0, focalPoint: focalBefore);
-      await tester.pumpAndSettle();
-      final focalAfter = _globalPositionOf(_localFocal);
+      testWidgets(
+          'setScaleWithAnimation keeps an off-center focal point anchored on '
+          'screen — $label', (tester) async {
+        final zoomController =
+            await _pumpHarness(tester, scrollAxis: axis, reverse: reverse);
 
-      expect(
-        (focalAfter - focalBefore).distance,
-        lessThan(5.0),
-        reason: 'zooming in centered on a point must leave that point where '
-            'it was on screen — before: $focalBefore, after: $focalAfter '
-            '(dx drift: ${(focalAfter.dx - focalBefore.dx).abs()}, '
-            'dy drift: ${(focalAfter.dy - focalBefore.dy).abs()})',
-      );
-    });
+        final focalBefore = _globalPositionOf(_localFocal);
+        zoomController.setScaleWithAnimation(2.0, focalPoint: focalBefore);
+        await tester.pumpAndSettle();
+        final focalAfter = _globalPositionOf(_localFocal);
 
-    testWidgets(
-        'a live two-finger pinch keeps its focal point anchored on screen — '
-        'scrollAxis: $axis', (tester) async {
-      await _pumpHarness(tester, scrollAxis: axis);
+        expect(
+          (focalAfter - focalBefore).distance,
+          lessThan(5.0),
+          reason: 'zooming in centered on a point must leave that point '
+              'where it was on screen — before: $focalBefore, after: '
+              '$focalAfter (dx drift: '
+              '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
+              '${(focalAfter.dy - focalBefore.dy).abs()})',
+        );
+      });
 
-      final focalBefore = _globalPositionOf(_localFocal);
+      testWidgets(
+          'a live two-finger pinch keeps its focal point anchored on '
+          'screen — $label', (tester) async {
+        await _pumpHarness(tester, scrollAxis: axis, reverse: reverse);
 
-      final g1 = await tester.startGesture(focalBefore + const Offset(-20, 0));
-      final g2 = await tester.startGesture(focalBefore + const Offset(20, 0));
-      for (var i = 0; i < 20; i++) {
-        await g1.moveBy(const Offset(-2, 0));
-        await g2.moveBy(const Offset(2, 0));
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      await g1.up();
-      await g2.up();
-      await tester.pumpAndSettle();
+        final focalBefore = _globalPositionOf(_localFocal);
 
-      final focalAfter = _globalPositionOf(_localFocal);
+        final g1 =
+            await tester.startGesture(focalBefore + const Offset(-20, 0));
+        final g2 =
+            await tester.startGesture(focalBefore + const Offset(20, 0));
+        for (var i = 0; i < 20; i++) {
+          await g1.moveBy(const Offset(-2, 0));
+          await g2.moveBy(const Offset(2, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await g1.up();
+        await g2.up();
+        await tester.pumpAndSettle();
 
-      expect(
-        (focalAfter - focalBefore).distance,
-        lessThan(15.0),
-        reason: 'the pinched point must stay under the fingers as the '
-            'content scales up around it — before: $focalBefore, '
-            'after: $focalAfter (dx drift: '
-            '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
-            '${(focalAfter.dy - focalBefore.dy).abs()})',
-      );
-    });
+        final focalAfter = _globalPositionOf(_localFocal);
+
+        expect(
+          (focalAfter - focalBefore).distance,
+          lessThan(15.0),
+          reason: 'the pinched point must stay under the fingers as the '
+              'content scales up around it — before: $focalBefore, '
+              'after: $focalAfter (dx drift: '
+              '${(focalAfter.dx - focalBefore.dx).abs()}, dy drift: '
+              '${(focalAfter.dy - focalBefore.dy).abs()})',
+        );
+      });
+    }
   }
 }

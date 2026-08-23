@@ -1344,6 +1344,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ? (Widget child) => ReaderZoomView(
               controller: zoomScrollController,
               scrollAxis: scrollDirection,
+              reverse: reverse,
               maxScale: InfinityContinuousConfig.maxZoomScale,
               // Long-strip min zoom-out rate is 0.5 unless disabled.
               minScale: isZoomOutDisabled ? 1 : 0.5,

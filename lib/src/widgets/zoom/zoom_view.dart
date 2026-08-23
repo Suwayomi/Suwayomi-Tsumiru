@@ -90,13 +90,28 @@ class ZoomViewController {
       verticalController: state._verticalController,
     );
 
+    final focusDx = _mainAxisFocalCoord(
+      raw: focus.dx,
+      dimension: width,
+      axis: Axis.horizontal,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
+    final focusDy = _mainAxisFocalCoord(
+      raw: focus.dy,
+      dimension: height,
+      axis: Axis.vertical,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
     final newHorizontalPixels = _clampScrollTarget(
       axis: Axis.horizontal,
       scrollAxis: widget.scrollAxis,
       controller: state._horizontalController,
       rawCrossDimension: width,
       newInternalScale: internalNewScale,
-      value: effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
+      value: effectivePixels.horizontal +
+          (currentInternalScale - internalNewScale) * focusDx,
     );
     final newVerticalPixels = _clampScrollTarget(
       axis: Axis.vertical,
@@ -104,7 +119,8 @@ class ZoomViewController {
       controller: state._verticalController,
       rawCrossDimension: height,
       newInternalScale: internalNewScale,
-      value: effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
+      value: effectivePixels.vertical +
+          (currentInternalScale - internalNewScale) * focusDy,
     );
 
     state._updateScale(internalNewScale);
@@ -160,6 +176,20 @@ class ZoomViewController {
     );
     double currentEffectiveHorizontalPixels = initialEffectivePixels.horizontal;
     double currentEffectiveVerticalPixels = initialEffectivePixels.vertical;
+    final focusDx = _mainAxisFocalCoord(
+      raw: focus.dx,
+      dimension: width,
+      axis: Axis.horizontal,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
+    final focusDy = _mainAxisFocalCoord(
+      raw: focus.dy,
+      dimension: height,
+      axis: Axis.vertical,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
     bool firstFrame = true;
     bool secondFrame = false;
     void listener() {
@@ -173,7 +203,8 @@ class ZoomViewController {
         rawCrossDimension: width,
         newInternalScale: newAnimatedInternalScale,
         value: currentEffectiveHorizontalPixels +
-            (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dx,
+            (previousAnimatedInternalScale - newAnimatedInternalScale) *
+                focusDx,
       );
       currentEffectiveVerticalPixels = _clampScrollTarget(
         axis: Axis.vertical,
@@ -182,7 +213,8 @@ class ZoomViewController {
         rawCrossDimension: height,
         newInternalScale: newAnimatedInternalScale,
         value: currentEffectiveVerticalPixels +
-            (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dy,
+            (previousAnimatedInternalScale - newAnimatedInternalScale) *
+                focusDy,
       );
       state._updateScale(newAnimatedInternalScale);
 
@@ -350,6 +382,7 @@ class ZoomView extends StatefulWidget {
     this.minScale = 1.0,
     this.onDoubleTap,
     this.scrollAxis = Axis.vertical,
+    this.reverse = false,
     this.doubleTapDrag = false,
     this.forceHoldOnPointerDown = false,
     this.pinchEnabled = true,
@@ -369,6 +402,16 @@ class ZoomView extends StatefulWidget {
 
   ///scrollAxis must be set to Axis.horizontal if the Scrollable is horizontal
   final Axis scrollAxis;
+
+  ///Must be set to true if the wrapped Scrollable itself is built with
+  ///`reverse: true` (e.g. an RTL manga's page list). The scrollable's own
+  ///`pixels` still increase in the same logical direction either way, but
+  ///which SCREEN direction that corresponds to flips — so every focal-point
+  ///recentering formula below, which maps a screen-space drag/pinch delta on
+  ///[scrollAxis] onto a `pixels` delta, needs its sign flipped to match.
+  ///Only [scrollAxis] itself is affected: the cross axis is ZoomView's own
+  ///synthetic pan controller, never the wrapped (possibly reversed) list.
+  final bool reverse;
 
   ///The maximum scale that the ZoomView can be zoomed to. Set to double.infinity to allow infinite zoom in
   final double maxScale;
@@ -456,13 +499,28 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
       horizontalController: _horizontalController,
       verticalController: _verticalController,
     );
+    final focusDx = _mainAxisFocalCoord(
+      raw: focus.dx,
+      dimension: size.width,
+      axis: Axis.horizontal,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
+    final focusDy = _mainAxisFocalCoord(
+      raw: focus.dy,
+      dimension: size.height,
+      axis: Axis.vertical,
+      scrollAxis: widget.scrollAxis,
+      reverse: widget.reverse,
+    );
     final newHorizontalPixels = _clampScrollTarget(
       axis: Axis.horizontal,
       scrollAxis: widget.scrollAxis,
       controller: _horizontalController,
       rawCrossDimension: size.width,
       newInternalScale: internalNewScale,
-      value: effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
+      value: effectivePixels.horizontal +
+          (currentInternalScale - internalNewScale) * focusDx,
     );
     final newVerticalPixels = _clampScrollTarget(
       axis: Axis.vertical,
@@ -470,7 +528,8 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
       controller: _verticalController,
       rawCrossDimension: size.height,
       newInternalScale: internalNewScale,
-      value: effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
+      value: effectivePixels.vertical +
+          (currentInternalScale - internalNewScale) * focusDy,
     );
     _updateScale(internalNewScale);
     _verticalController.jumpTo(newVerticalPixels);
@@ -658,7 +717,14 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     rawCrossDimension: height,
                     newInternalScale: newScale,
                     value: _verticalController.position.pixels +
-                        (_scale - newScale) * details.localFocalPoint.dy,
+                        (_scale - newScale) *
+                            _mainAxisFocalCoord(
+                              raw: details.localFocalPoint.dy,
+                              dimension: height,
+                              axis: Axis.vertical,
+                              scrollAxis: widget.scrollAxis,
+                              reverse: widget.reverse,
+                            ),
                   );
                   final horizontalOffset = _clampScrollTarget(
                     axis: Axis.horizontal,
@@ -667,7 +733,14 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     rawCrossDimension: width,
                     newInternalScale: newScale,
                     value: _horizontalController.position.pixels +
-                        (_scale - newScale) * details.localFocalPoint.dx,
+                        (_scale - newScale) *
+                            _mainAxisFocalCoord(
+                              raw: details.localFocalPoint.dx,
+                              dimension: width,
+                              axis: Axis.horizontal,
+                              scrollAxis: widget.scrollAxis,
+                              reverse: widget.reverse,
+                            ),
                   );
 
                   _updateScale(newScale);
@@ -725,7 +798,14 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     rawCrossDimension: height,
                     newInternalScale: newScale,
                     value: _verticalController.position.pixels +
-                        (_scale - newScale) * details.localFocalPoint.dy,
+                        (_scale - newScale) *
+                            _mainAxisFocalCoord(
+                              raw: details.localFocalPoint.dy,
+                              dimension: height,
+                              axis: Axis.vertical,
+                              scrollAxis: widget.scrollAxis,
+                              reverse: widget.reverse,
+                            ),
                   );
                   final horizontalOffset = _clampScrollTarget(
                     axis: Axis.horizontal,
@@ -734,7 +814,14 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     rawCrossDimension: width,
                     newInternalScale: newScale,
                     value: _horizontalController.position.pixels +
-                        (_scale - newScale) * details.localFocalPoint.dx,
+                        (_scale - newScale) *
+                            _mainAxisFocalCoord(
+                              raw: details.localFocalPoint.dx,
+                              dimension: width,
+                              axis: Axis.horizontal,
+                              scrollAxis: widget.scrollAxis,
+                              reverse: widget.reverse,
+                            ),
                   );
                   //This is the main logic to actually perform the scaling
                   _updateScale(newScale);
@@ -1032,3 +1119,39 @@ double _clampScrollTarget({
     return (horizontal: horizontalController.position.pixels, vertical: vertical);
   }
 }
+
+/// The focal-point coordinate on [axis] to actually use in every
+/// recentering formula below, correcting for [reverse].
+///
+/// Every formula in this file is built from terms like
+/// `pixels + delta * focus.dx`, which assumes increasing `pixels` moves
+/// content in the same screen direction as increasing screen coordinates.
+/// That holds for the MAIN axis (the one equal to [scrollAxis]) only when
+/// the wrapped scrollable is NOT reversed — Flutter paints a reversed
+/// sliver's `AxisDirection` by measuring from the OPPOSITE physical edge of
+/// the viewport, i.e. (conceptually) `screenPos = dimension - (pixels-relative
+/// position)` instead of `screenPos = (pixels-relative position)`. Naively
+/// negating the whole delta term does NOT correct for this — it's a
+/// reflection of the coordinate around the viewport's own extent, not a
+/// sign flip of the delta — verified against the actual `RenderSliverList`
+/// paint offsets by direct measurement (see the zoom-view-reverse
+/// investigation notes): reversed, `pixels` increasing by N moves a fixed
+/// content point by +N on screen (not -N as non-reversed does), AND the
+/// reversed formula carries an extra `+dimension` term that does not scale
+/// with zoom the way the rest of the expression does. Reflecting the focal
+/// coordinate itself (`dimension - raw`) before it enters the existing
+/// (already-correct-for-non-reverse) formula reproduces the right target in
+/// both cases without duplicating the formula.
+///
+/// [dimension] is the full unscaled viewport size along [axis] (`width` for
+/// horizontal, `height` for vertical). The cross axis is ZoomView's own
+/// synthetic pan controller, never the wrapped (possibly reversed) list, so
+/// [reverse] never applies there — [raw] passes through unchanged.
+double _mainAxisFocalCoord({
+  required double raw,
+  required double dimension,
+  required Axis axis,
+  required Axis scrollAxis,
+  required bool reverse,
+}) =>
+    (reverse && axis == scrollAxis) ? dimension - raw : raw;

@@ -38,12 +38,13 @@ double _paintScaleOf(Finder finder) {
 }
 
 class _Harness {
-  _Harness(this.tester, this.scrollAxis)
+  _Harness(this.tester, this.scrollAxis, {this.reverse = false})
       : mainController = ScrollController(),
         zoomController = ZoomViewController();
 
   final WidgetTester tester;
   final Axis scrollAxis;
+  final bool reverse;
   final ScrollController mainController;
   final ZoomViewController zoomController;
 
@@ -68,11 +69,13 @@ class _Harness {
               controller: mainController,
               zoomViewController: zoomController,
               scrollAxis: scrollAxis,
+              reverse: reverse,
               minScale: minScale,
               maxScale: maxScale,
               child: ListView(
                 controller: mainController,
                 scrollDirection: scrollAxis,
+                reverse: reverse,
                 children: [
                   for (var i = 0; i < 5; i++)
                     SizedBox(
@@ -105,100 +108,105 @@ class _Harness {
 
 void main() {
   for (final axis in [Axis.vertical, Axis.horizontal]) {
-    group('ZoomView scale behaviour — scrollAxis: $axis', () {
-      testWidgets('zooming in magnifies the content on screen',
-          (tester) async {
-        final h = _Harness(tester, axis);
-        await h.pump();
-        expect(h.paintScale, closeTo(1.0, 0.001),
-            reason: 'unzoomed content must render at 1:1');
+    for (final reverse in [false, true]) {
+      group('ZoomView scale behaviour — scrollAxis: $axis, reverse: $reverse',
+          () {
+        testWidgets('zooming in magnifies the content on screen',
+            (tester) async {
+          final h = _Harness(tester, axis, reverse: reverse);
+          await h.pump();
+          expect(h.paintScale, closeTo(1.0, 0.001),
+              reason: 'unzoomed content must render at 1:1');
 
-        h.zoomController.setScale(2.0);
-        await tester.pumpAndSettle();
+          h.zoomController.setScale(2.0);
+          await tester.pumpAndSettle();
 
-        expect(h.paintScale, closeTo(2.0, 0.01),
-            reason: 'setScale(2.0) must actually double the on-screen size, '
-                'not just the reported logical layout size');
+          expect(h.paintScale, closeTo(2.0, 0.01),
+              reason: 'setScale(2.0) must actually double the on-screen '
+                  'size, not just the reported logical layout size');
+        });
+
+        testWidgets(
+            'zooming back out to 1x restores the original on-screen size',
+            (tester) async {
+          final h = _Harness(tester, axis, reverse: reverse);
+          await h.pump();
+
+          h.zoomController.setScale(3.0);
+          await tester.pumpAndSettle();
+          expect(h.paintScale, closeTo(3.0, 0.01));
+
+          h.zoomController.setScale(1.0);
+          await tester.pumpAndSettle();
+          expect(h.paintScale, closeTo(1.0, 0.01),
+              reason: 'zooming back out must return to the original size');
+        });
+
+        testWidgets(
+            'zoom in/out round trip does not shift the main-axis scroll '
+            'position (regression: axis-centering bug jumped the page)',
+            (tester) async {
+          final h = _Harness(tester, axis, reverse: reverse);
+          await h.pump();
+
+          // Scroll to a non-trivial, non-edge position first — mirrors
+          // having read partway through a chapter before touching zoom.
+          h.mainController.jumpTo(600);
+          await tester.pumpAndSettle();
+          final beforeZoom = h.mainAxisPixels;
+
+          // Double-tap-to-zoom-in, from the reader's own on-screen center.
+          h.zoomController.setScaleWithAnimation(
+            3.0,
+            focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
+          );
+          await tester.pumpAndSettle();
+
+          // ...then straight back out to 1x, like a second double-tap.
+          h.zoomController.setScaleWithAnimation(
+            1.0,
+            focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
+          );
+          await tester.pumpAndSettle();
+
+          expect(h.mainAxisPixels, closeTo(beforeZoom, 1.0),
+              reason: 'returning to 1x must land back where the user '
+                  'actually was — a center-focal-point zoom in and back out '
+                  'should be a no-op on the main scroll axis, not silently '
+                  'jump the page');
+        });
+
+        testWidgets(
+            'zoom-out below 1x and back round trip does not shift the '
+            'main-axis scroll position (regression: axis-centering bug)',
+            (tester) async {
+          final h = _Harness(tester, axis, reverse: reverse);
+          await h.pump(minScale: 0.5); // long-strip "allow zoom out" setting
+
+          h.mainController.jumpTo(600);
+          await tester.pumpAndSettle();
+          final beforeZoom = h.mainAxisPixels;
+
+          h.zoomController.setScaleWithAnimation(
+            0.5,
+            focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
+          );
+          await tester.pumpAndSettle();
+
+          h.zoomController.setScaleWithAnimation(
+            1.0,
+            focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
+          );
+          await tester.pumpAndSettle();
+
+          expect(h.mainAxisPixels, closeTo(beforeZoom, 1.0),
+              reason: 'zooming below 1x and back must not drift the '
+                  'main-axis position — this is exactly the '
+                  'internal-scale > 1.0 branch that used to hard-code the '
+                  'horizontal controller as the "centered" one regardless '
+                  'of scrollAxis');
+        });
       });
-
-      testWidgets(
-          'zooming back out to 1x restores the original on-screen size',
-          (tester) async {
-        final h = _Harness(tester, axis);
-        await h.pump();
-
-        h.zoomController.setScale(3.0);
-        await tester.pumpAndSettle();
-        expect(h.paintScale, closeTo(3.0, 0.01));
-
-        h.zoomController.setScale(1.0);
-        await tester.pumpAndSettle();
-        expect(h.paintScale, closeTo(1.0, 0.01),
-            reason: 'zooming back out must return to the original size');
-      });
-
-      testWidgets(
-          'zoom in/out round trip does not shift the main-axis scroll '
-          'position (regression: axis-centering bug jumped the page)',
-          (tester) async {
-        final h = _Harness(tester, axis);
-        await h.pump();
-
-        // Scroll to a non-trivial, non-edge position first — mirrors having
-        // read partway through a chapter before touching zoom at all.
-        h.mainController.jumpTo(600);
-        await tester.pumpAndSettle();
-        final beforeZoom = h.mainAxisPixels;
-
-        // Double-tap-to-zoom-in, from the reader's own on-screen center.
-        h.zoomController.setScaleWithAnimation(
-          3.0,
-          focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
-        );
-        await tester.pumpAndSettle();
-
-        // ...then straight back out to 1x, exactly like a second double-tap.
-        h.zoomController.setScaleWithAnimation(
-          1.0,
-          focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
-        );
-        await tester.pumpAndSettle();
-
-        expect(h.mainAxisPixels, closeTo(beforeZoom, 1.0),
-            reason: 'returning to 1x must land back where the user actually '
-                'was — a center-focal-point zoom in and back out should be a '
-                'no-op on the main scroll axis, not silently jump the page');
-      });
-
-      testWidgets(
-          'zoom-out below 1x and back round trip does not shift the '
-          'main-axis scroll position (regression: axis-centering bug)',
-          (tester) async {
-        final h = _Harness(tester, axis);
-        await h.pump(minScale: 0.5); // long-strip "allow zoom out" setting
-
-        h.mainController.jumpTo(600);
-        await tester.pumpAndSettle();
-        final beforeZoom = h.mainAxisPixels;
-
-        h.zoomController.setScaleWithAnimation(
-          0.5,
-          focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
-        );
-        await tester.pumpAndSettle();
-
-        h.zoomController.setScaleWithAnimation(
-          1.0,
-          focalPoint: const Offset(_viewportWidth / 2, _viewportHeight / 2),
-        );
-        await tester.pumpAndSettle();
-
-        expect(h.mainAxisPixels, closeTo(beforeZoom, 1.0),
-            reason: 'zooming below 1x and back must not drift the main-axis '
-                'position — this is exactly the internal-scale > 1.0 branch '
-                'that used to hard-code the horizontal controller as the '
-                '"centered" one regardless of scrollAxis');
-      });
-    });
+    }
   }
 }

@@ -23,6 +23,7 @@ class ReaderZoomView extends HookWidget {
     super.key,
     required this.controller,
     required this.scrollAxis,
+    this.reverse = false,
     required this.maxScale,
     required this.minScale,
     required this.pinchEnabled,
@@ -33,6 +34,10 @@ class ReaderZoomView extends HookWidget {
 
   final ScrollController controller;
   final Axis scrollAxis;
+
+  /// Must match the wrapped scrollable's own `reverse` (e.g. an RTL manga's
+  /// continuous-horizontal strip) — see [ZoomView.reverse] for why.
+  final bool reverse;
   final double maxScale;
   final double minScale;
   final bool pinchEnabled;
@@ -65,6 +70,7 @@ class ReaderZoomView extends HookWidget {
       controller: controller,
       zoomViewController: zoomController,
       scrollAxis: scrollAxis,
+      reverse: reverse,
       maxScale: maxScale,
       minScale: minScale,
       pinchEnabled: pinchEnabled,
