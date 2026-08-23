@@ -54,14 +54,34 @@ UpdatesGroupedEntry _closeRun(List<ChapterWithMangaDto> run) {
   );
 }
 
-/// Picks the representative chapter for a group: the last unread chapter,
-/// or the first chapter if all are already read — matching WebUI behaviour.
+/// Picks the representative chapter for a group: the most recently released
+/// unread chapter, or the most recently released chapter if all are already
+/// read — matching WebUI behaviour.
+///
+/// Chosen by explicit [ChapterWithMangaDto.fetchedAt]/[sourceOrder]
+/// comparison rather than by list position (first/last): the real feed
+/// (`UpdatesRepository.getRecentChaptersPage`) orders chapters newest-first,
+/// so "last in the list" is actually the OLDEST chapter in a group, not the
+/// newest — using list position here previously picked the oldest unread
+/// chapter as the headline instead of the newest.
 ChapterWithMangaDto pickGroupHead(List<ChapterWithMangaDto> chapters) {
   assert(chapters.isNotEmpty);
-  return chapters.lastWhere(
-    (c) => !c.isRead,
-    orElse: () => chapters.first,
+  final unread = [for (final c in chapters) if (!c.isRead) c];
+  final candidates = unread.isNotEmpty ? unread : chapters;
+  return candidates.reduce(
+    (a, b) => _releasedAfter(b, a) ? b : a,
   );
+}
+
+/// True when [a] was released strictly after [b] — by [fetchedAt], falling
+/// back to [sourceOrder] (ascending = chronological reading order, see
+/// offline_download_providers.dart's `inReadingOrder` sort) to break ties
+/// within the same fetch batch.
+bool _releasedAfter(ChapterWithMangaDto a, ChapterWithMangaDto b) {
+  final fetchedCompare = (int.tryParse(a.fetchedAt) ?? 0)
+      .compareTo(int.tryParse(b.fetchedAt) ?? 0);
+  if (fetchedCompare != 0) return fetchedCompare > 0;
+  return a.sourceOrder.compareTo(b.sourceOrder) > 0;
 }
 
 /// Maps each group's head flat-list index to its position in [groups] —

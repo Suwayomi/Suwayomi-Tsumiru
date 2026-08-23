@@ -26,7 +26,7 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     required this.tail,
     required this.updatePairFor,
     required this.refreshManga,
-    required this.isSelected,
+    required this.isSelectedFor,
     required this.canTapSelect,
     required this.toggleSelect,
   });
@@ -40,7 +40,13 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
   final Future<void> Function() Function(ChapterWithMangaDto) updatePairFor;
 
   final Future<void> Function() refreshManga;
-  final bool isSelected;
+
+  /// Whether a given chapter (head OR any tail member) is selected. Queried
+  /// per-chapter rather than taking one precomputed bool for the whole group:
+  /// the head and each tail chapter have their own id and can be selected
+  /// independently, so a single shared bool would highlight every tail row
+  /// whenever only the head is selected (and vice versa).
+  final bool Function(ChapterWithMangaDto) isSelectedFor;
   final bool canTapSelect;
   final ValueChanged<ChapterWithMangaDto> toggleSelect;
 
@@ -67,7 +73,7 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
               isGroup ? () => isExpanded.value = !isExpanded.value : null,
           updatePair: updatePairFor(head),
           refreshManga: refreshManga,
-          isSelected: isSelected,
+          isSelected: isSelectedFor(head),
           canTapSelect: canTapSelect,
           toggleSelect: toggleSelect,
         ),
@@ -85,7 +91,7 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
                           chapter: chapter,
                           updatePair: updatePairFor(chapter),
                           refreshManga: refreshManga,
-                          isSelected: isSelected,
+                          isSelected: isSelectedFor(chapter),
                           canTapSelect: canTapSelect,
                           toggleSelect: toggleSelect,
                         ),

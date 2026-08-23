@@ -162,7 +162,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       tail: group.tail,
       updatePairFor: (chapter) => () => _updatePair(chapter),
       refreshManga: () => _refreshManga(group.head.mangaId),
-      isSelected: widget.selectedChapters.value.containsKey(group.head.id),
+      isSelectedFor: (chapter) =>
+          widget.selectedChapters.value.containsKey(chapter.id),
       canTapSelect: widget.selectedChapters.value.isNotEmpty,
       toggleSelect: (val) => _toggleSelect(val),
     );

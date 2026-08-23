@@ -121,15 +121,38 @@ void main() {
           unorderedEquals([1, 2, 3, 5]));
     });
 
-    test('group head falls back to the first chapter when all are read', () {
+    test(
+        'group head falls back to the most recently released chapter when '
+        'all are read', () {
       final result = groupUpdatesForDisplay([
         _chapter(id: 1, mangaId: 1, isRead: true),
         _chapter(id: 2, mangaId: 1, isRead: true),
       ]);
 
-      expect(result.single.head.id, 1,
-          reason: 'no unread chapter exists — fall back to the first one');
-      expect(result.single.tail.map((c) => c.id), [2]);
+      expect(result.single.head.id, 2,
+          reason: 'no unread chapter exists — fall back to the most '
+              'recently released one (highest sourceOrder), not list position');
+      expect(result.single.tail.map((c) => c.id), [1]);
+    });
+
+    test(
+        'group head is the most recently released unread chapter even when '
+        'the feed lists newest-first (the real order)', () {
+      // Mirrors UpdatesRepository.getRecentChaptersPage's actual sort
+      // (FETCHED_AT DESC, SOURCE_ORDER DESC): newest chapter first. A
+      // position-based pick (first/last) gets this backwards; only an
+      // explicit fetchedAt/sourceOrder comparison gets it right regardless
+      // of list order.
+      final result = groupUpdatesForDisplay([
+        _chapter(id: 103, mangaId: 1, isRead: false),
+        _chapter(id: 102, mangaId: 1, isRead: false),
+        _chapter(id: 101, mangaId: 1, isRead: false),
+      ]);
+
+      expect(result.single.head.id, 103,
+          reason: 'chapter 103 is the most recently released of the three, '
+              'even though it is FIRST in this newest-first list');
+      expect(result.single.tail.map((c) => c.id), unorderedEquals([101, 102]));
     });
 
     test('among several unread chapters, the latest one is the head', () {
@@ -176,12 +199,28 @@ void main() {
       expect(pickGroupHead(chapters).id, 3);
     });
 
-    test('returns the first chapter when every chapter is read', () {
+    test(
+        'returns the most recently released chapter (not list position) '
+        'when every chapter is read', () {
       final chapters = [
         _chapter(id: 1, mangaId: 1, isRead: true),
         _chapter(id: 2, mangaId: 1, isRead: true),
       ];
-      expect(pickGroupHead(chapters).id, 1);
+      expect(pickGroupHead(chapters).id, 2);
+    });
+
+    test('picks correctly regardless of input list order', () {
+      final newestFirst = [
+        _chapter(id: 3, mangaId: 1, isRead: false),
+        _chapter(id: 2, mangaId: 1, isRead: false),
+        _chapter(id: 1, mangaId: 1, isRead: false),
+      ];
+      final oldestFirst = newestFirst.reversed.toList();
+
+      expect(pickGroupHead(newestFirst).id, 3);
+      expect(pickGroupHead(oldestFirst).id, 3,
+          reason: 'the pick must depend on release recency, not on which '
+              'end of the list happens to hold the newest chapter');
     });
   });
 
