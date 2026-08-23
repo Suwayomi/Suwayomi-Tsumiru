@@ -81,19 +81,22 @@ class ZoomViewController {
     final internalNewScale = 1 / clampedUserScale;
     final double currentInternalScale = state._scale;
 
-    final effectiveHorizontalPixels = currentInternalScale > 1.0
-        ? -(width * currentInternalScale - width) / 2.0
-        : state._horizontalController.position.pixels;
-
-    final effectiveVerticalPixels = state._verticalController.position.pixels;
+    final effectivePixels = _effectivePixels(
+      scrollAxis: widget.scrollAxis,
+      currentInternalScale: currentInternalScale,
+      width: width,
+      height: height,
+      horizontalController: state._horizontalController,
+      verticalController: state._verticalController,
+    );
 
     final newHorizontalPixels = _clampToScrollExtent(
       state._horizontalController,
-      effectiveHorizontalPixels + (currentInternalScale - internalNewScale) * focus.dx,
+      effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
     );
     final newVerticalPixels = _clampToScrollExtent(
       state._verticalController,
-      effectiveVerticalPixels + (currentInternalScale - internalNewScale) * focus.dy,
+      effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
     );
 
     state._updateScale(internalNewScale);
@@ -139,11 +142,16 @@ class ZoomViewController {
         .animate(
             CurvedAnimation(parent: state._masterAnimationController, curve: Curves.easeInOut));
 
-    double currentEffectiveHorizontalPixels = initialInternalScale > 1.0
-        ? -(width * initialInternalScale - width) / 2.0
-        : state._horizontalController.position.pixels;
-
-    double currentEffectiveVerticalPixels = state._verticalController.position.pixels;
+    final initialEffectivePixels = _effectivePixels(
+      scrollAxis: widget.scrollAxis,
+      currentInternalScale: initialInternalScale,
+      width: width,
+      height: height,
+      horizontalController: state._horizontalController,
+      verticalController: state._verticalController,
+    );
+    double currentEffectiveHorizontalPixels = initialEffectivePixels.horizontal;
+    double currentEffectiveVerticalPixels = initialEffectivePixels.vertical;
     bool firstFrame = true;
     bool secondFrame = false;
     void listener() {
@@ -424,13 +432,17 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
     final focus = Offset(size.width / 2, size.height / 2);
     final currentInternalScale = _scale;
     const internalNewScale = 1.0;
-    final effectiveHorizontalPixels = currentInternalScale > 1.0
-        ? -(size.width * currentInternalScale - size.width) / 2.0
-        : _horizontalController.position.pixels;
-    final effectiveVerticalPixels = _verticalController.position.pixels;
-    final newHorizontalPixels = effectiveHorizontalPixels +
+    final effectivePixels = _effectivePixels(
+      scrollAxis: widget.scrollAxis,
+      currentInternalScale: currentInternalScale,
+      width: size.width,
+      height: size.height,
+      horizontalController: _horizontalController,
+      verticalController: _verticalController,
+    );
+    final newHorizontalPixels = effectivePixels.horizontal +
         (currentInternalScale - internalNewScale) * focus.dx;
-    final newVerticalPixels = effectiveVerticalPixels +
+    final newVerticalPixels = effectivePixels.vertical +
         (currentInternalScale - internalNewScale) * focus.dy;
     _updateScale(internalNewScale);
     _verticalController.jumpTo(newVerticalPixels);
@@ -899,4 +911,34 @@ double _clampDouble(double x, double min, double max) {
 double _clampToScrollExtent(ScrollController controller, double value) {
   final position = controller.position;
   return _clampDouble(value, position.minScrollExtent, position.maxScrollExtent);
+}
+
+/// The controller for the axis perpendicular to [scrollAxis] is a local,
+/// synthetic [ScrollController] that sits at pixel 0 until the user pans it,
+/// even though the [FittedBox]/[SizedBox] around it already centers the
+/// enlarged content on that axis once zoomed past 1x — so a fresh zoom step
+/// must treat that axis's "current" offset as the centering offset, not the
+/// stale raw scroll position. The controller for [scrollAxis] itself is the
+/// real scrollable (e.g. the reader's page/strip position) and must always
+/// use its actual pixels: overriding it with the centering formula would
+/// discard wherever the user had actually scrolled to.
+({double horizontal, double vertical}) _effectivePixels({
+  required Axis scrollAxis,
+  required double currentInternalScale,
+  required double width,
+  required double height,
+  required ScrollController horizontalController,
+  required ScrollController verticalController,
+}) {
+  if (scrollAxis == Axis.vertical) {
+    final horizontal = currentInternalScale > 1.0
+        ? -(width * currentInternalScale - width) / 2.0
+        : horizontalController.position.pixels;
+    return (horizontal: horizontal, vertical: verticalController.position.pixels);
+  } else {
+    final vertical = currentInternalScale > 1.0
+        ? -(height * currentInternalScale - height) / 2.0
+        : verticalController.position.pixels;
+    return (horizontal: horizontalController.position.pixels, vertical: vertical);
+  }
 }

@@ -396,6 +396,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isZoomOutDisabled = ref
         .watch(longStripDisableZoomOutProvider)
         .ifNull();
+    // readerIsZoomedInProvider is reset on mount/unmount so a leftover `true`
+    // from a previous reader session (e.g. the user closed it mid-zoom)
+    // can't wrongly disable DirectionalSwipeGestureHandler's chapter-swipe
+    // recognizers in a fresh session that hasn't zoomed yet.
+    useEffect(() {
+      // Captured once, up front: `ref` is unsafe to touch from a hook's
+      // dispose callback (the widget is already unmounting by then), so the
+      // notifier itself — not `ref` — has to be what the cleanup closure
+      // holds onto.
+      final notifier = ref.read(readerIsZoomedInProvider.notifier);
+      notifier.state = false;
+      return () => notifier.state = false;
+    }, const []);
     // Auto-crop borders. Render-only: the crop
     // provider's async decode is handled by the imageBuilder's frameBuilder
     // below, which still reserves placeholderHeight and measures the cropped
@@ -1332,10 +1345,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               controller: zoomScrollController,
               scrollAxis: scrollDirection,
               maxScale: InfinityContinuousConfig.maxZoomScale,
-              // Webtoon min zoom-out rate is 0.5 unless disabled.
+              // Long-strip min zoom-out rate is 0.5 unless disabled.
               minScale: isZoomOutDisabled ? 1 : 0.5,
               pinchEnabled: isPinchToZoomEnabled,
               doubleTapToZoom: isDoubleTapZoomEnabled,
+              onScaleChanged: (scale) {
+                final notifier = ref.read(readerIsZoomedInProvider.notifier);
+                final zoomed = scale > 1.01;
+                if (notifier.state != zoomed) notifier.state = zoomed;
+              },
               child: child,
             )
           : null,

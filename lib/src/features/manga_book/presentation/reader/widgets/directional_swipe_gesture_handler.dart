@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
@@ -13,9 +13,10 @@ import '../../../../../widgets/zoom/single_touch_drag_recognizers.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../utils/last_page_swipe_utils.dart';
+import 'reader_gesture_state.dart';
 
 /// Handles chapter-boundary swipes for reader modes that do not own gestures.
-class DirectionalSwipeGestureHandler extends HookWidget {
+class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   const DirectionalSwipeGestureHandler({
     super.key,
     required this.child,
@@ -52,7 +53,7 @@ class DirectionalSwipeGestureHandler extends HookWidget {
   final PageController? pageController;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // In vertical (webtoon / continuous / vertical-paged) modes the SingleTouch*
     // swipe recognizers are dead no-ops — their handlers early-return for
     // Axis.vertical (see :158 and :328), because chapter changes there are
@@ -69,11 +70,24 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     if (scrollDirection == Axis.vertical) {
       return _wrapWithTapAndLongPress(child);
     }
+    // Horizontal continuous mode has the same conflict while the reader is
+    // zoomed in: a single-finger drag then means "pan around the zoomed
+    // page", not "swipe to change page/chapter", but these recognizers would
+    // still enter the arena for it and can win it away from ZoomView exactly
+    // like the vertical case above. Unlike vertical, horizontal genuinely
+    // needs them at 1x, so they can't be dropped outright — each recognizer
+    // instead self-rejects new pointers while isZoomedIn() is true (mirrors
+    // the multi-touch self-rejection they already do), which changes their
+    // runtime behaviour without ever changing the widget tree shape — doing
+    // that structurally (e.g. conditionally omitting the RawGestureDetector)
+    // would tear down and remount the whole page list every time the zoom
+    // level crosses 1x, visibly jolting the reading position.
+    bool isZoomedIn() => ref.read(readerIsZoomedInProvider);
     final bool useAdvancedGestures =
         lastPageSwipeEnabled && !readerSwipeChapterToggle;
     return useAdvancedGestures
-        ? _buildBoundarySwipeHandler(context)
-        : _buildChapterSwipeHandler(context);
+        ? _buildBoundarySwipeHandler(context, isZoomedIn)
+        : _buildChapterSwipeHandler(context, isZoomedIn);
   }
 
   /// Tap + long-press wrapper shared by every mode. These don't fight
@@ -87,14 +101,21 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     );
   }
 
-  Widget _buildBoundarySwipeHandler(BuildContext context) {
+  Widget _buildBoundarySwipeHandler(
+    BuildContext context,
+    bool Function() isZoomedIn,
+  ) {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
         SingleTouchPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<
             SingleTouchPanGestureRecognizer>(
-          () => SingleTouchPanGestureRecognizer(debugOwner: this),
+          () => SingleTouchPanGestureRecognizer(
+            debugOwner: this,
+            isZoomedIn: isZoomedIn,
+          ),
           (recognizer) {
+            recognizer.isZoomedIn = isZoomedIn;
             recognizer.onEnd = (details) {
               final swipeDirection =
                   LastPageSwipeUtils.detectSwipeDirection(details);
@@ -112,15 +133,22 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     );
   }
 
-  Widget _buildChapterSwipeHandler(BuildContext context) {
+  Widget _buildChapterSwipeHandler(
+    BuildContext context,
+    bool Function() isZoomedIn,
+  ) {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
         SingleTouchHorizontalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<
                 SingleTouchHorizontalDragGestureRecognizer>(
-          () => SingleTouchHorizontalDragGestureRecognizer(debugOwner: this),
+          () => SingleTouchHorizontalDragGestureRecognizer(
+            debugOwner: this,
+            isZoomedIn: isZoomedIn,
+          ),
           (recognizer) {
+            recognizer.isZoomedIn = isZoomedIn;
             recognizer.onEnd = (details) {
               _handleSwipeGesture(
                 context: context,
@@ -133,8 +161,12 @@ class DirectionalSwipeGestureHandler extends HookWidget {
         SingleTouchVerticalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<
                 SingleTouchVerticalDragGestureRecognizer>(
-          () => SingleTouchVerticalDragGestureRecognizer(debugOwner: this),
+          () => SingleTouchVerticalDragGestureRecognizer(
+            debugOwner: this,
+            isZoomedIn: isZoomedIn,
+          ),
           (recognizer) {
+            recognizer.isZoomedIn = isZoomedIn;
             recognizer.onEnd = (details) {
               _handleSwipeGesture(
                 context: context,

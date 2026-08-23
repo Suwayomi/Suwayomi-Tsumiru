@@ -27,6 +27,7 @@ class ReaderZoomView extends HookWidget {
     required this.minScale,
     required this.pinchEnabled,
     required this.doubleTapToZoom,
+    this.onScaleChanged,
     required this.child,
   });
 
@@ -36,6 +37,11 @@ class ReaderZoomView extends HookWidget {
   final double minScale;
   final bool pinchEnabled;
   final bool doubleTapToZoom;
+
+  /// Invoked with the live user-facing scale (1.0 = unzoomed) any time it
+  /// changes, e.g. so callers can yield competing single-finger gestures
+  /// (chapter-swipe) while the reader is zoomed in.
+  final ValueChanged<double>? onScaleChanged;
   final Widget child;
 
   @override
@@ -63,6 +69,7 @@ class ReaderZoomView extends HookWidget {
       minScale: minScale,
       pinchEnabled: pinchEnabled,
       onDoubleTap: doubleTapToZoom ? onDoubleTap : null,
+      onScaleChanged: onScaleChanged,
       // Required so the scale recognizer wins the gesture arena against the
       // underlying scrollable's pan recognizer (closes #256).
       forceHoldOnPointerDown: true,
