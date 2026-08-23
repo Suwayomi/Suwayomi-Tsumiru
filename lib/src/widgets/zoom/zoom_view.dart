@@ -90,13 +90,21 @@ class ZoomViewController {
       verticalController: state._verticalController,
     );
 
-    final newHorizontalPixels = _clampToScrollExtent(
-      state._horizontalController,
-      effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
+    final newHorizontalPixels = _clampScrollTarget(
+      axis: Axis.horizontal,
+      scrollAxis: widget.scrollAxis,
+      controller: state._horizontalController,
+      rawCrossDimension: width,
+      newInternalScale: internalNewScale,
+      value: effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
     );
-    final newVerticalPixels = _clampToScrollExtent(
-      state._verticalController,
-      effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
+    final newVerticalPixels = _clampScrollTarget(
+      axis: Axis.vertical,
+      scrollAxis: widget.scrollAxis,
+      controller: state._verticalController,
+      rawCrossDimension: height,
+      newInternalScale: internalNewScale,
+      value: effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
     );
 
     state._updateScale(internalNewScale);
@@ -158,14 +166,22 @@ class ZoomViewController {
       final double newAnimatedInternalScale = scaleAnimation.value;
       final double previousAnimatedInternalScale = state._scale;
 
-      currentEffectiveHorizontalPixels = _clampToScrollExtent(
-        state._horizontalController,
-        currentEffectiveHorizontalPixels +
+      currentEffectiveHorizontalPixels = _clampScrollTarget(
+        axis: Axis.horizontal,
+        scrollAxis: widget.scrollAxis,
+        controller: state._horizontalController,
+        rawCrossDimension: width,
+        newInternalScale: newAnimatedInternalScale,
+        value: currentEffectiveHorizontalPixels +
             (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dx,
       );
-      currentEffectiveVerticalPixels = _clampToScrollExtent(
-        state._verticalController,
-        currentEffectiveVerticalPixels +
+      currentEffectiveVerticalPixels = _clampScrollTarget(
+        axis: Axis.vertical,
+        scrollAxis: widget.scrollAxis,
+        controller: state._verticalController,
+        rawCrossDimension: height,
+        newInternalScale: newAnimatedInternalScale,
+        value: currentEffectiveVerticalPixels +
             (previousAnimatedInternalScale - newAnimatedInternalScale) * focus.dy,
       );
       state._updateScale(newAnimatedInternalScale);
@@ -440,10 +456,22 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
       horizontalController: _horizontalController,
       verticalController: _verticalController,
     );
-    final newHorizontalPixels = effectivePixels.horizontal +
-        (currentInternalScale - internalNewScale) * focus.dx;
-    final newVerticalPixels = effectivePixels.vertical +
-        (currentInternalScale - internalNewScale) * focus.dy;
+    final newHorizontalPixels = _clampScrollTarget(
+      axis: Axis.horizontal,
+      scrollAxis: widget.scrollAxis,
+      controller: _horizontalController,
+      rawCrossDimension: size.width,
+      newInternalScale: internalNewScale,
+      value: effectivePixels.horizontal + (currentInternalScale - internalNewScale) * focus.dx,
+    );
+    final newVerticalPixels = _clampScrollTarget(
+      axis: Axis.vertical,
+      scrollAxis: widget.scrollAxis,
+      controller: _verticalController,
+      rawCrossDimension: size.height,
+      newInternalScale: internalNewScale,
+      value: effectivePixels.vertical + (currentInternalScale - internalNewScale) * focus.dy,
+    );
     _updateScale(internalNewScale);
     _verticalController.jumpTo(newVerticalPixels);
     _horizontalController.jumpTo(newHorizontalPixels);
@@ -623,14 +651,22 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     _minInternalScale,
                     _maxInternalScale,
                   );
-                  final verticalOffset = _clampToScrollExtent(
-                    _verticalController,
-                    _verticalController.position.pixels +
+                  final verticalOffset = _clampScrollTarget(
+                    axis: Axis.vertical,
+                    scrollAxis: widget.scrollAxis,
+                    controller: _verticalController,
+                    rawCrossDimension: height,
+                    newInternalScale: newScale,
+                    value: _verticalController.position.pixels +
                         (_scale - newScale) * details.localFocalPoint.dy,
                   );
-                  final horizontalOffset = _clampToScrollExtent(
-                    _horizontalController,
-                    _horizontalController.position.pixels +
+                  final horizontalOffset = _clampScrollTarget(
+                    axis: Axis.horizontal,
+                    scrollAxis: widget.scrollAxis,
+                    controller: _horizontalController,
+                    rawCrossDimension: width,
+                    newInternalScale: newScale,
+                    value: _horizontalController.position.pixels +
                         (_scale - newScale) * details.localFocalPoint.dx,
                   );
 
@@ -682,14 +718,22 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   // beyond the available range and let Flutter's own,
                   // unrelated-to-the-focal-point correction snap it back on
                   // a later frame (#372).
-                  final verticalOffset = _clampToScrollExtent(
-                    _verticalController,
-                    _verticalController.position.pixels +
+                  final verticalOffset = _clampScrollTarget(
+                    axis: Axis.vertical,
+                    scrollAxis: widget.scrollAxis,
+                    controller: _verticalController,
+                    rawCrossDimension: height,
+                    newInternalScale: newScale,
+                    value: _verticalController.position.pixels +
                         (_scale - newScale) * details.localFocalPoint.dy,
                   );
-                  final horizontalOffset = _clampToScrollExtent(
-                    _horizontalController,
-                    _horizontalController.position.pixels +
+                  final horizontalOffset = _clampScrollTarget(
+                    axis: Axis.horizontal,
+                    scrollAxis: widget.scrollAxis,
+                    controller: _horizontalController,
+                    rawCrossDimension: width,
+                    newInternalScale: newScale,
+                    value: _horizontalController.position.pixels +
                         (_scale - newScale) * details.localFocalPoint.dx,
                   );
                   //This is the main logic to actually perform the scaling
@@ -911,6 +955,52 @@ double _clampDouble(double x, double min, double max) {
 double _clampToScrollExtent(ScrollController controller, double value) {
   final position = controller.position;
   return _clampDouble(value, position.minScrollExtent, position.maxScrollExtent);
+}
+
+/// Clamps a computed scroll target for the controller bound to [axis]
+/// (Axis.horizontal or Axis.vertical — i.e. which physical direction, not
+/// which reader mode) to what will actually be scrollable once
+/// [newInternalScale] takes effect.
+///
+/// The MAIN axis (the one equal to [scrollAxis]) keeps using
+/// [_clampToScrollExtent]: its scroll range comes from `widget.child`'s own
+/// content, which ZoomView has no way to compute analytically.
+///
+/// The CROSS axis (perpendicular to [scrollAxis]) is different: it's
+/// ZoomView's own synthetic pan, and its scrollable range is pure geometry —
+/// [rawCrossDimension] (the fixed, unscaled viewport size on that axis)
+/// minus the viewport that axis actually gets once zoomed
+/// (`rawCrossDimension * newInternalScale`; see `_effectivePixels`'s doc for
+/// why that's the viewport size). Every caller here computes this target
+/// and calls `_updateScale` practically back-to-back, and `_updateScale`'s
+/// `setState()` does not re-layout synchronously — so reading the cross
+/// axis's `ScrollPosition.maxScrollExtent` at this point still reflects the
+/// PREVIOUS frame's scale, not the one about to apply. That staleness is
+/// harmless for the main axis, whose range is normally far larger than one
+/// animation step could cross, but the cross axis starts at EXACTLY zero
+/// range at 1x and must grow from there the instant a zoom-in begins.
+/// Clamping that first frame's target against the stale (zero) extent
+/// stalls it at zero — and because every caller here tracks a running
+/// position across frames rather than recomputing an absolute one each
+/// time, every later frame's delta then compounds on that wrong baseline
+/// instead of the right one, producing a large, persistent drift on
+/// whichever screen axis ISN'T scrollAxis (reported: pinch/double-tap zoom
+/// not staying anchored to the touched point, worse in horizontal mode).
+double _clampScrollTarget({
+  required Axis axis,
+  required Axis scrollAxis,
+  required ScrollController controller,
+  required double rawCrossDimension,
+  required double newInternalScale,
+  required double value,
+}) {
+  if (axis == scrollAxis) {
+    return _clampToScrollExtent(controller, value);
+  }
+  final maxExtent = newInternalScale >= 1.0
+      ? 0.0
+      : rawCrossDimension * (1.0 - newInternalScale);
+  return _clampDouble(value, 0.0, maxExtent);
 }
 
 /// The controller for the axis perpendicular to [scrollAxis] is a local,
