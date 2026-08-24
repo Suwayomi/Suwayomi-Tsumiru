@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import '../../../utils/crash/diagnostics.dart';
 import 'offline_database.dart';
 import 'reconcile_logic.dart';
 import 'reconcile_types.dart';
@@ -12,6 +13,24 @@ import 'reconcile_types.dart';
 /// real download sizes are known (cold start). Refined to real averages once
 /// chapters are on device.
 const _estimatedBytesPerPage = 256 * 1024;
+
+/// Cap on how many times the reconciler will ask the server to fetch a
+/// chapter it has never managed to download — persisted in
+/// [OfflineChapters.serverFetchAttempts], not in-memory.
+///
+/// Unlike the local-download hop (which persists `OfflineDeviceState.error`
+/// after one failure), asking the SERVER to fetch a chapter from its source
+/// had no equivalent persisted "give up" signal — a chapter whose source is
+/// gone/renumbered upstream just sits with `serverIsDownloaded == false`
+/// forever. Without this cap, every single reconcile pass (app launch,
+/// library sync, every download-queue-drain callback) re-issues a real
+/// enqueue mutation for it, indefinitely — exactly the "series stuck wanting
+/// to download chapters that don't exist" resource drain this guards against.
+///
+/// Persisted rather than in-memory: an in-memory counter resets every app
+/// restart, so a chapter whose source is truly gone would get a fresh budget
+/// every session and never actually reach the cap that stops it.
+const _maxServerFetchAttempts = 5;
 
 /// Orchestrates a single reconcile pass for one manga: reads the offline
 /// catalog, computes which chapters to download vs evict, invokes the injected
@@ -165,9 +184,27 @@ class OfflineReconciler {
       if (!c.serverIsDownloaded) {
         if (onServerDownload != null &&
             c.deviceState != OfflineDeviceState.downloaded) {
-          toServerDownload.add(id);
+          if (c.serverFetchAttempts >= _maxServerFetchAttempts) {
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-reconcile: '
+              'giving-up-on-server-fetch mangaId=$mangaId chapterId=$id '
+              'name="${c.name}" index=${c.chapterIndex} '
+              'attempts=${c.serverFetchAttempts}/$_maxServerFetchAttempts '
+              'serverIsDownloaded=false — excluded from further '
+              'server-download requests\n',
+            );
+          } else {
+            toServerDownload.add(id);
+          }
         }
         continue;
+      }
+      // Server now has it: any earlier fetch-attempt budget is moot — clear
+      // it lazily so a later, unrelated failure (e.g. after a manual re-fetch)
+      // starts fresh instead of inheriting attempts spent on a since-resolved
+      // problem.
+      if (c.serverFetchAttempts > 0) {
+        await db.resetServerFetchAttempts(id);
       }
       // Already on device — nothing to do.
       if (c.deviceState == OfflineDeviceState.downloaded) continue;
@@ -203,6 +240,21 @@ class OfflineReconciler {
       await onDownload(id);
     }
     if (onServerDownload != null && toServerDownload.isNotEmpty) {
+      for (final id in toServerDownload) {
+        await db.incrementServerFetchAttempts(id);
+        // A trail of every attempt, not just the final give-up — so a session
+        // that never reaches the cap (or one where the enqueue mutation itself
+        // silently no-ops server-side) is still visible, not only the ones
+        // that exhaust the budget.
+        final c = byId[id];
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-reconcile: '
+          'asking-server-to-fetch mangaId=$mangaId chapterId=$id '
+          'name="${c?.name}" index=${c?.chapterIndex} '
+          'attempt=${(c?.serverFetchAttempts ?? 0) + 1}/'
+          '$_maxServerFetchAttempts\n',
+        );
+      }
       await onServerDownload!(toServerDownload);
     }
 

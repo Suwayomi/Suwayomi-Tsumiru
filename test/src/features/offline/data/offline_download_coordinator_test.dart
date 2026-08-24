@@ -65,7 +65,7 @@ void main() {
       refreshAuth: () async => refreshOk,
       fetchPage: (url) async {
         if (onFetch != null) await onFetch();
-        if (pageOffline) throw const PageOfflineException();
+        if (pageOffline) throw const PageOfflineException('test-offline');
         if (auth401) throw const PageAuthException();
         if (fail) throw Exception('boom');
         return (bytes: [1, 2, 3], ext: 'jpg');

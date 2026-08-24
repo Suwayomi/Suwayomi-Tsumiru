@@ -63,4 +63,48 @@ void main() {
     expect(asked, [1],
         reason: 'setting a keep rule must still top up the server');
   });
+
+  test(
+    'stops asking the server for a chapter that never resolves, after '
+    'a bounded number of attempts',
+    () async {
+      // Regression: a chapter the server can never actually fetch (source
+      // gone/renumbered upstream) used to be re-enqueued on every single
+      // reconcile pass forever — every app launch, every library sync, every
+      // download-queue-drain callback — hammering the server for nothing.
+      //
+      // Persisted, not in-memory: an in-memory counter would reset every app
+      // restart and never actually reach the cap, which is exactly what was
+      // observed in the field — attempts stayed frozen at 1 across a whole
+      // test session that reopened the app repeatedly.
+      await seed();
+      const maxAttempts = 5; // mirrors offline_reconciler.dart's own cap
+      var totalAsks = 0;
+      Future<void> reconcileOnce() => OfflineReconciler(
+            db: db,
+            nets: SafetyNetConfig.off,
+            onDownload: (_) async {},
+            onEvict: (_) async {},
+            now: DateTime(2026, 3, 1),
+            onServerDownload: (ids) async => totalAsks += ids.length,
+          ).reconcileManga(1);
+
+      // serverIsDownloaded never flips true in this fixture (simulating a
+      // source that can never serve it), so every pass would re-ask forever
+      // without the cap.
+      for (var i = 0; i < maxAttempts; i++) {
+        await reconcileOnce();
+      }
+      expect(totalAsks, maxAttempts);
+      final persisted = await db.chapterById(1);
+      expect(persisted?.serverFetchAttempts, maxAttempts,
+          reason: 'the count must survive being read back from a fresh '
+              'OfflineReconciler instance, the way a new app session would');
+
+      // One more pass, well past the cap: must NOT ask again.
+      await reconcileOnce();
+      expect(totalAsks, maxAttempts,
+          reason: 'exhausted chapters must stop generating server traffic');
+    },
+  );
 }

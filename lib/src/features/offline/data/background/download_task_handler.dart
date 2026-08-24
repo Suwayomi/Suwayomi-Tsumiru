@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -29,6 +30,16 @@ import 'background_work_order.dart';
 void backgroundDownloadCallback() {
   FlutterForegroundTask.setTaskHandler(DownloadTaskHandler());
 }
+
+/// Bound on every HTTP call this isolate makes. None of `package:http`'s
+/// calls time out on their own — a proxy/tunnel in front of the server that
+/// accepts a connection but never replies would otherwise hang the request
+/// forever: no exception, no gateway status, nothing to catch — the drain
+/// loop just sits on one `await` permanently, which reads on-screen as a
+/// notification and progress spinner frozen at whatever count they were at
+/// when it happened, with nothing at all reaching the crash log to explain
+/// why (every error-handling path here is downstream of something throwing).
+const _httpTimeout = Duration(seconds: 30);
 
 /// Storage key under which the main isolate stashes the JSON-encoded
 /// [BackgroundWorkOrder] for the worker to pick up in [DownloadTaskHandler.onStart].
@@ -109,6 +120,19 @@ class DownloadTaskHandler extends TaskHandler {
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
       // Nothing to do — self-stop so we don't sit as a zombie notification.
+      // Nothing else reports this: if Android itself restarts this service
+      // (TaskStarter.system — after killing it for resources, a common OS
+      // behavior for a foreground service under memory/battery pressure) and
+      // the work order was already wiped by the previous run's own stop
+      // handshake, this fires immediately on every restart with nothing to
+      // do — a start/instant-stop cycle entirely outside ensureServiceRunning,
+      // driven by the OS's own restart policy rather than anything in this
+      // app's own retry/backoff logic, which would explain a notification
+      // flashing far faster than any network timeout could produce.
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'noWorkOrder',
+        'starter': starter.name,
+      });
       await FlutterForegroundTask.stopService();
       return;
     }
@@ -141,6 +165,13 @@ class DownloadTaskHandler extends TaskHandler {
     }
     if (!acquired) {
       // Still contended — leave the queue in drift; the next start retries.
+      // Nothing else reports this: without it, a lock held by a wedged other
+      // party (e.g. the WorkManager catch-up executor stuck on a hung request)
+      // makes this service start, spend ~30s failing to acquire, and stop —
+      // over and over, every time something re-triggers a start — showing as
+      // the notification repeatedly appearing and disappearing with no
+      // download ever actually attempted and nothing explaining why.
+      FlutterForegroundTask.sendDataToMain({'kind': 'lockFailed'});
       await FlutterForegroundTask.stopService();
       return;
     }
@@ -259,7 +290,18 @@ class DownloadTaskHandler extends TaskHandler {
       // straight back into the same dead server. (A park that happens mid-
       // download says so through its `offline` chapterDone instead — sending
       // both would let a stale one park a session that had already recovered.)
-      FlutterForegroundTask.sendDataToMain({'kind': 'parked'});
+      //
+      // chapterId/mangaId ride along so the main isolate can tell "this one
+      // specific chapter keeps parking" (its own source is gone/broken) apart
+      // from "the server is actually down" (parks would spread across whatever
+      // chapter happens to be first each restart) — without this, the main
+      // isolate had no way to attribute a park to a chapter at all.
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'parked',
+        'chapterId': chapterId,
+        'mangaId': mangaId,
+        'reason': _lastNetworkErrorReason,
+      });
       return true;
     }
     if (urls.isEmpty) {
@@ -342,7 +384,7 @@ class DownloadTaskHandler extends TaskHandler {
       );
       _done++;
     }
-    _afterChapter(chapterId, status);
+    _afterChapter(chapterId, status, offlineReason: outcome.offlineReason);
     // Network died mid-download: the chapter is recorded `offline` (resumable),
     // so park rather than churn every remaining chapter through the same drop.
     return status == 'offline';
@@ -375,12 +417,14 @@ class DownloadTaskHandler extends TaskHandler {
   }
 
   /// Notification + main-isolate notification after each chapter settles.
-  void _afterChapter(int chapterId, String? status) {
+  void _afterChapter(int chapterId, String? status, {String? offlineReason}) {
     FlutterForegroundTask.sendDataToMain({
       'kind': 'chapterDone',
       'chapterId': chapterId,
+      'mangaId': _mangaOf[chapterId],
       'gen': _genOf[chapterId] ?? 0,
       'status': status,
+      'reason': offlineReason,
     });
     // The icon rides every update — the plugin persists the latest content
     // wholesale, so omitting it here could reset the icon to the fallback.
@@ -424,6 +468,11 @@ class DownloadTaskHandler extends TaskHandler {
   /// chapter instead of erroring and poisoning the queue.
   static const Object _gqlNetworkError = Object();
 
+  /// Short technical detail behind the most recent [_gqlNetworkError] — set
+  /// right before returning it, read back by [_resolvePageUrls] so the
+  /// 'parked' event can say WHY, not just that it happened.
+  String? _lastNetworkErrorReason;
+
   /// Returns the page-URL list on success, [_gqlAuthError] on 401/403, or an
   /// empty list on any other failure.
   Future<Object> _postChapterPages(int chapterId, String? accessToken) async {
@@ -444,16 +493,17 @@ class DownloadTaskHandler extends TaskHandler {
       },
     });
     try {
-      final res = await _http.post(
-        Uri.parse(endpoint),
-        headers: headers,
-        body: body,
-      );
+      final res = await _http
+          .post(Uri.parse(endpoint), headers: headers, body: body)
+          .timeout(_httpTimeout);
       if (res.statusCode == 401 || res.statusCode == 403) return _gqlAuthError;
       // A proxy answering for a dead origin is the server being unreachable,
       // not the chapter being broken. Without this the queue marches through a
       // brief outage condemning every chapter in it.
-      if (isGatewayStatus(res.statusCode)) return _gqlNetworkError;
+      if (isGatewayStatus(res.statusCode)) {
+        _lastNetworkErrorReason = 'HTTP ${res.statusCode} on page-list fetch';
+        return _gqlNetworkError;
+      }
       if (res.statusCode != 200) return const <String>[];
       final decoded = jsonDecode(res.body) as Map<String, Object?>;
       final data = decoded['data'] as Map<String, Object?>?;
@@ -461,7 +511,11 @@ class DownloadTaskHandler extends TaskHandler {
       final pages = fetch?['pages'];
       if (pages is List) return pages.cast<String>();
       return const <String>[];
-    } on SocketException {
+    } on SocketException catch (e) {
+      _lastNetworkErrorReason = 'SocketException: $e';
+      return _gqlNetworkError; // transient — park, don't error
+    } on TimeoutException {
+      _lastNetworkErrorReason = 'timed out after $_httpTimeout on page-list fetch';
       return _gqlNetworkError; // transient — park, don't error
     } catch (_) {
       return const <String>[];
@@ -496,17 +550,23 @@ class DownloadTaskHandler extends TaskHandler {
       final (url, headers) = _authedPageRequest(pageUrl);
       final http.Response res;
       try {
-        res = await _http.get(Uri.parse(url), headers: headers);
-      } on SocketException {
+        res = await _http
+            .get(Uri.parse(url), headers: headers)
+            .timeout(_httpTimeout);
+      } on SocketException catch (e) {
         // Device offline (connection refused / unreachable host / DNS).
-        throw const PageOfflineException();
+        throw PageOfflineException('SocketException: $e');
+      } on TimeoutException {
+        throw PageOfflineException('timed out after $_httpTimeout on page fetch');
       }
       if (res.statusCode == 401 || res.statusCode == 403) {
         throw const PageAuthException();
       }
       // Same as the page-list POST: a gateway speaking for a dead origin leaves
       // the chapter resumable rather than failing it.
-      if (isGatewayStatus(res.statusCode)) throw const PageOfflineException();
+      if (isGatewayStatus(res.statusCode)) {
+        throw PageOfflineException('HTTP ${res.statusCode} on page fetch');
+      }
       if (res.statusCode != 200) {
         throw Exception('page fetch failed ($pageUrl): ${res.statusCode}');
       }
@@ -596,11 +656,13 @@ class DownloadTaskHandler extends TaskHandler {
         },
       });
       try {
-        final res = await _http.post(
-          Uri.parse(endpoint),
-          headers: const {'Content-Type': 'application/json'},
-          body: body,
-        );
+        final res = await _http
+            .post(
+              Uri.parse(endpoint),
+              headers: const {'Content-Type': 'application/json'},
+              body: body,
+            )
+            .timeout(_httpTimeout);
         if (res.statusCode != 200) return null;
         final decoded = jsonDecode(res.body) as Map<String, Object?>;
         final data = decoded['data'] as Map<String, Object?>?;

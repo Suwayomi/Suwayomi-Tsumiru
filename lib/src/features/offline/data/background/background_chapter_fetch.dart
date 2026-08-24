@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,6 +21,17 @@ import 'background_token_record.dart';
 /// close a connection per call, so a catch-up batch paid a fresh TLS handshake
 /// for every page it fetched. Lives as long as the isolate does.
 final http.Client backgroundHttpClient = http.Client();
+
+/// Bound on every call through this file. None of `package:http`'s calls time
+/// out on their own, and this executor holds the shared `.bg_lock` file for
+/// its whole run — a proxy/tunnel that accepts a connection but never replies
+/// would hang a request forever, which means the lock is NEVER released, which
+/// means the foreground-service worker can never acquire it either: it starts,
+/// fails to get the lock, stops, and whatever re-triggers it starts the same
+/// failed attempt again — the notification flashing on and off with nothing
+/// ever reaching a chapter, and nothing logged, because nothing here ever
+/// throws to report through.
+const _httpTimeout = Duration(seconds: 30);
 
 /// Server coordinates for the isolate-side fetch paths — the work-order fields
 /// the FGS uses, shared with the WorkManager catch-up executor.
@@ -88,11 +100,13 @@ Future<Object?> postBackgroundGraphql({
   final headers = <String, String>{'Content-Type': 'application/json'};
   applyBackgroundAuthHeaders(headers, record, accessToken: accessToken);
   try {
-    final res = await backgroundHttpClient.post(
-      Uri.parse(target.graphql),
-      headers: headers,
-      body: jsonEncode({'query': query, 'variables': variables}),
-    );
+    final res = await backgroundHttpClient
+        .post(
+          Uri.parse(target.graphql),
+          headers: headers,
+          body: jsonEncode({'query': query, 'variables': variables}),
+        )
+        .timeout(_httpTimeout);
     if (res.statusCode == 401 || res.statusCode == 403) return gqlAuthError;
     // A proxy answering for a dead origin is an outage, not a bad request —
     // the same rule the foreground worker and the app itself use.
@@ -101,6 +115,8 @@ Future<Object?> postBackgroundGraphql({
     final decoded = jsonDecode(res.body) as Map<String, Object?>;
     return decoded['data'];
   } on SocketException {
+    return gqlNetworkError;
+  } on TimeoutException {
     return gqlNetworkError;
   } catch (_) {
     return null;
@@ -177,17 +193,20 @@ ChapterDownloadEngine buildBackgroundEngine({
     }
     final http.Response res;
     try {
-      res = await backgroundHttpClient.get(
-        Uri.parse(fetchUrl),
-        headers: headers,
-      );
-    } on SocketException {
-      throw const PageOfflineException();
+      res = await backgroundHttpClient
+          .get(Uri.parse(fetchUrl), headers: headers)
+          .timeout(_httpTimeout);
+    } on SocketException catch (e) {
+      throw PageOfflineException('SocketException: $e');
+    } on TimeoutException {
+      throw PageOfflineException('timed out after $_httpTimeout on page fetch');
     }
     if (res.statusCode == 401 || res.statusCode == 403) {
       throw const PageAuthException();
     }
-    if (isGatewayStatus(res.statusCode)) throw const PageOfflineException();
+    if (isGatewayStatus(res.statusCode)) {
+      throw PageOfflineException('HTTP ${res.statusCode} on page fetch');
+    }
     if (res.statusCode != 200) {
       throw Exception('page fetch failed ($pageUrl): ${res.statusCode}');
     }

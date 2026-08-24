@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -1116,14 +1117,17 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   try {
     res = await ref
         .read(offlinePageClientProvider)
-        .get(Uri.parse(fetchUrl), headers: headers);
-  } on SocketException {
+        .get(Uri.parse(fetchUrl), headers: headers)
+        .timeout(const Duration(seconds: 30));
+  } on SocketException catch (e) {
     // Dead network is not a page failure: park resumable (Android worker
     // parity) instead of burning retries into a terminal error that poisons
     // the rest of the queue chapter by chapter.
-    throw const PageOfflineException();
-  } on http.ClientException {
-    throw const PageOfflineException();
+    throw PageOfflineException('SocketException: $e');
+  } on http.ClientException catch (e) {
+    throw PageOfflineException('ClientException: $e');
+  } on TimeoutException {
+    throw const PageOfflineException('timed out after 30s on page fetch');
   }
   if (res.statusCode == 401 || res.statusCode == 403) {
     throw const PageAuthException();

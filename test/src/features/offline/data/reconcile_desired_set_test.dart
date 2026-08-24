@@ -12,6 +12,7 @@ OfflineChapter ch(int id, int idx, {bool read = false, bool pinned = false}) =>
       syncedIsRead: false,
       updatedAt: DateTime(2026),
       downloadGeneration: 0,
+      serverFetchAttempts: 0,
     );
 
 void main() {

@@ -155,6 +155,18 @@ class OfflineChapters extends Table {
   IntColumn get downloadGeneration =>
       integer().withDefault(const Constant(0))();
 
+  /// How many times the foreground reconciler has asked the server to fetch
+  /// this chapter from its source without serverIsDownloaded ever flipping
+  /// true. Persisted (not in-memory) so a chapter whose source is gone for
+  /// good doesn't get a fresh budget every app restart — without that, a
+  /// user testing across several sessions would see it retried forever, one
+  /// or two attempts at a time, never actually reaching the cap that marks
+  /// it `error` and stops the request. Reset to 0 once serverIsDownloaded
+  /// flips true (a synced-down chapter that succeeded has nothing left to
+  /// give up on).
+  IntColumn get serverFetchAttempts =>
+      integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -204,7 +216,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -401,6 +413,13 @@ class OfflineDatabase extends _$OfflineDatabase {
       }
       if (from < 15 && !await _hasIndex('idx_offline_chapter_device_state')) {
         await m.createIndex(idxOfflineChapterDeviceState);
+      }
+      if (from < 16) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.serverFetchAttempts,
+        );
       }
     },
   );
@@ -727,6 +746,26 @@ class OfflineDatabase extends _$OfflineDatabase {
           : Value(downloadedAt),
     ),
   );
+
+  /// Bumps [OfflineChapters.serverFetchAttempts] by one — called each time the
+  /// reconciler actually asks the server to fetch a chapter it has never
+  /// managed to download, so the count survives an app restart instead of
+  /// resetting to a fresh budget every session.
+  Future<void> incrementServerFetchAttempts(int chapterId) => customUpdate(
+    'UPDATE offline_chapters SET server_fetch_attempts = server_fetch_attempts + 1 '
+    'WHERE id = ?',
+    variables: [Variable<int>(chapterId)],
+    updates: {offlineChapters},
+  );
+
+  /// Clears [OfflineChapters.serverFetchAttempts] — called once a chapter's
+  /// server fetch actually succeeds, so a later unrelated failure starts its
+  /// budget fresh rather than inheriting attempts spent on a since-resolved
+  /// problem.
+  Future<void> resetServerFetchAttempts(int chapterId) =>
+      (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+        const OfflineChaptersCompanion(serverFetchAttempts: Value(0)),
+      );
 
   /// Atomically record a chapter whose page files were transferred from a
   /// migration source: rewrite the target's page rows and mark it downloaded in

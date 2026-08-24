@@ -96,38 +96,6 @@ void main() {
     }
   });
 
-  test('v15 readStateManual persists across close/reopen', () async {
-    final dbPath = p.join(tmp.path, 'test.db');
-
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-      await db.upsertChapterMetadata(
-        id: 10,
-        mangaId: 1,
-        name: 'c',
-        chapterIndex: 1,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 3,
-        updatedAt: DateTime(2026),
-      );
-      await db.setChapterReadState(10, true, manual: true);
-      await db.close();
-    }
-
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
-      expect(c.readStateManual, true);
-      await db.close();
-    }
-  });
-
   Future<bool> hasIndex(OfflineDatabase db, String name) async {
     final rows = await db
         .customSelect(
@@ -214,6 +182,76 @@ void main() {
           reason: 'the from<12 guard already decided to preserve this value '
               'because the column existed; a later duplicate unconditional '
               'UPDATE synced_is_read = is_read must not override that');
+      await db.close();
+    }
+  });
+
+  test('v16 readStateManual persists across close/reopen', () async {
+    final dbPath = p.join(tmp.path, 'test.db');
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 3,
+        updatedAt: DateTime(2026),
+      );
+      await db.setChapterReadState(10, true, manual: true);
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(c.readStateManual, true);
+      await db.close();
+    }
+  });
+
+  test('v16 serverFetchAttempts persists across close/reopen', () async {
+    final dbPath = p.join(tmp.path, 'test.db');
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: false,
+        pageCount: 0,
+        updatedAt: DateTime(2026),
+      );
+      await db.incrementServerFetchAttempts(10);
+      await db.incrementServerFetchAttempts(10);
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final c = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(c.serverFetchAttempts, 2);
+      await db.resetServerFetchAttempts(10);
+      final reset = await (db.select(db.offlineChapters)
+            ..where((t) => t.id.equals(10)))
+          .getSingle();
+      expect(reset.serverFetchAttempts, 0);
       await db.close();
     }
   });

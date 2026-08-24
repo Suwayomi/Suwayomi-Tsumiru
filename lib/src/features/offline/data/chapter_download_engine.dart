@@ -18,8 +18,15 @@ class PageAuthException implements Exception {
 /// Thrown by a [PageFetcher] when the device is offline, or Wi-Fi-only is on and
 /// the active connection is metered. Signals the engine to stop this chapter and
 /// report it as paused-offline (leave it resumable), NOT as an error.
+///
+/// [reason] is a short technical description (e.g. the caught exception, or
+/// the HTTP status that looked like a gateway/proxy failure) — carried through
+/// to [ChapterDownloadOutcome.offlineReason] so a chapter that keeps parking
+/// can be diagnosed from the crash log instead of just seeing "offline" with
+/// no further detail.
 class PageOfflineException implements Exception {
-  const PageOfflineException();
+  const PageOfflineException(this.reason);
+  final String reason;
 }
 
 /// One page to download: its server URL and its index within the chapter.
@@ -46,6 +53,7 @@ class ChapterDownloadOutcome {
     required this.cancelled,
     required this.authFailed,
     required this.offline,
+    this.offlineReason,
     this.error,
   });
 
@@ -62,6 +70,11 @@ class ChapterDownloadOutcome {
   /// True if the run stopped because the device went offline / Wi-Fi-only
   /// blocked it. The chapter is left resumable (NOT an error).
   final bool offline;
+
+  /// Short technical detail behind [offline] (the caught exception or gateway
+  /// status), for diagnosing a chapter that keeps parking without ever
+  /// actually being a real device-offline condition.
+  final String? offlineReason;
 
   /// The first non-auth error that ended the run, if any.
   final Object? error;
@@ -120,6 +133,7 @@ class ChapterDownloadEngine {
     var cursor = 0;
     var authFailed = false;
     var offline = false;
+    String? offlineReason;
     Object? fatalError;
 
     Future<void> worker() async {
@@ -138,8 +152,9 @@ class ChapterDownloadEngine {
             }
           case _PageAuthDead():
             authFailed = true;
-          case _PageOffline():
+          case _PageOffline(:final reason):
             offline = true;
+            offlineReason = reason;
           case _PageCancelled():
             return; // cancel landed mid-fetch; the loop's guard also stops us
           case _PageError(:final error):
@@ -157,6 +172,7 @@ class ChapterDownloadEngine {
       cancelled: isCancelled(),
       authFailed: authFailed,
       offline: offline,
+      offlineReason: offlineReason,
       error: fatalError,
     );
   }
@@ -179,10 +195,10 @@ class ChapterDownloadEngine {
           bytes.ext,
         );
         return _PageOk(relPath: written.relPath, bytes: written.bytes);
-      } on PageOfflineException {
+      } on PageOfflineException catch (e) {
         // Device went offline / Wi-Fi-only blocked it — stop this chapter and
         // leave it resumable. No retry (retrying offline just burns backoff).
-        return const _PageOffline();
+        return _PageOffline(e.reason);
       } on PageAuthException {
         // Refresh once; concurrent 401s collapse via the refresher's
         // single-flight. If auth is dead, stop trying.
@@ -227,5 +243,6 @@ class _PageCancelled extends _PageResult {
 }
 
 class _PageOffline extends _PageResult {
-  const _PageOffline();
+  const _PageOffline(this.reason);
+  final String reason;
 }

@@ -13,7 +13,7 @@ void main() {
     'a PageOfflineException yields outcome.offline, not error/authFailed',
     () async {
       final engine = ChapterDownloadEngine(
-        fetchPage: (_) async => throw const PageOfflineException(),
+        fetchPage: (_) async => throw const PageOfflineException('test-offline'),
         writePage: FakePageStore(),
         refreshAuth: () async => true,
       );
@@ -24,6 +24,7 @@ void main() {
         isCancelled: () => false,
       );
       expect(outcome.offline, isTrue);
+      expect(outcome.offlineReason, 'test-offline');
       expect(outcome.error, isNull);
       expect(outcome.authFailed, isFalse);
       expect(outcome.succeeded, isFalse);
@@ -36,7 +37,7 @@ void main() {
     final engine = ChapterDownloadEngine(
       fetchPage: (_) async {
         calls++;
-        throw const PageOfflineException();
+        throw const PageOfflineException('test-offline');
       },
       writePage: FakePageStore(),
       refreshAuth: () async => true,

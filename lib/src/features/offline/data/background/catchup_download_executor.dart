@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../notifications/data/notification_state_store.dart';
 import '../chapter_manifest.dart';
 import '../offline_database.dart';
@@ -126,8 +127,41 @@ Future<bool> runCatchupDownloads({
       // Pinned chapters are always desired; the server rows can't know about
       // pins (device-side state), so the spec's set joins the rule's.
       final serverIds = {for (final r in chapters.rows) r.id};
+
+      final serverFetch = {...ledger.pendingServerFetch};
+      final retries = {...ledger.serverFetchRetries};
+      final dlRetries = {...ledger.downloadRetries};
+      final pending = {...ledger.pendingDownloads};
+
+      // A chapter that has spent its attempt budget on either hop is already a
+      // permanent dead end this run onward (both hops below `continue` once
+      // their own counter maxes out, and a counter only ever clears when the
+      // chapter leaves `desired` — which it never does on its own). Excluding
+      // it from the candidate pool here, rather than after, stops it wasting
+      // one of a `nUnread` rule's N slots forever: without this, the
+      // (N+1)th unread chapter never gets a turn, and "keep N downloaded"
+      // silently plateaus at N-1.
+      final exhausted = <int>{};
+      for (final r in chapters.rows) {
+        final serverFetchSpent = retries[r.id] ?? 0;
+        final downloadSpent = dlRetries[r.id] ?? 0;
+        if (serverFetchSpent < _maxChapterAttempts &&
+            downloadSpent < _maxChapterAttempts) {
+          continue;
+        }
+        exhausted.add(r.id);
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'giving-up-on-chapter mangaId=$mangaId chapterId=${r.id} '
+          'name="${r.name}" index=${r.chapterIndex} '
+          'serverFetchAttempts=$serverFetchSpent/$_maxChapterAttempts '
+          'downloadAttempts=$downloadSpent/$_maxChapterAttempts '
+          'serverIsDownloaded=${r.serverIsDownloaded} '
+          '— excluded from this manga\'s keep-rule slots from now on\n',
+        );
+      }
       final desired = desiredChapterIds(
-        chapters.rows,
+        [for (final r in chapters.rows) if (!exhausted.contains(r.id)) r],
         mangaSpec.keepRule,
         mangaSpec.keepUnreadCount,
       )..addAll(mangaSpec.pinnedChapterIds.intersection(serverIds));
@@ -137,11 +171,6 @@ Future<bool> runCatchupDownloads({
         ...mangaSpec.onDeviceChapterIds,
         ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
-
-      final serverFetch = {...ledger.pendingServerFetch};
-      final retries = {...ledger.serverFetchRetries};
-      final dlRetries = {...ledger.downloadRetries};
-      final pending = {...ledger.pendingDownloads};
 
       for (final chapterId in desired.difference(present)) {
         if (downloaded >= _maxChaptersPerRun) break;
@@ -172,6 +201,17 @@ Future<bool> runCatchupDownloads({
           // Two-hop: ask the server to fetch it from the source first. A failed
           // ask is the server not being there, which costs nothing.
           final ok = await _enqueueServerDownload(target, record, chapterId);
+          // A trail of every attempt, not just the final give-up — so a run
+          // that never reaches the cap is still visible, and a failed
+          // enqueue request (server unreachable) is distinguishable from one
+          // that succeeded but the source never actually produced the
+          // chapter (serverIsDownloaded staying false on a later run).
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'asking-server-to-fetch mangaId=$mangaId chapterId=$chapterId '
+            'name="${row.name}" index=${row.chapterIndex} '
+            'enqueueOk=$ok attempt=${spent + 1}/$_maxChapterAttempts\n',
+          );
           if (ok) {
             serverFetch[chapterId] = mangaId;
             retries[chapterId] = spent + 1;
@@ -213,10 +253,32 @@ Future<bool> runCatchupDownloads({
       // attempt counters go with them: they exist to stop a chapter being
       // retried while it is still wanted, so one left behind would meet a
       // re-added chapter with an already-spent budget.
+      //
+      // Scans BOTH maps, not just `pending`: a chapter can be exhausted (and
+      // now excluded from `desired` above) while it only ever reached
+      // `pendingServerFetch` — never promoted to `pendingDownloads`. Dropping
+      // it from `pending` alone left it in `serverFetch` forever, which kept
+      // its manga in the `mangaIds` set at the top of this run and re-issued
+      // a real chapter-list fetch for it on every wake indefinitely, even
+      // though nothing was ever going to download.
+      //
+      // `exhausted` is deliberately excluded from the "no longer desired"
+      // half of this condition: it is ALSO why those chapters are missing
+      // from `desired` (see above), and wiping their counters here would
+      // reset them to 0 next run — un-exhausting a chapter right back into
+      // fresh attempts and undoing the whole point of excluding it. A
+      // chapter drops out of `desired` for two different reasons and only
+      // one of them should forgive its spent budget.
       final done = {
         for (final e in pending.entries)
           if (e.value == mangaId &&
-              (!desired.contains(e.key) || present.contains(e.key)))
+              ((!desired.contains(e.key) && !exhausted.contains(e.key)) ||
+                  present.contains(e.key)))
+            e.key,
+        for (final e in serverFetch.entries)
+          if (e.value == mangaId &&
+              ((!desired.contains(e.key) && !exhausted.contains(e.key)) ||
+                  present.contains(e.key)))
             e.key,
       };
       for (final c in done) {
@@ -351,6 +413,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
         syncedIsRead: n['isRead'] as bool? ?? false,
         updatedAt: now,
         downloadGeneration: 0,
+        serverFetchAttempts: 0,
       ),
   ]);
 }

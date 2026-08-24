@@ -14,6 +14,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../constants/endpoints.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../utils/crash/crash_log.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
@@ -29,6 +31,15 @@ import 'notification_background_client.dart';
 ///
 /// Runs in the WorkManager isolate — no Riverpod, no BuildContext.
 Future<bool> runNewChapterCheck() async {
+  // The main isolate wires this up in main.dart; a WorkManager run gets a
+  // fresh isolate every time and starts with no diagnostic sink at all, so
+  // without this, every recordDiagnostic() call in the download/catch-up
+  // path this function calls into is a silent no-op — invisible even though
+  // the same crash-log file (and its Settings copy action) is what the user
+  // actually checks.
+  final crashLogPath = await initCrashLog();
+  setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();

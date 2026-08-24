@@ -37,6 +37,7 @@ void main() {
     syncedIsRead: false,
     updatedAt: DateTime(2026),
     downloadGeneration: 0,
+    serverFetchAttempts: 0,
   );
 
   OfflineDownloadManager manager() => OfflineDownloadManager(
