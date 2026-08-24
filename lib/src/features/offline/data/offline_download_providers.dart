@@ -753,7 +753,7 @@ Future<void> _deleteServerCopyIfDeletable(
     }
     if (isBookmarked && !allowBookmarked) return;
     await read(mangaBookRepositoryProvider).deleteChapters([chapterId]);
-    await _cascadeServerDeleteToDeviceRead(read, [chapterId]);
+    await cascadeServerDeleteToDevice(read, [chapterId]);
   } catch (e) {
     // Best-effort — a failed server auto-delete must never surface mid-read.
     logger.e('Offline: server delete-on-read failed for $chapterId: $e');
@@ -896,10 +896,14 @@ Future<void> pushPendingProgress(
 
 /// Enforce device ⊆ server: when chapters are deleted on the server, drop any
 /// device copies too. Silent; no-op when offline is unavailable.
-Future<void> cascadeServerDeleteToDevice(WidgetRef ref, List<int> chapterIds) =>
-    _cascadeServerDeleteToDeviceRead(ref.read, chapterIds);
-
-Future<void> _cascadeServerDeleteToDeviceRead(
+///
+/// Takes a plain read function ([_Read]) rather than a [WidgetRef]: callers
+/// that fire this off after an earlier `await` (a bulk/delete action whose
+/// widget or bottom bar may have unmounted by the time this runs) must pass a
+/// `ProviderContainer.read` tear-off instead of the widget's own `ref.read` —
+/// the widget's `ref` throws once its element is disposed, but a container
+/// obtained up front stays valid for as long as the app does.
+Future<void> cascadeServerDeleteToDevice(
   _Read read,
   List<int> chapterIds,
 ) async {
