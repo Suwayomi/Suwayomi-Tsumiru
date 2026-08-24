@@ -188,7 +188,17 @@ Future<void> applyBackgroundTerminalState({
     final c = await db.chapterById(chapterId);
     if (c == null || c.deviceState == OfflineDeviceState.none) return;
     if (eventGeneration < c.downloadGeneration) return; // stale generation
-    if (c.deviceState == OfflineDeviceState.downloading) {
+    // Accepts `queued` as well as `downloading`: the worker's `chapterStart`
+    // event (which flips queued -> downloading) is dispatched via
+    // `unawaited()` on the main isolate, same as this terminal event — there
+    // is no ordering guarantee between them. A chapter that fails fast enough
+    // (this event's transaction landing before chapterStart's) was previously
+    // silently skipped here because its row still read `queued`, leaving it
+    // stranded there forever: still "pending" to every future restart, with
+    // no error and nothing logged to explain why — the exact mechanism behind
+    // a fast, silent, repeating foreground-service restart loop.
+    if (c.deviceState == OfflineDeviceState.downloading ||
+        c.deviceState == OfflineDeviceState.queued) {
       await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
     }
   });
