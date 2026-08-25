@@ -83,28 +83,37 @@ class IoOfflinePageStore implements OfflinePageStore {
     final dir = _staging(mangaId, chapterId);
     if (!await dir.exists()) return const {};
     final byIndex = <int, File>{};
-    await for (final entity in dir.list()) {
-      if (entity is! File) continue;
-      final name = p.basename(entity.path);
-      if (name == kChapterManifestName) continue;
-      if (name.endsWith(_pageTempSuffix)) {
-        await _quietDelete(entity);
-        continue;
+    try {
+      await for (final entity in dir.list()) {
+        if (entity is! File) continue;
+        final name = p.basename(entity.path);
+        if (name == kChapterManifestName) continue;
+        if (name.endsWith(_pageTempSuffix)) {
+          await _quietDelete(entity);
+          continue;
+        }
+        final dot = name.indexOf('.');
+        if (dot <= 0) continue;
+        final index = int.tryParse(name.substring(0, dot));
+        if (index == null) continue;
+        final existing = byIndex[index];
+        if (existing == null) {
+          byIndex[index] = entity;
+          continue;
+        }
+        final keepNew = (await entity.stat()).modified.isAfter(
+          (await existing.stat()).modified,
+        );
+        byIndex[index] = keepNew ? entity : existing;
+        await _quietDelete(keepNew ? existing : entity);
       }
-      final dot = name.indexOf('.');
-      if (dot <= 0) continue;
-      final index = int.tryParse(name.substring(0, dot));
-      if (index == null) continue;
-      final existing = byIndex[index];
-      if (existing == null) {
-        byIndex[index] = entity;
-        continue;
-      }
-      final keepNew = (await entity.stat()).modified.isAfter(
-        (await existing.stat()).modified,
-      );
-      byIndex[index] = keepNew ? entity : existing;
-      await _quietDelete(keepNew ? existing : entity);
+    } on PathNotFoundException {
+      // The exists() check above can't be atomic with list() below — a
+      // concurrent delete/re-queue of this same chapter (the FGS and the
+      // WorkManager catch-up executor both stage independently) can remove
+      // the directory in between. Nothing staged is exactly the right answer
+      // once it's gone, same as the exists() guard already returns for it.
+      return const {};
     }
     return byIndex;
   }
