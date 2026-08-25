@@ -333,7 +333,13 @@ OfflineSync? offlineSync(Ref ref) {
           DBKeys.offlineCatalogServerId.name,
           identity,
         );
-        ref.invalidate(offlineActiveProvider);
+        // This closure is captured by OfflineSync and invoked later, from
+        // syncManga — this provider can have been disposed/rebuilt by then
+        // (e.g. a bulk operation triggering many syncs back to back), and
+        // ref.invalidate on a disposed Ref throws. The preference write above
+        // already landed, so the guard above won't re-run this block anyway;
+        // there's nothing left to do if the ref is gone.
+        if (ref.mounted) ref.invalidate(offlineActiveProvider);
       }
     },
   );
