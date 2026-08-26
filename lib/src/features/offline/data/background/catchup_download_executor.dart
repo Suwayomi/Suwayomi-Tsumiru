@@ -48,9 +48,20 @@ Future<bool> runCatchupDownloads({
   required TokenBroker broker,
 }) async {
   final spec = catchupStore.readSpec();
-  if (spec == null || spec.serverId != config.serverId) return true;
+  if (spec == null || spec.serverId != config.serverId) {
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'run-skipped reason=no-spec\n',
+    );
+    return true;
+  }
 
   var ledger = catchupStore.readLedger(config.serverId);
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-catchup: run-started '
+    'pendingDownloads=${ledger.pendingDownloads.length} '
+    'pendingServerFetch=${ledger.pendingServerFetch.length}\n',
+  );
   if (ledger.pendingDownloads.isEmpty && ledger.pendingServerFetch.isEmpty) {
     return true;
   }
@@ -62,7 +73,13 @@ Future<bool> runCatchupDownloads({
     final unmetered =
         net.contains(ConnectivityResult.wifi) ||
         net.contains(ConnectivityResult.ethernet);
-    if (!unmetered) return true; // not an error — just not now
+    if (!unmetered) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-catchup: '
+        'run-skipped reason=wifi-required\n',
+      );
+      return true; // not an error — just not now
+    }
   }
 
   final support = await getApplicationSupportDirectory();
@@ -75,7 +92,13 @@ Future<bool> runCatchupDownloads({
 
   // The FGS may legitimately own the log right now; skip the run rather than
   // interleave writers.
-  if (!await lock.acquire('wm-catchup')) return true;
+  if (!await lock.acquire('wm-catchup')) {
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'lock-held-skip\n',
+    );
+    return true;
+  }
   try {
     final target = BackgroundServerTarget(
       serverBase: config.endpoint.baseUrl,
@@ -98,7 +121,24 @@ Future<bool> runCatchupDownloads({
     // processed, which the filter below drops anyway. A retry loop or a second
     // pass would break that.
     final logEntries = await log.parse();
+    // A manga the feed-based cursor above has never had a reason to surface
+    // (its chapters all predate the watermark — typically a keep rule just
+    // turned on for it) gets a one-time full chapter-list visit here instead
+    // of waiting on the foreground launch pass, which is otherwise the only
+    // path that ever looks at a manga's whole list rather than the feed's
+    // delta. Listed first so a long-running pending backlog can't starve a
+    // manga that has never been looked at at all.
+    final needsBackfill = spec.keepRuleMangaIds.difference(
+      ledger.backfilledMangaIds,
+    );
+    if (needsBackfill.isNotEmpty) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-catchup: '
+        'backfilling-manga ids=${needsBackfill.join(',')}\n',
+      );
+    }
     final mangaIds = {
+      ...needsBackfill,
       ...ledger.pendingDownloads.values,
       ...ledger.pendingServerFetch.values,
     };
@@ -243,6 +283,11 @@ Future<bool> runCatchupDownloads({
           serverFetch.remove(chapterId);
           retries.remove(chapterId);
           dlRetries.remove(chapterId);
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'downloaded-chapter mangaId=$mangaId chapterId=$chapterId '
+            'bytes=${attempt.bytes}\n',
+          );
         } else if (!attempt.transient) {
           dlRetries[chapterId] = dlSpent + 1;
         }
@@ -293,9 +338,18 @@ Future<bool> runCatchupDownloads({
         pendingServerFetch: serverFetch,
         serverFetchRetries: retries,
         downloadRetries: dlRetries,
+        // The chapter-list fetch above already ran, whether or not this
+        // manga was one that needed it — recording it here (not just inside
+        // the needsBackfill branch) keeps the set accurate for every manga
+        // this run actually looked at.
+        backfilledMangaIds: {...ledger.backfilledMangaIds, mangaId},
       );
       await catchupStore.writeLedger(config.serverId, ledger);
     }
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'run-finished downloaded=$downloaded bytes=$runBytes\n',
+    );
     return true;
   } finally {
     await lock.release();
@@ -320,6 +374,9 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
     // them would meet the manga with a spent budget if it came back.
     serverFetchRetries: without(ledger.serverFetchRetries),
     downloadRetries: without(ledger.downloadRetries),
+    // Same reasoning: a manga that comes back under the rule again is a fresh
+    // backlog as far as this executor knows, not one it already visited.
+    backfilledMangaIds: {...ledger.backfilledMangaIds}..remove(mangaId),
   );
 }
 

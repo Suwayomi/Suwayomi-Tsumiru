@@ -89,6 +89,19 @@ void main() {
     expect(other.pendingDownloads, isEmpty);
   });
 
+  test('backfilledMangaIds round-trips through the ledger', () async {
+    final s = await store();
+    await s.writeLedger(
+      'srv-1',
+      const CatchupLedger(backfilledMangaIds: {7, 9}),
+    );
+
+    expect(s.readLedger('srv-1').backfilledMangaIds, {7, 9});
+    // A server switch must not carry another server's backfill history —
+    // same isolation rule as every other field on this ledger.
+    expect(s.readLedger('srv-2').backfilledMangaIds, isEmpty);
+  });
+
   test('clearState drops spec and ledger but keeps the user toggle', () async {
     final s = await store();
     await s.setEnabled(true);

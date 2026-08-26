@@ -43,7 +43,24 @@ Future<bool> runNewChapterCheck() async {
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
-  if (config == null || token == null) return true;
+  if (config == null || token == null) {
+    // The only way to tell "the OS never woke this task" apart from "it woke
+    // but had nothing configured yet" from the field — both look identical
+    // (a silent gap in the log) without this line.
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-worker: '
+      'check-skipped reason=no-config\n',
+    );
+    return true;
+  }
+
+  final catchupStore = await CatchupStateStore.open();
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-worker: check-started '
+    'newChapters=${config.newChaptersEnabled} catchup=${catchupStore.enabled} '
+    'appUpdates=${config.appUpdatesEnabled} '
+    'extUpdates=${config.extensionUpdatesEnabled}\n',
+  );
 
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
@@ -61,7 +78,6 @@ Future<bool> runNewChapterCheck() async {
   // Background download step — own cursor, keep-rule scope, no category
   // filter. Resolution records the obligations; the executor then downloads
   // as many as the run's budget allows.
-  final catchupStore = await CatchupStateStore.open();
   if (catchupStore.enabled) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
     ok = await runCatchupDownloads(
@@ -78,6 +94,10 @@ Future<bool> runNewChapterCheck() async {
   if (config.extensionUpdatesEnabled) {
     await _checkExtensionUpdates(store, client, notifier, l10n);
   }
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-worker: '
+    'check-finished ok=$ok\n',
+  );
   return ok;
 }
 
