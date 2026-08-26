@@ -1377,7 +1377,19 @@ Future<void> reconcileManga(Ref ref, int mangaId) async {
 }
 
 /// Widget entry point — same as [reconcileManga] but accepts a [WidgetRef].
-Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
+///
+/// [startDownload] defaults to true for the single-manga case (see the
+/// comment below). A caller reconciling many manga in a row should pass
+/// false and start once after the whole batch is queued instead — awaiting
+/// this per manga with the FGS start included lets the service drain and
+/// stop between each one (a manga with just one chapter often finishes before
+/// the next manga's reconcile even returns), so every "X/Y" the notification
+/// shows is that one manga's tiny snapshot, never the batch's real total.
+Future<void> reconcileMangaWidget(
+  WidgetRef ref,
+  int mangaId, {
+  bool startDownload = true,
+}) async {
   if (!ref.read(offlineActiveProvider)) return;
   final manager = ref.read(offlineDownloadManagerProvider);
   final coordinator = ref.read(offlineDownloadCoordinatorProvider);
@@ -1404,7 +1416,9 @@ Future<void> reconcileMangaWidget(WidgetRef ref, int mangaId) async {
   );
   // Start downloading the freshly-queued chapters. THIS was the missing wire
   // that made "Download all / unread" silently do nothing on Android.
-  await ref.read(downloadStarterProvider)(userInitiated: true);
+  if (startDownload) {
+    await ref.read(downloadStarterProvider)(userInitiated: true);
+  }
 }
 
 /// Container entry — same as [reconcileMangaWidget] but survives the caller's
