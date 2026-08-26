@@ -265,7 +265,16 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
           );
         } else {
           return DefaultTabController(
-            length: data!.length,
+            // Key on the category set so the controller fully rebuilds instead
+            // of swapping its length in place — the same fix as the grouped
+            // view below. A slow/reconnecting server fetch can replace a
+            // cached category list with a differently-sized live one after the
+            // tab bar is already showing; swapping the length while a drag is
+            // active on the old controller left its disposed AnimationController
+            // wired to a live gesture, crashing with a null-check in
+            // _TabBarState._handleTabControllerAnimationTick.
+            key: ValueKey('categories-${data!.map((c) => c.id).join(',')}'),
+            length: data.length,
             // The route param is a category ID (e.g. from quick-search), not a
             // positional tab index — the visible list filters out empty/hidden
             // categories, so id != index. Select the tab whose category matches
@@ -453,6 +462,10 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
 
         return DefaultTabController(
+          // See the matching comment on the toggled-search variant above: keys
+          // the controller to the category set so it fully rebuilds instead of
+          // swapping its length under an in-flight drag.
+          key: ValueKey('categories-${data.map((c) => c.id).join(',')}'),
           length: data.length,
           // The route param is a category ID (e.g. from quick-search), not a
           // positional tab index — the visible list filters out empty/hidden
