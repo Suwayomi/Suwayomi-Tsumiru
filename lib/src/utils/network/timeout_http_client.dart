@@ -18,6 +18,7 @@ class TimeoutHttpClient extends http.BaseClient {
     this.timeout, {
     this.retries = 0,
     this.retryDelay = const Duration(seconds: 1),
+    this.onConnectionFailure,
     http.Client? inner,
   }) : _inner = inner ?? createFastConnectClient(kConnectionEstablishTimeout);
 
@@ -26,23 +27,36 @@ class TimeoutHttpClient extends http.BaseClient {
   final int retries;
   final Duration retryDelay;
 
+  /// Gives the caller one chance to select a replacement endpoint after a
+  /// connection failure. A different URI is retried immediately, even if the
+  /// user's ordinary timeout retry setting is disabled.
+  final Future<Uri?> Function(http.BaseRequest request)? onConnectionFailure;
+
   final http.Client _inner;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     int attempt = 0;
     http.BaseRequest current = request;
+    var usedFailover = false;
 
     while (true) {
       try {
         return await _inner.send(current).timeout(timeout);
-      } on TimeoutException {
-        if (attempt >= retries) rethrow;
+      } catch (_) {
+        Uri? replacement;
+        var failingOver = false;
+        if (!usedFailover && onConnectionFailure != null) {
+          replacement = await onConnectionFailure!(current);
+          failingOver = replacement != null && replacement != current.url;
+          usedFailover = failingOver;
+        }
+        if (!failingOver && attempt >= retries) rethrow;
         // Streamed/multipart bodies are single-use and can't be safely retried.
-        final retryClone = _cloneRequest(request);
+        final retryClone = _cloneRequest(current, url: replacement);
         if (retryClone == null) rethrow;
         attempt++;
-        await Future.delayed(retryDelay);
+        if (replacement == null) await Future.delayed(retryDelay);
         current = retryClone;
       }
     }
@@ -55,9 +69,9 @@ class TimeoutHttpClient extends http.BaseClient {
   }
 
   // Clones a plain [http.Request] for retry; null for streamed/multipart bodies.
-  http.BaseRequest? _cloneRequest(http.BaseRequest original) {
+  http.BaseRequest? _cloneRequest(http.BaseRequest original, {Uri? url}) {
     if (original is http.Request) {
-      final clone = http.Request(original.method, original.url)
+      final clone = http.Request(original.method, url ?? original.url)
         ..headers.addAll(original.headers)
         ..followRedirects = original.followRedirects
         ..persistentConnection = original.persistentConnection;

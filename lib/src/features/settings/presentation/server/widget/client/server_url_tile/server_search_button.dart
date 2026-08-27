@@ -18,14 +18,17 @@ import '../server_port_tile/server_port_tile.dart';
 import 'server_url_tile.dart';
 
 class ServerSearchButton extends ConsumerWidget {
-  const ServerSearchButton({
-    super.key,
-    this.text,
-  });
+  const ServerSearchButton({super.key, this.text});
   final String? text;
   void _update(String url, WidgetRef ref) {
     final tempUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-    ref.read(serverUrlProvider.notifier).update(tempUrl);
+    ref.read(serverLanUrlProvider.notifier).update(tempUrl);
+    // Preserve the old single-URL setup when discovery is the first address a
+    // user enters. They can add a remote address later without losing this LAN
+    // connection as the fallback.
+    if (ref.read(serverExternalUrlProvider) == DBKeys.serverUrl.initial) {
+      ref.read(serverExternalUrlProvider.notifier).update(tempUrl);
+    }
   }
 
   Future<String?> getServerAddress(int? port) async {
@@ -48,17 +51,17 @@ class ServerSearchButton extends ConsumerWidget {
 
   Future<bool> pingIp(String ip, int port) async {
     bool isValidIp = false;
-    await Socket.connect(ip, port, timeout: const Duration(milliseconds: 50))
-        .then(
-      (socket) async {
-        await InternetAddress(socket.address.address).reverse().then(
-              (value) => isValidIp = true,
-              onError: (_) => isValidIp = true,
-            );
-        socket.destroy();
-      },
-      onError: (_) => null,
-    );
+    await Socket.connect(
+      ip,
+      port,
+      timeout: const Duration(milliseconds: 50),
+    ).then((socket) async {
+      await InternetAddress(socket.address.address).reverse().then(
+        (value) => isValidIp = true,
+        onError: (_) => isValidIp = true,
+      );
+      socket.destroy();
+    }, onError: (_) => null);
     return isValidIp;
   }
 

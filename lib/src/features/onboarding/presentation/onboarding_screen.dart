@@ -43,9 +43,9 @@ class OnboardingScreen extends HookConsumerWidget {
     final serverVerified = useState(false);
 
     bool stepComplete(int i) => switch (i) {
-          1 => serverVerified.value,
-          _ => true,
-        };
+      1 => serverVerified.value,
+      _ => true,
+    };
 
     final isLast = step.value == _stepCount - 1;
 
@@ -105,7 +105,8 @@ class OnboardingScreen extends HookConsumerWidget {
                       child: switch (step.value) {
                         0 => const _ThemeStep(),
                         1 => _ServerStep(
-                            onVerifiedChanged: (v) => serverVerified.value = v),
+                          onVerifiedChanged: (v) => serverVerified.value = v,
+                        ),
                         _ => const _FinishStep(),
                       },
                     ),
@@ -236,15 +237,22 @@ class _ThemeStep extends StatelessWidget {
         // The big brand mark — the swirl logo above the welcome heading.
         Center(child: Image.asset(Assets.icons.darkIcon.path, height: 160)),
         const SizedBox(height: 24),
-        Text(context.l10n.onboardingWelcomeTitle,
-            style: context.textTheme.headlineMedium
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          context.l10n.onboardingWelcomeTitle,
+          style: context.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(context.l10n.onboardingWelcomeSubtitle,
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        Text(
+          context.l10n.onboardingWelcomeSubtitle,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
         const SizedBox(height: 28),
-        Text(context.l10n.onboardingChooseTheme,
-            style: context.textTheme.titleMedium),
+        Text(
+          context.l10n.onboardingChooseTheme,
+          style: context.textTheme.titleMedium,
+        ),
         const ThemeSelector(),
       ],
     );
@@ -272,8 +280,9 @@ enum _TestState {
 
 /// Factory for the throwaway HTTP client the resolver probes use. Overridable
 /// in widget tests so the connection flow can be driven against a MockClient.
-final onboardingHttpClientProvider =
-    Provider<http.Client Function()>((Ref ref) => http.Client.new);
+final onboardingHttpClientProvider = Provider<http.Client Function()>(
+  (Ref ref) => http.Client.new,
+);
 
 class _ServerStep extends HookConsumerWidget {
   const _ServerStep({required this.onVerifiedChanged});
@@ -284,7 +293,7 @@ class _ServerStep extends HookConsumerWidget {
     final cs = context.theme.colorScheme;
     final urlController = useTextEditingController(
       text: () {
-        final stored = ref.read(serverUrlProvider);
+        final stored = ref.read(serverExternalUrlProvider);
         return (stored == null || stored == DBKeys.serverUrl.initial)
             ? ''
             : stored;
@@ -305,7 +314,8 @@ class _ServerStep extends HookConsumerWidget {
     // let the client auto-append a port.
     useEffect(() {
       Future.microtask(
-          () => ref.read(serverPortToggleProvider.notifier).update(false));
+        () => ref.read(serverPortToggleProvider.notifier).update(false),
+      );
       return null;
     }, const []);
 
@@ -320,7 +330,7 @@ class _ServerStep extends HookConsumerWidget {
     void adopt(String url) {
       resolvedUrl.value = url;
       ref.read(serverPortToggleProvider.notifier).update(false);
-      ref.read(serverUrlProvider.notifier).update(url);
+      ref.read(serverExternalUrlProvider.notifier).update(url);
       if (urlController.text != url) urlController.text = url;
     }
 
@@ -341,12 +351,19 @@ class _ServerStep extends HookConsumerWidget {
       // whose public aboutServer answers regardless of credentials. ui/simple
       // need no pre-flight: performSignIn's login round-trip throws on rejection.
       if (authChoice.value == AuthType.basic) {
-        if (!await basicAuthConfirms(base,
-            client: client, username: user, password: pass)) {
+        if (!await basicAuthConfirms(
+          base,
+          client: client,
+          username: user,
+          password: pass,
+        )) {
           return false;
         }
-        if (!await authProbeAuthorized(base,
-            client: client, basic: '$user:$pass')) {
+        if (!await authProbeAuthorized(
+          base,
+          client: client,
+          basic: '$user:$pass',
+        )) {
           return false;
         }
       }
@@ -379,10 +396,11 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       onVerifiedChanged(false);
       ref.read(serverPortToggleProvider.notifier).update(false);
-      ref.read(serverUrlProvider.notifier).update(url);
+      ref.read(serverExternalUrlProvider.notifier).update(url);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       final result = await AsyncValue.guard(
-          () => ref.read(aboutRepositoryProvider).getAbout());
+        () => ref.read(aboutRepositoryProvider).getAbout(),
+      );
       if (result.hasError || result.value == null) {
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
@@ -398,7 +416,8 @@ class _ServerStep extends HookConsumerWidget {
           onVerifiedChanged(true);
           return;
         }
-        final hasCreds = userController.text.trim().isNotEmpty &&
+        final hasCreds =
+            userController.text.trim().isNotEmpty &&
             passController.text.isNotEmpty;
         if (hasCreds && await validateCredentials(url, client)) {
           state.value = _TestState.connected;
@@ -447,13 +466,15 @@ class _ServerStep extends HookConsumerWidget {
           case ResolveOutcome.basicGated:
             adopt(result.baseUrl);
             version.value = result.serverVersion;
-            final needsLogin = result.outcome == ResolveOutcome.basicGated ||
+            final needsLogin =
+                result.outcome == ResolveOutcome.basicGated ||
                 result.authMode == ProbeAuthMode.authRequired;
             if (!needsLogin) {
               state.value = _TestState.connected;
               onVerifiedChanged(true);
             } else {
-              final hasCreds = userController.text.trim().isNotEmpty &&
+              final hasCreds =
+                  userController.text.trim().isNotEmpty &&
                   passController.text.isNotEmpty;
               if (hasCreds &&
                   await validateCredentials(result.baseUrl, client)) {
@@ -531,23 +552,34 @@ class _ServerStep extends HookConsumerWidget {
       }
     }
 
-    final busy = state.value == _TestState.testing ||
+    final busy =
+        state.value == _TestState.testing ||
         state.value == _TestState.searching;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(context.l10n.onboardingServerStepLabel,
-            style: TextStyle(
-                color: cs.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(
+          context.l10n.onboardingServerStepLabel,
+          style: TextStyle(
+            color: cs.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(context.l10n.onboardingServerTitle,
-            style: context.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          context.l10n.onboardingServerTitle,
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(context.l10n.onboardingServerSubtitle,
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        Text(
+          context.l10n.onboardingServerSubtitle,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
         const SizedBox(height: 20),
         TextField(
           controller: urlController,
@@ -571,15 +603,20 @@ class _ServerStep extends HookConsumerWidget {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.search_rounded, size: 18),
-              label: Text(state.value == _TestState.searching
-                  ? context.l10n.onboardingSearching
-                  : context.l10n.onboardingSearchNetwork),
+              label: Text(
+                state.value == _TestState.searching
+                    ? context.l10n.onboardingSearching
+                    : context.l10n.onboardingSearchNetwork,
+              ),
             ),
           ),
-        Text(context.l10n.onboardingServerPortHint,
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+        Text(
+          context.l10n.onboardingServerPortHint,
+          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+        ),
         const SizedBox(height: 12),
         // Validate: test the connection.
         FilledButton.tonalIcon(
@@ -588,20 +625,22 @@ class _ServerStep extends HookConsumerWidget {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.wifi_tethering_rounded),
           label: Text(context.l10n.onboardingTestConnection),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
         ),
         const SizedBox(height: 12),
         ..._buildTestStatus(
-            context,
-            cs,
-            state.value,
-            resolvedUrl.value,
-            version.value,
-            errorDetail.value,
-            shouldSuggestHttps(urlController.text.trim())),
+          context,
+          cs,
+          state.value,
+          resolvedUrl.value,
+          version.value,
+          errorDetail.value,
+          shouldSuggestHttps(urlController.text.trim()),
+        ),
         // Auth sub-form, revealed only when the server needs a login.
         if (state.value == _TestState.needsLogin) ...[
           const SizedBox(height: 12),
@@ -616,18 +655,22 @@ class _ServerStep extends HookConsumerWidget {
             requestFocusOnTap: false,
             label: Text(context.l10n.onboardingAuthMode),
             leadingIcon: const Icon(Icons.shield_rounded),
-            inputDecorationTheme:
-                const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             dropdownMenuEntries: [
               DropdownMenuEntry(
-                  value: AuthType.basic,
-                  label: context.l10n.onboardingAuthModeBasic),
+                value: AuthType.basic,
+                label: context.l10n.onboardingAuthModeBasic,
+              ),
               DropdownMenuEntry(
-                  value: AuthType.simpleLogin,
-                  label: context.l10n.onboardingAuthModeSimple),
+                value: AuthType.simpleLogin,
+                label: context.l10n.onboardingAuthModeSimple,
+              ),
               DropdownMenuEntry(
-                  value: AuthType.uiLogin,
-                  label: context.l10n.onboardingAuthModeUi),
+                value: AuthType.uiLogin,
+                label: context.l10n.onboardingAuthModeUi,
+              ),
             ],
             onSelected: (m) {
               if (m != null) {
@@ -674,11 +717,13 @@ class _ServerStep extends HookConsumerWidget {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.login_rounded),
             label: Text(context.l10n.onboardingSignIn),
-            style:
-                FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+            ),
           ),
         ],
         const SizedBox(height: 8),
@@ -689,7 +734,10 @@ class _ServerStep extends HookConsumerWidget {
           child: TextButton.icon(
             onPressed: () {
               launchUrlInWeb(
-                  context, AppUrls.tachideskHelp.url, ref.read(toastProvider));
+                context,
+                AppUrls.tachideskHelp.url,
+                ref.read(toastProvider),
+              );
               onVerifiedChanged(true);
             },
             icon: const Icon(Icons.open_in_new_rounded, size: 18),
@@ -727,7 +775,8 @@ List<Widget> _buildTestStatus(
           text: (version != null && version.isNotEmpty)
               // The server reports "v2.3.x"; the l10n string adds its own "v".
               ? context.l10n.onboardingConnected(
-                  version.startsWith('v') ? version.substring(1) : version)
+                  version.startsWith('v') ? version.substring(1) : version,
+                )
               : context.l10n.onboardingResolvedAddress(addr ?? ''),
         ),
         if (addr != null) ...[
@@ -788,8 +837,11 @@ List<Widget> _buildTestStatus(
 }
 
 class _StatusRow extends StatelessWidget {
-  const _StatusRow(
-      {required this.color, required this.icon, required this.text});
+  const _StatusRow({
+    required this.color,
+    required this.icon,
+    required this.text,
+  });
   final Color color;
   final IconData icon;
   final String text;
@@ -801,7 +853,9 @@ class _StatusRow extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 18),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: TextStyle(color: color))),
+        Expanded(
+          child: Text(text, style: TextStyle(color: color)),
+        ),
       ],
     );
   }
@@ -821,14 +875,19 @@ class _FinishStep extends StatelessWidget {
         const SizedBox(height: 48),
         Icon(Icons.rocket_launch_rounded, size: 64, color: cs.primary),
         const SizedBox(height: 24),
-        Text(context.l10n.onboardingDoneTitle,
-            textAlign: TextAlign.center,
-            style: context.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          context.l10n.onboardingDoneTitle,
+          textAlign: TextAlign.center,
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(context.l10n.onboardingDoneSubtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        Text(
+          context.l10n.onboardingDoneSubtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       ],
     );
   }

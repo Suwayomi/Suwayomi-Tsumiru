@@ -11,6 +11,12 @@ import 'enum.dart';
 
 enum DBKeys {
   serverUrl('http://127.0.0.1'),
+  // The address configured by the user for access away from their LAN. The
+  // older `serverUrl` key remains the *currently selected* endpoint so all
+  // existing request code can keep sharing one URL.
+  serverExternalUrl(null),
+  // Optional private/LAN address for the same server instance.
+  serverLanUrl(null),
   serverPort(4567),
   serverPortToggle(true),
   // First-time onboarding: false until the wizard is finished. A one-time

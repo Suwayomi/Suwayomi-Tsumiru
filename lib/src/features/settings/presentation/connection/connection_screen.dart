@@ -25,6 +25,12 @@ class ConnectionScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activeUrl =
+        ref.watch(serverEndpointResolverProvider) ??
+        ref.watch(serverUrlProvider) ??
+        DBKeys.serverUrl.initial;
+    final lanUrl = ref.watch(serverLanUrlProvider);
+    final usesLan = lanUrl != null && activeUrl == lanUrl;
     // One-time migration: the separate "Server Port" toggle is retired in
     // favour of the URL being the single source of truth. If a user still has
     // the toggle on, fold the port into the URL and switch the toggle off so
@@ -35,7 +41,7 @@ class ConnectionScreen extends HookConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!ref.read(serverPortToggleProvider).ifNull()) return;
         final String url =
-            ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
+            ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
         final port = ref.read(serverPortProvider);
         if (port != null && url.isNotBlank) {
           final merged = Endpoints.baseApi(
@@ -44,7 +50,7 @@ class ConnectionScreen extends HookConsumerWidget {
             addPort: true,
             appendApiToUrl: false,
           );
-          ref.read(serverUrlProvider.notifier).update(merged);
+          ref.read(serverExternalUrlProvider.notifier).update(merged);
         }
         ref.read(serverPortToggleProvider.notifier).update(false);
       });
@@ -52,9 +58,7 @@ class ConnectionScreen extends HookConsumerWidget {
     }, const []);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.connection),
-      ),
+      appBar: AppBar(title: Text(context.l10n.connection)),
       body: ListTileTheme(
         data: const ListTileThemeData(
           subtitleTextStyle: TextStyle(color: Colors.grey),
@@ -67,6 +71,18 @@ class ConnectionScreen extends HookConsumerWidget {
             const OfflineServerMismatchBanner(showAfterDismissal: true),
             SectionTitle(title: context.l10n.serverAddress),
             const ServerUrlTile(),
+            const ServerLanUrlTile(),
+            ListTile(
+              leading: const Icon(Icons.wifi_rounded),
+              title: Text(context.l10n.serverActiveUrl),
+              trailing: Chip(
+                label: Text(
+                  usesLan
+                      ? context.l10n.serverUsingLanUrl
+                      : context.l10n.serverUsingExternalUrl,
+                ),
+              ),
+            ),
             const InlineAuthSection(),
             if (!kIsWeb)
               ListTile(

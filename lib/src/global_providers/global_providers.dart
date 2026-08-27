@@ -5,10 +5,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:queue/queue.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,9 +21,9 @@ import '../constants/enum.dart';
 import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
-import '../features/offline/data/server_reachability.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
+import '../features/offline/data/server_reachability.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -34,6 +36,21 @@ import '../utils/network/timeout_http_client.dart';
 
 part 'global_providers.g.dart';
 
+/// A request that may have reached the server must never be replayed after a
+/// handover: mutations could otherwise run twice. GraphQL reads are safe to
+/// send once to the newly-selected endpoint.
+bool _isGraphQlRead(http.BaseRequest request) {
+  if (request is! http.Request) return false;
+  try {
+    final body = jsonDecode(request.body) as Map<String, dynamic>;
+    final document = body['query'] as String?;
+    if (document == null) return false;
+    return !RegExp(r'^\s*(mutation|subscription)\b').hasMatch(document);
+  } catch (_) {
+    return false;
+  }
+}
+
 // keepAlive: the reader captures this client (and its ref) once and issues
 // progress writes through it. Under autoDispose the ref could die mid-write
 // during provider churn, throwing a disposed-ref StateError inside
@@ -44,10 +61,12 @@ GraphQLClient graphQlClient(Ref ref) {
   final credentials = ref.watch(credentialsProvider).value;
 
   // Timeout settings
-  final timeoutMs = ref.watch(serverRequestTimeoutProvider) ??
+  final timeoutMs =
+      ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;
   final autoRetry = ref.watch(autoRefreshOnTimeoutProvider).ifNull();
-  final retryDelayMs = ref.watch(autoRefreshRetryDelayProvider) ??
+  final retryDelayMs =
+      ref.watch(autoRefreshRetryDelayProvider) ??
       DBKeys.autoRefreshRetryDelay.initial as int;
 
   // Every attempt gets the FULL timeout. Subdividing the budget into
@@ -72,6 +91,18 @@ GraphQLClient graphQlClient(Ref ref) {
       Duration(milliseconds: effectiveTimeoutMs),
       retries: retryCount,
       retryDelay: Duration(milliseconds: retryDelayMs),
+      onConnectionFailure: (request) async {
+        if (!_isGraphQlRead(request)) return null;
+        await ref.read(serverEndpointResolverProvider.notifier).refresh();
+        return Uri.parse(
+          Endpoints.baseApi(
+            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+            port: ref.read(serverPortProvider),
+            addPort: ref.read(serverPortToggleProvider).ifNull(),
+            isGraphQl: true,
+          ),
+        );
+      },
     ),
   );
 
@@ -92,8 +123,7 @@ GraphQLClient graphQlClient(Ref ref) {
         // by the eager `await container.read(...future)` in main(). We
         // read via `.future` defensively in case a caller invokes a
         // GraphQL operation before the preload finishes.
-        final snapshot =
-            await ref.read(authCredentialsStoreProvider.future);
+        final snapshot = await ref.read(authCredentialsStoreProvider.future);
         return authType == AuthType.simpleLogin
             ? snapshot.simpleLoginCookieHeader
             : snapshot.uiAuthorizationHeader;
@@ -110,12 +140,15 @@ GraphQLClient graphQlClient(Ref ref) {
         // AuthCoordinator owns single-flight dedup (R2-3), so both Link
         // instances (query + subscription) share one refresh through it.
         final rawClient = GraphQLClient(
-          link: HttpLink(Endpoints.baseApi(
-            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-            port: ref.read(serverPortProvider),
-            addPort: ref.read(serverPortToggleProvider).ifNull(),
-            isGraphQl: true,
-          ), httpResponseDecoder: tsumiruHttpResponseDecoder),
+          link: HttpLink(
+            Endpoints.baseApi(
+              baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+              port: ref.read(serverPortProvider),
+              addPort: ref.read(serverPortToggleProvider).ifNull(),
+              isGraphQl: true,
+            ),
+            httpResponseDecoder: tsumiruHttpResponseDecoder,
+          ),
           queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
           cache: GraphQLCache(),
         );
@@ -135,27 +168,29 @@ GraphQLClient graphQlClient(Ref ref) {
   // blip could pin details/reader offline until the user happened to pull the
   // library. Deferred a tick: responses can arrive while a provider builds.
   final reachabilityLink = Link.function((request, [forward]) {
-    return forward!(request).map((response) {
-      if (response.errors == null || response.errors!.isEmpty) {
-        Future(() {
-          try {
-            ref.read(serverUnreachableProvider.notifier).set(false);
-          } catch (_) {}
+    return forward!(request)
+        .map((response) {
+          if (response.errors == null || response.errors!.isEmpty) {
+            Future(() {
+              try {
+                ref.read(serverUnreachableProvider.notifier).set(false);
+              } catch (_) {}
+            });
+          }
+          return response;
+        })
+        .handleError((Object error) {
+          // The inverse. Only the downloader used to set this, so everything else
+          // kept paying its own retries to discover the same thing.
+          if (isConnectionError(error)) {
+            Future(() {
+              try {
+                ref.read(serverUnreachableProvider.notifier).set(true);
+              } catch (_) {}
+            });
+          }
+          throw error;
         });
-      }
-      return response;
-    }).handleError((Object error) {
-      // The inverse. Only the downloader used to set this, so everything else
-      // kept paying its own retries to discover the same thing.
-      if (isConnectionError(error)) {
-        Future(() {
-          try {
-            ref.read(serverUnreachableProvider.notifier).set(true);
-          } catch (_) {}
-        });
-      }
-      throw error;
-    });
   });
   link = reachabilityLink.concat(link);
 
@@ -171,8 +206,9 @@ GraphQLClient graphQlClient(Ref ref) {
     // the HTTP layer's whole retry window plus 2s grace, so the HTTP layer
     // always resolves first and keeps its error semantics.
     queryRequestTimeout: Duration(
-        milliseconds:
-            timeoutMs * (retryCount + 1) + retryDelayMs * retryCount + 2000),
+      milliseconds:
+          timeoutMs * (retryCount + 1) + retryDelayMs * retryCount + 2000,
+    ),
     // In-memory only: the default fetch policy is noCache, so a persisted
     // store is write-only bloat (its Hive box grew ~100 MB/week and its
     // whole-file load OOM-crashed startup).
@@ -226,8 +262,9 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     };
   } else if (authType == AuthType.simpleLogin) {
     final cookie = socketCookie;
-    handshakeHeaders =
-        (cookie == null || cookie.isEmpty) ? null : {'Cookie': cookie};
+    handshakeHeaders = (cookie == null || cookie.isEmpty)
+        ? null
+        : {'Cookie': cookie};
   } else if (authType == AuthType.basic && credentials.isNotBlank) {
     handshakeHeaders = {'Authorization': credentials!};
   }
@@ -245,7 +282,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   ref.onDispose(() => unawaited(wsLink.dispose().catchError((_) {})));
 
   final loggerLink = LoggerLink();
-  final timeoutMs = ref.watch(serverRequestTimeoutProvider) ??
+  final timeoutMs =
+      ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;
   return GraphQLClient(
     link: loggerLink.concat(wsLink),
@@ -277,33 +315,27 @@ ValueNotifier<GraphQLClient> graphQlClientHolder(Ref ref) {
 class AuthTypeKey extends _$AuthTypeKey
     with SharedPreferenceEnumClientMixin<AuthType> {
   @override
-  AuthType? build() => initialize(
-        DBKeys.authType,
-        enumList: AuthType.values,
-      );
+  AuthType? build() => initialize(DBKeys.authType, enumList: AuthType.values);
 }
 
 @riverpod
 class L10n extends _$L10n with SharedPreferenceClientMixin<Locale> {
   Map<String, String> toJson(Locale locale) => {
-        if (locale.countryCode.isNotBlank) "countryCode": locale.countryCode!,
-        if (locale.languageCode.isNotBlank) "languageCode": locale.languageCode,
-        if (locale.scriptCode.isNotBlank) "scriptCode": locale.scriptCode!,
-      };
+    if (locale.countryCode.isNotBlank) "countryCode": locale.countryCode!,
+    if (locale.languageCode.isNotBlank) "languageCode": locale.languageCode,
+    if (locale.scriptCode.isNotBlank) "scriptCode": locale.scriptCode!,
+  };
   Locale? fromJson(dynamic json) =>
       json is! Map<String, dynamic> || (json["languageCode"] == null)
-          ? null
-          : Locale.fromSubtags(
-              languageCode: json["languageCode"]!.toString(),
-              scriptCode: json["scriptCode"]?.toString(),
-              countryCode: json["countryCode"]?.toString(),
-            );
+      ? null
+      : Locale.fromSubtags(
+          languageCode: json["languageCode"]!.toString(),
+          scriptCode: json["scriptCode"]?.toString(),
+          countryCode: json["countryCode"]?.toString(),
+        );
   @override
-  Locale? build() => initialize(
-        DBKeys.l10n,
-        fromJson: fromJson,
-        toJson: toJson,
-      );
+  Locale? build() =>
+      initialize(DBKeys.l10n, fromJson: fromJson, toJson: toJson);
 }
 
 @riverpod
@@ -311,10 +343,7 @@ SharedPreferences sharedPreferences(Ref ref) => throw UnimplementedError();
 
 @riverpod
 Queue rateLimitQueue(Ref ref, [String? query]) {
-  final queue = Queue(
-    parallel: 3,
-    delay: const Duration(milliseconds: 500),
-  );
+  final queue = Queue(parallel: 3, delay: const Duration(milliseconds: 500));
   ref.onDispose(() {
     queue.cancel();
   });
