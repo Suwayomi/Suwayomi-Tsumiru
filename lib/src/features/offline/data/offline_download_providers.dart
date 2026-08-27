@@ -1060,13 +1060,20 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   final authType = ref.read(authTypeKeyProvider);
   final basicToken = ref.read(credentialsProvider).value;
   final creds = ref.read(authCredentialsStoreProvider).value;
-  final base = Endpoints.baseApi(
-    baseUrl: ref.read(serverUrlProvider),
-    port: ref.read(serverPortProvider),
-    addPort: ref.read(serverPortToggleProvider).ifNull(),
-    appendApiToUrl: false,
-  );
-  var fetchUrl = '$base$pageUrl';
+  String pageUrlForActiveServer() {
+    if (pageUrl.startsWith('http://') || pageUrl.startsWith('https://')) {
+      return pageUrl;
+    }
+    final base = Endpoints.baseApi(
+      baseUrl: ref.read(serverUrlProvider),
+      port: ref.read(serverPortProvider),
+      addPort: ref.read(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
+    ).replaceFirst(RegExp(r'/+$'), '');
+    return '$base/${pageUrl.replaceFirst(RegExp(r'^/+'), '')}';
+  }
+
+  var fetchUrl = pageUrlForActiveServer();
 
   final headers = <String, String>{};
   if (authType == AuthType.basic && basicToken != null) {
@@ -1081,19 +1088,30 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
         '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds!.uiAccessToken!)}';
   }
 
-  final http.Response res;
-  try {
-    res = await ref
-        .read(offlinePageClientProvider)
-        .get(Uri.parse(fetchUrl), headers: headers);
-  } on SocketException {
-    // Dead network is not a page failure: park resumable (Android worker
-    // parity) instead of burning retries into a terminal error that poisons
-    // the rest of the queue chapter by chapter.
-    throw const PageOfflineException();
-  } on http.ClientException {
+  http.Response? res;
+  final initialServer = ref.read(serverUrlProvider);
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      res = await ref
+          .read(offlinePageClientProvider)
+          .get(Uri.parse(fetchUrl), headers: headers);
+      break;
+    } on SocketException {
+      // A LAN-to-remote handover can land between page requests. Re-evaluate
+      // once and retry the safe GET against the newly active endpoint.
+    } on http.ClientException {
+      // Same path for DNS/connection failures surfaced by package:http.
+    }
+    if (attempt == 0) {
+      await ref.read(serverEndpointResolverProvider.notifier).refresh();
+      if (ref.read(serverUrlProvider) != initialServer) {
+        fetchUrl = pageUrlForActiveServer();
+        continue;
+      }
+    }
     throw const PageOfflineException();
   }
+  if (res == null) throw const PageOfflineException();
   if (res.statusCode == 401 || res.statusCode == 403) {
     throw const PageAuthException();
   }

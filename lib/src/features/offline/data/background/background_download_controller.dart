@@ -190,6 +190,22 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
+  /// The worker receives its endpoint in a launch-time work order. Restart it
+  /// on a LAN/remote handover so queued page GETs never remain pinned to the
+  /// address that just became unreachable.
+  Future<void> restartForEndpointChange() async {
+    if (!Platform.isAndroid || !await FlutterForegroundTask.isRunningService) {
+      return;
+    }
+    _suppressRestarts = true;
+    try {
+      await FlutterForegroundTask.stopService();
+    } finally {
+      _suppressRestarts = false;
+    }
+    await ensureServiceRunning(force: true);
+  }
+
   /// drift is queue authority: queued + (resumable) downloading chapters.
   Future<List<OfflineChapter>> _pendingChapters() async {
     final queued = await _db.chaptersInState(OfflineDeviceState.queued);

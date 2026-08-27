@@ -325,6 +325,15 @@ Future<void> _startApp() async {
         // both the server and the catalog, so it belongs ahead of both gates.
         if (isAndroidNative) {
           container.read(backgroundDownloadControllerProvider).register();
+          container.listen<String?>(serverUrlProvider, (previous, next) {
+            if (previous != null && previous != next) {
+              unawaited(
+                container
+                    .read(backgroundDownloadControllerProvider)
+                    .restartForEndpointChange(),
+              );
+            }
+          });
         }
 
         // Push queued progress the moment the server comes back, not just on

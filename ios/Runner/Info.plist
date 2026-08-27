@@ -89,5 +89,12 @@
 	<string>Save manga pages to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Save manga pages to your photo library.</string>
+	<!-- LAN Suwayomi servers commonly use an RFC1918 HTTP address. Keep ATS for
+	     remote hosts while allowing that explicitly configured local endpoint. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

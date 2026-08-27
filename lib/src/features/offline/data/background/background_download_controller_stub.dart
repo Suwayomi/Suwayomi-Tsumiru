@@ -21,6 +21,7 @@ class BackgroundDownloadController {
   void register() {}
   void dispose() {}
   Future<void> ensureServiceRunning({bool force = false}) async {}
+  Future<void> restartForEndpointChange() async {}
   Future<void> onEnqueued(List<int> chapterIds) async {}
   Future<void> requestStart({bool userInitiated = false}) async {}
   Future<void> onRemoved(int chapterId) async {}

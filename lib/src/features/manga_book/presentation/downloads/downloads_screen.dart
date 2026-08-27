@@ -64,9 +64,10 @@ class DownloadsScreen extends HookConsumerWidget {
       floatingActionButton: onDeviceTab
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB
-              ? DownloadsFab(
-                  status: downloaderRunState ?? DownloaderState.STOPPED)
-              : null),
+                ? DownloadsFab(
+                    status: downloaderRunState ?? DownloaderState.STOPPED,
+                  )
+                : null),
       body: TabBarView(
         controller: tabController,
         children: [
@@ -118,47 +119,44 @@ class _ServerDownloads extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    // With nothing to show, a dead feed is still worth reporting — otherwise a
-    // broken socket over a working connection reads as an empty queue.
-    final feed = ref.watch(downloadUpdatesProvider);
-    final effectiveStatus = downloadsChapterIds.isBlank && feed.hasError
-        ? AsyncValue<DownloadStatusDto?>.error(
-            feed.error!, feed.stackTrace ?? StackTrace.current)
-        : queueStatus;
-    return effectiveStatus.showUiWhenData(
-        context,
-        (data) {
-          if (data == null) {
-            return Emoticons(title: context.l10n.errorSomethingWentWrong);
-          } else if (downloadsChapterIds.isBlank) {
-            return Emoticons(title: context.l10n.noDownloads);
-          } else {
-            final downloadsCount =
-                (downloadsChapterIds.length).getValueOnNullOrNegative();
-            return RefreshIndicator(
-              onRefresh: () => ref.refresh(downloadStatusProvider.future),
-              child: ListView.builder(
-                itemBuilder: (context, index) {
-                  if (index == downloadsCount) return const Gap(104);
-                  final chapterId = downloadsChapterIds[index];
-                  return DownloadProgressListTile(
-                    key: ValueKey("$chapterId"),
-                    index: index,
-                    downloadsCount: downloadsCount,
-                    chapterId: chapterId,
-                    toast: toast,
-                  );
-                },
-                itemCount: downloadsCount + 1,
-              ),
-            );
-          }
-        },
-        refresh: () {
-          ref.invalidate(downloadStatusProvider);
-          ref.invalidate(downloadUpdatesProvider);
-        },
-        showGenericError: true,
+    // The status query is authoritative. A WebSocket can fail independently
+    // (notably on a LAN route) while the HTTP query succeeds; replacing a
+    // verified empty queue with that feed error made Downloads unusable.
+    ref.watch(downloadUpdatesProvider);
+    return queueStatus.showUiWhenData(
+      context,
+      (data) {
+        if (data == null) {
+          return Emoticons(title: context.l10n.errorSomethingWentWrong);
+        } else if (downloadsChapterIds.isBlank) {
+          return Emoticons(title: context.l10n.noDownloads);
+        } else {
+          final downloadsCount = (downloadsChapterIds.length)
+              .getValueOnNullOrNegative();
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(downloadStatusProvider.future),
+            child: ListView.builder(
+              itemBuilder: (context, index) {
+                if (index == downloadsCount) return const Gap(104);
+                final chapterId = downloadsChapterIds[index];
+                return DownloadProgressListTile(
+                  key: ValueKey("$chapterId"),
+                  index: index,
+                  downloadsCount: downloadsCount,
+                  chapterId: chapterId,
+                  toast: toast,
+                );
+              },
+              itemCount: downloadsCount + 1,
+            ),
+          );
+        }
+      },
+      refresh: () {
+        ref.invalidate(downloadStatusProvider);
+        ref.invalidate(downloadUpdatesProvider);
+      },
+      showGenericError: true,
     );
   }
 }
