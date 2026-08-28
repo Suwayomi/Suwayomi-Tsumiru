@@ -117,8 +117,9 @@ class MangaChapterList extends _$MangaChapterList {
     );
     if (ref.mounted) ref.keepAlive();
     if (result != null && fromServer) {
-      unawaited((sync?.syncChapters(result) ?? Future.value())
-          .then((_) => reconcileManga(ref, mangaId)));
+      unawaited((sync?.syncChapters(result) ?? Future.value()).then((_) {
+        if (ref.mounted) reconcileManga(ref, mangaId);
+      }));
     }
     if (didSourceFetch) {
       // MangaWithId loaded before the scrape refreshed metadata; refresh it so
