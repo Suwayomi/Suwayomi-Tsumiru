@@ -142,6 +142,7 @@ Future<bool> runCatchupDownloads({
       ...ledger.pendingDownloads.values,
       ...ledger.pendingServerFetch.values,
     };
+    outer:
     for (final mangaId in mangaIds) {
       if (downloaded >= _maxChaptersPerRun) break;
       if (DateTime.now().isAfter(deadline)) break;
@@ -264,6 +265,20 @@ Future<bool> runCatchupDownloads({
         serverFetch.remove(chapterId);
         final dlSpent = dlRetries[chapterId] ?? 0;
         if (dlSpent >= _maxChapterAttempts) continue;
+
+        // Re-check connectivity before each chapter's page downloads — the
+        // one-time gate at run start can't catch a WiFi drop mid-run.
+        if (spec.wifiOnly) {
+          final net = await Connectivity().checkConnectivity();
+          if (!net.contains(ConnectivityResult.wifi) &&
+              !net.contains(ConnectivityResult.ethernet)) {
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'run-paused reason=wifi-lost mid-run\n',
+            );
+            break outer;
+          }
+        }
 
         final attempt = await _downloadOneChapter(
           target: target,
