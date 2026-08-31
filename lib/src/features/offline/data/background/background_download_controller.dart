@@ -451,6 +451,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// offline_reconciler.dart), so this counter no longer drives one.
   final Map<int, int> _chapterParkAttempts = {};
 
+  /// How many consecutive commit failures a chapter gets before it is given up
+  /// on and marked `error`. Prevents the phantom-download loop where a chapter
+  /// whose staging always fails to commit stays `downloading` in drift and is
+  /// re-enqueued by `_pendingChapters()` on every `afterDrained` restart.
+  static const _maxCommitFailures = 3;
+  final Map<int, int> _commitFailures = {};
+
   /// The worker gave up on an unreachable server and stopped with the queue
   /// intact — OR, just as often in practice, gave up resolving/downloading
   /// one specific chapter whose source is gone (a reverse proxy in front of
@@ -695,6 +702,36 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           // transient blip, not its source being gone — don't let them count
           // toward giving up on it if it ever parks again later.
           _chapterParkAttempts.remove(chapterId);
+          _commitFailures.remove(chapterId);
+        } else {
+          // The worker reports the chapter downloaded, but the commit didn't
+          // publish it.
+          //
+          // `refused`: chapter was deleted or re-queued under a new generation
+          // while the download was in flight. Drift already reflects the new
+          // state (none / queued for the new gen) — do not touch it.
+          //
+          // `incomplete`/`noStaging`: staging was missing or empty after the
+          // download. The row is still `downloading` in drift, which means
+          // `_pendingChapters()` will return it on every `afterDrained` restart
+          // → infinite phantom-download loop. Fix: reset to `queued` so it
+          // re-downloads from scratch, or mark `error` after _maxCommitFailures
+          // consecutive failures so it leaves the queue entirely.
+          if (ch != null &&
+              ch.deviceState != OfflineDeviceState.none &&
+              result != ChapterCommitResult.refused) {
+            final attempts = (_commitFailures[chapterId] ?? 0) + 1;
+            _commitFailures[chapterId] = attempts;
+            if (attempts >= _maxCommitFailures) {
+              _commitFailures.remove(chapterId);
+              await _db.setChapterDeviceState(
+                  chapterId, OfflineDeviceState.error);
+              _sessionFailed++;
+            } else {
+              await _db.setChapterDeviceState(
+                  chapterId, OfflineDeviceState.queued, bytes: 0);
+            }
+          }
         }
       } else {
         await applyBackgroundTerminalState(
