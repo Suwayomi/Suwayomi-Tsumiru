@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../notifications/domain/new_chapter_detection.dart';
 import '../offline_types.dart';
 
@@ -232,6 +233,14 @@ class CatchupStateStore {
   // auto-download off — a deliberate deviation, flagged in the design doc.)
   bool get enabled => _prefs.getBool(_enabledKey) ?? true;
   Future<void> setEnabled(bool v) => _prefs.setBool(_enabledKey, v);
+
+  /// The offline catalog's own server-instance id — what [writeSpec]'s
+  /// [CatchupWorkSpec.serverId] is actually stamped with. NOT the same value
+  /// as [NotificationWorkerConfig.serverId] (a "url|port" string scoping the
+  /// unrelated notification cursor) — the executor must not cross-check the
+  /// spec against that instead, or the spec looks perpetually stale.
+  String? get catalogServerId =>
+      _prefs.getString(DBKeys.offlineCatalogServerId.name);
 
   Future<void> writeSpec(CatchupWorkSpec spec) =>
       _prefs.setString(_specKey, jsonEncode(spec.toJson()));

@@ -102,6 +102,22 @@ void main() {
     expect(s.readLedger('srv-2').backfilledMangaIds, isEmpty);
   });
 
+  test(
+      'catalogServerId reads the offline catalog key, not a made-up '
+      'namespace the executor could mismatch against', () async {
+    SharedPreferences.setMockInitialValues({
+      'offlineCatalogServerId': 'catalog-uuid-123',
+    });
+    final s = CatchupStateStore(await SharedPreferences.getInstance());
+    expect(s.catalogServerId, 'catalog-uuid-123');
+  });
+
+  test('catalogServerId is null when the offline catalog was never set up',
+      () async {
+    final s = await store();
+    expect(s.catalogServerId, isNull);
+  });
+
   test('clearState drops spec and ledger but keeps the user toggle', () async {
     final s = await store();
     await s.setEnabled(true);

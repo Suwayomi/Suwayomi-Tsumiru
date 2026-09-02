@@ -48,7 +48,11 @@ Future<bool> runCatchupDownloads({
   required TokenBroker broker,
 }) async {
   final spec = catchupStore.readSpec();
-  if (spec == null || spec.serverId != config.serverId) {
+  // spec.serverId is the offline catalog's server-instance id (what
+  // writeCatchupWorkSpec stamps it with) — NOT config.serverId, which is a
+  // "url|port" string scoping the unrelated notification cursor. Comparing
+  // against the wrong one meant this guard could never pass.
+  if (spec == null || spec.serverId != catchupStore.catalogServerId) {
     recordDiagnostic(
       '[${DateTime.now().toIso8601String()}] offline-catchup: '
       'run-skipped reason=no-spec\n',
