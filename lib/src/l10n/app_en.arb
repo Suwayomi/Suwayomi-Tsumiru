@@ -2892,6 +2892,11 @@
   "@downloadOverWifiOnly": {
     "description": "Toggle to restrict background downloads to Wi-Fi connections"
   },
+  "backgroundCatchupFetchFiles": "Download the files, not just check",
+  "backgroundCatchupFetchFilesDescription": "When off, background runs only detect and queue new chapters — the files are fetched the next time you open the app",
+  "@backgroundCatchupFetchFilesDescription": {
+    "description": "Sub-option under downloadNewChaptersInBackground: whether the background run also downloads chapter files, or only detects/queues them"
+  },
   "offlineConcurrencyLabel": "Simultaneous downloads",
   "@offlineConcurrencyLabel": {
     "description": "Label for the download concurrency slider"

@@ -218,6 +218,7 @@ class CatchupStateStore {
   static const _specKey = 'catchup_work_spec';
   static const _ledgerKey = 'catchup_ledger';
   static const _enabledKey = 'catchup_bg_enabled';
+  static const _downloadEnabledKey = 'catchup_bg_download_enabled';
 
   /// The worker isolate and the app share these keys through separate
   /// SharedPreferences caches; open() reloads so a run never plans from — or
@@ -233,6 +234,13 @@ class CatchupStateStore {
   // auto-download off — a deliberate deviation, flagged in the design doc.)
   bool get enabled => _prefs.getBool(_enabledKey) ?? true;
   Future<void> setEnabled(bool v) => _prefs.setBool(_enabledKey, v);
+
+  /// Whether the background run also fetches chapter files, or only detects
+  /// and queues them (leaving the actual download for the next foreground
+  /// session). Default ON — matches the behavior before this toggle existed.
+  bool get downloadEnabled => _prefs.getBool(_downloadEnabledKey) ?? true;
+  Future<void> setDownloadEnabled(bool v) =>
+      _prefs.setBool(_downloadEnabledKey, v);
 
   /// The offline catalog's own server-instance id — what [writeSpec]'s
   /// [CatchupWorkSpec.serverId] is actually stamped with. NOT the same value

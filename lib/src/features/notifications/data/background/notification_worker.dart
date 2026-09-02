@@ -79,16 +79,19 @@ Future<bool> runNewChapterCheck() async {
   }
   // Background download step — own cursor, keep-rule scope, no category
   // filter. Resolution records the obligations; the executor then downloads
-  // as many as the run's budget allows.
+  // as many as the run's budget allows — unless the user only wants
+  // detection in the background and prefers to fetch files in the foreground.
   if (catchupStore.enabled) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
-    ok = await runCatchupDownloads(
-          catchupStore: catchupStore,
-          config: config,
-          record: client.currentRecord,
-          broker: client.broker,
-        ) &&
-        ok;
+    if (catchupStore.downloadEnabled) {
+      ok = await runCatchupDownloads(
+            catchupStore: catchupStore,
+            config: config,
+            record: client.currentRecord,
+            broker: client.broker,
+          ) &&
+          ok;
+    }
   }
   if (config.appUpdatesEnabled) {
     await _checkAppUpdate(store, config, client, notifier, l10n);

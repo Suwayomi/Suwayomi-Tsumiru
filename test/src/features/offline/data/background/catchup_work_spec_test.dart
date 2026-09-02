@@ -138,6 +138,21 @@ void main() {
     expect(s.enabled, isTrue);
   });
 
+  test('downloadEnabled defaults to true, matching pre-toggle behavior',
+      () async {
+    final s = await store();
+    expect(s.downloadEnabled, isTrue);
+  });
+
+  test('downloadEnabled round-trips and survives clearState', () async {
+    final s = await store();
+    await s.setDownloadEnabled(false);
+    expect(s.downloadEnabled, isFalse);
+
+    await s.clearState();
+    expect(s.downloadEnabled, isFalse);
+  });
+
   test('chapter generations survive the spec round-trip', () {
     // A chapter deleted once carries a bumped generation. Staging written at
     // the wrong one is rejected at launch AFTER the obligation has been struck
