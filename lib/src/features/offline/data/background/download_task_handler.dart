@@ -452,6 +452,13 @@ class DownloadTaskHandler extends TaskHandler {
       );
       if (newAccess != null) {
         result = await _postChapterPages(chapterId, newAccess);
+      } else if (_broker.lastRefreshTransient) {
+        // The refresh call itself couldn't reach the server — likely the
+        // same blip that produced the 401 in the first place (e.g. right
+        // after the device reconnects, before the network has actually
+        // settled). Park instead of condemning the chapter outright.
+        _lastNetworkErrorReason = 'token refresh unreachable after 401';
+        return null;
       }
     }
     if (result is List<String>) return result;
@@ -640,7 +647,9 @@ class DownloadTaskHandler extends TaskHandler {
     },
     refreshFn: (refreshToken) async {
       // Only ui_login refreshes; basic/simple return null.
-      if (_record.authType != 'uiLogin') return null;
+      if (_record.authType != 'uiLogin') {
+        return (tokens: null, transient: false);
+      }
       final order = _order!;
       final endpoint = Endpoints.baseApi(
         baseUrl: order.serverBase,
@@ -663,17 +672,31 @@ class DownloadTaskHandler extends TaskHandler {
               body: body,
             )
             .timeout(_httpTimeout);
-        if (res.statusCode != 200) return null;
+        // A proxy answering for a dead origin is the server being unreachable,
+        // not the refresh token being invalid — same rule as the page-list
+        // fetch. Without this, the very first request after reconnecting
+        // (which races the network actually settling) permanently condemns
+        // every chapter that happened to 401 in that window.
+        if (isGatewayStatus(res.statusCode)) {
+          return (tokens: null, transient: true);
+        }
+        if (res.statusCode != 200) return (tokens: null, transient: false);
         final decoded = jsonDecode(res.body) as Map<String, Object?>;
         final data = decoded['data'] as Map<String, Object?>?;
         final refreshed = data?['refreshToken'] as Map<String, Object?>?;
         final access = refreshed?['accessToken'] as String?;
-        if (access == null || access.isEmpty) return null;
+        if (access == null || access.isEmpty) {
+          return (tokens: null, transient: false);
+        }
         // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
         // input one (the broker persists it back as the current refresh).
-        return (access: access, refresh: refreshToken);
+        return (tokens: (access: access, refresh: refreshToken), transient: false);
+      } on SocketException {
+        return (tokens: null, transient: true);
+      } on TimeoutException {
+        return (tokens: null, transient: true);
       } catch (_) {
-        return null;
+        return (tokens: null, transient: false);
       }
     },
   );

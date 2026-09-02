@@ -146,7 +146,14 @@ Future<List<String>?> resolveChapterPageUrls({
   var result = await post(null);
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
-    if (newAccess != null) result = await post(newAccess);
+    if (newAccess != null) {
+      result = await post(newAccess);
+    } else if (broker.lastRefreshTransient) {
+      // The refresh call itself couldn't reach the server — likely the same
+      // blip that produced the 401 in the first place (e.g. right after the
+      // device reconnects). Park instead of condemning the chapter outright.
+      return null;
+    }
   }
   if (result == gqlNetworkError) return null;
   if (result is Map<String, Object?>) {

@@ -11,7 +11,7 @@ void main() {
       write: (r) async => record = r,
       refreshFn: (_) async {
         refreshCalls++;
-        return (access: 'NEW', refresh: 'R1');
+        return (tokens: (access: 'NEW', refresh: 'R1'), transient: false);
       },
     );
     // someone else already advanced the record:
@@ -30,7 +30,7 @@ void main() {
       write: (r) async => record = r,
       refreshFn: (rt) async {
         expect(rt, 'R0');
-        return (access: 'NEW', refresh: 'R1');
+        return (tokens: (access: 'NEW', refresh: 'R1'), transient: false);
       },
     );
     final token = await broker.resolveAfter401('OLD');
@@ -40,14 +40,28 @@ void main() {
     expect(record.refreshToken, 'R1'); // rotated refresh persisted (fixes C4)
   });
 
-  test('a dead refresh returns null', () async {
+  test('a dead refresh returns null and is not marked transient', () async {
     var record = const BackgroundTokenRecord(
         gen: 1, authType: 'uiLogin', accessToken: 'OLD', refreshToken: 'R0');
     final broker = TokenBroker(
       read: () async => record,
       write: (r) async => record = r,
-      refreshFn: (_) async => null,
+      refreshFn: (_) async => (tokens: null, transient: false),
     );
     expect(await broker.resolveAfter401('OLD'), isNull);
+    expect(broker.lastRefreshTransient, isFalse);
+  });
+
+  test('a refresh that could not reach the server is marked transient',
+      () async {
+    var record = const BackgroundTokenRecord(
+        gen: 1, authType: 'uiLogin', accessToken: 'OLD', refreshToken: 'R0');
+    final broker = TokenBroker(
+      read: () async => record,
+      write: (r) async => record = r,
+      refreshFn: (_) async => (tokens: null, transient: true),
+    );
+    expect(await broker.resolveAfter401('OLD'), isNull);
+    expect(broker.lastRefreshTransient, isTrue);
   });
 }

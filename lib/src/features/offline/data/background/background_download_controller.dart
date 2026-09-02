@@ -951,7 +951,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// record — for callers/tests coordinating a refresh from the main isolate.
   /// Only ui_login refreshes; network refresh is delegated to [refreshFn].
   TokenBroker mainSideBroker({
-    required Future<RefreshResult?> Function(String refreshToken) refreshFn,
+    required Future<RefreshAttempt> Function(String refreshToken) refreshFn,
   }) => TokenBroker(
     read: () async {
       final raw = await FlutterForegroundTask.getData<String>(
