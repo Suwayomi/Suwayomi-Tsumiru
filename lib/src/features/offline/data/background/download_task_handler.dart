@@ -192,16 +192,22 @@ class DownloadTaskHandler extends TaskHandler {
         final id = data['chapterId'] as int;
         if (id == _inFlight) break; // already downloading — don't double-queue
         // A re-add after a delete carries a bumped generation; adopt it so this
-        // download's events outrank the deleted generation's stale ones.
+        // download's events outrank the deleted generation's stale ones. It
+        // also supersedes any earlier cancellation of this same id: a chapter
+        // that fell out of a keep-rule window (evicted → 'remove' → added to
+        // _cancelled) and then falls back in (window shifts again within the
+        // same FGS session, e.g. a read/unread toggle) is wanted again, not
+        // still cancelled — without this, the id stayed in _cancelled for the
+        // rest of the session and every future 'add' for it silently no-opped,
+        // since both branches below also required it absent from _cancelled.
+        _cancelled.remove(id);
         _genOf[id] = data['gen'] as int? ?? 0;
-        if (!_queue.contains(id) &&
-            !_cancelled.contains(id) &&
-            !_mangaOf.containsKey(id)) {
+        if (!_queue.contains(id) && !_mangaOf.containsKey(id)) {
           _queue.add(id);
           _mangaOf[id] = data['mangaId'] as int;
           _total++;
           _sawNewWork = true;
-        } else if (!_queue.contains(id) && !_cancelled.contains(id)) {
+        } else if (!_queue.contains(id)) {
           // Known manga mapping but not currently queued (e.g. re-add of a
           // chapter whose row we still remember): requeue it.
           _queue.add(id);
