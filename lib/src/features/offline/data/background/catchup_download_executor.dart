@@ -249,7 +249,12 @@ Future<bool> runCatchupDownloads({
           }
           // Two-hop: ask the server to fetch it from the source first. A failed
           // ask is the server not being there, which costs nothing.
-          final ok = await _enqueueServerDownload(target, record, chapterId);
+          final ok = await _enqueueServerDownload(
+            target,
+            record,
+            broker,
+            chapterId,
+          );
           // A trail of every attempt, not just the final give-up — so a run
           // that never reaches the cap is still visible, and a failed
           // enqueue request (server unreachable) is distinguishable from one
@@ -501,11 +506,12 @@ Future<_MangaChapters?> _fetchMangaChapters(
 Future<bool> _enqueueServerDownload(
   BackgroundServerTarget target,
   BackgroundTokenRecord Function() record,
+  TokenBroker broker,
   int chapterId,
 ) async {
   const query =
       'mutation EnqueueDownloads(\$input: EnqueueChapterDownloadsInput!){ enqueueChapterDownloads(input: \$input){ __typename } }';
-  final result = await postBackgroundGraphql(
+  Future<Object?> post(String? accessToken) => postBackgroundGraphql(
     target: target,
     record: record(),
     query: query,
@@ -514,7 +520,21 @@ Future<bool> _enqueueServerDownload(
         'ids': [chapterId],
       },
     },
+    accessToken: accessToken,
   );
+  // Without this retry, a uiLogin access token that expired between wakes
+  // (the wake interval is 1-6h, far longer than a typical token lifetime)
+  // makes this call 401 and give up every single run — the server never
+  // actually gets asked to fetch the chapter from source in the background,
+  // no matter how many attempts the ledger counts. `_fetchMangaChapters`
+  // above already refreshed the token this run if it was stale, but that
+  // refresh only persists to the store (via the broker), not back into
+  // `record()` — so this call still needs its own retry, same as that one.
+  var result = await post(null);
+  if (result == gqlAuthError && record().authType == 'uiLogin') {
+    final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
+    if (newAccess != null) result = await post(newAccess);
+  }
   return result is Map<String, Object?>;
 }
 
