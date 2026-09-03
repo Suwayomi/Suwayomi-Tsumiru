@@ -61,12 +61,23 @@ Future<bool> runCatchupDownloads({
   }
 
   var ledger = catchupStore.readLedger(config.serverId);
+
+  // Compute backfill needs BEFORE the early-exit: an empty ledger is not
+  // necessarily empty work — manga in the spec that have never had a full
+  // chapter-list pass need one regardless of whether there are ledger
+  // obligations (the ledger starts empty on every fresh spec or server switch).
+  final needsBackfill = spec.keepRuleMangaIds.difference(
+    ledger.backfilledMangaIds,
+  );
   recordDiagnostic(
     '[${DateTime.now().toIso8601String()}] offline-catchup: run-started '
     'pendingDownloads=${ledger.pendingDownloads.length} '
-    'pendingServerFetch=${ledger.pendingServerFetch.length}\n',
+    'pendingServerFetch=${ledger.pendingServerFetch.length} '
+    'needsBackfill=${needsBackfill.length}\n',
   );
-  if (ledger.pendingDownloads.isEmpty && ledger.pendingServerFetch.isEmpty) {
+  if (ledger.pendingDownloads.isEmpty &&
+      ledger.pendingServerFetch.isEmpty &&
+      needsBackfill.isEmpty) {
     return true;
   }
 
@@ -125,16 +136,9 @@ Future<bool> runCatchupDownloads({
     // processed, which the filter below drops anyway. A retry loop or a second
     // pass would break that.
     final logEntries = await log.parse();
-    // A manga the feed-based cursor above has never had a reason to surface
-    // (its chapters all predate the watermark — typically a keep rule just
-    // turned on for it) gets a one-time full chapter-list visit here instead
-    // of waiting on the foreground launch pass, which is otherwise the only
-    // path that ever looks at a manga's whole list rather than the feed's
-    // delta. Listed first so a long-running pending backlog can't starve a
-    // manga that has never been looked at at all.
-    final needsBackfill = spec.keepRuleMangaIds.difference(
-      ledger.backfilledMangaIds,
-    );
+    // needsBackfill was computed before the early-exit check so it is already
+    // available here; the set is the same because backfilledMangaIds only grows
+    // during the run and we haven't touched the ledger yet at this point.
     if (needsBackfill.isNotEmpty) {
       recordDiagnostic(
         '[${DateTime.now().toIso8601String()}] offline-catchup: '
