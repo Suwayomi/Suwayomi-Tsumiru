@@ -33,6 +33,30 @@ enum DateGroupKeys implements LocaleEnum {
   }
 }
 
+/// Calendar-day gap between [date] and now, e.g. 1 for "yesterday" no matter
+/// the time of day either side of the boundary falls on.
+///
+/// `DateTime.now().difference(date).inDays` looks equivalent but isn't: it's
+/// a rolling 24-hour count, not a calendar-day count. A chapter fetched late
+/// yesterday evening can be under 24 real hours old by the time it's viewed
+/// early this morning, so that rolling duration reports 0 — "Today" — even
+/// though a calendar midnight separates the two. This under-counts by
+/// exactly one for anything that isn't actually today, which is why
+/// yesterday's items looked like today's, the day before looked like
+/// yesterday's, and so on, one slot too recent all the way down.
+///
+/// Diffing two local midnights directly has its own trap: a DST transition
+/// makes one local day 23 or 25 real hours long, which can shift `.inDays`
+/// by one right on that day. Re-anchoring both dates as UTC calendar dates
+/// (same year/month/day, no timezone offset applied) before subtracting
+/// keeps the day count a pure calendar difference either way.
+int _calendarDaysAgo(DateTime date) {
+  final now = DateTime.now();
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final then = DateTime.utc(date.year, date.month, date.day);
+  return today.difference(then).inDays;
+}
+
 extension DateTimeExtensions on DateTime {
   String get toDateString => DateFormat.yMMMd().format(this);
   String get toMonthYearString => DateFormat.yMMM().format(this);
@@ -128,14 +152,14 @@ extension DateTimeExtensions on DateTime {
   static DateTime max(DateTime a, DateTime b) => a.compareTo(b) > 0 ? a : b;
 
   String convertToDaysAgo(BuildContext context) {
-    Duration diff = DateTime.now().difference(this);
+    final daysAgo = _calendarDaysAgo(this);
 
-    if (diff.inDays < 1) {
+    if (daysAgo <= 0) {
       return context.l10n.today;
-    } else if (diff.inDays < 2) {
+    } else if (daysAgo == 1) {
       return context.l10n.yesterday;
-    } else if (diff.inDays < 10) {
-      return context.l10n.daysAgo(diff.inDays);
+    } else if (daysAgo < 10) {
+      return context.l10n.daysAgo(daysAgo);
     } else {
       return DateFormat.yMMMd(context.currentLocale.toLanguageTag())
           .format(this);
@@ -152,10 +176,12 @@ extension DateTimeExtensions on DateTime {
       return context.l10n.minutesAgo(diff.inMinutes);
     } else if (diff.inHours < 24) {
       return context.l10n.hoursAgo(diff.inHours);
-    } else if (diff.inDays < 2) {
+    }
+    final daysAgo = _calendarDaysAgo(this);
+    if (daysAgo <= 1) {
       return context.l10n.yesterday;
-    } else if (diff.inDays < 10) {
-      return context.l10n.daysAgo(diff.inDays);
+    } else if (daysAgo < 10) {
+      return context.l10n.daysAgo(daysAgo);
     } else {
       return DateFormat.yMMMd(context.currentLocale.toLanguageTag())
           .format(this);
