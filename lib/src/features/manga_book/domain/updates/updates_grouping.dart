@@ -84,6 +84,34 @@ bool _releasedAfter(ChapterWithMangaDto a, ChapterWithMangaDto b) {
   return a.sourceOrder.compareTo(b.sourceOrder) > 0;
 }
 
+/// Flat indices that should carry a date header: the first occurrence of
+/// each calendar day in [items], in scan order.
+///
+/// The feed is normally sorted newest-first, so days only ever appear in one
+/// contiguous run — but `UpdatesRepository.getRecentChaptersPage` pages
+/// through a live, growing table with plain offset pagination (its own doc
+/// comment on `updatesPageSize` notes "the offset step must match, or pages
+/// overlap and the list repeats rows"), so a background update arriving
+/// mid-scroll can shift the offset window and re-surface a "today" row again
+/// after the list has already moved on into "yesterday". Keying headers off
+/// "first time this day was seen" instead of "does this row's day differ
+/// from the row right before it" means a stray repeat like that just folds
+/// silently into the day it belongs to instead of opening a second header
+/// for a day already shown further up.
+Set<int> dateHeaderIndices(List<ChapterWithMangaDto> items) {
+  final seenDays = <int>{};
+  final headerIndices = <int>{};
+  for (var i = 0; i < items.length; i++) {
+    final fetchedAt = int.tryParse(items[i].fetchedAt);
+    if (fetchedAt == null) continue;
+    final dayKey = DateTime.fromMillisecondsSinceEpoch(fetchedAt * 1000)
+        .startOfDay
+        .millisecondsSinceEpoch;
+    if (seenDays.add(dayKey)) headerIndices.add(i);
+  }
+  return headerIndices;
+}
+
 /// Maps each group's head flat-list index to its position in [groups] —
 /// computed once for the whole result and shared, instead of every row's
 /// `itemBuilder` call doing its own O(groups) scan to answer "is this flat

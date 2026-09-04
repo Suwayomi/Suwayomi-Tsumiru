@@ -33,10 +33,11 @@ ChapterWithMangaDto _chapter({
   required int mangaId,
   int day = 0,
   bool isRead = false,
+  String? fetchedAt,
 }) =>
     ChapterWithMangaDto(
       chapterNumber: id.toDouble(),
-      fetchedAt: '${day * 86400}',
+      fetchedAt: fetchedAt ?? '${day * 86400}',
       id: id,
       isBookmarked: false,
       isDownloaded: false,
@@ -221,6 +222,60 @@ void main() {
       expect(pickGroupHead(oldestFirst).id, 3,
           reason: 'the pick must depend on release recency, not on which '
               'end of the list happens to hold the newest chapter');
+    });
+  });
+
+  group('dateHeaderIndices', () {
+    test('empty input produces no header indices', () {
+      expect(dateHeaderIndices(const []), isEmpty);
+    });
+
+    test('a single day produces exactly one header, at index 0', () {
+      final items = [
+        _chapter(id: 1, mangaId: 1, day: 0),
+        _chapter(id: 2, mangaId: 1, day: 0),
+        _chapter(id: 3, mangaId: 2, day: 0),
+      ];
+
+      expect(dateHeaderIndices(items), {0});
+    });
+
+    test('a normally-sorted feed gets one header per day, at each day\'s '
+        'first appearance', () {
+      final items = [
+        _chapter(id: 1, mangaId: 1, day: 0),
+        _chapter(id: 2, mangaId: 2, day: 0),
+        _chapter(id: 3, mangaId: 1, day: 1),
+        _chapter(id: 4, mangaId: 2, day: 1),
+      ];
+
+      expect(dateHeaderIndices(items), {0, 2});
+    });
+
+    test(
+        'a stray repeat of an earlier day (offset-pagination drift) does not '
+        'open a second header for that day', () {
+      // Mirrors the real failure: a background update shifts the offset
+      // window mid-scroll, so a "today" row (day 0) is re-fetched again
+      // AFTER the list has already moved into "yesterday" (day 1).
+      final items = [
+        _chapter(id: 1, mangaId: 1, day: 0),
+        _chapter(id: 2, mangaId: 2, day: 1),
+        _chapter(id: 3, mangaId: 1, day: 0), // stray repeat of day 0
+      ];
+
+      expect(dateHeaderIndices(items), {0, 1},
+          reason: 'day 0 already got its header at index 0 — the repeat at '
+              'index 2 must not open a second one');
+    });
+
+    test('an unparseable fetchedAt is skipped, not given its own header', () {
+      final items = [
+        _chapter(id: 1, mangaId: 1, fetchedAt: 'not-a-date'),
+        _chapter(id: 2, mangaId: 1, day: 0),
+      ];
+
+      expect(dateHeaderIndices(items), {1});
     });
   });
 

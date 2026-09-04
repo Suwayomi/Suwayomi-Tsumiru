@@ -71,19 +71,30 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   List<ChapterWithMangaDto>? _memoItems;
   List<UpdatesGroupedEntry>? _memoGroups;
   Map<int, int>? _memoHeadIndex;
+  Set<int>? _memoHeaderIndices;
 
-  ({List<UpdatesGroupedEntry> groups, Map<int, int> headIndex}) _groupingFor(
+  ({
+    List<UpdatesGroupedEntry> groups,
+    Map<int, int> headIndex,
+    Set<int> headerIndices,
+  }) _groupingFor(
     List<ChapterWithMangaDto> items,
   ) {
     if (identical(_memoItems, items)) {
-      return (groups: _memoGroups!, headIndex: _memoHeadIndex!);
+      return (
+        groups: _memoGroups!,
+        headIndex: _memoHeadIndex!,
+        headerIndices: _memoHeaderIndices!,
+      );
     }
     final groups = groupUpdatesForDisplay(items);
     final headIndex = headFlatIndexToDisplayIndex(groups);
+    final headerIndices = dateHeaderIndices(items);
     _memoItems = items;
     _memoGroups = groups;
     _memoHeadIndex = headIndex;
-    return (groups: groups, headIndex: headIndex);
+    _memoHeaderIndices = headerIndices;
+    return (groups: groups, headIndex: headIndex, headerIndices: headerIndices);
   }
 
   Future<void> _updatePair(ChapterWithMangaDto item) async {
@@ -129,18 +140,26 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   Widget _buildItem(BuildContext context, ChapterWithMangaDto _, int flatIndex) {
     final items = widget.controller.itemList ?? [];
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
+    // Memoized per itemList instance — see _groupingFor's doc comment. Needed
+    // on both paths below since date headers are independent of manga
+    // grouping.
+    final grouping = _groupingFor(items);
 
     if (isGrouped) {
-      // Memoized per itemList instance — see _groupingFor's doc comment.
       // A flat index missing from headIndex is a tail member (or the head of
       // a DIFFERENT group already rendered): suppress it either way.
-      final grouping = _groupingFor(items);
       final displayIndex = grouping.headIndex[flatIndex];
       if (displayIndex == null) return const SizedBox.shrink();
 
       final group = grouping.groups[displayIndex];
       final tile = _buildGroupTile(context, group);
-      return _wrapWithDateHeader(context, items, flatIndex, tile);
+      return _wrapWithDateHeader(
+        context,
+        items,
+        flatIndex,
+        tile,
+        grouping.headerIndices,
+      );
     }
 
     // Ungrouped path — identical to the original flat behaviour.
@@ -153,7 +172,13 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       canTapSelect: widget.selectedChapters.value.isNotEmpty,
       toggleSelect: (val) => _toggleSelect(val),
     );
-    return _wrapWithDateHeader(context, items, flatIndex, tile);
+    return _wrapWithDateHeader(
+      context,
+      items,
+      flatIndex,
+      tile,
+      grouping.headerIndices,
+    );
   }
 
   Widget _buildGroupTile(BuildContext context, UpdatesGroupedEntry group) {
@@ -174,15 +199,10 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     List<ChapterWithMangaDto> items,
     int flatIndex,
     Widget tile,
+    Set<int> headerIndices,
   ) {
-    int? previousDate;
-    try {
-      previousDate = int.tryParse(items[flatIndex - 1].fetchedAt);
-    } catch (_) {
-      previousDate = null;
-    }
+    if (!headerIndices.contains(flatIndex)) return tile;
     final currentDate = int.tryParse(items[flatIndex].fetchedAt);
-    if (currentDate.isSameDayAs(previousDate)) return tile;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
