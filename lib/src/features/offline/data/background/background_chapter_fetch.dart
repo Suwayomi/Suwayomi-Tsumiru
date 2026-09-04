@@ -124,7 +124,8 @@ Future<Object?> postBackgroundGraphql({
 }
 
 /// A chapter's page URLs: the list on success, empty on terminal failure, null
-/// when the server was unreachable. Retries once through the broker on 401.
+/// when the server was unreachable or a 401 could not be resolved. Retries
+/// once through the broker on 401.
 Future<List<String>?> resolveChapterPageUrls({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord Function() record,
@@ -155,7 +156,16 @@ Future<List<String>?> resolveChapterPageUrls({
       return null;
     }
   }
-  if (result == gqlNetworkError) return null;
+  // An auth failure that survives the retry above (the refresh succeeded but
+  // the retried call 401'd again, or the refresh itself failed non-
+  // transiently) used to fall all the way through to the empty-list return
+  // below — indistinguishable from "the server answered, this chapter truly
+  // has no pages". The FGS worker treats an empty list as terminal and marks
+  // the chapter `error` on the spot (download_task_handler.dart), so a token
+  // that was merely stale right after a reconnect condemned the chapter
+  // outright instead of getting the park-and-retry treatment every other
+  // ambiguous failure in this file gets.
+  if (result == gqlNetworkError || result == gqlAuthError) return null;
   if (result is Map<String, Object?>) {
     final pages =
         (result['fetchChapterPages'] as Map<String, Object?>?)?['pages'];
