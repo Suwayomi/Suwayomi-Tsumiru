@@ -58,6 +58,10 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     // Each group starts expanded or collapsed based on the persisted setting.
     // The user can toggle independently of the global default.
     final isExpanded = useState(groupingMode == UpdatesGroupingMode.expanded);
+    useEffect(() {
+      isExpanded.value = groupingMode == UpdatesGroupingMode.expanded;
+      return null;
+    }, [groupingMode]);
 
     final isGroup = tail.isNotEmpty;
 
