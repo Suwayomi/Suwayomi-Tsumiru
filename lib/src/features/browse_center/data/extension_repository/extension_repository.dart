@@ -43,7 +43,8 @@ class ExtensionRepository {
               // Web picks carry bytes and a blob URL rather than a real path,
               // so fromPath can't open them.
               extensionFile: kIsWeb
-                  ? http.MultipartFile.fromBytes("extensionFile", file.bytes!,
+                  ? http.MultipartFile.fromBytes(
+                      "extensionFile", await file.readAsBytes(),
                       filename: file.name)
                   : await http.MultipartFile.fromPath(
                       "extensionFile", file.path!),

@@ -24,7 +24,7 @@ dependencies:
   drift: ^2.32.0
   extension_type_unions: ^1.0.10
   file: ^7.0.0
-  file_picker: ^11.0.0
+  file_picker: ^12.0.0
   flex_color_picker: 3.8.0
   flutter:
     sdk: flutter
@@ -62,8 +62,8 @@ dependencies:
   # HCT (perceived-lightness) color space for the light-mode genre chips. Ships
   # with Flutter itself; declared here because we import it directly.
   material_color_utilities: ^0.13.0
-  network_info_plus: ^6.0.0
-  package_info_plus: ^8.0.0
+  network_info_plus: ^8.0.0
+  package_info_plus: ^10.0.0
   path: ^1.8.3
   path_provider: ^2.0.11
   pub_semver: ^2.1.2
@@ -85,7 +85,7 @@ dependencies:
   url_launcher: ^6.1.6
   web_socket_channel: ^3.0.0
   screen_brightness: ^2.1.11
-  share_plus: ^12.0.2
+  share_plus: ^13.0.0
   gal: ^2.3.2
   image: ^4.8.0
   window_manager: ^0.5.2
@@ -93,6 +93,7 @@ dependencies:
   workmanager: ^0.10.0
 
 dev_dependencies:
+  cross_file: ^0.3.5+4
   build_runner: ^2.4.14
   # flutter_flavorizr: ^2.1.5
   drift_dev: ^2.32.0

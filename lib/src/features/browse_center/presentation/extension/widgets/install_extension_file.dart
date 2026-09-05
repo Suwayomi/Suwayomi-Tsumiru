@@ -19,13 +19,11 @@ class InstallExtensionFile extends ConsumerWidget {
 
   void extensionFilePicker(WidgetRef ref, BuildContext context) async {
     final toast = ref.read(toastProvider);
-    final file = await FilePicker.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['apk'],
-      // Web has no file paths, so the bytes have to come back with the pick.
-      withData: kIsWeb,
     );
-    if ((file?.files).isNotBlank) {
+    if (file != null) {
       if (context.mounted) {
         toast?.show(context.l10n.installingExtension);
       }
@@ -34,7 +32,7 @@ class InstallExtensionFile extends ConsumerWidget {
       () async {
         await ref
             .read(extensionActionsProvider)
-            .installFile(context, file: file?.files.single);
+            .installFile(context, file: file);
         if (context.mounted) {
           toast?.show(context.l10n.extensionInstalled, instantShow: true);
         }
