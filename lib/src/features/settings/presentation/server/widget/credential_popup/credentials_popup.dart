@@ -65,6 +65,17 @@ class CredentialsPopup extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final username = useTextEditingController();
     final password = useTextEditingController();
+    void doSave() {
+      if ((formKey.currentState?.validate()).ifNull()) {
+        ref.read(credentialsProvider.notifier).set(
+              _basicAuth(userName: username.text, password: password.text),
+              forEpoch:
+                  ref.read(authCredentialsStoreProvider.notifier).serverEpoch,
+            );
+        Navigator.pop(context);
+      }
+    }
+
     return AlertDialog(
       title: Text(context.l10n.credentials),
       content: Form(
@@ -76,6 +87,7 @@ class CredentialsPopup extends HookConsumerWidget {
               controller: username,
               validator: (value) =>
                   value.isBlank ? (context.l10n.errorUserName) : null,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: context.l10n.userName,
                 border: const OutlineInputBorder(),
@@ -87,6 +99,8 @@ class CredentialsPopup extends HookConsumerWidget {
               validator: (value) =>
                   value.isBlank ? (context.l10n.errorPassword) : null,
               obscureText: true,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => doSave(),
               decoration: InputDecoration(
                 hintText: context.l10n.password,
                 border: const OutlineInputBorder(),
@@ -98,19 +112,7 @@ class CredentialsPopup extends HookConsumerWidget {
       actions: [
         const PopButton(),
         ElevatedButton(
-          onPressed: () async {
-            if ((formKey.currentState?.validate()).ifNull()) {
-              ref.read(credentialsProvider.notifier).set(
-                    _basicAuth(
-                      userName: username.text,
-                      password: password.text,
-                    ),
-                    forEpoch:
-                        ref.read(authCredentialsStoreProvider.notifier).serverEpoch,
-                  );
-              Navigator.pop(context);
-            }
-          },
+          onPressed: doSave,
           child: Text(context.l10n.save),
         ),
       ],
