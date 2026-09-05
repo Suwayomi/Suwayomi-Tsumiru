@@ -145,7 +145,7 @@ class _ServerDownloads extends ConsumerWidget {
                     ListTile(
                       dense: true,
                       leading: const Icon(Icons.download_rounded),
-                      title: Text(context.l10n.downloadsServerTab),
+                      title: Text(context.l10n.downloadsQueue),
                       trailing: Text("$downloadsCount"),
                     ),
                     Padding(
@@ -161,14 +161,9 @@ class _ServerDownloads extends ConsumerWidget {
                     const Divider(height: 1),
                   ],
                 ),
-                onReorder: (oldIndex, newIndex) {
-                  final adjustedNewIndex =
-                      newIndex > oldIndex ? newIndex - 1 : newIndex;
-                  final chapterId = downloadsChapterIds[oldIndex];
-                  ref
-                      .read(downloadsMapProvider.notifier)
-                      .reorder(chapterId, adjustedNewIndex);
-                },
+                onReorderItem: (oldIndex, newIndex) => ref
+                    .read(downloadsMapProvider.notifier)
+                    .reorder(downloadsChapterIds[oldIndex], newIndex),
                 itemBuilder: (context, index) {
                   final chapterId = downloadsChapterIds[index];
                   return DownloadProgressListTile(

@@ -3051,6 +3051,10 @@
   "@downloadsOnDeviceTab": {
     "description": "Downloads tab: files downloaded on this device"
   },
+  "downloadsQueue": "Queue",
+  "@downloadsQueue": {
+    "description": "Header title above the server download queue"
+  },
   "downloadsServerHint": "Chapters the server is fetching. Long-press a row to reorder.",
   "@downloadsServerHint": {
     "description": "Hint shown above the server download queue"
