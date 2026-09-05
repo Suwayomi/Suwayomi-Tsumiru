@@ -1138,7 +1138,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           dtMs: dtMs,
         );
         final target = pos.pixels + (reverse ? -delta : delta);
-        if (target >= pos.maxScrollExtent && hasReachedEnd.value) {
+        final atEnd = reverse
+            ? target <= pos.minScrollExtent
+            : target >= pos.maxScrollExtent;
+        if (atEnd && hasReachedEnd.value) {
           ref.read(autoScrollActiveProvider.notifier).stop();
           return;
         }
