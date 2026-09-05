@@ -65,36 +65,39 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              context.l10n.offlineChaptersScreenTitle,
-              style: context.textTheme.titleMedium,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: thumbnailUrl != null
+                  ? ServerImage(
+                      imageUrl: thumbnailUrl!,
+                      fit: BoxFit.cover,
+                      size: const Size(32, 42),
+                    )
+                  : const Icon(Icons.book_outlined),
             ),
-            Text(
-              mangaTitle,
-              style: context.textTheme.bodySmall?.copyWith(
-                color: context.theme.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.offlineChaptersScreenTitle,
+                    style: context.textTheme.titleMedium,
+                  ),
+                  Text(
+                    mangaTitle,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
-        // Compact cover on the left for quick orientation.
-        leading: Padding(
-          padding: const EdgeInsets.all(10),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: thumbnailUrl != null
-                ? ServerImage(
-                    imageUrl: thumbnailUrl!,
-                    fit: BoxFit.cover,
-                    size: const Size(32, 42),
-                  )
-                : const Icon(Icons.book_outlined),
-          ),
         ),
       ),
       body: !hasAny
