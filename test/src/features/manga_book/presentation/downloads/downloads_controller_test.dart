@@ -75,6 +75,7 @@ Map<String, dynamic> _queueItem({
         'name': 'Ch. $chapterId',
         'sourceOrder': position,
         'isDownloaded': false,
+        'pageCount': 0,
         '__typename': 'ChapterType',
       },
       'manga': {

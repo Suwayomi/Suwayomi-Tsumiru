@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -137,9 +136,40 @@ class _ServerDownloads extends ConsumerWidget {
                 (downloadsChapterIds.length).getValueOnNullOrNegative();
             return RefreshIndicator(
               onRefresh: () => ref.refresh(downloadStatusProvider.future),
-              child: ListView.builder(
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                padding: const EdgeInsets.only(bottom: 88),
+                header: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.download_rounded),
+                      title: Text(context.l10n.downloadsServerTab),
+                      trailing: Text("$downloadsCount"),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Text(
+                        context.l10n.downloadsServerHint,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                  ],
+                ),
+                onReorder: (oldIndex, newIndex) {
+                  final adjustedNewIndex =
+                      newIndex > oldIndex ? newIndex - 1 : newIndex;
+                  final chapterId = downloadsChapterIds[oldIndex];
+                  ref
+                      .read(downloadsMapProvider.notifier)
+                      .reorder(chapterId, adjustedNewIndex);
+                },
                 itemBuilder: (context, index) {
-                  if (index == downloadsCount) return const Gap(104);
                   final chapterId = downloadsChapterIds[index];
                   return DownloadProgressListTile(
                     key: ValueKey("$chapterId"),
@@ -149,7 +179,7 @@ class _ServerDownloads extends ConsumerWidget {
                     toast: toast,
                   );
                 },
-                itemCount: downloadsCount + 1,
+                itemCount: downloadsCount,
               ),
             );
           }

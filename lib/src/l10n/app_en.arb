@@ -3051,6 +3051,22 @@
   "@downloadsOnDeviceTab": {
     "description": "Downloads tab: files downloaded on this device"
   },
+  "downloadsServerHint": "Chapters the server is fetching. Long-press a row to reorder.",
+  "@downloadsServerHint": {
+    "description": "Hint shown above the server download queue"
+  },
+  "downloadPagesProgress": "{done}/{total} pages",
+  "@downloadPagesProgress": {
+    "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "offlineNoFiles": "Nothing downloaded on this device yet",
   "@offlineNoFiles": {
     "description": "Empty state for the on-device downloads tab"
