@@ -161,7 +161,7 @@ class _HeaderDialog extends HookConsumerWidget {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: context.l10n.customHeaderName,
-              hintText: 'CF-Access-Client-Id',
+              hintText: 'X-Custom-Header',
               border: const OutlineInputBorder(),
               errorText: nameError.value,
             ),

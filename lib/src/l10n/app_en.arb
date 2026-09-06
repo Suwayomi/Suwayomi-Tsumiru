@@ -2075,11 +2075,11 @@
   "@customHeaders": {
     "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
   },
-  "customHeadersDescription": "Sent with every request to your server. Needed when the server sits behind a Zero Trust guard or reverse-proxy auth, e.g. Cloudflare Access (CF-Access-Client-Id / CF-Access-Client-Secret).",
+  "customHeadersDescription": "Sent with every request to your server. Only needed when the server sits behind an authentication gateway, Zero Trust guard, or reverse proxy that requires extra headers.",
   "@customHeadersDescription": {
     "description": "Explanation under the Custom HTTP headers section"
   },
-  "customHeaderEmpty": "No custom headers. Add one if your server is behind a Zero Trust guard (e.g. Cloudflare Access).",
+  "customHeaderEmpty": "No custom headers. Add one if your server sits behind an authentication gateway or reverse proxy that requires extra headers.",
   "@customHeaderEmpty": {
     "description": "Empty state for the custom headers list"
   },
