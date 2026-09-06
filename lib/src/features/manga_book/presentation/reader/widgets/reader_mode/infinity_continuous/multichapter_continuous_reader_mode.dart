@@ -194,6 +194,57 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final lastEndFeedbackTime = useRef<DateTime?>(null);
     final lastStartFeedbackTime = useRef<DateTime?>(null);
     final completedChapterIds = useRef<Set<int>>({});
+
+    // Session protection: protect each chapter opened in this reader from
+    // reconcile eviction. Discarded on dispose; never accumulates across sessions.
+    final sessionChapterIds = useRef<Set<int>>({});
+    final sessionNotifier = ref.read(sessionReadChaptersProvider.notifier);
+    // Mirrored into a ref each build so the deferred callbacks below never
+    // have to touch `ref` themselves — `ref` throws if it outlives the widget.
+    final incognitoRef = useRef(ref.watch(incognitoModeProvider));
+    incognitoRef.value = ref.watch(incognitoModeProvider);
+    useEffect(() {
+      var active = true;
+      void doRecord(int id) {
+        if (!active || incognitoRef.value) return;
+        if (!sessionChapterIds.value.contains(id)) {
+          sessionChapterIds.value = {...sessionChapterIds.value, id};
+          // The provider container can be torn down (route pop racing app/test
+          // shutdown) between scheduling this microtask and it running; there is
+          // nothing left to protect at that point, so ignore the disposed-ref
+          // error rather than crash on a benign teardown race.
+          try {
+            sessionNotifier.record(id);
+          } catch (_) {
+            // UnmountedRefException (internal riverpod type, not exported):
+            // container disposed before this microtask ran.
+          }
+        }
+      }
+      // A microtask (unlike addPostFrameCallback) is guaranteed to drain
+      // before this build/dispose call stack unwinds, regardless of whether
+      // another frame gets scheduled.
+      Future.microtask(() => doRecord(currentVisibleChapter.value.id));
+      void onChanged() => doRecord(currentVisibleChapter.value.id);
+      currentVisibleChapter.addListener(onChanged);
+      return () {
+        active = false;
+        currentVisibleChapter.removeListener(onChanged);
+        // Disposal can occur during a build phase; defer the state change.
+        // Same teardown race as above: the container may already be gone by
+        // the time this runs (e.g. widget torn down at test/app shutdown with
+        // no further frame or microtask flush to run this sooner).
+        Future.microtask(() {
+          try {
+            sessionNotifier.discard(sessionChapterIds.value);
+          } catch (_) {
+            // UnmountedRefException (internal riverpod type, not exported):
+            // container disposed before this microtask ran.
+          }
+        });
+      };
+    }, const []);
+
     final lastVisibleChapterId = useRef<int>(chapter.id);
     // Top-most visible (index, leadingEdge) from the previous listener
     // tick, used to derive scroll direction so neighbour chapters load
@@ -396,6 +447,19 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isZoomOutDisabled = ref
         .watch(longStripDisableZoomOutProvider)
         .ifNull();
+    // readerIsZoomedInProvider is reset on mount/unmount so a leftover `true`
+    // from a previous reader session (e.g. the user closed it mid-zoom)
+    // can't wrongly disable DirectionalSwipeGestureHandler's chapter-swipe
+    // recognizers in a fresh session that hasn't zoomed yet.
+    useEffect(() {
+      // Captured once, up front: `ref` is unsafe to touch from a hook's
+      // dispose callback (the widget is already unmounting by then), so the
+      // notifier itself — not `ref` — has to be what the cleanup closure
+      // holds onto.
+      final notifier = ref.read(readerIsZoomedInProvider.notifier);
+      notifier.state = false;
+      return () => notifier.state = false;
+    }, const []);
     // Auto-crop borders. Render-only: the crop
     // provider's async decode is handled by the imageBuilder's frameBuilder
     // below, which still reserves placeholderHeight and measures the cropped
@@ -434,14 +498,24 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       scaleType.maxContentWidth(context.width, context.height),
       widthLimit,
     );
+    final bool isHorizontal = scrollDirection == Axis.horizontal;
+    // The dimension along the scroll axis (height for a vertical strip,
+    // width for a horizontal one) — this is what a page reserves/grows along.
+    final double mainAxisExtent = isHorizontal ? context.width : context.height;
+    // The dimension a page is capped to across the scroll axis. The
+    // width-limit settings above are vertical-strip-specific (no per-mode
+    // settings surface exists for continuousHorizontalLTR/RTL, which are
+    // legacy-orphan modes), so a horizontal strip simply fills the full
+    // viewport height instead.
+    final double crossAxisExtent = isHorizontal ? context.height : maxContentWidth;
     // Read via ref (like loadedRef) so a once-bound closure — e.g. the
     // positions listener's loadNext/PreviousChapter — can't re-seed heights
     // at a width superseded by a later scale/limit change.
     final layoutParams =
         useRef<({bool naturalSize, double columnWidth})>(
-            (naturalSize: pagesAtNaturalSize, columnWidth: maxContentWidth));
+            (naturalSize: pagesAtNaturalSize, columnWidth: crossAxisExtent));
     layoutParams.value =
-        (naturalSize: pagesAtNaturalSize, columnWidth: maxContentWidth);
+        (naturalSize: pagesAtNaturalSize, columnWidth: crossAxisExtent);
     final ReaderScrollAmount scrollAmount =
         ref.watch(readerScrollAmountKeyProvider) ??
         DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
@@ -498,10 +572,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // Read via layoutParams, not closure capture, so a sweep started by
         // an old build still reserves at the current width.
         final layout = layoutParams.value;
-        final renderedWidth = layout.naturalSize
-            ? math.min(w.toDouble(), MediaQuery.sizeOf(context).width)
+        final crossAxisSize = isHorizontal
+            ? MediaQuery.sizeOf(context).height
+            : MediaQuery.sizeOf(context).width;
+        final renderedCrossAxis = layout.naturalSize
+            ? math.min(isHorizontal ? h.toDouble() : w.toDouble(), crossAxisSize)
             : layout.columnWidth;
-        pageHeights.value[url] = renderedWidth * h / w;
+        // Vertical: cross-axis is width(w), main-axis is height(h). Horizontal
+        // is the mirror image — cross-axis is height(h), main-axis is width(w).
+        pageHeights.value[url] = isHorizontal
+            ? renderedCrossAxis * w / h
+            : renderedCrossAxis * h / w;
       }
       info.dispose();
     }
@@ -577,7 +658,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     // First build is the initial sweep's job, not this effect's.
     final lastLayoutKey = useRef<(WebtoonScaleType, double)?>(null);
     useEffect(() {
-      final key = (scaleType, maxContentWidth);
+      final key = (scaleType, crossAxisExtent);
       final previous = lastLayoutKey.value;
       lastLayoutKey.value = key;
       if (previous == null || previous == key) return null;
@@ -598,7 +679,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         }
       });
       return null;
-    }, [scaleType, maxContentWidth]);
+    }, [scaleType, crossAxisExtent]);
 
     // --- chapter loading -------------------------------------------------
 
@@ -693,21 +774,42 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         final newPageCount = pages.pages.length;
 
         // Capture the page currently anchoring the viewport so we can
-        // re-pin it after every index shifts up by ``newPageCount``.
+        // re-pin it after every index shifts up by ``newPageCount``. The
+        // leading edge is kept UNCLAMPED for that purpose: jumpTo's
+        // alignment only supports [0, 1] (it aligns the item's top edge to
+        // a point within the viewport — see ItemScrollController.jumpTo),
+        // so a tall page we're deep inside of — routine on long-strip
+        // webtoon content — has a leading edge far below -1.0. Clamping
+        // that into range used to silently discard how far into the page
+        // we'd scrolled, so the re-anchor landed on the page's TOP instead
+        // of where we actually were. We jump to the top (alignment 0, the
+        // one value the API guarantees) and then nudge down by the exact
+        // pixel depth separately below.
         final positions = positionsListener.itemPositions.value.toList()
           ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
         int? anchorIndex;
-        double anchorAlignment = 0.0;
+        double anchorLeadingEdge = 0.0;
         for (final p in positions) {
           // First item whose top edge is at/below the viewport top is the
           // natural anchor; fall back to the first reported position.
           if (p.itemTrailingEdge > 0) {
             anchorIndex = p.index;
-            anchorAlignment = p.itemLeadingEdge.clamp(-1.0, 1.0);
+            anchorLeadingEdge = p.itemLeadingEdge;
             break;
           }
         }
         anchorIndex ??= positions.isNotEmpty ? positions.first.index : null;
+        // Pixels already scrolled past the anchor's top edge (0 if its top
+        // is still at/below the viewport top — nothing to restore then).
+        double intoAnchorPixels = 0;
+        try {
+          if (anchorLeadingEdge < 0) {
+            intoAnchorPixels = -anchorLeadingEdge *
+                scrollOffsetController.position.viewportDimension;
+          }
+        } catch (_) {
+          // Not laid out yet — landing on the item's top is the best we can do.
+        }
 
         loadedChapters.value = [
           (pages: pages, chapter: prev, chapterId: prev.id),
@@ -717,15 +819,30 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // direction sample so the next tick re-derives it cleanly.
         lastTop.value = null;
 
-        // Re-anchor on the next frame (the rebuilt SPL must register the
-        // new itemCount first). One frame, no animation, no second defer.
+        // Re-anchor across two frames: the first lands the shifted item's
+        // top edge at the viewport top (the only alignment jumpTo actually
+        // supports); the second — once that layout has settled and pixels
+        // reflects it — nudges down by the exact depth we'd read into it,
+        // so a tall page lands back at precisely the same visual spot
+        // instead of resetting to its top. No animation either frame.
         if (anchorIndex != null) {
           final target = anchorIndex + newPageCount;
           // Guard the re-anchor jump too: its settle motion must not be read
           // as a scroll back to the top that prepends yet another chapter.
           markScrollAdjusting();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            jumpToIndex(index: target, alignment: anchorAlignment);
+            jumpToIndex(index: target, alignment: 0.0);
+            if (intoAnchorPixels > 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                try {
+                  final pos = scrollOffsetController.position;
+                  pos.jumpTo(
+                    (pos.pixels + intoAnchorPixels)
+                        .clamp(pos.minScrollExtent, pos.maxScrollExtent),
+                  );
+                } catch (_) {}
+              });
+            }
           });
         }
 
@@ -816,10 +933,27 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         // opening a chapter (at page 0, or a short chapter) never auto-
         // loads a neighbour. A neighbour loads only when the user is
         // actively scrolling toward that edge.
-        final minIdx = positions
+        //
+        // minIdx/maxIdx use a stricter visibility floor than the raw
+        // sliver filter above: a page whose edge has only just grazed the
+        // viewport (as little as one rendered pixel) otherwise counts as
+        // "on screen" here, so a fast fling through a long chapter — more
+        // scrolling per gesture — can transiently report the tail page
+        // while the reader, by the 40%-visible standard selectCurrentIndex
+        // uses for progress, is still several pages behind. Falls back to
+        // the raw list if nothing clears the floor (e.g. several short
+        // pages sharing the screen, none individually over threshold).
+        final strictlyVisible = positions
+            .where((p) =>
+                InfinityContinuousUtils.calculateVisibleArea(p) >=
+                InfinityContinuousConfig.boundaryVisibleAreaThreshold)
+            .toList();
+        final boundaryPositions =
+            strictlyVisible.isNotEmpty ? strictlyVisible : positions;
+        final minIdx = boundaryPositions
             .map((p) => p.index)
             .reduce((a, b) => a < b ? a : b);
-        final maxIdx = positions
+        final maxIdx = boundaryPositions
             .map((p) => p.index)
             .reduce((a, b) => a > b ? a : b);
 
@@ -829,7 +963,23 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         bool scrollingUp = false;
         bool scrollingDown = false;
         if (prevTop != null) {
-          const eps = 0.0015;
+          // A fixed viewport-fraction epsilon (the previous 0.0015, ~1px on
+          // a typical phone) shrinks to nothing on tall viewports, letting
+          // ordinary sub-pixel layout jitter — e.g. a page-height
+          // correction landing while that page sits at the viewport top —
+          // masquerade as a deliberate scroll. Measure in real pixels
+          // instead, converting to the viewport-fraction units itemLeadingEdge
+          // uses.
+          double viewportHeight = 0;
+          try {
+            viewportHeight = scrollOffsetController.position.viewportDimension;
+          } catch (_) {
+            // Not laid out yet — fall back to a small-but-safe fraction.
+          }
+          final double eps = viewportHeight > 0
+              ? InfinityContinuousConfig.boundaryScrollDirectionEpsilonPx /
+                  viewportHeight
+              : 0.03;
           if (top.index < prevTop.index) {
             scrollingUp = true;
           } else if (top.index > prevTop.index) {
@@ -988,7 +1138,10 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           dtMs: dtMs,
         );
         final target = pos.pixels + (reverse ? -delta : delta);
-        if (target >= pos.maxScrollExtent && hasReachedEnd.value) {
+        final atEnd = reverse
+            ? target <= pos.minScrollExtent
+            : target >= pos.maxScrollExtent;
+        if (atEnd && hasReachedEnd.value) {
           ref.read(autoScrollActiveProvider.notifier).stop();
           return;
         }
@@ -1076,50 +1229,67 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     final total = InfinityContinuousUtils.getTotalPages(loadedChapters.value);
 
-    // Smart scale centres a narrower strip on wide screens.
-    Widget capWidth(Widget page) => maxContentWidth >= context.width
-        ? page
-        : Center(child: SizedBox(width: maxContentWidth, child: page));
+    // Smart scale centres a narrower strip on wide screens (cross-axis: width
+    // for a vertical strip, height for a horizontal one).
+    Widget capWidth(Widget page) {
+      final containerExtent = isHorizontal ? context.height : context.width;
+      if (crossAxisExtent >= containerExtent) return page;
+      return Center(
+        child: isHorizontal
+            ? SizedBox(height: crossAxisExtent, child: page)
+            : SizedBox(width: crossAxisExtent, child: page),
+      );
+    }
 
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
+      final fallbackMainAxisExtent = isHorizontal
+          ? mainAxisExtent * InfinityContinuousConfig.horizontalPageWidthRatio
+          : mainAxisExtent * InfinityContinuousConfig.verticalPageHeightRatio;
       if (loc == null) {
-        return SizedBox(
-          height:
-              context.height * InfinityContinuousConfig.verticalPageHeightRatio,
-        );
+        return isHorizontal
+            ? SizedBox(width: fallbackMainAxisExtent)
+            : SizedBox(height: fallbackMainAxisExtent);
       }
-      // Reserve the page's true height so a strip never grows on decode and
-      // shoves the scroll backward. Priority:
-      //   1. this exact page's measured height (re-entry), else
+      // Reserve the page's true main-axis extent so a strip never grows on
+      // decode and shoves the scroll backward. Priority:
+      //   1. this exact page's measured extent (re-entry), else
       //   2. the AVERAGE of pages already measured in this session — manhwa
       //      strips in a chapter are near-uniform, so this places an unloaded
-      //      page within a few px of its real height (the key fix: a page that
+      //      page within a few px of its real extent (the key fix: a page that
       //      loads while ABOVE the viewport barely changes size, so it doesn't
       //      push the reader back — the failure mode the 0.7-screen guess caused
       //      when real strips are 2-4 screens tall), else
       //   3. a one-screen fallback for the very first page (the anchor, which
-      //      grows downward and never jumps the reader).
+      //      grows forward and never jumps the reader).
       final measured = pageHeights.value;
-      final double? avgHeight = measured.isEmpty
+      final double? avgExtent = measured.isEmpty
           ? null
           : measured.values.reduce((a, b) => a + b) / measured.length;
-      final placeholderHeight =
-          measured[loc.imageUrl] ??
-          avgHeight ??
-          context.height * InfinityContinuousConfig.verticalPageHeightRatio;
+      final placeholderExtent =
+          measured[loc.imageUrl] ?? avgExtent ?? fallbackMainAxisExtent;
+      final fit = isHorizontal ? BoxFit.fitHeight : BoxFit.fitWidth;
+      Widget placeholderBox({Widget? child}) => isHorizontal
+          ? SizedBox(width: placeholderExtent, height: double.infinity, child: child)
+          : SizedBox(height: placeholderExtent, width: double.infinity, child: child);
       return ServerImage(
         showReloadButton: true,
-        fit: BoxFit.fitWidth,
+        fit: fit,
         appendApiToUrl: false,
         cropBorders: cropBorders,
-        // Decode at on-screen width, not the ~800×15000 source (#196 GPU cost).
-        memCacheWidth: (maxContentWidth * MediaQuery.devicePixelRatioOf(context))
-            .round()
-            .clamp(1, 1 << 20),
+        // Decode at on-screen size, not the ~800×15000 source (#196 GPU cost).
+        memCacheWidth: isHorizontal
+            ? null
+            : (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1 << 20),
+        memCacheHeight: isHorizontal
+            ? (crossAxisExtent * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 1 << 20)
+            : null,
         imageUrl: loc.imageUrl,
-        progressIndicatorBuilder: (_, __, progress) => SizedBox(
-          height: placeholderHeight,
+        progressIndicatorBuilder: (_, __, progress) => placeholderBox(
           child: Center(
             child: CircularProgressIndicator(value: progress.progress),
           ),
@@ -1128,46 +1298,47 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           final image = Image(
             image: imageProvider,
             // scaleDown = lay out at native size, shrink to fit, never enlarge.
-            fit: pagesAtNaturalSize ? BoxFit.scaleDown : BoxFit.fitWidth,
-            width: pagesAtNaturalSize ? null : double.infinity,
+            fit: pagesAtNaturalSize ? BoxFit.scaleDown : fit,
+            width: pagesAtNaturalSize
+                ? null
+                : (isHorizontal ? null : double.infinity),
+            height: pagesAtNaturalSize
+                ? null
+                : (isHorizontal ? double.infinity : null),
             // A page file deleted while still loaded (e.g. delete-on-read, then
             // scrolling back to it offline) would otherwise throw and paint
-            // Flutter's red error widget for every page. Show a stable-height
+            // Flutter's red error widget for every page. Show a stable-extent
             // broken-image placeholder instead.
-            errorBuilder: (context, error, stackTrace) => SizedBox(
-              height: placeholderHeight,
-              width: double.infinity,
+            errorBuilder: (context, error, stackTrace) => placeholderBox(
               child: const Center(
                 child: Icon(Icons.broken_image_rounded, color: Colors.grey),
               ),
             ),
-            // Reserve the page's height UNTIL the bitmap decodes. The network path
+            // Reserve the page's extent UNTIL the bitmap decodes. The network path
             // gets this for free via progressIndicatorBuilder, but the offline
             // (file://) ServerImage branch skips that and renders the bare Image —
-            // which is 0px tall until the local file decodes, then pops to full
-            // height. A wall of pages popping 0->real around a seek lands the jump
-            // on the wrong page (offline-only seek bug). Reserving placeholderHeight
+            // which is 0px until the local file decodes, then pops to full
+            // extent. A wall of pages popping 0->real around a seek lands the jump
+            // on the wrong page (offline-only seek bug). Reserving placeholderExtent
             // keeps every page size-stable, so jumpTo(index) lands true.
             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
               if (frame == null && !wasSynchronouslyLoaded) {
-                return SizedBox(
-                  height: placeholderHeight,
-                  width: double.infinity,
-                );
+                return placeholderBox();
               }
               // Only measure the REAL decoded image — never the placeholder — so a
-              // strip re-entering the viewport reserves its true height.
+              // strip re-entering the viewport reserves its true extent.
               return MeasureSize(
                 onChange: (size) {
-                  if (size.height <= 0) return;
-                  pageHeights.value[loc.imageUrl] = size.height;
+                  final extent = isHorizontal ? size.width : size.height;
+                  if (extent <= 0) return;
+                  pageHeights.value[loc.imageUrl] = extent;
                 },
                 child: child,
               );
             },
           );
-          // Load-bearing: without Center, the list's tight cross-axis width
-          // pins scaleDown's layout box at full width (letterboxed) instead
+          // Load-bearing: without Center, the list's tight cross-axis extent
+          // pins scaleDown's layout box at full size (letterboxed) instead
           // of letting it shrink to native.
           return pagesAtNaturalSize ? Center(child: image) : image;
         },
@@ -1175,6 +1346,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     }
 
     // continuousVertical is the "Long strip with gaps" mode in settings.
+    // continuousHorizontalLTR/RTL have no equivalent gaps setting (they're
+    // legacy-orphan modes with no dedicated settings surface), so they follow
+    // webtoon's no-gap default.
     final pageGap = effectiveReaderMode == ReaderMode.continuousVertical
         ? const Gap(kLongStripPageGap)
         : const SizedBox.shrink();
@@ -1207,8 +1381,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       scrollDirection: scrollDirection,
       reverse: reverse,
       itemCount: total,
-      minCacheExtent:
-          context.height * InfinityContinuousConfig.verticalCacheMultiplier,
+      minCacheExtent: isHorizontal
+          ? context.width * InfinityContinuousConfig.horizontalCacheMultiplier
+          : context.height * InfinityContinuousConfig.verticalCacheMultiplier,
       itemBuilder: (context, index) => capWidth(buildItem(context, index)),
       // Transition cards follow the strip's column width — a full-width card
       // interrupting a 30% strip reads as a glitch.
@@ -1331,11 +1506,17 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           ? (Widget child) => ReaderZoomView(
               controller: zoomScrollController,
               scrollAxis: scrollDirection,
+              reverse: reverse,
               maxScale: InfinityContinuousConfig.maxZoomScale,
-              // Webtoon min zoom-out rate is 0.5 unless disabled.
+              // Long-strip min zoom-out rate is 0.5 unless disabled.
               minScale: isZoomOutDisabled ? 1 : 0.5,
               pinchEnabled: isPinchToZoomEnabled,
               doubleTapToZoom: isDoubleTapZoomEnabled,
+              onScaleChanged: (scale) {
+                final notifier = ref.read(readerIsZoomedInProvider.notifier);
+                final zoomed = scale > 1.01;
+                if (notifier.state != zoomed) notifier.state = zoomed;
+              },
               child: child,
             )
           : null,

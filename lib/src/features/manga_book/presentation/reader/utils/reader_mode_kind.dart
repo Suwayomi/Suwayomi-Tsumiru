@@ -16,13 +16,13 @@ import '../../../../settings/presentation/reader/widgets/reader_tap_invert/reade
 bool isPagedReaderMode(ReaderMode mode) => switch (mode) {
       ReaderMode.singleHorizontalLTR ||
       ReaderMode.singleHorizontalRTL ||
-      ReaderMode.singleVertical ||
-      ReaderMode.continuousHorizontalLTR ||
-      ReaderMode.continuousHorizontalRTL =>
+      ReaderMode.singleVertical =>
         true,
       ReaderMode.defaultReader ||
       ReaderMode.continuousVertical ||
-      ReaderMode.webtoon =>
+      ReaderMode.webtoon ||
+      ReaderMode.continuousHorizontalLTR ||
+      ReaderMode.continuousHorizontalRTL =>
         false,
     };
 

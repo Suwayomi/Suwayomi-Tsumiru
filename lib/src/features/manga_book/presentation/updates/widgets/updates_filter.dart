@@ -8,8 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/organizer_heading.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../controller/updates_filter_controller.dart';
+import '../controller/updates_grouping_controller.dart';
 
 /// Filter rows for the Updates list. Same order Komikku uses — Downloaded,
 /// Unread, Started, Bookmarked — and the same pills the library organizer uses.
@@ -18,11 +20,37 @@ class UpdatesFilterSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final groupingMode = ref.watch(updatesGroupingModeProvider) ??
+        UpdatesGroupingMode.disabled;
+
     return SafeArea(
       top: false,
       child: ListView(
         shrinkWrap: true,
         children: [
+          OrganizerHeading(context.l10n.updatesGroupingLabel),
+          OrganizerHint(context.l10n.updatesGroupingHint),
+          // A chip row, same visual language as every other tri-state /
+          // enum picker in the organizer sheets — not a SegmentedButton.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final mode in UpdatesGroupingMode.values)
+                  FilterChip(
+                    selected: groupingMode == mode,
+                    showCheckmark: false,
+                    visualDensity: VisualDensity.compact,
+                    label: Text(mode.toLocale(context)),
+                    onSelected: (_) => ref
+                        .read(updatesGroupingModeProvider.notifier)
+                        .update(mode),
+                  ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(

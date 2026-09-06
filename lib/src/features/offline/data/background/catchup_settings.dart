@@ -33,3 +33,24 @@ class BackgroundCatchupEnabled extends Notifier<bool> {
     if (value) await writeCatchupWorkSpec(ref.read);
   }
 }
+
+/// Sub-option of [backgroundCatchupEnabledProvider]: whether the background
+/// run also fetches chapter files, or only detects/queues them and leaves the
+/// actual download for the next time the app is opened. Doesn't change the
+/// WorkManager schedule itself — the same job keeps running for detection —
+/// so no sync()/reschedule is needed here, unlike the parent toggle.
+final backgroundCatchupDownloadEnabledProvider =
+    NotifierProvider<BackgroundCatchupDownloadEnabled, bool>(
+        BackgroundCatchupDownloadEnabled.new);
+
+class BackgroundCatchupDownloadEnabled extends Notifier<bool> {
+  @override
+  bool build() =>
+      CatchupStateStore(ref.read(sharedPreferencesProvider)).downloadEnabled;
+
+  Future<void> setEnabled(bool value) async {
+    await CatchupStateStore(ref.read(sharedPreferencesProvider))
+        .setDownloadEnabled(value);
+    state = value;
+  }
+}

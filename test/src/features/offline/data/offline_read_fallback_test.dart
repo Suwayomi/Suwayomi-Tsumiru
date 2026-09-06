@@ -49,6 +49,29 @@ void main() {
     expect(r!.map((m) => m.id).toSet(), {1, 2});
   });
 
+  test('library: each manga gets its OWN categories, not another manga\'s '
+      '(one batched query, not per-manga)', () async {
+    await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+    await db.upsertCategory(2, 'Plan to read', 1, isHidden: false);
+    await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+    await db.upsertMangaMetadata(id: 2, title: 'B', updatedAt: DateTime(2026));
+    // A third, uncategorized manga: must come back with an empty list, not
+    // crash or silently borrow manga 1's/2's categories.
+    await db.upsertMangaMetadata(id: 3, title: 'C', updatedAt: DateTime(2026));
+    await db.replaceMangaCategories(1, [1, 2]);
+    await db.replaceMangaCategories(2, [1]);
+    await seedDownloadedChapter(1);
+    await seedDownloadedChapter(2);
+    await seedDownloadedChapter(3);
+
+    final r = await libraryWithOfflineFallback(
+        fetch: boom, db: db, offlineEnabled: true);
+    final byId = {for (final m in r!) m.id: m};
+    expect(byId[1]!.categories.nodes.map((n) => n.id).toList(), [1, 2]);
+    expect(byId[2]!.categories.nodes.map((n) => n.id).toList(), [1]);
+    expect(byId[3]!.categories.nodes, isEmpty);
+  });
+
   test('library: offline continue-reading target is the earliest unread '
       'downloaded chapter', () async {
     await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));

@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/selection_action_bar.dart';
@@ -18,6 +17,7 @@ import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 import '../data/offline_series_entry.dart';
 import 'keep_rule_picker.dart';
+import 'offline_series_chapters_screen.dart';
 import 'offline_settings_format.dart';
 
 typedef _SeriesRow = OfflineSeriesEntry;
@@ -140,7 +140,15 @@ class OfflineFilesView extends HookConsumerWidget {
               ),
               onTap: selecting
                   ? () => toggle(s.manga.id)
-                  : () => MangaRoute(mangaId: s.manga.id).push(context),
+                  : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => OfflineSeriesChaptersScreen(
+                            mangaId: s.manga.id,
+                            mangaTitle: s.manga.title,
+                            thumbnailUrl: s.manga.thumbnailUrl,
+                          ),
+                        ),
+                      ),
               onLongPress: () => toggle(s.manga.id),
             );
           },

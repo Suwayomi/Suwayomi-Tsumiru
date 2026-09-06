@@ -56,6 +56,12 @@ class BackgroundTokenRecord {
       );
 }
 
+/// Outcome of one refresh attempt: the new tokens on success, or a failure
+/// that distinguishes "the refresh call itself couldn't reach the server"
+/// (transient — retry later, auth may still be fine) from "the server
+/// responded and rejected the refresh token" (auth is genuinely dead).
+typedef RefreshAttempt = ({RefreshResult? tokens, bool transient});
+
 /// Coordinates token refresh across the main and worker isolates against ONE
 /// gen-versioned record, so a rotating refresh token is never lost-updated by two
 /// holders. Pure logic: storage + the actual refresh network call are injected.
@@ -63,7 +69,15 @@ class TokenBroker {
   TokenBroker({required this.read, required this.write, required this.refreshFn});
   final Future<BackgroundTokenRecord> Function() read;
   final Future<void> Function(BackgroundTokenRecord) write;
-  final Future<RefreshResult?> Function(String refreshToken) refreshFn;
+  final Future<RefreshAttempt> Function(String refreshToken) refreshFn;
+
+  /// Set by the most recent failed [resolveAfter401] — only meaningful right
+  /// after it returns null. Without this, a caller treats a refresh that
+  /// merely couldn't reach the server (e.g. right after the device
+  /// reconnects, before the network has actually settled) the same as a
+  /// refresh token the server explicitly rejected, and gives up on the
+  /// chapter permanently instead of retrying once the network is real.
+  bool lastRefreshTransient = false;
 
   /// Returns a usable access token to retry with, or null if auth is dead.
   Future<String?> resolveAfter401(String tokenThat401d) async {
@@ -73,11 +87,18 @@ class TokenBroker {
       return current.accessToken;
     }
     final rt = current.refreshToken;
-    if (rt == null) return null;
-    final res = await refreshFn(rt);
-    if (res == null) return null;
+    if (rt == null) {
+      lastRefreshTransient = false;
+      return null;
+    }
+    final attempt = await refreshFn(rt);
+    final tokens = attempt.tokens;
+    if (tokens == null) {
+      lastRefreshTransient = attempt.transient;
+      return null;
+    }
     await write(current.copyWith(
-        gen: current.gen + 1, accessToken: res.access, refreshToken: res.refresh));
-    return res.access;
+        gen: current.gen + 1, accessToken: tokens.access, refreshToken: tokens.refresh));
+    return tokens.access;
   }
 }

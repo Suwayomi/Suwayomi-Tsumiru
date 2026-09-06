@@ -226,8 +226,15 @@ class CategoryMangaList extends HookConsumerWidget {
                     final db = ref.read(offlineDatabaseProvider);
                     for (final id in ids) {
                       await db.setKeepRule(id, picked.rule, picked.count);
-                      await reconcileMangaWidget(ref, id);
+                      // Queue only — starting per manga let the FGS drain and
+                      // stop between each one, so its "X/Y" notification never
+                      // showed the whole selection's real total. One start
+                      // below, after every manga in the selection is queued.
+                      await reconcileMangaWidget(ref, id, startDownload: false);
                     }
+                    await ref.read(downloadStarterProvider)(
+                      userInitiated: true,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

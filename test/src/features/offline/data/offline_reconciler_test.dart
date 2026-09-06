@@ -249,4 +249,94 @@ void main() {
     expect(evicted, [1],
         reason: 'the keep window has to reach the reconciler, not just exist');
   });
+
+  // ── downloadProtectionWindow: re-download missing keep-window chapters ──────
+
+  test('downloadProtectionWindow=true downloads a missing protection-window chapter',
+      () async {
+    // Setup: allUnread rule, 3 chapters all read, slots=3 → protection window
+    // = top (slots-1)=2 most recently read = {ch3, ch2}.
+    // ch3 is on device, ch2 is NOT on device, ch1 is on device.
+    // allUnread → desired = {} (all read, nothing wanted by rule).
+    // With downloadProtectionWindow=true, ch2 must be re-downloaded because it
+    // is in the protection window and missing from device.
+    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+    await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
+
+    await db.upsertChapterMetadata(
+        id: 1, mangaId: 1, name: 'c1', chapterIndex: 1, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '100');
+    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded,
+        bytes: 100, downloadedAt: DateTime(2026, 1, 1));
+
+    await db.upsertChapterMetadata(
+        id: 2, mangaId: 1, name: 'c2', chapterIndex: 2, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '200');
+    // ch2 intentionally left at deviceState=none — it was evicted earlier.
+
+    await db.upsertChapterMetadata(
+        id: 3, mangaId: 1, name: 'c3', chapterIndex: 3, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '300');
+    await db.setChapterDeviceState(3, OfflineDeviceState.downloaded,
+        bytes: 100, downloadedAt: DateTime(2026, 1, 3));
+
+    final downloaded = <int>[];
+    final r = await OfflineReconciler(
+      db: db, nets: SafetyNetConfig.off,
+      onDownload: (id) async => downloaded.add(id),
+      onEvict: (id) async {},
+      now: DateTime(2026, 3, 1),
+      deleteWhileReadingSlots: 3,
+      downloadProtectionWindow: true,
+    ).reconcileManga(1);
+
+    expect(r.toDownload, contains(2),
+        reason: 'ch2 is in the protection window (2nd most recently read) '
+            'but missing from device — must be re-downloaded');
+    expect(downloaded, contains(2));
+  });
+
+  test('downloadProtectionWindow=false does not download missing protection-window chapters',
+      () async {
+    // Same topology as above but with downloadProtectionWindow=false (default).
+    // ch2 should NOT be re-downloaded because it is not in `desired`.
+    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+    await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
+
+    await db.upsertChapterMetadata(
+        id: 1, mangaId: 1, name: 'c1', chapterIndex: 1, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '100');
+    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded,
+        bytes: 100, downloadedAt: DateTime(2026, 1, 1));
+
+    await db.upsertChapterMetadata(
+        id: 2, mangaId: 1, name: 'c2', chapterIndex: 2, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '200');
+
+    await db.upsertChapterMetadata(
+        id: 3, mangaId: 1, name: 'c3', chapterIndex: 3, isRead: true,
+        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
+        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '300');
+    await db.setChapterDeviceState(3, OfflineDeviceState.downloaded,
+        bytes: 100, downloadedAt: DateTime(2026, 1, 3));
+
+    final downloaded = <int>[];
+    await OfflineReconciler(
+      db: db, nets: SafetyNetConfig.off,
+      onDownload: (id) async => downloaded.add(id),
+      onEvict: (id) async {},
+      now: DateTime(2026, 3, 1),
+      deleteWhileReadingSlots: 3,
+      downloadProtectionWindow: false,
+    ).reconcileManga(1);
+
+    expect(downloaded, isNot(contains(2)),
+        reason: 'without downloadProtectionWindow, a read chapter not in '
+            'desired must not be re-downloaded');
+  });
 }

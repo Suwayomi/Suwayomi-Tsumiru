@@ -110,6 +110,30 @@ void main() {
     );
   });
 
+  test(
+    'a chapter the source now serves with zero pages is marked error, '
+    'not left stuck downloading forever',
+    () async {
+      // Regression: a chapter removed/renamed upstream (e.g. after a source
+      // renumbers decimal-numbered chapters) answers with an empty page list.
+      // commitStagedChapter correctly refuses to publish that as `downloaded`,
+      // but the manager used to ignore its result entirely, leaving the row
+      // parked in `downloading` — not `error` — so the reconciler kept
+      // re-selecting it for download on every pass forever.
+      final chapter = await seedChapter();
+      final mgr = managerWith(urls: (_) async => const []);
+
+      await expectLater(mgr.downloadChapter(chapter), throwsStateError);
+
+      final c = (await db.chaptersForManga(552)).single;
+      expect(c.deviceState, OfflineDeviceState.error);
+      final pages = await (db.select(
+        db.offlinePages,
+      )..where((t) => t.chapterId.equals(2000))).get();
+      expect(pages, isEmpty);
+    },
+  );
+
   test('deleteChapter removes files, page rows, and resets state', () async {
     final chapter = await seedChapter();
     await managerWith().downloadChapter(chapter);

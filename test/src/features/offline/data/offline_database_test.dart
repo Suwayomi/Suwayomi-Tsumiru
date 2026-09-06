@@ -16,8 +16,8 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  test('opens at schema version 14', () {
-    expect(db.schemaVersion, 14);
+  test('opens at schema version 16', () {
+    expect(db.schemaVersion, 16);
   });
 
   test('inserts and reads a manga', () async {
@@ -117,5 +117,103 @@ void main() {
     expect(await db.select(db.offlineCategories).get(), isEmpty);
     expect(await db.select(db.offlineMangaCategories).get(), isEmpty);
     expect(await db.select(db.offlinePages).get(), isEmpty);
+  });
+
+  group('categoriesForMangas', () {
+    Future<void> seedManga(int id) => db.upsertMangaMetadata(
+          id: id,
+          title: 'M$id',
+          updatedAt: DateTime.utc(2026),
+        );
+
+    test('empty input short-circuits to an empty map', () async {
+      expect(await db.categoriesForMangas(const {}), isEmpty);
+    });
+
+    test('batches every id into one query, keyed by mangaId, ordered by '
+        "each category's sortOrder, and omits ids with no categories",
+        () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.upsertCategory(2, 'Plan to read', 1, isHidden: false);
+      await seedManga(10);
+      await seedManga(20);
+      await seedManga(30); // uncategorized
+      await db.replaceMangaCategories(10, [2, 1]); // inserted out of order
+      await db.replaceMangaCategories(20, [1]);
+
+      final result = await db.categoriesForMangas({10, 20, 30});
+
+      expect(result[10]!.map((c) => c.id).toList(), [1, 2],
+          reason: 'sortOrder governs, not insertion order');
+      expect(result[20]!.map((c) => c.id).toList(), [1]);
+      expect(result.containsKey(30), isFalse,
+          reason: 'no membership rows -> no entry, same as the single-id '
+              'form returning an empty list');
+    });
+
+    test('matches categoriesForManga(id) for each id in the batch', () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await db.upsertCategory(2, 'Plan to read', 1, isHidden: false);
+      await seedManga(10);
+      await seedManga(20);
+      await db.replaceMangaCategories(10, [1, 2]);
+      await db.replaceMangaCategories(20, [2]);
+
+      final batched = await db.categoriesForMangas({10, 20});
+      final single10 = await db.categoriesForManga(10);
+      final single20 = await db.categoriesForManga(20);
+
+      expect(batched[10]!.map((c) => c.id).toList(),
+          single10.map((c) => c.id).toList());
+      expect(batched[20]!.map((c) => c.id).toList(),
+          single20.map((c) => c.id).toList());
+    });
+  });
+
+  group('mangaCountByCategory / uncategorizedOf', () {
+    Future<void> seedManga(int id) => db.upsertMangaMetadata(
+          id: id,
+          title: 'M$id',
+          updatedAt: DateTime.utc(2026),
+        );
+
+    test('mangaCountByCategory: empty input short-circuits to an empty map',
+        () async {
+      expect(await db.mangaCountByCategory(const {}), isEmpty);
+    });
+
+    test('mangaCountByCategory: counts only rows whose mangaId is in the '
+        'requested set', () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await seedManga(10);
+      await seedManga(20);
+      await seedManga(30);
+      await db.replaceMangaCategories(10, [1]);
+      await db.replaceMangaCategories(20, [1]);
+      // Not in the requested set below -- must not inflate category 1's count.
+      await db.replaceMangaCategories(30, [1]);
+
+      expect(await db.mangaCountByCategory({10, 20}), {1: 2});
+    });
+
+    test('uncategorizedOf: empty input short-circuits to an empty set',
+        () async {
+      expect(await db.uncategorizedOf(const {}), isEmpty);
+    });
+
+    test('uncategorizedOf: only considers requested ids, and a membership '
+        'pointing at a never-mirrored category still counts as '
+        'uncategorized (mirrors the mapper\'s inner join)', () async {
+      await db.upsertCategory(1, 'Reading', 0, isHidden: false);
+      await seedManga(10); // categorized
+      await seedManga(20); // orphan membership -> counts as uncategorized
+      await seedManga(30); // truly uncategorized
+      await seedManga(40); // categorized, but NOT in the requested set
+      await db.replaceMangaCategories(10, [1]);
+      await db.replaceMangaCategories(20, [99]); // 99 was never mirrored
+      await db.replaceMangaCategories(40, [1]);
+
+      expect(await db.uncategorizedOf({10, 20, 30}), {20, 30});
+    });
   });
 }

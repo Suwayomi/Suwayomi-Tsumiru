@@ -27,10 +27,12 @@ OfflineChapter _ch(int id, {bool isRead = false, String? readAt}) =>
       progressDirty: false,
       bookmarkDirty: false,
       readStateDirty: false,
+      readStateManual: false,
       syncedIsRead: false,
       lastReadAt: readAt,
       updatedAt: DateTime(2026),
       downloadGeneration: 0,
+      serverFetchAttempts: 0,
     );
 
 void main() {

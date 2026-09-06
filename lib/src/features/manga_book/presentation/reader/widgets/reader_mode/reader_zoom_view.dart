@@ -23,19 +23,30 @@ class ReaderZoomView extends HookWidget {
     super.key,
     required this.controller,
     required this.scrollAxis,
+    this.reverse = false,
     required this.maxScale,
     required this.minScale,
     required this.pinchEnabled,
     required this.doubleTapToZoom,
+    this.onScaleChanged,
     required this.child,
   });
 
   final ScrollController controller;
   final Axis scrollAxis;
+
+  /// Must match the wrapped scrollable's own `reverse` (e.g. an RTL manga's
+  /// continuous-horizontal strip) — see [ZoomView.reverse] for why.
+  final bool reverse;
   final double maxScale;
   final double minScale;
   final bool pinchEnabled;
   final bool doubleTapToZoom;
+
+  /// Invoked with the live user-facing scale (1.0 = unzoomed) any time it
+  /// changes, e.g. so callers can yield competing single-finger gestures
+  /// (chapter-swipe) while the reader is zoomed in.
+  final ValueChanged<double>? onScaleChanged;
   final Widget child;
 
   @override
@@ -59,10 +70,12 @@ class ReaderZoomView extends HookWidget {
       controller: controller,
       zoomViewController: zoomController,
       scrollAxis: scrollAxis,
+      reverse: reverse,
       maxScale: maxScale,
       minScale: minScale,
       pinchEnabled: pinchEnabled,
       onDoubleTap: doubleTapToZoom ? onDoubleTap : null,
+      onScaleChanged: onScaleChanged,
       // Required so the scale recognizer wins the gesture arena against the
       // underlying scrollable's pan recognizer (closes #256).
       forceHoldOnPointerDown: true,

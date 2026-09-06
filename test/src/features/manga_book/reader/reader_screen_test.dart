@@ -22,6 +22,8 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/infinity_continuous/multichapter_continuous_reader_mode.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/multichapter_paged_reader_mode.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -127,6 +129,32 @@ ChapterDto _partReadChapter() => Fragment$ChapterDto(
 ChapterPagesDto _chapterPages() => ChapterPagesDto(
       chapter: ChapterPagesChapterDto(id: 1, pageCount: 3),
       pages: _localPages(3),
+    );
+
+MangaDto _mangaWithMode(ReaderMode mode) => Fragment$MangaDto(
+      id: 1,
+      title: 'Test Manga',
+      bookmarkCount: 0,
+      chapters: Fragment$MangaDto$chapters(totalCount: 0),
+      downloadCount: 0,
+      genre: const [],
+      inLibrary: true,
+      inLibraryAt: '0',
+      initialized: true,
+      meta: [
+        Fragment$MangaDto$meta(
+          key: MangaMetaKeys.readerMode.key,
+          value: mode.name,
+        ),
+      ],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      categories: Fragment$MangaDto$categories(nodes: const []),
+      trackRecords:
+          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      unreadCount: 0,
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/1',
     );
 
 void main() {
@@ -290,5 +318,68 @@ void main() {
     // resume position wiped just by navigating to it.
     expect(find.text('3 / 3'), findsOneWidget);
     expect(repo.putChapterCalls, isEmpty);
+  });
+
+  // continuousHorizontalLTR/RTL used to be pure aliases of
+  // singleHorizontalLTR/RTL, silently routed to the paged pager instead of a
+  // real continuous scroll. They must now reach MultiChapterContinuousReaderMode
+  // with scrollDirection: Axis.horizontal (never the paged widget).
+  group('continuousHorizontalLTR/RTL route to the continuous widget', () {
+    Future<void> pumpWithMode(WidgetTester tester, ReaderMode mode) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
+            mangaWithIdProvider(mangaId: 1)
+                .overrideWith(() => _FakeMangaWithId(_mangaWithMode(mode))),
+            chapterProvider(chapterId: 1).overrideWith((ref) => _chapter()),
+            chapterPagesProvider(chapterId: 1)
+                .overrideWith((ref) => _chapterPages()),
+            getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+                .overrideWithValue(null),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ReaderScreen(mangaId: 1, chapterId: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('continuousHorizontalLTR: horizontal continuous, not reversed',
+        (tester) async {
+      await pumpWithMode(tester, ReaderMode.continuousHorizontalLTR);
+
+      expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
+      final widget = tester.widget<MultiChapterContinuousReaderMode>(
+        find.byType(MultiChapterContinuousReaderMode),
+      );
+      expect(widget.scrollDirection, Axis.horizontal);
+      expect(widget.reverse, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('continuousHorizontalRTL: horizontal continuous, reversed',
+        (tester) async {
+      await pumpWithMode(tester, ReaderMode.continuousHorizontalRTL);
+
+      expect(find.byType(MultiChapterPagedReaderMode), findsNothing);
+      final widget = tester.widget<MultiChapterContinuousReaderMode>(
+        find.byType(MultiChapterContinuousReaderMode),
+      );
+      expect(widget.scrollDirection, Axis.horizontal);
+      expect(widget.reverse, isTrue);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

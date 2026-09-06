@@ -88,13 +88,22 @@ class MangaDetailsScreen extends HookConsumerWidget {
         [chapterListProvider]);
 
     final refresh = useCallback(([onlineFetch = false]) async {
-      if (context.mounted && onlineFetch) {
+      // This can be invoked as a bulk chapter action's `afterOptionSelected`,
+      // reached only after that action's own network round trip — the screen
+      // may already be gone by then, and every ref use below assumes it isn't.
+      if (!context.mounted) return;
+      if (onlineFetch) {
         ref.read(toastProvider)?.show(
               context.l10n.updating,
               withMicrotask: true,
             );
       }
       await mangaRefresh(onlineFetch);
+      // mangaRefresh can no-op on disposal partway through without throwing
+      // (it checks context.mounted internally) — but chapterListRefresh has
+      // no such guard, so this screen going away during mangaRefresh must be
+      // caught here before falling into it.
+      if (!context.mounted) return;
       await chapterListRefresh(onlineFetch);
       if (onlineFetch) {
         // mangaRefresh only invalidates; await the actual refetch and report ITS

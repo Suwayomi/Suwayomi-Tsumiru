@@ -17,8 +17,10 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/logger/logger.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../auth/data/auth_credentials_store.dart';
 import '../../../notifications/controller/notification_settings_providers.dart';
 import '../../../notifications/data/local_notification_service.dart';
@@ -184,6 +186,16 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       );
       if (res is ServiceRequestFailure) {
         logger.e('Offline: foreground service failed to start: ${res.error}');
+        // Previously silent: chapters stayed queued in drift with nothing
+        // downloading and no signal at all (e.g. notification permission
+        // denied). A toast is a best-effort surface only — it's a no-op
+        // when there's no active UI (background launch/replay), which still
+        // leaves that path silent; making it durably visible there needs a
+        // persisted banner, not attempted here.
+        _ref.read(toastProvider)?.showError(
+          'Downloads paused: couldn\'t start the download service '
+          '(${res.error})',
+        );
       }
     } finally {
       _ensuring = false;
@@ -417,13 +429,74 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       case 'drained':
         unawaited(_onDrained());
       case 'parked':
-        _onParked();
+        _onParked(
+          chapterId: data['chapterId'] as int?,
+          mangaId: data['mangaId'] as int?,
+          reason: data['reason'] as String?,
+        );
+      case 'lockFailed':
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-fgs: '
+          'lock-acquire-failed — another party (likely the WorkManager '
+          'catch-up executor) still holds .bg_lock; this run stopped without '
+          'attempting any chapter\n',
+        );
+      case 'noWorkOrder':
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-fgs: '
+          'no-work-order starter=${data['starter']} — started with nothing '
+          'to do and self-stopped instantly; a run of these with '
+          'starter=system means Android itself is repeatedly restarting the '
+          'service, not this app\'s own retry logic\n',
+        );
     }
   }
 
+  /// Consecutive parks attributed to one specific chapter — diagnostics only,
+  /// never a give-up signal. A park always means the SERVER could not be
+  /// reached for this chapter (see `_downloadChapter`'s null-vs-empty
+  /// distinction in download_task_handler.dart, which already routes a
+  /// genuine "server answered, no pages" straight to `error` without ever
+  /// parking); attributing several in a row to the same chapter just reflects
+  /// that it's the head of the queue every backoff cycle, not that its own
+  /// source is broken. A previous version marked the chapter `error` after
+  /// three, which during a proxy/tunnel outage (backoff runs 15s to 5min)
+  /// condemned the queue's head within minutes of a blip that had nothing to
+  /// do with that chapter. A chapter whose source really is gone already has
+  /// its own persisted give-up path (serverFetchAttempts, see
+  /// offline_reconciler.dart), so this counter no longer drives one.
+  final Map<int, int> _chapterParkAttempts = {};
+
+  /// How many consecutive commit failures a chapter gets before it is given up
+  /// on and marked `error`. Prevents the phantom-download loop where a chapter
+  /// whose staging always fails to commit stays `downloading` in drift and is
+  /// re-enqueued by `_pendingChapters()` on every `afterDrained` restart.
+  static const _maxCommitFailures = 3;
+  final Map<int, int> _commitFailures = {};
+
   /// The worker gave up on an unreachable server and stopped with the queue
-  /// intact.
-  void _onParked() {
+  /// intact — OR, just as often in practice, gave up resolving/downloading
+  /// one specific chapter whose source is gone (a reverse proxy in front of
+  /// the Suwayomi server answers a dead per-chapter source fetch with a
+  /// gateway-style status, which reads identically to "the whole server is
+  /// down" from here). [chapterId]/[mangaId] are null only for the rare path
+  /// that can't attribute the park to one chapter. [reason] is the short
+  /// technical detail behind THIS specific attempt (an exception or HTTP
+  /// status) — logged every time so a chapter that keeps parking can be
+  /// diagnosed, not just seen to be "offline" with no further explanation.
+  void _onParked({int? chapterId, int? mangaId, String? reason}) {
+    final ts = DateTime.now().toIso8601String();
+    if (chapterId != null) {
+      final attempts = (_chapterParkAttempts[chapterId] ?? 0) + 1;
+      _chapterParkAttempts[chapterId] = attempts;
+      recordDiagnostic(
+        '[$ts] offline-fgs: parked mangaId=$mangaId chapterId=$chapterId '
+        'attempt=$attempts reason="$reason"\n',
+      );
+    } else {
+      recordDiagnostic('[$ts] offline-fgs: parked (no chapter attributed)\n');
+    }
+
     if (_parkedUntil?.isAfter(DateTime.now()) ?? false) return;
     final delay = _nextBackoff();
     _armPark(delay);
@@ -604,7 +677,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     // Ahead of the awaits below: this event races the worker's `parked` message,
     // and the stop handshake at the end of this method would otherwise restart
     // the service before the latch is set.
-    if (status == 'offline') _onParked();
+    if (status == 'offline') {
+      _onParked(
+        chapterId: chapterId,
+        mangaId: data['mangaId'] as int?,
+        reason: data['reason'] as String?,
+      );
+    }
     final epoch = _parkEpoch;
     // Outside the status guard: a cancel (pause, delete, Wi-Fi drop) reports a
     // null status, and leaving those entries behind grows the map for the life
@@ -635,6 +714,40 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           // A chapter landed, so the server is demonstrably fine — unless a
           // later chapter parked while this one was committing.
           if (_parkEpoch == epoch) _clearPark();
+          // This chapter succeeded, so any earlier parks blamed on it were a
+          // transient blip, not its source being gone — don't let them count
+          // toward giving up on it if it ever parks again later.
+          _chapterParkAttempts.remove(chapterId);
+          _commitFailures.remove(chapterId);
+        } else {
+          // The worker reports the chapter downloaded, but the commit didn't
+          // publish it.
+          //
+          // `refused`: chapter was deleted or re-queued under a new generation
+          // while the download was in flight. Drift already reflects the new
+          // state (none / queued for the new gen) — do not touch it.
+          //
+          // `incomplete`/`noStaging`: staging was missing or empty after the
+          // download. The row is still `downloading` in drift, which means
+          // `_pendingChapters()` will return it on every `afterDrained` restart
+          // → infinite phantom-download loop. Fix: reset to `queued` so it
+          // re-downloads from scratch, or mark `error` after _maxCommitFailures
+          // consecutive failures so it leaves the queue entirely.
+          if (ch != null &&
+              ch.deviceState != OfflineDeviceState.none &&
+              result != ChapterCommitResult.refused) {
+            final attempts = (_commitFailures[chapterId] ?? 0) + 1;
+            _commitFailures[chapterId] = attempts;
+            if (attempts >= _maxCommitFailures) {
+              _commitFailures.remove(chapterId);
+              await _db.setChapterDeviceState(
+                  chapterId, OfflineDeviceState.error);
+              _sessionFailed++;
+            } else {
+              await _db.setChapterDeviceState(
+                  chapterId, OfflineDeviceState.queued, bytes: 0);
+            }
+          }
         }
       } else {
         await applyBackgroundTerminalState(
@@ -854,7 +967,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// record — for callers/tests coordinating a refresh from the main isolate.
   /// Only ui_login refreshes; network refresh is delegated to [refreshFn].
   TokenBroker mainSideBroker({
-    required Future<RefreshResult?> Function(String refreshToken) refreshFn,
+    required Future<RefreshAttempt> Function(String refreshToken) refreshFn,
   }) => TokenBroker(
     read: () async {
       final raw = await FlutterForegroundTask.getData<String>(

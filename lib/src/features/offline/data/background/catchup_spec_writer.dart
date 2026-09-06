@@ -26,7 +26,11 @@ typedef CatchupRead = T Function<T>(ProviderListenable<T> provider);
 /// pause — the worker reads the newest snapshot it can get, never drift.
 Future<void> writeCatchupWorkSpec(CatchupRead read) async {
   try {
-    if (!read(offlineActiveProvider)) return;
+    // offlineActiveProvider depends on serverInstanceIdProvider (.value), an
+    // async FutureProvider that may be null at pause/hide time (the provider
+    // is auto-dispose and restarts asynchronously). Guard only on the sync
+    // flag; the serverId null-check below already rejects a no-catalog state.
+    if (!read(offlineEnabledProvider)) return;
     final serverId = read(
       sharedPreferencesProvider,
     ).getString(DBKeys.offlineCatalogServerId.name);

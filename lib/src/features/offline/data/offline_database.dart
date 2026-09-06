@@ -61,6 +61,13 @@ class OfflineMangas extends Table {
 /// server-side is reconciled via [OfflineDeviceState.orphaned] and evicted on
 /// the next reconcile pass, not cascade-deleted.
 @TableIndex(name: 'idx_offline_chapter_manga', columns: {#mangaId})
+// deviceState is filtered on by chaptersInState/nextQueuedChapter/
+// watchOfflineChapters and the watchOfflineSeries join/aggregate — all
+// unindexed full scans without this, and (worse) drift's per-table .watch()
+// reruns watchOfflineSeries' whole join on every OfflineChapters write, so an
+// active download's per-page byte/pageCount updates were driving repeated
+// full-table scans of a table that can hold years of chapter metadata.
+@TableIndex(name: 'idx_offline_chapter_device_state', columns: {#deviceState})
 class OfflineChapters extends Table {
   IntColumn get id => integer()();
   IntColumn get mangaId => integer()();
@@ -103,6 +110,16 @@ class OfflineChapters extends Table {
   BoolColumn get readStateDirty =>
       boolean().withDefault(const Constant(false))();
 
+  /// Whether the pending [readStateDirty] change came from a manual mark-read
+  /// action (library/updates bulk "mark read") rather than ordinary reading.
+  /// Only meaningful while [readStateDirty] is true — read by
+  /// [pushPendingProgress] to pick the right tracker-sync gate
+  /// (updateProgressManualMarkRead vs updateProgressAfterReading) when
+  /// flushing a read-state change that was queued offline; a stale value left
+  /// over from a since-cleared write is never consulted.
+  BoolColumn get readStateManual =>
+      boolean().withDefault(const Constant(false))();
+
   /// The read state already reflected in the manga row's stored [OfflineMangas
   /// .unreadCount] — NOT simply "what the server last said". Invariant the
   /// offline view depends on: shown unread = stored count − Σ(isRead −
@@ -136,6 +153,18 @@ class OfflineChapters extends Table {
   /// their starting generation; anything below the current value is dropped so
   /// a stale event can't corrupt a re-queued download.
   IntColumn get downloadGeneration =>
+      integer().withDefault(const Constant(0))();
+
+  /// How many times the foreground reconciler has asked the server to fetch
+  /// this chapter from its source without serverIsDownloaded ever flipping
+  /// true. Persisted (not in-memory) so a chapter whose source is gone for
+  /// good doesn't get a fresh budget every app restart — without that, a
+  /// user testing across several sessions would see it retried forever, one
+  /// or two attempts at a time, never actually reaching the cap that marks
+  /// it `error` and stops the request. Reset to 0 once serverIsDownloaded
+  /// flips true (a synced-down chapter that succeeded has nothing left to
+  /// give up on).
+  IntColumn get serverFetchAttempts =>
       integer().withDefault(const Constant(0))();
 
   @override
@@ -187,7 +216,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -352,20 +381,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           );
         }
       }
-      if (from < 10) {
-        await _addColumnIfMissing(
-          m,
-          offlineChapters,
-          offlineChapters.syncedIsRead,
-        );
-        // Assume existing rows agree with the server: the correction then
-        // starts at zero and behaves exactly as it did before this column,
-        // until the next down-sync records real baselines. Guessing the other
-        // way would invent corrections for chapters nobody has touched.
-        await customStatement(
-          'UPDATE offline_chapters SET synced_is_read = is_read',
-        );
-      }
+      // NOTE: a second `if (from < 10)` step used to duplicate this exact
+      // add-column-then-backfill for synced_is_read. Removed (2026) — the
+      // `if (from < 12)` block above already covers every from<10 upgrade
+      // (12 > 10) with the SAME guarded backfill (only runs when the column
+      // was actually missing), so the second copy only ever re-ran a no-op
+      // unconditional UPDATE. Harmless today, but this invariant has broken
+      // from exactly this shape of duplicate writer before — don't re-add it.
       if (from < 14) {
         // onCreate only runs for brand-new databases, so an upgrade from a
         // version without these tables has to create them itself.
@@ -382,6 +404,23 @@ class OfflineDatabase extends _$OfflineDatabase {
           await m.createTable(offlineMangaCategories);
         }
       }
+      if (from < 15) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.readStateManual,
+        );
+      }
+      if (from < 15 && !await _hasIndex('idx_offline_chapter_device_state')) {
+        await m.createIndex(idxOfflineChapterDeviceState);
+      }
+      if (from < 16) {
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.serverFetchAttempts,
+        );
+      }
     },
   );
 
@@ -391,6 +430,18 @@ class OfflineDatabase extends _$OfflineDatabase {
     final rows = await customSelect(
       "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
       variables: [Variable<String>(table.actualTableName)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  /// Same idempotency concern as [_hasTable]/[_addColumnIfMissing]: an
+  /// intermediate/dev build can leave an index present at an older recorded
+  /// schema version, and `CREATE INDEX` (unlike `addColumn`) has no built-in
+  /// "if missing" guard in drift's Migrator.
+  Future<bool> _hasIndex(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
+      variables: [Variable<String>(name)],
     ).get();
     return rows.isNotEmpty;
   }
@@ -560,12 +611,16 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// Downloaded-library manga per category, for the offline tab counts.
   /// Membership rows outside [mangaIds] don't count.
   Future<Map<int, int>> mangaCountByCategory(Set<int> mangaIds) async {
-    final rows = await select(offlineMangaCategories).get();
+    if (mangaIds.isEmpty) return {};
+    final categoryId = offlineMangaCategories.categoryId;
+    final mangaCount = offlineMangaCategories.mangaId.count();
+    final query = selectOnly(offlineMangaCategories)
+      ..addColumns([categoryId, mangaCount])
+      ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
+      ..groupBy([categoryId]);
     final counts = <int, int>{};
-    for (final row in rows) {
-      if (mangaIds.contains(row.mangaId)) {
-        counts[row.categoryId] = (counts[row.categoryId] ?? 0) + 1;
-      }
+    for (final row in await query.get()) {
+      counts[row.read(categoryId)!] = row.read(mangaCount) ?? 0;
     }
     return counts;
   }
@@ -574,12 +629,15 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// render under Default. A row pointing at a pruned/unmirrored category
   /// doesn't count either; the mapper's inner join drops it the same way.
   Future<Set<int>> uncategorizedOf(Set<int> mangaIds) async {
+    if (mangaIds.isEmpty) return {};
     final rows = await (select(offlineMangaCategories).join([
       innerJoin(
         offlineCategories,
         offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
       ),
-    ])).get();
+    ])
+          ..where(offlineMangaCategories.mangaId.isIn(mangaIds)))
+        .get();
     final categorized = {
       for (final row in rows) row.readTable(offlineMangaCategories).mangaId,
     };
@@ -615,6 +673,30 @@ class OfflineDatabase extends _$OfflineDatabase {
     return (await query.get())
         .map((row) => row.readTable(offlineCategories))
         .toList();
+  }
+
+  /// Batched form of [categoriesForManga]: one join query covering every id
+  /// in [mangaIds] instead of one round-trip per manga. A manga with no
+  /// entry in the result has no categories (same meaning as an empty list
+  /// from the single-id form).
+  Future<Map<int, List<OfflineCategory>>> categoriesForMangas(
+    Set<int> mangaIds,
+  ) async {
+    if (mangaIds.isEmpty) return {};
+    final query = select(offlineMangaCategories).join([
+      innerJoin(
+        offlineCategories,
+        offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
+      ),
+    ])
+      ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
+      ..orderBy([OrderingTerm(expression: offlineCategories.sortOrder)]);
+    final byManga = <int, List<OfflineCategory>>{};
+    for (final row in await query.get()) {
+      final mangaId = row.readTable(offlineMangaCategories).mangaId;
+      byManga.putIfAbsent(mangaId, () => []).add(row.readTable(offlineCategories));
+    }
+    return byManga;
   }
 
   /// All persisted categories — for the offline category-list fallback.
@@ -664,6 +746,26 @@ class OfflineDatabase extends _$OfflineDatabase {
           : Value(downloadedAt),
     ),
   );
+
+  /// Bumps [OfflineChapters.serverFetchAttempts] by one — called each time the
+  /// reconciler actually asks the server to fetch a chapter it has never
+  /// managed to download, so the count survives an app restart instead of
+  /// resetting to a fresh budget every session.
+  Future<void> incrementServerFetchAttempts(int chapterId) => customUpdate(
+    'UPDATE offline_chapters SET server_fetch_attempts = server_fetch_attempts + 1 '
+    'WHERE id = ?',
+    variables: [Variable<int>(chapterId)],
+    updates: {offlineChapters},
+  );
+
+  /// Clears [OfflineChapters.serverFetchAttempts] — called once a chapter's
+  /// server fetch actually succeeds, so a later unrelated failure starts its
+  /// budget fresh rather than inheriting attempts spent on a since-resolved
+  /// problem.
+  Future<void> resetServerFetchAttempts(int chapterId) =>
+      (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+        const OfflineChaptersCompanion(serverFetchAttempts: Value(0)),
+      );
 
   /// Atomically record a chapter whose page files were transferred from a
   /// migration source: rewrite the target's page rows and mark it downloaded in
@@ -784,10 +886,19 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   /// Record local reading progress (read offline / always). Marks it
   /// `progressDirty` so it's pushed to the server on the next online sync.
+  ///
+  /// [manual] records whether this read-state change came from a manual
+  /// mark-read action (bulk "mark read" with a position reset) rather than
+  /// ordinary reading — [pushPendingProgress] reads it back to pick the right
+  /// tracker-sync gate when flushing offline-queued read-state changes.
+  /// Ignored (never written) when [isRead] is null, matching [readStateDirty]
+  /// itself: a partial position-only write has no read-state provenance to
+  /// record.
   Future<void> setChapterProgress(
     int chapterId, {
     required int lastPageRead,
     bool? isRead,
+    bool manual = false,
   }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
     OfflineChaptersCompanion(
       lastPageRead: Value(lastPageRead),
@@ -800,6 +911,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       // writes can't push a stale isRead (the ch-99 loop).
       isRead: isRead == null ? const Value.absent() : Value(isRead),
       readStateDirty: isRead == null ? const Value.absent() : const Value(true),
+      readStateManual:
+          isRead == null ? const Value.absent() : Value(manual),
     ),
   );
 
@@ -808,11 +921,20 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   /// Record a local read/unread change (list actions, mark-read). Position
   /// untouched; pushed under its own flag on the next online sync.
-  Future<void> setChapterReadState(int chapterId, bool isRead) =>
-      (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
+  ///
+  /// [manual] is true for every caller of this method today (it's only ever
+  /// invoked from the manual mark-read path — ordinary reading progress goes
+  /// through [setChapterProgress] instead) — see that method's doc comment
+  /// for what it's used for.
+  Future<void> setChapterReadState(
+    int chapterId,
+    bool isRead, {
+    bool manual = true,
+  }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
         OfflineChaptersCompanion(
           isRead: Value(isRead),
           readStateDirty: const Value(true),
+          readStateManual: Value(manual),
           // Marking read counts as reading activity for the Last Read sort;
           // un-reading is bookkeeping and leaves the timestamp alone.
           lastReadAt: isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
@@ -1314,6 +1436,25 @@ class OfflineDatabase extends _$OfflineDatabase {
               ))
             .get();
     return {for (final r in rows) r.read(offlineChapters.mangaId)!};
+  }
+
+  /// Live version of [mangaIdsWithDeviceDownloads] — the Library screen's
+  /// on-device badge/filter previously only read this once (on provider
+  /// creation), so a chapter finishing its download elsewhere (manga details,
+  /// Downloads screen) never updated it until the next navigation/manual
+  /// refresh. Watching lets it update the moment a chapter's deviceState
+  /// flips to downloaded.
+  Stream<Set<int>> watchMangaIdsWithDeviceDownloads() {
+    final query = selectOnly(offlineChapters, distinct: true)
+      ..addColumns([offlineChapters.mangaId])
+      ..where(
+        offlineChapters.deviceState.equalsValue(
+          OfflineDeviceState.downloaded,
+        ),
+      );
+    return query.watch().map(
+      (rows) => {for (final r in rows) r.read(offlineChapters.mangaId)!},
+    );
   }
 
   /// Total bytes used by downloaded chapters — for the storage UI, without a

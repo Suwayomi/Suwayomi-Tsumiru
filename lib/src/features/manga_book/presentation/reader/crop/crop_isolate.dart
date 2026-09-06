@@ -25,19 +25,37 @@ class CroppedImageData {
 
 // Sendable argument bundle for [compute].
 class _CropRequest {
-  const _CropRequest(this.encodedBytes, this.threshold);
+  const _CropRequest(
+    this.encodedBytes,
+    this.threshold,
+    this.targetWidth,
+    this.targetHeight,
+  );
   final Uint8List encodedBytes;
   final int threshold;
+  final int? targetWidth;
+  final int? targetHeight;
 }
 
 /// Decodes [encodedBytes], detects borders, and returns the cropped RGBA in a
 /// background isolate. Returns null when the image can't be decoded or no
 /// border was found (caller falls back to the uncropped image).
+///
+/// [targetWidth]/[targetHeight] (display px, one may be null to preserve
+/// aspect) downscale the cropped region in this same isolate call — the decode
+/// cap [ServerImage] applies to the un-cropped path can't reach this one
+/// (these are already-decoded raw pixels, not an encoded buffer the engine's
+/// decode-time resize can act on), so it has to happen here instead.
 Future<CroppedImageData?> cropImageBytes(
   Uint8List encodedBytes, {
   int threshold = 20,
+  int? targetWidth,
+  int? targetHeight,
 }) {
-  return compute(_cropEntry, _CropRequest(encodedBytes, threshold));
+  return compute(
+    _cropEntry,
+    _CropRequest(encodedBytes, threshold, targetWidth, targetHeight),
+  );
 }
 
 CroppedImageData? _cropEntry(_CropRequest req) {
@@ -61,5 +79,29 @@ CroppedImageData? _cropEntry(_CropRequest req) {
     dst += rowEnd - rowStart;
   }
 
-  return CroppedImageData(rgba: out, width: rect.width, height: rect.height);
+  // Only ever downscale — an upscale would blur a crop that's already
+  // smaller than the cap for no benefit.
+  final needsResize =
+      (req.targetWidth != null && req.targetWidth! < rect.width) ||
+      (req.targetHeight != null && req.targetHeight! < rect.height);
+  if (!needsResize) {
+    return CroppedImageData(rgba: out, width: rect.width, height: rect.height);
+  }
+
+  final resized = img.copyResize(
+    img.Image.fromBytes(
+      width: rect.width,
+      height: rect.height,
+      bytes: out.buffer,
+      numChannels: 4,
+      order: img.ChannelOrder.rgba,
+    ),
+    width: req.targetWidth,
+    height: req.targetHeight,
+  );
+  return CroppedImageData(
+    rgba: resized.getBytes(order: img.ChannelOrder.rgba),
+    width: resized.width,
+    height: resized.height,
+  );
 }

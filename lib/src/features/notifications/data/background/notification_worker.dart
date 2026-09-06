@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
@@ -14,6 +15,9 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../constants/endpoints.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../utils/crash/crash_log.dart';
+import '../../../../utils/crash/diagnostics.dart';
+import '../../../../utils/network/gateway_status.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
@@ -29,10 +33,36 @@ import 'notification_background_client.dart';
 ///
 /// Runs in the WorkManager isolate — no Riverpod, no BuildContext.
 Future<bool> runNewChapterCheck() async {
+  // The main isolate wires this up in main.dart; a WorkManager run gets a
+  // fresh isolate every time and starts with no diagnostic sink at all, so
+  // without this, every recordDiagnostic() call in the download/catch-up
+  // path this function calls into is a silent no-op — invisible even though
+  // the same crash-log file (and its Settings copy action) is what the user
+  // actually checks.
+  final crashLogPath = await initCrashLog();
+  setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
-  if (config == null || token == null) return true;
+  if (config == null || token == null) {
+    // The only way to tell "the OS never woke this task" apart from "it woke
+    // but had nothing configured yet" from the field — both look identical
+    // (a silent gap in the log) without this line.
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-worker: '
+      'check-skipped reason=no-config\n',
+    );
+    return true;
+  }
+
+  final catchupStore = await CatchupStateStore.open();
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-worker: check-started '
+    'newChapters=${config.newChaptersEnabled} catchup=${catchupStore.enabled} '
+    'appUpdates=${config.appUpdatesEnabled} '
+    'extUpdates=${config.extensionUpdatesEnabled}\n',
+  );
 
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
@@ -49,17 +79,19 @@ Future<bool> runNewChapterCheck() async {
   }
   // Background download step — own cursor, keep-rule scope, no category
   // filter. Resolution records the obligations; the executor then downloads
-  // as many as the run's budget allows.
-  final catchupStore = await CatchupStateStore.open();
+  // as many as the run's budget allows — unless the user only wants
+  // detection in the background and prefers to fetch files in the foreground.
   if (catchupStore.enabled) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
-    ok = await runCatchupDownloads(
-          catchupStore: catchupStore,
-          config: config,
-          record: client.currentRecord,
-          broker: client.broker,
-        ) &&
-        ok;
+    if (catchupStore.downloadEnabled) {
+      ok = await runCatchupDownloads(
+            catchupStore: catchupStore,
+            config: config,
+            record: client.currentRecord,
+            broker: client.broker,
+          ) &&
+          ok;
+    }
   }
   if (config.appUpdatesEnabled) {
     await _checkAppUpdate(store, config, client, notifier, l10n);
@@ -67,6 +99,10 @@ Future<bool> runNewChapterCheck() async {
   if (config.extensionUpdatesEnabled) {
     await _checkExtensionUpdates(store, client, notifier, l10n);
   }
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-worker: '
+    'check-finished ok=$ok\n',
+  );
   return ok;
 }
 
@@ -396,28 +432,44 @@ TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) =>
           isGraphQl: true,
         );
         try {
-          final res = await http.post(
-            Uri.parse(endpoint),
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'query':
-                  r'mutation RefreshToken($input: RefreshTokenInput!){ refreshToken(input: $input){ accessToken } }',
-              'variables': {
-                'input': {'refreshToken': refreshToken},
-              },
-            }),
-          );
-          if (res.statusCode != 200) return null;
+          final res = await http
+              .post(
+                Uri.parse(endpoint),
+                headers: const {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'query':
+                      r'mutation RefreshToken($input: RefreshTokenInput!){ refreshToken(input: $input){ accessToken } }',
+                  'variables': {
+                    'input': {'refreshToken': refreshToken},
+                  },
+                }),
+              )
+              .timeout(const Duration(seconds: 30));
+          // A proxy answering for a dead origin is the server being
+          // unreachable, not the refresh token being invalid — without this,
+          // the first request after reconnecting (racing the network
+          // actually settling) permanently condemns every chapter that
+          // happened to 401 in that window.
+          if (isGatewayStatus(res.statusCode)) {
+            return (tokens: null, transient: true);
+          }
+          if (res.statusCode != 200) return (tokens: null, transient: false);
           final data = (jsonDecode(res.body) as Map<String, Object?>)['data']
               as Map<String, Object?>?;
           final access =
               (data?['refreshToken'] as Map<String, Object?>?)?['accessToken']
                   as String?;
-          if (access == null || access.isEmpty) return null;
+          if (access == null || access.isEmpty) {
+            return (tokens: null, transient: false);
+          }
           // Suwayomi doesn't rotate the refresh token — reuse it.
-          return (access: access, refresh: refreshToken);
+          return (tokens: (access: access, refresh: refreshToken), transient: false);
+        } on SocketException {
+          return (tokens: null, transient: true);
+        } on TimeoutException {
+          return (tokens: null, transient: true);
         } catch (_) {
-          return null;
+          return (tokens: null, transient: false);
         }
       },
     );

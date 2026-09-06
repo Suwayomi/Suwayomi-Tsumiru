@@ -66,8 +66,8 @@ flatpak/bundle/
 .flatpak-out/
 .flatpak-builder/
 
-# Claude Code local settings (personal hooks/config)
-.claude/settings.local.json
+# Claude Code local settings/scratch (personal hooks/config, nothing tracked here)
+.claude/
 
 # FVM local SDK symlink (version pinned in .fvmrc)
 .fvm/

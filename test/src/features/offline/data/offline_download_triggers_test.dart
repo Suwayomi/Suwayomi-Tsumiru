@@ -107,6 +107,24 @@ void main() {
     );
   });
 
+  testWidgets(
+    'reconcileMangaWidget(startDownload: false) queues without starting',
+    (tester) async {
+      final h = await harness(tester);
+      await reconcileMangaWidget(h.ref, 1, startDownload: false);
+      expect(
+        h.starts(),
+        0,
+        reason:
+            'a caller batching several manga in a row (e.g. a bulk keep-rule '
+            'apply) must be able to queue each one without the FGS starting '
+            'and draining between them — otherwise its notification never '
+            'reflects the batch\'s real total, only whatever tiny snapshot '
+            'happened to be queued at each individual restart',
+      );
+    },
+  );
+
   testWidgets('saveChapterToDevice (single chapter) starts downloads', (
     tester,
   ) async {

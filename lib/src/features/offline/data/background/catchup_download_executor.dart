@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../notifications/data/notification_state_store.dart';
 import '../chapter_manifest.dart';
 import '../offline_database.dart';
@@ -47,10 +48,36 @@ Future<bool> runCatchupDownloads({
   required TokenBroker broker,
 }) async {
   final spec = catchupStore.readSpec();
-  if (spec == null || spec.serverId != config.serverId) return true;
+  // spec.serverId is the offline catalog's server-instance id (what
+  // writeCatchupWorkSpec stamps it with) — NOT config.serverId, which is a
+  // "url|port" string scoping the unrelated notification cursor. Comparing
+  // against the wrong one meant this guard could never pass.
+  if (spec == null || spec.serverId != catchupStore.catalogServerId) {
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'run-skipped reason=no-spec\n',
+    );
+    return true;
+  }
 
   var ledger = catchupStore.readLedger(config.serverId);
-  if (ledger.pendingDownloads.isEmpty && ledger.pendingServerFetch.isEmpty) {
+
+  // Compute backfill needs BEFORE the early-exit: an empty ledger is not
+  // necessarily empty work — manga in the spec that have never had a full
+  // chapter-list pass need one regardless of whether there are ledger
+  // obligations (the ledger starts empty on every fresh spec or server switch).
+  final needsBackfill = spec.keepRuleMangaIds.difference(
+    ledger.backfilledMangaIds,
+  );
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-catchup: run-started '
+    'pendingDownloads=${ledger.pendingDownloads.length} '
+    'pendingServerFetch=${ledger.pendingServerFetch.length} '
+    'needsBackfill=${needsBackfill.length}\n',
+  );
+  if (ledger.pendingDownloads.isEmpty &&
+      ledger.pendingServerFetch.isEmpty &&
+      needsBackfill.isEmpty) {
     return true;
   }
 
@@ -61,7 +88,13 @@ Future<bool> runCatchupDownloads({
     final unmetered =
         net.contains(ConnectivityResult.wifi) ||
         net.contains(ConnectivityResult.ethernet);
-    if (!unmetered) return true; // not an error — just not now
+    if (!unmetered) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-catchup: '
+        'run-skipped reason=wifi-required\n',
+      );
+      return true; // not an error — just not now
+    }
   }
 
   final support = await getApplicationSupportDirectory();
@@ -74,7 +107,13 @@ Future<bool> runCatchupDownloads({
 
   // The FGS may legitimately own the log right now; skip the run rather than
   // interleave writers.
-  if (!await lock.acquire('wm-catchup')) return true;
+  if (!await lock.acquire('wm-catchup')) {
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'lock-held-skip\n',
+    );
+    return true;
+  }
   try {
     final target = BackgroundServerTarget(
       serverBase: config.endpoint.baseUrl,
@@ -97,10 +136,21 @@ Future<bool> runCatchupDownloads({
     // processed, which the filter below drops anyway. A retry loop or a second
     // pass would break that.
     final logEntries = await log.parse();
+    // needsBackfill was computed before the early-exit check so it is already
+    // available here; the set is the same because backfilledMangaIds only grows
+    // during the run and we haven't touched the ledger yet at this point.
+    if (needsBackfill.isNotEmpty) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-catchup: '
+        'backfilling-manga ids=${needsBackfill.join(',')}\n',
+      );
+    }
     final mangaIds = {
+      ...needsBackfill,
       ...ledger.pendingDownloads.values,
       ...ledger.pendingServerFetch.values,
     };
+    outer:
     for (final mangaId in mangaIds) {
       if (downloaded >= _maxChaptersPerRun) break;
       if (DateTime.now().isAfter(deadline)) break;
@@ -126,8 +176,41 @@ Future<bool> runCatchupDownloads({
       // Pinned chapters are always desired; the server rows can't know about
       // pins (device-side state), so the spec's set joins the rule's.
       final serverIds = {for (final r in chapters.rows) r.id};
+
+      final serverFetch = {...ledger.pendingServerFetch};
+      final retries = {...ledger.serverFetchRetries};
+      final dlRetries = {...ledger.downloadRetries};
+      final pending = {...ledger.pendingDownloads};
+
+      // A chapter that has spent its attempt budget on either hop is already a
+      // permanent dead end this run onward (both hops below `continue` once
+      // their own counter maxes out, and a counter only ever clears when the
+      // chapter leaves `desired` — which it never does on its own). Excluding
+      // it from the candidate pool here, rather than after, stops it wasting
+      // one of a `nUnread` rule's N slots forever: without this, the
+      // (N+1)th unread chapter never gets a turn, and "keep N downloaded"
+      // silently plateaus at N-1.
+      final exhausted = <int>{};
+      for (final r in chapters.rows) {
+        final serverFetchSpent = retries[r.id] ?? 0;
+        final downloadSpent = dlRetries[r.id] ?? 0;
+        if (serverFetchSpent < _maxChapterAttempts &&
+            downloadSpent < _maxChapterAttempts) {
+          continue;
+        }
+        exhausted.add(r.id);
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'giving-up-on-chapter mangaId=$mangaId chapterId=${r.id} '
+          'name="${r.name}" index=${r.chapterIndex} '
+          'serverFetchAttempts=$serverFetchSpent/$_maxChapterAttempts '
+          'downloadAttempts=$downloadSpent/$_maxChapterAttempts '
+          'serverIsDownloaded=${r.serverIsDownloaded} '
+          '— excluded from this manga\'s keep-rule slots from now on\n',
+        );
+      }
       final desired = desiredChapterIds(
-        chapters.rows,
+        [for (final r in chapters.rows) if (!exhausted.contains(r.id)) r],
         mangaSpec.keepRule,
         mangaSpec.keepUnreadCount,
       )..addAll(mangaSpec.pinnedChapterIds.intersection(serverIds));
@@ -137,11 +220,6 @@ Future<bool> runCatchupDownloads({
         ...mangaSpec.onDeviceChapterIds,
         ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
-
-      final serverFetch = {...ledger.pendingServerFetch};
-      final retries = {...ledger.serverFetchRetries};
-      final dlRetries = {...ledger.downloadRetries};
-      final pending = {...ledger.pendingDownloads};
 
       for (final chapterId in desired.difference(present)) {
         if (downloaded >= _maxChaptersPerRun) break;
@@ -171,7 +249,23 @@ Future<bool> runCatchupDownloads({
           }
           // Two-hop: ask the server to fetch it from the source first. A failed
           // ask is the server not being there, which costs nothing.
-          final ok = await _enqueueServerDownload(target, record, chapterId);
+          final ok = await _enqueueServerDownload(
+            target,
+            record,
+            broker,
+            chapterId,
+          );
+          // A trail of every attempt, not just the final give-up — so a run
+          // that never reaches the cap is still visible, and a failed
+          // enqueue request (server unreachable) is distinguishable from one
+          // that succeeded but the source never actually produced the
+          // chapter (serverIsDownloaded staying false on a later run).
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'asking-server-to-fetch mangaId=$mangaId chapterId=$chapterId '
+            'name="${row.name}" index=${row.chapterIndex} '
+            'enqueueOk=$ok attempt=${spent + 1}/$_maxChapterAttempts\n',
+          );
           if (ok) {
             serverFetch[chapterId] = mangaId;
             retries[chapterId] = spent + 1;
@@ -184,6 +278,20 @@ Future<bool> runCatchupDownloads({
         serverFetch.remove(chapterId);
         final dlSpent = dlRetries[chapterId] ?? 0;
         if (dlSpent >= _maxChapterAttempts) continue;
+
+        // Re-check connectivity before each chapter's page downloads — the
+        // one-time gate at run start can't catch a WiFi drop mid-run.
+        if (spec.wifiOnly) {
+          final net = await Connectivity().checkConnectivity();
+          if (!net.contains(ConnectivityResult.wifi) &&
+              !net.contains(ConnectivityResult.ethernet)) {
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'run-paused reason=wifi-lost mid-run\n',
+            );
+            break outer;
+          }
+        }
 
         final attempt = await _downloadOneChapter(
           target: target,
@@ -203,6 +311,11 @@ Future<bool> runCatchupDownloads({
           serverFetch.remove(chapterId);
           retries.remove(chapterId);
           dlRetries.remove(chapterId);
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'downloaded-chapter mangaId=$mangaId chapterId=$chapterId '
+            'bytes=${attempt.bytes}\n',
+          );
         } else if (!attempt.transient) {
           dlRetries[chapterId] = dlSpent + 1;
         }
@@ -213,10 +326,32 @@ Future<bool> runCatchupDownloads({
       // attempt counters go with them: they exist to stop a chapter being
       // retried while it is still wanted, so one left behind would meet a
       // re-added chapter with an already-spent budget.
+      //
+      // Scans BOTH maps, not just `pending`: a chapter can be exhausted (and
+      // now excluded from `desired` above) while it only ever reached
+      // `pendingServerFetch` — never promoted to `pendingDownloads`. Dropping
+      // it from `pending` alone left it in `serverFetch` forever, which kept
+      // its manga in the `mangaIds` set at the top of this run and re-issued
+      // a real chapter-list fetch for it on every wake indefinitely, even
+      // though nothing was ever going to download.
+      //
+      // `exhausted` is deliberately excluded from the "no longer desired"
+      // half of this condition: it is ALSO why those chapters are missing
+      // from `desired` (see above), and wiping their counters here would
+      // reset them to 0 next run — un-exhausting a chapter right back into
+      // fresh attempts and undoing the whole point of excluding it. A
+      // chapter drops out of `desired` for two different reasons and only
+      // one of them should forgive its spent budget.
       final done = {
         for (final e in pending.entries)
           if (e.value == mangaId &&
-              (!desired.contains(e.key) || present.contains(e.key)))
+              ((!desired.contains(e.key) && !exhausted.contains(e.key)) ||
+                  present.contains(e.key)))
+            e.key,
+        for (final e in serverFetch.entries)
+          if (e.value == mangaId &&
+              ((!desired.contains(e.key) && !exhausted.contains(e.key)) ||
+                  present.contains(e.key)))
             e.key,
       };
       for (final c in done) {
@@ -231,9 +366,18 @@ Future<bool> runCatchupDownloads({
         pendingServerFetch: serverFetch,
         serverFetchRetries: retries,
         downloadRetries: dlRetries,
+        // The chapter-list fetch above already ran, whether or not this
+        // manga was one that needed it — recording it here (not just inside
+        // the needsBackfill branch) keeps the set accurate for every manga
+        // this run actually looked at.
+        backfilledMangaIds: {...ledger.backfilledMangaIds, mangaId},
       );
       await catchupStore.writeLedger(config.serverId, ledger);
     }
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-catchup: '
+      'run-finished downloaded=$downloaded bytes=$runBytes\n',
+    );
     return true;
   } finally {
     await lock.release();
@@ -258,6 +402,9 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
     // them would meet the manga with a spent budget if it came back.
     serverFetchRetries: without(ledger.serverFetchRetries),
     downloadRetries: without(ledger.downloadRetries),
+    // Same reasoning: a manga that comes back under the rule again is a fresh
+    // backlog as far as this executor knows, not one it already visited.
+    backfilledMangaIds: {...ledger.backfilledMangaIds}..remove(mangaId),
   );
 }
 
@@ -347,9 +494,11 @@ Future<_MangaChapters?> _fetchMangaChapters(
         progressDirty: false,
         bookmarkDirty: false,
         readStateDirty: false,
+        readStateManual: false,
         syncedIsRead: n['isRead'] as bool? ?? false,
         updatedAt: now,
         downloadGeneration: 0,
+        serverFetchAttempts: 0,
       ),
   ]);
 }
@@ -357,11 +506,12 @@ Future<_MangaChapters?> _fetchMangaChapters(
 Future<bool> _enqueueServerDownload(
   BackgroundServerTarget target,
   BackgroundTokenRecord Function() record,
+  TokenBroker broker,
   int chapterId,
 ) async {
   const query =
       'mutation EnqueueDownloads(\$input: EnqueueChapterDownloadsInput!){ enqueueChapterDownloads(input: \$input){ __typename } }';
-  final result = await postBackgroundGraphql(
+  Future<Object?> post(String? accessToken) => postBackgroundGraphql(
     target: target,
     record: record(),
     query: query,
@@ -370,7 +520,21 @@ Future<bool> _enqueueServerDownload(
         'ids': [chapterId],
       },
     },
+    accessToken: accessToken,
   );
+  // Without this retry, a uiLogin access token that expired between wakes
+  // (the wake interval is 1-6h, far longer than a typical token lifetime)
+  // makes this call 401 and give up every single run — the server never
+  // actually gets asked to fetch the chapter from source in the background,
+  // no matter how many attempts the ledger counts. `_fetchMangaChapters`
+  // above already refreshed the token this run if it was stale, but that
+  // refresh only persists to the store (via the broker), not back into
+  // `record()` — so this call still needs its own retry, same as that one.
+  var result = await post(null);
+  if (result == gqlAuthError && record().authType == 'uiLogin') {
+    final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
+    if (newAccess != null) result = await post(newAccess);
+  }
   return result is Map<String, Object?>;
 }
 

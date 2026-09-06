@@ -411,18 +411,44 @@ void main() {
     });
 
     test(
-      'a stale error event does not error a freshly queued chapter',
+      'an error event still fails a chapter still reading queued (same generation)',
       () async {
+        // The worker's chapterStart event (queued -> downloading) is
+        // dispatched unawaited on the main isolate, same as this terminal
+        // event — there is no ordering guarantee between them. A chapter
+        // that fails fast enough for this event to land first must still be
+        // failed here, or it's stranded in `queued` forever: still "pending"
+        // to every future restart, with nothing to explain why. Staleness is
+        // what the generation check above already exists to catch (see the
+        // dedicated tests below) — device state alone was never a reliable
+        // signal for "this event belongs to an attempt that hasn't happened
+        // yet".
         await db.setChapterDeviceState(5, OfflineDeviceState.queued);
         await applyBackgroundTerminalState(
           db: db,
           chapterId: 5,
           status: 'error',
         );
+        expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
+      },
+    );
+
+    test(
+      'a genuinely stale error event (older generation) does not touch a '
+      'freshly re-queued chapter',
+      () async {
+        await db.setChapterDeviceState(5, OfflineDeviceState.queued);
+        await db.bumpChapterGeneration(5); // now generation 1: re-queued
+        await applyBackgroundTerminalState(
+          db: db,
+          chapterId: 5,
+          status: 'error',
+          eventGeneration: 0, // event from before the re-queue
+        );
         expect(
           (await db.chapterById(5))!.deviceState,
           OfflineDeviceState.queued,
-          reason: 'error applies only to a chapter actually mid-download',
+          reason: 'a deleted/re-queued generation event must not touch the new one',
         );
       },
     );

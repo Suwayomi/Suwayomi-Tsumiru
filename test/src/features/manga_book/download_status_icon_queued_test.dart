@@ -28,6 +28,7 @@ DownloadDto _download(DownloadState state, double progress) =>
         name: 'c1',
         sourceOrder: 1,
         isDownloaded: false,
+        pageCount: 20,
       ),
       manga: Fragment$DownloadDto$manga(id: 1, title: 'M', downloadCount: 0),
       progress: progress,

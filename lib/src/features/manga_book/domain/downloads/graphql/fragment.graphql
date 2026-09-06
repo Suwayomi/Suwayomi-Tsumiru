@@ -4,6 +4,7 @@ fragment DownloadDto on DownloadType {
         name
         sourceOrder
         isDownloaded
+        pageCount
     }
 
     manga {

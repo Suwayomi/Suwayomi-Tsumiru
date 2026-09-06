@@ -12,9 +12,11 @@ import '../../../utils/platform/is_android_native.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../widgets/section_title.dart';
+import '../../notifications/controller/notification_settings_providers.dart';
+import '../../notifications/controller/notifications_controller.dart';
+import '../data/background/catchup_settings.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
-import '../data/background/catchup_settings.dart';
 import '../data/offline_settings_providers.dart';
 import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
@@ -89,7 +91,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     // Background wake-ups are Android's WorkManager; on other platforms the
     // in-app triggers (launch, update-finish, queue-drain) are the coverage,
     // so the switch would be a lie there.
-    if (isAndroidNative)
+    if (isAndroidNative) ...[
       SettingsPropTile(
         title: context.l10n.downloadNewChaptersInBackground,
         subtitle: context.l10n.downloadNewChaptersInBackgroundDescription,
@@ -103,6 +105,44 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
           },
         ),
       ),
+      // Both sub-options are meaningless with the run itself switched off —
+      // nested the same way the Notifications screen nests its own check
+      // interval under "New chapters". The interval is the SAME WorkManager
+      // schedule that check uses (one shared periodic job), so it's shown
+      // here too rather than only being reachable from a screen this toggle
+      // doesn't depend on.
+      if (ref.watch(backgroundCatchupEnabledProvider)) ...[
+        ListTile(
+          title: Text(context.l10n.notificationsCheckInterval),
+          trailing: DropdownButton<int>(
+            value: ref.watch(notificationsCheckIntervalHoursProvider) ?? 6,
+            onChanged: (v) async {
+              if (v == null) return;
+              ref
+                  .read(notificationsCheckIntervalHoursProvider.notifier)
+                  .update(v);
+              await ref.read(notificationsControllerProvider).sync();
+            },
+            items: const [1, 2, 3, 6, 12, 24]
+                .map((h) => DropdownMenuItem(value: h, child: Text('${h}h')))
+                .toList(),
+          ),
+        ),
+        SettingsPropTile(
+          title: context.l10n.backgroundCatchupFetchFiles,
+          subtitle: context.l10n.backgroundCatchupFetchFilesDescription,
+          type: SettingsPropType.switchTile(
+            value: ref.watch(backgroundCatchupDownloadEnabledProvider),
+            onChanged: (v) async {
+              await ref
+                  .read(backgroundCatchupDownloadEnabledProvider.notifier)
+                  .setEnabled(v);
+              return null;
+            },
+          ),
+        ),
+      ],
+    ],
     SettingsPropTile(
       title: context.l10n.offlineConcurrencyLabel,
       subtitle: context.l10n.offlineConcurrencyValue(

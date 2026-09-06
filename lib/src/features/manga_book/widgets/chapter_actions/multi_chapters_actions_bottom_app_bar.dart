@@ -139,7 +139,32 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           tooltip: context.l10n.delete,
           icon: const Icon(Icons.delete_rounded),
           onPressed: () async {
+            // Captured up front: this handler awaits a confirmation dialog and
+            // a network mutation, either of which can outlive this bar (the
+            // selection clears — and this widget unmounts — once the delete
+            // resolves). `ref.read` throws once that happens; a container
+            // obtained now stays valid regardless.
+            final containerRead =
+                ProviderScope.containerOf(context, listen: false).read;
             final repo = ref.read(offlineRepositoryProvider);
+            // Computed up front, before the confirmation dialog's own await:
+            // it only depends on the already-selected chapters, nothing the
+            // dialog reveals, so there is no reason for this `ref` use to
+            // wait behind an await that could outlive the widget.
+            // Delete expands to every scanlator duplicate, grouped per manga.
+            final deleteIds = <int>[
+              for (final entry
+                  in {for (final c in selectedChapterDtos) c.mangaId: true}
+                      .keys)
+                ...expandIdsAcrossScanlators(
+                  ref,
+                  mangaId: entry,
+                  chapterIds: [
+                    for (final c in selectedChapterDtos)
+                      if (c.mangaId == entry) c.id,
+                  ],
+                ),
+            ];
             final onDevice =
                 await repo.deviceDownloadedCount(selectedChapterList);
             if (onDevice > 0) {
@@ -163,20 +188,6 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   false;
               if (!ok) return;
             }
-            // Delete expands to every scanlator duplicate, grouped per manga.
-            final deleteIds = <int>[
-              for (final entry
-                  in {for (final c in selectedChapterDtos) c.mangaId: true}
-                      .keys)
-                ...expandIdsAcrossScanlators(
-                  ref,
-                  mangaId: entry,
-                  chapterIds: [
-                    for (final c in selectedChapterDtos)
-                      if (c.mangaId == entry) c.id,
-                  ],
-                ),
-            ];
             final result = await AsyncValue.guard(
               () => ref
                   .read(mangaBookRepositoryProvider)
@@ -187,7 +198,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
             }
             if (!result.hasError) {
               // Same expanded set (device ⊆ server).
-              await cascadeServerDeleteToDevice(ref, deleteIds);
+              await cascadeServerDeleteToDevice(containerRead, deleteIds);
             }
             await refresh(true);
           },

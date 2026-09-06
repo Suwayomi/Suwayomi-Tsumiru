@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../notifications/domain/new_chapter_detection.dart';
 import '../offline_types.dart';
 
@@ -126,6 +127,7 @@ class CatchupLedger {
     this.pendingServerFetch = const {},
     this.serverFetchRetries = const {},
     this.downloadRetries = const {},
+    this.backfilledMangaIds = const {},
   });
 
   final NewChapterWatermark cursor;
@@ -147,18 +149,31 @@ class CatchupLedger {
   /// could exhaust the chapter before the device ever tried.
   final Map<int, int> downloadRetries;
 
+  /// Manga the executor has already given one full chapter-list pass since it
+  /// entered the spec. The feed-based cursor above only ever surfaces chapters
+  /// that are NEW since it was seeded — a manga's pre-existing backlog (e.g. a
+  /// keep rule just turned on for it) never appears there and would otherwise
+  /// sit untouched until the next foreground launch pass, which is the one
+  /// path that fetches a manga's full list rather than diffing the feed. Once
+  /// a manga is in this set its remaining gaps live in [pendingDownloads] /
+  /// [pendingServerFetch] like any other obligation, so it only needs the one
+  /// pass.
+  final Set<int> backfilledMangaIds;
+
   CatchupLedger copyWith({
     NewChapterWatermark? cursor,
     Map<int, int>? pendingDownloads,
     Map<int, int>? pendingServerFetch,
     Map<int, int>? serverFetchRetries,
     Map<int, int>? downloadRetries,
+    Set<int>? backfilledMangaIds,
   }) => CatchupLedger(
     cursor: cursor ?? this.cursor,
     pendingDownloads: pendingDownloads ?? this.pendingDownloads,
     pendingServerFetch: pendingServerFetch ?? this.pendingServerFetch,
     serverFetchRetries: serverFetchRetries ?? this.serverFetchRetries,
     downloadRetries: downloadRetries ?? this.downloadRetries,
+    backfilledMangaIds: backfilledMangaIds ?? this.backfilledMangaIds,
   );
 
   Map<String, Object?> toJson() => {
@@ -167,6 +182,7 @@ class CatchupLedger {
     'pendingServerFetch': _mapToJson(pendingServerFetch),
     'serverFetchRetries': _mapToJson(serverFetchRetries),
     'downloadRetries': _mapToJson(downloadRetries),
+    'backfilledMangaIds': backfilledMangaIds.toList(),
   };
 
   factory CatchupLedger.fromJson(Map<String, Object?> j) => CatchupLedger(
@@ -177,6 +193,10 @@ class CatchupLedger {
     pendingServerFetch: _mapFromJson(j['pendingServerFetch']),
     serverFetchRetries: _mapFromJson(j['serverFetchRetries']),
     downloadRetries: _mapFromJson(j['downloadRetries']),
+    backfilledMangaIds: {
+      for (final id in (j['backfilledMangaIds'] as List? ?? const []))
+        (id as num).toInt(),
+    },
   );
 
   static Map<String, Object?> _mapToJson(Map<int, int> m) => {
@@ -198,6 +218,7 @@ class CatchupStateStore {
   static const _specKey = 'catchup_work_spec';
   static const _ledgerKey = 'catchup_ledger';
   static const _enabledKey = 'catchup_bg_enabled';
+  static const _downloadEnabledKey = 'catchup_bg_download_enabled';
 
   /// The worker isolate and the app share these keys through separate
   /// SharedPreferences caches; open() reloads so a run never plans from — or
@@ -213,6 +234,21 @@ class CatchupStateStore {
   // auto-download off — a deliberate deviation, flagged in the design doc.)
   bool get enabled => _prefs.getBool(_enabledKey) ?? true;
   Future<void> setEnabled(bool v) => _prefs.setBool(_enabledKey, v);
+
+  /// Whether the background run also fetches chapter files, or only detects
+  /// and queues them (leaving the actual download for the next foreground
+  /// session). Default ON — matches the behavior before this toggle existed.
+  bool get downloadEnabled => _prefs.getBool(_downloadEnabledKey) ?? true;
+  Future<void> setDownloadEnabled(bool v) =>
+      _prefs.setBool(_downloadEnabledKey, v);
+
+  /// The offline catalog's own server-instance id — what [writeSpec]'s
+  /// [CatchupWorkSpec.serverId] is actually stamped with. NOT the same value
+  /// as [NotificationWorkerConfig.serverId] (a "url|port" string scoping the
+  /// unrelated notification cursor) — the executor must not cross-check the
+  /// spec against that instead, or the spec looks perpetually stale.
+  String? get catalogServerId =>
+      _prefs.getString(DBKeys.offlineCatalogServerId.name);
 
   Future<void> writeSpec(CatchupWorkSpec spec) =>
       _prefs.setString(_specKey, jsonEncode(spec.toJson()));

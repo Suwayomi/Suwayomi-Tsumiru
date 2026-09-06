@@ -12,18 +12,14 @@ abstract class FilePickerUtils {
     BuildContext? context,
     List<String>? extensions,
   }) async {
-    final pickedFiles = await FilePicker.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: extensions,
-      // Web has no file paths, so the bytes have to come back with the pick.
-      withData: kIsWeb,
     );
-    final file = pickedFiles?.files.first;
     if (context != null && context.mounted) {
       if (file == null ||
           file.name.isBlank ||
-          (kIsWeb && (file.bytes).isBlank ||
-              (!kIsWeb && (file.path).isBlank))) {
+          (!kIsWeb && (file.path).isBlank)) {
         throw context.l10n.errorFilePick;
       }
       if (extensions.isNotBlank &&
@@ -44,7 +40,7 @@ abstract class FilePickerUtils {
     if (kIsWeb) {
       return MultipartFile.fromBytes(
         newFileName,
-        file.bytes!,
+        await file.readAsBytes(),
         filename: newFileNameWithExtension,
       );
     } else {

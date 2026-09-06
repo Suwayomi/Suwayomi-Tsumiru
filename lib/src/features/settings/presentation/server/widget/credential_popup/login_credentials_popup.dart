@@ -170,6 +170,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
             TextFormField(
               controller: username,
               validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: context.l10n.userName,
                 border: const OutlineInputBorder(),
@@ -180,6 +181,10 @@ class LoginCredentialsPopup extends HookConsumerWidget {
               controller: password,
               validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
               obscureText: true,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                if (!testing.value) doSave();
+              },
               decoration: InputDecoration(
                 hintText: context.l10n.password,
                 border: const OutlineInputBorder(),

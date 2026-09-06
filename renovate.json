@@ -4,7 +4,7 @@
   "enabledManagers": ["fvm", "pub", "github-actions", "gradle", "cocoapods", "custom.regex"],
   "ignoreDeps": ["dev.flutter.flutter-plugin-loader"],
   "constraints": {
-    "flutter": "3.44.6"
+    "flutter": "3.47.2"
   },
   "rangeStrategy": "update-lockfile",
   "prConcurrentLimit": 5,
@@ -21,6 +21,12 @@
       "description": "Major bumps wait on the dashboard so they land one at a time, reviewed",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "The plus packages and file_picker share a win32 pin and only resolve together",
+      "matchManagers": ["pub"],
+      "matchPackageNames": ["share_plus", "package_info_plus", "network_info_plus", "file_picker"],
+      "groupName": "plus-packages"
     },
     {
       "description": "Riverpod moves as one migration",

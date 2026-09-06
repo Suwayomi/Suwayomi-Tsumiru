@@ -24,17 +24,33 @@
 // pointer-down events reach the gesture recognizer BEFORE they reach an
 // outer `Listener` widget in Flutter's hit-test order, so a Listener-
 // maintained count would always be stale by one event.
+//
+// [isZoomedIn], when provided, is consulted the same way: a new pointer is
+// rejected outright while it returns true, so a single-finger drag used to
+// pan around a zoomed page never gets claimed by these recognizers instead
+// of ZoomView's own pan. It's a plain callback (queried fresh on every
+// pointer-down) rather than a one-time constructor value so the caller can
+// rebind it on every build without recreating the recognizer — the same
+// pattern already used for `onEnd` by DirectionalSwipeGestureHandler.
 
 import 'package:flutter/gestures.dart';
 
 class SingleTouchHorizontalDragGestureRecognizer
     extends HorizontalDragGestureRecognizer {
-  SingleTouchHorizontalDragGestureRecognizer({super.debugOwner});
+  SingleTouchHorizontalDragGestureRecognizer({
+    super.debugOwner,
+    this.isZoomedIn,
+  });
 
+  bool Function()? isZoomedIn;
   final Set<int> _selfTracked = <int>{};
 
   @override
   void addAllowedPointer(PointerDownEvent event) {
+    if (isZoomedIn?.call() ?? false) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
     if (_selfTracked.isNotEmpty) {
       _selfTracked.clear();
       resolve(GestureDisposition.rejected);
@@ -53,12 +69,20 @@ class SingleTouchHorizontalDragGestureRecognizer
 
 class SingleTouchVerticalDragGestureRecognizer
     extends VerticalDragGestureRecognizer {
-  SingleTouchVerticalDragGestureRecognizer({super.debugOwner});
+  SingleTouchVerticalDragGestureRecognizer({
+    super.debugOwner,
+    this.isZoomedIn,
+  });
 
+  bool Function()? isZoomedIn;
   final Set<int> _selfTracked = <int>{};
 
   @override
   void addAllowedPointer(PointerDownEvent event) {
+    if (isZoomedIn?.call() ?? false) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
     if (_selfTracked.isNotEmpty) {
       _selfTracked.clear();
       resolve(GestureDisposition.rejected);
@@ -76,12 +100,20 @@ class SingleTouchVerticalDragGestureRecognizer
 }
 
 class SingleTouchPanGestureRecognizer extends PanGestureRecognizer {
-  SingleTouchPanGestureRecognizer({super.debugOwner});
+  SingleTouchPanGestureRecognizer({
+    super.debugOwner,
+    this.isZoomedIn,
+  });
 
+  bool Function()? isZoomedIn;
   final Set<int> _selfTracked = <int>{};
 
   @override
   void addAllowedPointer(PointerDownEvent event) {
+    if (isZoomedIn?.call() ?? false) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
     if (_selfTracked.isNotEmpty) {
       _selfTracked.clear();
       resolve(GestureDisposition.rejected);

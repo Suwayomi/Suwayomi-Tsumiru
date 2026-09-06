@@ -89,6 +89,35 @@ void main() {
     expect(other.pendingDownloads, isEmpty);
   });
 
+  test('backfilledMangaIds round-trips through the ledger', () async {
+    final s = await store();
+    await s.writeLedger(
+      'srv-1',
+      const CatchupLedger(backfilledMangaIds: {7, 9}),
+    );
+
+    expect(s.readLedger('srv-1').backfilledMangaIds, {7, 9});
+    // A server switch must not carry another server's backfill history —
+    // same isolation rule as every other field on this ledger.
+    expect(s.readLedger('srv-2').backfilledMangaIds, isEmpty);
+  });
+
+  test(
+      'catalogServerId reads the offline catalog key, not a made-up '
+      'namespace the executor could mismatch against', () async {
+    SharedPreferences.setMockInitialValues({
+      'offlineCatalogServerId': 'catalog-uuid-123',
+    });
+    final s = CatchupStateStore(await SharedPreferences.getInstance());
+    expect(s.catalogServerId, 'catalog-uuid-123');
+  });
+
+  test('catalogServerId is null when the offline catalog was never set up',
+      () async {
+    final s = await store();
+    expect(s.catalogServerId, isNull);
+  });
+
   test('clearState drops spec and ledger but keeps the user toggle', () async {
     final s = await store();
     await s.setEnabled(true);
@@ -107,6 +136,21 @@ void main() {
     expect(s.readSpec(), isNull);
     expect(s.readLedger('srv-1').cursor.fetchedAt, 0);
     expect(s.enabled, isTrue);
+  });
+
+  test('downloadEnabled defaults to true, matching pre-toggle behavior',
+      () async {
+    final s = await store();
+    expect(s.downloadEnabled, isTrue);
+  });
+
+  test('downloadEnabled round-trips and survives clearState', () async {
+    final s = await store();
+    await s.setDownloadEnabled(false);
+    expect(s.downloadEnabled, isFalse);
+
+    await s.clearState();
+    expect(s.downloadEnabled, isFalse);
   });
 
   test('chapter generations survive the spec round-trip', () {

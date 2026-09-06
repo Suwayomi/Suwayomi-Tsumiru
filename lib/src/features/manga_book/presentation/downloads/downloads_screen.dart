@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -64,10 +63,9 @@ class DownloadsScreen extends HookConsumerWidget {
       floatingActionButton: onDeviceTab
           ? const OfflineDownloadsFab()
           : (showDownloadsFAB
-                ? DownloadsFab(
-                    status: downloaderRunState ?? DownloaderState.STOPPED,
-                  )
-                : null),
+              ? DownloadsFab(
+                  status: downloaderRunState ?? DownloaderState.STOPPED)
+              : null),
       body: TabBarView(
         controller: tabController,
         children: [
@@ -119,44 +117,69 @@ class _ServerDownloads extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final toast = ref.watch(toastProvider);
-    // The status query is authoritative. A WebSocket can fail independently
-    // (notably on a LAN route) while the HTTP query succeeds; replacing a
-    // verified empty queue with that feed error made Downloads unusable.
+    // The status query remains authoritative when the live socket is not
+    // available on an otherwise-working LAN route.
     ref.watch(downloadUpdatesProvider);
     return queueStatus.showUiWhenData(
-      context,
-      (data) {
-        if (data == null) {
-          return Emoticons(title: context.l10n.errorSomethingWentWrong);
-        } else if (downloadsChapterIds.isBlank) {
-          return Emoticons(title: context.l10n.noDownloads);
-        } else {
-          final downloadsCount = (downloadsChapterIds.length)
-              .getValueOnNullOrNegative();
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(downloadStatusProvider.future),
-            child: ListView.builder(
-              itemBuilder: (context, index) {
-                if (index == downloadsCount) return const Gap(104);
-                final chapterId = downloadsChapterIds[index];
-                return DownloadProgressListTile(
-                  key: ValueKey("$chapterId"),
-                  index: index,
-                  downloadsCount: downloadsCount,
-                  chapterId: chapterId,
-                  toast: toast,
-                );
-              },
-              itemCount: downloadsCount + 1,
-            ),
-          );
-        }
-      },
-      refresh: () {
-        ref.invalidate(downloadStatusProvider);
-        ref.invalidate(downloadUpdatesProvider);
-      },
-      showGenericError: true,
+        context,
+        (data) {
+          if (data == null) {
+            return Emoticons(title: context.l10n.errorSomethingWentWrong);
+          } else if (downloadsChapterIds.isBlank) {
+            return Emoticons(title: context.l10n.noDownloads);
+          } else {
+            final downloadsCount =
+                (downloadsChapterIds.length).getValueOnNullOrNegative();
+            return RefreshIndicator(
+              onRefresh: () => ref.refresh(downloadStatusProvider.future),
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                padding: const EdgeInsets.only(bottom: 88),
+                header: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.download_rounded),
+                      title: Text(context.l10n.downloadsQueue),
+                      trailing: Text("$downloadsCount"),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Text(
+                        context.l10n.downloadsServerHint,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                  ],
+                ),
+                onReorderItem: (oldIndex, newIndex) => ref
+                    .read(downloadsMapProvider.notifier)
+                    .reorder(downloadsChapterIds[oldIndex], newIndex),
+                itemBuilder: (context, index) {
+                  final chapterId = downloadsChapterIds[index];
+                  return DownloadProgressListTile(
+                    key: ValueKey("$chapterId"),
+                    index: index,
+                    downloadsCount: downloadsCount,
+                    chapterId: chapterId,
+                    toast: toast,
+                  );
+                },
+                itemCount: downloadsCount,
+              ),
+            );
+          }
+        },
+        refresh: () {
+          ref.invalidate(downloadStatusProvider);
+          ref.invalidate(downloadUpdatesProvider);
+        },
+        showGenericError: true,
     );
   }
 }

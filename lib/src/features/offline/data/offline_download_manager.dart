@@ -86,12 +86,24 @@ class OfflineDownloadManager {
           page.ext,
         );
       }
-      await commitStagedChapter(
+      final result = await commitStagedChapter(
         db: db,
         store: store,
         mangaId: chapter.mangaId,
         chapterId: chapter.id,
       );
+      // The source answered with zero pages (chapter removed/renamed upstream,
+      // for instance). commitStagedChapter refuses to publish that as
+      // `downloaded`, but left unchecked the row stays `downloading` forever —
+      // not `error`, so the reconciler's error-skip guard never engages and
+      // this chapter is re-selected for download on every pass, looking like
+      // it is stuck trying to fetch a chapter that does not exist.
+      if (result == ChapterCommitResult.incomplete) {
+        throw StateError(
+          'Chapter ${chapter.id} produced no pages to commit '
+          '(pageCount=$pageCount)',
+        );
+      }
     } catch (e, st) {
       logger.e(
         'Offline: download FAILED for chapter ${chapter.id} '

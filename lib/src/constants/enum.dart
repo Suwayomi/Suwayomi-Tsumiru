@@ -616,3 +616,21 @@ enum IncludeOrExclude implements ValueEnum {
 
 /// Global-search source scope: search only pinned sources, or all of them.
 enum GlobalSearchSourceFilter { pinned, all }
+
+/// Controls how consecutive chapters from the same manga are grouped on the
+/// Updates page. [disabled] = flat list (legacy behaviour); [collapsed] =
+/// grouped and folded by default; [expanded] = grouped and unfolded by default.
+enum UpdatesGroupingMode {
+  disabled,
+  collapsed,
+  expanded;
+
+  String toLocale(BuildContext context) => switch (this) {
+        UpdatesGroupingMode.disabled =>
+          context.l10n.updatesGroupingModeDisabled,
+        UpdatesGroupingMode.collapsed =>
+          context.l10n.updatesGroupingModeCollapsed,
+        UpdatesGroupingMode.expanded =>
+          context.l10n.updatesGroupingModeExpanded,
+      };
+}

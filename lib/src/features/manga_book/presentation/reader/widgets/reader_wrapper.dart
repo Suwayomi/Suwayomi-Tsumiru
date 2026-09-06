@@ -44,7 +44,10 @@ import 'chrome/reader_chrome.dart';
 import 'chrome/reader_page_actions_sheet.dart';
 import 'chrome/reader_settings_dialog.dart';
 import 'directional_swipe_gesture_handler.dart';
+import 'reader_gesture_state.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
+
+export 'reader_gesture_state.dart';
 
 class ReaderInputCallbacks {
   const ReaderInputCallbacks({
@@ -106,13 +109,6 @@ class ReaderInputScope extends InheritedWidget {
 }
 
 bool _noBoundaryNavigation() => false;
-
-/// Whether the touch that is currently down landed while the strip was still
-/// coasting from the reader's own fling. Such a tap arrests the scroll and
-/// nothing else — the next one opens the chrome. The long strip snapshots this
-/// on pointer-down, mirroring Komikku's `tapDuringManualScroll`
-/// (`WebtoonRecyclerView.kt:72-75`, consumed at `:244-248`).
-final readerTapArrestsFlingProvider = StateProvider<bool>((ref) => false);
 
 /// Whether the reader chrome is on screen. Public so the long strip can hold
 /// auto-scroll while it is up.

@@ -1692,6 +1692,8 @@
   "deleteChapterAfterManuallyMarkedRead": "Delete chapter after manually marking it as read",
   "deleteFinishedChaptersWhileReading": "Delete finished chapters while reading",
   "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
+  "downloadProtectionWindowTitle": "Keep recently-read chapters downloaded",
+  "downloadProtectionWindowDescription": "Re-download the keep-window chapters if they are missing from the device (requires delete-while-reading to be enabled).",
   "deleteWhileReadingDisabled": "Disabled",
   "deleteWhileReadingLastRead": "Last read chapter",
   "deleteWhileReadingSecondToLast": "Second to last read chapter",
@@ -2795,6 +2797,19 @@
   "updateCompleted": "Update Completed",
   "updateFailed": "Failed to update {property}",
   "updates": "Updates",
+  "updatesGroupingLabel": "Chapter grouping",
+  "updatesGroupingHint": "Stack consecutive chapters from the same series into one foldable entry.",
+  "updatesGroupingModeDisabled": "Disabled",
+  "updatesGroupingModeCollapsed": "Collapsed",
+  "updatesGroupingModeExpanded": "Expanded",
+  "updatesGroupingShowMore": "+{count} more",
+  "@updatesGroupingShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "updatesSummary": "Updates Summary",
   "updating": "Updating",
   "updatingLibrary": "Updating library…",
@@ -2883,6 +2898,11 @@
   "downloadNewChaptersInBackgroundDescription": "Fetch new chapters for series you keep offline, without opening the app",
   "@downloadOverWifiOnly": {
     "description": "Toggle to restrict background downloads to Wi-Fi connections"
+  },
+  "backgroundCatchupFetchFiles": "Download files in the background",
+  "backgroundCatchupFetchFilesDescription": "When off, background checks only find and queue new chapters. Files download the next time you open the app.",
+  "@backgroundCatchupFetchFilesDescription": {
+    "description": "Sub-option under downloadNewChaptersInBackground: whether the background run also downloads chapter files, or only detects/queues them"
   },
   "offlineConcurrencyLabel": "Simultaneous downloads",
   "@offlineConcurrencyLabel": {
@@ -3037,6 +3057,26 @@
   "downloadsOnDeviceTab": "On device",
   "@downloadsOnDeviceTab": {
     "description": "Downloads tab: files downloaded on this device"
+  },
+  "downloadsQueue": "Queue",
+  "@downloadsQueue": {
+    "description": "Header title above the server download queue"
+  },
+  "downloadsServerHint": "Chapters the server is fetching. Long-press a row to reorder.",
+  "@downloadsServerHint": {
+    "description": "Hint shown above the server download queue"
+  },
+  "downloadPagesProgress": "{done}/{total} pages",
+  "@downloadPagesProgress": {
+    "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "offlineNoFiles": "Nothing downloaded on this device yet",
   "@offlineNoFiles": {
@@ -3544,5 +3584,37 @@
         "type": "int"
       }
     }
+  },
+  "offlineChaptersScreenTitle": "Downloaded chapters",
+  "@offlineChaptersScreenTitle": {
+    "description": "AppBar title for the offline series drill-down chapter list"
+  },
+  "offlineChaptersActiveSection": "Downloading / Queued",
+  "@offlineChaptersActiveSection": {
+    "description": "Section header for chapters currently downloading or queued in the offline chapter list"
+  },
+  "offlineChaptersDownloadedSection": "Downloaded",
+  "@offlineChaptersDownloadedSection": {
+    "description": "Section header for fully downloaded chapters in the offline chapter list"
+  },
+  "offlineChaptersErrorSection": "Failed",
+  "@offlineChaptersErrorSection": {
+    "description": "Section header for chapters that failed to download"
+  },
+  "offlineChaptersEmpty": "No chapters saved on this device yet.",
+  "@offlineChaptersEmpty": {
+    "description": "Empty state for the offline chapter drill-down screen"
+  },
+  "offlineChapterRetry": "Retry",
+  "@offlineChapterRetry": {
+    "description": "Button to retry a failed chapter download"
+  },
+  "offlineChapterDelete": "Remove from device",
+  "@offlineChapterDelete": {
+    "description": "Button / tooltip to remove an on-device chapter"
+  },
+  "offlineChaptersQueued": "Queued",
+  "@offlineChaptersQueued": {
+    "description": "Status label for a chapter waiting in the download queue"
   }
 }

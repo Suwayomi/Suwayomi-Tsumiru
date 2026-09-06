@@ -128,6 +128,12 @@ class DownloadStatusIcon extends HookConsumerWidget {
             // Cloud = the SERVER copy; solid indigo = "you have it".
             icon: brandGradientIcon(context, Icons.cloud_done_rounded),
             onPressed: () async {
+              // Captured up front: the network mutation below can outlive
+              // this icon (the chapter row it belongs to can disappear once
+              // the delete resolves). `ref.read` throws once that happens; a
+              // container obtained now stays valid regardless.
+              final containerRead =
+                  ProviderScope.containerOf(context, listen: false).read;
               final deleteIds = expandIdsAcrossScanlators(
                 ref,
                 mangaId: chapter.mangaId,
@@ -141,7 +147,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
               result.showToastOnError(toast);
               if (!result.hasError) {
                 // Same expanded set (device ⊆ server).
-                await cascadeServerDeleteToDevice(ref, deleteIds);
+                await cascadeServerDeleteToDevice(containerRead, deleteIds);
               }
               await newUpdatePair(ref, (value) => isLoading.value = value);
             },

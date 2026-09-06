@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,6 +21,17 @@ import 'background_token_record.dart';
 /// close a connection per call, so a catch-up batch paid a fresh TLS handshake
 /// for every page it fetched. Lives as long as the isolate does.
 final http.Client backgroundHttpClient = http.Client();
+
+/// Bound on every call through this file. None of `package:http`'s calls time
+/// out on their own, and this executor holds the shared `.bg_lock` file for
+/// its whole run — a proxy/tunnel that accepts a connection but never replies
+/// would hang a request forever, which means the lock is NEVER released, which
+/// means the foreground-service worker can never acquire it either: it starts,
+/// fails to get the lock, stops, and whatever re-triggers it starts the same
+/// failed attempt again — the notification flashing on and off with nothing
+/// ever reaching a chapter, and nothing logged, because nothing here ever
+/// throws to report through.
+const _httpTimeout = Duration(seconds: 30);
 
 /// Server coordinates for the isolate-side fetch paths — the work-order fields
 /// the FGS uses, shared with the WorkManager catch-up executor.
@@ -88,11 +100,13 @@ Future<Object?> postBackgroundGraphql({
   final headers = <String, String>{'Content-Type': 'application/json'};
   applyBackgroundAuthHeaders(headers, record, accessToken: accessToken);
   try {
-    final res = await backgroundHttpClient.post(
-      Uri.parse(target.graphql),
-      headers: headers,
-      body: jsonEncode({'query': query, 'variables': variables}),
-    );
+    final res = await backgroundHttpClient
+        .post(
+          Uri.parse(target.graphql),
+          headers: headers,
+          body: jsonEncode({'query': query, 'variables': variables}),
+        )
+        .timeout(_httpTimeout);
     if (res.statusCode == 401 || res.statusCode == 403) return gqlAuthError;
     // A proxy answering for a dead origin is an outage, not a bad request —
     // the same rule the foreground worker and the app itself use.
@@ -102,13 +116,16 @@ Future<Object?> postBackgroundGraphql({
     return decoded['data'];
   } on SocketException {
     return gqlNetworkError;
+  } on TimeoutException {
+    return gqlNetworkError;
   } catch (_) {
     return null;
   }
 }
 
 /// A chapter's page URLs: the list on success, empty on terminal failure, null
-/// when the server was unreachable. Retries once through the broker on 401.
+/// when the server was unreachable or a 401 could not be resolved. Retries
+/// once through the broker on 401.
 Future<List<String>?> resolveChapterPageUrls({
   required BackgroundServerTarget target,
   required BackgroundTokenRecord Function() record,
@@ -130,9 +147,25 @@ Future<List<String>?> resolveChapterPageUrls({
   var result = await post(null);
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
-    if (newAccess != null) result = await post(newAccess);
+    if (newAccess != null) {
+      result = await post(newAccess);
+    } else if (broker.lastRefreshTransient) {
+      // The refresh call itself couldn't reach the server — likely the same
+      // blip that produced the 401 in the first place (e.g. right after the
+      // device reconnects). Park instead of condemning the chapter outright.
+      return null;
+    }
   }
-  if (result == gqlNetworkError) return null;
+  // An auth failure that survives the retry above (the refresh succeeded but
+  // the retried call 401'd again, or the refresh itself failed non-
+  // transiently) used to fall all the way through to the empty-list return
+  // below — indistinguishable from "the server answered, this chapter truly
+  // has no pages". The FGS worker treats an empty list as terminal and marks
+  // the chapter `error` on the spot (download_task_handler.dart), so a token
+  // that was merely stale right after a reconnect condemned the chapter
+  // outright instead of getting the park-and-retry treatment every other
+  // ambiguous failure in this file gets.
+  if (result == gqlNetworkError || result == gqlAuthError) return null;
   if (result is Map<String, Object?>) {
     final pages =
         (result['fetchChapterPages'] as Map<String, Object?>?)?['pages'];
@@ -177,17 +210,20 @@ ChapterDownloadEngine buildBackgroundEngine({
     }
     final http.Response res;
     try {
-      res = await backgroundHttpClient.get(
-        Uri.parse(fetchUrl),
-        headers: headers,
-      );
-    } on SocketException {
-      throw const PageOfflineException();
+      res = await backgroundHttpClient
+          .get(Uri.parse(fetchUrl), headers: headers)
+          .timeout(_httpTimeout);
+    } on SocketException catch (e) {
+      throw PageOfflineException('SocketException: $e');
+    } on TimeoutException {
+      throw PageOfflineException('timed out after $_httpTimeout on page fetch');
     }
     if (res.statusCode == 401 || res.statusCode == 403) {
       throw const PageAuthException();
     }
-    if (isGatewayStatus(res.statusCode)) throw const PageOfflineException();
+    if (isGatewayStatus(res.statusCode)) {
+      throw PageOfflineException('HTTP ${res.statusCode} on page fetch');
+    }
     if (res.statusCode != 200) {
       throw Exception('page fetch failed ($pageUrl): ${res.statusCode}');
     }

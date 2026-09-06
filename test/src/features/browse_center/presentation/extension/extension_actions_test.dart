@@ -4,6 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:typed_data';
+
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -174,7 +177,7 @@ void main() {
     // Only a BuildContext to hand to the picker call. The container stays
     // detached from the tree: attaching it makes Riverpod defer refreshes to a
     // frame that a bare `await` never pumps.
-    final apk = PlatformFile(name: 'source.apk', size: 4);
+    final apk = _FakeApk();
     late BuildContext capturedContext;
     await tester.pumpWidget(
       MaterialApp(
@@ -212,4 +215,21 @@ class _ThrowingRepository extends ExtensionRepository {
 
   @override
   Future<List<Extension>?> getExtensionListStream() async => <Extension>[];
+}
+
+base class _FakeApk extends PlatformFile {
+  @override
+  String get name => 'source.apk';
+  @override
+  Uri get uri => Uri.file('/tmp/source.apk');
+  @override
+  XFile get xFile => XFile(uri.toFilePath());
+  @override
+  int? lengthSync() => 4;
+  @override
+  Future<int> length() async => 4;
+  @override
+  Future<Uint8List> readAsBytes() async => Uint8List(4);
+  @override
+  Stream<Uint8List> readAsByteStream() => Stream.value(Uint8List(4));
 }

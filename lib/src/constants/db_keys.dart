@@ -93,6 +93,7 @@ enum DBKeys {
   updatesFilterUnread(null),
   updatesFilterStarted(null),
   updatesFilterBookmarked(null),
+  updatesGroupingMode(null),
   historyFilterUnfinishedSeries(null),
   historyFilterUnread(null),
   historyFilterInLibrary(null),
@@ -186,6 +187,10 @@ enum DBKeys {
   localDeleteWhileReading(0),
   localDeleteManuallyMarkedRead(false),
   localDeleteWithBookmark(false),
+  // When true, the reconciler pulls down the slots-1 most recently read
+  // chapters if they are missing from the device (fills the protection window).
+  // Off by default to preserve existing behavior.
+  localDownloadProtectionWindow(false),
   // Lock phones to portrait (landscape on a phone currently looks broken). Off
   // by default — many readers prefer landscape; tablets/desktop ignore it.
   forcePortrait(false),
