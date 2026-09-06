@@ -21,8 +21,10 @@ import '../../../utils/launch_url_in_web.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/theme/brand.dart';
 import '../../about/data/about_repository.dart';
+import '../../auth/data/custom_headers_store.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
+import '../../settings/presentation/connection/custom_headers_section.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../data/onboarding_complete.dart';
@@ -351,11 +353,13 @@ class _ServerStep extends HookConsumerWidget {
       // whose public aboutServer answers regardless of credentials. ui/simple
       // need no pre-flight: performSignIn's login round-trip throws on rejection.
       if (authChoice.value == AuthType.basic) {
+        final extra = ref.read(customHttpHeadersProvider);
         if (!await basicAuthConfirms(
           base,
           client: client,
           username: user,
           password: pass,
+          extraHeaders: extra,
         )) {
           return false;
         }
@@ -363,6 +367,7 @@ class _ServerStep extends HookConsumerWidget {
           base,
           client: client,
           basic: '$user:$pass',
+          extraHeaders: extra,
         )) {
           return false;
         }
@@ -411,7 +416,8 @@ class _ServerStep extends HookConsumerWidget {
       resolvedUrl.value = url;
       final client = ref.read(onboardingHttpClientProvider)();
       try {
-        if (!await webAuthRequired(url, client: client)) {
+        if (!await webAuthRequired(url,
+            client: client, extraHeaders: ref.read(customHttpHeadersProvider))) {
           state.value = _TestState.connected;
           onVerifiedChanged(true);
           return;
@@ -453,7 +459,9 @@ class _ServerStep extends HookConsumerWidget {
 
       final client = ref.read(onboardingHttpClientProvider)();
       try {
-        final result = await resolveServer(input, client: client);
+        final result = await resolveServer(input,
+            client: client,
+            extraHeaders: ref.read(customHttpHeadersProvider));
         switch (result.outcome) {
           case ResolveOutcome.notReached:
             state.value = _TestState.failed;
@@ -617,6 +625,10 @@ class _ServerStep extends HookConsumerWidget {
           context.l10n.onboardingServerPortHint,
           style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
         ),
+        const SizedBox(height: 8),
+        // Zero Trust / reverse-proxy headers (e.g. Cloudflare Access) must be
+        // set BEFORE probing, or the probe can't reach the server at all.
+        const CustomHeadersSection(),
         const SizedBox(height: 12),
         // Validate: test the connection.
         FilledButton.tonalIcon(

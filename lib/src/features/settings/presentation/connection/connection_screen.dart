@@ -18,6 +18,7 @@ import '../../../../widgets/section_title.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
+import 'custom_headers_section.dart';
 import 'inline_auth_section.dart';
 
 class ConnectionScreen extends HookConsumerWidget {
@@ -93,6 +94,7 @@ class ConnectionScreen extends HookConsumerWidget {
                 ),
               ),
             const InlineAuthSection(),
+            const CustomHeadersSection(),
             if (!kIsWeb)
               ListTile(
                 leading: const Icon(Icons.web_rounded),

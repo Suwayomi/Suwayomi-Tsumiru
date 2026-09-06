@@ -41,12 +41,20 @@ class SimpleLoginClient {
     required String serverBaseUrl,
     required String username,
     required String password,
+    Map<String, String>? extraHeaders,
   }) async {
     final request = http.Request('POST', Uri.parse('$serverBaseUrl/login.html'))
       ..bodyFields = {'user': username, 'pass': password}
       ..headers['Content-Type'] =
           'application/x-www-form-urlencoded; charset=utf-8'
       ..followRedirects = false;
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      for (final entry in extraHeaders.entries) {
+        final lower = entry.key.toLowerCase();
+        if (lower == 'authorization' || lower == 'cookie') continue;
+        request.headers[entry.key] = entry.value;
+      }
+    }
     final response = await http.Response.fromStream(await _http.send(request));
 
     if (response.statusCode == 200) {

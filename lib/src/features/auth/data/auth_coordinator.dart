@@ -22,6 +22,7 @@ import '../../onboarding/data/server_resolver.dart'
     show authProbeAuthorized, basicAuthConfirms;
 import 'auth_credentials_store.dart';
 import 'auth_state.dart';
+import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
 import 'simple_login_client.dart';
 
@@ -338,6 +339,7 @@ class AuthCoordinator extends _$AuthCoordinator {
       serverBaseUrl: serverBaseUrl,
       username: username,
       password: password,
+      extraHeaders: ref.read(customHttpHeadersProvider),
     );
   }
 
@@ -613,11 +615,13 @@ class AuthCoordinator extends _$AuthCoordinator {
         // basic_auth, i.e. wrong mode).
         final client = http.Client();
         try {
+          final extra = ref.read(customHttpHeadersProvider);
           final isSuwayomi = await basicAuthConfirms(
             serverBaseUrl,
             client: client,
             username: username,
             password: password,
+            extraHeaders: extra,
           );
           if (!isSuwayomi) {
             return const TestConnectionFailure(
@@ -629,6 +633,7 @@ class AuthCoordinator extends _$AuthCoordinator {
             serverBaseUrl,
             client: client,
             basic: '$username:$password',
+            extraHeaders: extra,
           );
           if (!authorized) {
             return const TestConnectionFailure(

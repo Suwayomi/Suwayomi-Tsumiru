@@ -460,6 +460,7 @@ Future<ProbeResult> probeServer(
   required http.Client client,
   Duration timeout = const Duration(seconds: 4),
   int redirectBudget = 1,
+  Map<String, String>? extraHeaders,
 }) async {
   final uri = graphqlUriFor(baseUrl);
 
@@ -471,6 +472,7 @@ Future<ProbeResult> probeServer(
       uri,
       kAboutProbeQuery,
       timeout,
+      extraHeaders: extraHeaders,
     );
     aboutResp = resp;
     aboutBody = body;
@@ -504,6 +506,7 @@ Future<ProbeResult> probeServer(
           client: client,
           timeout: timeout,
           redirectBudget: redirectBudget - 1,
+          extraHeaders: extraHeaders,
         );
       }
     }
@@ -520,6 +523,7 @@ Future<ProbeResult> probeServer(
       uri,
       kAuthProbeQuery,
       timeout,
+      extraHeaders: extraHeaders,
     );
     authBody = body;
   } catch (_) {
@@ -554,12 +558,20 @@ Future<(http.StreamedResponse, String)> _sendNoRedirect(
   http.Client client,
   Uri uri,
   String query,
-  Duration timeout,
-) async {
+  Duration timeout, {
+  Map<String, String>? extraHeaders,
+}) async {
   final request = http.Request('POST', uri)
     ..followRedirects = false
     ..headers['Content-Type'] = 'application/json'
     ..body = jsonEncode({'query': query});
+  if (extraHeaders != null && extraHeaders.isNotEmpty) {
+    for (final entry in extraHeaders.entries) {
+      final lower = entry.key.toLowerCase();
+      if (lower == 'authorization' || lower == 'cookie') continue;
+      request.headers[entry.key] = entry.value;
+    }
+  }
   final streamed = await client.send(request).timeout(timeout);
   final body = await streamed.stream.bytesToString().timeout(timeout);
   return (streamed, body);
@@ -587,6 +599,7 @@ Future<ResolvedServer> resolveServer(
   required http.Client client,
   Duration perCandidateTimeout = const Duration(seconds: 4),
   Future<ProbeResult> Function(String url)? probe,
+  Map<String, String>? extraHeaders,
 }) async {
   final candidates = connectionCandidates(rawInput);
   if (candidates.isEmpty) {
@@ -600,7 +613,12 @@ Future<ResolvedServer> resolveServer(
   }
 
   final doProbe = probe ??
-      (url) => probeServer(url, client: client, timeout: perCandidateTimeout);
+      (url) => probeServer(
+            url,
+            client: client,
+            timeout: perCandidateTimeout,
+            extraHeaders: extraHeaders,
+          );
 
   ProbeResult? bestBasicGated;
   ProbeResult? bestReached;
@@ -687,13 +705,22 @@ Future<bool> webAuthRequired(
   String baseUrl, {
   required http.Client client,
   Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
 }) async {
   final uri = graphqlUriFor(baseUrl);
+  final headers = <String, String>{'Content-Type': 'application/json'};
+  if (extraHeaders != null && extraHeaders.isNotEmpty) {
+    for (final entry in extraHeaders.entries) {
+      final lower = entry.key.toLowerCase();
+      if (lower == 'authorization' || lower == 'cookie') continue;
+      headers[entry.key] = entry.value;
+    }
+  }
   try {
     final resp = await client
         .post(
           uri,
-          headers: {'Content-Type': 'application/json'},
+          headers: headers,
           body: jsonEncode({'query': kAuthProbeQuery}),
         )
         .timeout(timeout);
@@ -734,6 +761,7 @@ Future<bool> authProbeAuthorized(
   String? bearer,
   String? basic,
   Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
 }) async {
   final uri = graphqlUriFor(baseUrl);
   try {
@@ -746,6 +774,13 @@ Future<bool> authProbeAuthorized(
     if (basic != null) {
       request.headers['Authorization'] =
           'Basic ${base64Encode(utf8.encode(basic))}';
+    }
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      for (final entry in extraHeaders.entries) {
+        final lower = entry.key.toLowerCase();
+        if (lower == 'authorization' || lower == 'cookie') continue;
+        request.headers[entry.key] = entry.value;
+      }
     }
     final streamed = await client.send(request).timeout(timeout);
     final body = await streamed.stream.bytesToString().timeout(timeout);
@@ -770,6 +805,7 @@ Future<bool> basicAuthConfirms(
   required String username,
   required String password,
   Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
 }) async {
   final uri = graphqlUriFor(baseUrl);
   try {
@@ -779,6 +815,13 @@ Future<bool> basicAuthConfirms(
       ..headers['Content-Type'] = 'application/json'
       ..headers['Authorization'] = 'Basic $cred'
       ..body = jsonEncode({'query': kAboutProbeQuery});
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      for (final entry in extraHeaders.entries) {
+        final lower = entry.key.toLowerCase();
+        if (lower == 'authorization' || lower == 'cookie') continue;
+        request.headers[entry.key] = entry.value;
+      }
+    }
     final streamed = await client.send(request).timeout(timeout);
     final body = await streamed.stream.bytesToString().timeout(timeout);
     if (streamed.statusCode != 200) return false;

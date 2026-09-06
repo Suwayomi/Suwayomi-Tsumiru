@@ -86,6 +86,7 @@ void applyBackgroundAuthHeaders(
       final cookie = record.simpleCookie;
       if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
   }
+  applyIsolateCustomHeaders(headers, record.extraHeaders);
 }
 
 /// One authenticated GraphQL POST. Returns the decoded `data` map,
@@ -208,6 +209,7 @@ ChapterDownloadEngine buildBackgroundEngine({
           fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(token)}';
         }
     }
+    applyIsolateCustomHeaders(headers, r.extraHeaders);
     final http.Response res;
     try {
       res = await backgroundHttpClient

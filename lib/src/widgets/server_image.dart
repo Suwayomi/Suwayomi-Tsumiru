@@ -18,6 +18,7 @@ import '../constants/endpoints.dart';
 import '../constants/enum.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/auth/data/custom_headers_store.dart';
 import '../features/manga_book/presentation/reader/crop/cropped_image_provider.dart';
 import '../features/offline/data/offline_image_provider.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -273,6 +274,13 @@ class ServerImage extends HookConsumerWidget {
     } else if (authType == AuthType.simpleLogin) {
       httpHeaders = simpleCookieHeader;
     }
+    final customHeaders = ref.watch(customHttpHeadersProvider);
+    if (customHeaders.isNotEmpty) {
+      httpHeaders = applyCustomHeaders(
+        Map<String, String>.from(httpHeaders ?? const {}),
+        customHeaders,
+      );
+    }
 
     // For ui_login, append ?token= since cached_network_image can't
     // reliably inject Authorization headers across platforms. Use the
@@ -499,6 +507,13 @@ class ServerImageWithCpi extends StatelessWidget {
   } else if (authType == AuthType.simpleLogin) {
     headers = creds?.simpleLoginCookieHeader;
   }
+  final customHeaders = ref.read(customHttpHeadersProvider);
+  if (customHeaders.isNotEmpty) {
+    headers = applyCustomHeaders(
+      Map<String, String>.from(headers ?? const {}),
+      customHeaders,
+    );
+  }
 
   final fetchUrl = appendUiLoginToken(
     cacheKey,
@@ -539,6 +554,13 @@ ImageProvider serverPageImageProvider(
     httpHeaders = {"Authorization": basicToken};
   } else if (authType == AuthType.simpleLogin) {
     httpHeaders = creds?.simpleLoginCookieHeader;
+  }
+  final customHeaders = ref.read(customHttpHeadersProvider);
+  if (customHeaders.isNotEmpty) {
+    httpHeaders = applyCustomHeaders(
+      Map<String, String>.from(httpHeaders ?? const {}),
+      customHeaders,
+    );
   }
 
   final fetchUrl = appendUiLoginToken(

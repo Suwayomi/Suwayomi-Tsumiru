@@ -23,6 +23,7 @@ import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
+import '../../../../../auth/data/custom_headers_store.dart';
 import '../../../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -368,19 +369,28 @@ String? _buildPageUrl(
 
 /// The auth headers [ServerImage] attaches when fetching a page: basic auth →
 /// `Authorization`; simple-login → the session cookie; ui_login → none (the
-/// token rides in the URL query instead). Mirrors [ServerImage.build].
+/// token rides in the URL query instead). Mirrors [ServerImage.build], plus
+/// the generic custom headers (e.g. Cloudflare Zero Trust).
 Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
   final authType = ref.read(authTypeKeyProvider);
+  Map<String, String>? headers;
   if (authType == AuthType.basic) {
     final basicToken = ref.read(credentialsProvider).value;
-    if (basicToken != null) return {"Authorization": basicToken};
+    if (basicToken != null) headers = {"Authorization": basicToken};
   } else if (authType == AuthType.simpleLogin) {
-    return ref
+    headers = ref
         .read(authCredentialsStoreProvider)
         .value
         ?.simpleLoginCookieHeader;
   }
-  return null;
+  final custom = ref.read(customHttpHeadersProvider);
+  if (custom.isNotEmpty) {
+    headers = applyCustomHeaders(
+      Map<String, String>.from(headers ?? const {}),
+      custom,
+    );
+  }
+  return headers;
 }
 
 class _PageActionsSheet extends StatelessWidget {

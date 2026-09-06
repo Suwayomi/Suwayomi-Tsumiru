@@ -13,6 +13,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/cover_cache/cover_cache.dart';
 import '../../../widgets/server_image.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import '../../auth/data/custom_headers_store.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -79,6 +80,13 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
           headers = {"Authorization": basicToken};
         } else if (authType == AuthType.simpleLogin) {
           headers = creds?.simpleLoginCookieHeader;
+        }
+        final customHeaders = ref.read(customHttpHeadersProvider);
+        if (customHeaders.isNotEmpty) {
+          headers = applyCustomHeaders(
+            Map<String, String>.from(headers ?? const {}),
+            customHeaders,
+          );
         }
         final fetchUrl = appendUiLoginToken(
           cacheKey,

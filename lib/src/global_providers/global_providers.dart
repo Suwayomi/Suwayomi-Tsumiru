@@ -22,6 +22,7 @@ import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
 import '../features/auth/data/auth_state.dart';
+import '../features/auth/data/custom_headers_store.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
 import '../features/offline/data/server_reachability.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
@@ -77,6 +78,11 @@ GraphQLClient graphQlClient(Ref ref) {
   final effectiveTimeoutMs = timeoutMs;
   final retryCount = autoRetry ? TimeoutConstants.autoRefreshMaxRetries : 0;
 
+  // Generic custom headers (e.g. Cloudflare Zero Trust service tokens) sent
+  // with every Suwayomi-server request. Watching here rebuilds the client
+  // when they change.
+  final customHeaders = ref.watch(customHttpHeadersProvider);
+
   Link link = HttpLink(
     Endpoints.baseApi(
       baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
@@ -86,7 +92,10 @@ GraphQLClient graphQlClient(Ref ref) {
     ),
     followRedirects: true,
     httpResponseDecoder: tsumiruHttpResponseDecoder,
-    defaultHeaders: {'Content-Type': 'application/json; charset=utf-8'},
+    defaultHeaders: applyCustomHeaders(
+      {'Content-Type': 'application/json; charset=utf-8'},
+      customHeaders,
+    ),
     httpClient: TimeoutHttpClient(
       Duration(milliseconds: effectiveTimeoutMs),
       retries: retryCount,
@@ -124,9 +133,14 @@ GraphQLClient graphQlClient(Ref ref) {
         // read via `.future` defensively in case a caller invokes a
         // GraphQL operation before the preload finishes.
         final snapshot = await ref.read(authCredentialsStoreProvider.future);
-        return authType == AuthType.simpleLogin
+        final base = authType == AuthType.simpleLogin
             ? snapshot.simpleLoginCookieHeader
             : snapshot.uiAuthorizationHeader;
+        final custom = ref.read(customHttpHeadersProvider);
+        if (base == null) {
+          return custom.isEmpty ? null : Map<String, String>.from(custom);
+        }
+        return applyCustomHeaders(Map<String, String>.from(base), custom);
       },
       refreshAccessToken: () async {
         // Refresh path only applies to ui_login. For simple_login the
@@ -148,6 +162,10 @@ GraphQLClient graphQlClient(Ref ref) {
               isGraphQl: true,
             ),
             httpResponseDecoder: tsumiruHttpResponseDecoder,
+            defaultHeaders: applyCustomHeaders(
+              const {},
+              ref.read(customHttpHeadersProvider),
+            ),
           ),
           queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
           cache: GraphQLCache(),
@@ -267,6 +285,14 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
         : {'Cookie': cookie};
   } else if (authType == AuthType.basic && credentials.isNotBlank) {
     handshakeHeaders = {'Authorization': credentials!};
+  }
+  // Custom headers (e.g. Cloudflare Zero Trust) also guard the WS upgrade.
+  final customWsHeaders = ref.watch(customHttpHeadersProvider);
+  if (customWsHeaders.isNotEmpty) {
+    handshakeHeaders = applyCustomHeaders(
+      Map<String, String>.from(handshakeHeaders ?? const {}),
+      customWsHeaders,
+    );
   }
 
   final wsLink = WebSocketLink(

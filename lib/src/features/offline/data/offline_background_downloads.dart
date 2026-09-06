@@ -14,6 +14,7 @@ import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_coordinator.dart';
+import '../../auth/data/custom_headers_store.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -64,6 +65,10 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
             port: ref.read(serverPortProvider),
             addPort: ref.read(serverPortToggleProvider).ifNull(),
             isGraphQl: true,
+          ),
+          defaultHeaders: applyCustomHeaders(
+            const {},
+            ref.read(customHttpHeadersProvider),
           ),
         ),
         cache: GraphQLCache(),

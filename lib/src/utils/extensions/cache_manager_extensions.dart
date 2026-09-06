@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../constants/enum.dart';
 import '../../features/auth/data/auth_credentials_store.dart';
+import '../../features/auth/data/custom_headers_store.dart';
 import '../../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -44,6 +45,13 @@ extension CacheManagerExtension on CacheManager {
       headers = {"Authorization": basicToken};
     } else if (authType == AuthType.simpleLogin) {
       headers = creds?.simpleLoginCookieHeader;
+    }
+    final customHeaders = ref.read(customHttpHeadersProvider);
+    if (customHeaders.isNotEmpty) {
+      headers = applyCustomHeaders(
+        Map<String, String>.from(headers ?? const {}),
+        customHeaders,
+      );
     }
 
     // For ui_login, append ?token= because cached_network_image can't

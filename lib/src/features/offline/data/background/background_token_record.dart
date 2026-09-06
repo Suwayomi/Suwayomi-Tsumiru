@@ -16,6 +16,7 @@ class BackgroundTokenRecord {
     this.password,
     this.basicCredential,
     this.simpleCookie,
+    this.extraHeaders = const {},
   });
 
   final int gen;
@@ -23,6 +24,11 @@ class BackgroundTokenRecord {
   // Endpoint these creds belong to, checked before writeback after a switch.
   final String? endpoint;
   final String? accessToken, refreshToken, password, basicCredential, simpleCookie;
+
+  /// Generic custom headers (e.g. Cloudflare Zero Trust) snapshotted for the
+  /// background isolate, which has no Riverpod access. Applied to every
+  /// server request alongside the auth headers.
+  final Map<String, String> extraHeaders;
 
   BackgroundTokenRecord copyWith({int? gen, String? accessToken, String? refreshToken}) =>
       BackgroundTokenRecord(
@@ -34,6 +40,7 @@ class BackgroundTokenRecord {
         password: password,
         basicCredential: basicCredential,
         simpleCookie: simpleCookie,
+        extraHeaders: extraHeaders,
       );
 
   Map<String, Object?> toJson() => {
@@ -41,6 +48,7 @@ class BackgroundTokenRecord {
         'accessToken': accessToken, 'refreshToken': refreshToken,
         'password': password, 'basicCredential': basicCredential,
         'simpleCookie': simpleCookie,
+        'extraHeaders': extraHeaders,
       };
 
   factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) =>
@@ -53,7 +61,26 @@ class BackgroundTokenRecord {
         password: j['password'] as String?,
         basicCredential: j['basicCredential'] as String?,
         simpleCookie: j['simpleCookie'] as String?,
+        extraHeaders: (j['extraHeaders'] as Map?)?.map(
+              (k, v) => MapEntry(k.toString(), v.toString()),
+            ) ??
+            const {},
       );
+}
+
+/// Merge isolate-side custom headers into [headers] without clobbering the
+/// app's own auth headers. Shared by the background download / notification
+/// workers (no Riverpod there).
+Map<String, String> applyIsolateCustomHeaders(
+  Map<String, String> headers,
+  Map<String, String> extra,
+) {
+  for (final entry in extra.entries) {
+    final lower = entry.key.toLowerCase();
+    if (lower == 'authorization' || lower == 'cookie') continue;
+    headers[entry.key] = entry.value;
+  }
+  return headers;
 }
 
 /// Outcome of one refresh attempt: the new tokens on success, or a failure

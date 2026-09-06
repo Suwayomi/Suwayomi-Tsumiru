@@ -10,7 +10,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
-import '../../../offline/data/background/background_token_record.dart';
+import '../../../offline/data/background/background_token_record.dart'
+    show BackgroundTokenRecord, TokenBroker, applyIsolateCustomHeaders;
 
 /// Where + how the background worker reaches the server. Persisted so the
 /// WorkManager isolate (no Riverpod, no widget tree) can rebuild it.
@@ -134,6 +135,7 @@ class NotificationBackgroundClient {
         final cookie = _record.simpleCookie;
         if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
     }
+    applyIsolateCustomHeaders(headers, _record.extraHeaders);
   }
 
   static const _newChaptersQuery = r'''
@@ -268,6 +270,7 @@ mutation NotifEnqueue($ids: [Int!]!) {
         final cookie = _record.simpleCookie;
         if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
     }
+    applyIsolateCustomHeaders(headers, _record.extraHeaders);
     try {
       final res = await _http.get(Uri.parse(url), headers: headers);
       return res.statusCode == 200 ? res.bodyBytes : null;
