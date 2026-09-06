@@ -19,6 +19,7 @@ class TimeoutHttpClient extends http.BaseClient {
     this.timeout, {
     this.retries = 0,
     this.retryDelay = const Duration(seconds: 1),
+    this.onConnectionFailure,
     http.Client? inner,
   }) : _inner = inner ?? createFastConnectClient(kConnectionEstablishTimeout);
 
@@ -27,12 +28,19 @@ class TimeoutHttpClient extends http.BaseClient {
   final int retries;
   final Duration retryDelay;
 
+  /// Selects an alternate endpoint after a connection failure. The returned
+  /// URI is retried once immediately, even when ordinary timeout retries are
+  /// disabled. Callers must return null for operations that are unsafe to
+  /// replay.
+  final Future<Uri?> Function(http.BaseRequest request)? onConnectionFailure;
+
   final http.Client _inner;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     int attempt = 0;
     http.BaseRequest current = request;
+    var usedFailover = false;
     // A GraphQL mutation isn't idempotent — a timeout doesn't mean the server
     // didn't already apply it, so retrying can silently double an effect
     // (re-enqueue a download, re-create a category, ...). This client is only
@@ -40,17 +48,35 @@ class TimeoutHttpClient extends http.BaseClient {
     // `{"query": "...", ...}` shape when it parses as one.
     final isMutation = _isMutationRequest(request);
 
+    Future<http.BaseRequest?> retryAfterFailure() async {
+      if (isMutation) return null;
+
+      Uri? replacement;
+      if (!usedFailover && onConnectionFailure != null) {
+        replacement = await onConnectionFailure!(current);
+        usedFailover = replacement != null && replacement != current.url;
+      }
+
+      if (!usedFailover && attempt >= retries) return null;
+      // Streamed/multipart bodies are single-use and can't be safely retried.
+      final retryClone = _cloneRequest(current, url: replacement);
+      if (retryClone == null) return null;
+      attempt++;
+      if (replacement == null) await Future.delayed(retryDelay);
+      return retryClone;
+    }
+
     while (true) {
       try {
         return await _inner.send(current).timeout(timeout);
       } on TimeoutException {
-        if (isMutation || attempt >= retries) rethrow;
-        // Streamed/multipart bodies are single-use and can't be safely retried.
-        final retryClone = _cloneRequest(request);
-        if (retryClone == null) rethrow;
-        attempt++;
-        await Future.delayed(retryDelay);
-        current = retryClone;
+        final retry = await retryAfterFailure();
+        if (retry == null) rethrow;
+        current = retry;
+      } on http.ClientException {
+        final retry = await retryAfterFailure();
+        if (retry == null) rethrow;
+        current = retry;
       }
     }
   }
@@ -80,9 +106,9 @@ class TimeoutHttpClient extends http.BaseClient {
   }
 
   // Clones a plain [http.Request] for retry; null for streamed/multipart bodies.
-  http.BaseRequest? _cloneRequest(http.BaseRequest original) {
+  http.BaseRequest? _cloneRequest(http.BaseRequest original, {Uri? url}) {
     if (original is http.Request) {
-      final clone = http.Request(original.method, original.url)
+      final clone = http.Request(original.method, url ?? original.url)
         ..headers.addAll(original.headers)
         ..followRedirects = original.followRedirects
         ..persistentConnection = original.persistentConnection;

@@ -56,6 +56,35 @@ void main() {
       expect(attempts, 2);
     });
 
+    test('retries a safe request once at a replacement endpoint', () async {
+      final requestedUris = <Uri>[];
+      final mock = MockClient.streaming((request, bodyStream) async {
+        requestedUris.add(request.url);
+        if (request.url.host == 'lan') throw http.ClientException('offline');
+        return http.StreamedResponse(Stream.value(<int>[]), 200,
+            request: request);
+      });
+      final client = TimeoutHttpClient(
+        const Duration(seconds: 5),
+        inner: mock,
+        onConnectionFailure: (request) async =>
+            Uri.parse('http://remote/api/graphql'),
+      );
+
+      final request = http.Request('POST', Uri.parse('http://lan/api/graphql'))
+        ..body = jsonEncode(<String, dynamic>{
+          'query': 'query GetLibrary { id }',
+          'variables': <String, dynamic>{},
+        });
+      final response = await client.send(request);
+
+      expect(response.statusCode, 200);
+      expect(requestedUris, <Uri>[
+        Uri.parse('http://lan/api/graphql'),
+        Uri.parse('http://remote/api/graphql'),
+      ]);
+    });
+
     test('does not retry a multipart body on timeout (single-use stream)',
         () async {
       var attempts = 0;
