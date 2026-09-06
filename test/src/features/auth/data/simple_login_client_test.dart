@@ -33,6 +33,24 @@ void main() {
       expect(cookie, 'JSESSIONID=abc.123');
     });
 
+    test('login does not follow the 303 so the cookie is observed', () async {
+      bool? followRedirects;
+      final mock = MockClient((request) async {
+        followRedirects = request.followRedirects;
+        return http.Response('', 303, headers: {
+          'set-cookie': 'JSESSIONID=abc; Path=/; HttpOnly',
+          'location': '/',
+        });
+      });
+      final cookie = await SimpleLoginClient(httpClient: mock).login(
+        serverBaseUrl: 'http://s',
+        username: 'u',
+        password: 'p',
+      );
+      expect(followRedirects, isFalse);
+      expect(cookie, 'JSESSIONID=abc');
+    });
+
     test('login throws SimpleLoginAuthFailure on 200 (re-rendered form)',
         () async {
       final mock = MockClient((request) async => http.Response(

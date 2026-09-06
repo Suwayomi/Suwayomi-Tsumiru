@@ -42,15 +42,12 @@ class SimpleLoginClient {
     required String username,
     required String password,
   }) async {
-    final uri = Uri.parse('$serverBaseUrl/login.html');
-    final response = await _http.post(
-      uri,
-      headers: {
-        'Content-Type':
-            'application/x-www-form-urlencoded; charset=utf-8',
-      },
-      body: {'user': username, 'pass': password},
-    );
+    final request = http.Request('POST', Uri.parse('$serverBaseUrl/login.html'))
+      ..bodyFields = {'user': username, 'pass': password}
+      ..headers['Content-Type'] =
+          'application/x-www-form-urlencoded; charset=utf-8'
+      ..followRedirects = false;
+    final response = await http.Response.fromStream(await _http.send(request));
 
     if (response.statusCode == 200) {
       // Server re-rendered the login page → bad credentials.
