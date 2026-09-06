@@ -274,7 +274,8 @@ class ServerImage extends HookConsumerWidget {
     } else if (authType == AuthType.simpleLogin) {
       httpHeaders = simpleCookieHeader;
     }
-    final customHeaders = ref.watch(customHttpHeadersProvider);
+    final customHeaders =
+        ref.watch(customHttpHeadersProvider).value ?? const {};
     if (customHeaders.isNotEmpty) {
       httpHeaders = applyCustomHeaders(
         Map<String, String>.from(httpHeaders ?? const {}),
@@ -507,7 +508,8 @@ class ServerImageWithCpi extends StatelessWidget {
   } else if (authType == AuthType.simpleLogin) {
     headers = creds?.simpleLoginCookieHeader;
   }
-  final customHeaders = ref.read(customHttpHeadersProvider);
+  final customHeaders =
+      ref.read(customHttpHeadersProvider).value ?? const {};
   if (customHeaders.isNotEmpty) {
     headers = applyCustomHeaders(
       Map<String, String>.from(headers ?? const {}),
@@ -555,7 +557,8 @@ ImageProvider serverPageImageProvider(
   } else if (authType == AuthType.simpleLogin) {
     httpHeaders = creds?.simpleLoginCookieHeader;
   }
-  final customHeaders = ref.read(customHttpHeadersProvider);
+  final customHeaders =
+      ref.read(customHttpHeadersProvider).value ?? const {};
   if (customHeaders.isNotEmpty) {
     httpHeaders = applyCustomHeaders(
       Map<String, String>.from(httpHeaders ?? const {}),

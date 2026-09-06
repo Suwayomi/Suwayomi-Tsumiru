@@ -2,12 +2,67 @@
 //
 // Tests for the generic custom HTTP headers (e.g. Cloudflare Zero Trust).
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
+import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
+
+class _InMemorySecureStorage implements FlutterSecureStorage {
+  _InMemorySecureStorage([Map<String, String>? seed]) : _store = {...?seed};
+  final Map<String, String> _store;
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (value == null) {
+      _store.remove(key);
+    } else {
+      _store[key] = value;
+    }
+  }
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async =>
+      _store[key];
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    _store.remove(key);
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName} not stubbed');
+}
 
 void main() {
   group('applyCustomHeaders', () {
@@ -65,21 +120,21 @@ void main() {
     });
   });
 
-  group('CustomHttpHeadersNotifier.decode', () {
+  group('CustomHttpHeadersStore.decode', () {
     test('round-trips through encode', () {
       const headers = {
         'CF-Access-Client-Id': 'id',
         'CF-Access-Client-Secret': 'secret',
       };
-      final raw = CustomHttpHeadersNotifier.encode(headers);
-      expect(CustomHttpHeadersNotifier.decode(raw), headers);
+      final raw = CustomHttpHeadersStore.encode(headers);
+      expect(CustomHttpHeadersStore.decode(raw), headers);
     });
 
     test('malformed input reads as empty, never throws', () {
-      expect(CustomHttpHeadersNotifier.decode(null), isEmpty);
-      expect(CustomHttpHeadersNotifier.decode(''), isEmpty);
-      expect(CustomHttpHeadersNotifier.decode('not-json'), isEmpty);
-      expect(CustomHttpHeadersNotifier.decode('[1,2]'), isEmpty);
+      expect(CustomHttpHeadersStore.decode(null), isEmpty);
+      expect(CustomHttpHeadersStore.decode(''), isEmpty);
+      expect(CustomHttpHeadersStore.decode('not-json'), isEmpty);
+      expect(CustomHttpHeadersStore.decode('[1,2]'), isEmpty);
     });
   });
 
@@ -144,6 +199,85 @@ void main() {
         'authType': 'none',
       });
       expect(revived.extraHeaders, isEmpty);
+    });
+  });
+
+  group('CustomHttpHeadersStore — secure-storage persistence', () {
+    ProviderContainer containerWith(_InMemorySecureStorage storage) =>
+        ProviderContainer(overrides: [
+          secureStorageProvider.overrideWithValue(storage),
+        ]);
+
+    test('empty storage loads as empty', () async {
+      final container = containerWith(_InMemorySecureStorage());
+      addTearDown(container.dispose);
+      await expectLater(
+        container.read(customHttpHeadersProvider.future),
+        completion(isEmpty),
+      );
+    });
+
+    test('put persists and a fresh container reloads it', () async {
+      final storage = _InMemorySecureStorage();
+      final container = containerWith(storage);
+      addTearDown(container.dispose);
+      await container.read(customHttpHeadersProvider.future);
+      await container
+          .read(customHttpHeadersProvider.notifier)
+          .put('CF-Access-Client-Id', 'id123');
+      expect(
+        container.read(customHttpHeadersProvider).value,
+        {'CF-Access-Client-Id': 'id123'},
+      );
+
+      final reloaded = containerWith(storage);
+      addTearDown(reloaded.dispose);
+      await expectLater(
+        reloaded.read(customHttpHeadersProvider.future),
+        completion({'CF-Access-Client-Id': 'id123'}),
+      );
+    });
+
+    test('remove and clear delete from storage', () async {
+      final storage = _InMemorySecureStorage();
+      final container = containerWith(storage);
+      addTearDown(container.dispose);
+      final store = container.read(customHttpHeadersProvider.notifier);
+      await container.read(customHttpHeadersProvider.future);
+      await store.put('X-A', '1');
+      await store.put('X-B', '2');
+      await store.remove('X-A');
+      expect(
+        container.read(customHttpHeadersProvider).value,
+        {'X-B': '2'},
+      );
+      await store.clear();
+      expect(
+        container.read(customHttpHeadersProvider).value,
+        isEmpty,
+      );
+      expect(storage._store.containsKey(CustomHttpHeadersStore.secureKey),
+          isFalse);
+    });
+
+    test('setAll replaces the entire map in storage', () async {
+      final storage = _InMemorySecureStorage();
+      final container = containerWith(storage);
+      addTearDown(container.dispose);
+      final store = container.read(customHttpHeadersProvider.notifier);
+      await container.read(customHttpHeadersProvider.future);
+      await store.setAll({'X-First': '1', 'X-Second': '2'});
+      expect(
+        container.read(customHttpHeadersProvider).value,
+        {'X-First': '1', 'X-Second': '2'},
+      );
+
+      final reloaded = containerWith(storage);
+      addTearDown(reloaded.dispose);
+      await expectLater(
+        reloaded.read(customHttpHeadersProvider.future),
+        completion({'X-First': '1', 'X-Second': '2'}),
+      );
     });
   });
 }

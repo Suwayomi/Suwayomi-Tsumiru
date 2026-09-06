@@ -339,7 +339,7 @@ class AuthCoordinator extends _$AuthCoordinator {
       serverBaseUrl: serverBaseUrl,
       username: username,
       password: password,
-      extraHeaders: ref.read(customHttpHeadersProvider),
+      extraHeaders: ref.read(customHttpHeadersProvider).value,
     );
   }
 
@@ -615,7 +615,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         // basic_auth, i.e. wrong mode).
         final client = http.Client();
         try {
-          final extra = ref.read(customHttpHeadersProvider);
+          final extra = ref.read(customHttpHeadersProvider).value;
           final isSuwayomi = await basicAuthConfirms(
             serverBaseUrl,
             client: client,

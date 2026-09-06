@@ -68,7 +68,7 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
           ),
           defaultHeaders: applyCustomHeaders(
             const {},
-            ref.read(customHttpHeadersProvider),
+            ref.read(customHttpHeadersProvider).value,
           ),
         ),
         cache: GraphQLCache(),

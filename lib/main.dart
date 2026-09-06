@@ -22,6 +22,7 @@ import 'src/features/about/presentation/about/controllers/about_controller.dart'
 import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
+import 'src/features/auth/data/custom_headers_store.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
 import 'src/features/library/data/badge_preference_migration.dart';
 import 'src/features/migration/controller/bulk_migration_providers.dart';
@@ -266,14 +267,15 @@ Future<void> _startApp() async {
     debugPrint('badge preference migration failed: $e\n$st');
   }
 
-  // 4) Preload both auth providers BEFORE the first frame so synchronous reads
-  //    (image widgets, GraphQL links) get populated state instead of
-  //    AsyncLoading — which would produce tokenless requests that get cached
-  //    as 401 failures by cached_network_image.
+  // 4) Preload both auth providers (plus the custom-header store) BEFORE the
+  //    first frame so synchronous reads (image widgets, GraphQL links) get
+  //    populated state instead of AsyncLoading — which would produce tokenless
+  //    requests that get cached as 401 failures by cached_network_image.
   try {
     await Future.wait([
       container.read(authCredentialsStoreProvider.future),
       container.read(credentialsProvider.future),
+      container.read(customHttpHeadersProvider.future),
     ]);
   } catch (e, st) {
     debugPrint('auth preload failed, falling back to empty state: $e\n$st');

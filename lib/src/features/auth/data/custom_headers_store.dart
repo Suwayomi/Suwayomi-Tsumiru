@@ -8,8 +8,7 @@ import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../constants/db_keys.dart';
-import '../../../global_providers/global_providers.dart';
+import 'secure_credentials_provider.dart';
 
 /// Generic custom HTTP headers sent with every request to the Suwayomi
 /// server (GraphQL, images, login, probes, background workers).
@@ -17,45 +16,60 @@ import '../../../global_providers/global_providers.dart';
 /// Motivating use-case: a Suwayomi-Server behind a Cloudflare Tunnel guarded
 /// by Zero Trust Access, which requires e.g.
 /// `CF-Access-Client-Id` + `CF-Access-Client-Secret` on every request.
-/// Stored as a JSON string in SharedPreferences under [DBKeys.customHttpHeaders].
 ///
-/// Manual [NotifierProvider] (no codegen) so no `build_runner` step is needed
-/// for this file.
-class CustomHttpHeadersNotifier extends Notifier<Map<String, String>> {
-  static const _key = 'customHttpHeaders';
+/// Header values are bearer-equivalent secrets, so the map lives in
+/// `flutter_secure_storage` (matching where the app keeps its own tokens),
+/// not SharedPreferences.
+///
+/// Manual [AsyncNotifierProvider] (no codegen) so no `build_runner` step is
+/// needed for this file. `main()` preloads the provider before the first
+/// frame, so request-building call sites can read the synchronously-cached
+/// [AsyncValue.value] (falling back to empty before the load completes).
+class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
+  /// Secure-storage key holding the JSON-encoded header map.
+  static const secureKey = 'custom.headers';
 
   @override
-  Map<String, String> build() {
-    final prefs = ref.watch(sharedPreferencesProvider);
-    return decode(prefs.getString(_key));
+  Future<Map<String, String>> build() async {
+    try {
+      final raw = await ref.read(secureStorageProvider).read(key: secureKey);
+      return decode(raw);
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _persist(Map<String, String> headers) async {
+    state = AsyncData(Map<String, String>.from(headers));
+    final storage = ref.read(secureStorageProvider);
+    if (headers.isEmpty) {
+      await storage.delete(key: secureKey);
+    } else {
+      await storage.write(key: secureKey, value: encode(headers));
+    }
   }
 
   /// Replace the whole map (used by import/reset flows).
-  Future<void> setAll(Map<String, String> headers) async {
-    state = Map<String, String>.from(headers);
-    await ref.read(sharedPreferencesProvider).setString(_key, encode(state));
-  }
+  Future<void> setAll(Map<String, String> headers) async =>
+      _persist(Map<String, String>.from(headers));
 
   /// Insert or update one header. [name] is trimmed; empty names are ignored.
   Future<void> put(String name, String value) async {
     final key = name.trim();
     if (key.isEmpty) return;
-    state = {...state, key: value};
-    await ref.read(sharedPreferencesProvider).setString(_key, encode(state));
+    final base = await future;
+    await _persist({...base, key: value});
   }
 
   /// Remove one header by name (exact match).
   Future<void> remove(String name) async {
-    if (!state.containsKey(name)) return;
-    state = {...state}..remove(name);
-    await ref.read(sharedPreferencesProvider).setString(_key, encode(state));
+    final base = await future;
+    if (!base.containsKey(name)) return;
+    await _persist({...base}..remove(name));
   }
 
   /// Remove all custom headers.
-  Future<void> clear() async {
-    state = const {};
-    await ref.read(sharedPreferencesProvider).setString(_key, encode(state));
-  }
+  Future<void> clear() => _persist(const {});
 
   /// Decode the persisted JSON string into a header map. Never throws:
   /// malformed input reads as empty.
@@ -81,13 +95,8 @@ class CustomHttpHeadersNotifier extends Notifier<Map<String, String>> {
 }
 
 final customHttpHeadersProvider =
-    NotifierProvider<CustomHttpHeadersNotifier, Map<String, String>>(
-      CustomHttpHeadersNotifier.new,
-    );
-
-/// True when at least one custom header is configured.
-final customHttpHeadersEnabledProvider = Provider<bool>(
-  (ref) => ref.watch(customHttpHeadersProvider).isNotEmpty,
+    AsyncNotifierProvider<CustomHttpHeadersStore, Map<String, String>>(
+  CustomHttpHeadersStore.new,
 );
 
 /// Validate a header name for the editor. Returns an error string or null
@@ -122,6 +131,3 @@ Map<String, String> applyCustomHeaders(
   }
   return headers;
 }
-
-/// DBKeys entry backing this store (kept in sync with the enum).
-DBKeys get customHttpHeadersDbKey => DBKeys.customHttpHeaders;

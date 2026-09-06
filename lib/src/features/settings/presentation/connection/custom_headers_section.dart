@@ -24,7 +24,10 @@ class CustomHeadersSection extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final headers = ref.watch(customHttpHeadersProvider);
+    // Preloaded in main() before the first frame; falls back to empty while
+    // the secure-storage read is in flight.
+    final headers =
+        ref.watch(customHttpHeadersProvider).value ?? const {};
     final entries = headers.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 

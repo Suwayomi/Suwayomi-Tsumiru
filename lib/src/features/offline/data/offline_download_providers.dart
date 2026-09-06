@@ -1130,7 +1130,8 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
     fetchUrl =
         '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds!.uiAccessToken!)}';
   }
-  applyCustomHeaders(headers, ref.read(customHttpHeadersProvider));
+  applyCustomHeaders(
+      headers, ref.read(customHttpHeadersProvider).value);
 
   final http.Response res;
   try {

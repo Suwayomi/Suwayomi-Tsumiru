@@ -57,7 +57,7 @@ class NotificationsController {
       basicCredential: basicToken,
       simpleCookie: creds?.simpleLoginCookie,
       extraHeaders: Map<String, String>.from(
-        _ref.read(customHttpHeadersProvider),
+        _ref.read(customHttpHeadersProvider).value ?? const {},
       ),
     );
   }

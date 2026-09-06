@@ -46,7 +46,8 @@ extension CacheManagerExtension on CacheManager {
     } else if (authType == AuthType.simpleLogin) {
       headers = creds?.simpleLoginCookieHeader;
     }
-    final customHeaders = ref.read(customHttpHeadersProvider);
+    final customHeaders =
+        ref.read(customHttpHeadersProvider).value ?? const {};
     if (customHeaders.isNotEmpty) {
       headers = applyCustomHeaders(
         Map<String, String>.from(headers ?? const {}),

@@ -137,12 +137,6 @@ enum DBKeys {
   customThemeColor(0xFF7C7BFF),
   historyEnabled(true),
   historyRetentionDays(90),
-  // Generic custom HTTP headers sent with every Suwayomi-server request.
-  // Stored as a JSON-encoded String (SharedPreferences has no map type).
-  // Used for reverse proxies / Zero Trust guards in front of the server,
-  // e.g. Cloudflare Access service tokens:
-  //   {"CF-Access-Client-Id": "...", "CF-Access-Client-Secret": "..."}
-  customHttpHeaders('{}'),
   // Timeout Settings
   // 30s matches Komikku's source read timeout; pages proxied live from a
   // source routinely exceed 5s on first fetch. Kept in sync with

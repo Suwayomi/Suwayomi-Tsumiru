@@ -102,5 +102,32 @@ void main() {
         throwsA(isA<SimpleLoginShapeFailure>()),
       );
     });
+
+    test('login sends extraHeaders and does not overwrite auth headers',
+        () async {
+      Map<String, String>? capturedHeaders;
+      final mock = MockClient((request) async {
+        capturedHeaders = request.headers;
+        return http.Response('', 303, headers: {
+          'set-cookie': 'JSESSIONID=xyz; Path=/; HttpOnly',
+          'location': '/',
+        });
+      });
+      final client = SimpleLoginClient(httpClient: mock);
+      final cookie = await client.login(
+        serverBaseUrl: 'https://server.test',
+        username: 'aaron',
+        password: 'hunter2',
+        extraHeaders: {
+          'CF-Access-Client-Id': 'client-id-123',
+          'Authorization': 'forbidden',
+          'cookie': 'forbidden-cookie',
+        },
+      );
+      expect(cookie, 'JSESSIONID=xyz');
+      expect(capturedHeaders?['CF-Access-Client-Id'], 'client-id-123');
+      expect(capturedHeaders?['Authorization'], isNull);
+      expect(capturedHeaders?['cookie'], isNull);
+    });
   });
 }

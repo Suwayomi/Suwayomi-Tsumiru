@@ -353,7 +353,7 @@ class _ServerStep extends HookConsumerWidget {
       // whose public aboutServer answers regardless of credentials. ui/simple
       // need no pre-flight: performSignIn's login round-trip throws on rejection.
       if (authChoice.value == AuthType.basic) {
-        final extra = ref.read(customHttpHeadersProvider);
+        final extra = ref.read(customHttpHeadersProvider).value;
         if (!await basicAuthConfirms(
           base,
           client: client,
@@ -417,7 +417,8 @@ class _ServerStep extends HookConsumerWidget {
       final client = ref.read(onboardingHttpClientProvider)();
       try {
         if (!await webAuthRequired(url,
-            client: client, extraHeaders: ref.read(customHttpHeadersProvider))) {
+            client: client,
+            extraHeaders: ref.read(customHttpHeadersProvider).value)) {
           state.value = _TestState.connected;
           onVerifiedChanged(true);
           return;
@@ -461,7 +462,7 @@ class _ServerStep extends HookConsumerWidget {
       try {
         final result = await resolveServer(input,
             client: client,
-            extraHeaders: ref.read(customHttpHeadersProvider));
+            extraHeaders: ref.read(customHttpHeadersProvider).value);
         switch (result.outcome) {
           case ResolveOutcome.notReached:
             state.value = _TestState.failed;

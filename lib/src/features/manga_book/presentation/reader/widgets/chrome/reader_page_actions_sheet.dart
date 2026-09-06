@@ -383,7 +383,7 @@ Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
         .value
         ?.simpleLoginCookieHeader;
   }
-  final custom = ref.read(customHttpHeadersProvider);
+  final custom = ref.read(customHttpHeadersProvider).value ?? const {};
   if (custom.isNotEmpty) {
     headers = applyCustomHeaders(
       Map<String, String>.from(headers ?? const {}),

@@ -81,7 +81,8 @@ GraphQLClient graphQlClient(Ref ref) {
   // Generic custom headers (e.g. Cloudflare Zero Trust service tokens) sent
   // with every Suwayomi-server request. Watching here rebuilds the client
   // when they change.
-  final customHeaders = ref.watch(customHttpHeadersProvider);
+  final customHeaders =
+      ref.watch(customHttpHeadersProvider).value ?? const {};
 
   Link link = HttpLink(
     Endpoints.baseApi(
@@ -136,7 +137,8 @@ GraphQLClient graphQlClient(Ref ref) {
         final base = authType == AuthType.simpleLogin
             ? snapshot.simpleLoginCookieHeader
             : snapshot.uiAuthorizationHeader;
-        final custom = ref.read(customHttpHeadersProvider);
+        final custom =
+            ref.read(customHttpHeadersProvider).value ?? const {};
         if (base == null) {
           return custom.isEmpty ? null : Map<String, String>.from(custom);
         }
@@ -164,7 +166,7 @@ GraphQLClient graphQlClient(Ref ref) {
             httpResponseDecoder: tsumiruHttpResponseDecoder,
             defaultHeaders: applyCustomHeaders(
               const {},
-              ref.read(customHttpHeadersProvider),
+              ref.read(customHttpHeadersProvider).value,
             ),
           ),
           queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
@@ -287,7 +289,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     handshakeHeaders = {'Authorization': credentials!};
   }
   // Custom headers (e.g. Cloudflare Zero Trust) also guard the WS upgrade.
-  final customWsHeaders = ref.watch(customHttpHeadersProvider);
+  final customWsHeaders =
+      ref.watch(customHttpHeadersProvider).value ?? const {};
   if (customWsHeaders.isNotEmpty) {
     handshakeHeaders = applyCustomHeaders(
       Map<String, String>.from(handshakeHeaders ?? const {}),
