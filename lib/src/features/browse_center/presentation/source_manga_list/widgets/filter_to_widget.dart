@@ -245,7 +245,7 @@ class FilterGroupWidget extends HookWidget {
           FilterToWidget(
             key: ValueKey("$name-$index"),
             filter: filters[index],
-            currentChanges: filterChangeMap.value[index] ?? [],
+            currentChanges: filterChangeMap.value[index] ?? const [],
             onChanged: (groupFilter) {
               final updatedGroupFilters = <FilterChange>[];
               for (final filter in groupFilter) {

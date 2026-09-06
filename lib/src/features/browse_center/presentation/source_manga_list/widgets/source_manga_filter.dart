@@ -17,16 +17,31 @@ class SourceMangaFilter extends HookWidget {
     super.key,
     required this.filters,
     required this.sourceId,
+    required this.appliedChanges,
     required this.onSubmitted,
     required this.onReset,
   });
   final List<Filter> filters;
   final String sourceId;
+  final List<FilterChange> appliedChanges;
   final ValueChanged<List<FilterChange>?> onSubmitted;
   final VoidCallback onReset;
   @override
   Widget build(BuildContext context) {
-    final filterChangeMap = useState<Map<int, List<FilterChange>>>({});
+    final filterChangeMap = useState<Map<int, List<FilterChange>>>(const {});
+
+    useEffect(() {
+      final changeMap = <int, List<FilterChange>>{};
+      for (final change in appliedChanges) {
+        changeMap[change.position] = [
+          ...?changeMap[change.position],
+          change,
+        ];
+      }
+      filterChangeMap.value = changeMap;
+      return null;
+    }, [appliedChanges]);
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kAppBarBottomHeight),
@@ -37,7 +52,7 @@ class SourceMangaFilter extends HookWidget {
               TextButton(
                 onPressed: () {
                   onReset();
-                  filterChangeMap.value = {};
+                  filterChangeMap.value = const {};
                 },
                 child: Text(context.l10n.reset),
               ),
@@ -67,7 +82,7 @@ class SourceMangaFilter extends HookWidget {
             return FilterToWidget(
               key: ValueKey("BaseFilter-$index"),
               filter: filter,
-              currentChanges: filterChangeMap.value[index] ?? [],
+              currentChanges: filterChangeMap.value[index] ?? const [],
               onChanged: (filters) {
                 final filterChanges = <FilterChange>[];
                 for (var filter in filters) {

@@ -76,7 +76,11 @@ class SourceMangaListScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sourceRepository = ref.watch(sourceRepositoryProvider);
-    final appliedFilter = useState<List<FilterChange>>([]);
+    final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
+    final appliedFilterNotifier =
+        ref.watch(appliedSourceFilterProvider(sourceId).notifier);
+    final liveAppliedFilter = useRef(appliedFilter);
+    liveAppliedFilter.value = appliedFilter;
     final filterList =
         ref.watch(baseSourceMangaFilterListProvider(sourceId)).value;
     final source = ref.watch(sourceProvider(sourceId));
@@ -92,7 +96,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
           controller,
           pageKey,
           query: query,
-          filter: appliedFilter.value,
+          filter: liveAppliedFilter.value,
         ),
       );
       return;
@@ -202,10 +206,14 @@ class SourceMangaListScreen extends HookConsumerWidget {
                   builder: (context) => SourceMangaFilter(
                     filters: filterList?.toList() ?? [],
                     sourceId: sourceId,
-                    onReset: () => appliedFilter.value = [],
+                    appliedChanges: appliedFilter,
+                    onReset: () {
+                      appliedFilterNotifier.reset();
+                      controller.refresh();
+                    },
                     onSubmitted: (value) {
                       Navigator.pop(context);
-                      appliedFilter.value = value ?? [];
+                      appliedFilterNotifier.apply(value ?? const []);
                       controller.refresh();
                     },
                   ),
@@ -233,10 +241,15 @@ class SourceMangaListScreen extends HookConsumerWidget {
                               builder: (context) => SourceMangaFilter(
                                 filters: filterList?.toList() ?? [],
                                 sourceId: sourceId,
-                                onReset: () => appliedFilter.value = [],
+                                appliedChanges: appliedFilter,
+                                onReset: () {
+                                  appliedFilterNotifier.reset();
+                                  controller.refresh();
+                                },
                                 onSubmitted: (value) {
                                   Navigator.pop(context);
-                                  appliedFilter.value = value ?? [];
+                                  appliedFilterNotifier
+                                      .apply(value ?? const []);
                                   controller.refresh();
                                 },
                               ),

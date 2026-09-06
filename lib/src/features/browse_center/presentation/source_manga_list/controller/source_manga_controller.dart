@@ -23,6 +23,17 @@ Future<SourceDto?> source(Ref ref, String sourceId) =>
 Future<List<Filter>?> baseSourceMangaFilterList(Ref ref, String sourceId) =>
     ref.read(sourceRepositoryProvider).getSourceFilter(sourceId);
 
+/// Session-scoped per source; deliberately not persisted.
+@Riverpod(keepAlive: true)
+class AppliedSourceFilter extends _$AppliedSourceFilter {
+  @override
+  List<FilterChange> build(String sourceId) => const [];
+
+  void apply(List<FilterChange> filters) => state = filters;
+
+  void reset() => state = const [];
+}
+
 @riverpod
 class SourceDisplayMode extends _$SourceDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
