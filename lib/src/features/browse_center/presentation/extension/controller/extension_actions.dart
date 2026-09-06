@@ -32,9 +32,13 @@ class ExtensionActions {
   /// [languageCode] is enabled in the source language filter, so the sources the
   /// new extension brings aren't filtered straight back out of the Sources tab.
   Future<void> install(String pkgName, {String? languageCode}) =>
+      _refreshAfter(() => _install(pkgName, languageCode));
+
+  /// The server has no reinstall mutation, so this is uninstall then install.
+  Future<void> reinstall(String pkgName, {String? languageCode}) =>
       _refreshAfter(() async {
-        await _repository.installExtension(pkgName);
-        if (languageCode.isNotBlank) _enableSourceLanguage(languageCode!);
+        await _repository.uninstallExtension(pkgName);
+        await _install(pkgName, languageCode);
       });
 
   Future<void> installFile(BuildContext context, {PlatformFile? file}) =>
@@ -47,6 +51,11 @@ class ExtensionActions {
 
   Future<void> uninstall(String pkgName) =>
       _refreshAfter(() => _repository.uninstallExtension(pkgName));
+
+  Future<void> _install(String pkgName, String? languageCode) async {
+    await _repository.installExtension(pkgName);
+    if (languageCode.isNotBlank) _enableSourceLanguage(languageCode!);
+  }
 
   /// A blank filter means the user turned every language off (the key defaults
   /// to a populated list), so installing an extension doesn't switch one back on.

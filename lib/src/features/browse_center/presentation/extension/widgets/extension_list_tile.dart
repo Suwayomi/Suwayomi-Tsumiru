@@ -27,7 +27,7 @@ class ExtensionListTile extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = useState(false);
+    final runningAction = useState<String?>(null);
     return ListTile(
       key: key,
       leading: ClipRRect(
@@ -36,7 +36,7 @@ class ExtensionListTile extends HookConsumerWidget {
           url: extension.iconUrl,
           outerSize: const Size.square(48),
           innerSize: const Size.square(24),
-          isLoading: isLoading.value,
+          isLoading: runningAction.value != null,
         ),
       ),
       title: Text(
@@ -66,7 +66,7 @@ class ExtensionListTile extends HookConsumerWidget {
       ),
       trailing: ExtensionListTileTailing(
         extension: extension,
-        isLoading: isLoading,
+        runningAction: runningAction,
         ref: ref,
       ),
     );
@@ -77,27 +77,30 @@ class ExtensionListTileTailing extends StatelessWidget {
   const ExtensionListTileTailing({
     super.key,
     required this.extension,
-    required this.isLoading,
+    required this.runningAction,
     required this.ref,
   });
 
   final Extension extension;
-  final ValueNotifier<bool> isLoading;
+
+  /// The label of the action in flight, or null when the tile is idle.
+  final ValueNotifier<String?> runningAction;
   final WidgetRef ref;
 
   /// Runs an extension action with the button's spinner and error toast.
   /// [ExtensionActions] refreshes both the extension and the source list, so no
   /// caller needs to pass a refresh callback down.
   Future<void> _run(
+    String label,
     Future<void> Function(ExtensionActions actions) action,
   ) async {
     try {
-      isLoading.value = true;
+      runningAction.value = label;
       await AppUtils.guard(
         () => action(ref.read(extensionActionsProvider)),
         ref.read(toastProvider),
       );
-      isLoading.value = false;
+      runningAction.value = null;
     } catch (_) {
       // The refresh this action triggers can rebuild the list and dispose the
       // tile out from under the spinner.
@@ -106,78 +109,99 @@ class ExtensionListTileTailing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final running = runningAction.value;
     if (extension.isObsolete.ifNull()) {
       return OutlinedButton(
-        onPressed: extension.isInstalled.ifNull() && !isLoading.value
-            ? () => _run((actions) => actions.uninstall(extension.pkgName))
+        onPressed: extension.isInstalled.ifNull() && running == null
+            ? () => _run(
+                  context.l10n.uninstalling,
+                  (actions) => actions.uninstall(extension.pkgName),
+                )
             : null,
         child: Text(
           context.l10n.obsolete,
           style: const TextStyle(color: Colors.redAccent),
         ),
       );
-    } else {
-      if (extension.isInstalled.ifNull()) {
-        final actionButton = TextButton(
-          onPressed: (!isLoading.value)
-              ? () => _run((actions) async {
-                    if (extension.pkgName.isBlank) {
-                      throw context.l10n.errorExtension;
-                    }
-                    if (extension.hasUpdate.ifNull()) {
-                      await actions.update(extension.pkgName);
-                    } else {
-                      await actions.uninstall(extension.pkgName);
-                    }
-                  })
-              : null,
-          child: Text(
-            extension.hasUpdate.ifNull()
-                ? isLoading.value
-                    ? context.l10n.updating
-                    : context.l10n.update
-                : isLoading.value
-                    ? context.l10n.uninstalling
-                    : context.l10n.uninstall,
-          ),
-        );
-        // When an update is pending the single button reads "Update", which used
-        // to leave no way to uninstall the extension. Keep Update but add a
-        // separate uninstall affordance so a pending update can't trap it (#290).
-        if (!extension.hasUpdate.ifNull()) return actionButton;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            actionButton,
-            IconButton(
-              tooltip: context.l10n.uninstall,
-              icon: const Icon(Icons.delete_outline),
-              onPressed: isLoading.value
-                  ? null
-                  : () => _run((actions) => actions.uninstall(
-                        extension.pkgName,
-                      )),
-            ),
-          ],
-        );
-      } else {
-        return TextButton(
-          onPressed: !isLoading.value
-              ? () => _run((actions) async {
-                    if (extension.pkgName.isBlank) {
-                      throw context.l10n.errorExtension;
-                    }
-                    await actions.install(
-                      extension.pkgName,
-                      languageCode: extension.language?.code,
-                    );
-                  })
-              : null,
-          child: Text(
-            isLoading.value ? context.l10n.installing : context.l10n.install,
-          ),
-        );
-      }
     }
+    if (!extension.isInstalled.ifNull()) {
+      return TextButton(
+        onPressed: running == null
+            ? () => _run(context.l10n.installing, (actions) async {
+                  if (extension.pkgName.isBlank) {
+                    throw context.l10n.errorExtension;
+                  }
+                  await actions.install(
+                    extension.pkgName,
+                    languageCode: extension.language?.code,
+                  );
+                })
+            : null,
+        child: Text(running ?? context.l10n.install),
+      );
+    }
+    final hasUpdate = extension.hasUpdate.ifNull();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: running == null
+              ? () => _run(
+                    hasUpdate
+                        ? context.l10n.updating
+                        : context.l10n.uninstalling,
+                    (actions) async {
+                      if (extension.pkgName.isBlank) {
+                        throw context.l10n.errorExtension;
+                      }
+                      if (hasUpdate) {
+                        await actions.update(extension.pkgName);
+                      } else {
+                        await actions.uninstall(extension.pkgName);
+                      }
+                    },
+                  )
+              : null,
+          child: Text(
+            running ??
+                (hasUpdate ? context.l10n.update : context.l10n.uninstall),
+          ),
+        ),
+        // A third control squeezes the extension name off a phone screen.
+        if (hasUpdate)
+          PopupMenuButton<VoidCallback>(
+            enabled: running == null,
+            onSelected: (selected) => selected(),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: _reinstall(context),
+                child: Text(context.l10n.reinstall),
+              ),
+              PopupMenuItem(
+                value: () => _run(
+                  context.l10n.uninstalling,
+                  (actions) => actions.uninstall(extension.pkgName),
+                ),
+                child: Text(context.l10n.uninstall),
+              ),
+            ],
+          )
+        else
+          IconButton(
+            tooltip: context.l10n.reinstall,
+            icon: const Icon(Icons.restart_alt_rounded),
+            onPressed: running == null ? _reinstall(context) : null,
+          ),
+      ],
+    );
   }
+
+  /// Repairs an extension with no loaded sources or a phantom update (#428).
+  VoidCallback _reinstall(BuildContext context) => () => _run(
+        context.l10n.reinstalling,
+        (actions) => actions.reinstall(
+          extension.pkgName,
+          languageCode: extension.language?.code,
+        ),
+      );
 }

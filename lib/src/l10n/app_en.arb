@@ -2781,6 +2781,11 @@
   "unifiedSearchAllSources": "Search all sources for \"{query}\"",
   "uninstall": "Uninstall",
   "uninstalling": "Uninstalling",
+  "reinstall": "Reinstall",
+  "@reinstall": {
+    "description": "Button tooltip on an installed extension: uninstall it and install it again"
+  },
+  "reinstalling": "Reinstalling",
   "unknownAuthor": "Unknown Author",
   "unknownManga": "Unknown Manga",
   "unknownSource": "Unknown Source",

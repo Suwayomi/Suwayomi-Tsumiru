@@ -10,7 +10,6 @@ import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_repository/extension_repository.dart';
@@ -21,44 +20,10 @@ import 'package:tsumiru/src/features/browse_center/presentation/extension/contro
 import 'package:tsumiru/src/features/browse_center/presentation/source/controller/source_controller.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
-GraphQLClient _dummyClient() =>
-    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
-
-class _FakeExtensionRepository extends ExtensionRepository {
-  _FakeExtensionRepository() : super(_dummyClient());
-
-  final List<String> installed = <String>[];
-  final List<String> uninstalled = <String>[];
-  final List<String> updated = <String>[];
-  final List<PlatformFile> fileInstalls = <PlatformFile>[];
-
-  @override
-  Future<void> installExtension(String pkgName) async => installed.add(pkgName);
-
-  @override
-  Future<void> uninstallExtension(String pkgName) async =>
-      uninstalled.add(pkgName);
-
-  @override
-  Future<void> updateExtension(String pkgName) async => updated.add(pkgName);
-
-  @override
-  Future<void> installExtensionFile(
-    BuildContext context, {
-    PlatformFile? file,
-  }) async {
-    // The real repository rejects a null pick before it mutates anything, so a
-    // test that passed null would pass even if the file stopped being forwarded.
-    if (file == null) throw Exception('no file picked');
-    fileInstalls.add(file);
-  }
-
-  @override
-  Future<List<Extension>?> getExtensionListStream() async => <Extension>[];
-}
+import '../../../../../helpers/fake_extension_repository.dart';
 
 class _CountingSourceRepository extends SourceRepository {
-  _CountingSourceRepository() : super(_dummyClient());
+  _CountingSourceRepository() : super(dummyGraphQLClient());
 
   int listCalls = 0;
 
@@ -70,12 +35,12 @@ class _CountingSourceRepository extends SourceRepository {
 }
 
 void main() {
-  late _FakeExtensionRepository extensions;
+  late FakeExtensionRepository extensions;
   late _CountingSourceRepository sources;
   late ProviderContainer container;
 
   setUp(() async {
-    extensions = _FakeExtensionRepository();
+    extensions = FakeExtensionRepository();
     sources = _CountingSourceRepository();
     SharedPreferences.setMockInitialValues(<String, Object>{});
     container = ProviderContainer(overrides: [
@@ -154,6 +119,28 @@ void main() {
     expect(container.read(sourceLanguageFilterProvider), isEmpty);
   });
 
+  test('reinstalling removes the extension before putting it back', () async {
+    final actions = container.read(extensionActionsProvider);
+    final refetches =
+        await sourceFetchesAfter(() => actions.reinstall('com.example.ext'));
+
+    expect(extensions.calls,
+        <String>['uninstall com.example.ext', 'install com.example.ext']);
+    expect(refetches, 1,
+        reason: 'the rebuilt extension re-registers its sources server-side');
+  });
+
+  test("reinstalling enables the extension's language in the source filter",
+      () async {
+    expect(container.read(sourceLanguageFilterProvider), isNot(contains('ko')));
+
+    await container
+        .read(extensionActionsProvider)
+        .reinstall('com.example.ext', languageCode: 'ko');
+
+    expect(container.read(sourceLanguageFilterProvider), contains('ko'));
+  });
+
   test('a failed install leaves the source list alone', () async {
     final failing = ProviderContainer(overrides: [
       extensionRepositoryProvider.overrideWithValue(_ThrowingRepository()),
@@ -207,7 +194,7 @@ void main() {
 }
 
 class _ThrowingRepository extends ExtensionRepository {
-  _ThrowingRepository() : super(_dummyClient());
+  _ThrowingRepository() : super(dummyGraphQLClient());
 
   @override
   Future<void> installExtension(String pkgName) async =>
