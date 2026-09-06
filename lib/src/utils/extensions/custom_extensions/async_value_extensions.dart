@@ -70,12 +70,13 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
               ServerUnreachableView(
                   onRetry: refresh, offlineEscape: offlineEscapeHatch));
         }
+        final message = error.toString().trim();
         return AppUtils.wrapOn(
             wrapper,
             Emoticons(
-              title: showGenericError
+              title: showGenericError || message.isBlank
                   ? context.l10n.errorSomethingWentWrong
-                  : error.toString(),
+                  : message,
               // Null when there's nothing to show — an empty Column still
               // costs Emoticons' spacing slot. The pin self-gates on the
               // catalog (no ref here); its shrunk state trails the column,

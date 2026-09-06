@@ -50,11 +50,14 @@ class Toast {
     bool withMicrotask = false,
     bool instantShow = false,
   }) {
+    final text = error.trim().isNotBlank
+        ? error.trim()
+        : _context.l10n.errorSomethingWentWrong;
     toast() {
       if (instantShow) close();
       _fToast.showToast(
         child: ToastWidget(
-          text: error,
+          text: text,
           backgroundColor: Colors.red.shade400,
           textColor: Colors.white,
         ),

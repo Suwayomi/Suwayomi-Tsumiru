@@ -29,6 +29,16 @@ extension StreamGraphQlExtensions<T> on Stream<QueryResult<T>> {
       map((res) => res.result.apply(parse));
 }
 
+final _serverErrorWrapper =
+    RegExp(r'^Exception while fetching data \([^)]*\)\s*:\s*');
+
+/// Suwayomi packs a whole Java stack trace into `GraphQLError.message`.
+String _readableGraphQLMessage(String message) {
+  final body = message.replaceFirst(_serverErrorWrapper, '').trim();
+  final firstLine = body.split('\n').first.trim();
+  return firstLine == 'null' ? '' : firstLine;
+}
+
 class OperationMessageException implements Exception {
   final OperationException exception;
 
@@ -39,8 +49,10 @@ class OperationMessageException implements Exception {
     StringBuffer toString = StringBuffer();
     List<GraphQLError> graphqlErrors = exception.graphqlErrors;
     for (GraphQLError error in graphqlErrors) {
+      final message = _readableGraphQLMessage(error.message);
+      if (message.isEmpty) continue;
       if (toString.isNotEmpty) toString.write(', ');
-      toString.write(error.message);
+      toString.write(message);
     }
     LinkException? linkException = exception.linkException;
     if (linkException != null && linkException.originalException != null) {
