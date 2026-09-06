@@ -197,7 +197,7 @@ class ServerUrlTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final serverUrl = ref.watch(serverExternalUrlProvider);
     return SettingsPropTile(
-      title: context.l10n.serverExternalUrl,
+      title: context.l10n.serverUrl,
       subtitle: serverUrl,
       leading: const Icon(Icons.computer_rounded),
       type: SettingsPropType<void>.textField(

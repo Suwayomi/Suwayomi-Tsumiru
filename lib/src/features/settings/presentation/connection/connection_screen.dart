@@ -31,6 +31,7 @@ class ConnectionScreen extends HookConsumerWidget {
         DBKeys.serverUrl.initial;
     final lanUrl = ref.watch(serverLanUrlProvider);
     final usesLan = lanUrl != null && activeUrl == lanUrl;
+    final showLanAddress = useState(lanUrl != null);
     // One-time migration: the separate "Server Port" toggle is retired in
     // favour of the URL being the single source of truth. If a user still has
     // the toggle on, fold the port into the URL and switch the toggle off so
@@ -71,18 +72,26 @@ class ConnectionScreen extends HookConsumerWidget {
             const OfflineServerMismatchBanner(showAfterDismissal: true),
             SectionTitle(title: context.l10n.serverAddress),
             const ServerUrlTile(),
-            const ServerLanUrlTile(),
-            ListTile(
-              leading: const Icon(Icons.wifi_rounded),
-              title: Text(context.l10n.serverActiveUrl),
-              trailing: Chip(
-                label: Text(
-                  usesLan
-                      ? context.l10n.serverUsingLanUrl
-                      : context.l10n.serverUsingExternalUrl,
+            if (showLanAddress.value || lanUrl != null)
+              const ServerLanUrlTile()
+            else
+              ListTile(
+                leading: const Icon(Icons.add_home_work_outlined),
+                title: Text(context.l10n.addLocalNetworkAddress),
+                onTap: () => showLanAddress.value = true,
+              ),
+            if (lanUrl != null)
+              ListTile(
+                leading: const Icon(Icons.wifi_rounded),
+                title: Text(context.l10n.serverActiveUrl),
+                trailing: Chip(
+                  label: Text(
+                    usesLan
+                        ? context.l10n.serverUsingLanUrl
+                        : context.l10n.serverUsingExternalUrl,
+                  ),
                 ),
               ),
-            ),
             const InlineAuthSection(),
             if (!kIsWeb)
               ListTile(

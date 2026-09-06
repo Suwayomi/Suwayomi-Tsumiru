@@ -2745,6 +2745,7 @@
   "noCrashLog": "No debug log found",
   "serverUrl": "Server URL",
   "serverUrlHintText": "Server url",
+  "addLocalNetworkAddress": "Add a local network address",
   "serverExternalUrl": "External / Remote URL",
   "serverLanUrl": "Internal / LAN URL",
   "serverLanUrlOptional": "Optional",
