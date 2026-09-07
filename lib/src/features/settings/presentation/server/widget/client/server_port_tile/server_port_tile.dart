@@ -14,7 +14,9 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
-import '../server_url_tile/server_url_tile.dart' show clearCredentialsForServerChange;
+import '../../../../../../offline/data/background/background_download_controller_shim.dart';
+import '../server_url_tile/server_url_tile.dart'
+    show clearCredentialsForServerChange;
 
 part 'server_port_tile.g.dart';
 
@@ -24,10 +26,19 @@ class ServerPort extends _$ServerPort with SharedPreferenceClientMixin<int> {
   int? build() => initialize(DBKeys.serverPort);
 
   @override
-  void update(int? value) {
-    // Port is part of the effective endpoint, same as ServerUrl.
-    if (value != state) clearCredentialsForServerChange(ref);
-    super.update(value);
+  Future<void> update(int? value) async {
+    if (value == state) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          await clearCredentialsForServerChange(ref);
+          super.update(value);
+        },
+      );
+    } finally {
+      lease.close();
+    }
   }
 }
 
@@ -36,15 +47,24 @@ class ServerPortToggle extends _$ServerPortToggle
     with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(
-        DBKeys.serverPortToggle,
-        initial: kIsWeb ? false : DBKeys.serverPortToggle.initial,
-      );
+    DBKeys.serverPortToggle,
+    initial: kIsWeb ? false : DBKeys.serverPortToggle.initial,
+  );
 
   @override
-  void update(bool? value) {
-    // Toggling the custom port on/off changes the effective endpoint too.
-    if (value != state) clearCredentialsForServerChange(ref);
-    super.update(value);
+  Future<void> update(bool? value) async {
+    if (value == state) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          await clearCredentialsForServerChange(ref);
+          super.update(value);
+        },
+      );
+    } finally {
+      lease.close();
+    }
   }
 }
 
@@ -61,7 +81,9 @@ class ServerPortTile extends ConsumerWidget {
       leading: const Icon(Icons.dns_rounded),
       trailing: Switch(
         value: serverToggle,
-        onChanged: ref.read(serverPortToggleProvider.notifier).update,
+        onChanged: (value) async {
+          await ref.read(serverPortToggleProvider.notifier).update(value);
+        },
       ),
       type: SettingsPropType<void>.numberPicker(
         min: 0,
@@ -69,7 +91,7 @@ class ServerPortTile extends ConsumerWidget {
         value: serverPort,
         onChanged: serverToggle
             ? (port) async {
-                ref.read(serverPortProvider.notifier).update(port);
+                await ref.read(serverPortProvider.notifier).update(port);
                 return;
               }
             : null,

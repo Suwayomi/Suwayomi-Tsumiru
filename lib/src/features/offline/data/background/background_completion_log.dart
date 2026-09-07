@@ -35,6 +35,10 @@ class DeletedEntry extends LogEntry {
   final int chapterId, generation;
 }
 
+class TimeoutEntry extends LogEntry {
+  const TimeoutEntry();
+}
+
 class DrainedEntry extends LogEntry {
   const DrainedEntry();
 }
@@ -102,6 +106,8 @@ class BackgroundCompletionLog {
   Future<void> appendDeleted(int chapterId, int generation) =>
       _append({'t': 'deleted', 'c': chapterId, 'g': generation});
 
+  Future<void> appendTimeout() => _append({'t': 'timeout'});
+
   Future<void> appendDrained() => _append({'t': 'drained'});
 
   Future<void> appendAdopt(AdoptChapterEntry e) => _append({
@@ -145,6 +151,8 @@ class BackgroundCompletionLog {
           );
         case 'deleted':
           out.add(DeletedEntry(j['c'] as int, j['g'] as int? ?? 0));
+        case 'timeout':
+          out.add(const TimeoutEntry());
         case 'drained':
           out.add(const DrainedEntry());
         case 'adopt':
@@ -216,6 +224,7 @@ Future<void> replayCompletionLog({
   required OfflinePageStore store,
   required BackgroundCompletionLog log,
   String? catalogServerId,
+  Future<void> Function()? onTimeout,
 }) async {
   final entries = await log.parse();
 
@@ -232,6 +241,7 @@ Future<void> replayCompletionLog({
 
   await _applyTerminalEntries(db: db, entries: entries);
 
+  if (entries.any((entry) => entry is TimeoutEntry)) await onTimeout?.call();
   await log.truncate();
 }
 
@@ -318,6 +328,7 @@ Future<void> _applyTerminalEntries({
       case DeletedEntry(:final chapterId, :final generation):
         advance(chapterId, generation);
         terminal.remove(chapterId);
+      case TimeoutEntry():
       case DrainedEntry():
       case AdoptChapterEntry():
         break;

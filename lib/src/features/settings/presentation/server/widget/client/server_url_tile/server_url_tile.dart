@@ -21,6 +21,7 @@ import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../credential_popup/credentials_popup.dart';
 import 'server_search_button.dart';
 
@@ -35,16 +36,36 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
   );
 
   @override
-  void update(String? value) {
-    final previous = state;
-    // Clear before publishing so the rebuild it triggers can't send A's creds to B.
-    if (_isDifferentHost(previous, value)) clearCredentialsForServerChange(ref);
-    super.update(value);
+  Future<void> update(String? value) async {
+    if (value == state) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (_isDifferentHost(state, value)) {
+            await clearCredentialsForServerChange(ref);
+          }
+          super.update(value);
+        },
+      );
+    } finally {
+      lease.close();
+    }
   }
 
-  /// Changes the endpoint selected for this session without treating the LAN
-  /// and remote addresses as different servers. They deliberately share auth.
-  void setActive(String? value) => super.update(value);
+  Future<void> setActive(String? value) async {
+    if (value == state) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          super.update(value);
+        },
+      );
+    } finally {
+      lease.close();
+    }
+  }
 }
 
 /// User-configured remote URL. Existing installations migrate their old single
@@ -63,17 +84,23 @@ class ServerExternalUrl extends _$ServerExternalUrl
   }
 
   @override
-  void update(String? value) {
+  Future<void> update(String? value) async {
     final normalised = _normaliseUrl(value);
-    if (_isDifferentHost(state, normalised)) {
-      clearCredentialsForServerChange(ref);
+    if (normalised == state) return;
+    final lease = ref.keepAlive();
+    try {
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (_isDifferentHost(state, normalised)) {
+            await clearCredentialsForServerChange(ref);
+          }
+          super.update(normalised);
+          await ref.read(serverUrlProvider.notifier).setActive(normalised);
+        },
+      );
+    } finally {
+      lease.close();
     }
-    super.update(normalised);
-    // A changed remote URL should work immediately when no LAN URL is set;
-    // refresh then decides whether the LAN endpoint is preferable.
-    ref.read(serverUrlProvider.notifier).setActive(normalised);
-    // The resolver is eagerly started at app launch. Avoid creating it from a
-    // settings write so first-run connection testing stays self-contained.
   }
 }
 
@@ -167,8 +194,8 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
         lanUrl: ref.read(serverLanUrlProvider),
         isReachable: serverUrlIsReachable,
       );
+      await ref.read(serverUrlProvider.notifier).setActive(selected);
       state = selected;
-      ref.read(serverUrlProvider.notifier).setActive(selected);
     } finally {
       _refreshing = false;
     }
@@ -185,9 +212,11 @@ bool _isDifferentHost(String? a, String? b) {
 
 /// Wipe credentials and bump the epoch on an endpoint change (URL, port, or
 /// port toggle) so the old server's creds can't reach the new one.
-void clearCredentialsForServerChange(Ref ref) {
-  ref.read(credentialsProvider.notifier).set(null);
-  ref.read(authCredentialsStoreProvider.notifier).clearAllForServerSwitch();
+Future<void> clearCredentialsForServerChange(Ref ref) async {
+  await ref.read(credentialsProvider.notifier).set(null);
+  await ref
+      .read(authCredentialsStoreProvider.notifier)
+      .clearAllForServerSwitch();
 }
 
 class ServerUrlTile extends ConsumerWidget {
@@ -204,7 +233,7 @@ class ServerUrlTile extends ConsumerWidget {
         hintText: context.l10n.serverUrlHintText,
         value: serverUrl,
         onChanged: (value) async {
-          ref.read(serverExternalUrlProvider.notifier).update(value);
+          await ref.read(serverExternalUrlProvider.notifier).update(value);
           return;
         },
       ),

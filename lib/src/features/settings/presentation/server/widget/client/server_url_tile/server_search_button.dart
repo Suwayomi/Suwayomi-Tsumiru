@@ -20,14 +20,14 @@ import 'server_url_tile.dart';
 class ServerSearchButton extends ConsumerWidget {
   const ServerSearchButton({super.key, this.text});
   final String? text;
-  void _update(String url, WidgetRef ref) {
+  Future<void> _update(String url, WidgetRef ref) async {
     final tempUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
     ref.read(serverLanUrlProvider.notifier).update(tempUrl);
     // Preserve the old single-URL setup when discovery is the first address a
     // user enters. They can add a remote address later without losing this LAN
     // connection as the fallback.
     if (ref.read(serverExternalUrlProvider) == DBKeys.serverUrl.initial) {
-      ref.read(serverExternalUrlProvider.notifier).update(tempUrl);
+      await ref.read(serverExternalUrlProvider.notifier).update(tempUrl);
     }
   }
 
@@ -76,7 +76,7 @@ class ServerSearchButton extends ConsumerWidget {
           ? () async {
               final value = await getServerAddress(port);
               if (value != null) {
-                _update(value, ref);
+                await _update(value, ref);
               } else {
                 if (context.mounted) {
                   ref

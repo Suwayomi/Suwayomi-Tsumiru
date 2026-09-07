@@ -20,10 +20,10 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/logger/logger.dart';
-import '../../../../utils/misc/toast/toast.dart';
 import '../../../auth/data/auth_credentials_store.dart';
 import '../../../auth/data/custom_headers_store.dart';
 import '../../../notifications/controller/notification_settings_providers.dart';
+import '../../../notifications/controller/notifications_controller.dart';
 import '../../../notifications/data/local_notification_service.dart';
 import '../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -31,16 +31,23 @@ import '../../../settings/presentation/server/widget/credential_popup/credential
 import '../chapter_commit.dart';
 import '../offline_database.dart';
 import '../offline_download_progress.dart';
+import '../offline_download_stall.dart';
 import '../offline_page_store.dart';
 import '../offline_paths.dart';
 import '../offline_repository.dart';
+import '../offline_server_identity_repository.dart';
 import '../offline_settings_providers.dart';
 import '../server_reachability.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
+import 'background_schedule.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
+import 'catchup_spec_writer.dart';
+import 'catchup_work_spec.dart';
 import 'download_task_handler.dart';
+import 'foreground_service_gateway.dart';
+import 'work_order_admission.dart';
 
 /// Owns the Android foreground-service download worker from the MAIN isolate —
 /// starts/stops it, mirrors drift into it, and applies its events + completion
@@ -49,7 +56,165 @@ import 'download_task_handler.dart';
 /// run there; on other platforms this controller is a no-op and the
 /// main-isolate pump is used instead.
 class BackgroundDownloadController with WidgetsBindingObserver {
-  BackgroundDownloadController(this._ref);
+  BackgroundDownloadController(
+    this._ref, {
+    ForegroundServiceGateway? gateway,
+    bool Function()? isAndroid,
+    Future<List<ConnectivityResult>> Function()? connectivity,
+    Stream<List<ConnectivityResult>>? connectivityChanges,
+    Future<void> Function(String? reason, {required bool silent})? notifyStall,
+    Future<void> Function()? publishQueue,
+    bool Function()? identityAllowed,
+    DateTime Function()? now,
+    Timer Function(Duration, void Function())? timer,
+  }) : _gateway = gateway ?? ForegroundServiceGateway(),
+       _isAndroid = isAndroid ?? (() => Platform.isAndroid),
+       _connectivity = connectivity ?? Connectivity().checkConnectivity,
+       _connectivityChanges =
+           connectivityChanges ?? Connectivity().onConnectivityChanged,
+       _notifyStallOverride = notifyStall,
+       _publishQueueOverride = publishQueue,
+       _identityAllowedOverride = identityAllowed,
+       _now = now ?? DateTime.now,
+       _timer = timer ?? Timer.new;
+
+  final ForegroundServiceGateway _gateway;
+  final bool Function() _isAndroid;
+  final Future<List<ConnectivityResult>> Function() _connectivity;
+  final Stream<List<ConnectivityResult>> _connectivityChanges;
+  final Future<void> Function(String?, {required bool silent})?
+  _notifyStallOverride;
+  final Future<void> Function()? _publishQueueOverride;
+  final bool Function()? _identityAllowedOverride;
+  final DateTime Function() _now;
+
+  bool get _identityAllowed =>
+      _identityAllowedOverride?.call() ??
+      (_ref.read(offlineActiveProvider) &&
+          CatchupStateStore(
+            _ref.read(sharedPreferencesProvider),
+          ).identityAuthorized);
+  final Timer Function(Duration, void Function()) _timer;
+  int _recoveryEpoch = 0;
+  Future<void> _identityTail = Future.value();
+  Future<void> _mutationTail = Future.value();
+  DateTime? _lastRecovery;
+  bool? _retryBlocked;
+  bool _disposed = false;
+  String? _notifiedStall;
+  bool _hasNotifiedStall = false;
+  String? _pendingSignature;
+  Timer? _queuePublishTimer;
+  Future<void>? _queuePublishFlight;
+  bool _queuePublishPending = false;
+  Timer? _handoffTimer;
+  bool _yieldedService = false;
+  bool _handoffForce = false;
+  int _restrictionEpoch = 0;
+  Future<void> _notificationTail = Future.value();
+  StreamSubscription<List<OfflineChapter>>? _pendingSub;
+
+  bool get _blocked =>
+      _retryBlocked ??= _ref.read(offlineDownloadsStalledProvider) != null;
+
+  void _allowRecovery() {
+    _recoveryEpoch++;
+    _lastRecovery = _now();
+    _retryBlocked = false;
+  }
+
+  Future<void> _clearStall() async {
+    _restrictionEpoch++;
+    _retryBlocked = false;
+    await _ref.read(offlineDownloadsStalledProvider.notifier).set(null);
+    _ref.read(offlineDownloadRestrictionProvider.notifier).set(null);
+    await _publishStall(null);
+  }
+
+  Future<void> _clearServiceStall() async {
+    _retryBlocked = false;
+    await _ref.read(offlineDownloadsStalledProvider.notifier).set(null);
+    await _refreshRestriction();
+  }
+
+  Future<void> _publishStall(String? reason) {
+    final next = _notificationTail.then((_) => _deliverStall(reason));
+    _notificationTail = next.catchError((Object _) {});
+    return next;
+  }
+
+  Future<void> _deliverStall(String? reason) async {
+    if (_isPaused() || _suppressRestarts) reason = null;
+    if (_hasNotifiedStall && reason == _notifiedStall) return;
+    final silent = _notifiedStall != null;
+    _notifiedStall = reason;
+    _hasNotifiedStall = true;
+    if (_notifyStallOverride != null) {
+      await _notifyStallOverride(reason, silent: silent);
+      return;
+    }
+    try {
+      final service = LocalNotificationService();
+      await service.init();
+      if (reason == null) {
+        await service.cancelDownloadStall();
+        return;
+      }
+      if (!_ref.read(notificationsDownloadsEnabledProvider).ifNull(true)) {
+        return;
+      }
+      final locales = WidgetsBinding.instance.platformDispatcher.locales;
+      final l10n = lookupAppLocalizations(
+        locales.isNotEmpty ? locales.first : const Locale('en'),
+      );
+      await service.showDownloadStall(
+        l10n.notificationDownloadsPausedTitle,
+        switch (reason) {
+          'wifi' => l10n.notificationDownloadsPausedWifi,
+          'connection' => l10n.notificationDownloadsPausedNoServer,
+          'background' => l10n.notificationDownloadsPausedBackground,
+          'budget' => l10n.notificationDownloadsPausedBudget,
+          _ => l10n.notificationDownloadsPausedService,
+        },
+        silent: silent,
+      );
+    } catch (error) {
+      logger.w('Offline: download stall notification failed: $error');
+    }
+  }
+
+  Future<bool> _refreshRestriction() async {
+    final epoch = ++_restrictionEpoch;
+    if (_isPaused() ||
+        _suppressRestarts ||
+        (await _pendingChapters()).isEmpty) {
+      await _clearStall();
+      return true;
+    }
+    final connections = await _connectivity();
+    final pending = await _pendingChapters();
+    if (epoch != _restrictionEpoch) return true;
+    if (_isPaused() || _suppressRestarts || pending.isEmpty) {
+      await _clearStall();
+      return true;
+    }
+    final connected = connections.any((r) => r != ConnectivityResult.none);
+    final unmetered =
+        connections.contains(ConnectivityResult.wifi) ||
+        connections.contains(ConnectivityResult.ethernet);
+    final networkReason = !connected
+        ? 'connection'
+        : ((_ref.read(offlineWifiOnlyProvider) ?? true) && !unmetered)
+        ? 'wifi'
+        : null;
+    final reason =
+        networkReason ??
+        (_ref.read(serverUnreachableProvider) ? 'connection' : null);
+    _ref.read(offlineDownloadRestrictionProvider.notifier).set(reason);
+    final stalled = _ref.read(offlineDownloadsStalledProvider);
+    await _publishStall(reason ?? stalled);
+    return networkReason != null;
+  }
 
   final Ref _ref;
 
@@ -69,6 +234,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// several awaited steps; concurrent enqueue + resume could double-start).
   bool _ensuring = false;
   bool _suppressRestarts = false;
+  int _controlCount = 0;
+  final Object _controlZone = Object();
 
   /// Backoff after the worker parks on an unreachable server. The stop
   /// handshake sees the queue still pending and restarts immediately, which
@@ -98,24 +265,67 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Wire up the worker-event callback + Wi-Fi-only listener. Call once at
   /// startup (after FFT.initCommunicationPort, before/at launch replay);
   /// idempotent.
+  Future<void> _recoverIdentityTransition() async {
+    final state = CatchupStateStore(_ref.read(sharedPreferencesProvider));
+    if (!_suppressRestarts && state.identityChanging) {
+      await state.setIdentityChanging(false);
+      _ref.invalidate(serverInstanceIdProvider);
+    }
+  }
+
   void register() {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
+    _notifiedStall ??= _ref.read(offlineDownloadsStalledProvider);
+    unawaited(_recoverIdentityTransition());
     WidgetsBinding.instance.addObserver(this);
     _workerEventCallback ??= _onWorkerEvent;
-    FlutterForegroundTask.addTaskDataCallback(_workerEventCallback!);
-    _connSub ??= Connectivity().onConnectivityChanged.listen(
-      _onConnectivityChanged,
-    );
+    _gateway.addCallback(_workerEventCallback!);
+    _pendingSub ??= _db.watchOfflineChapters().listen((chapters) {
+      final pending = [
+        for (final c in chapters)
+          if (c.deviceState == OfflineDeviceState.queued ||
+              c.deviceState == OfflineDeviceState.downloading)
+            '${c.mangaId}:${c.id}:${c.downloadGeneration}',
+      ]..sort();
+      final signature = pending.join(',');
+      if (signature == _pendingSignature) return;
+      _pendingSignature = signature;
+      _queuePublishTimer?.cancel();
+      _queuePublishTimer = _timer(const Duration(milliseconds: 250), () {
+        unawaited(
+          _publishQueue().catchError((Object error) {
+            logger.e('Offline: publishing download queue failed: $error');
+          }),
+        );
+      });
+      if (pending.isEmpty) unawaited(_clearStall());
+    });
+    _ref.listen(serverInstanceIdProvider, (_, next) {
+      if (next.hasValue && _identityAllowed) {
+        unawaited(_publishQueue().then((_) => ensureServiceRunning()));
+      }
+    });
+    _ref.listen(offlineWifiOnlyProvider, (_, next) {
+      unawaited(onWifiOnlyChanged(next ?? true));
+    });
+    _ref.listen(serverUnreachableProvider, (_, _) {
+      unawaited(_refreshRestriction());
+    });
+    _connSub ??= _connectivityChanges.listen(_onConnectivityChanged);
   }
 
   void dispose() {
+    _disposed = true;
+    _queuePublishTimer?.cancel();
+    _handoffTimer?.cancel();
+    unawaited(_pendingSub?.cancel());
     _parkTimer?.cancel();
     // Mirrors register(): off Android nothing was ever wired up, and touching
     // WidgetsBinding here would fault a container-only test with no binding.
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     WidgetsBinding.instance.removeObserver(this);
     final cb = _workerEventCallback;
-    if (cb != null) FlutterForegroundTask.removeTaskDataCallback(cb);
+    if (cb != null) _gateway.removeCallback(cb);
     unawaited(_connSub?.cancel());
   }
 
@@ -130,93 +340,184 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// [force] is for signals that supersede the park backoff: an explicit user
   /// action, or proof the server answered.
   Future<void> ensureServiceRunning({bool force = false}) async {
-    if (!Platform.isAndroid) return;
-    if (_suppressRestarts) return;
-    // PAUSE GATE — first line so every restart path (start, onEnqueued,
-    // replayOnResume, launch replay, drain/stop handlers, connectivity-resume)
-    // inherits it.
-    if (_isPaused()) return;
-    if (force) {
-      _clearPark();
-    } else if (_parkedUntil?.isAfter(DateTime.now()) ?? false) {
+    if (force && _controlCount > 0) _handoffForce = true;
+    if (!_isAndroid() ||
+        _disposed ||
+        _suppressRestarts ||
+        _controlCount > 0 ||
+        !_identityAllowed) {
       return;
     }
-    if (_ensuring) return;
+    if (_isPaused()) {
+      await _clearStall();
+      return;
+    }
+    if (_ensuring) {
+      if (force) _scheduleHandoff(force: true);
+      return;
+    }
     _ensuring = true;
+    final epoch = _recoveryEpoch;
     try {
       final pending = await _pendingChapters();
-      if (pending.isEmpty) return;
-
-      if (await FlutterForegroundTask.isRunningService) {
-        // Already owned — just merge the new ids into the worker's queue.
+      if (pending.isEmpty) {
+        await _clearStall();
+        return;
+      }
+      final restricted = await _refreshRestriction();
+      if (_isPaused() || _suppressRestarts) {
+        await _clearStall();
+        return;
+      }
+      final running = await _gateway.isRunningService;
+      if (_controlCount > 0 || _isPaused() || _suppressRestarts) return;
+      if (_yieldedService) {
+        if (running) {
+          _scheduleHandoff(force: force);
+          return;
+        }
+        _yieldedService = false;
+      }
+      if (running) {
         for (final c in pending) {
-          FlutterForegroundTask.sendDataToTask({
+          _gateway.send({
             'op': 'add',
             'chapterId': c.id,
             'mangaId': c.mangaId,
             'gen': _genOf(c),
           });
         }
+        await _clearServiceStall();
         return;
       }
-
-      // Start gate: don't bring up the service on metered + Wi-Fi-only; the
-      // queue stays in drift until a Wi-Fi reconnect or next foreground starts
-      // it.
-      if (await _wifiOnlyBlocks()) {
-        logger.i('Offline: Wi-Fi-only on + metered — deferring service start');
+      if (restricted || _blocked) return;
+      if (force) _clearPark();
+      if (_parkedUntil?.isAfter(_now()) ?? false) return;
+      await _gateway.ensureNotificationPermission();
+      if (_controlCount > 0 || _isPaused() || _suppressRestarts) return;
+      final attemptId = await _writeWorkOrder();
+      if (attemptId == null) return;
+      if (_isPaused() || _suppressRestarts || _controlCount > 0) {
+        await _invalidateAttempt(attemptId);
+        await _clearStall();
         return;
       }
-
-      await _ensureNotificationPermission();
-      await _writeWorkOrder(pending);
-      // Re-check the pause gate: a pause could have landed while we awaited the
-      // steps above, and pause() only messages a *running* service — without
-      // this recheck we'd start straight into a paused state.
-      if (_isPaused()) return;
-      final res = await FlutterForegroundTask.startService(
-        serviceTypes: [ForegroundServiceTypes.dataSync],
-        notificationTitle: 'Downloading chapters',
-        notificationText: 'Starting…',
-        // Explicit monochrome icon: the fallback is the launcher icon, which
-        // Android alpha-masks into an unrecognizable blob in the status bar.
-        notificationIcon: const NotificationIcon(
-          metaDataName: kNotificationIconMetaData,
-        ),
-        callback: backgroundDownloadCallback,
-      );
-      if (res is ServiceRequestFailure) {
-        logger.e('Offline: foreground service failed to start: ${res.error}');
-        // Previously silent: chapters stayed queued in drift with nothing
-        // downloading and no signal at all (e.g. notification permission
-        // denied). A toast is a best-effort surface only — it's a no-op
-        // when there's no active UI (background launch/replay), which still
-        // leaves that path silent; making it durably visible there needs a
-        // persisted banner, not attempted here.
-        _ref.read(toastProvider)?.showError(
-          'Downloads paused: couldn\'t start the download service '
-          '(${res.error})',
-        );
+      final result = await _gateway.start();
+      if (_isPaused() || _suppressRestarts || _controlCount > 0) {
+        await _invalidateAttempt(attemptId);
+        if (await _gateway.isRunningService) _pauseWorker();
+        await _clearStall();
+        return;
+      }
+      if (result is ServiceRequestFailure) {
+        await withWorkOrderAdmission(_paths.baseDir, () async {
+          final accepted = await _gateway.read(kAcceptedWorkOrderKey);
+          if (accepted == attemptId) {
+            await _clearServiceStall();
+            return;
+          }
+          final current = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
+          if (current?.attemptId == attemptId) {
+            await _gateway.remove(kWorkOrderKey);
+            await _gateway.remove(kTokenRecordKey);
+          }
+          if (_isPaused() || _suppressRestarts) {
+            await _clearStall();
+            return;
+          }
+          logger.e(
+            'Offline: foreground service failed to start: ${result.error}',
+          );
+          _retryBlocked = epoch == _recoveryEpoch;
+          final error = result.error.toString();
+          final reason =
+              error.contains(
+                'Time limit already exhausted for foreground service type dataSync',
+              )
+              ? 'budget'
+              : error.contains('ForegroundServiceStartNotAllowedException')
+              ? 'background'
+              : 'service';
+          await _ref.read(offlineDownloadsStalledProvider.notifier).set(reason);
+        });
+        await _refreshRestriction();
+      } else {
+        await _clearServiceStall();
+      }
+    } catch (error) {
+      logger.e('Offline: preparing download service failed: $error');
+      if (_isPaused() || _suppressRestarts) {
+        await _clearStall();
+      } else {
+        _retryBlocked = epoch == _recoveryEpoch;
+        await _ref
+            .read(offlineDownloadsStalledProvider.notifier)
+            .set('service');
+        await _refreshRestriction();
       }
     } finally {
+      if (force && _controlCount > 0) _handoffForce = true;
       _ensuring = false;
+      if (!_disposed &&
+          epoch != _recoveryEpoch &&
+          !_isPaused() &&
+          !_suppressRestarts) {
+        await ensureServiceRunning();
+      }
     }
   }
 
   /// The worker receives its endpoint in a launch-time work order. Restart it
   /// on a LAN/remote handover so queued page GETs never remain pinned to the
   /// address that just became unreachable.
-  Future<void> restartForEndpointChange() async {
-    if (!Platform.isAndroid || !await FlutterForegroundTask.isRunningService) {
-      return;
+  Future<void> restartForEndpointChange() => ensureServiceRunning(force: true);
+
+  Future<T> changeIdentity<T>(Future<T> Function() action) async {
+    if (Zone.current[_controlZone] == this) return action();
+    return _ref
+        .read(authCredentialsStoreProvider.notifier)
+        .withIdentityChange(() => _changeIdentityOwned(action));
+  }
+
+  Future<T> _changeIdentityOwned<T>(Future<T> Function() action) async {
+    if (!_isAndroid() ||
+        !_ref.read(offlineEnabledProvider) ||
+        Zone.current[_controlZone] == this) {
+      return action();
     }
+    final previous = _identityTail;
+    final finished = Completer<void>();
+    _identityTail = finished.future;
+    await previous;
     _suppressRestarts = true;
+    final state = CatchupStateStore(_ref.read(sharedPreferencesProvider));
     try {
-      await FlutterForegroundTask.stopService();
+      await state.setIdentityChanging(true);
+      await state.setIdentityAuthorized(false);
+      return await withOwnership(() async {
+        await withWorkOrderAdmission(_paths.baseDir, () async {
+          await _gateway.remove(kWorkOrderKey);
+          await _gateway.remove(kTokenRecordKey);
+        });
+        await withBackgroundScheduleLock(
+          state.clearState,
+          baseDir: _paths.baseDir,
+        );
+        await _clearStall();
+        final result = await action();
+        await state.setIdentityChanging(false);
+        _ref.invalidate(serverInstanceIdProvider);
+        return result;
+      });
     } finally {
-      _suppressRestarts = false;
+      try {
+        await state.setIdentityChanging(false);
+        await reconcileBackgroundSchedule();
+      } finally {
+        _suppressRestarts = false;
+        finished.complete();
+      }
     }
-    await ensureServiceRunning(force: true);
   }
 
   /// drift is queue authority: queued + (resumable) downloading chapters.
@@ -241,6 +542,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// outranks the park backoff outright; an automated pass only brings the next
   /// attempt forward, so a trigger that repeats can't defeat it.
   Future<void> requestStart({bool userInitiated = false}) {
+    if (userInitiated) {
+      _allowRecovery();
+      if (_controlCount > 0) _handoffForce = true;
+    }
     if (!userInitiated) _retrySooner();
     return ensureServiceRunning(force: userInitiated);
   }
@@ -258,30 +563,125 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// chapter and self-stop. Caller persists the flag first; the start gate in
   /// [ensureServiceRunning] then blocks restart until [resume].
   Future<void> pause() async {
-    if (!Platform.isAndroid) return;
-    if (await FlutterForegroundTask.isRunningService) {
+    if (!_isAndroid()) return;
+    await _clearStall();
+    await withWorkOrderAdmission(_paths.baseDir, () async {
+      final order = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
+      final accepted = await _gateway.read(kAcceptedWorkOrderKey);
+      if (order != null && order.attemptId != accepted) {
+        await _gateway.remove(kTokenRecordKey);
+      }
+      await _gateway.remove(kWorkOrderKey);
+    });
+    if (await _gateway.isRunningService) {
       // Graceful: the worker cancels + self-stops. Never main-side stopService
       // here — it would race the worker and could corrupt a half-written page.
-      FlutterForegroundTask.sendDataToTask({'op': 'pause'});
+      _pauseWorker();
+    }
+    await withOwnership(() async {});
+  }
+
+  Future<void> _publishQueue() {
+    _queuePublishPending = true;
+    return _queuePublishFlight ??= _flushQueue();
+  }
+
+  Future<void> _flushQueue() async {
+    try {
+      do {
+        _queuePublishPending = false;
+        if (_disposed) return;
+        try {
+          await _writeQueueSnapshot();
+        } catch (_) {
+          if (!_queuePublishPending) rethrow;
+        }
+      } while (_queuePublishPending);
+    } finally {
+      _queuePublishFlight = null;
     }
   }
 
+  Future<void> _writeQueueSnapshot() async {
+    if (_publishQueueOverride != null) return _publishQueueOverride();
+    if (!_isAndroid() || !_ref.read(offlineEnabledProvider)) return;
+    await writeCatchupWorkSpec(_ref.read);
+    await _ref.read(notificationsControllerProvider).sync();
+  }
+
+  Future<T> withOwnership<T>(Future<T> Function() action) async {
+    if (!_isAndroid() || Zone.current[_controlZone] == this) return action();
+    final lock = BackgroundDownloadLock(File('${_paths.baseDir}/.bg_lock'));
+    _controlCount++;
+    try {
+      var acquired = await lock.acquire('control');
+      if (!acquired) {
+        await lock.requestYield();
+        if (await _gateway.isRunningService) _pauseWorker();
+      }
+      for (var i = 0; !acquired && i < 300; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        acquired = await lock.acquire('control');
+        if (!acquired) await lock.requestYield();
+      }
+      if (!acquired) {
+        throw StateError('Downloads did not stop; action remains pending');
+      }
+      await _mutationTail;
+      return await runZoned(() async {
+        final result = await action();
+        await _publishQueue();
+        return result;
+      }, zoneValues: {_controlZone: this});
+    } finally {
+      await lock.release();
+      _controlCount--;
+      if (_controlCount == 0 &&
+          !_isPaused() &&
+          !_suppressRestarts &&
+          !_blocked) {
+        _scheduleHandoff();
+      }
+    }
+  }
+
+  void _pauseWorker() {
+    _yieldedService = true;
+    _gateway.send({'op': 'pause'});
+  }
+
+  void _scheduleHandoff({bool force = false}) {
+    if (_disposed || _isPaused() || _suppressRestarts || _blocked) return;
+    _handoffForce |= force;
+    _handoffTimer?.cancel();
+    _handoffTimer = _timer(const Duration(milliseconds: 500), () {
+      if (_ensuring || _controlCount > 0) {
+        _scheduleHandoff();
+        return;
+      }
+      final force = _handoffForce;
+      _handoffForce = false;
+      if (!_disposed) unawaited(ensureServiceRunning(force: force));
+    });
+  }
+
   /// Resume on-device downloads (caller has cleared the persisted flag first).
-  Future<void> resume() => ensureServiceRunning(force: true);
+  Future<void> resume() => requestStart(userInitiated: true);
 
   Future<void> stopAndClearWorkOrder() async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     _suppressRestarts = true;
     await pause();
-    if (await FlutterForegroundTask.isRunningService) {
-      await FlutterForegroundTask.stopService();
+    if (await _gateway.isRunningService) {
+      await _gateway.stop();
     }
     for (var i = 0; i < 20; i++) {
-      if (!await FlutterForegroundTask.isRunningService) break;
+      if (!await _gateway.isRunningService) break;
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
-    await FlutterForegroundTask.removeData(key: kWorkOrderKey);
-    await FlutterForegroundTask.removeData(key: kTokenRecordKey);
+    await _gateway.remove(kWorkOrderKey);
+    await _gateway.remove(kTokenRecordKey);
+    await CatchupStateStore(_ref.read(sharedPreferencesProvider)).clearState();
     final log = _log;
     if (await log.file.exists()) await log.file.delete();
   }
@@ -293,12 +693,18 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Tell the worker to drop a chapter (delete/cancel). The caller still does
   /// the actual drift/file delete; this only stops the in-flight download.
   Future<void> onRemoved(int chapterId) async {
-    if (!Platform.isAndroid) return;
-    if (await FlutterForegroundTask.isRunningService) {
-      FlutterForegroundTask.sendDataToTask({
-        'op': 'remove',
-        'chapterId': chapterId,
-      });
+    if (!_isAndroid()) return;
+    await withWorkOrderAdmission(_paths.baseDir, () async {
+      final raw = await _gateway.read(kWorkOrderKey);
+      if (raw == null) return;
+      final data = (jsonDecode(raw) as Map).cast<String, Object?>();
+      data['chapterIds'] = (data['chapterIds'] as List)
+          .where((id) => id != chapterId)
+          .toList();
+      await _gateway.write(kWorkOrderKey, jsonEncode(data));
+    });
+    if (await _gateway.isRunningService) {
+      _gateway.send({'op': 'remove', 'chapterId': chapterId});
     }
   }
 
@@ -306,22 +712,31 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// a stale entry from the previous generation can't complete the chapter
   /// after it's re-queued.
   Future<void> recordChapterDeleted(int chapterId, int newGeneration) async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     await _log.appendDeleted(chapterId, newGeneration);
   }
 
   /// Push a Wi-Fi-only setting change to the worker, and enforce it from the
   /// main side: if it's now on + we're metered, stop the running service.
   Future<void> onWifiOnlyChanged(bool value) async {
-    if (!Platform.isAndroid) return;
-    if (await FlutterForegroundTask.isRunningService) {
-      FlutterForegroundTask.sendDataToTask({
-        'op': 'setWifiOnly',
-        'value': value,
-      });
+    if (!_isAndroid()) return;
+    try {
+      await _publishQueue();
+    } catch (error) {
+      logger.e('Offline: publishing Wi-Fi policy failed: $error');
+    }
+    if (_isPaused() || (await _pendingChapters()).isEmpty) {
+      await _clearStall();
+      return;
+    }
+    final restricted = await _refreshRestriction();
+    if (await _gateway.isRunningService) {
+      _gateway.send({'op': 'setWifiOnly', 'value': value});
       if (value && await _isMetered()) {
-        await FlutterForegroundTask.stopService();
+        await _gateway.stop();
       }
+    } else if (!restricted) {
+      await requestStart();
     }
   }
 
@@ -331,7 +746,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     if (state == AppLifecycleState.resumed) {
       // Catch drift up from the durable log for live UI. No ownership change —
       // the worker still owns the queue.
@@ -342,18 +757,19 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   /// Replay the completion log into drift (live-UI catch-up on resume).
   Future<void> replayOnResume() async {
+    _allowRecovery();
+    _retrySooner();
     await _replay();
     // The FGS may have been killed while backgrounded (OOM, the dataSync time
     // cap, a swipe-away); restart if pending work remains — ensureServiceRunning
     // is idempotent/no-op if the worker's still alive.
-    final pending = await _pendingChapters();
-    if (pending.isNotEmpty) await ensureServiceRunning();
+    await ensureServiceRunning();
   }
 
   /// At launch: replay any log left by a previous run, then — if drift still has
   /// a non-empty queue — (re)start the service to finish it.
   Future<void> replayAtLaunchAndMaybeStart() async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     await _replay();
     await maybeStartAfterReplay();
   }
@@ -361,45 +777,30 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Replay only — split out so launch can order it BEFORE the reconcile pass
   /// (which must see post-replay device state), keeping the service start after.
   Future<void> replayAtLaunch() async {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     await _replay();
   }
 
   Future<void> maybeStartAfterReplay() async {
-    if (!Platform.isAndroid) return;
-    final pending = await _pendingChapters();
-    if (pending.isNotEmpty) await ensureServiceRunning();
+    if (!_isAndroid()) return;
+    _allowRecovery();
+    _retrySooner();
+    await ensureServiceRunning();
   }
 
-  Future<void> _replay() async {
-    // Replay parses then TRUNCATES — it must own the log. A running worker
-    // (FGS or WorkManager catch-up) is asked to yield and checkpoints within
-    // seconds; launch never waits out a multi-minute run.
-    final lock = BackgroundDownloadLock(File('${_paths.baseDir}/.bg_lock'));
-    var acquired = await lock.acquire('replay');
-    if (!acquired) {
-      await lock.requestYield();
-      for (var i = 0; i < 15 && !acquired; i++) {
-        await Future<void>.delayed(const Duration(seconds: 2));
-        acquired = await lock.acquire('replay');
-      }
-    }
-    if (!acquired) return; // contended past the wait — next launch replays
-    try {
-      await replayCompletionLog(
-        db: _db,
-        store: _store,
-        log: _log,
-        // Gates catch-up adoptions: a record from another server's catalog is
-        // refused (and its files cleaned up), never adopted across identities.
-        catalogServerId: _ref
-            .read(sharedPreferencesProvider)
-            .getString(DBKeys.offlineCatalogServerId.name),
-      );
-    } finally {
-      await lock.release();
-    }
-  }
+  Future<void> _replay() => withOwnership(() async {
+    await replayCompletionLog(
+      db: _db,
+      store: _store,
+      log: _log,
+      // Gates catch-up adoptions: a record from another server's catalog is
+      // refused (and its files cleaned up), never adopted across identities.
+      onTimeout: () => _recordTimeout(blockRetry: false),
+      catalogServerId: _ref
+          .read(sharedPreferencesProvider)
+          .getString(DBKeys.offlineCatalogServerId.name),
+    );
+  });
 
   // ---------------------------------------------------------------------------
   // Worker events + drain handshake (CRITICAL-1)
@@ -410,17 +811,29 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     // During a catalog clear the worker is being torn down; a page/chapter
     // event still queued in the SendPort would otherwise re-insert a row into
     // the just-wiped catalog — drop everything until the clear releases the flag.
-    if (_suppressRestarts) return;
+    if (_suppressRestarts || _controlCount > 0) return;
     switch (data['kind']) {
       // Live foreground UI only — mark downloading + accumulate page rows so
       // the progress arc animates; the durable record is the completion log,
       // replayed on resume.
+      case 'timedOut':
+        final occurred = DateTime.tryParse(data['at'] as String? ?? '');
+        unawaited(
+          _recordTimeout(
+            blockRetry:
+                occurred == null ||
+                _lastRecovery == null ||
+                occurred.isAfter(_lastRecovery!),
+          ),
+        );
       case 'chapterStart':
         unawaited(
-          _applyChapterStart(
-            data['chapterId'] as int,
-            data['total'] as int?,
-            data['gen'] as int? ?? 0,
+          _runMutation(
+            () => _applyChapterStart(
+              data['chapterId'] as int,
+              data['total'] as int?,
+              data['gen'] as int? ?? 0,
+            ),
           ),
         );
       case 'page':
@@ -436,21 +849,35 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           reason: data['reason'] as String?,
         );
       case 'lockFailed':
+        if (_controlCount == 0 && !_blocked && !_isPaused()) {
+          _armPark(_minParkBackoff);
+        }
         recordDiagnostic(
-          '[${DateTime.now().toIso8601String()}] offline-fgs: '
+          '[${_now().toIso8601String()}] offline-fgs: '
           'lock-acquire-failed — another party (likely the WorkManager '
           'catch-up executor) still holds .bg_lock; this run stopped without '
           'attempting any chapter\n',
         );
       case 'noWorkOrder':
         recordDiagnostic(
-          '[${DateTime.now().toIso8601String()}] offline-fgs: '
+          '[${_now().toIso8601String()}] offline-fgs: '
           'no-work-order starter=${data['starter']} — started with nothing '
           'to do and self-stopped instantly; a run of these with '
           'starter=system means Android itself is repeatedly restarting the '
           'service, not this app\'s own retry logic\n',
         );
     }
+  }
+
+  Future<void> _recordTimeout({required bool blockRetry}) async {
+    if (_isPaused() ||
+        _suppressRestarts ||
+        (await _pendingChapters()).isEmpty) {
+      return;
+    }
+    if (blockRetry) _retryBlocked = true;
+    await _ref.read(offlineDownloadsStalledProvider.notifier).set('budget');
+    await _refreshRestriction();
   }
 
   /// Consecutive parks attributed to one specific chapter — diagnostics only,
@@ -486,7 +913,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// status) — logged every time so a chapter that keeps parking can be
   /// diagnosed, not just seen to be "offline" with no further explanation.
   void _onParked({int? chapterId, int? mangaId, String? reason}) {
-    final ts = DateTime.now().toIso8601String();
+    final ts = _now().toIso8601String();
     if (chapterId != null) {
       final attempts = (_chapterParkAttempts[chapterId] ?? 0) + 1;
       _chapterParkAttempts[chapterId] = attempts;
@@ -498,13 +925,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       recordDiagnostic('[$ts] offline-fgs: parked (no chapter attributed)\n');
     }
 
-    if (_parkedUntil?.isAfter(DateTime.now()) ?? false) return;
+    if (_parkedUntil?.isAfter(_now()) ?? false) return;
     final delay = _nextBackoff();
     _armPark(delay);
     logger.i('Offline: server unreachable — downloads parked for $delay');
     // Lets the reconnect listener resume us as soon as anything else in the app
     // reaches the server, instead of waiting out the backoff.
     _ref.read(serverUnreachableProvider.notifier).set(true);
+    _ref.read(offlineDownloadRestrictionProvider.notifier).set('connection');
     // Only on the first park of a run: the service took its own notification
     // with it when it stopped, so without this the queue just goes quiet.
     if (delay == _minParkBackoff) unawaited(_notifyPaused(_PauseReason.server));
@@ -522,9 +950,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     // before the park would otherwise finish, see its captured epoch as
     // current, and clear a park armed while it was running.
     _parkEpoch++;
-    _parkedUntil = DateTime.now().add(delay);
+    _parkedUntil = _now().add(delay);
     _parkTimer?.cancel();
-    _parkTimer = Timer(delay, () => unawaited(_onParkExpired()));
+    _parkTimer = _timer(delay, () => unawaited(_onParkExpired()));
   }
 
   Future<void> _onParkExpired() async {
@@ -533,8 +961,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     // The start can decline — Android refusing the service, Wi-Fi-only holding
     // it back — and the deadline is gone by then, so without re-arming here the
     // queue would sit with nothing left to wake it.
-    if (_parkedUntil != null) return;
-    if (await FlutterForegroundTask.isRunningService) return;
+    if (_parkedUntil != null || _blocked || _isPaused() || _suppressRestarts) {
+      return;
+    }
+    if (await _gateway.isRunningService) return;
     if ((await _pendingChapters()).isEmpty) return;
     _armPark(_nextBackoff());
   }
@@ -552,7 +982,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   void _retrySooner() {
     final until = _parkedUntil;
     if (until == null) return;
-    if (until.difference(DateTime.now()) > _minParkBackoff) {
+    if (until.difference(_now()) > _minParkBackoff) {
       _armPark(_minParkBackoff);
     }
   }
@@ -599,7 +1029,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// restart if work remains.
   Future<void> _onDrained() async {
     for (var i = 0; i < 20; i++) {
-      if (!await FlutterForegroundTask.isRunningService) break;
+      if (!await _gateway.isRunningService) break;
       await Future<void>.delayed(const Duration(milliseconds: 150));
     }
     final pending = await _pendingChapters();
@@ -651,28 +1081,35 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   /// Says why the queue stopped: the service owns the download notification,
   /// so stopping it takes the only on-screen explanation with it.
-  Future<void> _notifyPaused(_PauseReason reason) async {
-    if (!_ref.read(notificationsDownloadsEnabledProvider).ifNull(true)) return;
-    try {
-      final locales = WidgetsBinding.instance.platformDispatcher.locales;
-      final l10n = lookupAppLocalizations(
-        locales.isNotEmpty ? locales.first : const Locale('en'),
-      );
-      final service = LocalNotificationService();
-      await service.init();
-      await service.showDownloadError(
-        l10n.notificationDownloadsPausedTitle,
-        switch (reason) {
-          _PauseReason.wifi => l10n.notificationDownloadsPausedWifi,
-          _PauseReason.server => l10n.notificationDownloadsPausedNoServer,
-        },
-      );
-    } catch (_) {
-      // Best-effort — a missed notification is not data loss.
-    }
+  Future<void> _notifyPaused(_PauseReason reason) =>
+      _publishStall(reason == _PauseReason.wifi ? 'wifi' : 'connection');
+
+  Future<void> _runMutation(Future<void> Function() action) {
+    final operation = _mutationTail.then((_) => action());
+    _mutationTail = operation.then(
+      (_) {},
+      onError: (Object error, StackTrace stack) {
+        logger.e(
+          'Offline: applying worker result failed',
+          error: error,
+          stackTrace: stack,
+        );
+      },
+    );
+    return operation;
   }
 
   Future<void> _onChapterDone(Map data) async {
+    await _runMutation(() => _applyChapterDone(data));
+    // Drain handshake: if the worker just self-stopped, do post-stop
+    // reconciliation + a drift requery in case work was enqueued during the
+    // async stop window (CRITICAL-1).
+    if (!await _gateway.isRunningService) {
+      await _onServiceStopped();
+    }
+  }
+
+  Future<void> _applyChapterDone(Map data) async {
     final chapterId = data['chapterId'] as int?;
     final status = data['status'] as String?;
     // Ahead of the awaits below: this event races the worker's `parked` message,
@@ -698,14 +1135,17 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       // staging directory into place and writes the rows for it.
       if (status == 'downloaded') {
         final ch = await _db.chapterById(chapterId);
-        final result = ch == null
-            ? ChapterCommitResult.refused
-            : await commitStagedChapter(
-                db: _db,
-                store: _store,
-                mangaId: ch.mangaId,
-                chapterId: chapterId,
-              );
+        if (ch == null ||
+            ch.deviceState == OfflineDeviceState.none ||
+            (data['gen'] as int? ?? 0) != ch.downloadGeneration) {
+          return;
+        }
+        final result = await commitStagedChapter(
+          db: _db,
+          store: _store,
+          mangaId: ch.mangaId,
+          chapterId: chapterId,
+        );
         // The worker saying "done" isn't the same as the chapter landing: a
         // stale event, a delete, or short staging all end here without
         // publishing anything, and counting those would have the completion
@@ -734,19 +1174,23 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           // → infinite phantom-download loop. Fix: reset to `queued` so it
           // re-downloads from scratch, or mark `error` after _maxCommitFailures
           // consecutive failures so it leaves the queue entirely.
-          if (ch != null &&
-              ch.deviceState != OfflineDeviceState.none &&
+          if (ch.deviceState != OfflineDeviceState.none &&
               result != ChapterCommitResult.refused) {
             final attempts = (_commitFailures[chapterId] ?? 0) + 1;
             _commitFailures[chapterId] = attempts;
             if (attempts >= _maxCommitFailures) {
               _commitFailures.remove(chapterId);
               await _db.setChapterDeviceState(
-                  chapterId, OfflineDeviceState.error);
+                chapterId,
+                OfflineDeviceState.error,
+              );
               _sessionFailed++;
             } else {
               await _db.setChapterDeviceState(
-                  chapterId, OfflineDeviceState.queued, bytes: 0);
+                chapterId,
+                OfflineDeviceState.queued,
+                bytes: 0,
+              );
             }
           }
         }
@@ -760,51 +1204,79 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         if (status == 'error') _sessionFailed++;
       }
     }
-
-    // Drain handshake: if the worker just self-stopped, do post-stop
-    // reconciliation + a drift requery in case work was enqueued during the
-    // async stop window (CRITICAL-1).
-    if (!await FlutterForegroundTask.isRunningService) {
-      await _onServiceStopped();
-    }
   }
 
   Future<void> _onServiceStopped() async {
     await _replay(); // final log replay → drift
     await _wipeWorkOrderAuth();
     // Anything queued during the async stop? Restart to pick it up.
-    final pending = await _pendingChapters();
-    if (pending.isNotEmpty) await ensureServiceRunning();
+    await ensureServiceRunning();
   }
 
   // ---------------------------------------------------------------------------
   // Work order + auth snapshot / write-back
   // ---------------------------------------------------------------------------
 
-  Future<void> _writeWorkOrder(List<OfflineChapter> pending) async {
-    final auth = _snapshotAuth();
-    final order = BackgroundWorkOrder(
-      chapterIds: [for (final c in pending) c.id],
-      mangaIdByChapter: {for (final c in pending) c.id: c.mangaId},
-      generationByChapter: {for (final c in pending) c.id: _genOf(c)},
-      serverBase: _ref.read(serverUrlProvider) ?? '',
-      port: _ref.read(serverPortProvider),
-      addPort: _ref.read(serverPortToggleProvider).ifNull(),
-      wifiOnly: _ref.read(offlineWifiOnlyProvider) ?? true,
-      auth: auth,
-      baseDir: _paths.baseDir,
+  Future<String?> _writeWorkOrder() async {
+    final ownership = BackgroundDownloadLock(
+      File('${_paths.baseDir}/.bg_lock'),
     );
-    await FlutterForegroundTask.saveData(
-      key: kWorkOrderKey,
-      value: jsonEncode(order.toJson()),
-    );
-    // Seed the shared token record so the worker's broker reads/writes the same
-    // gen-versioned record we'll read back on stop.
-    await FlutterForegroundTask.saveData(
-      key: kTokenRecordKey,
-      value: jsonEncode(auth.toJson()),
-    );
+    if (!await ownership.acquire('publish-service')) {
+      await ownership.requestYield();
+      if (_controlCount == 0 && !_blocked && !_isPaused()) {
+        _armPark(_minParkBackoff);
+      }
+      return null;
+    }
+    try {
+      await _wipeWorkOrderAuth();
+      return await withWorkOrderAdmission(_paths.baseDir, () async {
+        final pending = await _pendingChapters();
+        if (_isPaused() || _suppressRestarts || pending.isEmpty) return null;
+        final attemptId = "${_now().microsecondsSinceEpoch}-$_recoveryEpoch";
+        final auth = _snapshotAuth();
+        final order = BackgroundWorkOrder(
+          attemptId: attemptId,
+          chapterIds: [for (final c in pending) c.id],
+          mangaIdByChapter: {for (final c in pending) c.id: c.mangaId},
+          generationByChapter: {for (final c in pending) c.id: _genOf(c)},
+          identityEpoch: CatchupStateStore(
+            _ref.read(sharedPreferencesProvider),
+          ).identityEpoch,
+          catalogServerId: _ref
+              .read(sharedPreferencesProvider)
+              .getString(DBKeys.offlineCatalogServerId.name),
+          serverBase: _ref.read(serverUrlProvider) ?? '',
+          port: _ref.read(serverPortProvider),
+          addPort: _ref.read(serverPortToggleProvider).ifNull(),
+          wifiOnly: _ref.read(offlineWifiOnlyProvider) ?? true,
+          auth: auth,
+          baseDir: _paths.baseDir,
+        );
+        await _gateway.remove(kAcceptedWorkOrderKey);
+        try {
+          await _gateway.write(kTokenRecordKey, jsonEncode(auth.toJson()));
+          await _gateway.write(kWorkOrderKey, jsonEncode(order.toJson()));
+        } catch (_) {
+          await _gateway.remove(kTokenRecordKey);
+          await _gateway.remove(kWorkOrderKey);
+          rethrow;
+        }
+        return attemptId;
+      });
+    } finally {
+      await ownership.release();
+    }
   }
+
+  Future<void> _invalidateAttempt(String attemptId) =>
+      withWorkOrderAdmission(_paths.baseDir, () async {
+        final current = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
+        if (current?.attemptId != attemptId) return;
+        if (await _gateway.read(kAcceptedWorkOrderKey) == attemptId) return;
+        await _gateway.remove(kWorkOrderKey);
+        await _gateway.remove(kTokenRecordKey);
+      });
 
   /// Snapshot the current auth into the cross-isolate record. The worker uses
   /// only the fields relevant to the active auth type.
@@ -836,61 +1308,59 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// After the worker stops, copy any rotated ui_login tokens back into
   /// [AuthCredentialsStore], then clear the FFT auth keys so a stale snapshot
   /// doesn't linger in plugin storage.
-  Future<void> _wipeWorkOrderAuth() async {
-    final raw = await FlutterForegroundTask.getData<String>(
-      key: kTokenRecordKey,
-    );
-    if (raw != null) {
-      try {
-        final record = BackgroundTokenRecord.fromJson(
-          jsonDecode(raw) as Map<String, Object?>,
-        );
-        // gen > 0 means the worker rotated the token at least once. Endpoint
-        // check skips writeback if the user switched servers meanwhile.
-        if (record.gen > 0 &&
-            record.authType == 'uiLogin' &&
-            record.accessToken != null &&
-            record.endpoint == _effectiveEndpoint()) {
-          final store = _ref.read(authCredentialsStoreProvider.notifier);
-          // Epoch guard covers a switch landing during the writeback itself.
-          final epoch = store.serverEpoch;
-          if (record.refreshToken != null) {
-            await store.saveUiLoginTokens(
-              accessToken: record.accessToken!,
-              refreshToken: record.refreshToken!,
-              forEpoch: epoch,
-            );
-          } else {
-            await store.updateUiLoginAccessToken(
-              record.accessToken!,
-              forEpoch: epoch,
-            );
+  Future<void> _wipeWorkOrderAuth() => withWorkOrderAdmission(
+    _paths.baseDir,
+    () async {
+      if (await _gateway.isRunningService) return;
+      final order = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
+      final accepted = await _gateway.read(kAcceptedWorkOrderKey);
+      if (order != null && order.attemptId != accepted) return;
+      final raw = await _gateway.read(kTokenRecordKey);
+      if (raw != null) {
+        try {
+          final record = BackgroundTokenRecord.fromJson(
+            jsonDecode(raw) as Map<String, Object?>,
+          );
+          // gen > 0 means the worker rotated the token at least once. Endpoint
+          // check skips writeback if the user switched servers meanwhile.
+          if (record.gen > 0 &&
+              record.authType == 'uiLogin' &&
+              record.accessToken != null &&
+              record.endpoint == _effectiveEndpoint()) {
+            final store = _ref.read(authCredentialsStoreProvider.notifier);
+            // Epoch guard covers a switch landing during the writeback itself.
+            final epoch = store.serverEpoch;
+            if (record.refreshToken != null) {
+              await store.saveUiLoginTokens(
+                accessToken: record.accessToken!,
+                refreshToken: record.refreshToken!,
+                forEpoch: epoch,
+              );
+            } else {
+              await store.updateUiLoginAccessToken(
+                record.accessToken!,
+                forEpoch: epoch,
+              );
+            }
           }
+        } catch (e) {
+          logger.e('Offline: failed to read back worker token record: $e');
         }
-      } catch (e) {
-        logger.e('Offline: failed to read back worker token record: $e');
       }
-    }
-    await FlutterForegroundTask.removeData(key: kTokenRecordKey);
-    await FlutterForegroundTask.removeData(key: kWorkOrderKey);
-  }
+      await _gateway.remove(kTokenRecordKey);
+      await _gateway.remove(kWorkOrderKey);
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // Wi-Fi-only main-side enforcement
   // ---------------------------------------------------------------------------
 
-  /// True when Wi-Fi-only is set AND the active connection is metered — the
-  /// condition under which we won't start the service.
-  Future<bool> _wifiOnlyBlocks() async {
-    if (!(_ref.read(offlineWifiOnlyProvider) ?? true)) return false;
-    return _isMetered();
-  }
-
   /// True when the active connection is metered (no Wi-Fi/ethernet).
   /// `connectivity_plus` returns a list; empty/none is treated as metered-ish
   /// so a wifi-only batch doesn't start.
   Future<bool> _isMetered() async {
-    final result = await Connectivity().checkConnectivity();
+    final result = await _connectivity();
     final hasUnmetered =
         result.contains(ConnectivityResult.wifi) ||
         result.contains(ConnectivityResult.ethernet);
@@ -903,7 +1373,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// LIMITATION: a switch entirely while backgrounded isn't caught here — only
   /// reconciled on the next foreground/launch.
   void _onConnectivityChanged(List<ConnectivityResult> result) {
-    if (!Platform.isAndroid) return;
+    if (!_isAndroid()) return;
     final wifiOnly = _ref.read(offlineWifiOnlyProvider) ?? true;
     final hasUnmetered =
         result.contains(ConnectivityResult.wifi) ||
@@ -911,14 +1381,23 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     final hasConnection =
         result.any((r) => r != ConnectivityResult.none) && result.isNotEmpty;
     unawaited(() async {
-      if (wifiOnly && !hasUnmetered) {
+      if (_isPaused()) {
+        await _clearStall();
+        return;
+      }
+      if ((await _pendingChapters()).isEmpty) {
+        await _clearStall();
+        return;
+      }
+      await _refreshRestriction();
+      if (hasConnection && wifiOnly && !hasUnmetered) {
         // Wi-Fi-only and dropped to metered: stop the running service (chapters
         // stay `downloading` and resume on Wi-Fi).
-        if (await FlutterForegroundTask.isRunningService) {
+        if (await _gateway.isRunningService) {
           logger.i(
             'Offline: dropped to metered with Wi-Fi-only — stopping FGS',
           );
-          await FlutterForegroundTask.stopService();
+          await _gateway.stop();
           await _notifyPaused(_PauseReason.wifi);
         }
         return;
@@ -926,13 +1405,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       // Only the Wi-Fi-only case used to stop the service, so with that off
       // the worker kept running against a network that was gone.
       if (!hasConnection) {
-        if (await FlutterForegroundTask.isRunningService) {
+        if (await _gateway.isRunningService) {
           logger.i('Offline: no connection — stopping FGS');
           // Before the stop: the cancelled chapter's terminal event runs the
           // restart handshake, which would put a fresh worker straight back on
           // a network that isn't there.
           _armPark(_nextBackoff());
-          await FlutterForegroundTask.stopService();
+          await _gateway.stop();
           await _notifyPaused(_PauseReason.server);
         }
         return;
@@ -954,15 +1433,6 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Request POST_NOTIFICATIONS (Android 13+) before starting the service —
   /// `startService` fails without it. Best-effort: a denial is only logged,
   /// and the start still proceeds.
-  Future<void> _ensureNotificationPermission() async {
-    final current = await FlutterForegroundTask.checkNotificationPermission();
-    if (current == NotificationPermission.granted) return;
-    final result = await FlutterForegroundTask.requestNotificationPermission();
-    if (result != NotificationPermission.granted) {
-      logger.i('Offline: notification permission not granted ($result)');
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // TokenBroker adapter (main side)
   // ---------------------------------------------------------------------------
@@ -974,9 +1444,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     required Future<RefreshAttempt> Function(String refreshToken) refreshFn,
   }) => TokenBroker(
     read: () async {
-      final raw = await FlutterForegroundTask.getData<String>(
-        key: kTokenRecordKey,
-      );
+      final raw = await _gateway.read(kTokenRecordKey);
       if (raw != null) {
         return BackgroundTokenRecord.fromJson(
           jsonDecode(raw) as Map<String, Object?>,
@@ -984,10 +1452,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       }
       return _snapshotAuth();
     },
-    write: (r) => FlutterForegroundTask.saveData(
-      key: kTokenRecordKey,
-      value: jsonEncode(r.toJson()),
-    ),
+    write: (r) => _gateway.write(kTokenRecordKey, jsonEncode(r.toJson())),
     refreshFn: refreshFn,
   );
 }

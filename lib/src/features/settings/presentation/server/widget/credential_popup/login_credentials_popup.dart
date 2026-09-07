@@ -19,6 +19,7 @@ import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../client/server_port_tile/server_port_tile.dart';
 import '../client/server_url_tile/server_url_tile.dart';
 
@@ -76,8 +77,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     }
 
     String resolveBaseUrl() {
-      final baseUrl =
-          ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
+      final baseUrl = ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
       return Endpoints.baseApi(
         baseUrl: baseUrl,
         port: ref.read(serverPortProvider),
@@ -129,26 +129,30 @@ class LoginCredentialsPopup extends HookConsumerWidget {
           testing.value = false;
           return;
         }
-        ref.read(authUsernameProvider.notifier).update(username.text);
-        final store = ref.read(authCredentialsStoreProvider.notifier);
-        final coordinator = ref.read(authCoordinatorProvider.notifier);
-        if (authType == AuthType.simpleLogin) {
-          await store.clearUiLoginTokens();
-          await store.clearBasicCredentials();
-          await coordinator.loginSimple(
-            serverBaseUrl: resolvedUrl,
-            username: username.text,
-            password: password.text,
-          );
-        } else if (authType == AuthType.uiLogin) {
-          await store.clearSimpleLoginCookie();
-          await store.clearBasicCredentials();
-          await coordinator.loginUi(
-            gqlClient: ref.read(graphQlClientProvider),
-            username: username.text,
-            password: password.text,
-          );
-        }
+        await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+          () async {
+            ref.read(authUsernameProvider.notifier).update(username.text);
+            final store = ref.read(authCredentialsStoreProvider.notifier);
+            final coordinator = ref.read(authCoordinatorProvider.notifier);
+            if (authType == AuthType.simpleLogin) {
+              await store.clearUiLoginTokens();
+              await store.clearBasicCredentials();
+              await coordinator.loginSimple(
+                serverBaseUrl: resolvedUrl,
+                username: username.text,
+                password: password.text,
+              );
+            } else if (authType == AuthType.uiLogin) {
+              await store.clearSimpleLoginCookie();
+              await store.clearBasicCredentials();
+              await coordinator.loginUi(
+                gqlClient: ref.read(graphQlClientProvider),
+                username: username.text,
+                password: password.text,
+              );
+            }
+          },
+        );
         if (context.mounted) Navigator.pop(context);
       } catch (e) {
         if (!context.mounted) return;
@@ -193,16 +197,16 @@ class LoginCredentialsPopup extends HookConsumerWidget {
             Text(
               context.l10n.authReverseProxyHelp,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).hintColor,
-                  ),
+                color: Theme.of(context).hintColor,
+              ),
             ),
             if (authType == AuthType.uiLogin) ...[
               const Gap(8),
               Text(
                 context.l10n.authImageUrlLogWarning,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).hintColor,
-                    ),
+                  color: Theme.of(context).hintColor,
+                ),
               ),
             ],
             if (testResult.value != null) ...[

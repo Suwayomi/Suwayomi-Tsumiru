@@ -20,6 +20,85 @@ void main() {
     return CatchupStateStore(await SharedPreferences.getInstance());
   }
 
+  test(
+    'failed chapter ids round-trip and legacy manga specs default empty',
+    () {
+      const spec = CatchupMangaSpec(
+        mangaId: 1,
+        keepRule: OfflineKeepRule.all,
+        keepUnreadCount: 3,
+        onDeviceChapterIds: {},
+        pinnedChapterIds: {},
+        failedChapterIds: {5, 7},
+      );
+      final restored = CatchupMangaSpec.fromJson(
+        jsonDecode(jsonEncode(spec.toJson())) as Map<String, Object?>,
+      );
+      expect(restored.failedChapterIds, {5, 7});
+      expect(
+        CatchupMangaSpec.fromJson({'mangaId': 1}).failedChapterIds,
+        isEmpty,
+      );
+    },
+  );
+
+  test('queued chapters round-trip with generation-specific keys', () async {
+    final s = await store();
+    await s.writeSpec(
+      const CatchupWorkSpec(
+        serverId: 'srv-1',
+        wifiOnly: true,
+        storageCapEnabled: false,
+        storageCapBytes: 0,
+        manga: [],
+        queuedChapters: [
+          QueuedChapterSpec(chapterId: 42, mangaId: 7, generation: 2),
+          QueuedChapterSpec(chapterId: 42, mangaId: 7, generation: 3),
+        ],
+      ),
+    );
+    final queued = s.readSpec()!.queuedChapters;
+    expect(queued.map((chapter) => chapter.key), ['42:2', '42:3']);
+    expect(queued.first.chapterId, 42);
+    expect(queued.first.mangaId, 7);
+    expect(queued.first.generation, 2);
+  });
+
+  test('legacy specs and ledgers default queued work to empty', () {
+    final spec = CatchupWorkSpec.fromJson({'serverId': 'srv-1'});
+    final ledger = CatchupLedger.fromJson({});
+    expect(spec.queuedChapters, isEmpty);
+    expect(ledger.queuedServerRetries, isEmpty);
+    expect(ledger.queuedDownloadRetries, isEmpty);
+  });
+
+  test('queued retries round-trip independently for each generation', () async {
+    final s = await store();
+    const ledger = CatchupLedger(
+      queuedServerRetries: {'42:2': 3},
+      queuedDownloadRetries: {'42:2': 1, '42:3': 0},
+    );
+    await s.writeLedger('srv-1', ledger.copyWith());
+    final restored = s.readLedger('srv-1');
+    expect(restored.queuedServerRetries, {'42:2': 3});
+    expect(restored.queuedDownloadRetries, {'42:2': 1, '42:3': 0});
+    final updated = restored.copyWith(
+      queuedServerRetries: {'42:3': 1},
+      queuedDownloadRetries: {'42:3': 2},
+    );
+    expect(updated.queuedServerRetries, {'42:3': 1});
+    expect(updated.queuedDownloadRetries, {'42:3': 2});
+  });
+
+  test('paused reads the persisted offline pause setting', () async {
+    final s = await store();
+    expect(s.paused, isFalse);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('offlineDownloadsPaused', true);
+    await s.reload();
+    expect(s.paused, isTrue);
+  });
+
   test('spec round-trips through the store', () async {
     final s = await store();
     await s.writeSpec(
@@ -102,8 +181,7 @@ void main() {
     expect(s.readLedger('srv-2').backfilledMangaIds, isEmpty);
   });
 
-  test(
-      'catalogServerId reads the offline catalog key, not a made-up '
+  test('catalogServerId reads the offline catalog key, not a made-up '
       'namespace the executor could mismatch against', () async {
     SharedPreferences.setMockInitialValues({
       'offlineCatalogServerId': 'catalog-uuid-123',
@@ -112,11 +190,13 @@ void main() {
     expect(s.catalogServerId, 'catalog-uuid-123');
   });
 
-  test('catalogServerId is null when the offline catalog was never set up',
-      () async {
-    final s = await store();
-    expect(s.catalogServerId, isNull);
-  });
+  test(
+    'catalogServerId is null when the offline catalog was never set up',
+    () async {
+      final s = await store();
+      expect(s.catalogServerId, isNull);
+    },
+  );
 
   test('clearState drops spec and ledger but keeps the user toggle', () async {
     final s = await store();
@@ -138,11 +218,13 @@ void main() {
     expect(s.enabled, isTrue);
   });
 
-  test('downloadEnabled defaults to true, matching pre-toggle behavior',
-      () async {
-    final s = await store();
-    expect(s.downloadEnabled, isTrue);
-  });
+  test(
+    'downloadEnabled defaults to true, matching pre-toggle behavior',
+    () async {
+      final s = await store();
+      expect(s.downloadEnabled, isTrue);
+    },
+  );
 
   test('downloadEnabled round-trips and survives clearState', () async {
     final s = await store();

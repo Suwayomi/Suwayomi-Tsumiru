@@ -584,10 +584,10 @@ Future<void> _seedTestConfig(ProviderContainer container) async {
   const user = String.fromEnvironment('TEST_USER');
   const pass = String.fromEnvironment('TEST_PASS');
 
-  container.read(serverExternalUrlProvider.notifier).update(url);
+  await container.read(serverExternalUrlProvider.notifier).update(url);
   if (url.startsWith('https')) {
     // Reverse-proxied https servers need no extra port appended.
-    container.read(serverPortToggleProvider.notifier).update(false);
+    await container.read(serverPortToggleProvider.notifier).update(false);
   }
   container.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);
   if (user.isNotEmpty) {

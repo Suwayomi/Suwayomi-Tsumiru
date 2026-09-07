@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:battery_plus/battery_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -18,6 +20,9 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../offline/data/background/background_chapter_fetch.dart';
+import '../../../offline/data/background/background_download_lock.dart';
+import '../../../offline/data/background/background_schedule.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
@@ -73,30 +78,50 @@ Future<bool> runNewChapterCheck() async {
     broker: _brokerFor(store, config.endpoint),
   );
 
+  final network = await Connectivity().checkConnectivity();
+  final unmetered =
+      network.contains(ConnectivityResult.wifi) ||
+      network.contains(ConnectivityResult.ethernet);
+  var notificationPolicy = !config.wifiOnly || unmetered;
+  if (notificationPolicy && config.chargingOnly) {
+    try {
+      final battery = await Battery().batteryState;
+      notificationPolicy =
+          battery == BatteryState.charging || battery == BatteryState.full;
+    } catch (_) {
+      notificationPolicy = false;
+    }
+  }
   var ok = true;
-  if (config.newChaptersEnabled) {
+  if (notificationPolicy && config.newChaptersEnabled) {
     ok = await _runNewChapters(store, config, client, notifier, l10n);
   }
   // Background download step — own cursor, keep-rule scope, no category
   // filter. Resolution records the obligations; the executor then downloads
   // as many as the run's budget allows — unless the user only wants
   // detection in the background and prefers to fetch files in the foreground.
-  if (catchupStore.enabled) {
+  if (catchupStore.enabled &&
+      !catchupStore.paused &&
+      catchupStore.matchesIdentity(config) &&
+      (!(catchupStore.readSpec()?.wifiOnly ?? true) || unmetered)) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
-    if (catchupStore.downloadEnabled) {
-      ok = await runCatchupDownloads(
-            catchupStore: catchupStore,
-            config: config,
-            record: client.currentRecord,
-            broker: client.broker,
-          ) &&
-          ok;
-    }
   }
-  if (config.appUpdatesEnabled) {
+  if (!catchupStore.paused &&
+      ((catchupStore.enabled && catchupStore.downloadEnabled) ||
+          (catchupStore.readSpec()?.queuedChapters.isNotEmpty ?? false))) {
+    ok =
+        await runCatchupDownloads(
+          catchupStore: catchupStore,
+          config: config,
+          record: client.currentRecord,
+          broker: client.broker,
+        ) &&
+        ok;
+  }
+  if (notificationPolicy && config.appUpdatesEnabled) {
     await _checkAppUpdate(store, config, client, notifier, l10n);
   }
-  if (config.extensionUpdatesEnabled) {
+  if (notificationPolicy && config.extensionUpdatesEnabled) {
     await _checkExtensionUpdates(store, client, notifier, l10n);
   }
   recordDiagnostic(
@@ -172,19 +197,25 @@ Future<bool> _runNewChapters(
   if (watermark.fetchedAt == 0 && watermark.recent.isEmpty) {
     final maxFetched = await client.serverMaxFetchedAt();
     await store.writeWatermark(
-        config.serverId, NewChapterWatermark(fetchedAt: maxFetched));
+      config.serverId,
+      NewChapterWatermark(fetchedAt: maxFetched),
+    );
     return true;
   }
 
   // 2. Paginate the overlap window to exhaustion.
-  final gte =
-      (watermark.fetchedAt - kDefaultOverlapMs).clamp(0, watermark.fetchedAt);
+  final gte = (watermark.fetchedAt - kDefaultOverlapMs).clamp(
+    0,
+    watermark.fetchedAt,
+  );
   final all = <NotifChapter>[];
   final mangaCategories = <int, Set<int>>{};
   String? after;
   while (true) {
-    final page =
-        await client.fetchNewChaptersPage(fetchedAtGte: '$gte', after: after);
+    final page = await client.fetchNewChaptersPage(
+      fetchedAtGte: '$gte',
+      after: after,
+    );
     if (page == null) return false; // transient — retry next wake
     all.addAll(page.nodes);
     for (final n in page.nodes) {
@@ -202,7 +233,7 @@ Future<bool> _runNewChapters(
           id: n.id,
           mangaId: n.mangaId,
           chapterNumber: n.chapterNumber,
-          fetchedAt: n.fetchedAt
+          fetchedAt: n.fetchedAt,
         ),
     ],
     watermark: watermark,
@@ -216,11 +247,10 @@ Future<bool> _runNewChapters(
 
   // 4. Durable outbox BEFORE publishing.
   final byId = {for (final n in all) n.id: n};
-  final pending = [
-    for (final g in result.groups) _toPending(g, byId),
-  ];
+  final pending = [for (final g in result.groups) _toPending(g, byId)];
   await store.writeOutbox(
-      NotificationOutbox(pending: pending, nextWatermark: result.watermark));
+    NotificationOutbox(pending: pending, nextWatermark: result.watermark),
+  );
 
   // 5. Publish, then mark delivered (advance cursor + clear outbox).
   await _publish(notifier, client, l10n, config, pending);
@@ -238,72 +268,105 @@ Future<bool> _runDownloadResolution(
   NotificationWorkerConfig config,
   NotificationBackgroundClient client,
 ) async {
-  final spec = catchupStore.readSpec();
-  if (spec == null || spec.manga.isEmpty) return true;
-  // The worker must not outlive its world: after a server switch the spec is
-  // dead until the foreground rewrites it.
-  if (spec.serverId != config.serverId) return true;
+  final support = await getApplicationSupportDirectory();
+  final lock = BackgroundDownloadLock(File('${support.path}/offline/.bg_lock'));
+  if (!await lock.acquire('resolve')) return true;
+  try {
+    await catchupStore.reload();
+    if (catchupStore.paused || !catchupStore.matchesIdentity(config)) {
+      return true;
+    }
+    final spec = catchupStore.readSpec();
+    if (spec == null || spec.manga.isEmpty) return true;
+    // The worker must not outlive its world: after a server switch the spec is
+    // dead until the foreground rewrites it.
+    if (spec.serverId != catchupStore.catalogServerId) return true;
 
-  var ledger = catchupStore.readLedger(config.serverId);
+    if (!await verifyBackgroundServerIdentity(
+      target: BackgroundServerTarget(
+        serverBase: config.endpoint.baseUrl,
+        port: config.endpoint.port,
+        addPort: config.endpoint.addPort,
+      ),
+      record: client.currentRecord,
+      broker: client.broker,
+      expected: spec.serverId,
+    ).timeout(const Duration(seconds: 10), onTimeout: () => false)) {
+      return true;
+    }
 
-  // First enable: seed to now. The toggle does not backfill history — the
-  // foreground launch pass owns the backlog.
-  if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
-    final maxFetched = await client.serverMaxFetchedAt();
+    var ledger = catchupStore.readLedger(spec.serverId);
+
+    // First enable: seed to now. The toggle does not backfill history — the
+    // foreground launch pass owns the backlog.
+    if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
+      final maxFetched = await client.serverMaxFetchedAt();
+      if (await lock.yieldRequested()) return true;
+      await catchupStore.writeLedger(
+        spec.serverId,
+        ledger.copyWith(cursor: NewChapterWatermark(fetchedAt: maxFetched)),
+      );
+      return true;
+    }
+
+    final gte = (ledger.cursor.fetchedAt - kDefaultOverlapMs).clamp(
+      0,
+      ledger.cursor.fetchedAt,
+    );
+    final all = <NotifChapter>[];
+    String? after;
+    while (true) {
+      if (await lock.yieldRequested()) return true;
+      final page = await client.fetchNewChaptersPage(
+        fetchedAtGte: '$gte',
+        after: after,
+      );
+      if (page == null) return false; // transient — retry next wake
+      all.addAll(page.nodes);
+      if (!page.hasNextPage || page.endCursor == null) break;
+      after = page.endCursor;
+    }
+
+    final result = detectNewChapters(
+      candidates: [
+        for (final n in all)
+          (
+            id: n.id,
+            mangaId: n.mangaId,
+            chapterNumber: n.chapterNumber,
+            fetchedAt: n.fetchedAt,
+          ),
+      ],
+      watermark: ledger.cursor,
+      allowedMangaIds: spec.keepRuleMangaIds,
+    );
+
+    // Obligations and the advanced cursor land in ONE atomic write: the cursor
+    // may only move once every detected chapter is owed somewhere.
+    final pendingDownloads = {...ledger.pendingDownloads};
+    for (final group in result.groups) {
+      for (final c in group.chapters) {
+        pendingDownloads[c.id] = group.mangaId;
+      }
+    }
+    if (await lock.yieldRequested()) return true;
     await catchupStore.writeLedger(
-      config.serverId,
-      ledger.copyWith(cursor: NewChapterWatermark(fetchedAt: maxFetched)),
+      spec.serverId,
+      ledger.copyWith(
+        cursor: result.watermark,
+        pendingDownloads: pendingDownloads,
+      ),
     );
     return true;
+  } finally {
+    await lock.release();
   }
-
-  final gte = (ledger.cursor.fetchedAt - kDefaultOverlapMs)
-      .clamp(0, ledger.cursor.fetchedAt);
-  final all = <NotifChapter>[];
-  String? after;
-  while (true) {
-    final page =
-        await client.fetchNewChaptersPage(fetchedAtGte: '$gte', after: after);
-    if (page == null) return false; // transient — retry next wake
-    all.addAll(page.nodes);
-    if (!page.hasNextPage || page.endCursor == null) break;
-    after = page.endCursor;
-  }
-
-  final result = detectNewChapters(
-    candidates: [
-      for (final n in all)
-        (
-          id: n.id,
-          mangaId: n.mangaId,
-          chapterNumber: n.chapterNumber,
-          fetchedAt: n.fetchedAt
-        ),
-    ],
-    watermark: ledger.cursor,
-    allowedMangaIds: spec.keepRuleMangaIds,
-  );
-
-  // Obligations and the advanced cursor land in ONE atomic write: the cursor
-  // may only move once every detected chapter is owed somewhere.
-  final pendingDownloads = {...ledger.pendingDownloads};
-  for (final group in result.groups) {
-    for (final c in group.chapters) {
-      pendingDownloads[c.id] = group.mangaId;
-    }
-  }
-  await catchupStore.writeLedger(
-    config.serverId,
-    ledger.copyWith(
-      cursor: result.watermark,
-      pendingDownloads: pendingDownloads,
-    ),
-  );
-  return true;
 }
 
 PendingSeriesNotification _toPending(
-    MangaNewChapters group, Map<int, NotifChapter> byId) {
+  MangaNewChapters group,
+  Map<int, NotifChapter> byId,
+) {
   final first = byId[group.chapters.first.id]!;
   return PendingSeriesNotification(
     mangaId: group.mangaId,
@@ -329,14 +392,16 @@ Future<void> _publish(
       : l10n.notificationNewChaptersSummary(pending.length);
   final series = <SeriesNotificationContent>[];
   for (final p in pending) {
-    series.add(SeriesNotificationContent(
-      mangaId: p.mangaId,
-      title: p.mangaTitle,
-      body: _describe(l10n, p),
-      firstChapterId: p.firstChapterId,
-      chapterIds: p.chapterIds,
-      coverPath: config.hideContent ? null : await _fetchCover(client, p),
-    ));
+    series.add(
+      SeriesNotificationContent(
+        mangaId: p.mangaId,
+        title: p.mangaTitle,
+        body: _describe(l10n, p),
+        firstChapterId: p.firstChapterId,
+        chapterIds: p.chapterIds,
+        coverPath: config.hideContent ? null : await _fetchCover(client, p),
+      ),
+    );
   }
   await notifier.showNewChapters(
     summaryTitle: summaryTitle,
@@ -360,8 +425,7 @@ void notificationActionCallback(NotificationResponse response) {
 /// Handles a Mark-read / Download notification action headlessly (the app may be
 /// dead): reads config + token, builds a client, fires the mutation. View is a
 /// UI action, routed by the foreground handler instead.
-Future<void> handleNotificationAction(
-    String? actionId, String? payload) async {
+Future<void> handleNotificationAction(String? actionId, String? payload) async {
   if (actionId != kNotifActionMarkRead && actionId != kNotifActionDownload) {
     return;
   }
@@ -386,7 +450,9 @@ Future<void> handleNotificationAction(
 /// Fetch + cache a series cover to a temp file for the notification's
 /// BigPicture. Best-effort — null on any failure falls back to text.
 Future<String?> _fetchCover(
-    NotificationBackgroundClient client, PendingSeriesNotification p) async {
+  NotificationBackgroundClient client,
+  PendingSeriesNotification p,
+) async {
   final url = p.thumbnailUrl;
   if (url == null || url.isEmpty) return null;
   try {
@@ -404,85 +470,102 @@ Future<String?> _fetchCover(
 String _describe(AppLocalizations l10n, PendingSeriesNotification p) {
   final label = newChaptersLabel(p.chapterNumbers, p.totalCount);
   return switch (label) {
-    GenericNewChapters(:final count) =>
-      l10n.notificationChaptersGeneric(count),
-    SingleNewChapter(:final number, :final more) => more == 0
-        ? l10n.notificationChapterSingle(number)
-        : l10n.notificationChapterSingleAndMore(number, more),
-    MultipleNewChapters(:final numbers, :final more) => more == 0
-        ? l10n.notificationChaptersMultiple(numbers.join(', '))
-        : l10n.notificationChaptersMultipleAndMore(numbers.join(', '), more),
+    GenericNewChapters(:final count) => l10n.notificationChaptersGeneric(count),
+    SingleNewChapter(:final number, :final more) =>
+      more == 0
+          ? l10n.notificationChapterSingle(number)
+          : l10n.notificationChapterSingleAndMore(number, more),
+    MultipleNewChapters(:final numbers, :final more) =>
+      more == 0
+          ? l10n.notificationChaptersMultiple(numbers.join(', '))
+          : l10n.notificationChaptersMultipleAndMore(numbers.join(', '), more),
   };
 }
 
 /// A [TokenBroker] backed by the persistent store, so a ui_login refresh in the
 /// worker isolate rotates the shared record (same gen-versioned scheme the
 /// download worker uses).
-TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) =>
-    TokenBroker(
-      read: () async =>
-          store.readTokenRecord() ??
-          const BackgroundTokenRecord(gen: 0, authType: 'none'),
-      write: (r) => store.writeTokenRecord(r),
-      refreshFn: (refreshToken) async {
-        final endpoint = Endpoints.baseApi(
-          baseUrl: ep.baseUrl,
-          port: ep.port,
-          addPort: ep.addPort,
-          isGraphQl: true,
-        );
-        // Custom headers snapshot for the refresh call (e.g. Cloudflare
-        // Zero Trust). Read fresh from the store: the token record and the
-        // headers travel together.
-        Map<String, String> extraHeaders = const {};
-        try {
-          extraHeaders = store.readTokenRecord()?.extraHeaders ?? const {};
-        } catch (_) {}
-        try {
-          final res = await http
-              .post(
-                Uri.parse(endpoint),
-                headers: applyIsolateCustomHeaders(
-                  {'Content-Type': 'application/json'},
-                  extraHeaders,
-                ),
-                body: jsonEncode({
-                  'query':
-                      r'mutation RefreshToken($input: RefreshTokenInput!){ refreshToken(input: $input){ accessToken } }',
-                  'variables': {
-                    'input': {'refreshToken': refreshToken},
-                  },
-                }),
-              )
-              .timeout(const Duration(seconds: 30));
-          // A proxy answering for a dead origin is the server being
-          // unreachable, not the refresh token being invalid — without this,
-          // the first request after reconnecting (racing the network
-          // actually settling) permanently condemns every chapter that
-          // happened to 401 in that window.
-          if (isGatewayStatus(res.statusCode)) {
-            return (tokens: null, transient: true);
-          }
-          if (res.statusCode != 200) return (tokens: null, transient: false);
-          final data = (jsonDecode(res.body) as Map<String, Object?>)['data']
-              as Map<String, Object?>?;
-          final access =
-              (data?['refreshToken'] as Map<String, Object?>?)?['accessToken']
-                  as String?;
-          if (access == null || access.isEmpty) {
-            return (tokens: null, transient: false);
-          }
-          // Suwayomi doesn't rotate the refresh token — reuse it.
-          return (tokens: (access: access, refresh: refreshToken), transient: false);
-        } on SocketException {
+TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) {
+  final epoch = store.readConfig()?.identityEpoch;
+  return TokenBroker(
+    read: () async =>
+        store.readTokenRecord() ??
+        const BackgroundTokenRecord(gen: 0, authType: 'none'),
+    write: (r) => withBackgroundScheduleLock(() async {
+      final currentStore = await NotificationStateStore.open();
+      final current = currentStore.readTokenRecord();
+      final controls = await CatchupStateStore.open();
+      if (controls.identityAuthorized &&
+          currentStore.readConfig()?.identityEpoch == epoch &&
+          current?.endpoint == r.endpoint &&
+          current?.refreshToken == r.refreshToken &&
+          current?.authType == r.authType &&
+          r.gen > (current?.gen ?? -1)) {
+        await currentStore.writeTokenRecord(r);
+      }
+    }),
+    refreshFn: (refreshToken) async {
+      final endpoint = Endpoints.baseApi(
+        baseUrl: ep.baseUrl,
+        port: ep.port,
+        addPort: ep.addPort,
+        isGraphQl: true,
+      );
+      // Read fresh: the token record and its headers travel together.
+      Map<String, String> extraHeaders = const {};
+      try {
+        extraHeaders = store.readTokenRecord()?.extraHeaders ?? const {};
+      } catch (_) {}
+      try {
+        final res = await http
+            .post(
+              Uri.parse(endpoint),
+              headers: applyIsolateCustomHeaders(
+                {'Content-Type': 'application/json'},
+                extraHeaders,
+              ),
+              body: jsonEncode({
+                'query':
+                    r'mutation RefreshToken($input: RefreshTokenInput!){ refreshToken(input: $input){ accessToken } }',
+                'variables': {
+                  'input': {'refreshToken': refreshToken},
+                },
+              }),
+            )
+            .timeout(const Duration(seconds: 10));
+        // A proxy answering for a dead origin is the server being
+        // unreachable, not the refresh token being invalid — without this,
+        // the first request after reconnecting (racing the network
+        // actually settling) permanently condemns every chapter that
+        // happened to 401 in that window.
+        if (isGatewayStatus(res.statusCode)) {
           return (tokens: null, transient: true);
-        } on TimeoutException {
-          return (tokens: null, transient: true);
-        } catch (_) {
+        }
+        if (res.statusCode != 200) return (tokens: null, transient: false);
+        final data =
+            (jsonDecode(res.body) as Map<String, Object?>)['data']
+                as Map<String, Object?>?;
+        final access =
+            (data?['refreshToken'] as Map<String, Object?>?)?['accessToken']
+                as String?;
+        if (access == null || access.isEmpty) {
           return (tokens: null, transient: false);
         }
-      },
-    );
+        // Suwayomi doesn't rotate the refresh token — reuse it.
+        return (
+          tokens: (access: access, refresh: refreshToken),
+          transient: false,
+        );
+      } on SocketException {
+        return (tokens: null, transient: true);
+      } on TimeoutException {
+        return (tokens: null, transient: true);
+      } catch (_) {
+        return (tokens: null, transient: false);
+      }
+    },
+  );
+}
 
 Locale _deviceLocale() {
   final locales = PlatformDispatcher.instance.locales;

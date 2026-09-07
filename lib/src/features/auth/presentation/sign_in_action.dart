@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_coordinator.dart';
@@ -36,7 +37,7 @@ Future<void> performSignIn(
   required String serverBaseUrl,
   required String username,
   required String password,
-}) async {
+}) => ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
   ref.read(authUsernameProvider.notifier).update(username);
   final store = ref.read(authCredentialsStoreProvider.notifier);
   // Guards every write below against a server switch racing this sign-in.
@@ -48,9 +49,12 @@ Future<void> performSignIn(
   final coordinator = ref.read(authCoordinatorProvider.notifier);
   switch (authType) {
     case AuthType.basic:
-      await ref.read(credentialsProvider.notifier).set(
-          'Basic ${base64.encode(utf8.encode('$username:$password'))}',
-          forEpoch: epoch);
+      await ref
+          .read(credentialsProvider.notifier)
+          .set(
+            'Basic ${base64.encode(utf8.encode('$username:$password'))}',
+            forEpoch: epoch,
+          );
     case AuthType.simpleLogin:
       await coordinator.loginSimple(
         serverBaseUrl: serverBaseUrl,
@@ -67,4 +71,4 @@ Future<void> performSignIn(
       return;
   }
   ref.read(needsReauthProvider.notifier).set(false);
-}
+});

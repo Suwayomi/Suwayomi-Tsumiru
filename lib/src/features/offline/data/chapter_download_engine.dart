@@ -79,8 +79,7 @@ class ChapterDownloadOutcome {
   /// The first non-auth error that ended the run, if any.
   final Object? error;
 
-  bool get succeeded =>
-      error == null && !cancelled && !authFailed && !offline;
+  bool get succeeded => error == null && !cancelled && !authFailed && !offline;
 }
 
 /// Downloads a single chapter's pages with up to [parallelPageLimit] in flight
@@ -118,15 +117,16 @@ class ChapterDownloadEngine {
     required List<PageRef> pages,
     required bool Function() isCancelled,
     Future<void> Function(int pageIndex, String relPath, int bytes)?
-        onPageStored,
+    onPageStored,
   }) async {
     final stored = <int, ({String relPath, int bytes})>{};
     if (pages.isEmpty) {
       return ChapterDownloadOutcome(
-          storedPages: stored,
-          cancelled: false,
-          authFailed: false,
-          offline: false);
+        storedPages: stored,
+        cancelled: false,
+        authFailed: false,
+        offline: false,
+      );
     }
 
     final queue = List<PageRef>.of(pages);
@@ -143,7 +143,12 @@ class ChapterDownloadEngine {
         }
         if (cursor >= queue.length) return;
         final page = queue[cursor++];
-        final result = await _downloadOne(mangaId, chapterId, page, isCancelled);
+        final result = await _downloadOne(
+          mangaId,
+          chapterId,
+          page,
+          isCancelled,
+        );
         switch (result) {
           case _PageOk(:final relPath, :final bytes):
             stored[page.index] = (relPath: relPath, bytes: bytes);
@@ -163,8 +168,9 @@ class ChapterDownloadEngine {
       }
     }
 
-    final workerCount =
-        parallelPageLimit < queue.length ? parallelPageLimit : queue.length;
+    final workerCount = parallelPageLimit < queue.length
+        ? parallelPageLimit
+        : queue.length;
     await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
 
     return ChapterDownloadOutcome(
@@ -177,10 +183,15 @@ class ChapterDownloadEngine {
     );
   }
 
-  Future<_PageResult> _downloadOne(int mangaId, int chapterId, PageRef page,
-      bool Function() isCancelled) async {
+  Future<_PageResult> _downloadOne(
+    int mangaId,
+    int chapterId,
+    PageRef page,
+    bool Function() isCancelled,
+  ) async {
     var refreshedForAuth = false;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (isCancelled()) return const _PageCancelled();
       try {
         final bytes = await fetchPage(page.url);
         // The fetch can outlast a cancel (delete/pause landing mid-request);
@@ -196,10 +207,12 @@ class ChapterDownloadEngine {
         );
         return _PageOk(relPath: written.relPath, bytes: written.bytes);
       } on PageOfflineException catch (e) {
+        if (isCancelled()) return const _PageCancelled();
         // Device went offline / Wi-Fi-only blocked it — stop this chapter and
         // leave it resumable. No retry (retrying offline just burns backoff).
         return _PageOffline(e.reason);
       } on PageAuthException {
+        if (isCancelled()) return const _PageCancelled();
         // Refresh once; concurrent 401s collapse via the refresher's
         // single-flight. If auth is dead, stop trying.
         if (!refreshedForAuth) {
@@ -211,6 +224,7 @@ class ChapterDownloadEngine {
         // Already refreshed once and still 401 → auth is dead for this run.
         return const _PageAuthDead();
       } catch (e) {
+        if (isCancelled()) return const _PageCancelled();
         if (attempt >= maxAttempts) return _PageError(e);
         await Future.delayed(backoff(attempt));
       }

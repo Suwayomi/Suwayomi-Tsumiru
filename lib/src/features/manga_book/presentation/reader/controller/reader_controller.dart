@@ -8,9 +8,11 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/data/offline_read_fallback.dart';
 import '../../../../offline/data/offline_repository.dart';
+import '../../../../offline/data/offline_types.dart';
 import '../../../../offline/data/server_reachability.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -19,10 +21,7 @@ import '../../../domain/chapter_page/chapter_page_model.dart';
 part 'reader_controller.g.dart';
 
 @riverpod
-FutureOr<ChapterDto?> chapter(
-  Ref ref, {
-  required int chapterId,
-}) =>
+FutureOr<ChapterDto?> chapter(Ref ref, {required int chapterId}) =>
     // Offline: a downloaded chapter must still open when the server is
     // unreachable, so fall back to the on-device catalog row.
     chapterMetaWithOfflineFallback(
@@ -32,7 +31,8 @@ FutureOr<ChapterDto?> chapter(
       // Only read the native-only DB when offline is available (never on web).
       db: ref.watch(offlineReadDatabaseProvider),
       offlineEnabled: ref.watch(offlineActiveProvider),
-      offlineFirst: ref.watch(viewOfflineNowProvider) ||
+      offlineFirst:
+          ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       chapterId: chapterId,
     );
@@ -44,18 +44,27 @@ Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
   // Falls through to the network when not downloaded / offline is unavailable.
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   if (offlineDb != null) {
-    var local =
-        await ref.watch(offlineRepositoryProvider).localChapterPages(chapterId);
+    var local = await ref
+        .watch(offlineRepositoryProvider)
+        .localChapterPages(chapterId);
     // Otherwise this streams from the server on every read, and fails
     // entirely offline.
-    final startDownloads = ref.read(downloadStarterProvider);
-    local ??= await repairDownloadedChapterPages(
-      db: offlineDb,
-      store: ref.watch(offlinePageStoreProvider),
-      paths: ref.watch(offlinePathsProvider),
-      chapterId: chapterId,
-      onRequeued: () => unawaited(startDownloads()),
-    );
+    if (local == null &&
+        (await offlineDb.chapterById(chapterId))?.deviceState ==
+            OfflineDeviceState.downloaded) {
+      final startDownloads = ref.read(downloadStarterProvider);
+      local = await ref
+          .read(backgroundDownloadControllerProvider)
+          .withOwnership(
+            () => repairDownloadedChapterPages(
+              db: offlineDb,
+              store: ref.watch(offlinePageStoreProvider),
+              paths: ref.watch(offlinePathsProvider),
+              chapterId: chapterId,
+              onRequeued: () => unawaited(startDownloads()),
+            ),
+          );
+    }
     if (local != null && local.isNotEmpty) {
       return ChapterPagesDto(
         chapter: ChapterPagesChapterDto(id: chapterId, pageCount: local.length),

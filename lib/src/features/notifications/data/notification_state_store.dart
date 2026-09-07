@@ -27,6 +27,12 @@ class NotificationWorkerConfig {
     this.appUpdatesEnabled = false,
     this.extensionUpdatesEnabled = false,
     this.appVersion = '',
+    this.wifiOnly = true,
+    this.chargingOnly = false,
+    this.intervalHours = 6,
+    this.catalogServerId,
+    this.identityEpoch = 0,
+    this.verifiedAddress,
   });
 
   final String serverId;
@@ -34,6 +40,12 @@ class NotificationWorkerConfig {
   final bool newChaptersEnabled;
   final bool appUpdatesEnabled;
   final bool extensionUpdatesEnabled;
+  final bool wifiOnly;
+  final bool chargingOnly;
+  final int intervalHours;
+  final String? catalogServerId;
+  final int identityEpoch;
+  final String? verifiedAddress;
 
   /// The installed app version, so the worker can compare against the latest
   /// release without a plugin call in the isolate.
@@ -49,26 +61,40 @@ class NotificationWorkerConfig {
   final bool hideContent;
 
   Map<String, Object?> toJson() => {
-        'serverId': serverId,
-        'endpoint': endpoint.toJson(),
-        'newChaptersEnabled': newChaptersEnabled,
-        'includedCategoryIds': includedCategoryIds.toList(),
-        'excludedCategoryIds': excludedCategoryIds.toList(),
-        'hideContent': hideContent,
-        'appUpdatesEnabled': appUpdatesEnabled,
-        'extensionUpdatesEnabled': extensionUpdatesEnabled,
-        'appVersion': appVersion,
-      };
+    'serverId': serverId,
+    'endpoint': endpoint.toJson(),
+    'newChaptersEnabled': newChaptersEnabled,
+    'includedCategoryIds': includedCategoryIds.toList(),
+    'excludedCategoryIds': excludedCategoryIds.toList(),
+    'hideContent': hideContent,
+    'appUpdatesEnabled': appUpdatesEnabled,
+    'extensionUpdatesEnabled': extensionUpdatesEnabled,
+    'appVersion': appVersion,
+    'wifiOnly': wifiOnly,
+    'chargingOnly': chargingOnly,
+    'intervalHours': intervalHours,
+    'catalogServerId': catalogServerId,
+    'identityEpoch': identityEpoch,
+    'verifiedAddress': verifiedAddress,
+  };
 
   factory NotificationWorkerConfig.fromJson(Map<String, Object?> j) =>
       NotificationWorkerConfig(
         serverId: j['serverId'] as String,
         endpoint: NotificationEndpoint.fromJson(
-            (j['endpoint'] as Map).cast<String, Object?>()),
+          (j['endpoint'] as Map).cast<String, Object?>(),
+        ),
         newChaptersEnabled: (j['newChaptersEnabled'] as bool?) ?? false,
         appUpdatesEnabled: (j['appUpdatesEnabled'] as bool?) ?? false,
-        extensionUpdatesEnabled: (j['extensionUpdatesEnabled'] as bool?) ?? false,
+        extensionUpdatesEnabled:
+            (j['extensionUpdatesEnabled'] as bool?) ?? false,
         appVersion: (j['appVersion'] as String?) ?? '',
+        wifiOnly: (j['wifiOnly'] as bool?) ?? true,
+        chargingOnly: (j['chargingOnly'] as bool?) ?? false,
+        intervalHours: (j['intervalHours'] as num?)?.toInt() ?? 6,
+        catalogServerId: j['catalogServerId'] as String?,
+        identityEpoch: (j['identityEpoch'] as num?)?.toInt() ?? 0,
+        verifiedAddress: j['verifiedAddress'] as String?,
         includedCategoryIds: {
           for (final id in (j['includedCategoryIds'] as List? ?? const []))
             (id as num).toInt(),
@@ -125,14 +151,14 @@ class PendingSeriesNotification {
   final int totalCount;
 
   Map<String, Object?> toJson() => {
-        'mangaId': mangaId,
-        'mangaTitle': mangaTitle,
-        'thumbnailUrl': thumbnailUrl,
-        'chapterIds': chapterIds,
-        'chapterNumbers': chapterNumbers,
-        'firstChapterId': firstChapterId,
-        'totalCount': totalCount,
-      };
+    'mangaId': mangaId,
+    'mangaTitle': mangaTitle,
+    'thumbnailUrl': thumbnailUrl,
+    'chapterIds': chapterIds,
+    'chapterNumbers': chapterNumbers,
+    'firstChapterId': firstChapterId,
+    'totalCount': totalCount,
+  };
 
   factory PendingSeriesNotification.fromJson(Map<String, Object?> j) =>
       PendingSeriesNotification(
@@ -140,10 +166,10 @@ class PendingSeriesNotification {
         mangaTitle: j['mangaTitle'] as String,
         thumbnailUrl: j['thumbnailUrl'] as String?,
         chapterIds: [
-          for (final id in (j['chapterIds'] as List)) (id as num).toInt()
+          for (final id in (j['chapterIds'] as List)) (id as num).toInt(),
         ],
         chapterNumbers: [
-          for (final n in (j['chapterNumbers'] as List)) (n as num).toDouble()
+          for (final n in (j['chapterNumbers'] as List)) (n as num).toDouble(),
         ],
         firstChapterId: (j['firstChapterId'] as num).toInt(),
         totalCount: (j['totalCount'] as num).toInt(),
@@ -155,23 +181,29 @@ class PendingSeriesNotification {
 /// (stable ids + onlyAlertOnce → a replace, not a re-buzz), never loses the
 /// cursor advance, and never drops a detected chapter.
 class NotificationOutbox {
-  const NotificationOutbox({required this.pending, required this.nextWatermark});
+  const NotificationOutbox({
+    required this.pending,
+    required this.nextWatermark,
+  });
   final List<PendingSeriesNotification> pending;
   final NewChapterWatermark nextWatermark;
 
   Map<String, Object?> toJson() => {
-        'pending': [for (final p in pending) p.toJson()],
-        'nextWatermark': nextWatermark.toJson(),
-      };
+    'pending': [for (final p in pending) p.toJson()],
+    'nextWatermark': nextWatermark.toJson(),
+  };
 
   factory NotificationOutbox.fromJson(Map<String, Object?> j) =>
       NotificationOutbox(
         pending: [
           for (final p in (j['pending'] as List))
-            PendingSeriesNotification.fromJson((p as Map).cast<String, Object?>())
+            PendingSeriesNotification.fromJson(
+              (p as Map).cast<String, Object?>(),
+            ),
         ],
         nextWatermark: NewChapterWatermark.fromJson(
-            (j['nextWatermark'] as Map).cast<String, Object?>()),
+          (j['nextWatermark'] as Map).cast<String, Object?>(),
+        ),
       );
 }
 
@@ -187,17 +219,24 @@ class NotificationStateStore {
   static const _cursorKey = 'notif_cursor';
   static const _outboxKey = 'notif_outbox';
 
-  static Future<NotificationStateStore> open() async =>
-      NotificationStateStore(await SharedPreferences.getInstance());
+  static Future<NotificationStateStore> open() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return NotificationStateStore(prefs);
+  }
 
-  Future<void> writeConfig(NotificationWorkerConfig config) =>
-      _prefs.setString(_configKey, jsonEncode(config.toJson()));
+  Future<void> writeConfig(NotificationWorkerConfig config) async {
+    if (!await _prefs.setString(_configKey, jsonEncode(config.toJson()))) {
+      throw StateError('Failed to save notification worker config');
+    }
+  }
 
   NotificationWorkerConfig? readConfig() {
     final raw = _prefs.getString(_configKey);
     if (raw == null) return null;
     return NotificationWorkerConfig.fromJson(
-        (jsonDecode(raw) as Map).cast<String, Object?>());
+      (jsonDecode(raw) as Map).cast<String, Object?>(),
+    );
   }
 
   /// The auth record rotates independently of config (a ui_login refresh bumps
@@ -206,11 +245,15 @@ class NotificationStateStore {
     final raw = _prefs.getString(_tokenKey);
     if (raw == null) return null;
     return BackgroundTokenRecord.fromJson(
-        (jsonDecode(raw) as Map).cast<String, Object?>());
+      (jsonDecode(raw) as Map).cast<String, Object?>(),
+    );
   }
 
-  Future<void> writeTokenRecord(BackgroundTokenRecord record) =>
-      _prefs.setString(_tokenKey, jsonEncode(record.toJson()));
+  Future<void> writeTokenRecord(BackgroundTokenRecord record) async {
+    if (!await _prefs.setString(_tokenKey, jsonEncode(record.toJson()))) {
+      throw StateError('Failed to save notification token record');
+    }
+  }
 
   /// The cursor for [serverId]; resets to empty when the stored cursor belongs
   /// to a different server (switch → no replay/skip).
@@ -220,18 +263,22 @@ class NotificationStateStore {
     final j = (jsonDecode(raw) as Map).cast<String, Object?>();
     if (j['serverId'] != serverId) return const NewChapterWatermark();
     return NewChapterWatermark.fromJson(
-        (j['watermark'] as Map).cast<String, Object?>());
+      (j['watermark'] as Map).cast<String, Object?>(),
+    );
   }
 
   Future<void> writeWatermark(String serverId, NewChapterWatermark wm) =>
-      _prefs.setString(_cursorKey,
-          jsonEncode({'serverId': serverId, 'watermark': wm.toJson()}));
+      _prefs.setString(
+        _cursorKey,
+        jsonEncode({'serverId': serverId, 'watermark': wm.toJson()}),
+      );
 
   NotificationOutbox? readOutbox() {
     final raw = _prefs.getString(_outboxKey);
     if (raw == null) return null;
     return NotificationOutbox.fromJson(
-        (jsonDecode(raw) as Map).cast<String, Object?>());
+      (jsonDecode(raw) as Map).cast<String, Object?>(),
+    );
   }
 
   Future<void> writeOutbox(NotificationOutbox outbox) =>

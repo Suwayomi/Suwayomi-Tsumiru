@@ -7,6 +7,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'offline_download_providers.dart';
+import 'offline_download_stall.dart';
 import 'offline_settings_providers.dart';
 
 part 'offline_nav_status.g.dart';
@@ -17,6 +18,8 @@ part 'offline_nav_status.g.dart';
 @riverpod
 bool downloadsPausedBadge(Ref ref) {
   final paused = ref.watch(offlineDownloadsPausedProvider) ?? false;
-  if (!paused) return false;
+  if (!paused && ref.watch(effectiveDownloadStallProvider) == null) {
+    return false;
+  }
   return ref.watch(offlineHasPendingProvider).value ?? false;
 }

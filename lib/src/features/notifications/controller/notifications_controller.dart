@@ -8,13 +8,18 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
+import '../../auth/data/jwt_utils.dart';
+import '../../offline/data/background/background_schedule.dart';
 import '../../offline/data/background/background_token_record.dart';
 import '../../offline/data/background/catchup_work_spec.dart';
+import '../../offline/data/offline_repository.dart';
+import '../../offline/data/offline_server_identity_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -39,10 +44,10 @@ class NotificationsController {
   }
 
   NotificationEndpoint _endpoint() => NotificationEndpoint(
-        baseUrl: _ref.read(serverUrlProvider) ?? '',
-        port: _ref.read(serverPortProvider),
-        addPort: _ref.read(serverPortToggleProvider).ifNull(),
-      );
+    baseUrl: _ref.read(serverUrlProvider) ?? '',
+    port: _ref.read(serverPortProvider),
+    addPort: _ref.read(serverPortToggleProvider).ifNull(),
+  );
 
   BackgroundTokenRecord _tokenRecord() {
     final authType = _ref.read(authTypeKeyProvider) ?? AuthType.none;
@@ -64,58 +69,89 @@ class NotificationsController {
 
   /// Persist config + token and reconcile the schedule with current settings.
   Future<void> sync() async {
-    final newChapters =
-        _ref.read(notificationsNewChaptersEnabledProvider).ifNull();
-    final appUpdates =
-        _ref.read(notificationsAppUpdatesEnabledProvider).ifNull();
-    final extUpdates =
-        _ref.read(notificationsExtensionUpdatesEnabledProvider).ifNull();
-    final store = await NotificationStateStore.open();
+    await withBackgroundScheduleLock(() async {
+      final newChapters = _ref
+          .read(notificationsNewChaptersEnabledProvider)
+          .ifNull();
+      final appUpdates = _ref
+          .read(notificationsAppUpdatesEnabledProvider)
+          .ifNull();
+      final extUpdates = _ref
+          .read(notificationsExtensionUpdatesEnabledProvider)
+          .ifNull();
+      final store = await NotificationStateStore.open();
 
-    await store.writeTokenRecord(_tokenRecord());
-    final config = NotificationWorkerConfig(
-      serverId: _serverId(),
-      endpoint: _endpoint(),
-      newChaptersEnabled: newChapters,
-      includedCategoryIds: _ids(_ref.read(notificationsCategoriesIncludeProvider)),
-      excludedCategoryIds: _ids(_ref.read(notificationsCategoriesExcludeProvider)),
-      hideContent: _ref.read(notificationsHideContentProvider).ifNull(),
-      appUpdatesEnabled: appUpdates,
-      extensionUpdatesEnabled: extUpdates,
-      appVersion: (await PackageInfo.fromPlatform()).version,
-    );
-    await store.writeConfig(config);
+      final appVersion = (await PackageInfo.fromPlatform()).version;
+      var token = _tokenRecord();
+      final saved = store.readTokenRecord();
+      final controls = CatchupStateStore(_ref.read(sharedPreferencesProvider));
+      final identityEpoch = controls.identityEpoch;
+      if (controls.identityAuthorized &&
+          store.readConfig()?.identityEpoch == controls.identityEpoch &&
+          saved != null &&
+          saved.endpoint == token.endpoint &&
+          saved.authType == token.authType &&
+          saved.authType == 'uiLogin' &&
+          saved.gen > 0 &&
+          saved.accessToken != null &&
+          saved.refreshToken != null) {
+        final savedExpiry = decodeJwtExp(saved.accessToken!);
+        final currentExpiry = token.accessToken == null
+            ? null
+            : decodeJwtExp(token.accessToken!);
+        if (savedExpiry != null &&
+            (currentExpiry == null || !currentExpiry.isAfter(savedExpiry))) {
+          final credentials = _ref.read(authCredentialsStoreProvider.notifier);
+          final epoch = credentials.serverEpoch;
+          await credentials.saveUiLoginTokens(
+            accessToken: saved.accessToken!,
+            refreshToken: saved.refreshToken!,
+            forEpoch: epoch,
+          );
+          if (!controls.identityAuthorized ||
+              controls.identityEpoch != identityEpoch) {
+            return;
+          }
+          token = saved;
+        }
+      }
+      final config = NotificationWorkerConfig(
+        serverId: _serverId(),
+        endpoint: _endpoint(),
+        newChaptersEnabled: newChapters,
+        includedCategoryIds: _ids(
+          _ref.read(notificationsCategoriesIncludeProvider),
+        ),
+        excludedCategoryIds: _ids(
+          _ref.read(notificationsCategoriesExcludeProvider),
+        ),
+        hideContent: _ref.read(notificationsHideContentProvider).ifNull(),
+        appUpdatesEnabled: appUpdates,
+        extensionUpdatesEnabled: extUpdates,
+        appVersion: appVersion,
+        identityEpoch: CatchupStateStore(
+          _ref.read(sharedPreferencesProvider),
+        ).identityEpoch,
+        wifiOnly: _ref.read(notificationsWifiOnlyProvider) ?? true,
+        chargingOnly: _ref.read(notificationsChargingOnlyProvider) ?? false,
+        intervalHours: _ref.read(notificationsCheckIntervalHoursProvider) ?? 6,
+        catalogServerId: _ref.read(offlineActiveProvider)
+            ? _ref
+                  .read(sharedPreferencesProvider)
+                  .getString(DBKeys.offlineCatalogServerId.name)
+            : null,
+        verifiedAddress: _ref.read(offlineActiveProvider)
+            ? _ref.read(currentServerAddressProvider)
+            : null,
+      );
+      await store.writeTokenRecord(token);
+      await store.writeConfig(config);
 
-    // The periodic job runs when ANY check is on; if the new-chapter check went
-    // off, drop its detection state.
-    if (!newChapters) await store.clearState();
-    // Background chapter downloads ride this same job — it must keep running
-    // (and the config/token written above must keep seeding) for a user with
-    // keep rules and every notification switched off.
-    final catchupOn =
-        CatchupStateStore(_ref.read(sharedPreferencesProvider)).enabled;
-    if (!config.anyEnabled && !catchupOn) {
-      await Workmanager().cancelByUniqueName(kNewChapterPeriodicName);
-      return;
-    }
-    await _schedule();
-  }
-
-  Future<void> _schedule() async {
-    final hours = _ref.read(notificationsCheckIntervalHoursProvider) ?? 6;
-    final wifiOnly = _ref.read(notificationsWifiOnlyProvider).ifNull(true);
-    final charging = _ref.read(notificationsChargingOnlyProvider).ifNull();
-    await Workmanager().registerPeriodicTask(
-      kNewChapterPeriodicName,
-      kNewChapterCheckTask,
-      frequency: Duration(hours: hours < 1 ? 1 : hours),
-      constraints: Constraints(
-        networkType: wifiOnly ? NetworkType.unmetered : NetworkType.connected,
-        requiresCharging: charging,
-        requiresBatteryNotLow: true,
-      ),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    );
+      // The periodic job runs when ANY check is on; if the new-chapter check went
+      // off, drop its detection state.
+      if (!newChapters) await store.clearState();
+    });
+    await reconcileBackgroundSchedule();
   }
 
   /// Create the channels and request the Android 13+ POST_NOTIFICATIONS
@@ -139,8 +175,9 @@ class NotificationsController {
     );
   }
 
-  Set<int> _ids(List<String>? raw) =>
-      {for (final s in raw ?? const <String>[]) int.parse(s)};
+  Set<int> _ids(List<String>? raw) => {
+    for (final s in raw ?? const <String>[]) int.parse(s),
+  };
 }
 
 final notificationsControllerProvider = Provider<NotificationsController>(

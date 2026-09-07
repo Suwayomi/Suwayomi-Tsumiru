@@ -9,7 +9,9 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../constants/db_keys.dart';
+import '../../../notifications/data/notification_state_store.dart';
 import '../../../notifications/domain/new_chapter_detection.dart';
+import '../offline_server_identity.dart';
 import '../offline_types.dart';
 
 /// The background download step's read-only stand-in for drift: what the
@@ -23,6 +25,7 @@ class CatchupMangaSpec {
     required this.onDeviceChapterIds,
     required this.pinnedChapterIds,
     this.chapterGenerations = const {},
+    this.failedChapterIds = const {},
   });
 
   final int mangaId;
@@ -30,6 +33,7 @@ class CatchupMangaSpec {
   final int keepUnreadCount;
   final Set<int> onDeviceChapterIds;
   final Set<int> pinnedChapterIds;
+  final Set<int> failedChapterIds;
 
   /// Download generation per chapter, for the ones that have been deleted at
   /// least once. Staging the worker writes has to carry the generation its row
@@ -50,6 +54,7 @@ class CatchupMangaSpec {
     'keepUnreadCount': keepUnreadCount,
     'onDevice': onDeviceChapterIds.toList(),
     'pinned': pinnedChapterIds.toList(),
+    'failedChapterIds': failedChapterIds.toList(),
     'gens': {for (final e in chapterGenerations.entries) '${e.key}': e.value},
   };
 
@@ -66,11 +71,42 @@ class CatchupMangaSpec {
     pinnedChapterIds: {
       for (final id in (j['pinned'] as List? ?? const [])) (id as num).toInt(),
     },
+    failedChapterIds: {
+      for (final id in (j['failedChapterIds'] as List? ?? const []))
+        (id as num).toInt(),
+    },
     chapterGenerations: {
       for (final e in (j['gens'] as Map? ?? const {}).entries)
         ?int.tryParse('${e.key}'): (e.value as num).toInt(),
     },
   );
+}
+
+class QueuedChapterSpec {
+  const QueuedChapterSpec({
+    required this.chapterId,
+    required this.mangaId,
+    required this.generation,
+  });
+
+  final int chapterId;
+  final int mangaId;
+  final int generation;
+
+  String get key => '$chapterId:$generation';
+
+  Map<String, Object?> toJson() => {
+    'chapterId': chapterId,
+    'mangaId': mangaId,
+    'generation': generation,
+  };
+
+  factory QueuedChapterSpec.fromJson(Map<String, Object?> j) =>
+      QueuedChapterSpec(
+        chapterId: (j['chapterId'] as num).toInt(),
+        mangaId: (j['mangaId'] as num).toInt(),
+        generation: (j['generation'] as num).toInt(),
+      );
 }
 
 class CatchupWorkSpec {
@@ -81,6 +117,7 @@ class CatchupWorkSpec {
     required this.storageCapBytes,
     required this.manga,
     this.usedBytes = 0,
+    this.queuedChapters = const [],
   });
 
   final String serverId;
@@ -88,6 +125,7 @@ class CatchupWorkSpec {
   final bool storageCapEnabled;
   final int storageCapBytes;
   final List<CatchupMangaSpec> manga;
+  final List<QueuedChapterSpec> queuedChapters;
 
   /// On-device bytes when the spec was written — the executor's cap baseline.
   final int usedBytes;
@@ -101,6 +139,7 @@ class CatchupWorkSpec {
     'storageCapBytes': storageCapBytes,
     'usedBytes': usedBytes,
     'manga': [for (final m in manga) m.toJson()],
+    'queuedChapters': [for (final chapter in queuedChapters) chapter.toJson()],
   };
 
   factory CatchupWorkSpec.fromJson(Map<String, Object?> j) => CatchupWorkSpec(
@@ -109,6 +148,10 @@ class CatchupWorkSpec {
     storageCapEnabled: (j['storageCapEnabled'] as bool?) ?? false,
     storageCapBytes: (j['storageCapBytes'] as num?)?.toInt() ?? 0,
     usedBytes: (j['usedBytes'] as num?)?.toInt() ?? 0,
+    queuedChapters: [
+      for (final chapter in (j['queuedChapters'] as List? ?? const []))
+        QueuedChapterSpec.fromJson((chapter as Map).cast<String, Object?>()),
+    ],
     manga: [
       for (final m in (j['manga'] as List? ?? const []))
         CatchupMangaSpec.fromJson((m as Map).cast<String, Object?>()),
@@ -126,6 +169,8 @@ class CatchupLedger {
     this.pendingServerFetch = const {},
     this.serverFetchRetries = const {},
     this.downloadRetries = const {},
+    this.queuedServerRetries = const {},
+    this.queuedDownloadRetries = const {},
     this.backfilledMangaIds = const {},
   });
 
@@ -147,6 +192,8 @@ class CatchupLedger {
   /// different reasons, and one budget shared between them meant a slow source
   /// could exhaust the chapter before the device ever tried.
   final Map<int, int> downloadRetries;
+  final Map<String, int> queuedServerRetries;
+  final Map<String, int> queuedDownloadRetries;
 
   /// Manga the executor has already given one full chapter-list pass since it
   /// entered the spec. The feed-based cursor above only ever surfaces chapters
@@ -165,6 +212,8 @@ class CatchupLedger {
     Map<int, int>? pendingServerFetch,
     Map<int, int>? serverFetchRetries,
     Map<int, int>? downloadRetries,
+    Map<String, int>? queuedServerRetries,
+    Map<String, int>? queuedDownloadRetries,
     Set<int>? backfilledMangaIds,
   }) => CatchupLedger(
     cursor: cursor ?? this.cursor,
@@ -172,6 +221,8 @@ class CatchupLedger {
     pendingServerFetch: pendingServerFetch ?? this.pendingServerFetch,
     serverFetchRetries: serverFetchRetries ?? this.serverFetchRetries,
     downloadRetries: downloadRetries ?? this.downloadRetries,
+    queuedServerRetries: queuedServerRetries ?? this.queuedServerRetries,
+    queuedDownloadRetries: queuedDownloadRetries ?? this.queuedDownloadRetries,
     backfilledMangaIds: backfilledMangaIds ?? this.backfilledMangaIds,
   );
 
@@ -181,6 +232,8 @@ class CatchupLedger {
     'pendingServerFetch': _mapToJson(pendingServerFetch),
     'serverFetchRetries': _mapToJson(serverFetchRetries),
     'downloadRetries': _mapToJson(downloadRetries),
+    'queuedServerRetries': queuedServerRetries,
+    'queuedDownloadRetries': queuedDownloadRetries,
     'backfilledMangaIds': backfilledMangaIds.toList(),
   };
 
@@ -192,6 +245,14 @@ class CatchupLedger {
     pendingServerFetch: _mapFromJson(j['pendingServerFetch']),
     serverFetchRetries: _mapFromJson(j['serverFetchRetries']),
     downloadRetries: _mapFromJson(j['downloadRetries']),
+    queuedServerRetries: {
+      for (final e in (j['queuedServerRetries'] as Map? ?? const {}).entries)
+        e.key as String: (e.value as num).toInt(),
+    },
+    queuedDownloadRetries: {
+      for (final e in (j['queuedDownloadRetries'] as Map? ?? const {}).entries)
+        e.key as String: (e.value as num).toInt(),
+    },
     backfilledMangaIds: {
       for (final id in (j['backfilledMangaIds'] as List? ?? const []))
         (id as num).toInt(),
@@ -213,6 +274,13 @@ class CatchupLedger {
 class CatchupStateStore {
   CatchupStateStore(this._prefs);
   final SharedPreferences _prefs;
+  String? _cachedSpecRaw;
+  CatchupWorkSpec? _cachedSpec;
+
+  Future<void> reload() => _prefs.reload();
+
+  bool get paused =>
+      _prefs.getBool(DBKeys.offlineDownloadsPaused.name) ?? false;
 
   static const _specKey = 'catchup_work_spec';
   static const _ledgerKey = 'catchup_ledger';
@@ -249,15 +317,60 @@ class CatchupStateStore {
   String? get catalogServerId =>
       _prefs.getString(DBKeys.offlineCatalogServerId.name);
 
-  Future<void> writeSpec(CatchupWorkSpec spec) =>
-      _prefs.setString(_specKey, jsonEncode(spec.toJson()));
+  static const identityChangingKey = 'offline_background_identity_changing';
+  bool get identityChanging => _prefs.getBool(identityChangingKey) ?? false;
+  Future<void> setIdentityChanging(bool value) async {
+    if (!await _prefs.setBool(identityChangingKey, value)) {
+      throw StateError('Failed to save identity transition');
+    }
+  }
+
+  static const identityEpochKey = 'offline_background_identity_epoch';
+  int get identityEpoch => _prefs.getInt(identityEpochKey) ?? 0;
+  static const identityAuthorizedKey = 'offline_background_identity_authorized';
+  bool get identityAuthorized =>
+      !identityChanging && (_prefs.getBool(identityAuthorizedKey) ?? true);
+  Future<void> setIdentityAuthorized(bool value) async {
+    if (!value && !await _prefs.setInt(identityEpochKey, identityEpoch + 1)) {
+      throw StateError('Failed to invalidate background identity');
+    }
+    if (!await _prefs.setBool(identityAuthorizedKey, value)) {
+      throw StateError('Failed to save background identity control');
+    }
+  }
+
+  bool matchesIdentity(NotificationWorkerConfig config) {
+    final address = serverAddress(
+      baseUrl: config.endpoint.baseUrl,
+      port: config.endpoint.port,
+      addPort: config.endpoint.addPort,
+    );
+    return identityAuthorized &&
+        config.identityEpoch == identityEpoch &&
+        catalogServerId != null &&
+        catalogServerId == config.catalogServerId &&
+        _prefs.getString(DBKeys.offlineLastServerId.name) == catalogServerId &&
+        _prefs.getString(DBKeys.offlineLastServerAddress.name) == address &&
+        config.verifiedAddress == address;
+  }
+
+  Future<void> writeSpec(CatchupWorkSpec spec) async {
+    if (!await _prefs.setString(_specKey, jsonEncode(spec.toJson()))) {
+      throw StateError('Failed to save background download spec');
+    }
+  }
 
   CatchupWorkSpec? readSpec() {
     final raw = _prefs.getString(_specKey);
-    if (raw == null) return null;
-    return CatchupWorkSpec.fromJson(
-      (jsonDecode(raw) as Map).cast<String, Object?>(),
-    );
+    if (raw == _cachedSpecRaw) return _cachedSpec;
+    final parsed = raw == null
+        ? null
+        : CatchupWorkSpec.fromJson(
+            (jsonDecode(raw) as Map).cast<String, Object?>(),
+          );
+    _cachedSpecRaw = raw;
+    _cachedSpec = parsed;
+    return parsed;
   }
 
   /// Ledger scoped to [serverId] — a server switch starts from empty, like the
@@ -270,11 +383,14 @@ class CatchupStateStore {
     return CatchupLedger.fromJson((j['ledger'] as Map).cast<String, Object?>());
   }
 
-  Future<void> writeLedger(String serverId, CatchupLedger ledger) =>
-      _prefs.setString(
-        _ledgerKey,
-        jsonEncode({'serverId': serverId, 'ledger': ledger.toJson()}),
-      );
+  Future<void> writeLedger(String serverId, CatchupLedger ledger) async {
+    if (!await _prefs.setString(
+      _ledgerKey,
+      jsonEncode({'serverId': serverId, 'ledger': ledger.toJson()}),
+    )) {
+      throw StateError('Failed to save background download ledger');
+    }
+  }
 
   /// Server switch / sign-out / catalog clear: the worker must not outlive its
   /// world. The enabled flag survives (it's the user's setting).

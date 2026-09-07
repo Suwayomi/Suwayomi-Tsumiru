@@ -63,11 +63,14 @@ enum TestConnectionFailureKind {
 TestConnectionFailure classifyAuthError(Object e) {
   if (e is SimpleLoginAuthFailure) {
     return const TestConnectionFailure(
-        TestConnectionFailureKind.invalidCredentials);
+      TestConnectionFailureKind.invalidCredentials,
+    );
   }
   if (e is SimpleLoginShapeFailure) {
     return TestConnectionFailure(
-        TestConnectionFailureKind.unexpectedShape, e.message);
+      TestConnectionFailureKind.unexpectedShape,
+      e.message,
+    );
   }
   final msg = e.toString().toLowerCase();
   if (msg.contains('unauthor') ||
@@ -79,7 +82,8 @@ TestConnectionFailure classifyAuthError(Object e) {
       msg.contains('invalid username or password') ||
       msg.contains('invalid credentials')) {
     return const TestConnectionFailure(
-        TestConnectionFailureKind.invalidCredentials);
+      TestConnectionFailureKind.invalidCredentials,
+    );
   }
   if (msg.contains('handshake') ||
       msg.contains('wrong version') ||
@@ -95,7 +99,9 @@ TestConnectionFailure classifyAuthError(Object e) {
     return const TestConnectionFailure(TestConnectionFailureKind.network);
   }
   return TestConnectionFailure(
-      TestConnectionFailureKind.unexpectedShape, e.toString());
+    TestConnectionFailureKind.unexpectedShape,
+    e.toString(),
+  );
 }
 
 /// Outcome of a refresh attempt. Top-level sealed type — DECLARED HERE
@@ -197,28 +203,26 @@ class AuthCoordinator extends _$AuthCoordinator {
     // Listen to credentials changes and (re)schedule the proactive
     // refresh whenever a ui_login access token is present. Cancel when
     // tokens are cleared (logout, mode switch).
-    ref.listen<AsyncValue<AuthCredentialsState>>(
-      authCredentialsStoreProvider,
-      (prev, next) {
-        final state = next.value;
-        if (state == null) return;
-        if (state.uiAccessToken == null ||
-            state.uiAccessTokenExpiresAt == null) {
-          _cancelProactiveRefresh();
-          return;
-        }
-        // Re-schedule only when the expiry actually changed (e.g.
-        // post-refresh, post-login, post-bootstrap). Cheap idempotent
-        // reschedule is also fine — we cancel any existing Timer first.
-        final prevExpiry = prev?.value?.uiAccessTokenExpiresAt;
-        if (prevExpiry == state.uiAccessTokenExpiresAt &&
-            _proactiveRefreshTimer != null) {
-          return;
-        }
-        _scheduleProactiveRefresh();
-      },
-      fireImmediately: true,
-    );
+    ref.listen<AsyncValue<AuthCredentialsState>>(authCredentialsStoreProvider, (
+      prev,
+      next,
+    ) {
+      final state = next.value;
+      if (state == null) return;
+      if (state.uiAccessToken == null || state.uiAccessTokenExpiresAt == null) {
+        _cancelProactiveRefresh();
+        return;
+      }
+      // Re-schedule only when the expiry actually changed (e.g.
+      // post-refresh, post-login, post-bootstrap). Cheap idempotent
+      // reschedule is also fine — we cancel any existing Timer first.
+      final prevExpiry = prev?.value?.uiAccessTokenExpiresAt;
+      if (prevExpiry == state.uiAccessTokenExpiresAt &&
+          _proactiveRefreshTimer != null) {
+        return;
+      }
+      _scheduleProactiveRefresh();
+    }, fireImmediately: true);
     ref.onDispose(_cancelProactiveRefresh);
   }
 
@@ -254,8 +258,10 @@ class AuthCoordinator extends _$AuthCoordinator {
   /// Timer first so we never have two pending.
   void _scheduleBackoffRefresh() {
     _proactiveRefreshTimer?.cancel();
-    final stepIndex =
-        _proactiveBackoffStep.clamp(0, _backoffSchedule.length - 1);
+    final stepIndex = _proactiveBackoffStep.clamp(
+      0,
+      _backoffSchedule.length - 1,
+    );
     final delay = _backoffSchedule[stepIndex];
     _proactiveBackoffStep++;
     _proactiveRefreshTimer = Timer(delay, () {
@@ -351,14 +357,13 @@ class AuthCoordinator extends _$AuthCoordinator {
     required String username,
     required String password,
   }) async {
-    final result = await gqlClient.mutate$Login(Options$Mutation$Login(
-      variables: Variables$Mutation$Login(
-        input: Input$LoginInput(
-          username: username,
-          password: password,
+    final result = await gqlClient.mutate$Login(
+      Options$Mutation$Login(
+        variables: Variables$Mutation$Login(
+          input: Input$LoginInput(username: username, password: password),
         ),
       ),
-    ));
+    );
     if (result.hasException) {
       throw result.exception!;
     }
@@ -455,10 +460,16 @@ class AuthCoordinator extends _$AuthCoordinator {
   }
 
   Future<RefreshOutcome> _refreshUiAccessTokenImpl(
-      GraphQLClient gqlClient) async {
+    GraphQLClient gqlClient,
+  ) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     // A switch bumping the epoch mid-refresh discards the write below.
     final startEpoch = store.serverEpoch;
+    if (store.identityChanging) {
+      return RefreshOutcome.transientFailure(
+        StateError('Credentials are changing'),
+      );
+    }
     // "No tokens" is only meaningful once the store has actually loaded.
     // Before hydration (or after a failed secure-storage read) the snapshot is
     // empty even when tokens exist on disk — declaring the session dead there
@@ -470,7 +481,8 @@ class AuthCoordinator extends _$AuthCoordinator {
       // rebuilds the store) and pin the backoff loop — re-run it.
       if (storeState.hasError) ref.invalidate(authCredentialsStoreProvider);
       return RefreshOutcome.transientFailure(
-          StateError('credentials store not hydrated'));
+        StateError('credentials store not hydrated'),
+      );
     }
     final tokens = store.uiLoginTokens();
     if (tokens == null) {
@@ -497,6 +509,12 @@ class AuthCoordinator extends _$AuthCoordinator {
       return RefreshOutcome.transientFailure(e);
     }
 
+    if (store.identityChanging || store.serverEpoch != startEpoch) {
+      return RefreshOutcome.transientFailure(
+        StateError('Credentials changed during refresh'),
+      );
+    }
+
     final exception = result.exception;
     if (exception != null) {
       // Distinguish network-style GraphQL errors (linkException) from
@@ -513,7 +531,12 @@ class AuthCoordinator extends _$AuthCoordinator {
         if (status == 401 || status == 403) {
           // Server actively rejected the refresh token at the HTTP
           // layer. Treat as auth failure.
-          await store.clearUiLoginTokens();
+          await store.clearUiLoginTokens(forEpoch: startEpoch);
+          if (store.identityChanging || store.serverEpoch != startEpoch) {
+            return RefreshOutcome.transientFailure(
+              StateError('Credentials changed during refresh'),
+            );
+          }
           ref.read(needsReauthProvider.notifier).set(true);
           return const RefreshOutcome.authFailure();
         }
@@ -524,7 +547,12 @@ class AuthCoordinator extends _$AuthCoordinator {
       // GraphQL errors (non-link) here mean the server actively
       // rejected the refresh token at the GraphQL layer — clear and
       // prompt re-auth.
-      await store.clearUiLoginTokens();
+      await store.clearUiLoginTokens(forEpoch: startEpoch);
+      if (store.identityChanging || store.serverEpoch != startEpoch) {
+        return RefreshOutcome.transientFailure(
+          StateError('Credentials changed during refresh'),
+        );
+      }
       ref.read(needsReauthProvider.notifier).set(true);
       return const RefreshOutcome.authFailure();
     }
@@ -532,7 +560,12 @@ class AuthCoordinator extends _$AuthCoordinator {
     final newAccess = result.parsedData?.refreshToken.accessToken;
     if (newAccess == null) {
       // No exception, but no token either — treat as auth failure.
-      await store.clearUiLoginTokens();
+      await store.clearUiLoginTokens(forEpoch: startEpoch);
+      if (store.identityChanging || store.serverEpoch != startEpoch) {
+        return RefreshOutcome.transientFailure(
+          StateError('Credentials changed during refresh'),
+        );
+      }
       ref.read(needsReauthProvider.notifier).set(true);
       return const RefreshOutcome.authFailure();
     }
@@ -548,12 +581,19 @@ class AuthCoordinator extends _$AuthCoordinator {
         ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     if (currentMode != AuthType.uiLogin) {
       debugPrint(
-          'refresh result discarded: auth mode changed to $currentMode mid-refresh');
+        'refresh result discarded: auth mode changed to $currentMode mid-refresh',
+      );
       return RefreshOutcome.transientFailure(
-          Exception('auth mode changed during refresh'));
+        Exception('auth mode changed during refresh'),
+      );
     }
 
     await store.updateUiLoginAccessToken(newAccess, forEpoch: startEpoch);
+    if (store.identityChanging || store.serverEpoch != startEpoch) {
+      return RefreshOutcome.transientFailure(
+        StateError('Credentials changed during refresh'),
+      );
+    }
     return RefreshOutcome.success(newAccess);
   }
 
@@ -646,8 +686,9 @@ class AuthCoordinator extends _$AuthCoordinator {
         }
       } else {
         return const TestConnectionFailure(
-            TestConnectionFailureKind.unexpectedShape,
-            'testConnection only supports basic, simpleLogin or uiLogin');
+          TestConnectionFailureKind.unexpectedShape,
+          'testConnection only supports basic, simpleLogin or uiLogin',
+        );
       }
     } catch (e) {
       return classifyAuthError(e);

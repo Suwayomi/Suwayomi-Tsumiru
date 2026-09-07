@@ -17,6 +17,7 @@ import '../../../../../../features/auth/data/basic_auth_migration.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../../offline/data/background/background_download_controller_shim.dart';
 
 part 'credentials_popup.g.dart';
 
@@ -53,26 +54,28 @@ final formKey = GlobalKey<FormState>();
 class CredentialsPopup extends HookConsumerWidget {
   const CredentialsPopup({super.key});
 
-  String _basicAuth({
-    required String userName,
-    required String password,
-  }) =>
-      'Basic ${base64.encode(
-        utf8.encode('$userName:$password'),
-      )}';
+  String _basicAuth({required String userName, required String password}) =>
+      'Basic ${base64.encode(utf8.encode('$userName:$password'))}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final username = useTextEditingController();
     final password = useTextEditingController();
-    void doSave() {
+    Future<void> doSave() async {
       if ((formKey.currentState?.validate()).ifNull()) {
-        ref.read(credentialsProvider.notifier).set(
-              _basicAuth(userName: username.text, password: password.text),
-              forEpoch:
-                  ref.read(authCredentialsStoreProvider.notifier).serverEpoch,
-            );
-        Navigator.pop(context);
+        await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+          () async {
+            await ref
+                .read(credentialsProvider.notifier)
+                .set(
+                  _basicAuth(userName: username.text, password: password.text),
+                  forEpoch: ref
+                      .read(authCredentialsStoreProvider.notifier)
+                      .serverEpoch,
+                );
+          },
+        );
+        if (context.mounted) Navigator.pop(context);
       }
     }
 
@@ -111,10 +114,7 @@ class CredentialsPopup extends HookConsumerWidget {
       ),
       actions: [
         const PopButton(),
-        ElevatedButton(
-          onPressed: doSave,
-          child: Text(context.l10n.save),
-        ),
+        ElevatedButton(onPressed: doSave, child: Text(context.l10n.save)),
       ],
     );
   }

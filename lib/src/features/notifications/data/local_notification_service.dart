@@ -17,9 +17,9 @@ const kNotifActionView = 'view';
 /// headless) handler can route/act without any object graph.
 class NotificationPayload {
   const NotificationPayload.updates()
-      : mangaId = null,
-        chapterId = null,
-        chapterIds = const [];
+    : mangaId = null,
+      chapterId = null,
+      chapterIds = const [];
   const NotificationPayload.chapter({
     required this.mangaId,
     required this.chapterId,
@@ -36,10 +36,10 @@ class NotificationPayload {
   final List<int> chapterIds;
 
   String encode() => jsonEncode({
-        if (mangaId != null) 'm': mangaId,
-        if (chapterId != null) 'c': chapterId,
-        if (chapterIds.isNotEmpty) 'cs': chapterIds,
-      });
+    if (mangaId != null) 'm': mangaId,
+    if (chapterId != null) 'c': chapterId,
+    if (chapterIds.isNotEmpty) 'cs': chapterIds,
+  });
 
   static NotificationPayload decode(String? raw) {
     if (raw == null || raw.isEmpty) return const NotificationPayload.updates();
@@ -51,7 +51,7 @@ class NotificationPayload {
         mangaId: m,
         chapterId: (j['c'] as num?)?.toInt(),
         chapterIds: [
-          for (final id in (j['cs'] as List? ?? const [])) (id as num).toInt()
+          for (final id in (j['cs'] as List? ?? const [])) (id as num).toInt(),
         ],
       );
     } catch (_) {
@@ -88,7 +88,7 @@ class SeriesNotificationContent {
 /// from the UI isolate and the headless worker isolate alike.
 class LocalNotificationService {
   LocalNotificationService([FlutterLocalNotificationsPlugin? plugin])
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
 
@@ -112,6 +112,7 @@ class LocalNotificationService {
   static const _appUpdateId = 6;
   static const _extensionUpdateId = 7;
   static const _incognitoId = 8;
+  static const _downloadStallId = 9;
   int _seriesId(int mangaId) => 100000 + (mangaId % 1000000);
 
   Future<void> init({
@@ -126,20 +127,26 @@ class LocalNotificationService {
       onDidReceiveBackgroundNotificationResponse: onBackgroundTap,
     );
 
-    final android_ = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    await android_?.createNotificationChannel(const AndroidNotificationChannel(
-      newChaptersChannelId,
-      'New chapters',
-      description: 'Notifies when followed series get new chapters',
-      importance: Importance.high,
-    ));
-    await android_?.createNotificationChannel(const AndroidNotificationChannel(
-      downloadsChannelId,
-      'Downloads',
-      description: 'Notifies when downloads finish',
-      importance: Importance.low,
-    ));
+    final android_ = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android_?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        newChaptersChannelId,
+        'New chapters',
+        description: 'Notifies when followed series get new chapters',
+        importance: Importance.high,
+      ),
+    );
+    await android_?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        downloadsChannelId,
+        'Downloads',
+        description: 'Notifies when downloads finish',
+        importance: Importance.low,
+      ),
+    );
     for (final c in const [
       (libraryErrorChannelId, 'Library update errors'),
       (downloadErrorChannelId, 'Download errors'),
@@ -148,20 +155,28 @@ class LocalNotificationService {
       (extensionUpdateChannelId, 'Extension updates'),
     ]) {
       await android_?.createNotificationChannel(
-        AndroidNotificationChannel(c.$1, c.$2, importance: Importance.defaultImportance),
+        AndroidNotificationChannel(
+          c.$1,
+          c.$2,
+          importance: Importance.defaultImportance,
+        ),
       );
     }
-    await android_?.createNotificationChannel(const AndroidNotificationChannel(
-      incognitoChannelId,
-      'Incognito mode',
-      description: 'Persistent reminder while incognito mode is on',
-      importance: Importance.low,
-    ));
+    await android_?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        incognitoChannelId,
+        'Incognito mode',
+        description: 'Persistent reminder while incognito mode is on',
+        importance: Importance.low,
+      ),
+    );
   }
 
   Future<bool> requestPermission() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     return await android?.requestNotificationsPermission() ?? true;
   }
 
@@ -199,11 +214,12 @@ class LocalNotificationService {
           : InboxStyleInformation(summaryLines, contentTitle: summaryTitle),
     );
     await _plugin.show(
-        id: _summaryId,
-        title: summaryTitle,
-        body: summaryText,
-        notificationDetails: NotificationDetails(android: summaryDetails),
-        payload: const NotificationPayload.updates().encode());
+      id: _summaryId,
+      title: summaryTitle,
+      body: summaryText,
+      notificationDetails: NotificationDetails(android: summaryDetails),
+      payload: const NotificationPayload.updates().encode(),
+    );
 
     if (hideContent) return;
     for (final s in series) {
@@ -232,23 +248,30 @@ class LocalNotificationService {
         actions: [
           // Mark-read / Download act headlessly (no UI); View opens the app.
           AndroidNotificationAction(kNotifActionMarkRead, markReadLabel),
-          AndroidNotificationAction(kNotifActionView, viewLabel,
-              showsUserInterface: true),
+          AndroidNotificationAction(
+            kNotifActionView,
+            viewLabel,
+            showsUserInterface: true,
+          ),
           if (s.chapterIds.length <= _downloadActionMax)
-            AndroidNotificationAction(kNotifActionDownload, downloadLabel,
-                cancelNotification: false),
+            AndroidNotificationAction(
+              kNotifActionDownload,
+              downloadLabel,
+              cancelNotification: false,
+            ),
         ],
       );
       await _plugin.show(
-          id: _seriesId(s.mangaId),
-          title: s.title,
-          body: s.body,
-          notificationDetails: NotificationDetails(android: details),
-          payload: NotificationPayload.chapter(
-            mangaId: s.mangaId,
-            chapterId: s.firstChapterId,
-            chapterIds: s.chapterIds,
-          ).encode());
+        id: _seriesId(s.mangaId),
+        title: s.title,
+        body: s.body,
+        notificationDetails: NotificationDetails(android: details),
+        payload: NotificationPayload.chapter(
+          mangaId: s.mangaId,
+          chapterId: s.firstChapterId,
+          chapterIds: s.chapterIds,
+        ).encode(),
+      );
     }
   }
 
@@ -264,10 +287,11 @@ class LocalNotificationService {
       autoCancel: true,
     );
     await _plugin.show(
-        id: _downloadsCompleteId,
-        title: title,
-        body: body,
-        notificationDetails: const NotificationDetails(android: details));
+      id: _downloadsCompleteId,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(android: details),
+    );
   }
 
   Future<void> _showSimple({
@@ -279,50 +303,68 @@ class LocalNotificationService {
     String? payload,
     Importance importance = Importance.defaultImportance,
     bool ongoing = false,
-  }) =>
-      _plugin.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            channelId,
-            channelName,
-            importance: importance,
-            priority: importance == Importance.high
-                ? Priority.high
-                : Priority.defaultPriority,
-            styleInformation: BigTextStyleInformation(body, contentTitle: title),
-            ongoing: ongoing,
-            autoCancel: !ongoing,
-          ),
-        ),
-        payload: payload,
-      );
+    bool silent = false,
+  }) => _plugin.show(
+    id: id,
+    title: title,
+    body: body,
+    notificationDetails: NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        channelName,
+        importance: importance,
+        priority: importance == Importance.high
+            ? Priority.high
+            : Priority.defaultPriority,
+        styleInformation: BigTextStyleInformation(body, contentTitle: title),
+        ongoing: ongoing,
+        onlyAlertOnce: silent,
+        playSound: !silent,
+        enableVibration: !silent,
+        autoCancel: !ongoing,
+      ),
+    ),
+    payload: payload,
+  );
 
   Future<void> showLibraryUpdateError(String title, String body) => _showSimple(
-        id: _libraryErrorId,
-        channelId: libraryErrorChannelId,
-        channelName: 'Library update errors',
-        title: title,
-        body: body,
-      );
+    id: _libraryErrorId,
+    channelId: libraryErrorChannelId,
+    channelName: 'Library update errors',
+    title: title,
+    body: body,
+  );
 
   Future<void> showDownloadError(String title, String body) => _showSimple(
-        id: _downloadErrorId,
-        channelId: downloadErrorChannelId,
-        channelName: 'Download errors',
-        title: title,
-        body: body,
-      );
+    id: _downloadErrorId,
+    channelId: downloadErrorChannelId,
+    channelName: 'Download errors',
+    title: title,
+    body: body,
+  );
+
+  Future<void> showDownloadStall(
+    String title,
+    String body, {
+    bool silent = false,
+  }) => _showSimple(
+    id: _downloadStallId,
+    channelId: downloadErrorChannelId,
+    channelName: 'Download errors',
+    title: title,
+    body: body,
+    silent: silent,
+  );
+
+  Future<void> cancelDownloadStall() => _plugin.cancel(id: _downloadStallId);
 
   Future<void> showBackupResult(String title, String body) => _showSimple(
-        id: _backupId,
-        channelId: backupChannelId,
-        channelName: 'Backup & restore',
-        title: title,
-        body: body,
-      );
+    id: _backupId,
+    channelId: backupChannelId,
+    channelName: 'Backup & restore',
+    title: title,
+    body: body,
+  );
 
   /// Tapping opens the release page (payload = a URL the launch handler routes).
   Future<void> showAppUpdate(String title, String body, String? url) =>
@@ -337,23 +379,23 @@ class LocalNotificationService {
       );
 
   Future<void> showExtensionUpdates(String title, String body) => _showSimple(
-        id: _extensionUpdateId,
-        channelId: extensionUpdateChannelId,
-        channelName: 'Extension updates',
-        title: title,
-        body: body,
-      );
+    id: _extensionUpdateId,
+    channelId: extensionUpdateChannelId,
+    channelName: 'Extension updates',
+    title: title,
+    body: body,
+  );
 
   /// Persistent, non-dismissible while incognito mode is on (Komikku parity).
   Future<void> showIncognito(String title, String body) => _showSimple(
-        id: _incognitoId,
-        channelId: incognitoChannelId,
-        channelName: 'Incognito mode',
-        title: title,
-        body: body,
-        importance: Importance.low,
-        ongoing: true,
-      );
+    id: _incognitoId,
+    channelId: incognitoChannelId,
+    channelName: 'Incognito mode',
+    title: title,
+    body: body,
+    importance: Importance.low,
+    ongoing: true,
+  );
 
   Future<void> cancelIncognito() => _plugin.cancel(id: _incognitoId);
 

@@ -177,7 +177,12 @@ class OfflineDownloadCoordinator {
   /// starts it when it reaches the front. Skips chapters already downloaded, in
   /// flight, or terminally `error` — pass [allowErrored] for an explicit user
   /// retry, which is the only thing that may revive a failed chapter.
-  Future<void> queueChapter(int chapterId, {bool allowErrored = false}) async {
+  Future<void> queueChapter(
+    int chapterId, {
+    bool allowErrored = false,
+    int? expectedGeneration,
+    ({OfflineKeepRule rule, int count})? expectedKeepConfig,
+  }) async {
     if (_deleting.containsKey(chapterId)) return;
     await db.transaction(() async {
       // Recheck inside the transaction (serialized with deleteChapter): `none`
@@ -186,6 +191,20 @@ class OfflineDownloadCoordinator {
       if (_deleting.containsKey(chapterId)) return;
       final c = await db.chapterById(chapterId);
       if (c == null) return;
+      if (expectedGeneration != null &&
+          c.downloadGeneration != expectedGeneration) {
+        return;
+      }
+      if (expectedKeepConfig != null) {
+        final manga = await (db.select(
+          db.offlineMangas,
+        )..where((m) => m.id.equals(c.mangaId))).getSingleOrNull();
+        if (manga == null ||
+            manga.keepRule != expectedKeepConfig.rule ||
+            manga.keepUnreadCount != expectedKeepConfig.count) {
+          return;
+        }
+      }
       if (c.deviceState == OfflineDeviceState.downloaded ||
           c.deviceState == OfflineDeviceState.downloading ||
           c.deviceState == OfflineDeviceState.queued) {
@@ -193,6 +212,9 @@ class OfflineDownloadCoordinator {
       }
       // Terminal: only an explicit user retry may revive a failed chapter.
       if (c.deviceState == OfflineDeviceState.error && !allowErrored) return;
+      if (c.deviceState == OfflineDeviceState.error) {
+        await db.bumpChapterGeneration(chapterId);
+      }
       await db.setChapterDeviceState(chapterId, OfflineDeviceState.queued);
     });
   }

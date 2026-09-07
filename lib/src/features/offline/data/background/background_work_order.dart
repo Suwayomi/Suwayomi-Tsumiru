@@ -18,8 +18,14 @@ class BackgroundWorkOrder {
     required this.baseDir,
     this.generationByChapter = const {},
     this.rootIsolateToken = 0,
+    this.attemptId,
+    this.catalogServerId,
+    this.identityEpoch = 0,
   });
 
+  final String? attemptId;
+  final String? catalogServerId;
+  final int identityEpoch;
   final List<int> chapterIds;
   final Map<int, int> mangaIdByChapter;
 
@@ -44,34 +50,44 @@ class BackgroundWorkOrder {
   final int rootIsolateToken;
 
   Map<String, Object?> toJson() => {
-        'chapterIds': chapterIds,
-        'mangaIdByChapter':
-            mangaIdByChapter.map((k, v) => MapEntry(k.toString(), v)),
-        'generationByChapter':
-            generationByChapter.map((k, v) => MapEntry(k.toString(), v)),
-        'serverBase': serverBase,
-        'port': port,
-        'addPort': addPort,
-        'wifiOnly': wifiOnly,
-        'auth': auth.toJson(),
-        'baseDir': baseDir,
-        'rootIsolateToken': rootIsolateToken,
-      };
+    'attemptId': attemptId,
+    'catalogServerId': catalogServerId,
+    'identityEpoch': identityEpoch,
+    'chapterIds': chapterIds,
+    'mangaIdByChapter': mangaIdByChapter.map(
+      (k, v) => MapEntry(k.toString(), v),
+    ),
+    'generationByChapter': generationByChapter.map(
+      (k, v) => MapEntry(k.toString(), v),
+    ),
+    'serverBase': serverBase,
+    'port': port,
+    'addPort': addPort,
+    'wifiOnly': wifiOnly,
+    'auth': auth.toJson(),
+    'baseDir': baseDir,
+    'rootIsolateToken': rootIsolateToken,
+  };
 
   factory BackgroundWorkOrder.fromJson(Map<String, Object?> j) =>
       BackgroundWorkOrder(
+        attemptId: j['attemptId'] as String?,
+        catalogServerId: j['catalogServerId'] as String?,
+        identityEpoch: (j['identityEpoch'] as num?)?.toInt() ?? 0,
         chapterIds: (j['chapterIds'] as List).cast<int>(),
-        mangaIdByChapter: (j['mangaIdByChapter'] as Map)
-            .map((k, v) => MapEntry(int.parse(k as String), v as int)),
-        generationByChapter: (j['generationByChapter'] as Map?)
-                ?.map((k, v) => MapEntry(int.parse(k as String), v as int)) ??
+        mangaIdByChapter: (j['mangaIdByChapter'] as Map).map(
+          (k, v) => MapEntry(int.parse(k as String), v as int),
+        ),
+        generationByChapter:
+            (j['generationByChapter'] as Map?)?.map(
+              (k, v) => MapEntry(int.parse(k as String), v as int),
+            ) ??
             const {},
         serverBase: j['serverBase'] as String,
         port: j['port'] as int?,
         addPort: j['addPort'] as bool,
         wifiOnly: j['wifiOnly'] as bool,
-        auth: BackgroundTokenRecord.fromJson(
-            j['auth'] as Map<String, Object?>),
+        auth: BackgroundTokenRecord.fromJson(j['auth'] as Map<String, Object?>),
         baseDir: j['baseDir'] as String? ?? '',
         rootIsolateToken: j['rootIsolateToken'] as int? ?? 0,
       );

@@ -59,8 +59,10 @@ class OfflineMigrationService {
     required this.fetchManga,
     required this.fetchChapters,
     required this.reconcileTarget,
+    this.withOwnership,
   });
 
+  final Future<T> Function<T>(Future<T> Function() action)? withOwnership;
   final OfflineDatabase db;
   final OfflinePageStore pageStore;
   final OfflineSync sync;
@@ -221,6 +223,26 @@ class OfflineMigrationService {
   /// Both chapters are held for the whole sequence, so a download or an
   /// eviction can't publish into either one halfway through.
   Future<_TransferOutcome> _transferOne({
+    required int fromMangaId,
+    required int fromChapterId,
+    required int toMangaId,
+    required int toChapterId,
+    required DateTime downloadedAt,
+    required bool keepSource,
+  }) async {
+    Future<_TransferOutcome> transfer() => _transferOneOwned(
+      fromMangaId: fromMangaId,
+      fromChapterId: fromChapterId,
+      toMangaId: toMangaId,
+      toChapterId: toChapterId,
+      downloadedAt: downloadedAt,
+      keepSource: keepSource,
+    );
+    final ownership = withOwnership;
+    return ownership == null ? transfer() : ownership(transfer);
+  }
+
+  Future<_TransferOutcome> _transferOneOwned({
     required int fromMangaId,
     required int fromChapterId,
     required int toMangaId,

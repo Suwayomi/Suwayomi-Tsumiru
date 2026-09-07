@@ -8,7 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,6 +17,7 @@ import '../../../constants/db_keys.dart';
 import '../../../constants/endpoints.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
 import '../../../utils/misc/toast/toast.dart';
@@ -31,6 +32,7 @@ import '../../manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../manga_book/presentation/manga_details/controller/scanlator_propagation.dart';
+import '../../notifications/controller/notifications_controller.dart';
 import '../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -70,11 +72,28 @@ bool get _useBgService => isAndroidNative;
 /// Pass `userInitiated` when someone pressed something: it overrides the
 /// backoff Android applies while the server is unreachable, which an automatic
 /// pass must not.
+final backgroundDownloadsPlatformProvider = Provider<bool>(
+  (ref) => isAndroidNative,
+);
+
 final downloadStarterProvider =
     Provider<Future<void> Function({bool userInitiated})>((Ref ref) {
       return ({bool userInitiated = false}) async {
         if (!ref.read(offlineActiveProvider)) return;
-        if (isAndroidNative) {
+        if (ref.read(backgroundDownloadsPlatformProvider)) {
+          try {
+            await writeCatchupWorkSpec(ref.read);
+            await ref.read(notificationsControllerProvider).sync();
+          } catch (error) {
+            logger.e('Offline: scheduling queued downloads failed: $error');
+            final locales = WidgetsBinding.instance.platformDispatcher.locales;
+            final l10n = lookupAppLocalizations(
+              locales.isNotEmpty ? locales.first : const Locale('en'),
+            );
+            ref
+                .read(toastProvider)
+                ?.showError(l10n.backgroundDownloadScheduleFailed);
+          }
           await ref
               .read(backgroundDownloadControllerProvider)
               .requestStart(userInitiated: userInitiated);
@@ -89,6 +108,10 @@ final downloadStarterProvider =
 /// main-isolate pump elsewhere) — the persisted flag is what every download
 /// starter gates on, so no path can restart downloads while paused.
 Future<void> setOfflineDownloadsPaused(WidgetRef ref, bool paused) async {
+  final saved = await ref
+      .read(sharedPreferencesProvider)
+      .setBool(DBKeys.offlineDownloadsPaused.name, paused);
+  if (!saved) throw StateError('Could not persist download pause');
   ref.read(offlineDownloadsPausedProvider.notifier).update(paused);
   if (isAndroidNative) {
     final controller = ref.read(backgroundDownloadControllerProvider);
@@ -105,44 +128,54 @@ Future<void> setOfflineDownloadsPaused(WidgetRef ref, bool paused) async {
       coordinator?.resume();
     }
   }
+  if (isAndroidNative) {
+    await writeCatchupWorkSpec(ref.read);
+    await ref.read(notificationsControllerProvider).sync();
+  }
 }
 
 Future<void> clearOfflineCatalog(WidgetRef ref) async {
   if (!ref.read(offlineEnabledProvider)) return;
 
   final background = ref.read(backgroundDownloadControllerProvider);
-  await clearOfflineCatalogWithDependencies(
-    stopBackground: background.stopAndClearWorkOrder,
-    stopMainPump: () async {
-      final coordinator = ref.read(offlineDownloadCoordinatorProvider);
-      coordinator?.pause();
-      // Wait for the in-flight chapter to observe the cancel and unwind, so no
-      // page write lands after the wipe below.
-      await coordinator?.awaitIdle();
-    },
-    clearDatabase: ref.read(offlineDatabaseProvider).clearAll,
-    // Best-effort: a file-delete failure (locked file, permissions) must not
-    // abort the clear before the identity stamp resets — the DB is already
-    // wiped, so leftover bytes are just dead weight, not stale content.
-    clearFiles: () async {
-      try {
-        await ref.read(offlinePageStoreProvider).clearAll();
-      } catch (e) {
-        logger.e('Offline: clearing downloaded files failed: $e');
-      }
-    },
-    clearIdentity: () async {
-      final preferences = ref.read(sharedPreferencesProvider);
-      await preferences.remove(DBKeys.offlineCatalogServerId.name);
-      await preferences.remove(DBKeys.offlineServerMismatchDismissedList.name);
-    },
-    finish: background.finishCatalogClear,
-  );
+  await background.withOwnership(() async {
+    await CatchupStateStore(ref.read(sharedPreferencesProvider)).clearState();
+    await clearOfflineCatalogWithDependencies(
+      stopBackground: background.stopAndClearWorkOrder,
+      stopMainPump: () async {
+        final coordinator = ref.read(offlineDownloadCoordinatorProvider);
+        coordinator?.pause();
+        // Wait for the in-flight chapter to observe the cancel and unwind, so no
+        // page write lands after the wipe below.
+        await coordinator?.awaitIdle();
+      },
+      clearDatabase: ref.read(offlineDatabaseProvider).clearAll,
+      // Best-effort: a file-delete failure (locked file, permissions) must not
+      // abort the clear before the identity stamp resets — the DB is already
+      // wiped, so leftover bytes are just dead weight, not stale content.
+      clearFiles: () async {
+        try {
+          await ref.read(offlinePageStoreProvider).clearAll();
+        } catch (e) {
+          logger.e('Offline: clearing downloaded files failed: $e');
+        }
+      },
+      clearIdentity: () async {
+        final preferences = ref.read(sharedPreferencesProvider);
+        await preferences.remove(DBKeys.offlineCatalogServerId.name);
+        await preferences.remove(
+          DBKeys.offlineServerMismatchDismissedList.name,
+        );
+      },
+      finish: background.finishCatalogClear,
+    );
+  });
   // The background worker must not outlive its world: drop its spec + ledger
   // so no stale-server obligations survive the clear.
   await CatchupStateStore(ref.read(sharedPreferencesProvider)).clearState();
   ref.invalidate(offlineActiveProvider);
   ref.invalidate(offlineReadDatabaseProvider);
+  await ref.read(notificationsControllerProvider).sync();
 }
 
 Future<void> clearOfflineCatalogWithDependencies({
@@ -260,7 +293,11 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) async {
   // foreground-service worker owns the downloading; elsewhere the main-isolate
   // pump drains it. Both callers are the user pressing save or retry, which is
   // the one thing allowed to revive a terminally-failed chapter.
-  await coordinator.queueChapter(chapterId, allowErrored: true);
+  await coordinator.queueChapter(
+    chapterId,
+    allowErrored: true,
+    expectedGeneration: chapter.downloadGeneration,
+  );
   await ref.read(downloadStarterProvider)(userInitiated: true);
 }
 
@@ -1016,6 +1053,37 @@ Future<void> _deleteChapterFromDeviceCore({
   required BackgroundDownloadController? bgController,
   required int chapterId,
 }) async {
+  if (bgController != null) {
+    await bgController.withOwnership(
+      () => _deleteChapterFromDeviceOwned(
+        manager: manager,
+        db: db,
+        repo: repo,
+        coordinator: coordinator,
+        bgController: bgController,
+        chapterId: chapterId,
+      ),
+    );
+    return;
+  }
+  await _deleteChapterFromDeviceOwned(
+    manager: manager,
+    db: db,
+    repo: repo,
+    coordinator: coordinator,
+    bgController: null,
+    chapterId: chapterId,
+  );
+}
+
+Future<void> _deleteChapterFromDeviceOwned({
+  required OfflineDownloadManager manager,
+  required OfflineDatabase db,
+  required OfflineRepository repo,
+  required OfflineDownloadCoordinator? coordinator,
+  required BackgroundDownloadController? bgController,
+  required int chapterId,
+}) async {
   // Bump the persistent download generation first so a re-queued download
   // outranks any still-in-flight event from the deleted one (survives restart).
   final newGen = await db.bumpChapterGeneration(chapterId);
@@ -1045,6 +1113,15 @@ Future<void> _deleteChapterFromDeviceCore({
 /// copy; the SERVER's own download is left alone (see #34, #36). Runs on a
 /// [ProviderContainer] so a mid-purge navigation can't abort the cleanup.
 Future<void> removeMangaFromLibraryAndPurge(
+  ProviderContainer container,
+  int mangaId,
+) => container
+    .read(backgroundDownloadControllerProvider)
+    .withOwnership(
+      () => _removeMangaFromLibraryAndPurgeOwned(container, mangaId),
+    );
+
+Future<void> _removeMangaFromLibraryAndPurgeOwned(
   ProviderContainer container,
   int mangaId,
 ) async {
@@ -1256,16 +1333,16 @@ Stream<({int downloaded, int inFlight})> mangaOfflineProgress(
 /// This matches the pattern noted in the offline architecture doc.
 final offlineChaptersForMangaProvider =
     StreamProvider.family<List<OfflineChapter>, int>((ref, mangaId) {
-  if (!ref.watch(offlineEnabledProvider)) return Stream.value(const []);
-  return ref
-      .watch(offlineDatabaseProvider)
-      .watchChaptersForManga(mangaId)
-      .map(
-        (rows) => rows
-            .where((c) => c.deviceState != OfflineDeviceState.none)
-            .toList(),
-      );
-});
+      if (!ref.watch(offlineEnabledProvider)) return Stream.value(const []);
+      return ref
+          .watch(offlineDatabaseProvider)
+          .watchChaptersForManga(mangaId)
+          .map(
+            (rows) => rows
+                .where((c) => c.deviceState != OfflineDeviceState.none)
+                .toList(),
+          );
+    });
 
 /// Every series with an offline footprint — chapters present OR an active
 /// keep-rule — with per-series counts, bytes, and the manga row. Single source
@@ -1298,7 +1375,11 @@ Stream<List<OfflineSeriesEntry>> offlineSeries(Ref ref) {
 /// Order matters: pin every still-downloaded chapter BEFORE clearing the rule,
 /// so a reconcile racing this can't evict anything before the pin lands —
 /// only then is it safe to reconcile.
-Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
+Future<void> detachKeepRule(WidgetRef ref, int mangaId) => ref
+    .read(backgroundDownloadControllerProvider)
+    .withOwnership(() => _detachKeepRuleOwned(ref, mangaId));
+
+Future<void> _detachKeepRuleOwned(WidgetRef ref, int mangaId) async {
   if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   for (final c in await db.chaptersForManga(mangaId)) {
@@ -1325,7 +1406,11 @@ Future<void> detachKeepRule(WidgetRef ref, int mangaId) async {
 
 /// Stop keeping [mangaId] offline AND delete every on-device chapter (the
 /// server copy is untouched). Mirrors the per-series "remove" action.
-Future<void> removeKeepRuleAndDelete(WidgetRef ref, int mangaId) async {
+Future<void> removeKeepRuleAndDelete(WidgetRef ref, int mangaId) => ref
+    .read(backgroundDownloadControllerProvider)
+    .withOwnership(() => _removeKeepRuleAndDeleteOwned(ref, mangaId));
+
+Future<void> _removeKeepRuleAndDeleteOwned(WidgetRef ref, int mangaId) async {
   if (!ref.read(offlineActiveProvider)) return;
   final db = ref.read(offlineDatabaseProvider);
   final cfg = await ref.read(offlineRepositoryProvider).keepConfigFor(mangaId);
@@ -1345,10 +1430,23 @@ Future<void> changeKeepRule(
   int count,
 ) async {
   if (!ref.read(offlineActiveProvider)) return;
-  await ref.read(offlineDatabaseProvider).setKeepRule(mangaId, rule, count);
-  await reconcileMangaWidget(ref, mangaId);
-  // The background worker plans from the spec — a rule change re-snapshots it.
-  await writeCatchupWorkSpec(ref.read);
+  var reconciled = false;
+  try {
+    await ref.read(backgroundDownloadControllerProvider).withOwnership(
+      () async {
+        await ref
+            .read(offlineDatabaseProvider)
+            .setKeepRule(mangaId, rule, count);
+        await reconcileMangaWidget(ref, mangaId, startDownload: false);
+        reconciled = true;
+        await writeCatchupWorkSpec(ref.read);
+      },
+    );
+  } finally {
+    if (reconciled) {
+      await ref.read(downloadStarterProvider)(userInitiated: true);
+    }
+  }
 }
 
 /// Total bytes of on-device offline content — for the storage settings UI.
@@ -1379,12 +1477,18 @@ Future<void> reconcileMangaCore({
   required int mangaId,
   Future<void> Function(List<int> chapterIds)? enqueueServerDownload,
   Future<void> Function(int chapterId, int generation)? removeFromWorker,
+  Future<void> Function(Future<void> Function())? withOwnership,
   Set<int> sessionProtected = const {},
   int deleteWhileReadingSlots = 0,
   Set<int> newlyReadChapterIds = const {},
   bool downloadProtectionWindow = false,
-}) {
-  return OfflineReconciler(
+}) async {
+  final keepConfig = await repo.keepConfigFor(mangaId);
+  final generations = {
+    for (final chapter in await db.chaptersForManga(mangaId))
+      chapter.id: chapter.downloadGeneration,
+  };
+  await OfflineReconciler(
     db: db,
     nets: nets,
     sessionProtected: sessionProtected,
@@ -1397,32 +1501,45 @@ Future<void> reconcileMangaCore({
     // control. One failed queue-mark must not abort the rest.
     onDownload: (id) async {
       try {
-        await coordinator.queueChapter(id);
+        if (!generations.containsKey(id)) return;
+        await coordinator.queueChapter(
+          id,
+          expectedGeneration: generations[id],
+          expectedKeepConfig: keepConfig,
+        );
       } catch (e) {
         logger.e('Offline: reconcile queue skipped for chapter $id: $e');
       }
     },
     onEvict: (id) async {
-      try {
-        // Bump before anything else, and unconditionally — an eviction is a
-        // delete, so a producer still holding staging for this chapter has to
-        // be outranked whether or not the Android worker is wired up here.
-        final newGen = await db.bumpChapterGeneration(id);
-        // Cancel the active downloader before removing files, or an in-flight
-        // download re-writes the chapter after the purge. beginDelete claims
-        // the desktop engine; removeFromWorker stops the Android FGS worker
-        // (null in the launch/test core, where the coordinator is the only
-        // downloader).
-        await coordinator.beginDelete(id);
-        if (removeFromWorker != null) await removeFromWorker(id, newGen);
-        await ChapterFileLock.run(id, () async {
-          final c = await repo.chapterById(id);
-          if (c != null) await manager.deleteChapter(c);
-        });
-      } catch (e) {
-        logger.e('Offline: reconcile evict skipped for chapter $id: $e');
-      } finally {
-        coordinator.endDelete(id);
+      Future<void> evict() async {
+        try {
+          // Bump before anything else, and unconditionally — an eviction is a
+          // delete, so a producer still holding staging for this chapter has to
+          // be outranked whether or not the Android worker is wired up here.
+          final newGen = await db.bumpChapterGeneration(id);
+          // Cancel the active downloader before removing files, or an in-flight
+          // download re-writes the chapter after the purge. beginDelete claims
+          // the desktop engine; removeFromWorker stops the Android FGS worker
+          // (null in the launch/test core, where the coordinator is the only
+          // downloader).
+          await coordinator.beginDelete(id);
+          if (removeFromWorker != null) await removeFromWorker(id, newGen);
+          await ChapterFileLock.run(id, () async {
+            final c = await repo.chapterById(id);
+            if (c != null) await manager.deleteChapter(c);
+          });
+        } catch (e) {
+          logger.e('Offline: reconcile evict skipped for chapter $id: $e');
+        } finally {
+          coordinator.endDelete(id);
+        }
+      }
+
+      if (withOwnership != null) {
+        await withOwnership(evict);
+      } else {
+        await evict();
       }
     },
     onServerDownload: enqueueServerDownload == null
@@ -1477,6 +1594,7 @@ Future<void> reconcileManga(
       awaitingServerDownloads.add(mangaId);
       await persistAwaitingServerDownloads(ref.read);
     },
+    withOwnership: ref.read(backgroundDownloadControllerProvider).withOwnership,
     removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
@@ -1530,6 +1648,7 @@ Future<void> reconcileMangaWidget(
       awaitingServerDownloads.add(mangaId);
       await persistAwaitingServerDownloads(ref.read);
     },
+    withOwnership: ref.read(backgroundDownloadControllerProvider).withOwnership,
     removeFromWorker: (id, gen) async {
       final ctrl = ref.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
@@ -1577,6 +1696,9 @@ Future<void> reconcileMangaContainer(
       awaitingServerDownloads.add(mangaId);
       await persistAwaitingServerDownloads(container.read);
     },
+    withOwnership: container
+        .read(backgroundDownloadControllerProvider)
+        .withOwnership,
     removeFromWorker: (id, gen) async {
       final ctrl = container.read(backgroundDownloadControllerProvider);
       await ctrl.onRemoved(id);
@@ -1616,6 +1738,9 @@ Future<void> reconcileAllAtLaunch(ProviderContainer container) async {
       deleteWhileReadingSlots: container
           .read(localDeleteSettingsProvider)
           .deleteWhileReading,
+      withOwnership: container
+          .read(backgroundDownloadControllerProvider)
+          .withOwnership,
       removeFromWorker: (id, gen) async {
         final ctrl = container.read(backgroundDownloadControllerProvider);
         await ctrl.onRemoved(id);

@@ -11,6 +11,7 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 
 class AuthTypeTile extends ConsumerWidget {
   const AuthTypeTile({super.key});
@@ -30,9 +31,15 @@ class AuthTypeTile extends ConsumerWidget {
           optionList: AuthType.values,
           getOptionTitle: (value) => value.toLocale(context),
           value: authType ?? AuthType.none,
-          onChange: (enumValue) {
-            ref.read(authTypeKeyProvider.notifier).update(enumValue);
-            Navigator.pop(context);
+          onChange: (enumValue) async {
+            if (enumValue != ref.read(authTypeKeyProvider)) {
+              await ref
+                  .read(backgroundDownloadControllerProvider)
+                  .changeIdentity(() async {
+                    ref.read(authTypeKeyProvider.notifier).update(enumValue);
+                  });
+            }
+            if (context.mounted) Navigator.pop(context);
           },
         ),
       ),

@@ -15,6 +15,7 @@ import '../../../../utils/network/gateway_status.dart';
 import '../chapter_download_engine.dart';
 import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store.dart';
+import '../offline_server_identity.dart';
 import 'background_token_record.dart';
 
 /// One client for the whole background run. `http.get`/`http.post` open and
@@ -40,10 +41,14 @@ class BackgroundServerTarget {
     required this.serverBase,
     required this.port,
     required this.addPort,
+    this.client,
+    this.isCancelled,
   });
   final String serverBase;
   final int? port;
   final bool addPort;
+  final http.Client? client;
+  final bool Function()? isCancelled;
 
   String get graphql => Endpoints.baseApi(
     baseUrl: serverBase,
@@ -98,10 +103,11 @@ Future<Object?> postBackgroundGraphql({
   required Map<String, Object?> variables,
   String? accessToken,
 }) async {
+  if (target.isCancelled?.call() ?? false) return gqlNetworkError;
   final headers = <String, String>{'Content-Type': 'application/json'};
   applyBackgroundAuthHeaders(headers, record, accessToken: accessToken);
   try {
-    final res = await backgroundHttpClient
+    final res = await (target.client ?? backgroundHttpClient)
         .post(
           Uri.parse(target.graphql),
           headers: headers,
@@ -146,6 +152,7 @@ Future<List<String>?> resolveChapterPageUrls({
   );
 
   var result = await post(null);
+  if (target.isCancelled?.call() ?? false) return null;
   if (result == gqlAuthError && record().authType == 'uiLogin') {
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
     if (newAccess != null) {
@@ -188,6 +195,9 @@ ChapterDownloadEngine buildBackgroundEngine({
   writePage: store,
   parallelPageLimit: parallelPageLimit,
   fetchPage: (pageUrl) async {
+    if (target.isCancelled?.call() ?? false) {
+      throw StateError('Download cancelled');
+    }
     final r = record();
     var fetchUrl = '${target.pageBase}$pageUrl';
     final headers = <String, String>{};
@@ -212,7 +222,7 @@ ChapterDownloadEngine buildBackgroundEngine({
     applyIsolateCustomHeaders(headers, r.extraHeaders);
     final http.Response res;
     try {
-      res = await backgroundHttpClient
+      res = await (target.client ?? backgroundHttpClient)
           .get(Uri.parse(fetchUrl), headers: headers)
           .timeout(_httpTimeout);
     } on SocketException catch (e) {
@@ -235,8 +245,36 @@ ChapterDownloadEngine buildBackgroundEngine({
     );
   },
   refreshAuth: () async {
+    if (target.isCancelled?.call() ?? false) return false;
     if (record().authType != 'uiLogin') return false;
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
     return newAccess != null;
   },
 );
+
+Future<bool> verifyBackgroundServerIdentity({
+  required BackgroundServerTarget target,
+  required BackgroundTokenRecord Function() record,
+  required TokenBroker broker,
+  required String expected,
+}) async {
+  Future<Object?> read(String? accessToken) => postBackgroundGraphql(
+    target: target,
+    record: record(),
+    query:
+        r'query OfflineServerIdentity($key: String!) { metas(condition: {key: $key}, first: 1) { nodes { value } } }',
+    variables: {'key': kTsumiruServerIdMetaKey},
+    accessToken: accessToken,
+  );
+  var result = await read(null);
+  if (target.isCancelled?.call() ?? false) return false;
+  if (result == gqlAuthError && record().authType == 'uiLogin') {
+    final access = await broker.resolveAfter401(record().accessToken ?? '');
+    if (access != null) result = await read(access);
+  }
+  if (result is! Map) return false;
+  final nodes = (result['metas'] as Map?)?['nodes'];
+  return nodes is List &&
+      nodes.isNotEmpty &&
+      (nodes.first as Map)['value'] == expected;
+}

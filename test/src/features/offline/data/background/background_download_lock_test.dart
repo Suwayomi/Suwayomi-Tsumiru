@@ -5,8 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 
 void main() {
@@ -22,50 +24,63 @@ void main() {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
   });
 
-  test('a held lock refuses a second holder', () async {
+  test('a held lock refuses a second holder until release', () async {
     final a = BackgroundDownloadLock(anchor);
     final b = BackgroundDownloadLock(anchor);
+    addTearDown(a.release);
+    addTearDown(b.release);
     expect(await a.acquire('fgs'), isTrue);
     expect(await b.acquire('wm-catchup'), isFalse);
     await a.release();
     expect(await b.acquire('wm-catchup'), isTrue);
-    await b.release();
   });
 
-  test('a yield request survives heartbeats and reaches the holder', () async {
+  test('a holder excludes another isolate until release', () async {
     final holder = BackgroundDownloadLock(anchor);
-    final replay = BackgroundDownloadLock(anchor);
+    addTearDown(holder.release);
     expect(await holder.acquire('fgs'), isTrue);
-    expect(await holder.yieldRequested(), isFalse);
-
-    await replay.requestYield();
-    expect(await holder.yieldRequested(), isTrue,
-        reason: 'the flag is a marker file — no renewal can clobber it');
+    final path = anchor.path;
+    Future<bool> contend() => Isolate.run(() async {
+      final contender = BackgroundDownloadLock(File(path));
+      try {
+        return await contender.acquire('isolate');
+      } finally {
+        await contender.release();
+      }
+    });
+    expect(await contend(), isFalse);
     await holder.release();
+    expect(await contend(), isTrue);
   });
 
-  test('a displaced holder cannot delete its successor\'s lock', () async {
-    final a = BackgroundDownloadLock(anchor);
-    expect(await a.acquire('fgs'), isTrue);
-    // Simulate a steal: the successor rewrites the holder identity.
-    a.lockFile.writeAsStringSync('replay#123');
-
-    await a.release();
-    expect(a.lockFile.existsSync(), isTrue,
-        reason: 'release is owner-only — the stolen lock must survive');
-  });
-
-  test('a stale lock is broken and re-acquired', () async {
-    // A dead holder: lock file present, heartbeat long past staleness.
-    anchor.parent.createSync(recursive: true);
+  test('a stale marker cannot steal active SQLite ownership', () async {
+    final owner = sqlite3.open('${anchor.path}.sqlite');
+    owner.execute('BEGIN IMMEDIATE');
+    addTearDown(owner.close);
     anchor.writeAsStringSync('fgs#999');
     anchor.setLastModifiedSync(
-        DateTime.now().subtract(const Duration(minutes: 5)));
-
+      DateTime.now().subtract(const Duration(minutes: 5)),
+    );
     final claimant = BackgroundDownloadLock(anchor);
-    expect(await claimant.acquire('wm-catchup'), isTrue,
-        reason: 'heartbeat age past staleAfter means the holder is dead');
-    await claimant.release();
-    expect(anchor.existsSync(), isFalse);
+    addTearDown(claimant.release);
+    expect(await claimant.acquire('wm-catchup'), isFalse);
+    owner.execute('ROLLBACK');
+    expect(await claimant.acquire('wm-catchup'), isTrue);
+  });
+
+  test('a yield request survives contention and release', () async {
+    final holder = BackgroundDownloadLock(anchor);
+    final replay = BackgroundDownloadLock(anchor);
+    addTearDown(holder.release);
+    addTearDown(replay.release);
+    expect(await holder.acquire('fgs'), isTrue);
+    expect(await holder.yieldRequested(), isFalse);
+    await replay.requestYield();
+    expect(await replay.acquire('replay'), isFalse);
+    expect(await holder.yieldRequested(), isTrue);
+    await holder.release();
+    expect(await replay.yieldRequested(), isTrue);
+    expect(await replay.acquire('replay'), isTrue);
+    expect(await replay.yieldRequested(), isFalse);
   });
 }

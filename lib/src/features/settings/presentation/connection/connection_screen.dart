@@ -40,7 +40,7 @@ class ConnectionScreen extends HookConsumerWidget {
     // reaching the same server.
     useEffect(() {
       // Defer to after the frame: provider writes must not happen during build.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!ref.read(serverPortToggleProvider).ifNull()) return;
         final String url =
             ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
@@ -52,9 +52,9 @@ class ConnectionScreen extends HookConsumerWidget {
             addPort: true,
             appendApiToUrl: false,
           );
-          ref.read(serverExternalUrlProvider.notifier).update(merged);
+          await ref.read(serverExternalUrlProvider.notifier).update(merged);
         }
-        ref.read(serverPortToggleProvider.notifier).update(false);
+        await ref.read(serverPortToggleProvider.notifier).update(false);
       });
       return null;
     }, const []);

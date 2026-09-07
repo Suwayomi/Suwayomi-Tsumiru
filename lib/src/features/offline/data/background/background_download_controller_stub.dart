@@ -6,6 +6,8 @@
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../auth/data/auth_credentials_store.dart';
+
 /// Web stub for [BackgroundDownloadController]. The real controller depends on
 /// `dart:io` + `flutter_foreground_task` (native-only), which don't compile for
 /// web. The conditional-import shim swaps this no-op in on web, so the
@@ -27,6 +29,11 @@ class BackgroundDownloadController {
   Future<void> onRemoved(int chapterId) async {}
   Future<void> recordChapterDeleted(int chapterId, int newGeneration) async {}
   Future<void> onWifiOnlyChanged(bool value) async {}
+  Future<T> changeIdentity<T>(Future<T> Function() action) => _ref
+      .read(authCredentialsStoreProvider.notifier)
+      .withIdentityChange(action);
+
+  Future<T> withOwnership<T>(Future<T> Function() action) => action();
   Future<void> pause() async {}
   Future<void> resume() async {}
 
@@ -40,7 +47,8 @@ class BackgroundDownloadController {
 /// Web no-op mirror of the native provider.
 final backgroundDownloadControllerProvider =
     Provider<BackgroundDownloadController>(
-        (Ref ref) => BackgroundDownloadController(ref));
+      (Ref ref) => BackgroundDownloadController(ref),
+    );
 
 /// Web no-op: there is no foreground task service to initialise.
 void initForegroundTaskService() {}

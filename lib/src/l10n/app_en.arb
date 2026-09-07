@@ -2604,6 +2604,9 @@
   },
   "notificationDownloadErrorTitle": "Download failed",
   "notificationDownloadErrorBody": "{count} chapters failed to download",
+  "backgroundDownloadScheduleFailed": "Couldn't schedule background downloads. Try again from Downloads.",
+  "notificationDownloadsPausedBackground": "Android paused background downloads. Open Tsumiru to try again.",
+  "notificationDownloadsPausedService": "Couldn't start downloads. Tap Retry in Downloads to try again.",
   "notificationDownloadsPausedTitle": "Downloads paused",
   "@notificationDownloadsPausedTitle": {
     "description": "Notification shown when on-device downloads stop because they cannot continue"
@@ -3654,5 +3657,6 @@
   "offlineChaptersQueued": "Queued",
   "@offlineChaptersQueued": {
     "description": "Status label for a chapter waiting in the download queue"
-  }
+  },
+  "notificationDownloadsPausedBudget": "Android's background download limit was reached. Open Tsumiru to try again."
 }

@@ -8,9 +8,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../chapter_download_engine.dart';
@@ -18,10 +21,14 @@ import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
+import '../offline_server_identity.dart';
+import 'background_chapter_fetch.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
+import 'catchup_work_spec.dart';
+import 'work_order_admission.dart';
 
 /// Foreground-service entry point. Must be top-level +
 /// `@pragma('vm:entry-point')` so AOT keeps it and the plugin can re-enter it
@@ -50,16 +57,9 @@ const String kWorkOrderKey = 'work_order';
 /// rotation and is read back by the main side on stop).
 const String kTokenRecordKey = 'token_record';
 
-/// The background-download worker, running entirely in the foreground-service
-/// isolate — plugin-free by design (only `dart:io`, `package:http`, FFT
-/// storage/messaging), so it needs no isolate-binary-messenger init.
-/// Single-owner: while the queue is non-empty this isolate owns all
-/// downloading via the pure-Dart [ChapterDownloadEngine], appending progress
-/// to the durable [BackgroundCompletionLog]; `sendDataToMain` events are
-/// foreground-only cosmetics.
 class DownloadTaskHandler extends TaskHandler {
   /// chapterIds still to download, in order.
-  final List<int> _queue = <int>[];
+  final Set<int> _queue = <int>{};
 
   /// chapterId -> mangaId, needed to build page paths.
   final Map<int, int> _mangaOf = <int, int>{};
@@ -78,10 +78,6 @@ class DownloadTaskHandler extends TaskHandler {
   /// Chapters that reached a terminal state (for the notification counter).
   int _done = 0;
 
-  /// Wi-Fi-only flag carried from the main isolate. v1 LIMITATION: recorded/
-  /// live-updated here but not acted on — enforcement is done by the main
-  /// isolate; kept for a future in-worker gate.
-  // ignore: unused_field
   var _wifiOnly = false;
 
   /// Set when an `add` op merges new work while the drain loop is between
@@ -96,6 +92,11 @@ class DownloadTaskHandler extends TaskHandler {
   /// True once onDestroy fires (timeout / external stop) — the drain loop and
   /// the in-flight chapter observe it and unwind.
   var _stopping = false;
+  Future<void>? _drainFuture;
+  Timer? _yieldTimer;
+  bool _ownsLock = false;
+  Future<void>? _controlCheck;
+  DateTime? _lastControlRefresh;
 
   /// True once the main isolate sends `{op:'pause'}`. The in-flight chapter is
   /// cancelled (left resumable) and the worker self-stops; drift retains
@@ -139,7 +140,7 @@ class DownloadTaskHandler extends TaskHandler {
     _order = BackgroundWorkOrder.fromJson(
       jsonDecode(raw) as Map<String, Object?>,
     );
-    final order = _order!;
+    var order = _order!;
 
     // Plugin-free path building: the main isolate already resolved the offline
     // base dir (path_provider lives in the root isolate), so we just wrap it.
@@ -148,12 +149,7 @@ class DownloadTaskHandler extends TaskHandler {
     _log = BackgroundCompletionLog(File('${order.baseDir}/.bg_completion.log'));
 
     _wifiOnly = order.wifiOnly;
-    _record = order.auth;
-    _broker = _buildBroker();
 
-    // The log has one writer at a time. A WorkManager catch-up run mid-flight
-    // checkpoints within seconds of a yield request; a stale holder expires by
-    // heartbeat age.
     _lock = BackgroundDownloadLock(File('${order.baseDir}/.bg_lock'));
     var acquired = await _lock!.acquire('fgs');
     if (!acquired) {
@@ -161,6 +157,7 @@ class DownloadTaskHandler extends TaskHandler {
       for (var i = 0; i < 15 && !acquired; i++) {
         await Future<void>.delayed(const Duration(seconds: 2));
         acquired = await _lock!.acquire('fgs');
+        if (!acquired) await _lock!.requestYield();
       }
     }
     if (!acquired) {
@@ -176,11 +173,102 @@ class DownloadTaskHandler extends TaskHandler {
       return;
     }
 
+    _ownsLock = true;
+    BackgroundWorkOrder? admitted;
+    try {
+      admitted = await withWorkOrderAdmission(order.baseDir, () async {
+        final current = decodeWorkOrder(
+          await FlutterForegroundTask.getData<String>(key: kWorkOrderKey),
+        );
+        if (current == null ||
+            current.attemptId != order.attemptId ||
+            !await _controlsAllow(current)) {
+          return null;
+        }
+        if (_stopping || !_ownsLock) return null;
+        if (current.attemptId != null) {
+          final saved = await FlutterForegroundTask.saveData(
+            key: kAcceptedWorkOrderKey,
+            value: current.attemptId!,
+          );
+          if (!saved) throw StateError('Could not claim download work order');
+        }
+        return current;
+      });
+    } catch (error) {
+      await _releaseOwnership();
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'lockFailed',
+        'error': '$error',
+      });
+      await FlutterForegroundTask.stopService();
+      return;
+    }
+    if (admitted == null || _stopping || _paused) {
+      await _releaseOwnership();
+      await FlutterForegroundTask.stopService();
+      return;
+    }
+    order = admitted;
+    _order = admitted;
+    _record = order.auth;
+    _broker = _buildBroker();
+    FlutterForegroundTask.sendDataToMain({
+      'kind': 'owned',
+      'attemptId': order.attemptId,
+    });
+
     _queue.addAll(order.chapterIds);
     _mangaOf.addAll(order.mangaIdByChapter);
-    _genOf.addAll(order.generationByChapter);
+    for (final entry in order.generationByChapter.entries) {
+      if (entry.value > (_genOf[entry.key] ?? -1)) {
+        _genOf[entry.key] = entry.value;
+      }
+    }
     _total = _queue.length;
 
+    _yieldTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      _controlCheck ??= _checkControls().whenComplete(
+        () => _controlCheck = null,
+      );
+    });
+    _drainFuture = _verifyAndDrain(order);
+    try {
+      await _drainFuture;
+    } catch (error) {
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'parked',
+        'reason': '$error',
+      });
+      await _releaseOwnership();
+      await FlutterForegroundTask.stopService();
+    } finally {
+      _yieldTimer?.cancel();
+    }
+  }
+
+  Future<void> _verifyAndDrain(BackgroundWorkOrder order) async {
+    await _checkControls();
+    if (!_paused &&
+        !_stopping &&
+        !await verifyBackgroundServerIdentity(
+          target: BackgroundServerTarget(
+            serverBase: order.serverBase,
+            port: order.port,
+            addPort: order.addPort,
+            client: _http,
+            isCancelled: () => _paused || _stopping,
+          ),
+          record: () => _record,
+          broker: _broker,
+          expected: order.catalogServerId!,
+        )) {
+      _paused = true;
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'parked',
+        'reason': 'server identity not verified',
+      });
+    }
     await _drain();
   }
 
@@ -190,6 +278,8 @@ class DownloadTaskHandler extends TaskHandler {
     switch (data['op']) {
       case 'add':
         final id = data['chapterId'] as int;
+        final generation = data['gen'] as int? ?? 0;
+        if (generation < (_genOf[id] ?? 0)) break;
         if (id == _inFlight) break; // already downloading — don't double-queue
         // A re-add after a delete carries a bumped generation; adopt it so this
         // download's events outrank the deleted generation's stale ones. It
@@ -201,7 +291,7 @@ class DownloadTaskHandler extends TaskHandler {
         // rest of the session and every future 'add' for it silently no-opped,
         // since both branches below also required it absent from _cancelled.
         _cancelled.remove(id);
-        _genOf[id] = data['gen'] as int? ?? 0;
+        _genOf[id] = generation;
         if (!_queue.contains(id) && !_mangaOf.containsKey(id)) {
           _queue.add(id);
           _mangaOf[id] = data['mangaId'] as int;
@@ -224,6 +314,7 @@ class DownloadTaskHandler extends TaskHandler {
         // unwinds (left resumable), the drain loop exits and self-stops; main
         // won't restart while the persisted pause flag is set.
         _paused = true;
+        _http.close();
     }
   }
 
@@ -232,11 +323,80 @@ class DownloadTaskHandler extends TaskHandler {
 
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {
-    // The drain loop + the in-flight chapter both observe this and unwind. The
-    // log is flushed per page, so nothing is lost on an abrupt stop.
     _stopping = true;
-    await _lock?.release();
+    _yieldTimer?.cancel();
     _http.close();
+    if (_ownsLock) {
+      try {
+        try {
+          await _drainFuture;
+        } catch (_) {}
+        await _controlCheck;
+        if (isTimeout && _ownsLock) await _log.appendTimeout();
+      } finally {
+        await _releaseOwnership();
+      }
+    }
+    if (isTimeout) {
+      FlutterForegroundTask.sendDataToMain({
+        'kind': 'timedOut',
+        'at': timestamp.toIso8601String(),
+      });
+    }
+  }
+
+  Future<bool> _controlsAllow(BackgroundWorkOrder order) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final controls = CatchupStateStore(prefs);
+    if (controls.paused ||
+        !controls.identityAuthorized ||
+        controls.identityEpoch != order.identityEpoch ||
+        order.catalogServerId == null ||
+        controls.catalogServerId != order.catalogServerId ||
+        prefs.getString(DBKeys.offlineLastServerId.name) !=
+            order.catalogServerId ||
+        prefs.getString(DBKeys.offlineLastServerAddress.name) !=
+            serverAddress(
+              baseUrl: order.serverBase,
+              port: order.port,
+              addPort: order.addPort,
+            )) {
+      return false;
+    }
+    _wifiOnly =
+        prefs.getBool(DBKeys.downloadOnlyOverWifi.name) ?? order.wifiOnly;
+    final network = await Connectivity().checkConnectivity();
+    return !network.contains(ConnectivityResult.none) &&
+        (!_wifiOnly ||
+            network.contains(ConnectivityResult.wifi) ||
+            network.contains(ConnectivityResult.ethernet));
+  }
+
+  Future<void> _checkControls() async {
+    if (_paused || _stopping) return;
+    try {
+      if (await _lock!.yieldRequested()) {
+        _paused = true;
+      } else {
+        final now = DateTime.now();
+        if (_lastControlRefresh == null ||
+            now.difference(_lastControlRefresh!) >=
+                const Duration(seconds: 2)) {
+          _lastControlRefresh = now;
+          if (!await _controlsAllow(_order!)) _paused = true;
+        }
+      }
+      if (_paused) _http.close();
+    } catch (_) {
+      _paused = true;
+      _http.close();
+    }
+  }
+
+  Future<void> _releaseOwnership() async {
+    _ownsLock = false;
+    await _lock?.release();
   }
 
   // ---------------------------------------------------------------------------
@@ -255,8 +415,9 @@ class DownloadTaskHandler extends TaskHandler {
         // stopping (so it can recheck for anything enqueued during this window
         // and restart us), then self-stop.
         await _log.appendDrained();
+        if (_stopping) return;
         FlutterForegroundTask.sendDataToMain({'kind': 'drained'});
-        await _lock?.release();
+        await _releaseOwnership();
         await FlutterForegroundTask.stopService();
         return;
       }
@@ -264,10 +425,11 @@ class DownloadTaskHandler extends TaskHandler {
       _inFlight = next;
       final parked = await _downloadChapter(next, _mangaOf[next]!);
       _inFlight = null;
+      if (_stopping) return;
       if (parked) {
         // Server unreachable — stop with the queue still in drift so a reconnect
         // (or relaunch) resumes it. No drained marker: it isn't drained, parked.
-        await _lock?.release();
+        await _releaseOwnership();
         await FlutterForegroundTask.stopService();
         return;
       }
@@ -277,7 +439,7 @@ class DownloadTaskHandler extends TaskHandler {
     // resume just re-enqueues; do NOT append a drained marker — this is parked,
     // not drained.
     if (_paused && !_stopping) {
-      await _lock?.release();
+      await _releaseOwnership();
       await FlutterForegroundTask.stopService();
     }
   }
@@ -286,6 +448,7 @@ class DownloadTaskHandler extends TaskHandler {
   /// should stop and leave the queue intact for a later resume.
   Future<bool> _downloadChapter(int chapterId, int mangaId) async {
     final urls = await _resolvePageUrls(chapterId);
+    if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
     if (urls == null) {
       // Server unreachable resolving pages: leave `downloading` (resumable) and
       // park. Marking it error here poisoned the whole queue — one blip
@@ -366,16 +529,14 @@ class DownloadTaskHandler extends TaskHandler {
       },
     );
 
-    final String? status = outcome.succeeded
+    final String? status = outcome.cancelled || _paused || _stopping
+        ? null
+        : outcome.succeeded
         ? 'downloaded'
         : outcome.offline
         ? 'offline'
         : outcome.authFailed
         ? 'authFailed'
-        // cancelled → no terminal line; leave it `downloading` so a
-        // later replay/worker can pick it up (delete cleans it up).
-        : outcome.cancelled
-        ? null
         : 'error';
 
     if (status != null) {
@@ -528,7 +689,8 @@ class DownloadTaskHandler extends TaskHandler {
       _lastNetworkErrorReason = 'SocketException: $e';
       return _gqlNetworkError; // transient — park, don't error
     } on TimeoutException {
-      _lastNetworkErrorReason = 'timed out after $_httpTimeout on page-list fetch';
+      _lastNetworkErrorReason =
+          'timed out after $_httpTimeout on page-list fetch';
       return _gqlNetworkError; // transient — park, don't error
     } catch (_) {
       return const <String>[];
@@ -571,7 +733,9 @@ class DownloadTaskHandler extends TaskHandler {
         // Device offline (connection refused / unreachable host / DNS).
         throw PageOfflineException('SocketException: $e');
       } on TimeoutException {
-        throw PageOfflineException('timed out after $_httpTimeout on page fetch');
+        throw PageOfflineException(
+          'timed out after $_httpTimeout on page fetch',
+        );
       }
       if (res.statusCode == 401 || res.statusCode == 403) {
         throw const PageAuthException();
@@ -646,13 +810,21 @@ class DownloadTaskHandler extends TaskHandler {
       );
       return _record;
     },
-    write: (r) async {
+    write: (r) => withWorkOrderAdmission(_paths.baseDir, () async {
+      final order = decodeWorkOrder(
+        await FlutterForegroundTask.getData<String>(key: kWorkOrderKey),
+      );
+      if (_stopping || !_ownsLock || order?.attemptId != _order?.attemptId) {
+        return;
+      }
       _record = r;
-      await FlutterForegroundTask.saveData(
+      if (!await FlutterForegroundTask.saveData(
         key: kTokenRecordKey,
         value: jsonEncode(r.toJson()),
-      );
-    },
+      )) {
+        throw StateError('Failed to save refreshed download credentials');
+      }
+    }),
     refreshFn: (refreshToken) async {
       // Only ui_login refreshes; basic/simple return null.
       if (_record.authType != 'uiLogin') {
@@ -701,7 +873,10 @@ class DownloadTaskHandler extends TaskHandler {
         }
         // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
         // input one (the broker persists it back as the current refresh).
-        return (tokens: (access: access, refresh: refreshToken), transient: false);
+        return (
+          tokens: (access: access, refresh: refreshToken),
+          transient: false,
+        );
       } on SocketException {
         return (tokens: null, transient: true);
       } on TimeoutException {

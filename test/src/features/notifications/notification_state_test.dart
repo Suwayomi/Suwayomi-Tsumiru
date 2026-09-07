@@ -12,19 +12,58 @@ import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.
 NotificationWorkerConfig config({
   Set<int> include = const {},
   Set<int> exclude = const {},
-}) =>
-    NotificationWorkerConfig(
-      serverId: 's',
-      endpoint: const NotificationEndpoint(baseUrl: 'http://x'),
-      newChaptersEnabled: true,
-      includedCategoryIds: include,
-      excludedCategoryIds: exclude,
-      hideContent: false,
-    );
+}) => NotificationWorkerConfig(
+  serverId: 's',
+  endpoint: const NotificationEndpoint(baseUrl: 'http://x'),
+  newChaptersEnabled: true,
+  includedCategoryIds: include,
+  excludedCategoryIds: exclude,
+  hideContent: false,
+);
 
 void main() {
+  test('worker scheduling and server identity round-trip', () {
+    const original = NotificationWorkerConfig(
+      serverId: 's',
+      endpoint: NotificationEndpoint(baseUrl: 'http://x'),
+      newChaptersEnabled: true,
+      includedCategoryIds: {},
+      excludedCategoryIds: {},
+      hideContent: false,
+      wifiOnly: false,
+      chargingOnly: true,
+      intervalHours: 12,
+      catalogServerId: 'catalog-1',
+      verifiedAddress: 'http://x',
+    );
+    final restored = NotificationWorkerConfig.fromJson(original.toJson());
+    expect(restored.wifiOnly, isFalse);
+    expect(restored.chargingOnly, isTrue);
+    expect(restored.intervalHours, 12);
+    expect(restored.catalogServerId, 'catalog-1');
+    expect(restored.verifiedAddress, 'http://x');
+  });
+
+  test('legacy worker config keeps scheduling defaults', () {
+    final restored = NotificationWorkerConfig.fromJson({
+      'serverId': 's',
+      'endpoint': const NotificationEndpoint(baseUrl: 'http://x').toJson(),
+    });
+    for (final value in [config(), restored]) {
+      expect(value.wifiOnly, isTrue);
+      expect(value.chargingOnly, isFalse);
+      expect(value.intervalHours, 6);
+      expect(value.catalogServerId, isNull);
+      expect(value.verifiedAddress, isNull);
+    }
+  });
+
   group('category scope', () {
-    final mangaCats = {10: {1}, 20: {2}, 30: {1, 2}};
+    final mangaCats = {
+      10: {1},
+      20: {2},
+      30: {1, 2},
+    };
 
     test('no include/exclude -> null (all series)', () {
       expect(config().allowedMangaIds(mangaCats), isNull);
@@ -39,7 +78,9 @@ void main() {
     });
 
     test('exclude wins over include', () {
-      expect(config(include: {1}, exclude: {2}).allowedMangaIds(mangaCats), {10});
+      expect(config(include: {1}, exclude: {2}).allowedMangaIds(mangaCats), {
+        10,
+      });
     });
   });
 

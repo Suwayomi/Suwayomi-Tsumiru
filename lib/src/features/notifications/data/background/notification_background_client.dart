@@ -27,14 +27,17 @@ class NotificationEndpoint {
   final bool addPort;
 
   String get graphqlUrl => Endpoints.baseApi(
-        baseUrl: baseUrl,
-        port: port,
-        addPort: addPort,
-        isGraphQl: true,
-      );
+    baseUrl: baseUrl,
+    port: port,
+    addPort: addPort,
+    isGraphQl: true,
+  );
 
-  Map<String, Object?> toJson() =>
-      {'baseUrl': baseUrl, 'port': port, 'addPort': addPort};
+  Map<String, Object?> toJson() => {
+    'baseUrl': baseUrl,
+    'port': port,
+    'addPort': addPort,
+  };
 
   factory NotificationEndpoint.fromJson(Map<String, Object?> j) =>
       NotificationEndpoint(
@@ -71,8 +74,8 @@ class NotificationBackgroundClient {
     required BackgroundTokenRecord record,
     required this.broker,
     http.Client? httpClient,
-  })  : _record = record,
-        _http = httpClient ?? http.Client();
+  }) : _record = record,
+       _http = httpClient ?? http.Client();
 
   final NotificationEndpoint endpoint;
   final TokenBroker broker;
@@ -89,7 +92,9 @@ class NotificationBackgroundClient {
   /// One raw GraphQL POST, retrying once through the broker on a ui_login 401.
   /// Returns the `data` map, or null on auth-dead / network / server error.
   Future<Map<String, Object?>?> _post(
-      String query, Map<String, Object?> variables) async {
+    String query,
+    Map<String, Object?> variables,
+  ) async {
     var res = await _raw(query, variables, _record.accessToken);
     if (identical(res, _authError) && _record.authType == 'uiLogin') {
       final fresh = await broker.resolveAfter401(_record.accessToken ?? '');
@@ -102,15 +107,20 @@ class NotificationBackgroundClient {
   }
 
   Future<Object?> _raw(
-      String query, Map<String, Object?> variables, String? accessToken) async {
+    String query,
+    Map<String, Object?> variables,
+    String? accessToken,
+  ) async {
     final headers = <String, String>{'Content-Type': 'application/json'};
     _applyAuth(headers, accessToken);
     try {
-      final res = await _http.post(
-        Uri.parse(endpoint.graphqlUrl),
-        headers: headers,
-        body: jsonEncode({'query': query, 'variables': variables}),
-      );
+      final res = await _http
+          .post(
+            Uri.parse(endpoint.graphqlUrl),
+            headers: headers,
+            body: jsonEncode({'query': query, 'variables': variables}),
+          )
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 401 || res.statusCode == 403) return _authError;
       if (res.statusCode != 200) return _networkError;
       final decoded = jsonDecode(res.body) as Map<String, Object?>;
@@ -164,8 +174,10 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
     required String fetchedAtGte,
     String? after,
   }) async {
-    final data = await _post(
-        _newChaptersQuery, {'f': fetchedAtGte, 'after': after});
+    final data = await _post(_newChaptersQuery, {
+      'f': fetchedAtGte,
+      'after': after,
+    });
     final chapters = data?['chapters'] as Map<String, Object?>?;
     if (chapters == null) return null;
     final pageInfo = chapters['pageInfo'] as Map<String, Object?>?;
@@ -179,10 +191,10 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
 
   NotifChapter _parseChapter(Map<String, Object?> n) {
     final manga = n['manga'] as Map<String, Object?>?;
-    final cats = ((manga?['categories'] as Map<String, Object?>?)?['nodes']
-                as List? ??
-            const [])
-        .cast<Object?>();
+    final cats =
+        ((manga?['categories'] as Map<String, Object?>?)?['nodes'] as List? ??
+                const [])
+            .cast<Object?>();
     return (
       id: (n['id'] as num).toInt(),
       mangaId: (n['mangaId'] as num).toInt(),
@@ -192,7 +204,8 @@ query NotifNewChapters($f: LongString!, $after: Cursor) {
       mangaTitle: (manga?['title'] as String?) ?? '',
       thumbnailUrl: manga?['thumbnailUrl'] as String?,
       categoryIds: {
-        for (final c in cats) ((c as Map<String, Object?>)['id'] as num).toInt(),
+        for (final c in cats)
+          ((c as Map<String, Object?>)['id'] as num).toInt(),
       },
     );
   }
@@ -217,7 +230,8 @@ query NotifMaxFetched {
             .cast<Object?>();
     if (nodes.isEmpty) return 0;
     return int.tryParse(
-            '${(nodes.first as Map<String, Object?>)['fetchedAt']}') ??
+          '${(nodes.first as Map<String, Object?>)['fetchedAt']}',
+        ) ??
         0;
   }
 
@@ -297,7 +311,8 @@ mutation NotifEnqueue($ids: [Int!]!) {
     try {
       final res = await _http.get(
         Uri.parse(
-            'https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest'),
+          'https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest',
+        ),
         headers: const {'Accept': 'application/vnd.github+json'},
       );
       if (res.statusCode != 200) return null;

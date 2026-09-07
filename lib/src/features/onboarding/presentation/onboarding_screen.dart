@@ -329,10 +329,10 @@ class _ServerStep extends HookConsumerWidget {
     }
 
     // Persist a resolved/typed base URL as the active server URL.
-    void adopt(String url) {
+    Future<void> adopt(String url) async {
       resolvedUrl.value = url;
-      ref.read(serverPortToggleProvider.notifier).update(false);
-      ref.read(serverExternalUrlProvider.notifier).update(url);
+      await ref.read(serverPortToggleProvider.notifier).update(false);
+      await ref.read(serverExternalUrlProvider.notifier).update(url);
       if (urlController.text != url) urlController.text = url;
     }
 
@@ -400,8 +400,8 @@ class _ServerStep extends HookConsumerWidget {
       errorDetail.value = null;
       credsRejected.value = false;
       onVerifiedChanged(false);
-      ref.read(serverPortToggleProvider.notifier).update(false);
-      ref.read(serverExternalUrlProvider.notifier).update(url);
+      await ref.read(serverPortToggleProvider.notifier).update(false);
+      await ref.read(serverExternalUrlProvider.notifier).update(url);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       final result = await AsyncValue.guard(
         () => ref.read(aboutRepositoryProvider).getAbout(),
@@ -473,7 +473,7 @@ class _ServerStep extends HookConsumerWidget {
             onVerifiedChanged(false);
           case ResolveOutcome.found:
           case ResolveOutcome.basicGated:
-            adopt(result.baseUrl);
+            await adopt(result.baseUrl);
             version.value = result.serverVersion;
             final needsLogin =
                 result.outcome == ResolveOutcome.basicGated ||

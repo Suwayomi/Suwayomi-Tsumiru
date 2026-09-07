@@ -16,6 +16,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import 'background/catchup_work_spec.dart';
 import 'graphql/__generated__/server_identity.graphql.dart';
 import 'offline_server_identity.dart';
 
@@ -48,10 +49,10 @@ class OfflineServerIdentityRepository {
       .getData((data) => data.setGlobalMeta?.meta.value);
 
   Future<String> resolve() => resolveServerInstanceId(
-        read: read,
-        write: write,
-        create: createServerInstanceId,
-      );
+    read: read,
+    write: write,
+    create: createServerInstanceId,
+  );
 }
 
 Future<String> resolveServerInstanceId({
@@ -75,18 +76,19 @@ OfflineServerIdentityRepository offlineServerIdentityRepository(Ref ref) =>
 
 @riverpod
 String currentServerAddress(Ref ref) => serverAddress(
-      baseUrl: ref.watch(serverUrlProvider),
-      port: ref.watch(serverPortProvider),
-      addPort: ref.watch(serverPortToggleProvider).ifNull(),
-    );
+  baseUrl: ref.watch(serverUrlProvider),
+  port: ref.watch(serverPortProvider),
+  addPort: ref.watch(serverPortToggleProvider).ifNull(),
+);
 
 @riverpod
 Future<String> serverInstanceId(Ref ref) async {
   final preferences = ref.watch(sharedPreferencesProvider);
   final address = ref.watch(currentServerAddressProvider);
   final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
-  final cachedAddress =
-      preferences.getString(DBKeys.offlineLastServerAddress.name);
+  final cachedAddress = preferences.getString(
+    DBKeys.offlineLastServerAddress.name,
+  );
 
   // Offline-first: if we already know this address's id, return it immediately
   // (no network wait, so the offline library opens instantly) and verify against
@@ -107,10 +109,24 @@ Future<void> _verifyServerInstanceId(
   String address,
   String cachedId,
 ) async {
+  final controls = CatchupStateStore(preferences);
+  final epoch = controls.identityEpoch;
   try {
-    final live =
-        await ref.read(offlineServerIdentityRepositoryProvider).resolve();
-    if (live == cachedId) return;
+    final live = await ref
+        .read(offlineServerIdentityRepositoryProvider)
+        .resolve();
+    if (!ref.mounted ||
+        controls.identityChanging ||
+        controls.identityEpoch != epoch ||
+        ref.read(currentServerAddressProvider) != address) {
+      return;
+    }
+    final wasAuthorized = controls.identityAuthorized;
+    await controls.setIdentityAuthorized(true);
+    if (live == cachedId) {
+      if (!wasAuthorized) ref.invalidateSelf();
+      return;
+    }
     // The address now points at a different server — record its id and
     // re-evaluate so the mismatch guard/banner picks up the switch.
     await preferences.setString(DBKeys.offlineLastServerId.name, live);
@@ -127,15 +143,26 @@ Future<String> _resolveAndCacheServerInstanceId(
   SharedPreferences preferences,
   String address,
 ) async {
+  final controls = CatchupStateStore(preferences);
+  final epoch = controls.identityEpoch;
   try {
-    final id =
-        await ref.read(offlineServerIdentityRepositoryProvider).resolve();
+    final id = await ref
+        .read(offlineServerIdentityRepositoryProvider)
+        .resolve();
+    if (!ref.mounted ||
+        controls.identityChanging ||
+        controls.identityEpoch != epoch ||
+        ref.read(currentServerAddressProvider) != address) {
+      throw StateError('Server identity changed during verification');
+    }
+    await controls.setIdentityAuthorized(true);
     await preferences.setString(DBKeys.offlineLastServerId.name, id);
     await preferences.setString(DBKeys.offlineLastServerAddress.name, address);
     return id;
   } catch (error) {
-    final cachedAddress =
-        preferences.getString(DBKeys.offlineLastServerAddress.name);
+    final cachedAddress = preferences.getString(
+      DBKeys.offlineLastServerAddress.name,
+    );
     final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
     final fallback = cachedServerIdForFailure(
       error: error,

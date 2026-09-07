@@ -19,6 +19,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../offline/data/background/background_download_controller_shim.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
@@ -52,10 +53,10 @@ class InlineAuthSection extends HookConsumerWidget {
     final isError = useState(false);
 
     String resolvedBaseUrl() => Endpoints.baseApi(
-          baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-          port: ref.read(serverPortProvider),
-          addPort: ref.read(serverPortToggleProvider).ifNull(),
-        );
+      baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+      port: ref.read(serverPortProvider),
+      addPort: ref.read(serverPortToggleProvider).ifNull(),
+    );
 
     // Validate the entered credentials WITHOUT committing them.
     Future<void> testConnection() async {
@@ -67,14 +68,15 @@ class InlineAuthSection extends HookConsumerWidget {
       testing.value = true;
       message.value = null;
       try {
-        final result =
-            await ref.read(authCoordinatorProvider.notifier).testConnection(
-                  authType: authType,
-                  serverBaseUrl: resolvedBaseUrl(),
-                  username: username.text.trim(),
-                  password: password.text,
-                  makeGqlClient: () => ref.read(graphQlClientProvider),
-                );
+        final result = await ref
+            .read(authCoordinatorProvider.notifier)
+            .testConnection(
+              authType: authType,
+              serverBaseUrl: resolvedBaseUrl(),
+              username: username.text.trim(),
+              password: password.text,
+              makeGqlClient: () => ref.read(graphQlClientProvider),
+            );
         if (!context.mounted) return;
         if (result is TestConnectionSuccess) {
           isError.value = false;
@@ -146,39 +148,43 @@ class InlineAuthSection extends HookConsumerWidget {
         ),
       );
       if (confirmed != true) return;
-      final store = ref.read(authCredentialsStoreProvider.notifier);
-      await store.clearUiLoginTokens();
-      await store.clearSimpleLoginCookie();
-      await store.clearPassword();
-      await store.clearBasicCredentials();
-      ref.read(authTypeKeyProvider.notifier).update(AuthType.none);
-      ref.read(needsReauthProvider.notifier).set(false);
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          final store = ref.read(authCredentialsStoreProvider.notifier);
+          await store.clearUiLoginTokens();
+          await store.clearSimpleLoginCookie();
+          await store.clearPassword();
+          await store.clearBasicCredentials();
+          ref.read(authTypeKeyProvider.notifier).update(AuthType.none);
+          ref.read(needsReauthProvider.notifier).set(false);
+        },
+      );
       password.clear();
       message.value = null;
     }
 
-    void onAuthModeChanged(AuthType? next) {
+    Future<void> onAuthModeChanged(AuthType? next) async {
       if (next == null || next == authType) return;
-      ref.read(authTypeKeyProvider.notifier).update(next);
+      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
+        () async {
+          if (next == AuthType.none) {
+            final store = ref.read(authCredentialsStoreProvider.notifier);
+            await store.clearUiLoginTokens();
+            await store.clearSimpleLoginCookie();
+            await store.clearBasicCredentials();
+            ref.read(needsReauthProvider.notifier).set(false);
+          } else {
+            ref.read(needsReauthProvider.notifier).set(true);
+          }
+          ref.read(authTypeKeyProvider.notifier).update(next);
+        },
+      );
       message.value = null;
       password.clear();
-      if (next == AuthType.none) {
-        // Switching to "no auth" is an effective logout.
-        final store = ref.read(authCredentialsStoreProvider.notifier);
-        store.clearUiLoginTokens();
-        store.clearSimpleLoginCookie();
-        store.clearBasicCredentials();
-        ref.read(needsReauthProvider.notifier).set(false);
-      } else {
-        // A newly-chosen mode needs credentials before it's "signed in".
-        ref.read(needsReauthProvider.notifier).set(true);
-      }
     }
 
-    Padding pad(Widget child) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          child: child,
-        );
+    Padding pad(Widget child) =>
+        Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 4), child: child);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,11 +202,14 @@ class InlineAuthSection extends HookConsumerWidget {
             requestFocusOnTap: false,
             label: Text(context.l10n.authType),
             leadingIcon: const Icon(Icons.security_rounded),
-            inputDecorationTheme:
-                const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             dropdownMenuEntries: AuthType.values
-                .map((t) =>
-                    DropdownMenuEntry(value: t, label: t.toLocale(context)))
+                .map(
+                  (t) =>
+                      DropdownMenuEntry(value: t, label: t.toLocale(context)),
+                )
                 .toList(),
             onSelected: onAuthModeChanged,
           ),
@@ -208,16 +217,20 @@ class InlineAuthSection extends HookConsumerWidget {
         if (authType != AuthType.none) ...[
           if (signedIn) ...[
             ListTile(
-              leading: Icon(Icons.check_circle_rounded,
-                  color: theme.colorScheme.primary),
+              leading: Icon(
+                Icons.check_circle_rounded,
+                color: theme.colorScheme.primary,
+              ),
               title: Text(context.l10n.connectionAuthSignedIn),
               subtitle: (storedUsername != null && storedUsername.isNotBlank)
                   ? Text(storedUsername)
                   : null,
             ),
             ListTile(
-              leading:
-                  Icon(Icons.logout_rounded, color: theme.colorScheme.error),
+              leading: Icon(
+                Icons.logout_rounded,
+                color: theme.colorScheme.error,
+              ),
               title: Text(
                 context.l10n.authLogout,
                 style: TextStyle(color: theme.colorScheme.error),
@@ -226,72 +239,84 @@ class InlineAuthSection extends HookConsumerWidget {
             ),
           ] else ...[
             if (needsReauth)
-              pad(Text(
-                context.l10n.connectionAuthSignInNeeded,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.error),
-              )),
-            pad(TextField(
-              controller: username,
-              autocorrect: false,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                labelText: context.l10n.userName,
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.person_rounded),
+              pad(
+                Text(
+                  context.l10n.connectionAuthSignInNeeded,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
               ),
-            )),
-            pad(TextField(
-              controller: password,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: context.l10n.password,
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.lock_rounded),
+            pad(
+              TextField(
+                controller: username,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(
+                  labelText: context.l10n.userName,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person_rounded),
+                ),
               ),
-              onSubmitted: (_) => signIn(),
-            )),
+            ),
+            pad(
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: context.l10n.password,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock_rounded),
+                ),
+                onSubmitted: (_) => signIn(),
+              ),
+            ),
             if (message.value != null)
-              pad(Text(
-                message.value!,
-                style: TextStyle(
-                  color: isError.value
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
-                ),
-              )),
-            pad(Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed:
-                        (busy.value || testing.value) ? null : testConnection,
-                    icon: testing.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.wifi_tethering_rounded),
-                    label: Text(context.l10n.authTestConnection),
+              pad(
+                Text(
+                  message.value!,
+                  style: TextStyle(
+                    color: isError.value
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: (busy.value || testing.value) ? null : signIn,
-                    icon: busy.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login_rounded),
-                    label: Text(context.l10n.onboardingSignIn),
+              ),
+            pad(
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (busy.value || testing.value)
+                          ? null
+                          : testConnection,
+                      icon: testing.value
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.wifi_tethering_rounded),
+                      label: Text(context.l10n.authTestConnection),
+                    ),
                   ),
-                ),
-              ],
-            )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: (busy.value || testing.value) ? null : signIn,
+                      icon: busy.value
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login_rounded),
+                      label: Text(context.l10n.onboardingSignIn),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ],
       ],

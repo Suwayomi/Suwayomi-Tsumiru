@@ -160,6 +160,7 @@ enum DBKeys {
   // pause shouldn't silently resume on restart); read synchronously by the
   // download starters to gate every restart path.
   offlineDownloadsPaused(false),
+  offlineDownloadsStalled(null),
   offlineCatalogServerId(null),
   // Newest chapter fetchedAt the catch-up pass has processed (epoch seconds).
   offlineCatchUpWatermark(0),

@@ -16,6 +16,7 @@ import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 import '../data/offline_series_entry.dart';
+import 'download_stall_banner.dart';
 import 'keep_rule_picker.dart';
 import 'offline_series_chapters_screen.dart';
 import 'offline_settings_format.dart';
@@ -33,11 +34,13 @@ class OfflineFilesView extends HookConsumerWidget {
   /// offline sheet).
   static const _bufferSizes = [5, 10, 25];
 
-  String _ruleLabel(BuildContext context, OfflineManga m) => switch (m.keepRule) {
+  String _ruleLabel(BuildContext context, OfflineManga m) =>
+      switch (m.keepRule) {
         OfflineKeepRule.all => context.l10n.keepOfflineAll,
         OfflineKeepRule.allUnread => context.l10n.keepOfflineAllUnread,
-        OfflineKeepRule.nUnread =>
-          context.l10n.keepOfflineNextUnread(m.keepUnreadCount),
+        OfflineKeepRule.nUnread => context.l10n.keepOfflineNextUnread(
+          m.keepUnreadCount,
+        ),
         OfflineKeepRule.off => context.l10n.offlineManualOnly,
       };
 
@@ -75,6 +78,7 @@ class OfflineFilesView extends HookConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const DownloadStallBanner(),
                   ListTile(
                     dense: true,
                     leading: const Icon(Icons.sd_storage_outlined),
@@ -100,8 +104,8 @@ class OfflineFilesView extends HookConsumerWidget {
             final filesLine = s.inFlight > 0
                 ? '${context.l10n.offlineDownloadingCount(s.inFlight)} · ${context.l10n.nChapters(s.downloaded)}'
                 : s.downloaded > 0
-                    ? '${context.l10n.nChapters(s.downloaded)} · ${formatBytes(s.bytes)}'
-                    : context.l10n.manageDownloadsNothingYet;
+                ? '${context.l10n.nChapters(s.downloaded)} · ${formatBytes(s.bytes)}'
+                : context.l10n.manageDownloadsNothingYet;
             return ListTile(
               selected: selected,
               isThreeLine: true,
@@ -116,13 +120,15 @@ class OfflineFilesView extends HookConsumerWidget {
                   ),
                 ),
               ),
-              title:
-                  Text(s.manga.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              title: Text(
+                s.manga.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(filesLine,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(filesLine, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(
                     _ruleLabel(context, s.manga),
                     maxLines: 1,
@@ -141,14 +147,14 @@ class OfflineFilesView extends HookConsumerWidget {
               onTap: selecting
                   ? () => toggle(s.manga.id)
                   : () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => OfflineSeriesChaptersScreen(
-                            mangaId: s.manga.id,
-                            mangaTitle: s.manga.title,
-                            thumbnailUrl: s.manga.thumbnailUrl,
-                          ),
+                      MaterialPageRoute<void>(
+                        builder: (_) => OfflineSeriesChaptersScreen(
+                          mangaId: s.manga.id,
+                          mangaTitle: s.manga.title,
+                          thumbnailUrl: s.manga.thumbnailUrl,
                         ),
                       ),
+                    ),
               onLongPress: () => toggle(s.manga.id),
             );
           },
@@ -165,8 +171,10 @@ class OfflineFilesView extends HookConsumerWidget {
                   icon: const Icon(Icons.close_rounded),
                   onPressed: clear,
                 ),
-                Text('${selection.value.length}',
-                    style: context.textTheme.titleMedium),
+                Text(
+                  '${selection.value.length}',
+                  style: context.textTheme.titleMedium,
+                ),
               ],
               actions: [
                 IconButton(
@@ -179,13 +187,21 @@ class OfflineFilesView extends HookConsumerWidget {
                   tooltip: context.l10n.manageDownloadsStopKeep,
                   icon: const Icon(Icons.bookmark_remove_outlined),
                   onPressed: () => _bulkStopKeep(
-                      context, ref, selection.value.toList(), clear),
+                    context,
+                    ref,
+                    selection.value.toList(),
+                    clear,
+                  ),
                 ),
                 IconButton(
                   tooltip: context.l10n.manageDownloadsStopDelete,
                   icon: const Icon(Icons.delete_outline_rounded),
                   onPressed: () => _bulkStopDelete(
-                      context, ref, selection.value.toList(), clear),
+                    context,
+                    ref,
+                    selection.value.toList(),
+                    clear,
+                  ),
                 ),
               ],
             ),
@@ -199,7 +215,10 @@ class OfflineFilesView extends HookConsumerWidget {
   // ---------------------------------------------------------------------------
 
   void _openSeriesSheet(
-      BuildContext context, WidgetRef ref, OfflineManga manga) {
+    BuildContext context,
+    WidgetRef ref,
+    OfflineManga manga,
+  ) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -217,7 +236,8 @@ class OfflineFilesView extends HookConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.bookmark_add_outlined),
                   title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                  trailing: (manga.keepRule == OfflineKeepRule.nUnread &&
+                  trailing:
+                      (manga.keepRule == OfflineKeepRule.nUnread &&
                           manga.keepUnreadCount == n)
                       ? const Icon(Icons.check_rounded)
                       : null,
@@ -234,8 +254,12 @@ class OfflineFilesView extends HookConsumerWidget {
                     : null,
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  changeKeepRule(ref, manga.id, OfflineKeepRule.allUnread,
-                      manga.keepUnreadCount);
+                  changeKeepRule(
+                    ref,
+                    manga.id,
+                    OfflineKeepRule.allUnread,
+                    manga.keepUnreadCount,
+                  );
                 },
               ),
               ListTile(
@@ -247,7 +271,11 @@ class OfflineFilesView extends HookConsumerWidget {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   changeKeepRule(
-                      ref, manga.id, OfflineKeepRule.all, manga.keepUnreadCount);
+                    ref,
+                    manga.id,
+                    OfflineKeepRule.all,
+                    manga.keepUnreadCount,
+                  );
                 },
               ),
               const Divider(height: 1),
@@ -260,14 +288,19 @@ class OfflineFilesView extends HookConsumerWidget {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.delete_outline_rounded,
-                    color: sheetContext.theme.colorScheme.error),
-                title: Text(sheetContext.l10n.manageDownloadsStopDelete,
-                    style:
-                        TextStyle(color: sheetContext.theme.colorScheme.error)),
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: sheetContext.theme.colorScheme.error,
+                ),
+                title: Text(
+                  sheetContext.l10n.manageDownloadsStopDelete,
+                  style: TextStyle(color: sheetContext.theme.colorScheme.error),
+                ),
                 onTap: () async {
-                  final ok = await _confirm(sheetContext,
-                      sheetContext.l10n.manageDownloadsDeleteConfirm(1));
+                  final ok = await _confirm(
+                    sheetContext,
+                    sheetContext.l10n.manageDownloadsDeleteConfirm(1),
+                  );
                   if (!sheetContext.mounted) return;
                   Navigator.pop(sheetContext);
                   if (ok) await removeKeepRuleAndDelete(ref, manga.id);
@@ -284,16 +317,23 @@ class OfflineFilesView extends HookConsumerWidget {
   // Bulk actions
   // ---------------------------------------------------------------------------
 
-  Future<void> _bulkChangeRule(BuildContext context, WidgetRef ref,
-      List<_SeriesRow> rows, VoidCallback clear) async {
+  Future<void> _bulkChangeRule(
+    BuildContext context,
+    WidgetRef ref,
+    List<_SeriesRow> rows,
+    VoidCallback clear,
+  ) async {
     if (rows.isEmpty) return;
     final picked = await _pickRule(context);
     if (picked == null || !context.mounted) return;
-    final growing =
-        rows.where((r) => picked.rule.index > r.manga.keepRule.index).length;
+    final growing = rows
+        .where((r) => picked.rule.index > r.manga.keepRule.index)
+        .length;
     if (growing > 0 &&
         !await _confirm(
-            context, context.l10n.manageDownloadsGrowConfirm(growing))) {
+          context,
+          context.l10n.manageDownloadsGrowConfirm(growing),
+        )) {
       return;
     }
     clear();
@@ -302,11 +342,17 @@ class OfflineFilesView extends HookConsumerWidget {
     }
   }
 
-  Future<void> _bulkStopKeep(BuildContext context, WidgetRef ref,
-      List<int> ids, VoidCallback clear) async {
+  Future<void> _bulkStopKeep(
+    BuildContext context,
+    WidgetRef ref,
+    List<int> ids,
+    VoidCallback clear,
+  ) async {
     if (ids.isEmpty) return;
     if (!await _confirm(
-        context, context.l10n.manageDownloadsKeepFilesConfirm(ids.length))) {
+      context,
+      context.l10n.manageDownloadsKeepFilesConfirm(ids.length),
+    )) {
       return;
     }
     clear();
@@ -315,11 +361,17 @@ class OfflineFilesView extends HookConsumerWidget {
     }
   }
 
-  Future<void> _bulkStopDelete(BuildContext context, WidgetRef ref,
-      List<int> ids, VoidCallback clear) async {
+  Future<void> _bulkStopDelete(
+    BuildContext context,
+    WidgetRef ref,
+    List<int> ids,
+    VoidCallback clear,
+  ) async {
     if (ids.isEmpty) return;
     if (!await _confirm(
-        context, context.l10n.manageDownloadsDeleteConfirm(ids.length))) {
+      context,
+      context.l10n.manageDownloadsDeleteConfirm(ids.length),
+    )) {
       return;
     }
     clear();
@@ -329,8 +381,8 @@ class OfflineFilesView extends HookConsumerWidget {
   }
 
   Future<({OfflineKeepRule rule, int count})?> _pickRule(
-          BuildContext context) =>
-      pickOfflineKeepRule(context);
+    BuildContext context,
+  ) => pickOfflineKeepRule(context);
 
   Future<bool> _confirm(BuildContext context, String message) async {
     return await showDialog<bool>(
@@ -339,11 +391,13 @@ class OfflineFilesView extends HookConsumerWidget {
             content: Text(message),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: Text(ctx.l10n.cancel)),
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(ctx.l10n.cancel),
+              ),
               FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(ctx.l10n.yes)),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(ctx.l10n.yes),
+              ),
             ],
           ),
         ) ??
