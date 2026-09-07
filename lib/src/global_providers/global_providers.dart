@@ -52,12 +52,49 @@ bool _isGraphQlRead(http.BaseRequest request) {
   }
 }
 
-// keepAlive: the reader captures this client (and its ref) once and issues
-// progress writes through it. Under autoDispose the ref could die mid-write
-// during provider churn, throwing a disposed-ref StateError inside
-// SuwayomiAuthLink.getHeaders — the silent online-progress-loss root cause.
+final unauthenticatedGraphQlClientProvider = Provider<GraphQLClient>((ref) {
+  final timeoutMs =
+      ref.watch(serverRequestTimeoutProvider) ??
+      DBKeys.serverRequestTimeout.initial as int;
+  final client = TimeoutHttpClient(Duration(milliseconds: timeoutMs));
+  ref.onDispose(client.close);
+  return GraphQLClient(
+    link: HttpLink(
+      Endpoints.baseApi(
+        baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+        port: ref.watch(serverPortProvider),
+        addPort: ref.watch(serverPortToggleProvider).ifNull(),
+        isGraphQl: true,
+      ),
+      httpClient: client,
+      httpResponseDecoder: tsumiruHttpResponseDecoder,
+      defaultHeaders: applyCustomHeaders(
+        {},
+        ref.watch(customHttpHeadersProvider).value,
+      ),
+    ),
+    queryRequestTimeout: Duration(milliseconds: timeoutMs + 2000),
+    cache: GraphQLCache(),
+    defaultPolicies: DefaultPolicies(
+      query: Policies(fetch: FetchPolicy.noCache),
+    ),
+  );
+});
+
+Link _sessionLink(bool Function() isCurrentSession) => Link.function((
+  request, [
+  forward,
+]) async* {
+  if (!isCurrentSession()) throw StateError('Authentication session changed');
+  await for (final response in forward!(request)) {
+    if (!isCurrentSession()) throw StateError('Authentication session changed');
+    yield response;
+  }
+});
+
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlClient(Ref ref) {
+  final isCurrentSession = watchAuthSession(ref);
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider).value;
 
@@ -81,8 +118,7 @@ GraphQLClient graphQlClient(Ref ref) {
   // Generic custom headers (e.g. Cloudflare Zero Trust service tokens) sent
   // with every Suwayomi-server request. Watching here rebuilds the client
   // when they change.
-  final customHeaders =
-      ref.watch(customHttpHeadersProvider).value ?? const {};
+  final customHeaders = ref.watch(customHttpHeadersProvider).value ?? const {};
 
   Link link = HttpLink(
     Endpoints.baseApi(
@@ -93,14 +129,14 @@ GraphQLClient graphQlClient(Ref ref) {
     ),
     followRedirects: true,
     httpResponseDecoder: tsumiruHttpResponseDecoder,
-    defaultHeaders: applyCustomHeaders(
-      {'Content-Type': 'application/json; charset=utf-8'},
-      customHeaders,
-    ),
+    defaultHeaders: applyCustomHeaders({
+      'Content-Type': 'application/json; charset=utf-8',
+    }, customHeaders),
     httpClient: TimeoutHttpClient(
       Duration(milliseconds: effectiveTimeoutMs),
       retries: retryCount,
       retryDelay: Duration(milliseconds: retryDelayMs),
+      isCurrentSession: isCurrentSession,
       onConnectionFailure: (request) async {
         if (!_isGraphQlRead(request)) return null;
         await ref.read(serverEndpointResolverProvider.notifier).refresh();
@@ -127,6 +163,7 @@ GraphQLClient graphQlClient(Ref ref) {
   // simple_login / ui_login link.
   if (authType == AuthType.simpleLogin || authType == AuthType.uiLogin) {
     final suwayomiAuthLink = SuwayomiAuthLink(
+      isCurrentSession: isCurrentSession,
       authType: () => authType,
       getHeaders: () async {
         // Synchronously read the cached snapshot — populated at startup
@@ -137,8 +174,7 @@ GraphQLClient graphQlClient(Ref ref) {
         final base = authType == AuthType.simpleLogin
             ? snapshot.simpleLoginCookieHeader
             : snapshot.uiAuthorizationHeader;
-        final custom =
-            ref.read(customHttpHeadersProvider).value ?? const {};
+        final custom = ref.read(customHttpHeadersProvider).value ?? const {};
         if (base == null) {
           return custom.isEmpty ? null : Map<String, String>.from(custom);
         }
@@ -216,7 +252,7 @@ GraphQLClient graphQlClient(Ref ref) {
 
   final loggerLink = LoggerLink();
   return GraphQLClient(
-    link: loggerLink.concat(link),
+    link: _sessionLink(isCurrentSession).concat(loggerLink).concat(link),
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),
@@ -242,6 +278,7 @@ GraphQLClient graphQlClient(Ref ref) {
 // 10 min idle, 53 while navigating.
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
+  final isCurrentSession = watchAuthSession(ref);
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider).value;
   // Only the cookie: it's pinned into the handshake at build time. The
@@ -274,7 +311,13 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   Map<String, String>? handshakeHeaders;
   if (authType == AuthType.uiLogin) {
     initialPayload = () async {
+      if (!isCurrentSession()) {
+        throw StateError('Authentication session changed');
+      }
       final snapshot = await ref.read(authCredentialsStoreProvider.future);
+      if (!isCurrentSession()) {
+        throw StateError('Authentication session changed');
+      }
       final token = snapshot.uiAccessToken;
       return (token == null || token.isEmpty)
           ? <String, dynamic>{}
@@ -315,7 +358,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
       ref.watch(serverRequestTimeoutProvider) ??
       DBKeys.serverRequestTimeout.initial as int;
   return GraphQLClient(
-    link: loggerLink.concat(wsLink),
+    link: _sessionLink(isCurrentSession).concat(loggerLink).concat(wsLink),
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.noCache),
     ),

@@ -14,6 +14,7 @@ import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_coordinator.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -40,6 +41,7 @@ part 'offline_background_downloads.g.dart';
 @Riverpod(keepAlive: true)
 ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
+  final isCurrentSession = watchAuthSession(ref);
   // Page-level parallelism. One chapter downloads
   // at a time; this is how many of its pages are in flight at once.
   final parallel =
@@ -47,10 +49,12 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
               DBKeys.offlineDownloadConcurrency.initial as int)
           .clamp(1, 10);
   return ChapterDownloadEngine(
-    fetchPage: (pageUrl) => fetchOfflinePageBytes(ref, pageUrl),
+    fetchPage: (pageUrl) =>
+        fetchOfflinePageBytes(ref, pageUrl, isCurrentSession: isCurrentSession),
     writePage: ref.watch(offlinePageStoreProvider),
     parallelPageLimit: parallel,
     refreshAuth: () async {
+      if (!isCurrentSession()) return false;
       // Only ui_login has a refreshable rotating token. basic / simple_login /
       // none don't rotate, so a 401 there means the credential is wrong — no
       // point retrying.
@@ -76,7 +80,7 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
       final outcome = await ref
           .read(authCoordinatorProvider.notifier)
           .refreshUiAccessToken(gqlClient: rawClient);
-      return outcome is RefreshSuccess;
+      return isCurrentSession() && outcome is RefreshSuccess;
     },
   );
 }

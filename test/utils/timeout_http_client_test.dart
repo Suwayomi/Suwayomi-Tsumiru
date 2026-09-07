@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -170,6 +171,121 @@ void main() {
       final res = await client.send(_graphqlRequest('{ library { id } }'));
       expect(res.statusCode, 200);
       expect(attempts, 2);
+    });
+
+    test(
+      'late failure from an old session cannot resolve a new endpoint',
+      () async {
+        var current = true;
+        var sends = 0;
+        var resolutions = 0;
+        final started = Completer<void>();
+        final failure = Completer<http.StreamedResponse>();
+        final client = TimeoutHttpClient(
+          const Duration(seconds: 5),
+          isCurrentSession: () => current,
+          inner: MockClient.streaming((request, body) {
+            sends++;
+            started.complete();
+            return failure.future;
+          }),
+          onConnectionFailure: (_) async {
+            resolutions++;
+            return Uri.parse('http://new/api/graphql');
+          },
+        );
+        final pending = expectLater(
+          client.send(_graphqlRequest('{ library { id } }')),
+          throwsStateError,
+        );
+        await started.future;
+        current = false;
+        failure.completeError(http.ClientException('old connection failed'));
+        await pending;
+        expect(sends, 1);
+        expect(resolutions, 0);
+      },
+    );
+
+    test('a switch during endpoint resolution cancels the retry', () async {
+      var current = true;
+      var sends = 0;
+      final resolving = Completer<void>();
+      final endpoint = Completer<Uri?>();
+      final client = TimeoutHttpClient(
+        const Duration(seconds: 5),
+        isCurrentSession: () => current,
+        inner: MockClient.streaming((request, body) async {
+          sends++;
+          if (sends == 1) throw http.ClientException('offline');
+          return http.StreamedResponse(const Stream.empty(), 200);
+        }),
+        onConnectionFailure: (_) {
+          resolving.complete();
+          return endpoint.future;
+        },
+      );
+      final pending = expectLater(
+        client.send(_graphqlRequest('{ library { id } }')),
+        throwsStateError,
+      );
+      await resolving.future;
+      current = false;
+      endpoint.complete(Uri.parse('http://new/api/graphql'));
+      await pending;
+      expect(sends, 1);
+    });
+
+    test('a switch during the retry delay prevents another send', () {
+      fakeAsync((clock) {
+        var current = true;
+        var sends = 0;
+        Object? error;
+        final client = TimeoutHttpClient(
+          const Duration(seconds: 5),
+          retries: 1,
+          retryDelay: const Duration(seconds: 1),
+          isCurrentSession: () => current,
+          inner: MockClient.streaming((request, body) async {
+            sends++;
+            if (sends == 1) throw TimeoutException('slow');
+            return http.StreamedResponse(const Stream.empty(), 200);
+          }),
+        );
+        client
+            .send(_graphqlRequest('{ library { id } }'))
+            .then<void>(
+              (_) {},
+              onError: (Object failure) {
+                error = failure;
+              },
+            );
+        clock.flushMicrotasks();
+        expect(sends, 1);
+        current = false;
+        clock.elapse(const Duration(seconds: 1));
+        expect(sends, 1);
+        expect(error, isStateError);
+      });
+    });
+
+    test('same-session endpoint failover remains available', () async {
+      final urls = <Uri>[];
+      final client = TimeoutHttpClient(
+        const Duration(seconds: 5),
+        isCurrentSession: () => true,
+        inner: MockClient.streaming((request, body) async {
+          urls.add(request.url);
+          if (urls.length == 1) throw http.ClientException('offline');
+          return http.StreamedResponse(const Stream.empty(), 200);
+        }),
+        onConnectionFailure: (_) async => Uri.parse('http://new/api/graphql'),
+      );
+      expect(
+        (await client.send(_graphqlRequest('{ library { id } }'))).statusCode,
+        200,
+      );
+      expect(urls.map((uri) => uri.host), ['x', 'new']);
     });
   });
 }

@@ -15,6 +15,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'constants/app_theme.dart';
 import 'features/auth/presentation/reauth_banner.dart';
+import 'features/notifications/controller/notifications_controller.dart';
 import 'features/notifications/data/background/notification_worker.dart';
 import 'features/notifications/data/local_notification_service.dart';
 import 'features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
@@ -44,10 +45,19 @@ class Sorayomi extends HookConsumerWidget {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
         return null;
       }
+      bool allowed(NotificationPayload payload) =>
+          context.mounted &&
+          (!payload.requiresSession ||
+              ref
+                  .read(notificationsControllerProvider)
+                  .acceptsNotification(payload));
+
       void go(NotificationPayload p) {
+        if (!allowed(p)) return;
         if (p.mangaId != null && p.chapterId != null) {
-          routes.go(ReaderRoute(mangaId: p.mangaId!, chapterId: p.chapterId!)
-              .location);
+          routes.go(
+            ReaderRoute(mangaId: p.mangaId!, chapterId: p.chapterId!).location,
+          );
         } else {
           routes.go(const UpdatesRoute().location);
         }
@@ -57,7 +67,8 @@ class Sorayomi extends HookConsumerWidget {
         final action = r.actionId;
         // Also handled headlessly when the app is dead — no navigation needed.
         if (action == kNotifActionMarkRead || action == kNotifActionDownload) {
-          handleNotificationAction(action, r.payload);
+          final payload = NotificationPayload.decode(r.payload);
+          if (allowed(payload)) handleNotificationAction(action, r.payload);
           return;
         }
         final raw = r.payload;
@@ -66,6 +77,7 @@ class Sorayomi extends HookConsumerWidget {
           return;
         }
         final p = NotificationPayload.decode(r.payload);
+        if (!allowed(p)) return;
         if (action == kNotifActionView && p.mangaId != null) {
           routes.go(MangaRoute(mangaId: p.mangaId!).location);
         } else {
@@ -77,9 +89,9 @@ class Sorayomi extends HookConsumerWidget {
       service
           .init(onTap: onResponse, onBackgroundTap: notificationActionCallback)
           .then((_) async {
-        final launch = await service.launchPayload();
-        if (launch != null) go(launch);
-      });
+            final launch = await service.launchPayload();
+            if (launch != null) go(launch);
+          });
       return null;
     }, const []);
 
@@ -160,11 +172,11 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => const {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.invertedStylus,
-        PointerDeviceKind.unknown,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+    PointerDeviceKind.unknown,
+  };
 }

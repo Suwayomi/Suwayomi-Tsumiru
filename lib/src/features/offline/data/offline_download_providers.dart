@@ -1152,6 +1152,7 @@ Future<void> _removeMangaFromLibraryAndPurgeOwned(
 @riverpod
 OfflineDownloadManager? offlineDownloadManager(Ref ref) {
   if (!ref.watch(offlineActiveProvider)) return null;
+  final isCurrentSession = watchAuthSession(ref);
   final repo = ref.watch(mangaBookRepositoryProvider);
   return OfflineDownloadManager(
     db: ref.watch(offlineDatabaseProvider),
@@ -1159,7 +1160,8 @@ OfflineDownloadManager? offlineDownloadManager(Ref ref) {
     fetchPageUrls: (chapterId) async =>
         (await repo.getChapterPages(chapterId: chapterId))?.pages ??
         const <String>[],
-    fetchBytes: (url) => fetchOfflinePageBytes(ref, url),
+    fetchBytes: (url) =>
+        fetchOfflinePageBytes(ref, url, isCurrentSession: isCurrentSession),
   );
 }
 
@@ -1183,7 +1185,12 @@ http.Client offlinePageClient(Ref ref) {
 /// `/api`, ui_login `?token=`, basic/simple_login via headers). Throws
 /// [PageAuthException] on 401 so the engine refreshes and retries; any other
 /// non-200 is a plain transient exception.
-Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
+Future<PageBytes> fetchOfflinePageBytes(
+  Ref ref,
+  String pageUrl, {
+  required bool Function() isCurrentSession,
+}) async {
+  if (!isCurrentSession()) throw StateError('Authentication session changed');
   final authType = ref.read(authTypeKeyProvider);
   final basicToken = ref.read(credentialsProvider).value;
   final creds = ref.read(authCredentialsStoreProvider).value;
@@ -1207,8 +1214,7 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
     fetchUrl =
         '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds!.uiAccessToken!)}';
   }
-  applyCustomHeaders(
-      headers, ref.read(customHttpHeadersProvider).value);
+  applyCustomHeaders(headers, ref.read(customHttpHeadersProvider).value);
 
   final http.Response res;
   try {
@@ -1226,6 +1232,7 @@ Future<PageBytes> fetchOfflinePageBytes(Ref ref, String pageUrl) async {
   } on TimeoutException {
     throw const PageOfflineException('timed out after 30s on page fetch');
   }
+  if (!isCurrentSession()) throw StateError('Authentication session changed');
   if (res.statusCode == 401 || res.statusCode == 403) {
     throw const PageAuthException();
   }

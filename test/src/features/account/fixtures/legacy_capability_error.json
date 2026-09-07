@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "message": "Cannot query field 'user' on type 'Query'.",
+      "extensions": {
+        "code": "GRAPHQL_VALIDATION_FAILED"
+      }
+    }
+  ]
+}

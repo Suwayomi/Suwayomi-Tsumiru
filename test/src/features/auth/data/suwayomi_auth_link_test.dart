@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Contributors to the Suwayomi project
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart';
 import 'package:graphql/client.dart';
+import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/suwayomi_auth_link.dart';
@@ -58,6 +61,214 @@ Request _req() => Request(
     );
 
 void main() {
+  group('SuwayomiAuthLink session changes', () {
+    late bool current;
+    late int refreshCalls;
+    late int reauthCalls;
+
+    SuwayomiAuthLink guarded({
+      Future<Map<String, String>?> Function()? headers,
+      Future<RefreshOutcome> Function()? refresh,
+    }) => SuwayomiAuthLink(
+      authType: () => AuthType.uiLogin,
+      getHeaders: headers ?? () async => {'Authorization': 'Bearer OLD'},
+      refreshAccessToken: () {
+        refreshCalls++;
+        return refresh?.call() ?? Future.value(const RefreshSuccess('FRESH'));
+      },
+      onNeedsReauth: () => reauthCalls++,
+      isCurrentSession: () => current,
+    );
+
+    final sessionError = isA<StateError>().having(
+      (error) => error.message,
+      'message',
+      'Authentication session changed',
+    );
+
+    setUp(() {
+      current = true;
+      refreshCalls = 0;
+      reauthCalls = 0;
+    });
+
+    test('rejects an old client before reading credentials', () async {
+      var headerCalls = 0;
+      final recorder = _RecorderLink([(_) => _ok()]);
+      final link = guarded(
+        headers: () async {
+          headerCalls++;
+          return null;
+        },
+      );
+      current = false;
+
+      await expectLater(
+        link.concat(recorder).request(_req()),
+        emitsError(sessionError),
+      );
+      expect(headerCalls, 0);
+      expect(recorder.callCount, 0);
+    });
+
+    test('does not dispatch credentials obtained after a switch', () async {
+      final started = Completer<void>();
+      final headers = Completer<Map<String, String>?>();
+      final recorder = _RecorderLink([(_) => _ok()]);
+      final link = guarded(
+        headers: () {
+          started.complete();
+          return headers.future;
+        },
+      );
+      final result = expectLater(
+        link.concat(recorder).request(_req()),
+        emitsError(sessionError),
+      );
+      await started.future;
+      current = false;
+      headers.complete({'Authorization': 'Bearer NEW_ACCOUNT'});
+
+      await result;
+      expect(recorder.callCount, 0);
+    });
+
+    for (final unauthorized in [false, true]) {
+      test(
+        'rejects late ${unauthorized ? 'unauthorized' : 'successful'} response',
+        () async {
+          final started = Completer<void>();
+          final response = Completer<Response>();
+          final result = expectLater(
+            guarded().request(_req(), (_) async* {
+              started.complete();
+              yield await response.future;
+            }),
+            emitsError(sessionError),
+          );
+          await started.future;
+          current = false;
+          response.complete(unauthorized ? _unauthorized() : _ok());
+
+          await result;
+          expect(refreshCalls, 0);
+          expect(reauthCalls, 0);
+        },
+      );
+    }
+
+    for (final stage in ['headers', 'response', 'retry']) {
+      test('rejects a late HTTP auth error during $stage', () async {
+        final started = Completer<void>();
+        final failure = Completer<void>();
+        var calls = 0;
+        final link = guarded(
+          headers: stage == 'headers'
+              ? () async {
+                  started.complete();
+                  await failure.future;
+                  return null;
+                }
+              : null,
+        );
+        final result = expectLater(
+          link.request(_req(), (_) async* {
+            calls++;
+            if (stage == 'retry' && calls == 1) {
+              yield _unauthorized();
+              return;
+            }
+            started.complete();
+            await failure.future;
+            yield _ok();
+          }),
+          emitsError(sessionError),
+        );
+        await started.future;
+        current = false;
+        failure.completeError(
+          HttpLinkServerException(
+            response: http.Response('Unauthorized', 401),
+            parsedResponse: _unauthorized(),
+          ),
+        );
+
+        await result;
+        expect(calls, stage == 'headers' ? 0 : (stage == 'retry' ? 2 : 1));
+        expect(refreshCalls, stage == 'retry' ? 1 : 0);
+        expect(reauthCalls, 0);
+      });
+    }
+
+    for (final outcome in <RefreshOutcome>[
+      const RefreshSuccess('NEW_ACCOUNT'),
+      const RefreshAuthFailure(),
+      RefreshTransientFailure(StateError('offline')),
+    ]) {
+      test('rejects ${outcome.runtimeType} completed after a switch', () async {
+        final started = Completer<void>();
+        final refresh = Completer<RefreshOutcome>();
+        final recorder = _RecorderLink([(_) => _unauthorized(), (_) => _ok()]);
+        final link = guarded(
+          refresh: () {
+            started.complete();
+            return refresh.future;
+          },
+        );
+        final result = expectLater(
+          link.concat(recorder).request(_req()),
+          emitsError(sessionError),
+        );
+        await started.future;
+        current = false;
+        refresh.complete(outcome);
+
+        await result;
+        expect(recorder.callCount, 1);
+        expect(reauthCalls, 0);
+      });
+    }
+
+    for (final retry in [false, true]) {
+      test(
+        'guards every ${retry ? 'retried ' : ''}subscription event',
+        () async {
+          final events = StreamController<Response>();
+          final dispatched = Completer<void>();
+          var calls = 0;
+          final iterator = StreamIterator(
+            guarded().request(_req(), (_) {
+              calls++;
+              if (retry && calls == 1) {
+                return Stream.value(_unauthorized());
+              }
+              dispatched.complete();
+              return events.stream;
+            }),
+          );
+          final first = iterator.moveNext();
+          await dispatched.future;
+          events.add(_ok());
+          expect(await first, isTrue);
+          expect(iterator.current.data, {'ok': true});
+          final second = iterator.moveNext();
+          events.add(Response(data: {'tick': 2}, response: {}));
+          expect(await second, isTrue);
+          expect(iterator.current.data, {'tick': 2});
+          final late = expectLater(iterator.moveNext(), throwsA(sessionError));
+          current = false;
+          events.add(_unauthorized());
+
+          await late;
+          await iterator.cancel();
+          await events.close();
+          expect(reauthCalls, 0);
+          expect(refreshCalls, retry ? 1 : 0);
+        },
+      );
+    }
+  });
+
   group('SuwayomiAuthLink — UI Login', () {
     test('injects Authorization: Bearer header from store', () async {
       final recorder = _RecorderLink([(_) => _ok()]);

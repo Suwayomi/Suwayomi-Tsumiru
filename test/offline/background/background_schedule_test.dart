@@ -16,6 +16,7 @@ import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart'
 import 'package:tsumiru/src/features/notifications/controller/notifications_controller.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_client.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_entry.dart';
+import 'package:tsumiru/src/features/notifications/data/local_notification_service.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_controller.dart';
@@ -210,6 +211,40 @@ void main() {
   }
 
   test(
+    'notification identity survives sync but rejects a replacement login',
+    () async {
+      await login(jwt(2000000000, 'A'), 'refresh-A');
+      final controller = container.read(notificationsControllerProvider);
+      await controller.sync();
+      final store = NotificationStateStore(prefs);
+      final first = store.readTokenRecord()!;
+      final owner = store.readConfig()!;
+      final payload = NotificationPayload.chapter(
+        mangaId: 1,
+        chapterId: 5,
+        chapterIds: [5],
+        identityEpoch: owner.identityEpoch,
+        catalogServerId: owner.catalogServerId,
+        sessionFingerprint: owner.sessionFingerprint,
+      );
+      expect(controller.acceptsNotification(payload), isTrue);
+      await controller.sync();
+      expect(
+        store.readTokenRecord()!.notificationSessionId,
+        first.notificationSessionId,
+      );
+      await login(jwt(2000000000, 'B'), 'refresh-B');
+      expect(controller.acceptsNotification(payload), isFalse);
+      await controller.sync();
+      expect(
+        store.readTokenRecord()!.notificationSessionId,
+        isNot(first.notificationSessionId),
+      );
+      expect(controller.acceptsNotification(payload), isFalse);
+    },
+  );
+
+  test(
     'sync imports and preserves a worker refresh across repeated publications',
     () async {
       final oldAccess = jwt(2000000000, 'reader');
@@ -221,6 +256,9 @@ void main() {
           gen: 4,
           authType: 'uiLogin',
           endpoint: 'https://server.test|-',
+          identityEpoch: CatchupStateStore(prefs).identityEpoch,
+          catalogServerId: 'catalog',
+          originalRefreshToken: 'old-refresh',
           accessToken: rotatedAccess,
           refreshToken: 'rotated-refresh',
         ),

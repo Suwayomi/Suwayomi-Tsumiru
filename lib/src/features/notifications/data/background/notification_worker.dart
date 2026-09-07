@@ -50,7 +50,7 @@ Future<bool> runNewChapterCheck() async {
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
-  if (config == null || token == null) {
+  if (config == null || token == null || !config.matchesToken(token)) {
     // The only way to tell "the OS never woke this task" apart from "it woke
     // but had nothing configured yet" from the field — both look identical
     // (a silent gap in the log) without this line.
@@ -75,7 +75,7 @@ Future<bool> runNewChapterCheck() async {
   final client = NotificationBackgroundClient(
     endpoint: config.endpoint,
     record: token,
-    broker: _brokerFor(store, config.endpoint),
+    broker: _brokerFor(config.endpoint, token),
   );
 
   final network = await Connectivity().checkConnectivity();
@@ -94,7 +94,7 @@ Future<bool> runNewChapterCheck() async {
   }
   var ok = true;
   if (notificationPolicy && config.newChaptersEnabled) {
-    ok = await _runNewChapters(store, config, client, notifier, l10n);
+    ok = await runNewChapters(store, config, client, notifier, l10n);
   }
   // Background download step — own cursor, keep-rule scope, no category
   // filter. Resolution records the obligations; the executor then downloads
@@ -122,7 +122,7 @@ Future<bool> runNewChapterCheck() async {
     await _checkAppUpdate(store, config, client, notifier, l10n);
   }
   if (notificationPolicy && config.extensionUpdatesEnabled) {
-    await _checkExtensionUpdates(store, client, notifier, l10n);
+    await _checkExtensionUpdates(store, config, client, notifier, l10n);
   }
   recordDiagnostic(
     '[${DateTime.now().toIso8601String()}] offline-worker: '
@@ -143,37 +143,60 @@ Future<void> _checkAppUpdate(
   final release = await client.fetchLatestRelease();
   if (release == null) return;
   if (release.version == config.appVersion) return; // up to date
-  if (release.version == store.lastNotifiedAppVersion) return; // already told
-  await store.setLastNotifiedAppVersion(release.version);
-  await notifier.showAppUpdate(
-    l10n.notificationAppUpdateTitle,
-    l10n.notificationAppUpdateBody(release.version),
-    release.url.isEmpty ? null : release.url,
-  );
+  await _withNotificationOwner(config, (current) async {
+    if (release.version == current.lastNotifiedAppVersion) return;
+    await current.setLastNotifiedAppVersion(release.version);
+    await notifier.showAppUpdate(
+      l10n.notificationAppUpdateTitle,
+      l10n.notificationAppUpdateBody(release.version),
+      release.url.isEmpty ? null : release.url,
+    );
+  });
 }
 
 /// Extension-update check — notifies when the count of installed extensions with
 /// an update rises (server-tracked).
 Future<void> _checkExtensionUpdates(
   NotificationStateStore store,
+  NotificationWorkerConfig config,
   NotificationBackgroundClient client,
   LocalNotificationService notifier,
   AppLocalizations l10n,
 ) async {
   final count = await client.countExtensionUpdates();
-  if (count <= store.lastExtensionUpdateCount) {
-    // Fewer/equal — user updated some or nothing new; just record.
-    await store.setLastExtensionUpdateCount(count);
-    return;
-  }
-  await store.setLastExtensionUpdateCount(count);
-  await notifier.showExtensionUpdates(
-    l10n.notificationExtensionUpdateTitle,
-    l10n.notificationExtensionUpdateBody(count),
-  );
+  await _withNotificationOwner(config, (current) async {
+    final previous = current.lastExtensionUpdateCount;
+    await current.setLastExtensionUpdateCount(count);
+    if (count <= previous) return;
+    await notifier.showExtensionUpdates(
+      l10n.notificationExtensionUpdateTitle,
+      l10n.notificationExtensionUpdateBody(count),
+    );
+  });
 }
 
-Future<bool> _runNewChapters(
+Future<bool> _withNotificationOwner(
+  NotificationWorkerConfig expected,
+  Future<void> Function(NotificationStateStore) action,
+) => withBackgroundScheduleLock(() async {
+  final current = await NotificationStateStore.open();
+  final config = current.readConfig();
+  final token = current.readTokenRecord();
+  final controls = await CatchupStateStore.open();
+  if (config == null ||
+      token == null ||
+      !config.matchesToken(token) ||
+      !expected.matchesToken(token) ||
+      !controls.identityAuthorized ||
+      controls.identityEpoch != expected.identityEpoch ||
+      jsonEncode(config.toJson()) != jsonEncode(expected.toJson())) {
+    return false;
+  }
+  await action(current);
+  return true;
+});
+
+Future<bool> runNewChapters(
   NotificationStateStore store,
   NotificationWorkerConfig config,
   NotificationBackgroundClient client,
@@ -184,21 +207,31 @@ Future<bool> _runNewChapters(
   // mid-post) without advancing the cursor. Re-publish (stable ids → replace,
   // not re-buzz), advance, clear.
   final stranded = store.readOutbox();
-  if (stranded != null) {
-    await _publish(notifier, client, l10n, config, stranded.pending);
-    await store.writeWatermark(config.serverId, stranded.nextWatermark);
-    await store.clearOutbox();
+  if (stranded != null && stranded.matchesConfig(config)) {
+    if (!await _publish(
+      notifier,
+      client,
+      l10n,
+      config,
+      stranded.pending,
+      stranded.nextWatermark,
+    )) {
+      return true;
+    }
   }
 
-  var watermark = store.readWatermark(config.serverId);
+  var watermark = store.readWatermark(config.sessionFingerprint!);
 
   // 1. First enable: seed the cursor to the server's current max fetch time and
   // notify nothing, so we don't dump the backlog.
   if (watermark.fetchedAt == 0 && watermark.recent.isEmpty) {
     final maxFetched = await client.serverMaxFetchedAt();
-    await store.writeWatermark(
-      config.serverId,
-      NewChapterWatermark(fetchedAt: maxFetched),
+    await _withNotificationOwner(
+      config,
+      (current) => current.writeWatermark(
+        config.sessionFingerprint!,
+        NewChapterWatermark(fetchedAt: maxFetched),
+      ),
     );
     return true;
   }
@@ -241,21 +274,17 @@ Future<bool> _runNewChapters(
   );
 
   if (result.groups.isEmpty) {
-    await store.writeWatermark(config.serverId, result.watermark);
+    await _withNotificationOwner(
+      config,
+      (current) =>
+          current.writeWatermark(config.sessionFingerprint!, result.watermark),
+    );
     return true;
   }
 
-  // 4. Durable outbox BEFORE publishing.
   final byId = {for (final n in all) n.id: n};
   final pending = [for (final g in result.groups) _toPending(g, byId)];
-  await store.writeOutbox(
-    NotificationOutbox(pending: pending, nextWatermark: result.watermark),
-  );
-
-  // 5. Publish, then mark delivered (advance cursor + clear outbox).
-  await _publish(notifier, client, l10n, config, pending);
-  await store.writeWatermark(config.serverId, result.watermark);
-  await store.clearOutbox();
+  await _publish(notifier, client, l10n, config, pending, result.watermark);
   return true;
 }
 
@@ -379,12 +408,13 @@ PendingSeriesNotification _toPending(
   );
 }
 
-Future<void> _publish(
+Future<bool> _publish(
   LocalNotificationService notifier,
   NotificationBackgroundClient client,
   AppLocalizations l10n,
   NotificationWorkerConfig config,
   List<PendingSeriesNotification> pending,
+  NewChapterWatermark watermark,
 ) async {
   final summaryTitle = l10n.notificationNewChaptersTitle;
   final summaryText = pending.length == 1 && !config.hideContent
@@ -399,20 +429,36 @@ Future<void> _publish(
         body: _describe(l10n, p),
         firstChapterId: p.firstChapterId,
         chapterIds: p.chapterIds,
-        coverPath: config.hideContent ? null : await _fetchCover(client, p),
+        coverPath: config.hideContent
+            ? null
+            : await _fetchCover(client, p, config.sessionFingerprint!),
       ),
     );
   }
-  await notifier.showNewChapters(
-    summaryTitle: summaryTitle,
-    summaryText: summaryText,
-    summaryLines: [for (final p in pending) p.mangaTitle],
-    hideContent: config.hideContent,
-    markReadLabel: l10n.notificationActionMarkRead,
-    viewLabel: l10n.notificationActionView,
-    downloadLabel: l10n.notificationActionDownload,
-    series: series,
-  );
+  return _withNotificationOwner(config, (current) async {
+    await current.writeOutbox(
+      NotificationOutbox(
+        pending: pending,
+        nextWatermark: watermark,
+        sessionFingerprint: config.sessionFingerprint,
+      ),
+    );
+    await notifier.showNewChapters(
+      summaryTitle: summaryTitle,
+      summaryText: summaryText,
+      summaryLines: [for (final p in pending) p.mangaTitle],
+      hideContent: config.hideContent,
+      markReadLabel: l10n.notificationActionMarkRead,
+      viewLabel: l10n.notificationActionView,
+      downloadLabel: l10n.notificationActionDownload,
+      series: series,
+      identityEpoch: config.identityEpoch,
+      catalogServerId: config.catalogServerId,
+      sessionFingerprint: config.sessionFingerprint,
+    );
+    await current.writeWatermark(config.sessionFingerprint!, watermark);
+    await current.clearOutbox();
+  });
 }
 
 /// Isolate entry point for a Mark-read / Download action fired while the app is
@@ -434,11 +480,16 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
-  if (config == null || token == null) return;
+  if (config == null ||
+      token == null ||
+      !config.matchesToken(token) ||
+      !p.matchesConfig(config)) {
+    return;
+  }
   final client = NotificationBackgroundClient(
     endpoint: config.endpoint,
     record: token,
-    broker: _brokerFor(store, config.endpoint),
+    broker: _brokerFor(config.endpoint, token),
   );
   if (actionId == kNotifActionMarkRead) {
     await client.markRead(p.chapterIds);
@@ -452,6 +503,7 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
 Future<String?> _fetchCover(
   NotificationBackgroundClient client,
   PendingSeriesNotification p,
+  String sessionFingerprint,
 ) async {
   final url = p.thumbnailUrl;
   if (url == null || url.isEmpty) return null;
@@ -459,7 +511,9 @@ Future<String?> _fetchCover(
     final bytes = await client.fetchCover(url);
     if (bytes == null) return null;
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/notif_cover_${p.mangaId}.jpg');
+    final file = File(
+      '${dir.path}/notif_cover_${sessionFingerprint}_${p.mangaId}.jpg',
+    );
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   } catch (_) {
@@ -485,22 +539,26 @@ String _describe(AppLocalizations l10n, PendingSeriesNotification p) {
 /// A [TokenBroker] backed by the persistent store, so a ui_login refresh in the
 /// worker isolate rotates the shared record (same gen-versioned scheme the
 /// download worker uses).
-TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) {
-  final epoch = store.readConfig()?.identityEpoch;
+TokenBroker _brokerFor(
+  NotificationEndpoint ep,
+  BackgroundTokenRecord original,
+) {
+  final epoch = original.identityEpoch;
   return TokenBroker(
+    expectedIdentity: original,
     read: () async =>
-        store.readTokenRecord() ??
+        (await NotificationStateStore.open()).readTokenRecord() ??
         const BackgroundTokenRecord(gen: 0, authType: 'none'),
     write: (r) => withBackgroundScheduleLock(() async {
       final currentStore = await NotificationStateStore.open();
       final current = currentStore.readTokenRecord();
       final controls = await CatchupStateStore.open();
       if (controls.identityAuthorized &&
-          currentStore.readConfig()?.identityEpoch == epoch &&
-          current?.endpoint == r.endpoint &&
-          current?.refreshToken == r.refreshToken &&
-          current?.authType == r.authType &&
-          r.gen > (current?.gen ?? -1)) {
+          currentStore.readConfig()?.matchesToken(r) == true &&
+          controls.identityEpoch == epoch &&
+          current != null &&
+          current.sameIdentity(r) &&
+          r.gen > current.gen) {
         await currentStore.writeTokenRecord(r);
       }
     }),
@@ -514,16 +572,15 @@ TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) {
       // Read fresh: the token record and its headers travel together.
       Map<String, String> extraHeaders = const {};
       try {
-        extraHeaders = store.readTokenRecord()?.extraHeaders ?? const {};
+        extraHeaders = original.extraHeaders;
       } catch (_) {}
       try {
         final res = await http
             .post(
               Uri.parse(endpoint),
-              headers: applyIsolateCustomHeaders(
-                {'Content-Type': 'application/json'},
-                extraHeaders,
-              ),
+              headers: applyIsolateCustomHeaders({
+                'Content-Type': 'application/json',
+              }, extraHeaders),
               body: jsonEncode({
                 'query':
                     r'mutation RefreshToken($input: RefreshTokenInput!){ refreshToken(input: $input){ accessToken } }',

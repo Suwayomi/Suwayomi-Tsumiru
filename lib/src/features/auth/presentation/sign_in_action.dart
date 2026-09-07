@@ -63,7 +63,7 @@ Future<void> performSignIn(
       );
     case AuthType.uiLogin:
       await coordinator.loginUi(
-        gqlClient: ref.read(graphQlClientProvider),
+        gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
         username: username,
         password: password,
       );

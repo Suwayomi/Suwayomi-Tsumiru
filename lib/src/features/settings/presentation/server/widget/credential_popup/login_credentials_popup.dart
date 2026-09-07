@@ -103,7 +103,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
               serverBaseUrl: resolvedUrl,
               username: username.text,
               password: password.text,
-              makeGqlClient: () => ref.read(graphQlClientProvider),
+              makeGqlClient: () => ref.read(unauthenticatedGraphQlClientProvider),
             );
         if (!context.mounted) return;
         if (result is TestConnectionSuccess) {
@@ -146,7 +146,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
               await store.clearSimpleLoginCookie();
               await store.clearBasicCredentials();
               await coordinator.loginUi(
-                gqlClient: ref.read(graphQlClientProvider),
+                gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
                 username: username.text,
                 password: password.text,
               );

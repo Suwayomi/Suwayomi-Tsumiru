@@ -800,15 +800,17 @@ class DownloadTaskHandler extends TaskHandler {
   // ---------------------------------------------------------------------------
 
   TokenBroker _buildBroker() => TokenBroker(
+    expectedIdentity: _order!.auth,
     read: () async {
       final raw = await FlutterForegroundTask.getData<String>(
         key: kTokenRecordKey,
       );
       if (raw == null) return _record;
-      _record = BackgroundTokenRecord.fromJson(
+      final current = BackgroundTokenRecord.fromJson(
         jsonDecode(raw) as Map<String, Object?>,
       );
-      return _record;
+      if (current.sameIdentity(_order!.auth)) _record = current;
+      return current;
     },
     write: (r) => withWorkOrderAdmission(_paths.baseDir, () async {
       final order = decodeWorkOrder(
@@ -848,10 +850,9 @@ class DownloadTaskHandler extends TaskHandler {
         final res = await _http
             .post(
               Uri.parse(endpoint),
-              headers: applyIsolateCustomHeaders(
-                {'Content-Type': 'application/json'},
-                _record.extraHeaders,
-              ),
+              headers: applyIsolateCustomHeaders({
+                'Content-Type': 'application/json',
+              }, _record.extraHeaders),
               body: body,
             )
             .timeout(_httpTimeout);

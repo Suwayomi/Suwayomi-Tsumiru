@@ -595,11 +595,15 @@ Future<void> _seedTestConfig(ProviderContainer container) async {
   }
 
   if (pass.isEmpty) return; // server set; user logs in manually if no password.
-  await container
-      .read(authCoordinatorProvider.notifier)
-      .loginUi(
-        gqlClient: container.read(graphQlClientProvider),
-        username: user,
-        password: pass,
-      );
+  await container.read(backgroundDownloadControllerProvider).changeIdentity(
+    () async {
+      await container
+          .read(authCoordinatorProvider.notifier)
+          .loginUi(
+            gqlClient: container.read(unauthenticatedGraphQlClientProvider),
+            username: user,
+            password: pass,
+          );
+    },
+  );
 }

@@ -1,0 +1,191 @@
+fragment AccountDto on UserType {
+  id
+  username
+  permissions
+  roles
+}
+
+fragment AccountCodeDto on UserCodeType {
+  id
+  purpose
+  createdAt
+  expiresAt
+  createdBy {
+    id
+    username
+  }
+  user {
+    id
+    username
+  }
+}
+
+fragment AccountSettingsDto on UserSettingsType {
+  autoDownloadIgnoreReUploads
+  autoDownloadNewChapters
+  autoDownloadNewChaptersLimit
+  excludeCompleted
+  excludeEntryWithUnreadChapters
+  excludeNotStarted
+  excludeUnreadChapters
+  updateMangas
+  koreaderSyncChecksumMethod
+  koreaderSyncPercentageTolerance
+  koreaderSyncStrategyBackward
+  koreaderSyncStrategyForward
+  opdsCbzMimetype
+  opdsChapterSortOrder
+  opdsEnablePageReadProgress
+  opdsItemsPerPage
+  opdsMarkAsReadOnDownload
+  opdsShowOnlyDownloadedChapters
+  opdsShowOnlyUnreadChapters
+  opdsSkipChapterMetadataFeed
+  opdsUseBinaryFileSizes
+  serveConversions {
+    callTimeout
+    compressionLevel
+    connectTimeout
+    headers {
+      name
+      value
+    }
+    mimeType
+    target
+  }
+  syncDataCategories
+  syncDataChapters
+  syncDataHistory
+  syncDataManga
+  syncDataTracking
+  syncInterval
+  syncYomiApiKey
+  syncYomiEnabled
+  syncYomiHost
+}
+
+query CurrentAccount {
+  user {
+    ...AccountDto
+  }
+}
+
+query Accounts($first: Int!, $after: Cursor) {
+  users(first: $first, after: $after, order: [{by: ID, byType: ASC}]) {
+    nodes {
+      ...AccountDto
+    }
+    pageInfo {
+      ...PageInfoDto
+    }
+    totalCount
+  }
+}
+
+query AccountCodes($forUserId: Int) {
+  userCodes(forUserId: $forUserId) {
+    ...AccountCodeDto
+  }
+}
+
+mutation CreateRegistrationCode($input: CreateRegistrationCodeInput!) {
+  createRegistrationCode(input: $input) {
+    code
+    expiresAt
+  }
+}
+
+mutation RedeemRegistrationCode($input: RedeemRegistrationCodeInput!) {
+  redeemRegistrationCode(input: $input) {
+    accessToken
+    refreshToken
+    user {
+      id
+      username
+    }
+  }
+}
+
+mutation CreateRecoveryCode($input: CreateRecoveryCodeInput!) {
+  createRecoveryCode(input: $input) {
+    code
+    expiresAt
+  }
+}
+
+mutation RedeemRecoveryCode($input: RedeemRecoveryCodeInput!) {
+  redeemRecoveryCode(input: $input) {
+    accessToken
+    refreshToken
+    user {
+      id
+      username
+    }
+  }
+}
+
+mutation RevokeAccountCode($input: RevokeUserCodeInput!) {
+  revokeUserCode(input: $input) {
+    clientMutationId
+  }
+}
+
+mutation UpdateAccount($input: UpdateUserInput!) {
+  updateUser(input: $input) {
+    user {
+      ...AccountDto
+    }
+  }
+}
+
+mutation SetAccountPassword($input: SetPasswordInput!) {
+  setPassword(input: $input) {
+    clientMutationId
+  }
+}
+
+query AccountSettings {
+  userSettings {
+    ...AccountSettingsDto
+  }
+}
+
+mutation SetAccountSettings($input: SetUserSettingsInput!) {
+  setUserSettings(input: $input) {
+    userSettings {
+      ...AccountSettingsDto
+    }
+  }
+}
+
+mutation ResetAccountSettings($input: ResetUserSettingsInput!) {
+  resetUserSettings(input: $input) {
+    userSettings {
+      ...AccountSettingsDto
+    }
+  }
+}
+
+query AccountCategoryIdentities($first: Int!, $after: Cursor) {
+  categories(first: $first, after: $after, order: [{by: ID, byType: ASC}]) {
+    nodes {
+      id
+      isDefaultCategory
+    }
+    pageInfo {
+      ...PageInfoDto
+    }
+  }
+}
+
+mutation RegisterAccount($input: RegisterInput!) {
+  register(input: $input) {
+    clientMutationId
+  }
+}
+
+query AccountCapability {
+  user {
+    id
+  }
+}

@@ -75,7 +75,7 @@ class InlineAuthSection extends HookConsumerWidget {
               serverBaseUrl: resolvedBaseUrl(),
               username: username.text.trim(),
               password: password.text,
-              makeGqlClient: () => ref.read(graphQlClientProvider),
+              makeGqlClient: () => ref.read(unauthenticatedGraphQlClientProvider),
             );
         if (!context.mounted) return;
         if (result is TestConnectionSuccess) {

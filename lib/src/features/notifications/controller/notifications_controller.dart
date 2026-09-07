@@ -6,9 +6,9 @@
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
-import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -53,10 +53,36 @@ class NotificationsController {
     final authType = _ref.read(authTypeKeyProvider) ?? AuthType.none;
     final basicToken = _ref.read(credentialsProvider).value;
     final creds = _ref.read(authCredentialsStoreProvider).value;
+    final controls = CatchupStateStore(_ref.read(sharedPreferencesProvider));
+    final saved = NotificationStateStore(
+      _ref.read(sharedPreferencesProvider),
+    ).readTokenRecord();
+    final sameSession =
+        saved != null &&
+        saved.authType == authType.name &&
+        saved.endpoint == _serverId() &&
+        saved.identityEpoch == controls.identityEpoch &&
+        saved.catalogServerId == controls.catalogServerId &&
+        switch (authType) {
+          AuthType.uiLogin =>
+            saved.originalRefreshToken == creds?.uiRefreshToken ||
+                (saved.refreshToken == creds?.uiRefreshToken &&
+                    saved.accessToken == creds?.uiAccessToken),
+          AuthType.basic => saved.basicCredential == basicToken,
+          AuthType.simpleLogin =>
+            saved.simpleCookie == creds?.simpleLoginCookie,
+          AuthType.none => true,
+        };
     return BackgroundTokenRecord(
+      notificationSessionId: sameSession && saved.notificationSessionId != null
+          ? saved.notificationSessionId
+          : const Uuid().v4(),
       gen: 0,
       authType: authType.name,
       endpoint: _serverId(),
+      identityEpoch: controls.identityEpoch,
+      catalogServerId: controls.catalogServerId,
+      originalRefreshToken: creds?.uiRefreshToken,
       accessToken: creds?.uiAccessToken,
       refreshToken: creds?.uiRefreshToken,
       basicCredential: basicToken,
@@ -65,6 +91,18 @@ class NotificationsController {
         _ref.read(customHttpHeadersProvider).value ?? const {},
       ),
     );
+  }
+
+  bool acceptsNotification(NotificationPayload payload) {
+    if (_ref.read(authCredentialsStoreProvider.notifier).identityChanging) {
+      return false;
+    }
+    final config = NotificationStateStore(
+      _ref.read(sharedPreferencesProvider),
+    ).readConfig();
+    return config != null &&
+        config.matchesToken(_tokenRecord()) &&
+        payload.matchesConfig(config);
   }
 
   /// Persist config + token and reconcile the schedule with current settings.
@@ -89,6 +127,12 @@ class NotificationsController {
       if (controls.identityAuthorized &&
           store.readConfig()?.identityEpoch == controls.identityEpoch &&
           saved != null &&
+          saved.identityEpoch == controls.identityEpoch &&
+          saved.catalogServerId == controls.catalogServerId &&
+          saved.originalRefreshToken != null &&
+          (saved.originalRefreshToken == token.refreshToken ||
+              (saved.accessToken == token.accessToken &&
+                  saved.refreshToken == token.refreshToken)) &&
           saved.endpoint == token.endpoint &&
           saved.authType == token.authType &&
           saved.authType == 'uiLogin' &&
@@ -103,19 +147,26 @@ class NotificationsController {
             (currentExpiry == null || !currentExpiry.isAfter(savedExpiry))) {
           final credentials = _ref.read(authCredentialsStoreProvider.notifier);
           final epoch = credentials.serverEpoch;
-          await credentials.saveUiLoginTokens(
+          final adopted = await credentials.refreshUiLoginTokens(
             accessToken: saved.accessToken!,
             refreshToken: saved.refreshToken!,
+            originalRefreshToken: token.refreshToken!,
             forEpoch: epoch,
           );
-          if (!controls.identityAuthorized ||
+          if (!adopted ||
+              credentials.identityChanging ||
+              credentials.serverEpoch != epoch ||
+              !controls.identityAuthorized ||
               controls.identityEpoch != identityEpoch) {
             return;
           }
-          token = saved;
+          token = saved.copyWith(
+            notificationSessionId: token.notificationSessionId,
+          );
         }
       }
       final config = NotificationWorkerConfig(
+        sessionFingerprint: notificationIdentityFingerprint(token),
         serverId: _serverId(),
         endpoint: _endpoint(),
         newChaptersEnabled: newChapters,
@@ -129,17 +180,11 @@ class NotificationsController {
         appUpdatesEnabled: appUpdates,
         extensionUpdatesEnabled: extUpdates,
         appVersion: appVersion,
-        identityEpoch: CatchupStateStore(
-          _ref.read(sharedPreferencesProvider),
-        ).identityEpoch,
+        identityEpoch: token.identityEpoch!,
         wifiOnly: _ref.read(notificationsWifiOnlyProvider) ?? true,
         chargingOnly: _ref.read(notificationsChargingOnlyProvider) ?? false,
         intervalHours: _ref.read(notificationsCheckIntervalHoursProvider) ?? 6,
-        catalogServerId: _ref.read(offlineActiveProvider)
-            ? _ref
-                  .read(sharedPreferencesProvider)
-                  .getString(DBKeys.offlineCatalogServerId.name)
-            : null,
+        catalogServerId: token.catalogServerId,
         verifiedAddress: _ref.read(offlineActiveProvider)
             ? _ref.read(currentServerAddressProvider)
             : null,

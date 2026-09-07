@@ -29,9 +29,17 @@ class BackgroundDownloadController {
   Future<void> onRemoved(int chapterId) async {}
   Future<void> recordChapterDeleted(int chapterId, int newGeneration) async {}
   Future<void> onWifiOnlyChanged(bool value) async {}
-  Future<T> changeIdentity<T>(Future<T> Function() action) => _ref
-      .read(authCredentialsStoreProvider.notifier)
-      .withIdentityChange(action);
+  Future<T> changeIdentity<T>(
+    Future<T> Function() action, {
+    bool preserveSession = false,
+  }) {
+    final credentials = _ref.read(authCredentialsStoreProvider.notifier);
+    return credentials.withIdentityChange(
+      action,
+      preserveSession: preserveSession,
+      expectedEpoch: preserveSession ? null : credentials.serverEpoch,
+    );
+  }
 
   Future<T> withOwnership<T>(Future<T> Function() action) => action();
   Future<void> pause() async {}

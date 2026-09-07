@@ -7,10 +7,32 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../offline/data/background/background_token_record.dart';
 import '../domain/new_chapter_detection.dart';
 import 'background/notification_background_client.dart';
+
+String? notificationIdentityFingerprint(BackgroundTokenRecord record) {
+  if (record.endpoint == null ||
+      record.endpoint!.isEmpty ||
+      record.identityEpoch == null) {
+    return null;
+  }
+  final sessionId = record.notificationSessionId;
+  if (sessionId == null || sessionId.isEmpty) return null;
+  return const Uuid().v5(
+    Namespace.url.value,
+    jsonEncode([
+      'tsumiru/notification-session/v1',
+      record.authType,
+      record.endpoint,
+      record.identityEpoch,
+      record.catalogServerId,
+      sessionId,
+    ]),
+  );
+}
 
 /// Everything the headless worker needs to reach the server and decide what to
 /// notify. Written by the app (on enable / settings change / auth rotation);
@@ -33,6 +55,7 @@ class NotificationWorkerConfig {
     this.catalogServerId,
     this.identityEpoch = 0,
     this.verifiedAddress,
+    this.sessionFingerprint,
   });
 
   final String serverId;
@@ -46,6 +69,16 @@ class NotificationWorkerConfig {
   final String? catalogServerId;
   final int identityEpoch;
   final String? verifiedAddress;
+  final String? sessionFingerprint;
+
+  bool matchesToken(BackgroundTokenRecord record) =>
+      sessionFingerprint != null &&
+      sessionFingerprint == notificationIdentityFingerprint(record) &&
+      serverId == record.endpoint &&
+      serverId ==
+          '${endpoint.baseUrl}|${endpoint.addPort ? endpoint.port ?? "-" : "-"}' &&
+      identityEpoch == record.identityEpoch &&
+      catalogServerId == record.catalogServerId;
 
   /// The installed app version, so the worker can compare against the latest
   /// release without a plugin call in the isolate.
@@ -76,6 +109,7 @@ class NotificationWorkerConfig {
     'catalogServerId': catalogServerId,
     'identityEpoch': identityEpoch,
     'verifiedAddress': verifiedAddress,
+    'sessionFingerprint': sessionFingerprint,
   };
 
   factory NotificationWorkerConfig.fromJson(Map<String, Object?> j) =>
@@ -95,6 +129,7 @@ class NotificationWorkerConfig {
         catalogServerId: j['catalogServerId'] as String?,
         identityEpoch: (j['identityEpoch'] as num?)?.toInt() ?? 0,
         verifiedAddress: j['verifiedAddress'] as String?,
+        sessionFingerprint: j['sessionFingerprint'] as String?,
         includedCategoryIds: {
           for (final id in (j['includedCategoryIds'] as List? ?? const []))
             (id as num).toInt(),
@@ -184,17 +219,25 @@ class NotificationOutbox {
   const NotificationOutbox({
     required this.pending,
     required this.nextWatermark,
+    this.sessionFingerprint,
   });
   final List<PendingSeriesNotification> pending;
   final NewChapterWatermark nextWatermark;
+  final String? sessionFingerprint;
+
+  bool matchesConfig(NotificationWorkerConfig config) =>
+      sessionFingerprint != null &&
+      sessionFingerprint == config.sessionFingerprint;
 
   Map<String, Object?> toJson() => {
     'pending': [for (final p in pending) p.toJson()],
     'nextWatermark': nextWatermark.toJson(),
+    'sessionFingerprint': sessionFingerprint,
   };
 
   factory NotificationOutbox.fromJson(Map<String, Object?> j) =>
       NotificationOutbox(
+        sessionFingerprint: j['sessionFingerprint'] as String?,
         pending: [
           for (final p in (j['pending'] as List))
             PendingSeriesNotification.fromJson(

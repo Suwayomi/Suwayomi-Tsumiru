@@ -11,6 +11,10 @@ class BackgroundTokenRecord {
     required this.gen,
     required this.authType,
     this.endpoint,
+    this.identityEpoch,
+    this.catalogServerId,
+    this.originalRefreshToken,
+    this.notificationSessionId,
     this.accessToken,
     this.refreshToken,
     this.password,
@@ -23,45 +27,81 @@ class BackgroundTokenRecord {
   final String authType; // basic | simpleLogin | uiLogin | none
   // Endpoint these creds belong to, checked before writeback after a switch.
   final String? endpoint;
-  final String? accessToken, refreshToken, password, basicCredential, simpleCookie;
+  final int? identityEpoch;
+  final String? catalogServerId;
+  final String? originalRefreshToken;
+  final String? notificationSessionId;
+  final String? accessToken,
+      refreshToken,
+      password,
+      basicCredential,
+      simpleCookie;
 
   /// Generic custom headers (e.g. Cloudflare Zero Trust) snapshotted for the
   /// background isolate, which has no Riverpod access. Applied to every
   /// server request alongside the auth headers.
   final Map<String, String> extraHeaders;
 
-  BackgroundTokenRecord copyWith({int? gen, String? accessToken, String? refreshToken}) =>
-      BackgroundTokenRecord(
-        gen: gen ?? this.gen,
-        authType: authType,
-        endpoint: endpoint,
-        accessToken: accessToken ?? this.accessToken,
-        refreshToken: refreshToken ?? this.refreshToken,
-        password: password,
-        basicCredential: basicCredential,
-        simpleCookie: simpleCookie,
-        extraHeaders: extraHeaders,
-      );
+  BackgroundTokenRecord copyWith({
+    int? gen,
+    String? accessToken,
+    String? refreshToken,
+    String? notificationSessionId,
+  }) => BackgroundTokenRecord(
+    gen: gen ?? this.gen,
+    authType: authType,
+    endpoint: endpoint,
+    identityEpoch: identityEpoch,
+    catalogServerId: catalogServerId,
+    originalRefreshToken: originalRefreshToken,
+    notificationSessionId: notificationSessionId ?? this.notificationSessionId,
+    accessToken: accessToken ?? this.accessToken,
+    refreshToken: refreshToken ?? this.refreshToken,
+    password: password,
+    basicCredential: basicCredential,
+    simpleCookie: simpleCookie,
+    extraHeaders: extraHeaders,
+  );
+
+  bool sameIdentity(BackgroundTokenRecord other) =>
+      authType == other.authType &&
+      endpoint == other.endpoint &&
+      identityEpoch == other.identityEpoch &&
+      catalogServerId == other.catalogServerId &&
+      originalRefreshToken == other.originalRefreshToken;
 
   Map<String, Object?> toJson() => {
-        'gen': gen, 'authType': authType, 'endpoint': endpoint,
-        'accessToken': accessToken, 'refreshToken': refreshToken,
-        'password': password, 'basicCredential': basicCredential,
-        'simpleCookie': simpleCookie,
-        'extraHeaders': extraHeaders,
-      };
+    'gen': gen,
+    'authType': authType,
+    'endpoint': endpoint,
+    'identityEpoch': identityEpoch,
+    'catalogServerId': catalogServerId,
+    'originalRefreshToken': originalRefreshToken,
+    'notificationSessionId': notificationSessionId,
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'password': password,
+    'basicCredential': basicCredential,
+    'simpleCookie': simpleCookie,
+    'extraHeaders': extraHeaders,
+  };
 
   factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) =>
       BackgroundTokenRecord(
         gen: j['gen'] as int,
         authType: j['authType'] as String,
         endpoint: j['endpoint'] as String?,
+        identityEpoch: j['identityEpoch'] as int?,
+        catalogServerId: j['catalogServerId'] as String?,
+        originalRefreshToken: j['originalRefreshToken'] as String?,
+        notificationSessionId: j['notificationSessionId'] as String?,
         accessToken: j['accessToken'] as String?,
         refreshToken: j['refreshToken'] as String?,
         password: j['password'] as String?,
         basicCredential: j['basicCredential'] as String?,
         simpleCookie: j['simpleCookie'] as String?,
-        extraHeaders: (j['extraHeaders'] as Map?)?.map(
+        extraHeaders:
+            (j['extraHeaders'] as Map?)?.map(
               (k, v) => MapEntry(k.toString(), v.toString()),
             ) ??
             const {},
@@ -89,14 +129,24 @@ Map<String, String> applyIsolateCustomHeaders(
 /// responded and rejected the refresh token" (auth is genuinely dead).
 typedef RefreshAttempt = ({RefreshResult? tokens, bool transient});
 
-/// Coordinates token refresh across the main and worker isolates against ONE
-/// gen-versioned record, so a rotating refresh token is never lost-updated by two
-/// holders. Pure logic: storage + the actual refresh network call are injected.
 class TokenBroker {
-  TokenBroker({required this.read, required this.write, required this.refreshFn});
-  final Future<BackgroundTokenRecord> Function() read;
+  TokenBroker({
+    required Future<BackgroundTokenRecord> Function() read,
+    required this.write,
+    required this.refreshFn,
+    this.expectedIdentity,
+  }) : _read = read;
+  final BackgroundTokenRecord? expectedIdentity;
+  final Future<BackgroundTokenRecord> Function() _read;
   final Future<void> Function(BackgroundTokenRecord) write;
   final Future<RefreshAttempt> Function(String refreshToken) refreshFn;
+
+  Future<BackgroundTokenRecord?> readCurrent() async {
+    final current = await _read();
+    return expectedIdentity == null || current.sameIdentity(expectedIdentity!)
+        ? current
+        : null;
+  }
 
   /// Set by the most recent failed [resolveAfter401] — only meaningful right
   /// after it returns null. Without this, a caller treats a refresh that
@@ -108,7 +158,11 @@ class TokenBroker {
 
   /// Returns a usable access token to retry with, or null if auth is dead.
   Future<String?> resolveAfter401(String tokenThat401d) async {
-    final current = await read();
+    lastRefreshTransient = false;
+    final current = await _read();
+    if (expectedIdentity != null && !current.sameIdentity(expectedIdentity!)) {
+      return null;
+    }
     // Someone already refreshed to a different access token — use it, no refresh.
     if (current.accessToken != null && current.accessToken != tokenThat401d) {
       return current.accessToken;
@@ -119,13 +173,22 @@ class TokenBroker {
       return null;
     }
     final attempt = await refreshFn(rt);
+    if (expectedIdentity != null &&
+        !(await _read()).sameIdentity(expectedIdentity!)) {
+      return null;
+    }
     final tokens = attempt.tokens;
     if (tokens == null) {
       lastRefreshTransient = attempt.transient;
       return null;
     }
-    await write(current.copyWith(
-        gen: current.gen + 1, accessToken: tokens.access, refreshToken: tokens.refresh));
+    await write(
+      current.copyWith(
+        gen: current.gen + 1,
+        accessToken: tokens.access,
+        refreshToken: tokens.refresh,
+      ),
+    );
     return tokens.access;
   }
 }

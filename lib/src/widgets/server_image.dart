@@ -31,6 +31,25 @@ import '../utils/misc/app_utils.dart';
 import 'cover_cache/cover_cache.dart';
 import 'custom_circular_progress_indicator.dart';
 
+Future<bool> reloadServerImage({
+  required Iterable<String> cacheKeys,
+  required bool Function() isCurrentSession,
+  required Future<void> Function(String) evict,
+  required Future<void> Function() refresh,
+}) async {
+  for (final key in cacheKeys) {
+    if (!isCurrentSession()) return false;
+    try {
+      await evict(key);
+    } catch (_) {}
+  }
+  if (!isCurrentSession()) return false;
+  try {
+    await refresh();
+  } catch (_) {}
+  return isCurrentSession();
+}
+
 final _trailingSlashes = RegExp(r'/+$');
 final _leadingSlashes = RegExp(r'^/+');
 
@@ -327,6 +346,11 @@ class ServerImage extends HookConsumerWidget {
               defaultIndicator,
         );
 
+    final reloadStore = ref.read(authCredentialsStoreProvider.notifier);
+    final reloadEpoch = reloadStore.sessionEpoch;
+    bool canReload() => context.mounted &&
+        !reloadStore.sessionChanging && reloadStore.sessionEpoch == reloadEpoch;
+
     Widget errorWidget(BuildContext context, String error, stackTrace) {
       if (showReloadButton) {
         return AppUtils.wrapOn(
@@ -345,35 +369,16 @@ class ServerImage extends HookConsumerWidget {
                   const Gap(32),
                   TextButton(
                     onPressed: () async {
-                      // 1. Evict any cached entry. CachedNetworkImage
-                      //    stores under our explicit cacheKey (baseApi),
-                      //    but defensively evict fetchUrl too in case
-                      //    the lib ever falls back to imageUrl. Idempotent
-                      //    + cheap — non-existent entries are a no-op.
-                      //    Wrapped in try/catch because removeFile
-                      //    throws on missing entries on some platforms.
-                      for (final keyToEvict in {baseApi, fetchUrl}) {
-                        try {
-                          await cacheManager.removeFile(keyToEvict);
-                        } catch (_) {/* not in cache; ignore */}
-                      }
-                      // 2. Speculatively refresh if the ui_login access
-                      //    token is within leadTime of expiry. Internally
-                      //    gated on authType == uiLogin so this is a true
-                      //    no-op for basic/simple — no GQL traffic.
-                      try {
-                        await ref
-                            .read(authCoordinatorProvider.notifier)
-                            .refreshUiAccessTokenIfDue(
-                              gqlClient: ref.read(graphQlClientProvider),
-                            );
-                      } catch (_) {/* refresh failures degrade to retry */}
-                      // 3. Remount. On RefreshSuccess the store was
-                      //    updated synchronously, so the rebuild sees
-                      //    fresh creds. On transient failure we remount
-                      //    with stale creds and let the user retry —
-                      //    correct behavior for non-auth errors.
-                      key.value = (UniqueKey());
+                      final ready = await reloadServerImage(
+                        cacheKeys: {baseApi, fetchUrl},
+                        isCurrentSession: canReload,
+                        evict: cacheManager.removeFile,
+                        refresh: () async {
+                          await ref.read(authCoordinatorProvider.notifier)
+                              .refreshUiAccessTokenIfDue(gqlClient: ref.read(unauthenticatedGraphQlClientProvider));
+                        },
+                      );
+                      if (ready && canReload()) key.value = UniqueKey();
                     },
                     child: Text(context.l10n.reload),
                   ),

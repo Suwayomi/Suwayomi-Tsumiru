@@ -154,6 +154,45 @@ void main() {
   );
 
   test(
+    'login submitted during another identity change never sends credentials',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final transition = store.withIdentityChange(() async {
+        entered.complete();
+        await release.future;
+        await saveAccountB();
+      });
+      await entered.future;
+      link.response.complete(
+        Response(
+          data: {
+            '__typename': 'Mutation',
+            'login': {
+              '__typename': 'LoginPayload',
+              'accessToken': 'A',
+              'refreshToken': 'R-A',
+            },
+          },
+          response: const {},
+        ),
+      );
+      final attempted = container
+          .read(authCoordinatorProvider.notifier)
+          .loginUi(
+            gqlClient: client,
+            username: 'old-reader',
+            password: 'old-password',
+          );
+      final rejected = expectLater(attempted, throwsStateError);
+      release.complete();
+      await Future.wait([transition, rejected]);
+      expect(link.requested.isCompleted, isFalse);
+      await expectAccountB();
+    },
+  );
+
+  test(
     'refresh stays blocked throughout the transition action and resumes afterwards',
     () async {
       final entered = Completer<void>();

@@ -99,7 +99,9 @@ class NotificationBackgroundClient {
     if (identical(res, _authError) && _record.authType == 'uiLogin') {
       final fresh = await broker.resolveAfter401(_record.accessToken ?? '');
       if (fresh != null) {
-        _record = await broker.read();
+        final current = await broker.readCurrent();
+        if (current == null || !current.sameIdentity(_record)) return null;
+        _record = current;
         res = await _raw(query, variables, fresh);
       }
     }

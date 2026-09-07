@@ -226,13 +226,6 @@ class AuthCoordinator extends _$AuthCoordinator {
     ref.onDispose(_cancelProactiveRefresh);
   }
 
-  /// (Re)schedules the proactive refresh Timer from the currently-stored
-  /// `uiAccessTokenExpiresAt`. Idempotent — cancels any existing Timer
-  /// first. No-op if there is no expiry (logout / non-ui mode).
-  ///
-  /// Does NOT capture a [GraphQLClient] — [_firePeriodicRefresh] reads
-  /// `graphQlClientProvider` fresh when the Timer actually fires (see its
-  /// doc comment for why capturing one here was a bug).
   void _scheduleProactiveRefresh() {
     _proactiveRefreshTimer?.cancel();
     _proactiveRefreshTimer = null;
@@ -270,22 +263,9 @@ class AuthCoordinator extends _$AuthCoordinator {
     });
   }
 
-  /// Common Timer body — calls `refreshUiAccessToken` and dispatches
-  /// the next schedule based on outcome.
-  ///
-  /// Reads `graphQlClientProvider` fresh on every firing instead of taking
-  /// it as a parameter. It used to be threaded through from whichever
-  /// `ref.read(graphQlClientProvider)` happened at the FIRST schedule (in
-  /// `build()`'s credentials listener) and reused for every reschedule
-  /// after that — a transient-failure backoff loop, or a success reschedule
-  /// racing the credentials listener's own reschedule, could keep closing
-  /// over that same original client forever. A server switch (or any other
-  /// change that rebuilds `graphQlClientProvider`) mid-loop then left the
-  /// proactive refresh silently retrying against the OLD server
-  /// indefinitely, since nothing else re-reads the provider on this path.
   Future<void> _firePeriodicRefresh() async {
     try {
-      final gqlClient = ref.read(graphQlClientProvider);
+      final gqlClient = ref.read(unauthenticatedGraphQlClientProvider);
       final outcome = await refreshUiAccessToken(gqlClient: gqlClient);
       if (outcome is RefreshSuccess) {
         _proactiveBackoffStep = 0;
@@ -389,15 +369,17 @@ class AuthCoordinator extends _$AuthCoordinator {
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     // Capture before verify so a switch mid-login can't persist creds for the new host.
-    final epoch = store.serverEpoch;
-    final cookie = await verifySimpleCredentials(
-      serverBaseUrl: serverBaseUrl,
-      username: username,
-      password: password,
-    );
-    await store.saveSimpleLoginCookie(cookie, forEpoch: epoch);
-    await store.savePassword(password, forEpoch: epoch);
-    ref.read(needsReauthProvider.notifier).set(false);
+    await store.withIdentityChange(() async {
+      final epoch = store.serverEpoch;
+      final cookie = await verifySimpleCredentials(
+        serverBaseUrl: serverBaseUrl,
+        username: username,
+        password: password,
+      );
+      await store.saveSimpleLoginCookie(cookie, forEpoch: epoch);
+      await store.savePassword(password, forEpoch: epoch);
+      ref.read(needsReauthProvider.notifier).set(false);
+    }, expectedEpoch: store.serverEpoch);
   }
 
   /// Performs UI Login AND persists both tokens + password.
@@ -407,19 +389,21 @@ class AuthCoordinator extends _$AuthCoordinator {
     required String password,
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
-    final epoch = store.serverEpoch;
-    final tokens = await verifyUiCredentials(
-      gqlClient: gqlClient,
-      username: username,
-      password: password,
-    );
-    await store.saveUiLoginTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      forEpoch: epoch,
-    );
-    await store.savePassword(password, forEpoch: epoch);
-    ref.read(needsReauthProvider.notifier).set(false);
+    await store.withIdentityChange(() async {
+      final epoch = store.serverEpoch;
+      final tokens = await verifyUiCredentials(
+        gqlClient: gqlClient,
+        username: username,
+        password: password,
+      );
+      await store.saveUiLoginTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        forEpoch: epoch,
+      );
+      await store.savePassword(password, forEpoch: epoch);
+      ref.read(needsReauthProvider.notifier).set(false);
+    }, expectedEpoch: store.serverEpoch);
   }
 
   /// Calls the `refreshToken` mutation. Returns a typed [RefreshOutcome].

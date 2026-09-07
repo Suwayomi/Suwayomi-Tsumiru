@@ -50,3 +50,13 @@ Pluggable authentication for all traffic (queries, mutations, subscriptions, ima
 - **Migrated basic creds live under `auth.basic.credentials`**, tracked by a separate `credentialsProvider`, not `AuthCredentialsState`. Logout must call `clearBasicCredentials()` or they persist invisibly.
 - **Refresh client must stay un-authed** — if it ever gains a `SuwayomiAuthLink`, refresh recurses infinitely.
 - **`isLocalAddress` suppresses the insecure-transport warning** for `localhost`/`127.x`/`10.x`/`172.16–31.x`/`192.168.x` only.
+
+## Account session boundary
+
+`AuthCredentialsStore.withIdentityChange` closes request admission before credentials change and publishes a new session generation when the transition ends. HTTP and subscription clients follow that generation. Retained clients reject new requests and late responses once their session has ended; token refresh alone preserves the clients.
+
+Login and credential checks use `unauthenticatedGraphQlClientProvider`. It includes proxy headers but excludes stored account credentials, because the multi-user server rejects login requests from an already authenticated caller.
+
+Credential replacement and explicit logout enter this boundary at the store, including direct calls. Worker refresh uses a separate operation that requires the original refresh token; worker records also carry the originating authorization epoch and catalogue ID. A stale worker cannot replace the current login.
+
+LAN/remote address failover preserves the session. The HTTP transport checks the captured session before endpoint resolution, after resolution and before every send, including delayed retries.

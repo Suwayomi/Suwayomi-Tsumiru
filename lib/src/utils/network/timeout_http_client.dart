@@ -20,6 +20,7 @@ class TimeoutHttpClient extends http.BaseClient {
     this.retries = 0,
     this.retryDelay = const Duration(seconds: 1),
     this.onConnectionFailure,
+    this.isCurrentSession,
     http.Client? inner,
   }) : _inner = inner ?? createFastConnectClient(kConnectionEstablishTimeout);
 
@@ -34,7 +35,15 @@ class TimeoutHttpClient extends http.BaseClient {
   /// replay.
   final Future<Uri?> Function(http.BaseRequest request)? onConnectionFailure;
 
+  final bool Function()? isCurrentSession;
+
   final http.Client _inner;
+
+  void _checkSession() {
+    if (isCurrentSession?.call() == false) {
+      throw StateError('Authentication session changed');
+    }
+  }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -49,11 +58,14 @@ class TimeoutHttpClient extends http.BaseClient {
     final isMutation = _isMutationRequest(request);
 
     Future<http.BaseRequest?> retryAfterFailure() async {
+      _checkSession();
       if (isMutation) return null;
 
       Uri? replacement;
       if (!usedFailover && onConnectionFailure != null) {
+        _checkSession();
         replacement = await onConnectionFailure!(current);
+        _checkSession();
         usedFailover = replacement != null && replacement != current.url;
       }
 
@@ -68,6 +80,7 @@ class TimeoutHttpClient extends http.BaseClient {
 
     while (true) {
       try {
+        _checkSession();
         return await _inner.send(current).timeout(timeout);
       } on TimeoutException {
         final retry = await retryAfterFailure();

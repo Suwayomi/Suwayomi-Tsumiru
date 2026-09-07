@@ -472,11 +472,16 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// address that just became unreachable.
   Future<void> restartForEndpointChange() => ensureServiceRunning(force: true);
 
-  Future<T> changeIdentity<T>(Future<T> Function() action) async {
-    if (Zone.current[_controlZone] == this) return action();
-    return _ref
-        .read(authCredentialsStoreProvider.notifier)
-        .withIdentityChange(() => _changeIdentityOwned(action));
+  Future<T> changeIdentity<T>(
+    Future<T> Function() action, {
+    bool preserveSession = false,
+  }) async {
+    final credentials = _ref.read(authCredentialsStoreProvider.notifier);
+    return credentials.withIdentityChange(
+      () => _changeIdentityOwned(action),
+      preserveSession: preserveSession,
+      expectedEpoch: preserveSession ? null : credentials.serverEpoch,
+    );
   }
 
   Future<T> _changeIdentityOwned<T>(Future<T> Function() action) async {
@@ -1288,6 +1293,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       gen: 0,
       authType: authType.name,
       endpoint: _effectiveEndpoint(),
+      identityEpoch: CatchupStateStore(
+        _ref.read(sharedPreferencesProvider),
+      ).identityEpoch,
+      catalogServerId: CatchupStateStore(
+        _ref.read(sharedPreferencesProvider),
+      ).catalogServerId,
+      originalRefreshToken: creds?.uiRefreshToken,
       accessToken: creds?.uiAccessToken,
       refreshToken: creds?.uiRefreshToken,
       basicCredential: basicToken,
@@ -1308,49 +1320,46 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// After the worker stops, copy any rotated ui_login tokens back into
   /// [AuthCredentialsStore], then clear the FFT auth keys so a stale snapshot
   /// doesn't linger in plugin storage.
-  Future<void> _wipeWorkOrderAuth() => withWorkOrderAdmission(
-    _paths.baseDir,
-    () async {
-      if (await _gateway.isRunningService) return;
-      final order = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
-      final accepted = await _gateway.read(kAcceptedWorkOrderKey);
-      if (order != null && order.attemptId != accepted) return;
-      final raw = await _gateway.read(kTokenRecordKey);
-      if (raw != null) {
-        try {
-          final record = BackgroundTokenRecord.fromJson(
-            jsonDecode(raw) as Map<String, Object?>,
-          );
-          // gen > 0 means the worker rotated the token at least once. Endpoint
-          // check skips writeback if the user switched servers meanwhile.
-          if (record.gen > 0 &&
-              record.authType == 'uiLogin' &&
-              record.accessToken != null &&
-              record.endpoint == _effectiveEndpoint()) {
+  Future<void> _wipeWorkOrderAuth() =>
+      withWorkOrderAdmission(_paths.baseDir, () async {
+        if (await _gateway.isRunningService) return;
+        final order = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
+        final accepted = await _gateway.read(kAcceptedWorkOrderKey);
+        if (order != null && order.attemptId != accepted) return;
+        final raw = await _gateway.read(kTokenRecordKey);
+        if (raw != null) {
+          try {
+            final record = BackgroundTokenRecord.fromJson(
+              jsonDecode(raw) as Map<String, Object?>,
+            );
+            final controls = CatchupStateStore(
+              _ref.read(sharedPreferencesProvider),
+            );
             final store = _ref.read(authCredentialsStoreProvider.notifier);
-            // Epoch guard covers a switch landing during the writeback itself.
-            final epoch = store.serverEpoch;
-            if (record.refreshToken != null) {
-              await store.saveUiLoginTokens(
+            if (record.gen > 0 &&
+                record.authType == 'uiLogin' &&
+                record.accessToken != null &&
+                record.refreshToken != null &&
+                record.originalRefreshToken != null &&
+                record.identityEpoch == controls.identityEpoch &&
+                record.catalogServerId != null &&
+                record.catalogServerId == controls.catalogServerId &&
+                controls.identityAuthorized &&
+                record.endpoint == _effectiveEndpoint()) {
+              await store.refreshUiLoginTokens(
                 accessToken: record.accessToken!,
                 refreshToken: record.refreshToken!,
-                forEpoch: epoch,
-              );
-            } else {
-              await store.updateUiLoginAccessToken(
-                record.accessToken!,
-                forEpoch: epoch,
+                originalRefreshToken: record.originalRefreshToken!,
+                forEpoch: store.serverEpoch,
               );
             }
+          } catch (e) {
+            logger.e('Offline: failed to read back worker token record: $e');
           }
-        } catch (e) {
-          logger.e('Offline: failed to read back worker token record: $e');
         }
-      }
-      await _gateway.remove(kTokenRecordKey);
-      await _gateway.remove(kWorkOrderKey);
-    },
-  );
+        await _gateway.remove(kTokenRecordKey);
+        await _gateway.remove(kWorkOrderKey);
+      });
 
   // ---------------------------------------------------------------------------
   // Wi-Fi-only main-side enforcement
@@ -1442,19 +1451,38 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// Only ui_login refreshes; network refresh is delegated to [refreshFn].
   TokenBroker mainSideBroker({
     required Future<RefreshAttempt> Function(String refreshToken) refreshFn,
-  }) => TokenBroker(
-    read: () async {
-      final raw = await _gateway.read(kTokenRecordKey);
-      if (raw != null) {
-        return BackgroundTokenRecord.fromJson(
-          jsonDecode(raw) as Map<String, Object?>,
-        );
-      }
-      return _snapshotAuth();
-    },
-    write: (r) => _gateway.write(kTokenRecordKey, jsonEncode(r.toJson())),
-    refreshFn: refreshFn,
-  );
+  }) {
+    final original = _snapshotAuth();
+    return TokenBroker(
+      expectedIdentity: original,
+      read: () async {
+        final raw = await _gateway.read(kTokenRecordKey);
+        if (raw != null) {
+          return BackgroundTokenRecord.fromJson(
+            jsonDecode(raw) as Map<String, Object?>,
+          );
+        }
+        return _snapshotAuth();
+      },
+      write: (r) => withWorkOrderAdmission(_paths.baseDir, () async {
+        if (_ref.read(authCredentialsStoreProvider.notifier).identityChanging ||
+            !_snapshotAuth().sameIdentity(original)) {
+          return;
+        }
+        final raw = await _gateway.read(kTokenRecordKey);
+        if (_ref.read(authCredentialsStoreProvider.notifier).identityChanging ||
+            !_snapshotAuth().sameIdentity(original) ||
+            raw == null ||
+            !BackgroundTokenRecord.fromJson(
+              jsonDecode(raw) as Map<String, Object?>,
+            ).sameIdentity(original)) {
+          return;
+        }
+        await _gateway.write(kTokenRecordKey, jsonEncode(r.toJson()));
+      }),
+      refreshFn: refreshFn,
+    );
+  }
 }
 
 /// App-lifetime singleton driving the foreground-service downloads on

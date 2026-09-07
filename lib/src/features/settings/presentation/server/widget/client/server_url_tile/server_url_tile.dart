@@ -53,14 +53,16 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
     }
   }
 
-  Future<void> setActive(String? value) async {
-    if (value == state) return;
+  Future<void> setActive(String? value, {bool Function()? isCurrent}) async {
+    if (value == state || isCurrent?.call() == false) return;
     final lease = ref.keepAlive();
     try {
       await ref.read(backgroundDownloadControllerProvider).changeIdentity(
         () async {
+          if (isCurrent?.call() == false) return;
           super.update(value);
         },
+        preserveSession: true,
       );
     } finally {
       lease.close();
@@ -185,6 +187,14 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
     final external =
         ref.watch(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
     ref.watch(serverLanUrlProvider);
+    ref.watch(
+      authCredentialsStoreProvider.select(
+        (value) => (
+          value.value?.sessionEpoch ?? 0,
+          value.value?.sessionChanging ?? false,
+        ),
+      ),
+    );
     // Desktop and widget-test platforms may not register connectivity_plus,
     // and a sandboxed Linux build (Flatpak) has no system D-Bus to reach
     // NetworkManager through. That failure arrives asynchronously, after
@@ -205,19 +215,36 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
 
   Future<void> refresh() async {
     if (_refreshing) return;
+    final credentials = ref.read(authCredentialsStoreProvider.notifier);
+    if (credentials.sessionChanging) return;
+    final epoch = credentials.sessionEpoch;
+    final external =
+        ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
+    final lan = ref.read(serverLanUrlProvider);
+    bool current() =>
+        ref.mounted &&
+        !credentials.sessionChanging &&
+        credentials.sessionEpoch == epoch &&
+        (ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial) ==
+            external &&
+        ref.read(serverLanUrlProvider) == lan;
     _refreshing = true;
     try {
-      final external =
-          ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial;
       final selected = await selectServerUrl(
         externalUrl: external,
-        lanUrl: ref.read(serverLanUrlProvider),
+        lanUrl: lan,
         isReachable: serverUrlIsReachable,
       );
-      await ref.read(serverUrlProvider.notifier).setActive(selected);
-      state = selected;
+      if (!current()) return;
+      await ref
+          .read(serverUrlProvider.notifier)
+          .setActive(selected, isCurrent: current);
+      if (current()) state = selected;
     } finally {
       _refreshing = false;
+      if (ref.mounted && !credentials.sessionChanging && !current()) {
+        unawaited(refresh());
+      }
     }
   }
 }
