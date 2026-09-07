@@ -192,6 +192,9 @@ void main() {
   tearDown(() async {
     if (!releasePage.isCompleted) releasePage.complete();
     await server.close(force: true);
+    try {
+      if (await tmp.exists()) await tmp.delete(recursive: true);
+    } catch (_) {}
   });
 
   Future<void> enableOverlap({

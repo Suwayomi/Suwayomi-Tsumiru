@@ -419,10 +419,20 @@ class IoOfflinePageStore implements OfflinePageStore {
   }
 
   Future<void> _quietDeleteDir(Directory dir) async {
-    try {
-      if (await dir.exists()) await dir.delete(recursive: true);
-    } catch (_) {
-      // Same: leftover bytes are dead weight, not corruption.
+    // Retry up to 3 times with a brief back-off: on Windows, anti-virus or
+    // the file indexer can briefly hold a read handle on a freshly-created
+    // file, causing delete(recursive: true) to fail with EPERM/errno-32.
+    // Under full-suite parallel load this happens often enough to make tests
+    // flaky; the content is non-essential (leftover bytes, not corruption),
+    // so silent retry is correct here.
+    for (var i = 0; i < 3; i++) {
+      try {
+        if (await dir.exists()) await dir.delete(recursive: true);
+        return;
+      } catch (_) {
+        if (i == 2) return;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
     }
   }
 }

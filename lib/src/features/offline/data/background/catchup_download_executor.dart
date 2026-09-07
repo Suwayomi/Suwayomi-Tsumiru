@@ -203,7 +203,9 @@ Future<bool> runCatchupDownloads({
           followLinks: false,
         )) {
           if (cancelled) return true;
-          if (item is File && RegExp(r'/[0-9]+/').hasMatch(item.path)) {
+          if (item is File &&
+              RegExp(r'[/\\][0-9]+[/\\]').hasMatch(item.path) &&
+              !item.path.contains('.superseded')) {
             storedBytes += await item.length();
           }
         }
