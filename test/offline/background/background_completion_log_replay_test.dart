@@ -50,7 +50,13 @@ void main() {
   });
   tearDown(() async {
     await db.close();
-    await tmp.delete(recursive: true);
+    // A _quietDeleteDir retry (50 ms backoff) may leave a .superseded dir
+    // briefly locked by the Windows file indexer. If tmp.delete then throws,
+    // the framework marks the test itself failed — so silence the error here;
+    // the test's own assertions already validated the correct outcome.
+    try {
+      await tmp.delete(recursive: true);
+    } catch (_) {}
   });
 
   Future<void> replay() => replayCompletionLog(
