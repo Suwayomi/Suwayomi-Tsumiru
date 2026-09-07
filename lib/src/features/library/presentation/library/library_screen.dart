@@ -127,7 +127,14 @@ class LibraryScreen extends HookConsumerWidget {
     // chapters it found appear without a manual refresh. Tracks the last
     // known running state and fires on the running→idle edge, ignoring the
     // transient null frames a socket reconnect emits.
-    final lastRunning = useRef<bool>(false);
+    //
+    // Seeded from the socket's current value so an update already in progress
+    // when this widget mounts (e.g. user navigates to Library mid-update)
+    // correctly triggers the invalidate when it finishes, instead of missing
+    // the true→false edge because lastRunning started at false.
+    final lastRunning = useRef<bool>(
+      ref.read(updateRunningSocketProvider).value ?? false,
+    );
     ref.listen(updateRunningSocketProvider, (_, next) {
       final running = next.value;
       if (running == null) return;
