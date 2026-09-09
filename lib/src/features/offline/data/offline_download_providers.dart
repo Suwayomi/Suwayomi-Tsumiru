@@ -683,6 +683,44 @@ Future<void> _resolveReadDeletes(
           pending.enqueue((mangaId: mangaId, chapterId: target, server: false));
         }
       }
+
+      // Rolling window: reconcile immediately at each chapter boundary so the
+      // next chapter starts downloading and the keep-last-read window advances.
+      // Uses deleteWhileReading+1 to buffer one extra chapter at the boundary
+      // for easy back-and-forth; reader exit cleans up to the normal value.
+      if (ref.read(localRollingWindowProvider) ?? false) {
+        final manager = ref.read(offlineDownloadManagerProvider);
+        final coordinator = ref.read(offlineDownloadCoordinatorProvider);
+        if (manager != null && coordinator != null) {
+          await reconcileMangaCore(
+            db: ref.read(offlineDatabaseProvider),
+            repo: ref.read(offlineRepositoryProvider),
+            manager: manager,
+            coordinator: coordinator,
+            nets: ref.read(safetyNetConfigProvider),
+            mangaId: mangaId,
+            sessionProtected: ref.read(sessionReadChaptersProvider),
+            deleteWhileReadingSlots: s.deleteWhileReading + 1,
+            downloadProtectionWindow:
+                ref.read(localDownloadProtectionWindowProvider) ?? false,
+            enqueueServerDownload: (ids) async {
+              await ref
+                  .read(downloadsRepositoryProvider)
+                  .addChaptersBatchToDownloadQueue(ids);
+              awaitingServerDownloads.add(mangaId);
+              await persistAwaitingServerDownloads(ref.read);
+            },
+            withOwnership:
+                ref.read(backgroundDownloadControllerProvider).withOwnership,
+            removeFromWorker: (id, gen) async {
+              final ctrl = ref.read(backgroundDownloadControllerProvider);
+              await ctrl.onRemoved(id);
+              await ctrl.recordChapterDeleted(id, gen);
+            },
+          );
+          await ref.read(downloadStarterProvider)();
+        }
+      }
     }
 
     final serverSettings = await _serverDeleteSettings(ref.read);

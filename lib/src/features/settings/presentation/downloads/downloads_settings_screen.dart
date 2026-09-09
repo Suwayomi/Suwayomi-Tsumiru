@@ -300,6 +300,13 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
                 ]
               : const [],
         ),
+        _SubSwitchTile(
+          title: context.l10n.rollingWindowTitle,
+          subtitle: context.l10n.rollingWindowDescription,
+          value: ref.watch(localRollingWindowProvider) ?? false,
+          onChanged: (v) async =>
+              ref.read(localRollingWindowProvider.notifier).update(v),
+        ),
         ...buildOnDeviceStorageTiles(context, ref),
       ],
     );

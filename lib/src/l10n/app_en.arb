@@ -1678,6 +1678,8 @@
   "allowDeletingBookmarkedChapters": "Allow deleting bookmarked chapters",
   "downloadProtectionWindowTitle": "Keep recently-read chapters downloaded",
   "downloadProtectionWindowDescription": "Re-download the keep-window chapters if they are missing from the device (requires delete-while-reading to be enabled).",
+  "rollingWindowTitle": "Rolling download window",
+  "rollingWindowDescription": "Download the next chapter as you read and delete behind you in real time. Uses keep-last-read+1 at chapter boundaries for smooth back-and-forth, then cleans up to the normal keep value on reader exit.",
   "deleteWhileReadingDisabled": "Disabled",
   "deleteWhileReadingLastRead": "Last read chapter",
   "deleteWhileReadingSecondToLast": "Second to last read chapter",
