@@ -31,17 +31,27 @@ Set<int> desiredChapterIds(
     // Without this, an unread gap earlier in the series (e.g. the user skipped
     // ch. 2 but read ch. 3+) causes the worker to download behind their reading
     // progress instead of ahead of it.
+    //
+    // Uses chapterNumber (the parsed chapter number: 1.0, 10.5, …) as the
+    // ordering key because it reflects narrative reading order. Falls back to
+    // chapterIndex (sourceOrder) for chapters whose number is absent or ≤ 0
+    // (bonus/special chapters that the source never assigned a real number).
     OfflineKeepRule.nUnread => () {
+      double readOrder(OfflineChapter c) {
+        final n = c.chapterNumber;
+        return (n != null && n > 0) ? n : c.chapterIndex.toDouble();
+      }
+
       final floor = chapters
           .where((c) => c.isRead)
-          .fold(-1, (m, c) => c.chapterIndex > m ? c.chapterIndex : m);
+          .fold(-1.0, (m, c) => readOrder(c) > m ? readOrder(c) : m);
       return (chapters
                 .where((c) =>
                     !c.isRead &&
                     c.deviceState != OfflineDeviceState.error &&
-                    c.chapterIndex > floor)
+                    readOrder(c) > floor)
                 .toList()
-            ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
+            ..sort((a, b) => readOrder(a).compareTo(readOrder(b))))
           .take(keepUnreadCount)
           .map((c) => c.id)
           .toSet();

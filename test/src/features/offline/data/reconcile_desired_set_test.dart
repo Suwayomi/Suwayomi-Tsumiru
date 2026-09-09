@@ -8,6 +8,7 @@ OfflineChapter ch(
   bool read = false,
   bool pinned = false,
   OfflineDeviceState deviceState = OfflineDeviceState.none,
+  double? chapterNumber,
 }) =>
     OfflineChapter(
       id: id, mangaId: 1, name: 'c$id', chapterIndex: idx, isRead: read,
@@ -19,6 +20,7 @@ OfflineChapter ch(
       updatedAt: DateTime(2026),
       downloadGeneration: 0,
       serverFetchAttempts: 0,
+      chapterNumber: chapterNumber,
     );
 
 void main() {
@@ -101,6 +103,32 @@ void main() {
         ch(4, 4),
       ];
       expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 1), {3, 4});
+    },
+  );
+
+  test(
+    'nUnread uses chapterNumber, not chapterIndex, for the floor: a bonus '
+    'chapter added late (high sourceOrder) but numbered 0.5 is treated as '
+    'narratively early and excluded once the user has read past it',
+    () {
+      // Source feed order (chapterIndex): bonus=50, ch.1=1, ch.50=2, …, ch.100=3
+      // The bonus chapter was added to the source feed after ch.100 existed, so
+      // the source assigned it sourceOrder=50. But its real number is 0.5.
+      // After the user reads up to ch.50 (chapterNumber=50.0, floor=50.0),
+      // chapterNumber-based ordering correctly sees 0.5 < 50 → don't download.
+      // chapterIndex-based ordering would wrongly see 50 > 2 → would download.
+      final c = [
+        ch(10, 1, read: true, chapterNumber: 1.0),   // ch.1, sourceOrder=1
+        ch(20, 2, read: true, chapterNumber: 50.0),  // ch.50, sourceOrder=2
+        ch(30, 3, chapterNumber: 51.0),              // ch.51, unread, ahead
+        ch(40, 4, chapterNumber: 52.0),              // ch.52, unread, ahead
+        // Bonus chapter: added late → high sourceOrder (50), but number = 0.5
+        ch(50, 50, chapterNumber: 0.5),              // unread, narratively before ch.1
+      ];
+      // Floor by chapterNumber = 50.0. Only ch.51 (30) and ch.52 (40) are ahead.
+      // The bonus ch.0.5 should NOT be included even though sourceOrder=50 > floor
+      // by sourceOrder (2).
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {30, 40});
     },
   );
 }
