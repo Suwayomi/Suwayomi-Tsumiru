@@ -99,6 +99,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _identityTail = Future.value();
   Future<void> _mutationTail = Future.value();
   DateTime? _lastRecovery;
+  AppLifecycleState? _lastLifecycle;
   bool? _retryBlocked;
   bool _disposed = false;
   String? _notifiedStall;
@@ -747,9 +748,19 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isAndroid()) return;
+    final previous = _lastLifecycle;
+    _lastLifecycle = state;
     if (state == AppLifecycleState.resumed) {
-      // Catch drift up from the durable log for live UI. No ownership change —
-      // the worker still owns the queue.
+      // Only replay when coming back from a true background state (paused /
+      // hidden / detached). Pulling down the notification panel and closing it
+      // sends inactive → resumed without ever going to paused — treating that
+      // as a resume would re-send add ops for every pending chapter to the FGS,
+      // interrupting in-progress downloads unnecessarily.
+      final wasBackground = previous == AppLifecycleState.paused ||
+          previous == AppLifecycleState.hidden ||
+          previous == AppLifecycleState.detached ||
+          previous == null; // first resume at launch
+      if (!wasBackground) return;
       unawaited(replayOnResume());
     }
     // paused/hidden/detached: NOTHING — the FGS already owns the queue.
