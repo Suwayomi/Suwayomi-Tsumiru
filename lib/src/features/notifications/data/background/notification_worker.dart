@@ -541,14 +541,30 @@ TokenBroker _brokerFor(NotificationStateStore store, NotificationEndpoint ep) {
         if (isGatewayStatus(res.statusCode)) {
           return (tokens: null, transient: true);
         }
-        if (res.statusCode != 200) return (tokens: null, transient: false);
-        final data =
-            (jsonDecode(res.body) as Map<String, Object?>)['data']
-                as Map<String, Object?>?;
+        if (res.statusCode != 200) {
+          // The server was reached and rejected the refresh (e.g. 401/403 =
+          // refresh token no longer accepted). This is the decisive line for
+          // "the background worker worked once then fails every wake": if it
+          // shows up, the fix is on the auth side, not Doze/scheduling.
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-refresh: '
+            'rejected status=${res.statusCode}\n',
+          );
+          return (tokens: null, transient: false);
+        }
+        final decoded = jsonDecode(res.body) as Map<String, Object?>;
+        final data = decoded['data'] as Map<String, Object?>?;
         final access =
             (data?['refreshToken'] as Map<String, Object?>?)?['accessToken']
                 as String?;
         if (access == null || access.isEmpty) {
+          // HTTP 200 but no token — usually a GraphQL `errors` payload
+          // (invalid/expired refresh token reported in-band). Surface the
+          // errors so the reason is visible in the log.
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-refresh: '
+            'no-token errors=${decoded['errors']}\n',
+          );
           return (tokens: null, transient: false);
         }
         // Suwayomi doesn't rotate the refresh token — reuse it.

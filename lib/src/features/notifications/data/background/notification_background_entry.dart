@@ -17,6 +17,14 @@ const kNewChapterCheckTask = 'tsumiru.newChapterCheck';
 const kNewChapterPeriodicName = 'tsumiru.newChapterCheck.periodic';
 const kNewChapterCheckNowName = 'tsumiru.newChapterCheck.now';
 
+/// A short-fuse follow-up wake, scheduled when a run leaves chapters waiting on
+/// the server's own download (the two-hop server-fetch). Its own unique name,
+/// so it never replaces or suppresses the periodic schedule. Without it, the
+/// second hop waits for the next 1-6h period — or, if the app is force-closed,
+/// until the next launch — which is the "a chapter is regularly forgotten in
+/// catch-up" symptom.
+const kNewChapterFollowUpName = 'tsumiru.newChapterCheck.followup';
+
 /// The isolate entry point registered with `Workmanager().initialize`. Must be a
 /// top-level `vm:entry-point` function — the OS spawns a fresh isolate here.
 @pragma('vm:entry-point')
