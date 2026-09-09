@@ -23,6 +23,7 @@ import '../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../migration/domain/migration_models.dart';
+import '../../../offline/data/offline_database.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../offline/data/server_reachability.dart';
@@ -225,8 +226,70 @@ class CategoryMangaList extends HookConsumerWidget {
                     // Let the user choose how much to keep (next-N / all-unread
                     // / all) instead of silently downloading every chapter —
                     // picking "all" across a read library can queue thousands.
+                    // The picker also surfaces "stop keeping" and "remove from
+                    // device" so bulk offline management is possible from the
+                    // library without opening each series individually.
                     final picked = await pickOfflineKeepRule(context);
                     if (picked == null) return;
+
+                    if (picked.remove) {
+                      // "Remove from device" — confirm before deleting, always
+                      // (even for a single series, since deletion is irreversible
+                      // without a re-download).
+                      if (!context.mounted) return;
+                      final ok = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              icon: Icon(Icons.delete_outline_rounded,
+                                  color:
+                                      ctx.theme.colorScheme.error),
+                              title: Text(ctx.l10n.offlineRemoveSeries),
+                              content: Text(
+                                ids.length == 1
+                                    ? ctx.l10n.offlineRemoveAllConfirm
+                                    : ctx.l10n
+                                        .manageDownloadsDeleteConfirm(
+                                            ids.length),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, false),
+                                  child: Text(ctx.l10n.cancel),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        ctx.theme.colorScheme.error,
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.pop(ctx, true),
+                                  child: Text(ctx.l10n.delete),
+                                ),
+                              ],
+                            ),
+                          ) ??
+                          false;
+                      if (!ok) return;
+                      selection.value = const {};
+                      for (final id in ids) {
+                        await removeKeepRuleAndDelete(ref, id);
+                      }
+                      return;
+                    }
+
+                    if (picked.rule == OfflineKeepRule.off) {
+                      // "Stop keeping offline" — just clear the rule, no
+                      // download or deletion.
+                      selection.value = const {};
+                      final db = ref.read(offlineDatabaseProvider);
+                      for (final id in ids) {
+                        await db.setKeepRule(
+                            id, OfflineKeepRule.off, 5);
+                      }
+                      return;
+                    }
+
                     if (ids.length > 1 &&
                         context.mounted &&
                         !await confirmBulkDownload(
