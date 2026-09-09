@@ -59,7 +59,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.stop_circle_outlined),
+              leading: const Icon(Icons.bookmark_remove_outlined),
               title: Text(sheetContext.l10n.keepOfflineOff),
               onTap: () => Navigator.pop(
                   sheetContext,
