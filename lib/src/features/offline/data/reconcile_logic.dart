@@ -26,14 +26,26 @@ Set<int> desiredChapterIds(
     // re-downloading an errored chapter every pass (so it never gets retried),
     // but nothing here ever let the (N+1)th unread chapter take its place, so
     // the user's "keep N downloaded" setting silently plateaus at N-1 forever.
-    OfflineKeepRule.nUnread => (chapters
-              .where((c) =>
-                  !c.isRead && c.deviceState != OfflineDeviceState.error)
-              .toList()
-          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
-        .take(keepUnreadCount)
-        .map((c) => c.id)
-        .toSet(),
+    //
+    // Also restricts to chapters AFTER the user's furthest-read position.
+    // Without this, an unread gap earlier in the series (e.g. the user skipped
+    // ch. 2 but read ch. 3+) causes the worker to download behind their reading
+    // progress instead of ahead of it.
+    OfflineKeepRule.nUnread => () {
+      final floor = chapters
+          .where((c) => c.isRead)
+          .fold(-1, (m, c) => c.chapterIndex > m ? c.chapterIndex : m);
+      return (chapters
+                .where((c) =>
+                    !c.isRead &&
+                    c.deviceState != OfflineDeviceState.error &&
+                    c.chapterIndex > floor)
+                .toList()
+            ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
+          .take(keepUnreadCount)
+          .map((c) => c.id)
+          .toSet();
+    }(),
   };
   return ruleSet..addAll(pinned);
 }

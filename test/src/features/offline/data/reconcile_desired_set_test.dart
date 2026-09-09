@@ -44,9 +44,26 @@ void main() {
     expect(desiredChapterIds(chapters, OfflineKeepRule.allUnread, 3), {3, 4, 5});
   });
 
-  test('nUnread keeps the N lowest-index unread', () {
+  test('nUnread keeps the N lowest-index unread after the furthest-read position', () {
     expect(desiredChapterIds(chapters, OfflineKeepRule.nUnread, 2), {3, 4});
   });
+
+  test(
+    'nUnread skips unread chapters that are behind the furthest-read position',
+    () {
+      // User read ch.1, skipped ch.2, read ch.3 — ch.2 is unread but behind
+      // the furthest-read point (index 3). nUnread should NOT download ch.2;
+      // it should download ch.4 and ch.5 (the next unread chapters ahead).
+      final c = [
+        ch(1, 1, read: true),
+        ch(2, 2),             // unread but BEHIND the furthest-read position
+        ch(3, 3, read: true),
+        ch(4, 4),             // unread, ahead
+        ch(5, 5),             // unread, ahead
+      ];
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {4, 5});
+    },
+  );
 
   test('nUnread unions pinned even when read or beyond N', () {
     final c = [...chapters, ch(1, 1, read: true, pinned: true)];
