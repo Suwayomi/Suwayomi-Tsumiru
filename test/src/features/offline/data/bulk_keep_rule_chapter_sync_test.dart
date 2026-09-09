@@ -88,6 +88,44 @@ void main() {
         );
       },
     );
+
+    test(
+      'setKeepRule silently no-ops when the manga has no offlineMangas row',
+      () async {
+        // Root cause of failure mode #3 ("nothing happens, not even the keep
+        // rule change"). setKeepRule is a pure UPDATE, so with no row it
+        // touches zero rows and the rule never persists. The bulk handler must
+        // mirror the manga row (from the DTO it holds) before calling this.
+        final db = testOfflineDatabase();
+        addTearDown(db.close);
+
+        // No upsertMangaMetadata — the row is deliberately absent.
+        await db.setKeepRule(42, OfflineKeepRule.all, 3);
+
+        final row = await (db.select(db.offlineMangas)
+              ..where((t) => t.id.equals(42)))
+            .getSingleOrNull();
+        expect(
+          row,
+          isNull,
+          reason: 'setKeepRule is an UPDATE, not an upsert — it cannot create '
+              'the row, so the keep rule is lost with no error raised',
+        );
+
+        // After the row exists, the same call persists.
+        await db.upsertMangaMetadata(
+          id: 42,
+          title: 'Manga B',
+          updatedAt: DateTime(2026),
+        );
+        await db.setKeepRule(42, OfflineKeepRule.all, 3);
+        final after = await (db.select(db.offlineMangas)
+              ..where((t) => t.id.equals(42)))
+            .getSingle();
+        expect(after.keepRule, OfflineKeepRule.all);
+        expect(after.keepUnreadCount, 3);
+      },
+    );
   });
 
   // --- syncAndReconcileMangaSet guards -----------------------------------------
@@ -243,6 +281,41 @@ void main() {
           [false],
           reason: 'the starter fires once regardless of individual sync '
               'failures — the same pattern as runKeepRuleCatchUp',
+        );
+      },
+    );
+
+    test(
+      'userInitiated is passed through to the download starter',
+      () async {
+        // The bulk keep-rule change is an explicit user gesture, so the FGS
+        // must start in user-initiated mode (drives the "X/Y" notification).
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final db = testOfflineDatabase();
+        addTearDown(db.close);
+        final repo = _NullChapterRepo();
+        final starterCalls = <bool>[];
+
+        final container = ProviderContainer(overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          offlineActiveProvider.overrideWithValue(true),
+          offlineDatabaseProvider.overrideWithValue(db),
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          downloadStarterProvider.overrideWithValue(
+            ({bool userInitiated = false}) async =>
+                starterCalls.add(userInitiated),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        await syncAndReconcileMangaSet(container, {1}, userInitiated: true);
+
+        expect(
+          starterCalls,
+          [true],
+          reason: 'a user-initiated bulk keep must start the FGS in '
+              'user-initiated mode, not the background default',
         );
       },
     );

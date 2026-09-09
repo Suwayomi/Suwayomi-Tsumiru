@@ -330,24 +330,29 @@ touchedSinceWatermark({
   return (touched: touched, newestFetchedAt: newest, sawWatermark: false);
 }
 
-/// Sync chapters from the server for [mangaIds] that have no [OfflineChapters]
-/// rows yet, then reconcile each one. Called from the bulk keep-rule change
-/// path when a manga's chapter list has never been mirrored locally (e.g. the
-/// user changed the keep rule from the library without ever opening the manga
-/// details screen). Without this step the reconciler finds an empty chapter
-/// list and silently does nothing — no server download, no device download.
+/// Fetch each manga's chapter list from the server, mirror it into drift, then
+/// reconcile. Called from the bulk keep-rule change path.
+///
+/// The server fetch is not optional even for a manga whose chapters are already
+/// mirrored: the reconciler routes purely on the stored `serverIsDownloaded`
+/// flag, and that mirror goes stale between syncs. A stale-true value routes a
+/// chapter straight to a device download that bypasses the server; a stale-false
+/// value re-enqueues a chapter the server already holds, which drains with no
+/// edge and never pulls to the device. Re-syncing first (syncChapters writes the
+/// server's current isDownloaded) is what keeps both hops correct.
 ///
 /// Mirrors [_syncAndReconcile] but also kicks the download starter so the
 /// freshly-queued chapters begin transferring without waiting for the next
 /// library update.
 Future<void> syncAndReconcileMangaSet(
   ProviderContainer container,
-  Set<int> mangaIds,
-) async {
+  Set<int> mangaIds, {
+  bool userInitiated = false,
+}) async {
   if (mangaIds.isEmpty) return;
   if (!container.read(offlineActiveProvider)) return;
   await _syncAndReconcile(container, mangaIds);
-  await container.read(downloadStarterProvider)();
+  await container.read(downloadStarterProvider)(userInitiated: userInitiated);
 }
 
 /// The manga-details chain, minus the screen: stored chapters from the server,

@@ -245,33 +245,37 @@ class CategoryMangaList extends HookConsumerWidget {
                     }
                     selection.value = const {};
                     final db = ref.read(offlineDatabaseProvider);
-                    // Manga whose chapter list has never been mirrored into
-                    // the local DB (never opened in manga details) can't be
-                    // reconciled immediately — the reconciler finds an empty
-                    // chapter list and silently does nothing. Collect them
-                    // for a background sync+reconcile instead.
-                    final needsSync = <int>{};
-                    for (final id in ids) {
-                      await db.setKeepRule(id, picked.rule, picked.count);
-                      // Queue only — starting per manga let the FGS drain and
-                      // stop between each one, so its "X/Y" notification never
-                      // showed the whole selection's real total. One start
-                      // below, after every manga in the selection is queued.
-                      final chapters = await db.chaptersForManga(id);
-                      if (chapters.isEmpty) {
-                        needsSync.add(id);
-                      } else {
-                        await reconcileMangaWidget(ref, id, startDownload: false);
-                      }
+                    final sync = ref.read(offlineSyncProvider);
+                    // setKeepRule is a pure UPDATE: with no offlineMangas row it
+                    // silently touches nothing, so the rule never persists and
+                    // the reconciler later early-exits on the missing row. A
+                    // library row is only mirrored lazily (unawaited, and only
+                    // when the list came from the server), so it can be absent
+                    // here. Mirror it now from the DTO we already hold, then set
+                    // the rule against a row that is guaranteed to exist.
+                    final selected =
+                        items.where((m) => ids.contains(m.id)).toList();
+                    for (final manga in selected) {
+                      await sync?.syncManga(
+                        manga,
+                        fetchedAtGen: sync.syncGeneration,
+                      );
+                      await db.setKeepRule(manga.id, picked.rule, picked.count);
                     }
-                    await ref.read(downloadStarterProvider)(
-                      userInitiated: true,
+                    // Always fetch fresh chapter state before reconciling — the
+                    // stored serverIsDownloaded mirror the reconciler routes on
+                    // goes stale, which otherwise sends chapters to a device-only
+                    // download (bypassing the server) or to a server re-enqueue
+                    // that never pulls to the device. syncAndReconcileMangaSet
+                    // re-syncs, reconciles, registers the second-hop pull, and
+                    // starts the download in the background.
+                    unawaited(
+                      syncAndReconcileMangaSet(
+                        container,
+                        ids.toSet(),
+                        userInitiated: true,
+                      ),
                     );
-                    // Manga needing chapter sync: fetch from server in the
-                    // background, then reconcile and start downloading.
-                    if (needsSync.isNotEmpty) {
-                      unawaited(syncAndReconcileMangaSet(container, needsSync));
-                    }
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
