@@ -21,6 +21,7 @@ import '../../../library/presentation/category/controller/edit_category_controll
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../migration/domain/migration_models.dart';
+import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
@@ -209,6 +210,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     MultiSelectPopupButton(
                       filteredChapterList: filteredChapterList,
                       selectedChapters: selectedChapters,
+                      afterOptionSelected: chapterListRefresh,
                     ),
                   ],
                 )
@@ -474,18 +476,20 @@ class MangaDetailsScreen extends HookConsumerWidget {
   }
 }
 
-class MultiSelectPopupButton extends StatelessWidget {
+class MultiSelectPopupButton extends ConsumerWidget {
   const MultiSelectPopupButton({
     super.key,
     required this.filteredChapterList,
     required this.selectedChapters,
+    required this.afterOptionSelected,
   });
 
   final AsyncValue<List<ChapterDto>?> filteredChapterList;
   final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
+  final Future<void> Function() afterOptionSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton(
       shape: RoundedRectangleBorder(
         borderRadius: KBorderRadius.r16.radius,
@@ -538,6 +542,33 @@ class MultiSelectPopupButton extends StatelessWidget {
             });
           },
           child: Text(context.l10n.selectInBetween),
+        ),
+        PopupMenuItem(
+          onTap: () async {
+            final chapterList = [...?filteredChapterList.value];
+            final selectedIds = selectedChapters.value.keys.toSet();
+            // Anchor = first selected chapter in the current list order.
+            final anchorIndex =
+                chapterList.indexWhere((c) => selectedIds.contains(c.id));
+            if (anchorIndex < 0) return;
+            // "Below" means every chapter that appears lower in the list than
+            // the anchor. In the default descending sort (newest first) these
+            // are the older chapters — exactly what the user wants to mark read.
+            final belowIds = [
+              for (int i = anchorIndex + 1; i < chapterList.length; i++)
+                chapterList[i].id,
+            ];
+            if (belowIds.isEmpty) return;
+            await recordReadState(
+              ref,
+              chapterIds: belowIds,
+              isRead: true,
+              resetPosition: true,
+            );
+            selectedChapters.value = {};
+            await afterOptionSelected();
+          },
+          child: Text(context.l10n.markBelowAsRead),
         ),
       ],
     );

@@ -2742,6 +2742,7 @@
   "search": "Search",
   "searchLibraryHint": "Search title, author, source...",
   "searchingForUpdates": "Searching for updates",
+  "markBelowAsRead": "Mark below as read",
   "selectInBetween": "Select in between",
   "selectNext10": "Select next 10",
   "selectUnread": "Select Unread",
