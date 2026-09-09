@@ -28,7 +28,6 @@ import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
-import 'offline_types.dart';
 
 /// Closes the #310 gap: a library update told the SERVER to find new chapters,
 /// but nothing on the client synced or downloaded them for keep-rule manga —
@@ -329,6 +328,26 @@ touchedSinceWatermark({
     }
   }
   return (touched: touched, newestFetchedAt: newest, sawWatermark: false);
+}
+
+/// Sync chapters from the server for [mangaIds] that have no [OfflineChapters]
+/// rows yet, then reconcile each one. Called from the bulk keep-rule change
+/// path when a manga's chapter list has never been mirrored locally (e.g. the
+/// user changed the keep rule from the library without ever opening the manga
+/// details screen). Without this step the reconciler finds an empty chapter
+/// list and silently does nothing — no server download, no device download.
+///
+/// Mirrors [_syncAndReconcile] but also kicks the download starter so the
+/// freshly-queued chapters begin transferring without waiting for the next
+/// library update.
+Future<void> syncAndReconcileMangaSet(
+  ProviderContainer container,
+  Set<int> mangaIds,
+) async {
+  if (mangaIds.isEmpty) return;
+  if (!container.read(offlineActiveProvider)) return;
+  await _syncAndReconcile(container, mangaIds);
+  await container.read(downloadStarterProvider)();
 }
 
 /// The manga-details chain, minus the screen: stored chapters from the server,

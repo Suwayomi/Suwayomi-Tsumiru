@@ -23,6 +23,7 @@ import '../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../migration/domain/migration_models.dart';
+import '../../../offline/data/offline_chapter_catchup.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../offline/data/server_reachability.dart';
@@ -222,6 +223,12 @@ class CategoryMangaList extends HookConsumerWidget {
                   onMarkUnread: () => markSelection(false),
                   onKeepOffline: () async {
                     final ids = selection.value.toList();
+                    // Captured before any await — context is guaranteed mounted here.
+                    // After the dialog awaits below it may no longer be.
+                    final container = ProviderScope.containerOf(
+                      context,
+                      listen: false,
+                    );
                     // Let the user choose how much to keep (next-N / all-unread
                     // / all) instead of silently downloading every chapter —
                     // picking "all" across a read library can queue thousands.
@@ -238,17 +245,33 @@ class CategoryMangaList extends HookConsumerWidget {
                     }
                     selection.value = const {};
                     final db = ref.read(offlineDatabaseProvider);
+                    // Manga whose chapter list has never been mirrored into
+                    // the local DB (never opened in manga details) can't be
+                    // reconciled immediately — the reconciler finds an empty
+                    // chapter list and silently does nothing. Collect them
+                    // for a background sync+reconcile instead.
+                    final needsSync = <int>{};
                     for (final id in ids) {
                       await db.setKeepRule(id, picked.rule, picked.count);
                       // Queue only — starting per manga let the FGS drain and
                       // stop between each one, so its "X/Y" notification never
                       // showed the whole selection's real total. One start
                       // below, after every manga in the selection is queued.
-                      await reconcileMangaWidget(ref, id, startDownload: false);
+                      final chapters = await db.chaptersForManga(id);
+                      if (chapters.isEmpty) {
+                        needsSync.add(id);
+                      } else {
+                        await reconcileMangaWidget(ref, id, startDownload: false);
+                      }
                     }
                     await ref.read(downloadStarterProvider)(
                       userInitiated: true,
                     );
+                    // Manga needing chapter sync: fetch from server in the
+                    // background, then reconcile and start downloading.
+                    if (needsSync.isNotEmpty) {
+                      unawaited(syncAndReconcileMangaSet(container, needsSync));
+                    }
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
