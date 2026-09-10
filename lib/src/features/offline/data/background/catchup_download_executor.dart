@@ -339,6 +339,12 @@ Future<bool> runCatchupDownloads({
           .firstOrNull;
       if (mangaSpec == null) {
         // Rule removed since resolution: drop the obligations.
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'skip-manga mangaId=$mangaId reason=not-in-work-spec '
+          '— keep rule removed or the spec is stale; dropping its '
+          'ledger obligations\n',
+        );
         ledger = _dropManga(ledger, mangaId);
         await catchupStore.writeLedger(spec.serverId, ledger);
         continue;
@@ -611,6 +617,21 @@ Future<bool> runCatchupDownloads({
                   present.contains(e.key)))
             e.key,
       };
+      if (done.isNotEmpty) {
+        // The exclusion reason for a pending chapter that never downloaded:
+        // already on the device (present — the common "re-notified a chapter
+        // it already has" case) vs. no longer inside the keep window.
+        final droppedPresent =
+            [for (final c in done) if (present.contains(c)) c];
+        final droppedNotDesired =
+            [for (final c in done) if (!present.contains(c)) c];
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'dropped-pending mangaId=$mangaId '
+          'alreadyPresent=[${droppedPresent.join(',')}] '
+          'noLongerDesired=[${droppedNotDesired.join(',')}]\n',
+        );
+      }
       for (final c in done) {
         pending.remove(c);
         serverFetch.remove(c);
