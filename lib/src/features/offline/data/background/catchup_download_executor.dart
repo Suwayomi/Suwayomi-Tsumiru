@@ -81,7 +81,10 @@ Future<bool> runCatchupDownloads({
     '[${DateTime.now().toIso8601String()}] offline-catchup: run-started '
     'pendingDownloads=${ledger.pendingDownloads.length} '
     'pendingServerFetch=${ledger.pendingServerFetch.length} '
-    'needsBackfill=${needsBackfill.length}\n',
+    'needsBackfill=${needsBackfill.length} '
+    'pendingDownloadIds=[${ledger.pendingDownloads.keys.join(',')}] '
+    'pendingServerFetchIds=[${ledger.pendingServerFetch.keys.join(',')}] '
+    'needsBackfillIds=[${needsBackfill.join(',')}]\n',
   );
   if (ledger.pendingDownloads.isEmpty &&
       ledger.pendingServerFetch.isEmpty &&
@@ -418,20 +421,42 @@ Future<bool> runCatchupDownloads({
         ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
 
-      for (final chapterId in desired.difference(present)) {
+      final toDownload = desired.difference(present);
+      if (toDownload.isNotEmpty) {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'manga-plan mangaId=$mangaId keepRule=${mangaSpec.keepRule.name} '
+          'keepN=${mangaSpec.keepUnreadCount} desired=${desired.length} '
+          'onDevice=${mangaSpec.onDeviceChapterIds.length} '
+          'toDownload=[${toDownload.join(',')}]\n',
+        );
+      }
+      for (final chapterId in toDownload) {
         if (downloaded >= _maxChaptersPerRun) break;
         if (DateTime.now().isAfter(deadline)) break;
         if (await capBlocked()) {
           final partial = await store.readManifest(mangaId, chapterId);
           if (partial?.generation != mangaSpec.generationOf(chapterId) ||
               await store.stagedBytes(mangaId, chapterId) == 0) {
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+              'reason=storage-cap\n',
+            );
             continue;
           }
         }
         await checkControls();
         if (cancelled) break;
         final row = chapters.byId[chapterId];
-        if (row == null) continue;
+        if (row == null) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+            'reason=not-in-server-list\n',
+          );
+          continue;
+        }
 
         // A budget per hop, spent only on that hop's own failures. Sharing one
         // meant a slow source could exhaust a chapter before the device had
@@ -448,6 +473,12 @@ Future<bool> runCatchupDownloads({
             // which manga this chapter belongs to, so the window cleanup below
             // can drop the counter with it once the chapter is no longer
             // wanted. Skipping costs nothing — the gate is ahead of any I/O.
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+              'reason=server-fetch-budget-exhausted '
+              'attempts=$spent/$kMaxChapterAttempts\n',
+            );
             serverFetch.remove(chapterId);
             continue;
           }
@@ -486,7 +517,15 @@ Future<bool> runCatchupDownloads({
         // many runs the fetch above took.
         serverFetch.remove(chapterId);
         final dlSpent = dlRetries[chapterId] ?? 0;
-        if (dlSpent >= kMaxChapterAttempts) continue;
+        if (dlSpent >= kMaxChapterAttempts) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+            'reason=download-budget-exhausted '
+            'attempts=$dlSpent/$kMaxChapterAttempts\n',
+          );
+          continue;
+        }
 
         // Re-check connectivity before each chapter's page downloads — the
         // one-time gate at run start can't catch a WiFi drop mid-run.
@@ -522,6 +561,20 @@ Future<bool> runCatchupDownloads({
           );
         } else if (!attempt.transient) {
           dlRetries[chapterId] = dlSpent + 1;
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'download-failed mangaId=$mangaId chapterId=$chapterId '
+            'transient=false attempt=${dlSpent + 1}/$kMaxChapterAttempts\n',
+          );
+        } else {
+          // Transient (network blip, server busy): keep the obligation and let
+          // the next wake retry — this is why a pending chapter can silently
+          // carry over run after run without ever spending its budget.
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'download-deferred mangaId=$mangaId chapterId=$chapterId '
+            'reason=transient\n',
+          );
         }
       }
 
