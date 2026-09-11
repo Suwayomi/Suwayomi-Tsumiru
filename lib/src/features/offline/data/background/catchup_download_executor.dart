@@ -84,7 +84,11 @@ Future<bool> runCatchupDownloads({
     'needsBackfill=${needsBackfill.length} '
     'pendingDownloadIds=[${ledger.pendingDownloads.keys.join(',')}] '
     'pendingServerFetchIds=[${ledger.pendingServerFetch.keys.join(',')}] '
-    'needsBackfillIds=[${needsBackfill.join(',')}]\n',
+    'needsBackfillIds=[${needsBackfill.join(',')}] '
+    // The background download scope for this run. A new chapter whose manga is
+    // absent here is invisible to both the resolution cursor and backfill —
+    // if a kept series is missing, the spec (a foreground snapshot) is stale.
+    'keepRuleMangaIds=[${spec.keepRuleMangaIds.join(',')}]\n',
   );
   if (ledger.pendingDownloads.isEmpty &&
       ledger.pendingServerFetch.isEmpty &&
