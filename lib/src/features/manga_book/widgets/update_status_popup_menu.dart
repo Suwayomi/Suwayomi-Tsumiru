@@ -18,14 +18,13 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
   const UpdateStatusPopupMenu({
     super.key,
     this.getCategory,
-    this.showSummaryButton = true,
     this.showDuplicatesButton = false,
   });
   final CategoryDto? Function()? getCategory;
-  final bool showSummaryButton;
   final bool showDuplicatesButton;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final failedCount = ref.watch(failedUpdatesProvider).value?.length ?? 0;
     return PopupMenuButton(
       icon: const Icon(Icons.more_vert_rounded),
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
@@ -49,13 +48,10 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
             },
             child: Text(context.l10n.globalUpdate),
           ),
-          if (showSummaryButton)
-            PopupMenuItem(
-              onTap: () => const UpdateStatusRoute().push(context),
-              child: Text(
-                context.l10n.updatesSummary,
-              ),
-            ),
+          PopupMenuItem(
+            onTap: () => const LibraryUpdateErrorsRoute().push(context),
+            child: Text(context.l10n.libraryUpdateErrorsCount(failedCount)),
+          ),
           if (showDuplicatesButton)
             PopupMenuItem(
               onTap: () => const LibraryDuplicatesRoute().push(context),

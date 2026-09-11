@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/theme/brand.dart';
 import '../../../widgets/shell/update_banner_state.dart';
@@ -22,10 +21,10 @@ class UpdateStatusFab extends ConsumerWidget {
     final updateStatus = ref.watch(updatesSocketProvider);
     final showStatus = (updateStatus.value?.isUpdateChecking).ifNull();
     return BrandFab(
-      icon: showStatus ? null : const Icon(Icons.refresh_rounded),
+      icon: Icon(showStatus ? Icons.stop_rounded : Icons.refresh_rounded),
       onPressed: () {
         if (showStatus) {
-          const UpdateStatusRoute().push(context);
+          ref.read(updatesRepositoryProvider).stopUpdates();
         } else {
           ref.read(updateOptimisticProvider.notifier).arm();
           ref.read(updatesRepositoryProvider).fetchUpdates();

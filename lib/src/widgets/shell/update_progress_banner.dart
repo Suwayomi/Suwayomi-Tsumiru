@@ -16,7 +16,6 @@ import '../../features/manga_book/domain/update_status/update_status_model.dart'
 import '../../features/notifications/data/local_notification_service.dart';
 import '../../features/settings/presentation/library/widgets/show_update_progress_banner/show_update_progress_banner.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import 'update_banner_state.dart';
 
@@ -144,9 +143,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
           ? const SizedBox.shrink()
           : Material(
               color: scheme.secondary,
-              child: InkWell(
-                onTap: () => const UpdateStatusRoute().push(context),
-                child: Padding(
+              child: Padding(
                   padding: EdgeInsets.only(top: topInset) +
                       const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                   child: Row(
@@ -171,7 +168,6 @@ class UpdateProgressBanner extends HookConsumerWidget {
                     ],
                   ),
                 ),
-              ),
             ),
     );
   }

@@ -57,10 +57,6 @@
   "@checkForUpdates": {
     "description": "Button text to check for App Updates"
   },
-  "completed": "완료됨",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' 복사됨!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",

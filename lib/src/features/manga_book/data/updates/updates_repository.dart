@@ -11,6 +11,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
+import '../../domain/manga/manga_model.dart';
 import '../../domain/update_status/update_status_model.dart';
 import '../../domain/updates/updates_filter.dart';
 import './graphql/__generated__/query.graphql.dart';
@@ -112,6 +113,18 @@ class UpdatesRepository {
       .query$UpdateStatusDto(Options$Query$UpdateStatusDto())
       .getData((data) => data.updateStatus);
 
+  /// Series that failed in the most recent run. Reads the server's current
+  /// status API — the deprecated `updateStatus` job lists hang on a live
+  /// server, which is what left the old summary screen spinning.
+  Future<List<MangaDto>> failedUpdates() async =>
+      (await client
+          .query$LibraryUpdateFailures(Options$Query$LibraryUpdateFailures())
+          .getData((data) => [
+                for (final update in data.libraryUpdateStatus.mangaUpdates)
+                  if (update.status == Enum$MangaJobStatus.FAILED) update.manga,
+              ])) ??
+      const [];
+
   /// Cheap "is a run in progress" read, decoupled from the heavy job lists
   /// (see [updateRunningSubscription]).
   Future<bool?> runningSummary() async => client
@@ -160,3 +173,7 @@ Future<bool?> updateRunningSummary(Ref ref) =>
 @riverpod
 Stream<bool?> updateRunningSocket(Ref ref) =>
     ref.watch(updatesRepositoryProvider).updateRunningSubscription();
+
+@riverpod
+Future<List<MangaDto>> failedUpdates(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).failedUpdates();

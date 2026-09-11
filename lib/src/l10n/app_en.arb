@@ -336,9 +336,6 @@
   "@cloudflareBypass": {
     "description": "Section title for Cloudflare Bypass"
   },
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "@copied": {
     "description": "Copied Text"
   },
@@ -493,9 +490,6 @@
   },
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
-  },
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "@filter": {
     "description": "title of filter Tab across the app"
@@ -852,9 +846,6 @@
   "@pause": {
     "description": "Button text to pause downloads"
   },
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "@pinchToZoom": {
     "description": "Switch title to enable pinch to zoom in reader screen"
   },
@@ -1065,9 +1056,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "@save": {
     "description": "Save Button Text"
   },
@@ -1228,9 +1216,6 @@
   },
   "@updates": {
     "description": "Screen title and Button text of Updates screen"
-  },
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "@updating": {
     "description": "Button text to show that the extension is updating"
@@ -1567,7 +1552,6 @@
   "close": "Close",
   "cloudflareBypass": "Cloudflare Bypass",
   "collapseSidebar": "Collapse sidebar",
-  "completed": "Completed",
   "connection": "Connection",
   "connectionAuthNone": "No auth",
   "connectionAuthSignedIn": "Signed in",
@@ -2009,7 +1993,6 @@
   "extensionRepository": "Extension Repository",
   "extensionRepositoryDescription": "Add repositories from which extensions can be installed",
   "extensions": "Extensions",
-  "failed": "Failed",
   "filter": "Filter",
   "findServer": "Find",
   "finished": "Finished",
@@ -2310,7 +2293,6 @@
   "parallelSourceRequest": "Parallel source requests",
   "password": "Password",
   "pause": "Pause",
-  "pending": "Pending",
   "all": "All",
   "pinnedSources": "Pinned sources",
   "hasResults": "Has results",
@@ -2593,6 +2575,17 @@
       }
     }
   },
+  "libraryUpdateErrors": "Library update errors",
+  "libraryUpdateErrorsCount": "Library update errors ({count})",
+  "@libraryUpdateErrorsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryUpdateErrorsEmpty": "No update errors",
+  "libraryUpdateErrorsEmptyDetail": "Series that fail to update show up here",
   "notificationLibraryErrorTitle": "Library update failed",
   "notificationLibraryErrorBody": "{count} series failed to update",
   "@notificationLibraryErrorBody": {
@@ -2743,7 +2736,6 @@
   "restoring": "Restoring backup",
   "resume": "Resume",
   "retry": "Retry",
-  "running": "Running",
   "save": "Save",
   "saveAsCBZArchive": "Save as CBZ archive",
   "scanlators": "Scanlators",
@@ -2851,7 +2843,6 @@
       }
     }
   },
-  "updatesSummary": "Updates Summary",
   "updating": "Updating",
   "updatingLibrary": "Updating library…",
   "updatingLibraryProgress": "Updating library ({percent}% · {checked}/{total})",

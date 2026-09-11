@@ -161,10 +161,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "已完成",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "credentials": "认证",
   "@credentials": {
     "description": "Popup title and Button text to enter Authentication credentials"
@@ -407,10 +403,6 @@
   "@pause": {
     "description": "Button text to pause downloads"
   },
-  "pending": "等待中",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "reader": "阅读器",
   "@reader": {
     "description": "Screen title and Button text of Reader screen"
@@ -499,10 +491,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "running": "运行中",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "save": "保存",
   "@save": {
     "description": "Save Button Text"
@@ -567,10 +555,6 @@
   "@updateCompleted": {
     "description": "Button text to show that extension update is completed"
   },
-  "updatesSummary": "更新摘要",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
-  },
   "userName": "用户名",
   "@userName": {
     "description": "Title text for User Name field"
@@ -586,10 +570,6 @@
   "help": "帮助",
   "@help": {
     "description": "Button text of help in about screen"
-  },
-  "failed": "失败",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "筛选",
   "@filter": {
