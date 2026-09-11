@@ -49,7 +49,7 @@
   "@authTypeBasic": {
     "description": "Radio button text for the Basic Authentication type"
   },
-  "restoring": "正在还原",
+  "restoring": "正在还原备份",
   "@restoring": {
     "description": "Toast Text to show that the backup is restoring"
   },
@@ -63,11 +63,11 @@
       }
     }
   },
-  "errorFilePickUnknownExtension": "请选择插件 {extensionName}",
+  "errorFilePickUnknownExtension": "请选择扩展名为 {extensionName} 的文件",
   "@errorFilePickUnknownExtension": {
     "description": "Error Description to show when user selected unknown extension file"
   },
-  "finished": "阅读过",
+  "finished": "已完成",
   "@finished": {
     "description": "Text to show the Currently Finished reading chapter in Reader Screen"
   },
@@ -105,7 +105,7 @@
   "@appTheme": {
     "description": "Popup title and Button text to change App Theme"
   },
-  "appTitle": "Sorayomi",
+  "appTitle": "Tsumiru",
   "@appTitle": {
     "description": "Name of the app (Sorayomi in native script)"
   },
@@ -161,7 +161,7 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "阅读过",
+  "completed": "已完成",
   "@completed": {
     "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
   },
@@ -169,7 +169,7 @@
   "@credentials": {
     "description": "Popup title and Button text to enter Authentication credentials"
   },
-  "defaultCategory": "默认添加到此库",
+  "defaultCategory": "添加新漫画到书架时的默认分类",
   "@defaultCategory": {
     "description": "Checkbox description when creating a Category to add manga to the Category by Default"
   },
@@ -177,7 +177,7 @@
   "@delete": {
     "description": "Text for delete button"
   },
-  "createBackupDescription": "可用于还原当前书架数据",
+  "createBackupDescription": "将书架备份为 Tachidesk 备份",
   "@createBackupDescription": {
     "description": "Button text description to create backup"
   },
@@ -205,7 +205,7 @@
   "@displayModeGrid": {
     "description": "Radio button text for Manga Cover display mode - Grid"
   },
-  "displayModeList": "简单列表",
+  "displayModeList": "列表",
   "@displayModeList": {
     "description": "Radio button text for Manga Cover display mode - List"
   },
@@ -225,7 +225,7 @@
   "@errorExtension": {
     "description": "Error Description to show when user selected unknown extension from list"
   },
-  "errorLaunchURL": "打开失败\n详细记录{url}已经复制到剪贴板",
+  "errorLaunchURL": "打开失败\n已将“{url}”复制到剪贴板",
   "@errorLaunchURL": {
     "description": "Error Description to show when App failed to launch an URL and copied the URL to clipboard",
     "placeholders": {
@@ -275,7 +275,7 @@
   "@installing": {
     "description": "Button text to show that the extension is installing"
   },
-  "installingExtension": "正在安装",
+  "installingExtension": "正在安装插件",
   "@installingExtension": {
     "description": "Toast text to show that the extension is installing"
   },
@@ -291,7 +291,7 @@
   "@manga": {
     "description": "Screen title and Button text of Manga details screen"
   },
-  "mangaSortAlphabetical": "名称",
+  "mangaSortAlphabetical": "按名称",
   "@mangaSortAlphabetical": {
     "description": "Radio button text for Manga sort Type - Alphabetical"
   },
@@ -299,7 +299,7 @@
   "@mangaSortUnread": {
     "description": "Radio button text for Manga sort Type - Unread"
   },
-  "mangaMissingSources": "来源未安装",
+  "mangaMissingSources": "漫画缺少图源",
   "@mangaMissingSources": {
     "description": "Group title to show the Manga Missing Sources when restoring Backup"
   },
@@ -315,7 +315,7 @@
   "@mangaStatusCompleted": {
     "description": "Text to show Manga Status Completed in Manga details screen"
   },
-  "mangaStatusLicensed": "已认证",
+  "mangaStatusLicensed": "已授权",
   "@mangaStatusLicensed": {
     "description": "Text to show Manga Status Licensed in Manga details screen"
   },
@@ -349,7 +349,7 @@
   "@newUpdateAvailable": {
     "description": "Popup title to show that the App/Server has and update"
   },
-  "noCategoryMangaFound": "未找到匹配项\n提示：检查搜索或更改筛选条件",
+  "noCategoryMangaFound": "未在此分类中找到漫画\n（提示：检查搜索和筛选条件！）",
   "@noCategoryMangaFound": {
     "description": "Hint text to check filter when manga list is empty in Category tab in Library"
   },
@@ -357,7 +357,7 @@
   "@noChaptersFound": {
     "description": "Text to show that the Chapter list is empty in Manga details Screen"
   },
-  "noDownloads": "没有下载中的任务",
+  "noDownloads": "暂无下载",
   "@noDownloads": {
     "description": "Text to show that there is no active downloads in Downloads Screen"
   },
@@ -369,15 +369,15 @@
   "@noResultFound": {
     "description": "Text to show that no results found for the given search query"
   },
-  "noSourcesFound": "结果为空",
+  "noSourcesFound": "未找到图源",
   "@noSourcesFound": {
     "description": "Text to show that the Source list is empty"
   },
-  "noUpdatesAvailable": "正在使用最新版",
+  "noUpdatesAvailable": "已是最新版本",
   "@noUpdatesAvailable": {
     "description": "Text to show that the user is using the latest version of the app"
   },
-  "nsfw": "在图源和插件中显示",
+  "nsfw": "显示 NSFW 插件和图源",
   "@nsfw": {
     "description": "Switch text to show/hide the nsfw extensions"
   },
@@ -389,7 +389,7 @@
   "@nsfwInfo": {
     "description": "Hint text to show that the nsfw switch cannot prevent incorrectly flagged extensions from surfacing"
   },
-  "numSelected": "已选择 {num} 章",
+  "numSelected": "已选择 {num} 项",
   "@numSelected": {
     "description": "Title text to show the number of chapters selected in the Manga details screen and Updates screen",
     "placeholders": {
@@ -423,7 +423,7 @@
   "@readerModeContinuousHorizontalLTR": {
     "description": "Radio button text for Reader Mode Type - Continuous Horizontal (LTR)"
   },
-  "readerModeContinuousVertical": "从上到下（不分页）",
+  "readerModeContinuousVertical": "长条漫（有间隔）",
   "@readerModeContinuousVertical": {
     "description": "Radio button text for Reader Mode Type - Continuous Vertical"
   },
@@ -439,7 +439,7 @@
   "@readerModeWebtoon": {
     "description": "Radio button text for Reader Mode Type - Webtoon"
   },
-  "readerNavigationLayoutDefault": "默认布局",
+  "readerNavigationLayoutDefault": "默认",
   "@readerNavigationLayoutDefault": {
     "description": "Radio button text for Reader Navigation Layout - Default"
   },
@@ -447,7 +447,7 @@
   "@readerNavigationLayout": {
     "description": "Popup title and Button text of Reader Navigation Layout popup"
   },
-  "readerNavigationLayoutEdge": "边缘模式",
+  "readerNavigationLayoutEdge": "边缘",
   "@readerNavigationLayoutEdge": {
     "description": "Radio button text for Reader Navigation Layout - Edge"
   },
@@ -455,11 +455,11 @@
   "@readerNavigationLayoutInvert": {
     "description": "Switch title to invert Tap to scroll in reader screen"
   },
-  "readerNavigationLayoutLShaped": "L 样式",
+  "readerNavigationLayoutLShaped": "L 形",
   "@readerNavigationLayoutLShaped": {
     "description": "Radio button text for Reader Navigation Layout - L Shaped"
   },
-  "readerNavigationLayoutRightAndLeft": "左右样式",
+  "readerNavigationLayoutRightAndLeft": "右侧和左侧",
   "@readerNavigationLayoutRightAndLeft": {
     "description": "Radio button text for Reader Navigation Layout - Right And Left"
   },
@@ -479,7 +479,7 @@
   "@reset": {
     "description": "Button text of reset button in source filters"
   },
-  "readerPadding": "填充",
+  "readerPadding": "阅读器内边距",
   "@readerPadding": {
     "description": "Slider title text for Reader Padding"
   },
@@ -487,7 +487,7 @@
   "@restoreBackupTitle": {
     "description": "Button text to create backup"
   },
-  "restored": "完成备份恢复！",
+  "restored": "备份已还原！",
   "@restored": {
     "description": "Toast Text to show that the backup has been restored"
   },
@@ -511,7 +511,7 @@
   "@search": {
     "description": "Search field hint Text"
   },
-  "searchingForUpdates": "搜索更新中",
+  "searchingForUpdates": "正在搜索更新",
   "@searchingForUpdates": {
     "description": "Toast Text for searching for updates of the App/Server"
   },
@@ -531,7 +531,7 @@
   "@sourceTypeFilter": {
     "description": "Tab text Filter for source screen type"
   },
-  "sourceTypePopular": "常用",
+  "sourceTypePopular": "热门",
   "@sourceTypePopular": {
     "description": "Tab text Popular for source screen type"
   },
@@ -559,7 +559,7 @@
   "@unknownSource": {
     "description": "Text to show unknown Source in Manga details screen"
   },
-  "unread": "未阅读",
+  "unread": "未读",
   "@unread": {
     "description": "Checkbox text to unread bookmarked manga/chapters across app"
   },
@@ -587,7 +587,7 @@
   "@help": {
     "description": "Button text of help in about screen"
   },
-  "failed": "更新失败",
+  "failed": "失败",
   "@failed": {
     "description": "Failed status Manga Group title in Update Summary Screen"
   },
@@ -671,7 +671,7 @@
   "@noCategoriesFound": {
     "description": "Hint text to add new Category when category list is empty"
   },
-  "noCategoriesFoundAlt": "尚无任何分类。\n提示：轻触加号按钮创建一个分类来管理你的书架",
+  "noCategoriesFoundAlt": "尚无任何分类。\n请在设置中创建一个分类来管理你的书架",
   "@noCategoriesFoundAlt": {
     "description": "Hint text to add new Category in Settings when category list is empty"
   },
@@ -685,7 +685,7 @@
       }
     }
   },
-  "noUpdatesFound": "最近没有更新",
+  "noUpdatesFound": "未找到更新",
   "@noUpdatesFound": {
     "description": "Toast Text to show that there are no Updates available"
   },
@@ -743,7 +743,7 @@
   "@readerNavigationLayoutKindlish": {
     "description": "Radio button text for Reader Navigation Layout - Kindle-ish"
   },
-  "sourceTypeLatest": "最近更新",
+  "sourceTypeLatest": "最新",
   "@sourceTypeLatest": {
     "description": "Tab text Latest for source screen type"
   },
@@ -759,7 +759,7 @@
   "@mangaStatusUnknown": {
     "description": "Text to show Manga Status Unknown in Manga details screen"
   },
-  "missingTrackers": "跟踪器缺失",
+  "missingTrackers": "追踪器缺失",
   "@missingTrackers": {
     "description": "Group title to show the Missing Trackers when restoring Backup"
   },
@@ -795,7 +795,7 @@
   "@serverPort": {
     "description": "Popup title and Button text to update Server Port"
   },
-  "allScanlators": "所有过滤器",
+  "allScanlators": "所有汉化组",
   "@allScanlators": {
     "description": "Text for all Scanlators in manga description screen chapter filter"
   },
@@ -815,7 +815,7 @@
   "@quickSearchCategory": {
     "description": "Quick Open Hint text for Category C with prefill '#C'"
   },
-  "scanlators": "扫描",
+  "scanlators": "汉化组",
   "@scanlators": {
     "description": "Title text for Scanlators"
   },
@@ -846,5 +846,2835 @@
   "readerSwipeChapterToggleDescription": "滑动切换章节",
   "@readerSwipeChapterToggleDescription": {
     "description": "Switch tile description for, toggle `swipe to change chapter` in reader screen"
-  }
+  },
+  "advanced": "高级",
+  "@advanced": {
+    "description": "Section title Text for Advanced Section"
+  },
+  "animatePageTransitions": "页面切换动画",
+  "@animatePageTransitions": {
+    "description": "Reader toggle: animate page transitions"
+  },
+  "authTypeSimpleLogin": "简单登录",
+  "@authTypeSimpleLogin": {
+    "description": "Radio button text for Suwayomi server's simple_login auth mode"
+  },
+  "authTypeUiLogin": "UI 登录（推荐）",
+  "@authTypeUiLogin": {
+    "description": "Radio button text for Suwayomi server's ui_login (JWT) auth mode, marked as recommended"
+  },
+  "authReverseProxyHelp": "如果在 Suwayomi 前面使用反向代理（Pangolin、Authelia、Authentik、Cloudflare Access 等），请配置代理转发请求，并让 Suwayomi 在此处处理身份验证。对于公共主机名，请在“服务器”屏幕关闭“使用服务器端口”开关，使请求使用标准 443 端口。",
+  "@authReverseProxyHelp": {
+    "description": "Helper text under the login fields explaining how to use Sorayomi with a reverse proxy in front of Suwayomi"
+  },
+  "authTestConnection": "测试连接",
+  "@authTestConnection": {
+    "description": "Button text for testing the entered credentials against the server"
+  },
+  "authTestConnectionSuccess": "已连接。",
+  "@authTestConnectionSuccess": {
+    "description": "Success toast text after Test Connection succeeds"
+  },
+  "authTestConnectionFailedNetwork": "无法连接服务器。请检查网址和网络连接。",
+  "@authTestConnectionFailedNetwork": {
+    "description": "Error message when Test Connection cannot reach the server"
+  },
+  "authTestConnectionFailedAuth": "登录失败。请检查用户名和密码。",
+  "@authTestConnectionFailedAuth": {
+    "description": "Error message when Test Connection reaches the server but credentials are rejected"
+  },
+  "authTestConnectionFailedMode": "服务器可能未处于所选认证模式。请检查服务器的 authMode 设置。",
+  "@authTestConnectionFailedMode": {
+    "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
+  },
+  "authTestConnectionFailedShape": "服务器响应格式异常。你的网址是否指向 Suwayomi API？",
+  "@authTestConnectionFailedShape": {
+    "description": "Error message when the server's response is not the expected shape"
+  },
+  "authTestConnectionFailedTls": "TLS 握手失败。常见原因：1）服务器是纯 HTTP——请把网址改成 http://。2）公共主机名位于反向代理后面——请在“服务器”屏幕关闭“使用服务器端口”开关，使请求使用标准 443 端口。",
+  "@authTestConnectionFailedTls": {
+    "description": "Error message when the client sends TLS bytes to a plaintext server, or vice versa — typically a wrong scheme (http vs https) or wrong port"
+  },
+  "authSessionExpired": "会话已过期——请重新登录。",
+  "@authSessionExpired": {
+    "description": "Banner text shown at top of screens when the session has expired and the user must re-authenticate"
+  },
+  "authReauthenticate": "重新认证",
+  "@authReauthenticate": {
+    "description": "Button text on the session-expired banner that opens the re-auth prompt"
+  },
+  "authInsecureTransportTitle": "不安全的连接",
+  "@authInsecureTransportTitle": {
+    "description": "Title of the http:// warning confirmation dialog"
+  },
+  "authInsecureTransportWarning": "你的服务器网址使用 http://——用户名和密码会以明文形式通过网络发送。除非完全信任当前网络，否则请使用 https://。",
+  "@authInsecureTransportWarning": {
+    "description": "Warning body shown when the user is about to send credentials over http:// instead of https://"
+  },
+  "authInsecureTransportContinue": "我已了解，继续",
+  "@authInsecureTransportContinue": {
+    "description": "Button text to acknowledge the http:// warning and proceed anyway"
+  },
+  "authLogout": "退出登录",
+  "@authLogout": {
+    "description": "Tile title in settings to log out and clear stored credentials"
+  },
+  "authLogoutConfirm": "退出登录并清除已保存的凭据？你需要重新登录才能使用此服务器。",
+  "@authLogoutConfirm": {
+    "description": "Confirmation dialog text shown when the user taps Log out"
+  },
+  "authImageUrlLogWarning": "注意：使用 UI 登录时，图片网址会以查询参数形式携带访问令牌，它可能出现在服务器访问日志中。",
+  "@authImageUrlLogWarning": {
+    "description": "Additional note in helper text explaining the ui_login image URL token leak risk"
+  },
+  "authentication": "认证",
+  "@authentication": {
+    "description": "Section title for server authentication"
+  },
+  "autoDownload": "自动下载",
+  "@autoDownload": {
+    "description": "Title for Auto-download Section in downloads settings"
+  },
+  "autoDownloadNewChapters": "下载新章节",
+  "@autoDownloadNewChapters": {
+    "description": "Toggle's title to change Auto Download New Chapters settings"
+  },
+  "autoDownloadCategories": "分类",
+  "autoDownloadCategoriesAll": "全部分类",
+  "autoDownloadCategoriesHint": "仅自动下载已包含分类的新章节（排除始终优先）。点按循环切换：✓ 包含 · – 排除 · 留空为默认。",
+  "autoDownloadCategoriesIncluded": "已包含：{names}",
+  "@autoDownloadCategoriesIncluded": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadCategoriesExcluded": "已排除：{names}",
+  "@autoDownloadCategoriesExcluded": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCategories": "要更新的分类",
+  "updateCategoriesAll": "全部分类",
+  "updateCategoriesHint": "全局更新书架时只检查已包含的分类（排除始终优先）。点按循环切换：✓ 包含 · – 排除 · 留空为默认。",
+  "updateCategoriesIncluded": "已包含：{names}",
+  "@updateCategoriesIncluded": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCategoriesExcluded": "已排除：{names}",
+  "@updateCategoriesExcluded": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "autoWebtoonSnack": "正在以条漫方式阅读",
+  "@autoWebtoonSnack": {
+    "description": "Toast when Auto Webtoon Mode switches a long-strip series to the webtoon reader (SY eh_auto_webtoon_snack)"
+  },
+  "automaticBackup": "自动备份",
+  "@automaticBackup": {
+    "description": "Settings group title for automatic backup settings"
+  },
+  "automaticUpdate": "自动更新",
+  "@automaticUpdate": {
+    "description": "Popup title and Settings text to update Automatic Global Update interval"
+  },
+  "centerMarginDoubleAndWide": "双页和宽页",
+  "@centerMarginDoubleAndWide": {
+    "description": "Center margin chip"
+  },
+  "centerMarginDoublePages": "双页",
+  "@centerMarginDoublePages": {
+    "description": "Center margin chip"
+  },
+  "centerMarginNone": "无",
+  "@centerMarginNone": {
+    "description": "Center margin chip"
+  },
+  "centerMarginType": "居中边距类型",
+  "@centerMarginType": {
+    "description": "Section label for the paged center-margin chip row"
+  },
+  "centerMarginWidePages": "宽页",
+  "@centerMarginWidePages": {
+    "description": "Center margin chip"
+  },
+  "cropBorders": "裁剪边框",
+  "@cropBorders": {
+    "description": "Reader toggle: crop page borders"
+  },
+  "dualPageSpreadInLandscape": "横屏双页跨页",
+  "imageScaleType": "缩放类型",
+  "@imageScaleType": {
+    "description": "Section label for the paged image scale-type chip row"
+  },
+  "imageScaleTypeFitHeight": "适配高度",
+  "@imageScaleTypeFitHeight": {
+    "description": "Image scale type chip"
+  },
+  "imageScaleTypeFitScreen": "适配屏幕",
+  "@imageScaleTypeFitScreen": {
+    "description": "Image scale type chip"
+  },
+  "imageScaleTypeFitWidth": "适配宽度",
+  "@imageScaleTypeFitWidth": {
+    "description": "Image scale type chip"
+  },
+  "imageScaleTypeOriginalSize": "原始大小",
+  "@imageScaleTypeOriginalSize": {
+    "description": "Image scale type chip"
+  },
+  "imageScaleTypeSmartFit": "智能适配",
+  "@imageScaleTypeSmartFit": {
+    "description": "Image scale type chip"
+  },
+  "imageScaleTypeStretch": "拉伸",
+  "@imageScaleTypeStretch": {
+    "description": "Image scale type chip"
+  },
+  "invertDoublePages": "反转双页顺序",
+  "@invertDoublePages": {
+    "description": "Paged reader toggle"
+  },
+  "invertSplitPagesPlacement": "反转拆分页面位置",
+  "invertWidePageRotation": "反转宽页旋转",
+  "landscapeZoom": "自动放大宽图",
+  "@landscapeZoom": {
+    "description": "Paged reader toggle: disable landscape zoom-in"
+  },
+  "navigateToPan": "平移宽图",
+  "@navigateToPan": {
+    "description": "Paged reader toggle: navigate-to-pan"
+  },
+  "pageLayout": "页面布局",
+  "@pageLayout": {
+    "description": "Section label for the paged page-layout chip row"
+  },
+  "pageLayoutAutomatic": "自动",
+  "@pageLayoutAutomatic": {
+    "description": "Page layout chip"
+  },
+  "pageLayoutDoublePages": "双页",
+  "@pageLayoutDoublePages": {
+    "description": "Page layout chip"
+  },
+  "pageLayoutSinglePage": "单页",
+  "@pageLayoutSinglePage": {
+    "description": "Page layout chip"
+  },
+  "readerForThisSeries": "仅此作品",
+  "@readerForThisSeries": {
+    "description": "Group heading for the per-manga override settings in the reader sheet"
+  },
+  "readerGroupActions": "操作",
+  "@readerGroupActions": {
+    "description": "Reader settings group heading for long-tap actions"
+  },
+  "showTapZonesOverlay": "显示点按区域覆盖层",
+  "@showTapZonesOverlay": {
+    "description": "Reader setting: flash the tap zones when a chapter opens"
+  },
+  "showTapZonesOverlaySubtitle": "打开阅读器时短暂显示",
+  "@showTapZonesOverlaySubtitle": {
+    "description": "Subtitle for the tap zones overlay setting"
+  },
+  "readerGroupDisplay": "显示",
+  "@readerGroupDisplay": {
+    "description": "Reader settings group heading for display options"
+  },
+  "readerGroupEInk": "墨水屏",
+  "@readerGroupEInk": {
+    "description": "Reader settings group heading for E-Ink screen options"
+  },
+  "readerGroupNavigation": "导航",
+  "@readerGroupNavigation": {
+    "description": "Reader settings group heading for volume-key navigation"
+  },
+  "readerGroupPagerViewer": "分页",
+  "@readerGroupPagerViewer": {
+    "description": "Group heading for the paged-reader settings, in both the reader sheet and Reader settings"
+  },
+  "readerGroupReading": "阅读",
+  "@readerGroupReading": {
+    "description": "Reader settings group heading for chapter-to-chapter reading options"
+  },
+  "readerGroupWebtoonViewer": "长条漫",
+  "@readerGroupWebtoonViewer": {
+    "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
+  },
+  "readerSectionPaged": "分页",
+  "@readerSectionPaged": {
+    "description": "Heading for the paged-only reader settings section"
+  },
+  "readerSectionReadingMode": "阅读模式",
+  "@readerSectionReadingMode": {
+    "description": "Section label for the reading-mode chip row"
+  },
+  "readerSectionRotation": "旋转",
+  "@readerSectionRotation": {
+    "description": "Section label for the rotation chip row"
+  },
+  "readerSectionTapInvert": "反转点按区域",
+  "@readerSectionTapInvert": {
+    "description": "Section label for the tap-invert chip row"
+  },
+  "readerSectionTapZones": "点按区域",
+  "@readerSectionTapZones": {
+    "description": "Section label for the tap-zone chip row"
+  },
+  "rotateWidePagesToFit": "旋转宽页以适配",
+  "splitWidePages": "拆分宽页",
+  "alwaysShowChapterTransition": "始终显示章节过渡",
+  "autoWebtoonMode": "自动阅读模式",
+  "autoWebtoonModeSubtitle": "以条漫滚动模式打开韩漫、国漫和 webtoon。其他作品保持默认阅读模式。",
+  "backgroundColorAuto": "自动",
+  "backgroundColorBlack": "黑色",
+  "backgroundColorGray": "灰色",
+  "backgroundColorWhite": "白色",
+  "flashColorBlack": "黑色",
+  "flashColorWhite": "白色",
+  "flashColorWhiteBlack": "白色和黑色",
+  "flashDuration": "闪烁时长",
+  "flashDurationMs": "{ms} 毫秒",
+  "@flashDurationMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "flashEvery": "闪烁间隔",
+  "flashEveryPages": "{count, plural, =1{1 页} other{{count} 页}}",
+  "@flashEveryPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "flashOnPageChange": "翻页时闪烁",
+  "flashWith": "闪烁颜色",
+  "forceHorizontalSeekbar": "强制水平进度条",
+  "leftHandedVerticalSeekbar": "左手竖向进度条",
+  "readerBackgroundColor": "背景颜色",
+  "readerFullscreen": "全屏",
+  "showActionsOnLongTap": "长按时显示操作",
+  "showContentInCutoutArea": "在刘海区域显示内容",
+  "showPageNumber": "显示页码",
+  "showVerticalSeekbarInLandscape": "横屏显示竖向进度条",
+  "refreshChaptersFromSource": "从图源刷新章节",
+  "@refreshChaptersFromSource": {
+    "description": "Switch title for refreshing chapters from the source when opening an entry"
+  },
+  "refreshChaptersFromSourceSubtitle": "关闭时，打开作品只显示服务器上已有的章节。开启时，还会检查图源是否有新章节。",
+  "@refreshChaptersFromSourceSubtitle": {
+    "description": "Switch subtitle explaining the refresh-chapters-from-source toggle"
+  },
+  "automaticallyRefreshMetadata": "自动刷新元数据",
+  "@automaticallyRefreshMetadata": {
+    "description": "Settings text to update Automatically refresh metadata"
+  },
+  "automaticallyRefreshMetadataSubtitle": "更新书架时检查新的封面和简介",
+  "@automaticallyRefreshMetadataSubtitle": {
+    "description": "Settings sub title text to update Automatically refresh metadata"
+  },
+  "backupAndRestore": "备份和恢复",
+  "@backupAndRestore": {
+    "description": "Title for Backup and Restore section in settings"
+  },
+  "backupCleanup": "清理备份",
+  "@backupCleanup": {
+    "description": "Title for file backup cleanup edit tile"
+  },
+  "backupCleanupDescription": "{count, select, 0{从不} 01{删除超过 1 天的备份} other{删除超过 {count} 天的备份}}",
+  "backupInterval": "备份间隔",
+  "@backupInterval": {
+    "description": "Title for file backup interval edit tile"
+  },
+  "backupLocation": "备份位置",
+  "@backupLocation": {
+    "description": "Title for backup file storage location edit tile"
+  },
+  "backupLocationDescription": "服务器上保存自动备份的目录路径",
+  "@backupLocationDescription": {
+    "description": "description for editing backup location"
+  },
+  "backupTime": "备份时间",
+  "@backupTime": {
+    "description": "Title for file backup time edit tile"
+  },
+  "categoryNumberOfItems": "显示条目数量",
+  "@categoryNumberOfItems": {
+    "description": "Library Display > Tabs: checkbox to show a manga count next to each category tab label"
+  },
+  "categoryTabs": "显示分类标签",
+  "@categoryTabs": {
+    "description": "Library Group checkbox to show or hide the category tab bar in Tabs mode"
+  },
+  "categoryVisibilityDeviceOnly": "重新连接前，此更改只保存在本设备",
+  "@categoryVisibilityDeviceOnly": {
+    "description": "Toast when hiding or showing a category offline: the change lives on the device mirror and the server setting returns on the next online sync"
+  },
+  "sectionHeadersShowAllCategories": "显示全部分类",
+  "@sectionHeadersShowAllCategories": {
+    "description": "Library Group checkbox to scroll all sections together in Section headers mode"
+  },
+  "showHiddenCategories": "显示隐藏分类",
+  "@showHiddenCategories": {
+    "description": "Library Display > Tabs: checkbox to include categories marked as hidden in the tab bar"
+  },
+  "smallerTapZones": "更小点按区域",
+  "@smallerTapZones": {
+    "description": "Reader toggle: shrink the tap navigation zones"
+  },
+  "smoothAutoScroll": "平滑自动滚动",
+  "@smoothAutoScroll": {
+    "description": "Long-strip reader toggle"
+  },
+  "scrollAmount": "键盘滚动距离",
+  "@scrollAmount": {
+    "description": "Keyboard scroll step, fraction of the screen"
+  },
+  "scrollAmountTiny": "极小",
+  "scrollAmountSmall": "小",
+  "scrollAmountMedium": "中",
+  "scrollAmountLarge": "大",
+  "autoScroll": "自动滚动",
+  "@autoScroll": {
+    "description": "Reader utils bar: auto-scroll toggle label (webtoon)"
+  },
+  "autoAdvance": "自动前进",
+  "@autoAdvance": {
+    "description": "Reader utils bar: auto-advance toggle label (paged)"
+  },
+  "autoScrollInterval": "自动滚动间隔",
+  "@autoScrollInterval": {
+    "description": "Long-strip auto-scroll: seconds per advance"
+  },
+  "autoAdvanceInterval": "自动前进间隔",
+  "@autoAdvanceInterval": {
+    "description": "Paged reader auto-advance: seconds per page turn"
+  },
+  "autoScrollSeconds": "{count, plural, =1{1 秒} other{{count} 秒}}",
+  "@autoScrollSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tabs": "标签页",
+  "@tabs": {
+    "description": "Library Display sheet section heading for tab-related toggles"
+  },
+  "continueReadingButton": "继续阅读按钮",
+  "@continueReadingButton": {
+    "description": "Library display checkbox to overlay a continue-reading (next unread chapter) button on manga covers"
+  },
+  "languageBadge": "语言",
+  "sourceBadge": "图源图标",
+  "chapterDownloadLimit": "章节下载限制",
+  "@chapterDownloadLimit": {
+    "description": "Title Text for changing Chapter download limit settings"
+  },
+  "chapterDownloadLimitDesc": "限制将要下载的新章节数量。",
+  "@chapterDownloadLimitDesc": {
+    "description": "Sub Title Text for changing Chapter download limit settings"
+  },
+  "chapterDisplayChapterNumber": "章节号",
+  "@chapterDisplayChapterNumber": {
+    "description": "Radio button text for displaying chapters by chapter number"
+  },
+  "chapterDisplaySourceTitle": "图源标题",
+  "@chapterDisplaySourceTitle": {
+    "description": "Radio button text for displaying chapters by source title"
+  },
+  "chapterSortAlphabetical": "按字母顺序",
+  "@chapterSortAlphabetical": {
+    "description": "Radio button text for sort Alphabetically"
+  },
+  "chapterSortChapterNumber": "按章节号",
+  "@chapterSortChapterNumber": {
+    "description": "Radio button text for sort by Chapter Number"
+  },
+  "cloudflareBypass": "绕过 Cloudflare",
+  "@cloudflareBypass": {
+    "description": "Section title for Cloudflare Bypass"
+  },
+  "collapseSidebar": "折叠侧边栏",
+  "connection": "连接",
+  "connectionAuthNone": "无需认证",
+  "connectionAuthSignedIn": "已登录",
+  "connectionAuthSignInNeeded": "需要登录",
+  "copied": "已复制！",
+  "@copied": {
+    "description": "Copied Text"
+  },
+  "back": "返回",
+  "next": "下一步",
+  "finish": "完成",
+  "onboardingSkip": "跳过",
+  "onboardingWelcomeTitle": "欢迎使用 Tsumiru",
+  "onboardingWelcomeSubtitle": "用于阅读 Suwayomi 书架的阅读器。",
+  "onboardingChooseTheme": "选择主题",
+  "onboardingServerTitle": "连接服务器",
+  "onboardingServerSubtitle": "Tsumiru 从你的 Suwayomi 服务器读取内容。",
+  "onboardingServerPortHint": "Suwayomi 默认使用 4567 端口。",
+  "onboardingServerStepLabel": "第 2 步，共 3 步",
+  "onboardingServerOnNetwork": "在此网络中",
+  "onboardingServerRemote": "远程",
+  "onboardingServerNone": "还没有服务器",
+  "onboardingNoServerHelp": "没关系——你可以先搭建 Suwayomi 服务器，稍后在设置中连接。",
+  "onboardingNoServerLink": "如何搭建服务器",
+  "onboardingTestConnection": "测试连接",
+  "onboardingFindServer": "查找服务器",
+  "onboardingResolvedAddress": "在 {url} 找到服务器",
+  "@onboardingResolvedAddress": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingFoundAt": "位于 {address}",
+  "@onboardingFoundAt": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingResolvedNoAuth": "此服务器已就绪——无需登录。",
+  "onboardingResolvedNeedsAuth": "此服务器需要登录。请在下方输入用户名和密码。",
+  "onboardingSearchNetwork": "搜索我的网络",
+  "onboardingSearching": "正在搜索网络…",
+  "onboardingNoServerFound": "未在网络中找到服务器——请手动输入地址。",
+  "onboardingNeedsLogin": "此服务器需要登录",
+  "onboardingEnterAddress": "输入服务器地址，或点按“搜索我的网络”。",
+  "onboardingSignIn": "登录",
+  "onboardingCredsRejected": "这些凭据无效。请再次检查用户名、密码和登录方式。",
+  "onboardingNotReachedHttpsHint": "如果它位于反向代理后面，请尝试其 https 地址。",
+  "onboardingAuthMode": "登录方式",
+  "onboardingAuthModeAuto": "用户名和密码（自动）",
+  "onboardingAuthModeBasic": "Basic 认证",
+  "onboardingAuthModeSimple": "简单登录",
+  "onboardingAuthModeUi": "UI 登录",
+  "onboardingResolvedBasicGated": "{url} 有响应，但被我们无法读取的登录页挡住。请选择“用户名和密码”并输入凭据。",
+  "@onboardingResolvedBasicGated": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingResolvedUnconfirmed": "已到达 {url}，但它没有像 Suwayomi 服务器那样响应——常见原因是路由器或其他应用，而不是你的服务器。请检查地址和端口，或仍然使用它。",
+  "@onboardingResolvedUnconfirmed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingNotReached": "无法通过该地址连接服务器。请确认服务器正在运行，且此设备可以访问。",
+  "onboardingUseAddressAnyway": "仍使用此地址",
+  "onboardingConnected": "已连接——Suwayomi v{version}",
+  "@onboardingConnected": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingConnectFailed": "无法连接该服务器。请检查地址（以及需要时的登录信息）。",
+  "onboardingDoneTitle": "一切就绪",
+  "onboardingDoneSubtitle": "浏览图源，开始把漫画加入书架。",
+  "justNow": "刚刚",
+  "minutesAgo": "{minutes, plural, =1{1 分钟前} other{{minutes} 分钟前}}",
+  "@minutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{hours, plural, =1{1 小时前} other{{hours} 小时前}}",
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLastUpdated": "书架上次更新：{time}",
+  "debugLogs": "调试日志",
+  "@debugLogs": {
+    "description": "Switch title for Debug logs in settings"
+  },
+  "defaultCategoryOnAdd": "默认分类",
+  "alwaysAsk": "总是询问",
+  "setCategories": "设置分类",
+  "ok": "确定",
+  "deleteChapters": "删除章节",
+  "deleteOnDeviceDownloads": "删除本机下载",
+  "deleteOnDeviceDownloadsDescription": "阅读时移除章节在本设备的副本。服务器仍保留副本——这只会释放手机空间。",
+  "deleteServerDownloads": "删除服务器下载",
+  "deleteServerDownloadsDescription": "阅读时从服务器移除章节副本（同时也会从本设备移除）。这些设置与网页端共享。",
+  "deleteChapterAfterManuallyMarkedRead": "手动标记已读后删除章节",
+  "deleteFinishedChaptersWhileReading": "阅读时删除已读完章节",
+  "allowDeletingBookmarkedChapters": "允许删除已加书签章节",
+  "downloadProtectionWindowTitle": "保持最近阅读章节已下载",
+  "downloadProtectionWindowDescription": "如果保留窗口内的章节从设备中缺失，则重新下载（需要启用阅读时删除）。",
+  "deleteWhileReadingDisabled": "已禁用",
+  "deleteWhileReadingLastRead": "最近阅读章节",
+  "deleteWhileReadingSecondToLast": "倒数第 2 个已读章节",
+  "deleteWhileReadingThirdToLast": "倒数第 3 个已读章节",
+  "deleteWhileReadingFourthToLast": "倒数第 4 个已读章节",
+  "deleteWhileReadingFifthToLast": "倒数第 5 个已读章节",
+  "displayModeComfortableGrid": "舒适网格",
+  "displayModeCompactGrid": "紧凑网格",
+  "@displayModeCompactGrid": {
+    "description": "Library-only label for display mode Grid, whose title sits on the cover"
+  },
+  "displayModeCoverOnly": "仅封面网格",
+  "@displayModeCoverOnly": {
+    "description": "Radio button text for Manga Cover display mode - Cover-only grid"
+  },
+  "gridStyle": "网格样式",
+  "@gridStyle": {
+    "description": "Library Display section label for the grid cover-geometry chip row"
+  },
+  "gridStyleUniform": "均匀",
+  "@gridStyleUniform": {
+    "description": "Grid style chip: every cover cropped into the same fixed cell"
+  },
+  "gridStyleNonUniform": "非均匀",
+  "@gridStyleNonUniform": {
+    "description": "Grid style chip: covers keep their aspect ratio, rows still align"
+  },
+  "gridStyleStaggered": "瀑布流",
+  "@gridStyleStaggered": {
+    "description": "Grid style chip: masonry layout where columns pack independently"
+  },
+  "outlineOnCovers": "封面描边",
+  "@outlineOnCovers": {
+    "description": "Library Display checkbox to draw a thin outline around every cover"
+  },
+  "filterStateAny": "任意",
+  "@filterStateAny": {
+    "description": "Tri-state filter chip to not filter on this at all"
+  },
+  "filterStateIncluded": "已包含",
+  "@filterStateIncluded": {
+    "description": "Generic tri-state filter chip to show only entries that match"
+  },
+  "filterStateExcluded": "已排除",
+  "@filterStateExcluded": {
+    "description": "Generic tri-state filter chip to hide entries that match"
+  },
+  "filterHeaderDownloadStatus": "下载状态",
+  "@filterHeaderDownloadStatus": {
+    "description": "Section label for the downloaded filter chip row"
+  },
+  "filterOptionDownloaded": "已下载",
+  "@filterOptionDownloaded": {
+    "description": "Download-status filter chip: only downloaded entries"
+  },
+  "filterOptionNotDownloaded": "未下载",
+  "@filterOptionNotDownloaded": {
+    "description": "Download-status filter chip: only entries with nothing downloaded"
+  },
+  "filterHeaderStorage": "存储",
+  "@filterHeaderStorage": {
+    "description": "Section label for the on-device filter chip row"
+  },
+  "filterOptionOnDevice": "本机",
+  "@filterOptionOnDevice": {
+    "description": "Storage filter chip: only entries kept on this device"
+  },
+  "filterOptionRemote": "远程",
+  "@filterOptionRemote": {
+    "description": "Storage filter chip: only entries with nothing kept on this device"
+  },
+  "filterHeaderReadStatus": "阅读状态",
+  "@filterHeaderReadStatus": {
+    "description": "Section label for the unread filter chip row"
+  },
+  "filterOptionUnread": "未读",
+  "@filterOptionUnread": {
+    "description": "Read-status filter chip: only entries with unread chapters"
+  },
+  "filterOptionRead": "已读",
+  "@filterOptionRead": {
+    "description": "Read-status filter chip: only fully read entries"
+  },
+  "filterHeaderProgress": "进度",
+  "@filterHeaderProgress": {
+    "description": "Section label for the started filter chip row"
+  },
+  "filterOptionStarted": "已开始",
+  "@filterOptionStarted": {
+    "description": "Progress filter chip: only entries with at least one chapter read"
+  },
+  "filterOptionNotStarted": "未开始",
+  "@filterOptionNotStarted": {
+    "description": "Progress filter chip: only entries with no chapters read yet"
+  },
+  "filterHeaderBookmarks": "书签",
+  "@filterHeaderBookmarks": {
+    "description": "Section label for the bookmarked filter chip row"
+  },
+  "filterOptionBookmarked": "已加书签",
+  "@filterOptionBookmarked": {
+    "description": "Bookmarks filter chip: only entries with a bookmarked chapter"
+  },
+  "filterOptionNotBookmarked": "未加书签",
+  "@filterOptionNotBookmarked": {
+    "description": "Bookmarks filter chip: only entries with no bookmarked chapter"
+  },
+  "filterHeaderSeries": "作品",
+  "@filterHeaderSeries": {
+    "description": "Section label for the series-progress filter chip row"
+  },
+  "filterOptionUnfinished": "未完结",
+  "@filterOptionUnfinished": {
+    "description": "Series filter chip: only series with chapters left to read"
+  },
+  "filterOptionFinished": "已完结",
+  "@filterOptionFinished": {
+    "description": "Series filter chip: only series with every chapter read"
+  },
+  "filterHeaderLibrary": "书架",
+  "@filterHeaderLibrary": {
+    "description": "Section label for the library-membership filter chip row"
+  },
+  "filterOptionInLibrary": "在书架中",
+  "@filterOptionInLibrary": {
+    "description": "Library filter chip: only entries saved to the library"
+  },
+  "filterOptionNotInLibrary": "不在书架中",
+  "@filterOptionNotInLibrary": {
+    "description": "Library filter chip: only entries not saved to the library"
+  },
+  "filterHeaderPublicationStatus": "出版状态",
+  "@filterHeaderPublicationStatus": {
+    "description": "Section label for the completed filter chip row"
+  },
+  "filterOptionCompleted": "已完结",
+  "@filterOptionCompleted": {
+    "description": "Publication-status filter chip: only entries the source marked completed"
+  },
+  "filterOptionNotCompleted": "未完结",
+  "@filterOptionNotCompleted": {
+    "description": "Publication-status filter chip: only entries not marked completed"
+  },
+  "filterHeaderContentRating": "内容分级",
+  "@filterHeaderContentRating": {
+    "description": "Section label for the lewd filter chip row"
+  },
+  "filterOptionLewd": "擦边",
+  "@filterOptionLewd": {
+    "description": "Content-rating filter chip: only entries the source marked NSFW"
+  },
+  "filterOptionNotLewd": "非擦边",
+  "@filterOptionNotLewd": {
+    "description": "Content-rating filter chip: only entries not marked NSFW"
+  },
+  "limitTitleLines": "标题最多显示 2 行",
+  "@limitTitleLines": {
+    "description": "Library Display checkbox to cap titles at two ellipsized lines"
+  },
+  "longStripWidthLimit": "最大宽度",
+  "@longStripWidthLimit": {
+    "description": "Long strip slider: cap the strip at a percentage of the window or an absolute pixel width"
+  },
+  "longStripWidthLimitFullWidth": "全宽",
+  "@longStripWidthLimitFullWidth": {
+    "description": "Readout at the width slider's 100% position (the off state)"
+  },
+  "longStripWidthLimitPercent": "{percent}%",
+  "@longStripWidthLimitPercent": {
+    "description": "Value readout for the width slider in percent mode",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "longStripWidthLimitPx": "{px} 像素",
+  "@longStripWidthLimitPx": {
+    "description": "Value readout for the width slider in pixel mode",
+    "placeholders": {
+      "px": {
+        "type": "int"
+      }
+    }
+  },
+  "longStripWidthLimitUnitPercent": "%",
+  "@longStripWidthLimitUnitPercent": {
+    "description": "Width slider unit chip: percent of window"
+  },
+  "longStripWidthLimitUnitPixels": "像素",
+  "@longStripWidthLimitUnitPixels": {
+    "description": "Width slider unit chip: absolute pixels"
+  },
+  "listSize": "列表大小",
+  "@listSize": {
+    "description": "Library Display section label for the List and Descriptive List scale slider"
+  },
+  "unreadBadgeMode": "未读徽标",
+  "@unreadBadgeMode": {
+    "description": "Library Badges section label for the unread badge chip row"
+  },
+  "unreadBadgeModeCount": "显示数量",
+  "@unreadBadgeModeCount": {
+    "description": "Unread badge chip: show the number of unread chapters"
+  },
+  "unreadBadgeModeDot": "显示纯徽标",
+  "@unreadBadgeModeDot": {
+    "description": "Unread badge chip: show a plain accent chip with no number"
+  },
+  "unreadBadgeModeHidden": "隐藏",
+  "@unreadBadgeModeHidden": {
+    "description": "Unread badge chip: do not draw the badge at all"
+  },
+  "badgeLayout": "徽标布局",
+  "@badgeLayout": {
+    "description": "Library Badges section label for the drag-to-reorder badge list"
+  },
+  "badgeLayoutHint": "拖动可重新排序。点按箭头可把徽标移到另一角。",
+  "@badgeLayoutHint": {
+    "description": "Helper text under Badge layout explaining the drag handle and side toggle"
+  },
+  "badgeMoveToLeft": "移到左角",
+  "@badgeMoveToLeft": {
+    "description": "Tooltip on the badge side toggle when the badge is on the right"
+  },
+  "badgeMoveToRight": "移到右角",
+  "@badgeMoveToRight": {
+    "description": "Tooltip on the badge side toggle when the badge is on the left"
+  },
+  "groupStyle": "分组显示",
+  "@groupStyle": {
+    "description": "Library Group section label for the group presentation chip row"
+  },
+  "groupStyleTabs": "标签页",
+  "@groupStyleTabs": {
+    "description": "Group display chip: one page per group, behind a swipeable tab bar"
+  },
+  "groupStyleHeaders": "分节标题",
+  "@groupStyleHeaders": {
+    "description": "Group display chip: one continuous scroll with a sticky header per group"
+  },
+  "groupByTag": "按标签",
+  "@groupByTag": {
+    "description": "Group mode: one tab per source genre and user tag"
+  },
+  "groupByLanguage": "按语言",
+  "@groupByLanguage": {
+    "description": "Group mode: one tab per source language"
+  },
+  "downloadAllChapters": "全部",
+  "@downloadAllChapters": {
+    "description": "Bulk-download menu item: queue every not-yet-downloaded chapter."
+  },
+  "downloadLocation": "下载位置",
+  "@downloadLocation": {
+    "description": "Settings label Text to update Download location"
+  },
+  "downloadLocationHint": "服务器上保存下载文件的目录路径",
+  "@downloadLocationHint": {
+    "description": "Hint text for updating downloads location"
+  },
+  "downloading": "正在下载",
+  "@downloading": {
+    "description": "Text to show chapters downloading"
+  },
+  "downloadNextChapter": "下一章",
+  "@downloadNextChapter": {
+    "description": "Bulk-download menu item: queue the next single chapter after the last read."
+  },
+  "downloadNextChaptersN": "后续 {n} 章",
+  "@downloadNextChaptersN": {
+    "description": "Bulk-download menu item: queue the next N chapters after the last read.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "onDeviceDownloads": "本机下载",
+  "@onDeviceDownloads": {
+    "description": "Settings entry: on-device (offline) downloads screen"
+  },
+  "downloadToServer": "下载到服务器",
+  "downloadUnreadChapters": "未读",
+  "@downloadUnreadChapters": {
+    "description": "Bulk-download menu item: queue all unread, not-yet-downloaded chapters."
+  },
+  "hideCategory": "隐藏分类",
+  "showCategory": "显示分类",
+  "showUpdateProgressBanner": "显示更新进度横幅",
+  "libraryPersistentSearchBar": "常驻搜索栏",
+  "@libraryPersistentSearchBar": {
+    "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
+  },
+  "libraryPersistentSearchBarSubtitle": "始终在应用栏下方显示搜索栏。滚动时会固定在顶部",
+  "@libraryPersistentSearchBarSubtitle": {
+    "description": "Subtitle for the persistent search bar library setting"
+  },
+  "incognitoMode": "无痕模式",
+  "incognitoModeDescription": "暂停阅读历史",
+  "enableSocksProxy": "使用 SOCKS 代理",
+  "@enableSocksProxy": {
+    "description": "Switch title to enable SOCKS Proxy"
+  },
+  "enterProp": "请输入 {prop}",
+  "@enterProp": {
+    "description": "Hint text for text field to enter value of Property"
+  },
+  "error": "出错",
+  "@error": {
+    "description": "Text to show error downloading chapters"
+  },
+  "errorBackupCreate": "创建备份出错",
+  "@errorBackupCreate": {
+    "description": "Error Text to show that backup creating failed"
+  },
+  "errorBackupRestore": "还原备份出错！",
+  "@errorBackupRestore": {
+    "description": "toast to show that backup restoration failed"
+  },
+  "expandSidebar": "展开侧边栏",
+  "excludeEntryWithUnreadChapters": "忽略带有未读章节的作品的自动下载",
+  "@excludeEntryWithUnreadChapters": {
+    "description": "Toggle's title to change Toggle Exclude Entry With Unread Chapters setting"
+  },
+  "extensionRepository": "扩展库",
+  "@extensionRepository": {
+    "description": "Screen title text for Extension repository settings screen"
+  },
+  "extensionRepositoryDescription": "添加可以安装扩展的存储库",
+  "@extensionRepositoryDescription": {
+    "description": "Subtitle text for Extension repository settings property"
+  },
+  "flareSolverr": "FlareSolverr",
+  "@flareSolverr": {
+    "description": "Toggle title to enable FlareSolverr"
+  },
+  "flareSolverrRequestTimeout": "FlareSolverr 请求超时",
+  "@flareSolverrRequestTimeout": {
+    "description": "Title text for FlareSolverr Request Timeout property"
+  },
+  "flareSolverrServerUrl": "FlareSolverr 服务器网址",
+  "@flareSolverrServerUrl": {
+    "description": "Title text for FlareSolverr Server Url property"
+  },
+  "flareSolverrSessionName": "FlareSolverr 会话名称",
+  "@flareSolverrSessionName": {
+    "description": "Title text for FlareSolverr Session Name property"
+  },
+  "flareSolverrSessionTTL": "FlareSolverr 会话 TTL",
+  "@flareSolverrSessionTTL": {
+    "description": "Title text for FlareSolverr Session TTL property"
+  },
+  "gqlDebugLogs": "Graphql 调试日志",
+  "@gqlDebugLogs": {
+    "description": "Switch title for Graphql Debug logs in settings"
+  },
+  "gqlDebugLogsHint": "日志里包含不安全的隐私信息",
+  "@gqlDebugLogsHint": {
+    "description": "Switch subTitle for Graphql Debug logs in settings"
+  },
+  "hideEmptyCategory": "隐藏空分类",
+  "@hideEmptyCategory": {
+    "description": "Switch button text to Hide empty category in library"
+  },
+  "includeCategories": "分类",
+  "@includeCategories": {
+    "description": "Check box text to include categories during create backup"
+  },
+  "includeChapters": "章节",
+  "@includeChapters": {
+    "description": "Check box text to include chapters during create backup"
+  },
+  "includeHistory": "历史",
+  "@includeHistory": {},
+  "includeTracking": "追踪",
+  "@includeTracking": {},
+  "includeClientData": "应用设置",
+  "@includeClientData": {},
+  "invalidPort": "无效的端口",
+  "@invalidPort": {
+    "description": "Error when Submitted invalid Port Number"
+  },
+  "invalidProp": "无效的{property}",
+  "@invalidProp": {
+    "description": "Toast text for select invalid property value"
+  },
+  "ip": "IP地址",
+  "@ip": {
+    "description": "Option title for Server IP Address in Server settings"
+  },
+  "ipHintText": "请输入服务器绑定的IP地址",
+  "isTrueBlack": "纯黑",
+  "@isTrueBlack": {
+    "description": "Switch title to enable {} black theme"
+  },
+  "appThemeTitle": "主题",
+  "@appThemeTitle": {
+    "description": "Header for the color theme picker"
+  },
+  "appThemeIndigoNight": "靛蓝夜",
+  "@appThemeIndigoNight": {},
+  "appThemeCarbon": "碳黑",
+  "@appThemeCarbon": {},
+  "appThemePlum": "紫红",
+  "@appThemePlum": {},
+  "appThemeCustom": "自定义",
+  "@appThemeCustom": {},
+  "customColor": "自定义颜色",
+  "@customColor": {
+    "description": "Tile to pick a custom seed color"
+  },
+  "customFilter": "自定义滤镜",
+  "@customFilter": {
+    "description": "Reader settings sheet tab for brightness/color filters"
+  },
+  "customBrightness": "自定义亮度",
+  "@customBrightness": {
+    "description": "Custom-filter tab: brightness toggle + slider label"
+  },
+  "customColorFilter": "自定义颜色滤镜",
+  "@customColorFilter": {
+    "description": "Custom-filter tab: RGBA color filter toggle"
+  },
+  "customHeaders": "自定义 HTTP 头",
+  "@customHeaders": {
+    "description": "Section title for generic custom HTTP headers sent with every server request (e.g. Cloudflare Zero Trust)"
+  },
+  "customHeadersDescription": "随每个发送到服务器的请求一起发送。仅在服务器位于需要额外请求头的认证网关、Zero Trust 防护或反向代理后面时才需要。",
+  "@customHeadersDescription": {
+    "description": "Explanation under the Custom HTTP headers section"
+  },
+  "customHeaderEmpty": "暂无自定义请求头。如果服务器位于需要额外请求头的认证网关或反向代理后面，请添加一个。",
+  "@customHeaderEmpty": {
+    "description": "Empty state for the custom headers list"
+  },
+  "customHeaderName": "请求头名称",
+  "@customHeaderName": {
+    "description": "Label for the custom header name field"
+  },
+  "customHeaderValue": "请求头值",
+  "@customHeaderValue": {
+    "description": "Label for the custom header value field"
+  },
+  "customHeaderAdd": "添加请求头",
+  "@customHeaderAdd": {
+    "description": "Button to add a custom HTTP header"
+  },
+  "customHeaderNameInvalid": "请求头名称无效（不能包含空格或冒号）。",
+  "@customHeaderNameInvalid": {
+    "description": "Validation error for a bad custom header name"
+  },
+  "customHeaderExists": "已存在同名请求头。",
+  "@customHeaderExists": {
+    "description": "Validation error for a duplicate custom header name"
+  },
+  "colorFilterRed": "红色",
+  "@colorFilterRed": {},
+  "colorFilterGreen": "绿色",
+  "@colorFilterGreen": {},
+  "colorFilterBlue": "蓝色",
+  "@colorFilterBlue": {},
+  "colorFilterAlpha": "透明度",
+  "@colorFilterAlpha": {},
+  "colorFilterBlendMode": "颜色滤镜混合模式",
+  "@colorFilterBlendMode": {
+    "description": "Section label for the blend-mode chips"
+  },
+  "colorFilterModeDefault": "默认",
+  "@colorFilterModeDefault": {},
+  "colorFilterModeMultiply": "正片叠底",
+  "@colorFilterModeMultiply": {},
+  "colorFilterModeScreen": "滤色",
+  "@colorFilterModeScreen": {},
+  "colorFilterModeOverlay": "叠加",
+  "@colorFilterModeOverlay": {},
+  "colorFilterModeLighten": "变亮/减淡",
+  "@colorFilterModeLighten": {},
+  "colorFilterModeDarken": "变暗/加深",
+  "@colorFilterModeDarken": {},
+  "grayscale": "灰度",
+  "@grayscale": {},
+  "invertedColors": "反色",
+  "@invertedColors": {
+    "description": "Custom-filter tab: invert page colors toggle"
+  },
+  "pureBlackAmoled": "纯黑（AMOLED）",
+  "@pureBlackAmoled": {
+    "description": "AMOLED dark variant toggle"
+  },
+  "lewd": "擦边",
+  "@lewd": {
+    "description": "Library filter label: NSFW/lewd manga from adult sources"
+  },
+  "libraryColumnsLandscape": "列数（横屏）",
+  "@libraryColumnsLandscape": {
+    "description": "Library Display section heading for the landscape column count slider"
+  },
+  "libraryColumnsPortrait": "列数（竖屏）",
+  "@libraryColumnsPortrait": {
+    "description": "Library Display section heading for the portrait column count slider"
+  },
+  "localSourceLocation": "本地源位置",
+  "@localSourceLocation": {
+    "description": "Text for Local Source Location settings property"
+  },
+  "localSourceLocationDescription": "服务器上保存本地源文件的目录路径",
+  "@localSourceLocationDescription": {
+    "description": "Description text for Local Source Location property"
+  },
+  "mangaSortLastChapterDate": "最新章节",
+  "@mangaSortLastChapterDate": {
+    "description": "Radio button text for Manga sort Type - Last Chapter Date (upload date of the most recent chapter from the source)"
+  },
+  "mangaSortLastUpdated": "章节获取日期",
+  "@mangaSortLastUpdated": {
+    "description": "Radio button text for Manga sort Type - Last Updated"
+  },
+  "mangaSortLastUpdate": "上次更新",
+  "mangaSortRating": "评分",
+  "minimumRating": "最低评分",
+  "mangaSortRandom": "随机",
+  "@mangaSortRandom": {
+    "description": "Radio button text for Manga sort Type - Random (seeded shuffle; re-tap to re-roll)"
+  },
+  "mangaSortTrackerScore": "追踪评分",
+  "@mangaSortTrackerScore": {
+    "description": "Radio button text for Manga sort Type - Tracker score (mean normalized 0–10)"
+  },
+  "mangaSortTotalChapters": "总章节",
+  "@mangaSortTotalChapters": {
+    "description": "Radio button text for Manga sort Type - Total Chapters"
+  },
+  "misc": "杂项",
+  "@misc": {
+    "description": "Section title for misc settings"
+  },
+  "nChapters": "{n, plural, =0{无章节} =1{1 章} other{{n} 章}}",
+  "@nChapters": {
+    "description": "Text for showing N chapters"
+  },
+  "nDays": "{count, select, 01{01 天} other{{count} 天}}",
+  "@nDays": {
+    "description": "to show Number of days with plural"
+  },
+  "soon": "即将",
+  "inNDays": "{days, plural, =1{1 天后} other{{days} 天后}}",
+  "@inNDays": {
+    "description": "Next-chapter estimate on the manga details page",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "smartUpdate": "智能更新",
+  "smartUpdateExpected": "预计新章节约在 {predicted} 后发布，约每 {interval} 检查一次。",
+  "@smartUpdateExpected": {
+    "placeholders": {
+      "predicted": {
+        "type": "String"
+      },
+      "interval": {
+        "type": "String"
+      }
+    }
+  },
+  "dayCount": "{count, plural, =1{1 天} other{{count} 天}}",
+  "@dayCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nHours": "{n, plural, =1{1 小时} other{{n} 小时}}",
+  "@nHours": {
+    "description": "Text to represent 'n' hours"
+  },
+  "nMinutes": "{n, plural, =1{1 分钟} other{{n} 分钟}}",
+  "@nMinutes": {
+    "description": "Text to represent 'n' Minutes"
+  },
+  "nRepo": "{n, plural, =1{1 个仓库} other{{n} 个仓库}}",
+  "@nRepo": {
+    "description": "Text to show n repo as subtitle"
+  },
+  "nSeconds": "{n, plural, =1{1 秒} other{{n} 秒}}",
+  "@nSeconds": {
+    "description": "Text to represent 'n' seconds"
+  },
+  "nSources": "{n, plural, =1{1 个图源} other{{n} 个图源}}",
+  "@nSources": {
+    "description": "Text to represent n number Parallel source requests"
+  },
+  "nextChapter": "下章：{chapterTitle}",
+  "@nextChapter": {
+    "description": "Text for Next Chapter button in Manga Reader Screen"
+  },
+  "nothingToDownload": "没有可下载内容",
+  "@nothingToDownload": {
+    "description": "Toast shown when a bulk-download preset would queue zero chapters."
+  },
+  "needsServerConnection": "需要连接服务器",
+  "@needsServerConnection": {
+    "description": "Error toast when a server-stored setting is changed while the server is unreachable"
+  },
+  "seeRecommendations": "查看推荐",
+  "@seeRecommendations": {
+    "description": "Button on the manga details page opening the recommendations screen"
+  },
+  "recommendations": "推荐",
+  "@recommendations": {
+    "description": "Title of the recommendations screen"
+  },
+  "noRecommendationsForTitle": "该作品暂时没有推荐",
+  "@noRecommendationsForTitle": {
+    "description": "Empty state on the recommendations screen when no provider returned results"
+  },
+  "similarTo": "与 {title} 相似",
+  "@similarTo": {
+    "description": "Recommendations screen title for a single manga",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "httpErrorCheckWebView": "HTTP {statusCode}，请在 WebView 中查看网站",
+  "@httpErrorCheckWebView": {
+    "description": "Per-provider error on the recommendations screen when its API returns a non-200",
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "suggestions": "建议",
+  "@suggestions": {
+    "description": "Header for the inline suggestions row on the manga details page"
+  },
+  "showRecommendations": "显示推荐",
+  "@showRecommendations": {
+    "description": "Appearance setting toggling the suggestions row on manga details"
+  },
+  "showRecommendationsSubtitle": "在漫画详情页显示一行相似作品",
+  "@showRecommendationsSubtitle": {
+    "description": "Subtitle for the show recommendations setting"
+  },
+  "noPropFound": "未找到 {prop}",
+  "@noPropFound": {
+    "description": "Template text to say No value for property found"
+  },
+  "none": "无",
+  "@none": {
+    "description": "Text for None"
+  },
+  "onDevice": "本机",
+  "offlineBulkDeleteWarning": "其中 {count} 个已保存在本设备，也将在此处移除。",
+  "@offlineBulkDeleteWarning": {
+    "description": "Bulk server-delete confirm: warns N selected chapters are also on this device",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openFlareSolverr": "查看 FlareSolverr 的设置说明",
+  "@openFlareSolverr": {
+    "description": "Text for link to Open Flare Solverr setup documentation"
+  },
+  "openInWeb": "在浏览器中打开",
+  "@openInWeb": {
+    "description": "Button title text for open the url in web"
+  },
+  "openSourceInBrowser": "打开图源页面",
+  "@openSourceInBrowser": {
+    "description": "Menu item: open the manga page on the original source website"
+  },
+  "openOnServer": "在服务器中打开",
+  "@openOnServer": {
+    "description": "Menu item: open the manga in the Suwayomi server WebUI"
+  },
+  "or": "或",
+  "@or": {
+    "description": "text literal for word or"
+  },
+  "parallelSourceRequest": "并行图源请求数",
+  "@parallelSourceRequest": {
+    "description": "Text for Parallel source requests property"
+  },
+  "all": "全部",
+  "pinnedSources": "已固定图源",
+  "hasResults": "有结果",
+  "pinSource": "固定图源",
+  "filterSources": "筛选图源",
+  "allSources": "全部图源",
+  "pinchToZoom": "捏拉缩放",
+  "@pinchToZoom": {
+    "description": "Switch title to enable pinch to zoom in reader screen"
+  },
+  "doubleTapToZoom": "双击缩放",
+  "disableZoomOut": "禁用缩小",
+  "disableZoomIn": "禁用放大",
+  "unpinSource": "取消固定图源",
+  "previousChapter": "上章：{chapterTitle}",
+  "@previousChapter": {
+    "description": "Text for Previous Chapter button in Manga Reader Screen"
+  },
+  "queued": "排队中",
+  "@queued": {
+    "description": "Text to show chapters are queued for downloading"
+  },
+  "quickSearch": "快速搜索",
+  "@quickSearch": {
+    "description": "Screen title and Button text of Quick Search screen"
+  },
+  "readerMouseScrollSpeed": "鼠标滚轮滚动速度",
+  "@readerMouseScrollSpeed": {
+    "description": "Desktop-only reader setting: how far one wheel notch scrolls."
+  },
+  "readerModeChipDefault": "默认",
+  "@readerModeChipDefault": {
+    "description": "Reading-mode chip - Default"
+  },
+  "readerModeChipLegacyContinuous": "连续横向（旧版）",
+  "@readerModeChipLegacyContinuous": {
+    "description": "Reading-mode chip shown when a series still uses the legacy continuous-horizontal mode"
+  },
+  "readerModeChipLongStrip": "长条漫",
+  "@readerModeChipLongStrip": {
+    "description": "Reading-mode chip - Long strip (webtoon)"
+  },
+  "readerModeChipLongStripGaps": "长条漫（有间隔）",
+  "@readerModeChipLongStripGaps": {
+    "description": "Reading-mode chip - Long strip with gaps (continuous vertical)"
+  },
+  "readerModeChipPagedLtr": "分页（从左到右）",
+  "@readerModeChipPagedLtr": {
+    "description": "Reading-mode chip - Paged (left to right)"
+  },
+  "readerModeChipPagedRtl": "分页（从右到左）",
+  "@readerModeChipPagedRtl": {
+    "description": "Reading-mode chip - Paged (right to left)"
+  },
+  "readerModeChipPagedVertical": "分页（竖向）",
+  "@readerModeChipPagedVertical": {
+    "description": "Reading-mode chip - Paged (vertical)"
+  },
+  "readerOrientationDefault": "默认",
+  "@readerOrientationDefault": {
+    "description": "Rotation chip - Default (follow the app)"
+  },
+  "readerOrientationFree": "自由",
+  "@readerOrientationFree": {
+    "description": "Rotation chip - Free rotation"
+  },
+  "readerOrientationLandscape": "横屏",
+  "@readerOrientationLandscape": {
+    "description": "Rotation chip - Landscape (sensor)"
+  },
+  "readerOrientationLockedLandscape": "锁定横屏",
+  "@readerOrientationLockedLandscape": {
+    "description": "Rotation chip - Locked landscape"
+  },
+  "readerOrientationLockedPortrait": "锁定竖屏",
+  "@readerOrientationLockedPortrait": {
+    "description": "Rotation chip - Locked portrait"
+  },
+  "readerOrientationPortrait": "竖屏",
+  "@readerOrientationPortrait": {
+    "description": "Rotation chip - Portrait (sensor)"
+  },
+  "readerOrientationReversePortrait": "反向竖屏",
+  "@readerOrientationReversePortrait": {
+    "description": "Rotation chip - Reverse portrait"
+  },
+  "readerOverlay": "阅读器初始覆盖层",
+  "@readerOverlay": {
+    "description": "Toggle subtile text for Initial Reader Overlay"
+  },
+  "readerOverlaySubtitle": "打开章节时显示标题和设置",
+  "@readerOverlaySubtitle": {
+    "description": "Shows title and quick settings when opening a chapter"
+  },
+  "readerFeedbackToasts": "阅读反馈提示",
+  "@readerFeedbackToasts": {
+    "description": "Switch title for the toggle that shows reader feedback toasts"
+  },
+  "readerFeedbackToastsSubtitle": "显示“正在加载下一章”“没有更多章节”等消息",
+  "@readerFeedbackToastsSubtitle": {
+    "description": "Switch subtitle explaining the reader feedback toasts toggle"
+  },
+  "readerLastPageSwipeToggle": "最后一页滑动",
+  "@readerLastPageSwipeToggle": {
+    "description": "Last page swipe"
+  },
+  "readerLastPageSwipeToggleDescription": "只在最后一页滑动切换下一章",
+  "@readerLastPageSwipeToggleDescription": {
+    "description": "Swipe to next chapter only at last page"
+  },
+  "chapterSeparator": "章节分隔符",
+  "@chapterSeparator": {
+    "description": "Text for the separator between chapters in continuous reading mode"
+  },
+  "lastChapterNotification": "这是最后一章",
+  "@lastChapterNotification": {
+    "description": "Notification text shown when user is at the last chapter"
+  },
+  "firstChapterNotification": "这是第一章",
+  "@firstChapterNotification": {
+    "description": "Notification text shown when user is at the first chapter"
+  },
+  "loadingNextChapter": "正在加载下一章...",
+  "@loadingNextChapter": {
+    "description": "Loading text shown when loading next chapter in continuous reading"
+  },
+  "loadingPreviousChapter": "正在加载上一章...",
+  "@loadingPreviousChapter": {
+    "description": "Loading text shown when loading previous chapter in continuous reading"
+  },
+  "noMoreChaptersAhead": "前方没有更多章节",
+  "@noMoreChaptersAhead": {
+    "description": "Notification text shown when user tries to scroll past the last chapter"
+  },
+  "noMoreChaptersBehind": "后方没有更多章节",
+  "@noMoreChaptersBehind": {
+    "description": "Notification text shown when user tries to scroll past the first chapter"
+  },
+  "nextChapterLoaded": "已加载：{chapterName}",
+  "@nextChapterLoaded": {
+    "description": "Success message shown when next chapter is loaded",
+    "placeholders": {
+      "chapterName": {
+        "type": "String",
+        "description": "The name of the loaded chapter"
+      }
+    }
+  },
+  "previousChapterLoaded": "已加载：{chapterName}",
+  "@previousChapterLoaded": {
+    "description": "Success message shown when previous chapter is loaded",
+    "placeholders": {
+      "chapterName": {
+        "type": "String",
+        "description": "The name of the loaded chapter"
+      }
+    }
+  },
+  "failedToLoadNextChapter": "下一章加载失败",
+  "@failedToLoadNextChapter": {
+    "description": "Error message shown when next chapter fails to load"
+  },
+  "failedToLoadPreviousChapter": "上一章加载失败",
+  "@failedToLoadPreviousChapter": {
+    "description": "Error message shown when previous chapter fails to load"
+  },
+  "chapterCompleted": "本章已读完",
+  "@chapterCompleted": {
+    "description": "Text shown when a chapter is completed in continuous reading"
+  },
+  "readerTapInvertBoth": "两者",
+  "@readerTapInvertBoth": {
+    "description": "Tap-invert option - both axes"
+  },
+  "readerTapInvertHorizontal": "水平",
+  "@readerTapInvertHorizontal": {
+    "description": "Tap-invert option - horizontal axis"
+  },
+  "readerTapInvertNone": "无",
+  "@readerTapInvertNone": {
+    "description": "Tap-invert option - none"
+  },
+  "readerTapInvertVertical": "垂直",
+  "@readerTapInvertVertical": {
+    "description": "Tap-invert option - vertical axis"
+  },
+  "readerVolumeTap": "音量键",
+  "@readerVolumeTap": {
+    "description": "Switch button text for Reader Page Navigation with Volume Tap"
+  },
+  "readerVolumeTapInvert": "反转音量键",
+  "@readerVolumeTapInvert": {
+    "description": "Switch button text to invert Volume Tap "
+  },
+  "readerVolumeTapSubtitle": "使用音量键操作",
+  "@readerVolumeTapSubtitle": {
+    "description": "Switch button Subtitle text for Reader Page Navigation with Volume Tap"
+  },
+  "readerKeepScreenOn": "保持屏幕常亮",
+  "@readerKeepScreenOn": {
+    "description": "Reader switch tile title: keep the screen awake while reading"
+  },
+  "readerKeepScreenOnSubtitle": "阅读时防止屏幕休眠",
+  "@readerKeepScreenOnSubtitle": {
+    "description": "Reader switch tile subtitle for keep screen on"
+  },
+  "readerIgnoreSafeAreaToggle": "忽略安全区域",
+  "@readerIgnoreSafeAreaToggle": {
+    "description": "Toggle text to ignore safe area in reader"
+  },
+  "readerIgnoreSafeAreaToggleDescription": "允许内容延伸到刘海和手势条区域",
+  "@readerIgnoreSafeAreaToggleDescription": {
+    "description": "Description for ignore safe area toggle in reader settings"
+  },
+  "migrate": "迁移",
+  "migrationSelectTargetSource": "选择目标来源",
+  "migrationSearchInSource": "在 {sourceName} 中搜索",
+  "migrationPreview": "迁移预览",
+  "migrationInProgress": "迁移进行中",
+  "migrationComplete": "迁移成功完成",
+  "migrationFailed": "迁移失败",
+  "migrationCancelled": "迁移已取消",
+  "migrateChapters": "迁移章节",
+  "migrateChaptersDescription": "将章节阅读状态复制到新来源",
+  "migrateCategories": "迁移类别",
+  "migrateCategoriesDescription": "将漫画类别复制到新来源",
+  "migrateDownloads": "迁移下载",
+  "migrateDownloadsDescription": "将下载的章节移动到新来源",
+  "migrateTracking": "迁移追踪",
+  "migrateTrackingDescription": "将追踪信息复制到新来源",
+  "migrateReaderSettings": "阅读器设置",
+  "migrateOfflineSettings": "离线保留规则",
+  "migrationOptions": "迁移选项",
+  "migrationSettings": "迁移设置",
+  "bulkMigrationTitle": "迁移图源",
+  "targetSourcesPriority": "目标图源",
+  "targetSourcesPriorityHint": "每部作品会按顺序匹配这些图源，最上面的优先。拖动可重新排序。",
+  "availableSources": "可用图源",
+  "noTargetSourcesSelected": "请至少添加一个要搜索的目标图源。",
+  "searchManually": "手动选择每个匹配项",
+  "searchManuallyDescription": "逐个查看并选择目标，而不是自动匹配。",
+  "migrationPausedReauth": "已暂停——请重新登录后继续。",
+  "migrationSelectSourcesTitle": "选择图源",
+  "migrationListTitle": "迁移",
+  "migrationListTitleProgress": "迁移（{done}/{total}）",
+  "@migrationListTitleProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationListNoMatch": "未找到匹配项",
+  "migrationLatestChapter": "最新章节：{chapter}",
+  "@migrationLatestChapter": {
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationSearchManually": "手动搜索",
+  "migrationSkip": "跳过",
+  "migrationMigrateNow": "立即迁移",
+  "migrationCopyNow": "立即复制",
+  "migrationSelectPinned": "选择已固定",
+  "migrationSelectNone": "全不选",
+  "migrationSelectEnabled": "选择已启用",
+  "migrationSelectAllSources": "全选",
+  "migrationContinue": "继续",
+  "migrationSearchForSource": "搜索图源",
+  "migrationSelectedHeader": "已选择",
+  "migrationAvailableHeader": "可用",
+  "migrationDataToMigrateHeader": "要迁移的数据",
+  "migrationAdditionalSearchQuery": "附加搜索词",
+  "migrationAdditionalSearchQueryHint": "搜索图源时会附加到每个标题后。",
+  "migrationHideUnmatched": "隐藏无匹配项的作品",
+  "migrationHideWithoutUpdates": "隐藏没有新章节的作品",
+  "migrationHideWithoutUpdatesSubtitle": "隐藏新图源没有更多章节的作品。",
+  "migrationPickSourceTitle": "迁移离开图源",
+  "migrationFilterObsolete": "只显示已废弃",
+  "migrationSortMode": "排序方式",
+  "migrationSortDirection": "排序方向",
+  "migrationObsoleteSource": "已废弃",
+  "migrationNeedsMigration": "需要迁移",
+  "migrationOtherSources": "其他图源",
+  "migrationSourceSeriesCount": "{count, plural, =1{1 部作品} other{{count} 部作品}}",
+  "@migrationSourceSeriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationNoLibrarySources": "书架为空——没有可迁移内容。",
+  "migrationSelectAll": "全选",
+  "migrationInvertSelection": "反选",
+  "migrationGroupNeedsReview": "需要检查",
+  "migrationGroupNoMatch": "无匹配",
+  "migrationGroupFailed": "失败",
+  "migrationGroupReady": "就绪",
+  "migrationGroupInProgress": "进行中",
+  "migrationGroupDone": "完成",
+  "migrationGroupSkipped": "已跳过",
+  "migrationRetry": "重试",
+  "migrationFindManually": "手动查找",
+  "migrationOverwriteTracking": "覆盖目标的追踪信息",
+  "migrationKeepTargetTracking": "这部作品已在目标图源上登记追踪。可以保留其追踪信息，或用来源的追踪信息覆盖。",
+  "migrationLargeBatchWarning": "这是一个大批量任务，可能需要较长时间并产生大量图源请求。",
+  "migrationTrackerCollisionSummary": "{count, plural, =1{1 部作品的目标已存在追踪记录；除非选择覆盖，否则会保留目标上的追踪信息。} other{{count} 部作品的目标已存在追踪记录；除非选择覆盖，否则会保留目标上的追踪信息。}}",
+  "@migrationTrackerCollisionSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationActionMigrate": "迁移",
+  "migrationActionCopy": "复制",
+  "migrationActionMigrateDescription": "把每部作品移动到新图源，并移除原作品。",
+  "migrationActionCopyDescription": "在新图源添加每部作品，并保留原作品。",
+  "migrateSeriesCount": "迁移 {count} 部作品",
+  "@migrateSeriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "copySeriesCount": "复制 {count} 部作品",
+  "@copySeriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationDoneMigrated": "已迁移 {count} 部作品",
+  "@migrationDoneMigrated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationDoneCopied": "已复制 {count} 部作品",
+  "@migrationDoneCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationNewChaptersTitle": "新章节",
+  "notificationNewChaptersSummary": "{count} 部作品的更新",
+  "@notificationNewChaptersSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationChaptersGeneric": "{count} 个新章节",
+  "@notificationChaptersGeneric": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationChapterSingle": "第 {number} 章",
+  "@notificationChapterSingle": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationChapterSingleAndMore": "第 {number} 章及其他 {count} 章",
+  "@notificationChapterSingleAndMore": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationChaptersMultiple": "第 {numbers} 章",
+  "@notificationChaptersMultiple": {
+    "placeholders": {
+      "numbers": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationChaptersMultipleAndMore": "第 {numbers} 章及其他 {count} 章",
+  "@notificationChaptersMultipleAndMore": {
+    "placeholders": {
+      "numbers": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationLibraryErrorTitle": "书架更新失败",
+  "notificationLibraryErrorBody": "{count} 部作品更新失败",
+  "@notificationLibraryErrorBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationDownloadErrorTitle": "下载失败",
+  "notificationDownloadErrorBody": "{count} 章下载失败",
+  "@notificationDownloadErrorBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backgroundDownloadScheduleFailed": "无法安排后台下载。请在“下载”页重试。",
+  "notificationDownloadsPausedBackground": "Android 已暂停后台下载。打开 Tsumiru 重试。",
+  "notificationDownloadsPausedService": "无法启动下载。请点按“下载”页中的重试。",
+  "notificationDownloadsPausedTitle": "下载已暂停",
+  "@notificationDownloadsPausedTitle": {
+    "description": "Notification shown when on-device downloads stop because they cannot continue"
+  },
+  "notificationDownloadsPausedNoServer": "无连接。连接恢复后会继续。",
+  "@notificationDownloadsPausedNoServer": {
+    "description": "Body when downloads pause because the Suwayomi server is unreachable"
+  },
+  "notificationDownloadsPausedWifi": "正在等待 Wi-Fi。",
+  "@notificationDownloadsPausedWifi": {
+    "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
+  },
+  "notificationBackupCompleteTitle": "备份完成",
+  "notificationRestoreCompleteTitle": "还原完成",
+  "notificationBackupFailedTitle": "备份失败",
+  "notificationRestoreFailedTitle": "还原失败",
+  "notificationAppUpdateTitle": "有可用更新",
+  "notificationAppUpdateBody": "Tsumiru {version} 可用",
+  "@notificationAppUpdateBody": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationExtensionUpdateTitle": "插件更新",
+  "notificationExtensionUpdateBody": "{count} 个插件有更新",
+  "@notificationExtensionUpdateBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationIncognitoTitle": "无痕模式",
+  "notificationIncognitoBody": "历史和进度更新已暂停",
+  "notificationsErrors": "错误通知",
+  "notificationsErrorsSubtitle": "下载失败和书架更新失败",
+  "notificationsBackup": "备份通知",
+  "notificationsAppUpdates": "应用更新通知",
+  "notificationsExtensionUpdates": "插件更新通知",
+  "notificationActionMarkRead": "标记为已读",
+  "notificationActionView": "查看章节",
+  "notificationActionDownload": "下载",
+  "notificationDownloadsCompleteTitle": "下载完成",
+  "notificationDownloadsCompleteBody": "已下载 {count} 章",
+  "@notificationDownloadsCompleteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifications": "通知",
+  "notificationsNewChapters": "新章节通知",
+  "notificationsNewChaptersSubtitle": "关注的作品有新章节时通知",
+  "notificationsDownloadsComplete": "下载通知",
+  "notificationsCheckInterval": "检查间隔",
+  "notificationsWifiOnly": "仅 Wi-Fi",
+  "notificationsChargingOnly": "仅充电时",
+  "notificationsHideContent": "隐藏通知内容",
+  "notificationsHideContentSubtitle": "只显示数量，不显示标题或封面",
+  "notificationsCheckNow": "立即检查",
+  "notificationsReliabilityNote": "检查会定期运行，不是即时运行。某些设备会限制后台更新。",
+  "selectTargetSource": "选择目标来源",
+  "noSourcesAvailable": "没有可迁移的来源",
+  "checkSourceConfiguration": "请检查您的来源配置",
+  "noAlternativeSources": "没有可用的替代来源",
+  "installMoreSources": "安装更多来源以启用迁移",
+  "errorLoadingSources": "加载来源时出错",
+  "errorGettingMigrationSources": "获取迁移来源失败",
+  "errorSearchingMangaInSource": "在来源中搜索漫画失败",
+  "errorFetchingSourceManga": "获取来源漫画失败",
+  "errorSourceMangaNotFound": "未找到来源漫画",
+  "errorFetchingTargetManga": "获取目标漫画失败",
+  "errorTargetMangaNotFound": "未找到目标漫画",
+  "searchManga": "搜索漫画...",
+  "searchForManga": "在目标来源中搜索漫画",
+  "enterSearchTerm": "输入搜索词以查找漫画",
+  "noResultsFound": "未找到结果",
+  "tryDifferentSearch": "尝试不同的搜索词",
+  "searchError": "搜索错误",
+  "importantNotice": "重要通知",
+  "migrationWarning": "这将永久移动您的漫画数据。此操作无法撤销。",
+  "deleteSourceWarning": "迁移后，原始漫画将从您的库中删除。",
+  "confirmMigration": "确认迁移",
+  "migrationConfirmationMessage": "您确定要迁移此漫画吗？此操作无法撤销。",
+  "startMigration": "开始迁移",
+  "preparingMigration": "正在准备迁移...",
+  "migrationCompleted": "迁移完成！",
+  "migrationSuccessMessage": "您的漫画已成功迁移到新来源。",
+  "migrationCancelledMessage": "迁移过程已取消。未进行任何更改。",
+  "cancelMigration": "取消迁移",
+  "cancelMigrationConfirmation": "您确定要取消迁移吗？此操作无法撤销。",
+  "quickPresets": "快速预设",
+  "quickMigration": "快速",
+  "fullMigration": "完整",
+  "customMigration": "自定义",
+  "deleteSourceManga": "删除来源漫画",
+  "deleteSourceMangaDescription": "迁移后从库中移除原始漫画",
+  "done": "完成",
+  "webtoonScaleType": "长条缩放",
+  "@webtoonScaleType": {
+    "description": "Section label for the long-strip scale chip row"
+  },
+  "webtoonScaleTypeFitScreen": "适配屏幕",
+  "@webtoonScaleTypeFitScreen": {
+    "description": "Long strip scale chip"
+  },
+  "webtoonScaleTypeOriginalSize": "原始大小",
+  "@webtoonScaleTypeOriginalSize": {
+    "description": "Long strip scale chip: render pages at native size, never upscaled"
+  },
+  "webtoonScaleTypeRatio16to9": "16:9",
+  "@webtoonScaleTypeRatio16to9": {
+    "description": "Smart scale chip"
+  },
+  "webtoonScaleTypeRatio20to9": "20:9",
+  "@webtoonScaleTypeRatio20to9": {
+    "description": "Smart scale chip"
+  },
+  "webtoonScaleTypeRatio3to2": "3:2",
+  "@webtoonScaleTypeRatio3to2": {
+    "description": "Smart scale chip"
+  },
+  "webtoonScaleTypeRatio4to3": "4:3",
+  "@webtoonScaleTypeRatio4to3": {
+    "description": "Smart scale chip"
+  },
+  "yes": "是",
+  "no": "否",
+  "from": "来自",
+  "to": "到",
+  "migrationDetails": "迁移详情",
+  "searchAllSources": "搜索所有来源",
+  "searchingAllSources": "正在搜索所有可用来源...",
+  "noMatchingMangaFound": "在任何来源中未找到匹配的漫画",
+  "deleteSourceAfterMigration": "迁移后删除来源漫画",
+  "reload": "刷新",
+  "@reload": {
+    "description": "Reload button text"
+  },
+  "remove": "移除",
+  "@remove": {
+    "description": "Remove Button text"
+  },
+  "removeFromLibrary": "从书架移除？",
+  "@removeFromLibrary": {
+    "description": "Remove From Library Popup text"
+  },
+  "restore": "恢复",
+  "@restore": {
+    "description": "Button Text to create backup"
+  },
+  "saveAsCBZArchive": "保存为 CBZ 压缩包",
+  "@saveAsCBZArchive": {
+    "description": "Settings toggle label for Save as CBZ archive"
+  },
+  "searchLibraryHint": "搜索标题、作者、图源...",
+  "@searchLibraryHint": {
+    "description": "Placeholder text in the library search field"
+  },
+  "selectInBetween": "选取区间",
+  "@selectInBetween": {
+    "description": "Toast Text for selecting chapters in between first and last Chapters"
+  },
+  "selectNext10": "选取下 10 个",
+  "@selectNext10": {
+    "description": "Toast Text for selecting next 10 chapters"
+  },
+  "selectUnread": "选择未读",
+  "@selectUnread": {
+    "description": "Popup Text for selecting unread chapters"
+  },
+  "serverAddress": "服务器地址",
+  "serverBindings": "服务器绑定",
+  "@serverBindings": {
+    "description": "Title for server bindings settings"
+  },
+  "serverOwnSettingsCaption": "这些设置会修改 Suwayomi 服务器本身，而不是应用连接它的方式。",
+  "serverSettingsSubtitle": "配置 Suwayomi 服务器本身。",
+  "serverUnreachableTitle": "无法连接服务器",
+  "@serverUnreachableTitle": {
+    "description": "Shown when the app cannot connect to the Suwayomi server"
+  },
+  "serverUnreachableSubtitle": "请确认服务器正在运行，然后检查连接设置。",
+  "@serverUnreachableSubtitle": {
+    "description": "Guidance under the server-unreachable message"
+  },
+  "serverUnreachableAction": "连接设置",
+  "@serverUnreachableAction": {
+    "description": "Button that opens the connection settings screen"
+  },
+  "clearCrashLog": "清除调试日志",
+  "copyCrashLog": "复制调试日志",
+  "copyCrashLogSubtitle": "用于错误报告——复制近期错误和阅读器诊断信息",
+  "crashLogCleared": "已清除调试日志",
+  "crashLogCopied": "已复制调试日志到剪贴板",
+  "noCrashLog": "未找到调试日志",
+  "addLocalNetworkAddress": "添加局域网地址",
+  "serverExternalUrl": "外部/远程 URL",
+  "serverLanUrl": "内部/局域网 URL",
+  "serverLanUrlOptional": "可选",
+  "serverLanUrlHintText": "http://192.168.1.100:4567",
+  "serverActiveUrl": "当前连接",
+  "serverUsingLanUrl": "使用局域网",
+  "serverUsingExternalUrl": "使用远程",
+  "skipThisVersion": "这个版本不再提醒我",
+  "skipUpdatingEntries": "跳过正在更新的作品",
+  "@skipUpdatingEntries": {
+    "description": "Settings Text to update skip Updating Entries"
+  },
+  "socksHost": "SOCKS 主机",
+  "socksPassword": "SOCKS 密码",
+  "socksPort": "SOCKS 端口",
+  "socksProxy": "SOCKS 代理",
+  "@socksProxy": {
+    "description": "Section title for SOCKS Proxy settings"
+  },
+  "socksUserName": "SOCKS 用户名",
+  "socksVersion": "SOCKS 版本",
+  "@socksVersion": {
+    "description": "Title for Socks version picker"
+  },
+  "started": "已开始",
+  "@started": {
+    "description": "Library filter label: manga the user has started reading (read at least one chapter)"
+  },
+  "systemTrayIcon": "在系统托盘中显示图标",
+  "@systemTrayIcon": {
+    "description": "Switch title to Show icon in system tray in settings"
+  },
+  "thatHaventBeenStarted": "未开始",
+  "@thatHaventBeenStarted": {
+    "description": "Setting option Text for Skip updating entries to toggle That haven't been started"
+  },
+  "tomorrow": "明天",
+  "upcoming": "即将",
+  "upcomingGuide": "这是什么？",
+  "upcomingGuideBody": "预测书架中各作品的下次发布日期，依据其最近更新节奏估算。这些只是估算，不构成保证；已完结作品不会显示。",
+  "upcomingEmpty": "暂无预计的即将发布内容。书架积累足够章节历史后，会显示在这里。",
+  "unifiedSearchHint": "搜索书架、应用和图源",
+  "@unifiedSearchHint": {
+    "description": "Placeholder text in the unified search field"
+  },
+  "unifiedSearchLibrarySection": "书架",
+  "@unifiedSearchLibrarySection": {
+    "description": "Unified search section header"
+  },
+  "unifiedSearchGoToSection": "前往",
+  "@unifiedSearchGoToSection": {
+    "description": "Unified search section header for app navigation"
+  },
+  "unifiedSearchFiltersSection": "筛选器",
+  "@unifiedSearchFiltersSection": {
+    "description": "Unified search section header for operator autocomplete suggestions"
+  },
+  "unifiedSearchExamplesSection": "示例",
+  "@unifiedSearchExamplesSection": {
+    "description": "Unified search section header for example queries in the empty state"
+  },
+  "unifiedSearchAllSources": "在全部图源中搜索“{query}”",
+  "@unifiedSearchAllSources": {
+    "description": "Row that hands off to global source search",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "reinstall": "重新安装",
+  "@reinstall": {
+    "description": "Button tooltip on an installed extension: uninstall it and install it again"
+  },
+  "reinstalling": "正在重新安装",
+  "readProgressBar": "阅读进度条",
+  "updateFailed": "更新 {property} 失败",
+  "@updateFailed": {
+    "description": "Failed to update Text"
+  },
+  "updatesGroupingLabel": "章节分组",
+  "updatesGroupingHint": "将同一作品连续章节堆叠成一个可折叠条目。",
+  "updatesGroupingModeDisabled": "已禁用",
+  "updatesGroupingModeCollapsed": "折叠",
+  "updatesGroupingModeExpanded": "展开",
+  "updatesGroupingShowMore": "还有 {count} 项",
+  "@updatesGroupingShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "updatingLibrary": "正在更新书架…",
+  "updatingLibraryProgress": "正在更新书架（{percent}% · {checked}/{total}）",
+  "@updatingLibraryProgress": {
+    "description": "App-root banner text while a library update is running, once the job total is known. Percent alongside the raw checked/total counts (locked in the design spec: Komikku's banner is percent-only, ours adds counts since the data is already available).",
+    "placeholders": {
+      "percent": {
+        "example": "37",
+        "type": "int"
+      },
+      "checked": {
+        "example": "44",
+        "type": "int"
+      },
+      "total": {
+        "example": "120",
+        "type": "int"
+      }
+    }
+  },
+  "validating": "验证",
+  "@validating": {
+    "description": "toast to show backup validation is in progress"
+  },
+  "withCompletedStatus": "已完成状态",
+  "@withCompletedStatus": {
+    "description": "Setting option Text for Skip updating entries to toggle With Completed status"
+  },
+  "withUnreadChapter": "有未读章节",
+  "@withUnreadChapter": {
+    "description": "Setting option Text for Skip updating entries to toggle With unread chapter(s)"
+  },
+  "recentlyRead": "最近阅读",
+  "@recentlyRead": {
+    "description": "Recently Read Text to show reading history grouping"
+  },
+  "history": "历史",
+  "searchHistory": "搜索历史...",
+  "noHistoryFound": "未找到阅读历史",
+  "startReadingToSeeHistory": "开始阅读漫画后，历史记录会显示在这里",
+  "noSearchResults": "没有搜索结果",
+  "tryDifferentSearchTerm": "尝试不同的搜索词",
+  "errorOccurred": "发生错误",
+  "viewManga": "查看漫画",
+  "timeoutSettings": "超时设置",
+  "serverRequestTimeout": "服务器请求超时",
+  "@serverRequestTimeout": {
+    "description": "Controls how long to wait for server responses"
+  },
+  "serverRequestTimeoutDescription": "等待服务器响应的时间（秒）",
+  "autoRefreshOnTimeout": "超时后自动刷新",
+  "@autoRefreshOnTimeout": {
+    "description": "Toggle automatic retry on timeout"
+  },
+  "autoRefreshOnTimeoutDescription": "自动重试超时的请求",
+  "autoRefreshRetryDelay": "自动刷新重试延迟",
+  "@autoRefreshRetryDelay": {
+    "description": "Delay between auto retry attempts in seconds"
+  },
+  "autoRefreshRetryDelayDescription": "自动重试之间的延迟（秒）",
+  "offline": "离线",
+  "@offline": {
+    "description": "Settings entry and screen title for offline downloads"
+  },
+  "offlineStorageSection": "存储",
+  "@offlineStorageSection": {
+    "description": "Section header in Offline Settings"
+  },
+  "offlineStorageUsage": "已用存储",
+  "@offlineStorageUsage": {
+    "description": "Label for current offline storage usage tile"
+  },
+  "offlineRemoveAllDownloads": "移除全部下载",
+  "@offlineRemoveAllDownloads": {
+    "description": "Label for the remove-all tile in Offline Settings"
+  },
+  "offlineRemoveAllConfirm": "移除此设备的全部已下载章节？服务器书架不会受影响。",
+  "@offlineRemoveAllConfirm": {
+    "description": "Body text for remove-all confirmation dialog"
+  },
+  "offlineSafetyNets": "安全网",
+  "@offlineSafetyNets": {
+    "description": "Section header for safety net settings"
+  },
+  "offlineDownloadsSection": "下载",
+  "@offlineDownloadsSection": {
+    "description": "Section header for offline download behaviour settings"
+  },
+  "downloadOverWifiOnly": "仅通过 Wi-Fi 下载",
+  "@downloadOverWifiOnly": {
+    "description": "Toggle to restrict background downloads to Wi-Fi connections"
+  },
+  "downloadNewChaptersInBackground": "后台下载新章节",
+  "downloadNewChaptersInBackgroundDescription": "为离线保留的作品获取新章节，无需打开应用",
+  "backgroundCatchupFetchFiles": "后台下载文件",
+  "backgroundCatchupFetchFilesDescription": "关闭时，后台检查只会发现并排队新章节。文件会在下次打开应用时下载。",
+  "@backgroundCatchupFetchFilesDescription": {
+    "description": "Sub-option under downloadNewChaptersInBackground: whether the background run also downloads chapter files, or only detects/queues them"
+  },
+  "offlineConcurrencyLabel": "同时下载数",
+  "@offlineConcurrencyLabel": {
+    "description": "Label for the download concurrency slider"
+  },
+  "offlineConcurrencyValue": "每次 {count} 个",
+  "@offlineConcurrencyValue": {
+    "description": "Value subtitle for the download concurrency slider",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineStorageCapEnable": "限制离线存储",
+  "@offlineStorageCapEnable": {
+    "description": "Toggle to enable the storage cap safety net"
+  },
+  "offlineStorageCapLimit": "存储上限",
+  "@offlineStorageCapLimit": {
+    "description": "Label for the storage cap MB slider"
+  },
+  "offlineMegabytes": "{count} MB",
+  "@offlineMegabytes": {
+    "description": "Storage cap value shown as megabytes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineTimeEvictEnable": "自动移除旧下载",
+  "@offlineTimeEvictEnable": {
+    "description": "Toggle to enable time-based eviction"
+  },
+  "offlineKeepDaysLabel": "下载保留时间",
+  "@offlineKeepDaysLabel": {
+    "description": "Label for the keep-days slider"
+  },
+  "offlineDays": "{count} 天",
+  "@offlineDays": {
+    "description": "Keep-days value shown as days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineNotAvailable": "此平台不支持离线下载。",
+  "@offlineNotAvailable": {
+    "description": "Shown in Offline Settings when offline storage is unavailable"
+  },
+  "keepOffline": "离线保留",
+  "@keepOffline": {
+    "description": "Tooltip for the per-series keep-offline popup button in manga details"
+  },
+  "keepOfflineOff": "关闭",
+  "@keepOfflineOff": {
+    "description": "Keep-offline rule: disabled"
+  },
+  "keepOfflineNextUnread": "保留后续 {count} 个未读",
+  "@keepOfflineNextUnread": {
+    "description": "Keep-offline rule: keep the next N unread chapters downloaded (rolling buffer)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "keepOfflineAllUnread": "保留全部未读",
+  "@keepOfflineAllUnread": {
+    "description": "Keep-offline rule: keep all unread chapters on device"
+  },
+  "keepOfflineAll": "保留全部章节",
+  "@keepOfflineAll": {
+    "description": "Keep-offline rule: keep every chapter on device"
+  },
+  "offlineDownloadAction": "离线",
+  "@offlineDownloadAction": {
+    "description": "Series offline button label when nothing is downloaded yet"
+  },
+  "offlineOnDevice": "本机",
+  "@offlineOnDevice": {
+    "description": "Series offline button label when the series has downloads on this device"
+  },
+  "offlineSheetTitle": "离线阅读",
+  "viewOffline": "查看离线内容",
+  "@viewOffline": {
+    "description": "Button on loading screens that skips waiting for the server and shows the on-device library"
+  },
+  "offlineSheetSubtitle": "在本设备保存章节，并在阅读时自动补充。它与服务器下载（顶部的云图标）相互独立。",
+  "offlineDownloadAll": "下载全部章节",
+  "@offlineDownloadAll": {
+    "description": "Series offline action: download every chapter to this device"
+  },
+  "offlineRemoveSeries": "全部移除（此作品）",
+  "@offlineRemoveSeries": {
+    "description": "Series offline action: remove this series' downloads from the device"
+  },
+  "offlineDownloadingToast": "正在下载到此设备…",
+  "@offlineDownloadingToast": {
+    "description": "Snackbar shown after starting a series download"
+  },
+  "manageDownloads": "管理下载",
+  "@manageDownloads": {
+    "description": "Title/entry for the page listing on-device keep-rule subscriptions"
+  },
+  "manageDownloadsEmpty": "暂无下载订阅",
+  "manageDownloadsNothingYet": "尚无下载内容",
+  "offlineManualOnly": "仅手动",
+  "offlineManageHint": "已保存在此设备的作品。点按作品上的滑块图标可自动保留新章节，或移除作品以释放空间。长按可选择多个。",
+  "manageDownloadsChangeRule": "更改规则",
+  "manageDownloadsStopKeep": "停止保留（保留文件）",
+  "manageDownloadsStopDelete": "停止保留并删除文件",
+  "manageDownloadsKeepFilesConfirm": "停止自动保留 {count} 部作品，但保留已下载到此设备的章节？",
+  "@manageDownloadsKeepFilesConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "manageDownloadsDeleteConfirm": "停止保留 {count} 部作品，并从此设备删除其已下载章节？服务器副本不会受影响。",
+  "@manageDownloadsDeleteConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "manageDownloadsGrowConfirm": "这会为 {count} 部作品下载更多章节。是否继续？",
+  "@manageDownloadsGrowConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineDownloadingCount": "正在下载 {count} 项",
+  "@offlineDownloadingCount": {
+    "description": "Series button label while N chapters are downloading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsServerTab": "服务器",
+  "@downloadsServerTab": {
+    "description": "Downloads tab: the server download queue"
+  },
+  "downloadsOnDeviceTab": "本机",
+  "@downloadsOnDeviceTab": {
+    "description": "Downloads tab: files downloaded on this device"
+  },
+  "downloadsQueue": "队列",
+  "@downloadsQueue": {
+    "description": "Header title above the server download queue"
+  },
+  "downloadsServerHint": "服务器正在获取的章节。长按行可重新排序。",
+  "@downloadsServerHint": {
+    "description": "Hint shown above the server download queue"
+  },
+  "downloadPagesProgress": "{done}/{total} 页",
+  "@downloadPagesProgress": {
+    "description": "Progress text for a downloading chapter, e.g. 24/25 pages",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineNoFiles": "此设备尚未下载任何内容",
+  "@offlineNoFiles": {
+    "description": "Empty state for the on-device downloads tab"
+  },
+  "tracking": "追踪",
+  "@tracking": {
+    "description": "Settings entry and screen title for the Tracking screen"
+  },
+  "yourRating": "你的评分",
+  "addTag": "添加标签",
+  "tags": "标签",
+  "searchForSources": "搜索图源",
+  "searchForExtensions": "搜索插件",
+  "noTagsYet": "书架中还没有标签",
+  "copyToClipboard": "复制到剪贴板",
+  "copiedToClipboard": "已复制到剪贴板",
+  "searchTips": "搜索技巧",
+  "searchTipsBody": "使用 key:value 按字段筛选。\n\ntag:seinen（图源标签或自定义标签）\ngenre:action（图源分类）\nauthor:oda\nstatus:ongoing（也支持 completed、hiatus、cancelled）\nsource:mangadex\ntracked:true、tracked:anilist\nrating:>=4（你的评分）\nunread:true、downloaded:true\n\n多词值请加引号：tag:\"slice of life\"\n用减号排除：-tag:dropped",
+  "updateProgressAfterReading": "阅读后更新进度",
+  "@updateProgressAfterReading": {
+    "description": "Toggle label: automatically sync reading progress after a chapter is read"
+  },
+  "updateProgressManualMarkRead": "标记为已读时更新进度",
+  "@updateProgressManualMarkRead": {
+    "description": "Toggle label: sync progress when a chapter is manually marked as read"
+  },
+  "updateProgressManualMarkReadDesc": "不适用于批量标记已读",
+  "@updateProgressManualMarkReadDesc": {
+    "description": "Subtitle for the manual-mark-read progress toggle"
+  },
+  "trackers": "追踪服务",
+  "@trackers": {
+    "description": "Section header listing connected tracker accounts"
+  },
+  "logIn": "登录",
+  "@logIn": {
+    "description": "Button label to log in to a tracker account"
+  },
+  "logOut": "退出登录",
+  "@logOut": {
+    "description": "Button label to log out of a tracker account"
+  },
+  "reLogin": "令牌已过期——请重新登录",
+  "@reLogin": {
+    "description": "Subtitle shown on a tracker tile when the token is expired, prompting the user to log in again"
+  },
+  "trackerLoginSuccess": "已登录 {trackerName}",
+  "@trackerLoginSuccess": {
+    "description": "Toast shown after a successful tracker login",
+    "placeholders": {
+      "trackerName": {
+        "type": "String"
+      }
+    }
+  },
+  "manageTrackers": "管理追踪服务",
+  "@manageTrackers": {
+    "description": "Button / list-tile label that opens the Tracking settings screen from the track hub sheet"
+  },
+  "noTrackersLoggedIn": "请登录一个追踪服务",
+  "@noTrackersLoggedIn": {
+    "description": "Empty-state message shown in the track hub sheet when no tracker account is logged in"
+  },
+  "addTracking": "添加追踪",
+  "@addTracking": {
+    "description": "Button label on an unbound tracker card in the hub sheet; tapping opens the tracker search to bind a remote entry"
+  },
+  "logInToEdit": "登录后编辑",
+  "@logInToEdit": {
+    "description": "Button shown on a read-only tracker card when the tracker account is logged out but the manga already has a bound record; tapping pops the sheet and opens Tracking Settings"
+  },
+  "track": "追踪",
+  "@track": {
+    "description": "Primary button label in the tracker search sheet; tapping binds the selected remote entry to the manga"
+  },
+  "trackPrivately": "私密追踪",
+  "@trackPrivately": {
+    "description": "Secondary button label in the tracker search sheet; tapping binds the selected entry with the private flag enabled"
+  },
+  "trackBindSuccess": "已添加到 {trackerName}",
+  "@trackBindSuccess": {
+    "description": "Success toast shown after a manga is successfully bound to a tracker",
+    "placeholders": {
+      "trackerName": {
+        "type": "String"
+      }
+    }
+  },
+  "trackStatus": "状态",
+  "@trackStatus": {
+    "description": "Row label for the track status field in the track editor"
+  },
+  "trackScore": "评分",
+  "@trackScore": {
+    "description": "Row label for the track score field in the track editor"
+  },
+  "trackChaptersRead": "已读章节",
+  "@trackChaptersRead": {
+    "description": "Row label for the chapters-read field in the track editor"
+  },
+  "trackStartDate": "开始日期",
+  "@trackStartDate": {
+    "description": "Row label for the start-date field in the track editor"
+  },
+  "trackFinishDate": "完成日期",
+  "@trackFinishDate": {
+    "description": "Row label for the finish-date field in the track editor"
+  },
+  "trackRemoveEntry": "移除追踪",
+  "@trackRemoveEntry": {
+    "description": "Overflow menu item that removes the track record"
+  },
+  "trackRemoveConfirmTitle": "移除追踪？",
+  "@trackRemoveConfirmTitle": {
+    "description": "Title of the confirmation dialog when removing a track record"
+  },
+  "trackRemoveConfirmBody": "这会从 {trackerName} 移除追踪记录。",
+  "@trackRemoveConfirmBody": {
+    "description": "Body of the remove-tracking confirmation dialog",
+    "placeholders": {
+      "trackerName": {
+        "type": "String"
+      }
+    }
+  },
+  "trackRemoveAlsoOnRemote": "同时从 {trackerName} 移除",
+  "@trackRemoveAlsoOnRemote": {
+    "description": "Checkbox in the remove-tracking dialog that also deletes the entry on the tracker service",
+    "placeholders": {
+      "trackerName": {
+        "type": "String"
+      }
+    }
+  },
+  "trackMarkPrivate": "私密追踪",
+  "@trackMarkPrivate": {
+    "description": "Overflow menu item that marks the track record as private"
+  },
+  "trackMarkPublic": "公开追踪",
+  "@trackMarkPublic": {
+    "description": "Overflow menu item that marks the track record as public"
+  },
+  "trackChangeEntry": "更改条目",
+  "@trackChangeEntry": {
+    "description": "Overflow menu item that opens the tracker search to rebind to a different entry"
+  },
+  "trackPrivateBadge": "私密",
+  "@trackPrivateBadge": {
+    "description": "Badge shown on a private track record in the track editor header"
+  },
+  "group": "分组",
+  "@group": {
+    "description": "Label for the Group tab in the library organizer sheet (Filter/Sort/Display/Group)"
+  },
+  "groupByDefault": "默认",
+  "@groupByDefault": {
+    "description": "Group mode: by category (the existing category tabs behaviour)"
+  },
+  "groupBySource": "按图源",
+  "@groupBySource": {
+    "description": "Group mode: one tab per manga source"
+  },
+  "groupByStatus": "按状态",
+  "@groupByStatus": {
+    "description": "Group mode: one tab per publication status"
+  },
+  "groupUngrouped": "未分组",
+  "@groupUngrouped": {
+    "description": "Group mode: single tab containing all library manga"
+  },
+  "groupByTrackStatus": "按追踪状态",
+  "@groupByTrackStatus": {
+    "description": "Group mode: one tab per tracker status (Reading, Completed, etc.); gated on logged-in trackers"
+  },
+  "filterTracked": "已追踪",
+  "@filterTracked": {
+    "description": "Filter section heading shown when at least one tracker is logged in"
+  },
+  "copyPageLink": "复制页面链接",
+  "@copyPageLink": {
+    "description": "Reader page-actions sheet: copy the clean image URL of the current page to the clipboard"
+  },
+  "copyImageToClipboard": "复制",
+  "@copyImageToClipboard": {
+    "description": "Reader page-actions sheet: copy the current page image itself to the clipboard"
+  },
+  "copiedImage": "图片已复制",
+  "@copiedImage": {
+    "description": "Toast shown after the current page image was copied to the clipboard"
+  },
+  "shareImage": "分享图片",
+  "@shareImage": {
+    "description": "Reader page-actions sheet: share the current page image file via the system share sheet"
+  },
+  "saveToGallery": "保存到相册",
+  "@saveToGallery": {
+    "description": "Reader page-actions sheet: save the current page image to the device photo gallery"
+  },
+  "copyFirstPage": "复制第一页",
+  "@copyFirstPage": {
+    "description": "Reader page-actions sheet: copy the first page image in a two-page spread"
+  },
+  "shareFirstPage": "分享第一页",
+  "@shareFirstPage": {
+    "description": "Reader page-actions sheet: share the first page image in a two-page spread"
+  },
+  "saveFirstPage": "保存第一页",
+  "@saveFirstPage": {
+    "description": "Reader page-actions sheet: save the first page image in a two-page spread"
+  },
+  "copySecondPage": "复制第二页",
+  "@copySecondPage": {
+    "description": "Reader page-actions sheet: copy the second page image in a two-page spread"
+  },
+  "shareSecondPage": "分享第二页",
+  "@shareSecondPage": {
+    "description": "Reader page-actions sheet: share the second page image in a two-page spread"
+  },
+  "saveSecondPage": "保存第二页",
+  "@saveSecondPage": {
+    "description": "Reader page-actions sheet: save the second page image in a two-page spread"
+  },
+  "copySpread": "复制跨页",
+  "@copySpread": {
+    "description": "Reader page-actions sheet: copy a combined two-page spread image"
+  },
+  "shareSpread": "分享跨页",
+  "@shareSpread": {
+    "description": "Reader page-actions sheet: share a combined two-page spread image"
+  },
+  "saveSpread": "保存跨页",
+  "@saveSpread": {
+    "description": "Reader page-actions sheet: save a combined two-page spread image"
+  },
+  "savedToGallery": "已保存到相册",
+  "@savedToGallery": {
+    "description": "Toast shown after the current page image was saved to the device gallery"
+  },
+  "zoomStart": "缩放起始位置",
+  "@zoomStart": {
+    "description": "Section label for the paged zoom-start chip row"
+  },
+  "zoomStartAutomatic": "自动",
+  "@zoomStartAutomatic": {
+    "description": "Zoom start position chip"
+  },
+  "zoomStartCenter": "居中",
+  "@zoomStartCenter": {
+    "description": "Zoom start position chip"
+  },
+  "zoomStartLeft": "左侧",
+  "@zoomStartLeft": {
+    "description": "Zoom start position chip"
+  },
+  "zoomStartRight": "右侧",
+  "@zoomStartRight": {
+    "description": "Zoom start position chip"
+  },
+  "offlineServerMismatch": "你的离线下载来自另一台服务器。",
+  "offlineServerMismatchDisabled": "此处离线功能已关闭。请清除另一服务器的下载后再使用。",
+  "offlineServerMismatchClear": "清除旧下载",
+  "offlineServerMismatchDismiss": "忽略",
+  "offlineServerMismatchConfirmTitle": "清除离线数据？",
+  "offlineServerMismatchConfirmBody": "这会移除之前服务器保存在本设备的全部漫画和排队下载。",
+  "offlineServerMismatchClearAction": "清除离线数据",
+  "keyboardShortcuts": "键盘快捷键",
+  "@keyboardShortcuts": {
+    "description": "Settings tile + Hotkeys page title"
+  },
+  "hotkeysGlobalSection": "全局",
+  "@hotkeysGlobalSection": {
+    "description": "Hotkeys page section header"
+  },
+  "hotkeysReaderSection": "阅读器",
+  "@hotkeysReaderSection": {
+    "description": "Hotkeys page section header"
+  },
+  "hotkeyGoBack": "返回",
+  "@hotkeyGoBack": {
+    "description": "Hotkey action"
+  },
+  "hotkeyOpenLibrary": "打开书架",
+  "@hotkeyOpenLibrary": {
+    "description": "Hotkey action"
+  },
+  "hotkeyOpenDownloads": "打开下载",
+  "@hotkeyOpenDownloads": {
+    "description": "Hotkey action"
+  },
+  "hotkeyOpenSearch": "搜索",
+  "@hotkeyOpenSearch": {
+    "description": "Hotkey action"
+  },
+  "hotkeyReaderPrevPage": "上一页",
+  "@hotkeyReaderPrevPage": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderNextPage": "下一页",
+  "@hotkeyReaderNextPage": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderFirstPage": "第一页",
+  "@hotkeyReaderFirstPage": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderLastPage": "最后一页",
+  "@hotkeyReaderLastPage": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderPrevChapter": "上一章",
+  "@hotkeyReaderPrevChapter": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderNextChapter": "下一章",
+  "@hotkeyReaderNextChapter": {
+    "description": "Reader hotkey action"
+  },
+  "hotkeyReaderToggleMenu": "切换菜单",
+  "@hotkeyReaderToggleMenu": {
+    "description": "Reader hotkey action"
+  },
+  "extensionStores": "插件商店",
+  "@extensionStores": {
+    "description": "Screen title for the Extension stores screen"
+  },
+  "extensionStoresDescription": "添加服务器安装插件时使用的插件商店",
+  "@extensionStoresDescription": {
+    "description": "Subtitle for the Extension stores settings row when no stores are added yet"
+  },
+  "recommendsInOverflow": "推荐放入更多菜单",
+  "@recommendsInOverflow": {
+    "description": "Setting to move the recommendations button into the overflow menu"
+  },
+  "recommendsInOverflowSubtitle": "将推荐移动到更多菜单，而不是在漫画页面显示一行推荐",
+  "@recommendsInOverflowSubtitle": {
+    "description": "Subtitle for the recommendations-in-overflow setting"
+  },
+  "addExtensionStore": "添加插件商店",
+  "@addExtensionStore": {
+    "description": "Title of the dialog used to add an extension store"
+  },
+  "storeIndexUrl": "商店索引 URL",
+  "@storeIndexUrl": {
+    "description": "Label for the index URL field in the Add extension store dialog"
+  },
+  "extensionStoreAlreadyExists": "此插件商店已存在",
+  "@extensionStoreAlreadyExists": {
+    "description": "Validation error shown when the entered store URL is already in the list"
+  },
+  "processing": "正在处理…",
+  "@processing": {
+    "description": "Button label shown while an extension store is being added"
+  },
+  "removeExtensionStore": "移除插件商店",
+  "@removeExtensionStore": {
+    "description": "Title of the confirmation dialog for removing an extension store"
+  },
+  "removeExtensionStoreBody": "要移除插件商店“{name}”（{url}）吗？",
+  "@removeExtensionStoreBody": {
+    "description": "Body of the confirmation dialog for removing an extension store",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "extensionStoresEmpty": "你还没有添加插件商店",
+  "@extensionStoresEmpty": {
+    "description": "Empty state text on the Extension stores screen"
+  },
+  "nStores": "{count, plural, =1{1 家商店} other{{count} 家商店}}",
+  "@nStores": {
+    "description": "Text to show n extension stores as subtitle",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "add": "添加",
+  "@add": {
+    "description": "Generic button text for Add"
+  },
+  "preferredScanlationGroups": "首选汉化组",
+  "@preferredScanlationGroups": {
+    "description": "Title for the preferred scanlation groups filter-sheet row and ranking dialog"
+  },
+  "preferredGroupsHint": "勾选的组按顺序优先；未覆盖的章节会回退到其他组。",
+  "@preferredGroupsHint": {
+    "description": "Hint text explaining the preferred scanlation groups ranking dialog"
+  },
+  "noGroupPreference": "无偏好",
+  "@noGroupPreference": {
+    "description": "Subtitle shown when no preferred scanlation groups are set"
+  },
+  "showAllChapterVersions": "显示所有版本",
+  "@showAllChapterVersions": {
+    "description": "Switch title to show every scanlator's copy of each chapter instead of the deduped preferred version"
+  },
+  "unknownScanlator": "未知",
+  "@unknownScanlator": {
+    "description": "Label for chapters with no scanlator group, shown in the preferred scanlation groups dialog"
+  },
+  "possibleDuplicatesTitle": "可能重复",
+  "@possibleDuplicatesTitle": {
+    "description": "Title of the dialog shown when a manga being added may already be in the library"
+  },
+  "possibleDuplicatesBody": "书架中有名称相似的作品。\n\n请选择要迁移的作品，或仍然添加。",
+  "@possibleDuplicatesBody": {
+    "description": "Body text of the possible-duplicates dialog shown before adding a manga to the library"
+  },
+  "actionAddAnyway": "仍然添加",
+  "@actionAddAnyway": {
+    "description": "Button text to add a manga to the library despite a possible duplicate"
+  },
+  "duplicateSameTrackerEntry": "相同的 {tracker} 记录",
+  "@duplicateSameTrackerEntry": {
+    "description": "Label on a duplicate candidate that shares a tracker binding, naming the tracker",
+    "placeholders": {
+      "tracker": {
+        "type": "String"
+      }
+    }
+  },
+  "duplicateSameTrackerEntryGeneric": "相同的追踪记录",
+  "@duplicateSameTrackerEntryGeneric": {
+    "description": "Label on a duplicate candidate that shares a tracker binding when the tracker's name isn't known"
+  },
+  "duplicateAllowAll": "全部允许",
+  "@duplicateAllowAll": {
+    "description": "Button text to add every remaining duplicate candidate during a bulk add"
+  },
+  "duplicateSkipIt": "跳过此项",
+  "@duplicateSkipIt": {
+    "description": "Button text to skip a single duplicate candidate during a bulk add"
+  },
+  "duplicateSkipAll": "全部跳过",
+  "@duplicateSkipAll": {
+    "description": "Button text to skip every remaining duplicate candidate during a bulk add"
+  },
+  "actionShowEntry": "显示作品",
+  "@actionShowEntry": {
+    "description": "Button text to open the existing library entry from a duplicate candidate"
+  },
+  "bulkAddedSkipped": "已添加 {added}，跳过 {skipped}",
+  "@bulkAddedSkipped": {
+    "description": "Summary toast after a bulk add where some entries were skipped as duplicates",
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkAdded": "已将 {added} 加入书架",
+  "@bulkAdded": {
+    "description": "Summary toast after a bulk add where no entries were skipped",
+    "placeholders": {
+      "added": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicatedEntries": "重复条目",
+  "@duplicatedEntries": {
+    "description": "Title of the library settings row that opens the library-wide duplicate scan"
+  },
+  "duplicatedEntriesSubtitle": "显示书架中的全部重复条目",
+  "@duplicatedEntriesSubtitle": {
+    "description": "Subtitle of the library settings row that opens the library-wide duplicate scan"
+  },
+  "scanForDuplicates": "扫描重复项",
+  "@scanForDuplicates": {
+    "description": "Button text to run the library-wide duplicate scan"
+  },
+  "checkDescription": "检查简介",
+  "@checkDescription": {
+    "description": "Switch title to include description-substring matching in the duplicate scan"
+  },
+  "duplicatesOfflineTitleOnly": "离线：仅按标题匹配",
+  "@duplicatesOfflineTitleOnly": {
+    "description": "Notice shown during the duplicate scan while offline, since tracker and description matching need server data"
+  },
+  "duplicatesRemoveConfirm": "{count, plural, =1{从书架移除 1 部作品？} other{从书架移除 {count} 部作品？}}这也会删除此设备上的已下载章节。",
+  "@duplicatesRemoveConfirm": {
+    "description": "Confirmation dialog body for removing entries found by the duplicate scan",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicatesRemoveOfflineTooltip": "重新连接服务器后才能移除作品",
+  "@duplicatesRemoveOfflineTooltip": {
+    "description": "Tooltip on the disabled remove action in the duplicate scan while offline"
+  },
+  "duplicatesRemoved": "已从书架移除 {count} 部作品",
+  "@duplicatesRemoved": {
+    "description": "Toast after removing entries from the duplicate scan when all removals succeeded",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicatesRemovedPartial": "已移除 {removed}/{total}。其余作品无法移除。",
+  "@duplicatesRemovedPartial": {
+    "description": "Toast after removing entries from the duplicate scan when a removal failed partway, so fewer were removed than requested",
+    "placeholders": {
+      "removed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineChaptersScreenTitle": "已下载章节",
+  "@offlineChaptersScreenTitle": {
+    "description": "AppBar title for the offline series drill-down chapter list"
+  },
+  "offlineChaptersActiveSection": "下载中/排队",
+  "@offlineChaptersActiveSection": {
+    "description": "Section header for chapters currently downloading or queued in the offline chapter list"
+  },
+  "offlineChaptersDownloadedSection": "已下载",
+  "@offlineChaptersDownloadedSection": {
+    "description": "Section header for fully downloaded chapters in the offline chapter list"
+  },
+  "offlineChaptersErrorSection": "失败",
+  "@offlineChaptersErrorSection": {
+    "description": "Section header for chapters that failed to download"
+  },
+  "offlineChaptersEmpty": "此设备尚未保存章节。",
+  "@offlineChaptersEmpty": {
+    "description": "Empty state for the offline chapter drill-down screen"
+  },
+  "offlineChapterRetry": "重试",
+  "@offlineChapterRetry": {
+    "description": "Button to retry a failed chapter download"
+  },
+  "offlineChapterDelete": "从设备移除",
+  "@offlineChapterDelete": {
+    "description": "Button / tooltip to remove an on-device chapter"
+  },
+  "offlineChaptersQueued": "排队中",
+  "@offlineChaptersQueued": {
+    "description": "Status label for a chapter waiting in the download queue"
+  },
+  "notificationDownloadsPausedBudget": "Android 的后台下载上限已达到。打开 Tsumiru 重试。"
 }
