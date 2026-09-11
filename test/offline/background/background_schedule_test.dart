@@ -388,6 +388,18 @@ void main() {
 
       expect(schedule.oneOffRegistrations, hasLength(1));
       expect(schedule.cancellations, isEmpty);
+
+      // A pending fetch the executor has given up on is not worth a wake.
+      await CatchupStateStore(prefs).writeLedger(
+        'catalog',
+        const CatchupLedger(
+          pendingServerFetch: {99: 1},
+          serverFetchRetries: {99: kMaxChapterAttempts},
+        ),
+      );
+      await reconcileBackgroundSchedule();
+
+      expect(schedule.oneOffRegistrations, hasLength(1));
     },
   );
 

@@ -83,11 +83,11 @@ Future<void> reconcileBackgroundSchedule() =>
       // hop completes promptly — this is the "a chapter is regularly forgotten
       // in catch-up" case. It's a one-off (not periodic), so it needs no
       // explicit cancel: while the obligation persists each run re-arms it
-      // (replace), and once pendingServerFetch drains — the download lands, or
-      // the executor's retry budget exhausts the entry — we simply stop
-      // re-arming and the last queued one fires once more, harmlessly.
+      // (replace), and once nothing pending has strikes left — the download
+      // lands, or the executor gave up on it — we simply stop re-arming and
+      // the last queued one fires once more, harmlessly.
       if (downloadDemand &&
-          state.readLedger(spec!.serverId).pendingServerFetch.isNotEmpty) {
+          state.readLedger(spec!.serverId).hasActionableServerFetch) {
         await Workmanager().registerOneOffTask(
           kNewChapterFollowUpName,
           kNewChapterCheckTask,

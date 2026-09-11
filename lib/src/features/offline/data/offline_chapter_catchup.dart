@@ -149,6 +149,7 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
         fresh.copyWith(
           pendingServerFetch: const {},
           serverFetchRetries: const {},
+          serverFetchAskedAt: const {},
         ),
       );
     } finally {
@@ -349,7 +350,12 @@ Future<bool> _syncAndReconcile(
         continue;
       }
       final newlyRead = await sync.syncChapters(chapters);
-      if (!await _reconcileTracked(container, mangaId, newlyReadChapterIds: newlyRead)) allSynced = false;
+      if (!await _reconcileTracked(
+        container,
+        mangaId,
+        newlyReadChapterIds: newlyRead,
+      ))
+        allSynced = false;
     } catch (e) {
       // Never reconcile on a failed fetch — evictions must not run against a
       // list the server didn't actually give us.
