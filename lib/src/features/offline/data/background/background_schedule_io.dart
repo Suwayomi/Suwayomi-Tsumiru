@@ -62,18 +62,46 @@ Future<void> reconcileBackgroundSchedule() =>
       final downloadDemand = queue || catchup;
       final wifiOnly =
           (!notices || config!.wifiOnly) && (!downloadDemand || spec!.wifiOnly);
+      final networkType = wifiOnly
+          ? NetworkType.unmetered
+          : NetworkType.connected;
       await Workmanager().registerPeriodicTask(
         kNewChapterPeriodicName,
         kNewChapterCheckTask,
         frequency: Duration(hours: (config?.intervalHours ?? 6).clamp(1, 6)),
         constraints: Constraints(
-          networkType: wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+          networkType: networkType,
           requiresCharging: !downloadDemand && (config?.chargingOnly ?? false),
           requiresBatteryNotLow: true,
         ),
         existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       );
+      // A freshly-published upstream chapter is usually not yet downloaded on
+      // the server, so the last run asked the server to fetch it and deferred
+      // the device pull to a later wake. Nudge that wake to happen in minutes
+      // instead of the next full period (or the next app launch) so the second
+      // hop completes promptly — this is the "a chapter is regularly forgotten
+      // in catch-up" case. It's a one-off (not periodic), so it needs no
+      // explicit cancel: while the obligation persists each run re-arms it
+      // (replace), and once pendingServerFetch drains — the download lands, or
+      // the executor's retry budget exhausts the entry — we simply stop
+      // re-arming and the last queued one fires once more, harmlessly.
+      if (downloadDemand &&
+          state.readLedger(spec!.serverId).pendingServerFetch.isNotEmpty) {
+        await Workmanager().registerOneOffTask(
+          kNewChapterFollowUpName,
+          kNewChapterCheckTask,
+          initialDelay: _followUpDelay,
+          constraints: Constraints(networkType: networkType),
+          existingWorkPolicy: ExistingWorkPolicy.replace,
+        );
+      }
     });
+
+/// How long after a run leaves a server-fetch pending before the follow-up wake
+/// retries the second hop. Long enough for the server to finish its own
+/// download of a typical chapter, short enough to beat the 1-6h periodic gap.
+const _followUpDelay = Duration(minutes: 15);
 
 bool queuedChapterTerminal(List<LogEntry> entries, QueuedChapterSpec chapter) {
   var generation = -1;

@@ -10,8 +10,13 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../offline/data/background/background_token_record.dart'
-    show BackgroundTokenRecord, TokenBroker, applyIsolateCustomHeaders;
+    show
+        BackgroundTokenRecord,
+        TokenBroker,
+        applyIsolateCustomHeaders,
+        isGraphqlAuthError;
 
 /// Where + how the background worker reaches the server. Persisted so the
 /// WorkManager isolate (no Riverpod, no widget tree) can rebuild it.
@@ -96,11 +101,30 @@ class NotificationBackgroundClient {
     Map<String, Object?> variables,
   ) async {
     var res = await _raw(query, variables, _record.accessToken);
-    if (identical(res, _authError) && _record.authType == 'uiLogin') {
-      final fresh = await broker.resolveAfter401(_record.accessToken ?? '');
-      if (fresh != null) {
-        _record = await broker.read();
-        res = await _raw(query, variables, fresh);
+    if (identical(res, _authError)) {
+      if (_record.authType == 'uiLogin') {
+        final fresh = await broker.resolveAfter401(_record.accessToken ?? '');
+        if (fresh != null) {
+          _record = await broker.read();
+          res = await _raw(query, variables, fresh);
+        } else {
+          // The access token was rejected AND the refresh did not yield a new
+          // one. transient=true means the refresh call itself couldn't reach
+          // the server (retry later); transient=false means the server
+          // rejected the refresh token — auth is genuinely dead until the app
+          // is reopened and re-authenticates. This is the single most likely
+          // reason a background run that worked once fails on every wake after
+          // the access token expires.
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-graphql: '
+            'refresh-failed transient=${broker.lastRefreshTransient}\n',
+          );
+        }
+      } else {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-graphql: '
+          'auth-rejected authType=${_record.authType} (no refresh path)\n',
+        );
       }
     }
     return res is Map<String, Object?> ? res : null;
@@ -122,12 +146,42 @@ class NotificationBackgroundClient {
           )
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 401 || res.statusCode == 403) return _authError;
-      if (res.statusCode != 200) return _networkError;
+      if (res.statusCode != 200) {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-graphql: '
+          'http-error status=${res.statusCode}\n',
+        );
+        return _networkError;
+      }
       final decoded = jsonDecode(res.body) as Map<String, Object?>;
+      // Suwayomi returns an expired/invalid access token as HTTP 200 with a
+      // GraphQL auth error (extensions.http.status == 401, or an "unauthorized"
+      // message), NOT an HTTP 401 — verifyJwt downgrades a bad token to Visitor
+      // and the @requireAuth field errors IN-BAND. The foreground
+      // SuwayomiAuthLink detects exactly this; the background must too. Without
+      // it the broker refresh below never fires, so every background run past
+      // the server's 5-minute access-token lifetime fails — the notification
+      // check and download resolution both return null and the worker reports
+      // ok=false forever until the app is reopened. This was THE overnight bug.
+      if (isGraphqlAuthError(decoded['errors'])) return _authError;
       return decoded['data'] as Map<String, Object?>?;
-    } on SocketException {
+    } on SocketException catch (e) {
+      // Server unreachable (self-hosted server asleep, off the LAN/VPN, DNS) —
+      // distinct from an auth failure. Recorded so a background run that fails
+      // because the server is simply not reachable overnight is not mistaken
+      // for an expired-token problem.
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-graphql: '
+        'socket-error ${e.osError?.message ?? e.message}\n',
+      );
       return _networkError;
-    } catch (_) {
+    } catch (e) {
+      // Includes TimeoutException from the 10s cap above — a slow/unreachable
+      // server rather than a rejection.
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-graphql: '
+        'request-error $e\n',
+      );
       return _networkError;
     }
   }

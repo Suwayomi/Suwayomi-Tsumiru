@@ -120,6 +120,10 @@ Future<Object?> postBackgroundGraphql({
     if (isGatewayStatus(res.statusCode)) return gqlNetworkError;
     if (res.statusCode != 200) return null;
     final decoded = jsonDecode(res.body) as Map<String, Object?>;
+    // Expired token comes back as HTTP 200 with an in-band GraphQL 401, not a
+    // real 401 (see isGraphqlAuthError) — route it to the broker refresh above
+    // instead of treating a null data payload as "no result".
+    if (isGraphqlAuthError(decoded['errors'])) return gqlAuthError;
     return decoded['data'];
   } on SocketException {
     return gqlNetworkError;

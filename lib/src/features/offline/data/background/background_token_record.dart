@@ -83,6 +83,30 @@ Map<String, String> applyIsolateCustomHeaders(
   return headers;
 }
 
+/// Suwayomi reports an expired/invalid access token as HTTP **200** with a
+/// GraphQL error carrying `extensions.http.status == 401` (or an "unauthorized"
+/// message), NOT an HTTP 401 — `verifyJwt` downgrades a bad token to a Visitor
+/// and the `@requireAuth` field errors in-band. Every background GraphQL path
+/// must treat this like a 401 so the broker refresh fires; the foreground
+/// `SuwayomiAuthLink` already does. Without it, once the server's short
+/// (default 5-minute) access token expires, every background run fails silently
+/// and never refreshes. Shared by the notification client and the catch-up
+/// fetch path so both detect it identically.
+bool isGraphqlAuthError(Object? errors) {
+  if (errors is! List) return false;
+  for (final err in errors) {
+    if (err is! Map) continue;
+    final ext = err['extensions'];
+    final http = ext is Map ? ext['http'] : null;
+    if (http is Map && http['status'] == 401) return true;
+    final message = err['message'];
+    if (message is String && message.toLowerCase().contains('unauthor')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Outcome of one refresh attempt: the new tokens on success, or a failure
 /// that distinguishes "the refresh call itself couldn't reach the server"
 /// (transient — retry later, auth may still be fine) from "the server

@@ -68,6 +68,26 @@ class _Schedule extends WorkmanagerPlatform {
     if (refuseRegistration) throw StateError('Scheduler unavailable');
   }
 
+  final oneOffRegistrations = <({String name, Duration? initialDelay})>[];
+
+  @override
+  Future<void> registerOneOffTask(
+    String uniqueName,
+    String taskName, {
+    String? tag,
+    ExistingWorkPolicy? existingWorkPolicy,
+    Duration? initialDelay,
+    Constraints? constraints,
+    BackoffPolicy? backoffPolicy,
+    Duration? backoffPolicyDelay,
+    OutOfQuotaPolicy? outOfQuotaPolicy,
+    Map<String, dynamic>? inputData,
+    ForegroundServiceConfig? foregroundServiceConfig,
+    bool expedited = false,
+  }) async {
+    oneOffRegistrations.add((name: uniqueName, initialDelay: initialDelay));
+  }
+
   @override
   Future<void> cancelByUniqueName(String uniqueName) async {
     cancellations.add(uniqueName);
@@ -335,6 +355,38 @@ void main() {
       expect(CatchupStateStore(prefs).downloadEnabled, isFalse);
       expect(NotificationStateStore(prefs).readConfig()!.anyEnabled, isFalse);
       expect(schedule.registrations.single.networkType, NetworkType.connected);
+      expect(schedule.cancellations, isEmpty);
+    },
+  );
+
+  test(
+    'a pending server-fetch arms a short follow-up wake that stops re-arming when it clears',
+    () async {
+      await config();
+      await writeCatchupWorkSpec(container.read);
+      await CatchupStateStore(prefs).writeLedger(
+        'catalog',
+        const CatchupLedger(pendingServerFetch: {99: 1}),
+      );
+      await reconcileBackgroundSchedule();
+
+      expect(schedule.oneOffRegistrations, hasLength(1));
+      expect(schedule.oneOffRegistrations.single.name, kNewChapterFollowUpName);
+      expect(
+        schedule.oneOffRegistrations.single.initialDelay,
+        const Duration(minutes: 15),
+      );
+
+      // The obligation clears (download landed, or the retry budget drained):
+      // a one-off self-expires after one fire, so reconcile must simply stop
+      // re-arming it — no new registration, and no spurious cancellation that
+      // would pollute the periodic-schedule bookkeeping.
+      await CatchupStateStore(
+        prefs,
+      ).writeLedger('catalog', const CatchupLedger());
+      await reconcileBackgroundSchedule();
+
+      expect(schedule.oneOffRegistrations, hasLength(1));
       expect(schedule.cancellations, isEmpty);
     },
   );
