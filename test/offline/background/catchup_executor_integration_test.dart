@@ -38,6 +38,9 @@ void main() {
   late Map<int, List<String>> pageUrls;
   late Completer<void> pageRequested;
   late Completer<void> releasePage;
+  late Set<int> serverMissing;
+  late List<int> enqueued;
+  late DateTime clock;
   const token = BackgroundTokenRecord(gen: 0, authType: 'none');
   final broker = TokenBroker(
     read: () async => token,
@@ -51,6 +54,7 @@ void main() {
       config: config,
       record: () => token,
       broker: broker,
+      now: () => clock,
     ),
     createHttpClient: _RealHttpOverrides().createHttpClient,
   );
@@ -65,6 +69,9 @@ void main() {
     serverChapterCount = 30;
     serverIdentity = 'catalog-uuid';
     pageUrls = {};
+    serverMissing = {};
+    enqueued = [];
+    clock = DateTime(2026, 9, 11, 2);
     pageRequested = Completer<void>();
     releasePage = Completer<void>();
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -102,10 +109,18 @@ void main() {
                   'chapterNumber': index + 1,
                   'isRead': false,
                   'isBookmarked': false,
-                  'isDownloaded': true,
+                  'isDownloaded': !serverMissing.contains(index + 1),
                   'pageCount': 1,
                 },
               ),
+            },
+          };
+        } else if (query.contains('EnqueueDownloads')) {
+          final ids = (body['variables'] as Map)['input']['ids'] as List;
+          enqueued.addAll(ids.cast<int>());
+          data = {
+            'enqueueChapterDownloads': {
+              '__typename': 'EnqueueChapterDownloadsPayload',
             },
           };
         } else {
@@ -140,7 +155,11 @@ void main() {
       },
     );
     WorkmanagerAndroid.registerWith();
-    for (final method in ['registerPeriodicTask', 'cancelByUniqueName']) {
+    for (final method in [
+      'registerPeriodicTask',
+      'registerOneOffTask',
+      'cancelByUniqueName',
+    ]) {
       messenger.setMockMessageHandler(
         'dev.flutter.pigeon.workmanager_platform_interface.WorkmanagerHostApi.$method',
         (_) async => const StandardMessageCodec().encodeMessage([null]),
@@ -448,4 +467,91 @@ void main() {
       expect(pages, [1]);
     },
   );
+
+  group('server-fetch give-up recovers', () {
+    // Chapter 1 is not on the server; the executor asks the server to fetch it.
+    test('a re-ask within an hour does not spend a strike', () async {
+      serverChapterCount = 1;
+      serverMissing = {1};
+      await enableOverlap(queuedCount: 0);
+      expect(await run(), isTrue);
+      clock = clock.add(const Duration(minutes: 15));
+      expect(await run(), isTrue);
+      expect(enqueued, [1, 1]);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries, {1: 1});
+    });
+
+    test('a re-ask an hour later spends a strike', () async {
+      serverChapterCount = 1;
+      serverMissing = {1};
+      await enableOverlap(queuedCount: 0);
+      expect(await run(), isTrue);
+      clock = clock.add(const Duration(hours: 1));
+      expect(await run(), isTrue);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries, {1: 2});
+    });
+
+    test('an exhausted chapter is pulled once the server has it', () async {
+      serverChapterCount = 1;
+      await enableOverlap(queuedCount: 0);
+      await state.writeLedger(
+        'catalog-uuid',
+        CatchupLedger(
+          pendingServerFetch: const {1: 1},
+          serverFetchRetries: const {1: 5},
+          serverFetchAskedAt: {1: clock.millisecondsSinceEpoch},
+          backfilledMangaIds: const {1},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(pages, [1]);
+      final ledger = state.readLedger('catalog-uuid');
+      expect(ledger.serverFetchRetries, isEmpty);
+      expect(ledger.serverFetchAskedAt, isEmpty);
+    });
+
+    test(
+      'a give-up recorded before strikes had timestamps is forgiven',
+      () async {
+        serverChapterCount = 1;
+        serverMissing = {1};
+        await enableOverlap(queuedCount: 0);
+        await state.writeLedger(
+          'catalog-uuid',
+          const CatchupLedger(
+            pendingServerFetch: {1: 1},
+            serverFetchRetries: {1: 5},
+            backfilledMangaIds: {1},
+          ),
+        );
+        expect(await run(), isTrue);
+        expect(enqueued, [1]);
+        expect(state.readLedger('catalog-uuid').serverFetchRetries, {1: 1});
+      },
+    );
+
+    test('an exhausted chapter is asked for again after a day', () async {
+      serverChapterCount = 1;
+      serverMissing = {1};
+      await enableOverlap(queuedCount: 0);
+      await state.writeLedger(
+        'catalog-uuid',
+        CatchupLedger(
+          pendingServerFetch: const {1: 1},
+          serverFetchRetries: const {1: 5},
+          serverFetchAskedAt: {1: clock.millisecondsSinceEpoch},
+          backfilledMangaIds: const {1},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(enqueued, isEmpty);
+      clock = clock.add(const Duration(hours: 23));
+      expect(await run(), isTrue);
+      expect(enqueued, isEmpty);
+      clock = clock.add(const Duration(hours: 2));
+      expect(await run(), isTrue);
+      expect(enqueued, [1]);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries, {1: 1});
+    });
+  });
 }

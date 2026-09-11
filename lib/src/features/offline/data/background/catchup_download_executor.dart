@@ -35,7 +35,10 @@ const _runBudget = Duration(minutes: 7);
 /// Attempts a single chapter gets across runs before its obligation is dropped.
 /// Without this the ledger never converges: a chapter the server cannot serve
 /// stays pending and is retried on every scheduled wake, forever.
-const _maxChapterAttempts = 5;
+// Asks closer together than this share one strike.
+const _serverFetchStrikeSpacing = Duration(hours: 1);
+// An exhausted chapter gets a fresh budget once its last strike is this old.
+const _serverFetchGiveUpFor = Duration(hours: 24);
 
 /// Download the ledger's obligations inside the WorkManager task. Returns
 /// false only on transient failure (scheduler retries).
@@ -49,7 +52,9 @@ Future<bool> runCatchupDownloads({
   required NotificationWorkerConfig config,
   required BackgroundTokenRecord Function() record,
   required TokenBroker broker,
+  DateTime Function()? now,
 }) async {
+  final clock = now ?? DateTime.now;
   var spec = catchupStore.readSpec();
   // spec.serverId is the offline catalog's server-instance id (what
   // writeCatchupWorkSpec stamps it with) — NOT config.serverId, which is a
@@ -350,23 +355,37 @@ Future<bool> runCatchupDownloads({
 
       final serverFetch = {...ledger.pendingServerFetch};
       final retries = {...ledger.serverFetchRetries};
+      final askedAt = {...ledger.serverFetchAskedAt};
       final dlRetries = {...ledger.downloadRetries};
       final pending = {...ledger.pendingDownloads};
+      final nowMs = clock().millisecondsSinceEpoch;
 
-      // A chapter that has spent its attempt budget on either hop is already a
-      // permanent dead end this run onward (both hops below `continue` once
-      // their own counter maxes out, and a counter only ever clears when the
-      // chapter leaves `desired` — which it never does on its own). Excluding
-      // it from the candidate pool here, rather than after, stops it wasting
-      // one of a `nUnread` rule's N slots forever: without this, the
-      // (N+1)th unread chapter never gets a turn, and "keep N downloaded"
-      // silently plateaus at N-1.
+      // A chapter that has spent its attempt budget on either hop is a dead
+      // end until the server gets it or the give-up expires. Excluding it
+      // from the candidate pool here, rather than after, stops it wasting
+      // one of a `nUnread` rule's N slots: without this, the (N+1)th unread
+      // chapter never gets a turn, and "keep N downloaded" plateaus at N-1.
       final exhausted = <int>{};
       for (final r in chapters.rows) {
+        if (r.serverIsDownloaded) {
+          // The server hop is done, however many asks it took.
+          retries.remove(r.id);
+          askedAt.remove(r.id);
+        } else if ((retries[r.id] ?? 0) >= kMaxChapterAttempts &&
+            nowMs - (askedAt[r.id] ?? 0) >=
+                _serverFetchGiveUpFor.inMilliseconds) {
+          retries.remove(r.id);
+          askedAt.remove(r.id);
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'retrying-server-fetch mangaId=$mangaId chapterId=${r.id} '
+            'reason=give-up-expired\n',
+          );
+        }
         final serverFetchSpent = retries[r.id] ?? 0;
         final downloadSpent = dlRetries[r.id] ?? 0;
-        if (serverFetchSpent < _maxChapterAttempts &&
-            downloadSpent < _maxChapterAttempts) {
+        if (serverFetchSpent < kMaxChapterAttempts &&
+            downloadSpent < kMaxChapterAttempts) {
           continue;
         }
         exhausted.add(r.id);
@@ -374,8 +393,8 @@ Future<bool> runCatchupDownloads({
           '[${DateTime.now().toIso8601String()}] offline-catchup: '
           'giving-up-on-chapter mangaId=$mangaId chapterId=${r.id} '
           'name="${r.name}" index=${r.chapterIndex} '
-          'serverFetchAttempts=$serverFetchSpent/$_maxChapterAttempts '
-          'downloadAttempts=$downloadSpent/$_maxChapterAttempts '
+          'serverFetchAttempts=$serverFetchSpent/$kMaxChapterAttempts '
+          'downloadAttempts=$downloadSpent/$kMaxChapterAttempts '
           'serverIsDownloaded=${r.serverIsDownloaded} '
           '— excluded from this manga\'s keep-rule slots from now on\n',
         );
@@ -424,7 +443,7 @@ Future<bool> runCatchupDownloads({
         // over. Success clears them; so does the chapter leaving the window.
         if (!row.serverIsDownloaded) {
           final spent = retries[chapterId] ?? 0;
-          if (spent >= _maxChapterAttempts) {
+          if (spent >= kMaxChapterAttempts) {
             // Stop asking, but keep the obligation: it is what tells the ledger
             // which manga this chapter belongs to, so the window cleanup below
             // can drop the counter with it once the chapter is no longer
@@ -449,11 +468,16 @@ Future<bool> runCatchupDownloads({
             '[${DateTime.now().toIso8601String()}] offline-catchup: '
             'asking-server-to-fetch mangaId=$mangaId chapterId=$chapterId '
             'name="${row.name}" index=${row.chapterIndex} '
-            'enqueueOk=$ok attempt=${spent + 1}/$_maxChapterAttempts\n',
+            'enqueueOk=$ok attempt=${spent + 1}/$kMaxChapterAttempts\n',
           );
           if (ok) {
             serverFetch[chapterId] = mangaId;
-            retries[chapterId] = spent + 1;
+            final last = askedAt[chapterId];
+            if (last == null ||
+                nowMs - last >= _serverFetchStrikeSpacing.inMilliseconds) {
+              retries[chapterId] = spent + 1;
+              askedAt[chapterId] = nowMs;
+            }
           }
           continue;
         }
@@ -462,7 +486,7 @@ Future<bool> runCatchupDownloads({
         // many runs the fetch above took.
         serverFetch.remove(chapterId);
         final dlSpent = dlRetries[chapterId] ?? 0;
-        if (dlSpent >= _maxChapterAttempts) continue;
+        if (dlSpent >= kMaxChapterAttempts) continue;
 
         // Re-check connectivity before each chapter's page downloads — the
         // one-time gate at run start can't catch a WiFi drop mid-run.
@@ -538,6 +562,7 @@ Future<bool> runCatchupDownloads({
         pending.remove(c);
         serverFetch.remove(c);
         retries.remove(c);
+        askedAt.remove(c);
         dlRetries.remove(c);
       }
 
@@ -545,6 +570,7 @@ Future<bool> runCatchupDownloads({
         pendingDownloads: pending,
         pendingServerFetch: serverFetch,
         serverFetchRetries: retries,
+        serverFetchAskedAt: askedAt,
         downloadRetries: dlRetries,
         // The chapter-list fetch above already ran, whether or not this
         // manga was one that needed it — recording it here (not just inside
@@ -585,6 +611,7 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
     // The rule is gone, so the attempts spent under it mean nothing — leaving
     // them would meet the manga with a spent budget if it came back.
     serverFetchRetries: without(ledger.serverFetchRetries),
+    serverFetchAskedAt: without(ledger.serverFetchAskedAt),
     downloadRetries: without(ledger.downloadRetries),
     // Same reasoning: a manga that comes back under the rule again is a fresh
     // backlog as far as this executor knows, not one it already visited.

@@ -151,6 +151,7 @@ void main() {
         pendingDownloads: {10: 1, 11: 1},
         pendingServerFetch: {12: 2},
         serverFetchRetries: {12: 3},
+        serverFetchAskedAt: {12: 1700000000000},
       ),
     );
 
@@ -160,6 +161,7 @@ void main() {
     expect(same.pendingDownloads, {10: 1, 11: 1});
     expect(same.pendingServerFetch, {12: 2});
     expect(same.serverFetchRetries, {12: 3});
+    expect(same.serverFetchAskedAt, {12: 1700000000000});
 
     // A server switch must start from scratch, never replay another server's
     // ledger against colliding integer ids.

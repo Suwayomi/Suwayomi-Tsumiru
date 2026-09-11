@@ -159,6 +159,9 @@ class CatchupWorkSpec {
   );
 }
 
+/// Strikes per hop before the executor stops retrying a chapter.
+const kMaxChapterAttempts = 5;
+
 /// The download side's cursor and obligations, written as ONE JSON value so
 /// every transition is atomic — the ledger and cursor can never disagree after
 /// a crash (the completion log wins where they overlap; see prune()).
@@ -168,6 +171,7 @@ class CatchupLedger {
     this.pendingDownloads = const {},
     this.pendingServerFetch = const {},
     this.serverFetchRetries = const {},
+    this.serverFetchAskedAt = const {},
     this.downloadRetries = const {},
     this.queuedServerRetries = const {},
     this.queuedDownloadRetries = const {},
@@ -186,6 +190,9 @@ class CatchupLedger {
   /// expired entries surface via the launch banner instead of retrying forever
   /// against a dead source.
   final Map<int, int> serverFetchRetries;
+
+  /// chapterId → epoch ms of the last ask that counted as a strike.
+  final Map<int, int> serverFetchAskedAt;
 
   /// chapterId → attempts spent pulling it from the server onto this device.
   /// Separate from [serverFetchRetries] on purpose: the two hops fail for
@@ -206,11 +213,18 @@ class CatchupLedger {
   /// pass.
   final Set<int> backfilledMangaIds;
 
+  /// Pending server fetches that still have strikes left, so a follow-up wake
+  /// can do something with them.
+  bool get hasActionableServerFetch => pendingServerFetch.keys.any(
+    (id) => (serverFetchRetries[id] ?? 0) < kMaxChapterAttempts,
+  );
+
   CatchupLedger copyWith({
     NewChapterWatermark? cursor,
     Map<int, int>? pendingDownloads,
     Map<int, int>? pendingServerFetch,
     Map<int, int>? serverFetchRetries,
+    Map<int, int>? serverFetchAskedAt,
     Map<int, int>? downloadRetries,
     Map<String, int>? queuedServerRetries,
     Map<String, int>? queuedDownloadRetries,
@@ -220,6 +234,7 @@ class CatchupLedger {
     pendingDownloads: pendingDownloads ?? this.pendingDownloads,
     pendingServerFetch: pendingServerFetch ?? this.pendingServerFetch,
     serverFetchRetries: serverFetchRetries ?? this.serverFetchRetries,
+    serverFetchAskedAt: serverFetchAskedAt ?? this.serverFetchAskedAt,
     downloadRetries: downloadRetries ?? this.downloadRetries,
     queuedServerRetries: queuedServerRetries ?? this.queuedServerRetries,
     queuedDownloadRetries: queuedDownloadRetries ?? this.queuedDownloadRetries,
@@ -231,6 +246,7 @@ class CatchupLedger {
     'pendingDownloads': _mapToJson(pendingDownloads),
     'pendingServerFetch': _mapToJson(pendingServerFetch),
     'serverFetchRetries': _mapToJson(serverFetchRetries),
+    'serverFetchAskedAt': _mapToJson(serverFetchAskedAt),
     'downloadRetries': _mapToJson(downloadRetries),
     'queuedServerRetries': queuedServerRetries,
     'queuedDownloadRetries': queuedDownloadRetries,
@@ -244,6 +260,7 @@ class CatchupLedger {
     pendingDownloads: _mapFromJson(j['pendingDownloads']),
     pendingServerFetch: _mapFromJson(j['pendingServerFetch']),
     serverFetchRetries: _mapFromJson(j['serverFetchRetries']),
+    serverFetchAskedAt: _mapFromJson(j['serverFetchAskedAt']),
     downloadRetries: _mapFromJson(j['downloadRetries']),
     queuedServerRetries: {
       for (final e in (j['queuedServerRetries'] as Map? ?? const {}).entries)
