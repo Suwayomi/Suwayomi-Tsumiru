@@ -17,6 +17,7 @@ import 'package:tsumiru/src/features/browse_center/data/source_repository/source
 import 'package:tsumiru/src/features/browse_center/domain/extension/extension_model.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_actions.dart';
+import 'package:tsumiru/src/features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/source/controller/source_controller.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -65,6 +66,25 @@ void main() {
     await container.read(sourceListProvider.future);
     return sources.listCalls - before;
   }
+
+  Future<int> badgeCountsAfter(Future<void> Function() action) async {
+    container.listen(extensionUpdateBadgeCountProvider, (previous, next) {});
+    await container.read(extensionUpdateBadgeCountProvider.future);
+    final before = extensions.updateCountCalls;
+    await action();
+    await container.read(extensionUpdateBadgeCountProvider.future);
+    return extensions.updateCountCalls - before;
+  }
+
+  test('updating an extension recounts the Browse badge', () async {
+    final actions = container.read(extensionActionsProvider);
+    expect(await badgeCountsAfter(() => actions.update('com.example.ext')), 1);
+  });
+
+  test('refreshing the extension list recounts the Browse badge', () async {
+    final actions = container.read(extensionActionsProvider);
+    expect(await badgeCountsAfter(actions.refreshList), 1);
+  });
 
   test('installing an extension refetches the source list', () async {
     final actions = container.read(extensionActionsProvider);
