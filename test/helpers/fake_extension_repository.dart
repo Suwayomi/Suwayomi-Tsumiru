@@ -15,6 +15,14 @@ GraphQLClient dummyGraphQLClient() =>
 
 /// Records every mutation the app sends; [calls] keeps their order.
 class FakeExtensionRepository extends ExtensionRepository {
+  int updateCountCalls = 0;
+
+  @override
+  Future<int> getExtensionUpdateCount() async {
+    updateCountCalls++;
+    return 0;
+  }
+
   FakeExtensionRepository() : super(dummyGraphQLClient());
 
   final List<String> installed = <String>[];

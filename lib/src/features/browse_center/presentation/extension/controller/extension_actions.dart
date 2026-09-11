@@ -12,6 +12,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../data/extension_repository/extension_repository.dart';
 import '../../source/controller/source_controller.dart';
 import 'extension_controller.dart';
+import 'extension_update_badge.dart';
 
 part 'extension_actions.g.dart';
 
@@ -68,10 +69,18 @@ class ExtensionActions {
     }
   }
 
+  /// Refetching the list is what makes the server re-check for updates, so
+  /// the Browse badge is recounted once it lands (#444).
+  Future<void> refreshList() async {
+    _ref.invalidate(extensionProvider);
+    await _ref.read(extensionProvider.future);
+    _ref.invalidate(extensionUpdateBadgeCountProvider);
+  }
+
   Future<void> _refreshAfter(Future<void> Function() mutate) async {
     await mutate();
     _ref.invalidate(sourceListProvider);
-    return _ref.refresh(extensionProvider.future);
+    return refreshList();
   }
 }
 
