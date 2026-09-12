@@ -21,6 +21,7 @@ GraphQLClient _dummyClient() => GraphQLClient(
 class _CapturingRepo extends MangaBookRepository {
   _CapturingRepo() : super(_dummyClient());
   ChapterChange? lastPatch;
+  ChapterBatch? lastBatch;
 
   @override
   Future<void> putChapter({
@@ -28,6 +29,11 @@ class _CapturingRepo extends MangaBookRepository {
     required ChapterChange patch,
   }) async {
     lastPatch = patch;
+  }
+
+  @override
+  Future<void> modifyBulkChapters(ChapterBatch batch) async {
+    lastBatch = batch;
   }
 }
 
@@ -64,6 +70,49 @@ void main() {
 
       final json = repo.lastPatch!.toJson();
       expect(json['isRead'], true);
+    });
+
+    test('reader completion marks every confidently matched release read',
+        () async {
+      final db = testOfflineDatabase();
+      addTearDown(db.close);
+      for (final id in [11, 12]) {
+        await db.upsertChapterMetadata(
+          id: id,
+          mangaId: 1,
+          name: 'Chapter 1',
+          chapterIndex: id,
+          isRead: false,
+          lastPageRead: 9,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 10,
+          updatedAt: DateTime(2026),
+        );
+      }
+      final repo = _CapturingRepo();
+
+      await recordReadingProgressWithDependencies(
+        offlineEnabled: true,
+        offlineDatabase: db,
+        repository: repo,
+        chapterId: 11,
+        lastPageRead: 0,
+        isRead: true,
+        completionChapterIds: [11, 12],
+      );
+
+      expect(repo.lastBatch!.ids, [11, 12]);
+      expect(repo.lastBatch!.patch.isRead, isTrue);
+      expect(repo.lastBatch!.patch.lastPageRead, 0);
+      for (final id in [11, 12]) {
+        final row = (await db.chapterById(id))!;
+        expect(row.isRead, isTrue);
+        expect(row.lastPageRead, 0);
+        expect(row.readStateManual, isFalse);
+        expect(row.readStateDirty, isFalse);
+        expect(row.progressDirty, isFalse);
+      }
     });
 
     test('offline: a partial read does NOT flip a read chapter to unread',

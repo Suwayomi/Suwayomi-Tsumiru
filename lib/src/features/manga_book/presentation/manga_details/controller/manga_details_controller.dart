@@ -391,6 +391,7 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   Ref ref, {
   required int mangaId,
   int? keepChapterId,
+  String? readerScanlatorGroup,
 }) {
   final chapterList = ref.watch(mangaChapterListProvider(mangaId: mangaId));
   final chapterFilterUnread = ref.watch(mangaChapterFilterUnreadProvider);
@@ -406,12 +407,14 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
       ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
   final showAllVersions =
       ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
-  // No offline gate: catalog rows carry real chapter numbers since schema v9,
-  // so dedup groups offline exactly as online (pre-v9 rows fall back to the
-  // unique index and simply never collapse).
-  final dedupActive = preferredScanlators.isNotEmpty && !showAllVersions;
+  final filterScanlators =
+      preferredScanlators.isNotEmpty && !showAllVersions;
+  final offline = ref.watch(viewOfflineNowProvider) ||
+      ref.watch(serverUnreachableProvider);
 
   bool applyChapterFilter(ChapterDto chapter) {
+    if (chapter.id == keepChapterId) return true;
+
     if (chapterFilterUnread != null &&
         (chapterFilterUnread ^ !(chapter.isRead.ifNull()))) {
       return false;
@@ -451,18 +454,23 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
 
   return chapterList.copyWithData((data) {
     var list = data ?? const <ChapterDto>[];
-    if (dedupActive) {
-      // Dedup BEFORE filters: filters must see aggregate row state, or an
-      // unread filter would strip a read copy and silently swap the winner.
-      list = applyPreferredScanlators(list, preferredScanlators,
+    if (readerScanlatorGroup != null) {
+      list = applyReaderSessionScanlator(
+        list,
+        scanlatorGroup: readerScanlatorGroup,
+        preferred: preferredScanlators,
+        offline: offline,
+        keepChapterId: keepChapterId,
+      );
+    } else if (filterScanlators) {
+      list = filterPreferredScanlators(list, preferredScanlators,
           keepChapterId: keepChapterId);
     }
     return [...list.where(applyChapterFilter)]..sort(applyChapterSort);
   });
 }
 
-/// Deduped-but-unfiltered list for bulk actions (download presets): presets
-/// must count chapters, not duplicate copies.
+/// Preferred-scanlator-filtered but otherwise unfiltered list for bulk actions.
 @riverpod
 AsyncValue<List<ChapterDto>?> mangaChapterListForBulkActions(
   Ref ref, {
@@ -473,11 +481,9 @@ AsyncValue<List<ChapterDto>?> mangaChapterListForBulkActions(
       ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
   final showAll =
       ref.watch(mangaShowAllScanlatorVersionsProvider(mangaId: mangaId));
-  // No offline gate — catalog rows carry real chapter numbers (schema v9),
-  // so dedup behaves the same offline; see mangaChapterListWithFilter.
   if (preferred.isEmpty || showAll) return chapterList;
-  return chapterList.copyWithData(
-      (data) => data == null ? null : applyPreferredScanlators(data, preferred));
+  return chapterList.copyWithData((data) =>
+      data == null ? null : filterPreferredScanlators(data, preferred));
 }
 
 @riverpod
@@ -509,12 +515,16 @@ ChapterDto? firstUnreadInFilteredChapterList(
   required int mangaId,
   required int chapterId,
   bool shouldAscSort = true,
+  String? readerScanlatorGroup,
 }) {
   final isAscSorted = ref.watch(mangaChapterSortDirectionProvider) ??
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
       .watch(mangaChapterListWithFilterProvider(
-          mangaId: mangaId, keepChapterId: chapterId))
+          mangaId: mangaId,
+          keepChapterId: chapterId,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ))
       .value;
   if (filteredList == null) {
     return null;
@@ -526,7 +536,9 @@ ChapterDto? firstUnreadInFilteredChapterList(
     if (current == -1) return (first: null, second: null);
     final prevChapter = current > 0 ? filteredList[current - 1] : null;
     final nextChapter =
-        current < (filteredList.length - 1) ? filteredList[current + 1] : null;
+        current < (filteredList.length - 1)
+            ? filteredList[current + 1]
+            : null;
     return (
       first: shouldAscSort && isAscSorted ? nextChapter : prevChapter,
       second: shouldAscSort && isAscSorted ? prevChapter : nextChapter,

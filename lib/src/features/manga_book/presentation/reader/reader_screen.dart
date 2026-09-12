@@ -31,6 +31,7 @@ import '../../../settings/presentation/reader/widgets/reader_orientation/reader_
 import '../../../tracking/domain/track_progress_gate.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
+import '../manga_details/controller/scanlator_dedup.dart';
 import 'controller/auto_webtoon.dart';
 import 'controller/display_cutout.dart';
 import 'controller/reader_controller.dart';
@@ -44,11 +45,13 @@ class ReaderScreen extends HookConsumerWidget {
     super.key,
     required this.mangaId,
     required this.chapterId,
+    this.readerScanlatorGroup,
     this.showReaderLayoutAnimation = false,
     this.openAtEnd = false,
   });
   final int mangaId;
   final int chapterId;
+  final String? readerScanlatorGroup;
   final bool showReaderLayoutAnimation;
   final bool openAtEnd;
   @override
@@ -365,6 +368,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.singleHorizontalRTL =>
                           MultiChapterPagedReaderMode(
@@ -376,6 +382,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.singleHorizontalLTR =>
                           MultiChapterPagedReaderMode(
@@ -384,6 +393,9 @@ class ReaderScreen extends HookConsumerWidget {
                             onPageChanged: onPageChanged,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.continuousHorizontalRTL =>
                           MultiChapterContinuousReaderMode(
@@ -398,6 +410,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.continuousHorizontalLTR =>
                           MultiChapterContinuousReaderMode(
@@ -411,6 +426,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.continuousVertical => MultiChapterContinuousReaderMode(
                             chapter: chapterData,
@@ -421,6 +439,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.webtoon => MultiChapterContinuousReaderMode(
                             chapter: chapterData,
@@ -430,6 +451,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation,
                             chapterPages: chapterPagesData,
                             openAtEnd: openAtEnd,
+                            readerScanlatorGroup:
+                                readerScanlatorGroup ??
+                                scanlatorGroupOf(chapterData),
                           ),
                         ReaderMode.defaultReader || null => switch (
                               defaultReaderMode ?? ReaderMode.singleHorizontalRTL) {
@@ -440,6 +464,9 @@ class ReaderScreen extends HookConsumerWidget {
                                 onPageChanged: onPageChanged,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.singleHorizontalRTL =>
                               MultiChapterPagedReaderMode(
@@ -451,6 +478,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.continuousHorizontalLTR =>
                               MultiChapterContinuousReaderMode(
@@ -464,6 +494,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.continuousHorizontalRTL =>
                               MultiChapterContinuousReaderMode(
@@ -478,6 +511,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.singleVertical => MultiChapterPagedReaderMode(
                                 chapter: chapterData,
@@ -488,6 +524,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.continuousVertical =>
                               MultiChapterContinuousReaderMode(
@@ -500,6 +539,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                             ReaderMode.webtoon || _ => MultiChapterContinuousReaderMode(
                                 chapter: chapterData,
@@ -509,6 +551,9 @@ class ReaderScreen extends HookConsumerWidget {
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
                                 openAtEnd: openAtEnd,
+                                readerScanlatorGroup:
+                                    readerScanlatorGroup ??
+                                    scanlatorGroupOf(chapterData),
                               ),
                           }
                       };

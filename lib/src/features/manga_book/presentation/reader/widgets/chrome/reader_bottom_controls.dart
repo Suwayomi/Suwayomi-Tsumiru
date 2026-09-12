@@ -20,6 +20,7 @@ import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../widgets/download_status_icon.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
+import '../../../manga_details/controller/scanlator_dedup.dart';
 import '../../utils/reader_mode_kind.dart';
 import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
@@ -39,6 +40,7 @@ class ReaderBottomControls extends ConsumerWidget {
     super.key,
     required this.chapter,
     required this.chapterPages,
+    required this.readerScanlatorGroup,
     required this.currentIndex,
     required this.totalPageCount,
     required this.useBottomSeekBar,
@@ -54,6 +56,7 @@ class ReaderBottomControls extends ConsumerWidget {
 
   final ChapterDto chapter;
   final ChapterPagesDto chapterPages;
+  final String readerScanlatorGroup;
   final int currentIndex;
 
   /// For infinity-scroll mode; null means use [chapterPages.chapter.pageCount].
@@ -178,6 +181,7 @@ class ReaderBottomControls extends ConsumerWidget {
                         context: context,
                         mangaId: chapter.mangaId,
                         currentChapterId: chapter.id,
+                        readerScanlatorGroup: readerScanlatorGroup,
                         transVertical: scrollDirection == Axis.vertical,
                       ),
                     ),
@@ -240,6 +244,7 @@ Future<void> _showChapterPicker({
   required BuildContext context,
   required int mangaId,
   required int currentChapterId,
+  required String readerScanlatorGroup,
   required bool transVertical,
 }) {
   final readerContext = context;
@@ -263,12 +268,13 @@ Future<void> _showChapterPicker({
             ),
             child: Consumer(
               builder: (context, ref, _) {
-                // keepChapterId: keeps the open chapter visible even if dedup
-                // would otherwise hide it.
+                // Keep the open chapter visible even if its scanlator is not
+                // selected by the preferred-scanlator filter.
                 final chapters = ref.watch(
                   mangaChapterListWithFilterProvider(
                     mangaId: mangaId,
                     keepChapterId: currentChapterId,
+                    readerScanlatorGroup: readerScanlatorGroup,
                   ),
                 );
                 return chapters.showUiWhenData(
@@ -353,6 +359,9 @@ class _ReaderChapterSheet extends StatelessWidget {
               final isCurrent = chapter.id == currentChapterId;
               final lastPageRead =
                   chapter.lastPageRead.getValueOnNullOrNegative();
+              final scanlator = chapter.scanlator.isNotBlank
+                  ? chapter.scanlator!
+                  : context.l10n.unknownScanlator;
               return ListTile(
                 dense: true,
                 visualDensity:
@@ -375,14 +384,16 @@ class _ReaderChapterSheet extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: lastPageRead > 0
-                    ? Text(
-                        context.l10n.page(lastPageRead + 1),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textTheme.bodySmall,
-                      )
-                    : null,
+                subtitle: Text(
+                  [
+                    scanlator,
+                    if (lastPageRead > 0)
+                      context.l10n.page(lastPageRead + 1),
+                  ].join(' • '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.bodySmall,
+                ),
                 trailing: IconButtonTheme(
                   data: IconButtonThemeData(
                     style: ButtonStyle(
@@ -419,6 +430,7 @@ class _ReaderChapterSheet extends StatelessWidget {
                     ReaderRoute(
                       mangaId: mangaId,
                       chapterId: chapter.id,
+                      readerScanlatorGroup: scanlatorGroupOf(chapter),
                       showReaderLayoutAnimation: true,
                       transVertical: transVertical,
                     ).pushReplacement(readerContext);

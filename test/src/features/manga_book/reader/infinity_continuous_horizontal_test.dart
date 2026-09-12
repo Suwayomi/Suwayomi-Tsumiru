@@ -159,9 +159,9 @@ Future<void> _pumpReaderOnChapter2(
         chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
         chapterPagesProvider(chapterId: 1).overrideWith((ref) => prevPages()),
         chapterPagesProvider(chapterId: 2).overrideWith((ref) => _pages(2, 3)),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
+        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2, readerScanlatorGroup: '')
             .overrideWithValue((first: null, second: ch1)),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1, readerScanlatorGroup: '')
             .overrideWithValue((first: ch2, second: null)),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],

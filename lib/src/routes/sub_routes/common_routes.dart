@@ -45,6 +45,7 @@ class ReaderRoute extends GoRouteData with $ReaderRoute {
     required this.chapterId,
     this.transVertical,
     this.toPrev,
+    this.readerScanlatorGroup,
     this.showReaderLayoutAnimation = false,
     this.openAtEnd = false,
   });
@@ -52,6 +53,7 @@ class ReaderRoute extends GoRouteData with $ReaderRoute {
   final int chapterId;
   final bool? transVertical;
   final bool? toPrev;
+  final String? readerScanlatorGroup;
   final bool showReaderLayoutAnimation;
   final bool openAtEnd;
 
@@ -64,6 +66,7 @@ class ReaderRoute extends GoRouteData with $ReaderRoute {
       child: ReaderScreen(
         mangaId: mangaId,
         chapterId: chapterId,
+        readerScanlatorGroup: readerScanlatorGroup,
         showReaderLayoutAnimation: showReaderLayoutAnimation,
         openAtEnd: openAtEnd,
       ),

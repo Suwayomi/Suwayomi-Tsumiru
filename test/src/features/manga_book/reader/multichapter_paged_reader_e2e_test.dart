@@ -163,9 +163,9 @@ void main() {
           chapterPagesProvider(chapterId: 2)
               .overrideWith((ref) => _pages(2, 2)),
           // Chapter 1 has a next (chapter 2); chapter 2 has a previous (1).
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1, readerScanlatorGroup: '')
               .overrideWithValue((first: ch2, second: null)),
-          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
+          getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2, readerScanlatorGroup: '')
               .overrideWithValue((first: null, second: ch1)),
           // Keep the external tracker path inert in the test.
           trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),

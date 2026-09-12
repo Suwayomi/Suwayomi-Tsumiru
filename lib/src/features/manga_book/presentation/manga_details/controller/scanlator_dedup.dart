@@ -8,8 +8,6 @@ import 'package:collection/collection.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../domain/chapter/chapter_model.dart';
-// The generated copyWith is an extension; it must be imported directly.
-import '../../../domain/chapter/graphql/__generated__/fragment.graphql.dart';
 
 /// Group key for chapters with no scanlator; displayed via l10n as "Unknown".
 const String kUnknownScanlatorGroup = '';
@@ -17,105 +15,153 @@ const String kUnknownScanlatorGroup = '';
 String scanlatorGroupOf(ChapterDto c) =>
     c.scanlator.isNotBlank ? c.scanlator! : kUnknownScanlatorGroup;
 
-/// One row per chapter number when [preferred] is non-empty.
-///
-/// Winner group per number: the in-flight copy ([keepChapterId], so an open
-/// reader never loses its chapter), else an in-progress copy, else a
-/// downloaded copy, else the highest-ranked group in [preferred] covering the
-/// number, else the copy the source lists first. All of the winning group's
-/// entries at that number survive (split chapters / v2 re-uploads share a
-/// number). Rows carry aggregate read/downloaded/bookmarked state across ALL
-/// copies of the number. Entries with chapterNumber <= 0 pass through.
-List<ChapterDto> applyPreferredScanlators(
+/// Filters by scanlator without assuming that equal chapter numbers identify
+/// alternate releases. Every row from a preferred group survives, including
+/// specials and series whose numbering restarts. [keepChapterId] keeps an open
+/// reader chapter visible even when its group is not preferred.
+List<ChapterDto> filterPreferredScanlators(
   List<ChapterDto> chapters,
   List<String> preferred, {
   int? keepChapterId,
 }) {
   if (preferred.isEmpty) return chapters;
+  return [
+    for (final chapter in chapters)
+      if (chapter.id == keepChapterId ||
+          preferred.contains(scanlatorGroupOf(chapter)))
+        chapter,
+  ];
+}
 
-  final byNumber = <double, List<ChapterDto>>{};
-  for (final c in chapters) {
-    if (c.chapterNumber > 0) {
-      byNumber.putIfAbsent(c.chapterNumber, () => []).add(c);
-    }
+String _normalizedChapterName(String name) =>
+    name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+bool _canConfidentlyMatch(ChapterDto previous, ChapterDto chapter) {
+  if (!(previous.chapterNumber >= 0) || !(chapter.chapterNumber >= 0)) {
+    return false;
   }
+  return previous.chapterNumber == chapter.chapterNumber &&
+      _normalizedChapterName(previous.name) ==
+          _normalizedChapterName(chapter.name) &&
+      scanlatorGroupOf(previous) != scanlatorGroupOf(chapter);
+}
 
-  final winnersByNumber = <double, String>{};
-  for (final entry in byNumber.entries) {
-    final copies = entry.value;
-    final kept = keepChapterId == null
-        ? null
-        : copies.firstWhereOrNull((c) => c.id == keepChapterId);
-    final inProgress =
-        copies.firstWhereOrNull((c) => !c.isRead && c.lastPageRead > 0);
-    final downloaded = copies.firstWhereOrNull((c) => c.isDownloaded);
-    String? winner;
-    if (kept != null) {
-      winner = scanlatorGroupOf(kept);
-    } else if (inProgress != null) {
-      winner = scanlatorGroupOf(inProgress);
-    } else if (downloaded != null) {
-      winner = scanlatorGroupOf(downloaded);
+/// Groups only releases that satisfy the conservative reader match. Sorting
+/// by source order first keeps otherwise-identical rows independent when an
+/// intervening chapter shows that they belong to different runs.
+List<List<ChapterDto>> _confidentReleaseGroups(List<ChapterDto> chapters) {
+  final sourceOrdered = [...chapters]
+    ..sort((a, b) {
+      final bySourceOrder = a.sourceOrder.compareTo(b.sourceOrder);
+      return bySourceOrder != 0 ? bySourceOrder : a.id.compareTo(b.id);
+    });
+  final releaseGroups = <List<ChapterDto>>[];
+  for (final chapter in sourceOrdered) {
+    if (releaseGroups.isEmpty) {
+      releaseGroups.add([chapter]);
+      continue;
+    }
+    final current = releaseGroups.last;
+    final groupAlreadyPresent = current.any(
+      (candidate) => scanlatorGroupOf(candidate) == scanlatorGroupOf(chapter),
+    );
+    if (!groupAlreadyPresent &&
+        _canConfidentlyMatch(current.last, chapter)) {
+      current.add(chapter);
     } else {
-      winner = preferred.firstWhereOrNull(
-          (g) => copies.any((c) => scanlatorGroupOf(c) == g));
-      winner ??= scanlatorGroupOf(
-          copies.reduce((a, b) => a.sourceOrder <= b.sourceOrder ? a : b));
+      releaseGroups.add([chapter]);
     }
-    winnersByNumber[entry.key] = winner;
   }
+  return releaseGroups;
+}
 
+Map<int, List<int>> _releaseIdsByChapterId(List<ChapterDto> chapters) {
+  final idsByChapter = <int, List<int>>{};
+  for (final releases in _confidentReleaseGroups(chapters)) {
+    final ids = [for (final release in releases) release.id];
+    for (final release in releases) {
+      idsByChapter[release.id] = ids;
+    }
+  }
+  return idsByChapter;
+}
+
+ChapterDto _pickReaderRelease(
+  List<ChapterDto> releases, {
+  required String scanlatorGroup,
+  required List<String> preferred,
+  required bool offline,
+  int? keepChapterId,
+}) {
+  final kept = releases.firstWhereOrNull((c) => c.id == keepChapterId);
+  if (kept != null) return kept;
+
+  final downloaded = releases.where((c) => c.isDownloaded).toList();
+  final candidates = offline && downloaded.isNotEmpty ? downloaded : releases;
+  return candidates.firstWhereOrNull(
+        (c) => scanlatorGroupOf(c) == scanlatorGroup,
+      ) ??
+      preferred
+          .map((group) => candidates.firstWhereOrNull(
+                (c) => scanlatorGroupOf(c) == group,
+              ))
+          .firstWhereOrNull((c) => c != null) ??
+      candidates.reduce((a, b) =>
+          a.sourceOrder <= b.sourceOrder ? a : b);
+}
+
+/// Builds the reader path without globally grouping equal chapter numbers.
+/// Only adjacent source-order rows with the same normalized name and number,
+/// and with distinct scanlators, are considered alternate releases. Anything
+/// uncertain remains an independent reader entry.
+List<ChapterDto> applyReaderSessionScanlator(
+  List<ChapterDto> chapters, {
+  required String scanlatorGroup,
+  List<String> preferred = const [],
+  bool offline = false,
+  int? keepChapterId,
+}) {
+  if (chapters.isEmpty) return chapters;
+
+  final selectedIds = <int>{
+    for (final releases in _confidentReleaseGroups(chapters))
+      _pickReaderRelease(
+        releases,
+        scanlatorGroup: scanlatorGroup,
+        preferred: preferred,
+        offline: offline,
+        keepChapterId: keepChapterId,
+      ).id,
+  };
   return [
-    for (final c in chapters)
-      // Negated: `!(x > 0)` also catches NaN, unlike `x <= 0`.
-      if (!(c.chapterNumber > 0))
-        c
-      else if (scanlatorGroupOf(c) == winnersByNumber[c.chapterNumber])
-        c.copyWith(
-          isRead: byNumber[c.chapterNumber]!.any((x) => x.isRead),
-          isDownloaded:
-              byNumber[c.chapterNumber]!.any((x) => x.isDownloaded),
-          isBookmarked:
-              byNumber[c.chapterNumber]!.any((x) => x.isBookmarked),
-        ),
+    for (final chapter in chapters)
+      if (selectedIds.contains(chapter.id)) chapter,
   ];
 }
 
-/// Ids of every copy sharing [chapterId]'s chapter number (self included).
-/// Number <= 0 or unknown id: just the id itself.
-List<int> duplicateChapterIds(List<ChapterDto> allChapters, int chapterId) {
-  final chapter = allChapters.firstWhereOrNull((c) => c.id == chapterId);
-  // Same NaN-safe negation as applyPreferredScanlators.
-  if (chapter == null || !(chapter.chapterNumber > 0)) return [chapterId];
-  return [
-    for (final c in allChapters)
-      if (c.chapterNumber == chapter.chapterNumber) c.id,
-  ];
-}
+/// IDs of releases confidently matched to [chapterId], including itself.
+List<int> duplicateChapterIds(List<ChapterDto> allChapters, int chapterId) =>
+    _releaseIdsByChapterId(allChapters)[chapterId] ?? [chapterId];
 
-/// Write-side union of every same-number copy for each id (self included).
-/// Identity when the raw list is unavailable.
+/// Expands read/delete mutations across confident alternate-release groups.
+/// Identity when the raw chapter list is unavailable.
 List<int> expandIdsForDuplicates(
   List<ChapterDto>? allChapters,
   List<int> chapterIds,
 ) {
   if (allChapters == null) return chapterIds;
-  final out = <int>{};
+  final idsByChapter = _releaseIdsByChapterId(allChapters);
+  final expanded = <int>{};
   for (final id in chapterIds) {
-    out.addAll(duplicateChapterIds(allChapters, id));
+    expanded.addAll(idsByChapter[id] ?? [id]);
   }
-  return out.toList();
+  return expanded.toList();
 }
 
-/// Unread copies whose chapter number has at least one read copy — the
-/// one-time catch-up set when a preference is set on a series with history.
-List<int> reconcileIdsForReadNumbers(List<ChapterDto> allChapters) {
-  final readNumbers = <double>{
-    for (final c in allChapters)
-      if (c.isRead && c.chapterNumber > 0) c.chapterNumber,
-  };
-  return [
-    for (final c in allChapters)
-      if (!c.isRead && readNumbers.contains(c.chapterNumber)) c.id,
-  ];
-}
+/// Unread releases in a confident group that already contains a read release.
+List<int> reconcileIdsForReadNumbers(List<ChapterDto> allChapters) => [
+      for (final releases in _confidentReleaseGroups(allChapters))
+        if (releases.any((chapter) => chapter.isRead))
+          for (final chapter in releases)
+            if (!chapter.isRead) chapter.id,
+    ];

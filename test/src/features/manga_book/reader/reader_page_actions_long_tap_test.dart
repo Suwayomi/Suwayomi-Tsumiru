@@ -67,6 +67,7 @@ Future<void> _pumpReader(
             toggleVisibility: onTap ?? () {},
             scrollDirection: Axis.vertical,
             mangaId: 1,
+            readerScanlatorGroup: '',
             mangaReaderPadding: 0,
             onNext: () {},
             onPrevious: () {},

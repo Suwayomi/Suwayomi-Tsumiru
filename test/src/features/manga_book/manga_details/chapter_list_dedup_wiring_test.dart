@@ -84,21 +84,25 @@ Future<ProviderContainer> _container({
   return c;
 }
 
-List<int> _ids(ProviderContainer c, {int? keepChapterId}) =>
+List<int> _ids(
+  ProviderContainer c, {
+  int? keepChapterId,
+  String? readerScanlatorGroup,
+}) =>
     c
         .read(mangaChapterListWithFilterProvider(
-            mangaId: 1, keepChapterId: keepChapterId))
+            mangaId: 1,
+            keepChapterId: keepChapterId,
+            readerScanlatorGroup: readerScanlatorGroup))
         .value!
         .map((e) => e.id)
         .toList();
 
 void main() {
-  test('dedup runs before filters: unread filter sees aggregate state',
+  test('preferred scanlators filter rows without aggregating read state',
       () async {
-    // preference ['B'], unread filter ON: ch3's B row aggregates isRead=true
-    // from A's read copy (id 4) -> filtered OUT. Survivors: ch1-B(2), ch2-B(3).
     final c = await _container(preference: const ['B'], unreadFilter: true);
-    expect(_ids(c), [3, 2]);
+    expect(_ids(c), [5, 3, 2]);
   });
 
   test('no preference -> identical to today (all copies)', () async {
@@ -111,11 +115,7 @@ void main() {
     expect(_ids(c), [5, 4, 3, 2, 1]);
   });
 
-  test('catalog-shaped rows (unique fabricated numbers) never collapse',
-      () async {
-    // The offline catalog fabricates chapterNumber from the list index, so
-    // every row has a distinct number and dedup structurally no-ops — this is
-    // the offline safety property (there is no offlineActive gate).
+  test('preferred scanlator filtering behaves the same offline', () async {
     final catalogShaped = [
       ch(id: 1, number: 0, scanlator: 'A', sourceOrder: 0),
       ch(id: 2, number: 1, scanlator: 'B', sourceOrder: 1),
@@ -124,22 +124,39 @@ void main() {
     ];
     final c = await _container(
         chapters: catalogShaped, preference: const ['B'], offline: true);
-    expect(_ids(c), [4, 3, 2, 1]);
+    expect(_ids(c), [4, 2]);
   });
 
   test('keepChapterId surfaces a hidden copy', () async {
-    // preference ['B'], keepChapterId = ch1-A's id (1) -> ch1's row is A's
-    // copy instead of B's; ch2/ch3 dedup normally (B wins both).
     final c = await _container(preference: const ['B']);
-    expect(_ids(c, keepChapterId: 1), [5, 3, 1]);
+    expect(_ids(c, keepChapterId: 1), [5, 3, 2, 1]);
+  });
+
+  test('keepChapterId bypasses unread filter for reader navigation', () async {
+    final c = await _container(
+      preference: const ['B'],
+      unreadFilter: true,
+    );
+    expect(_ids(c, keepChapterId: 4), [5, 4, 3, 2]);
+  });
+
+  test('same-number specials and restarted seasons are never folded',
+      () async {
+    final c = await _container(
+      preference: const ['A'],
+      chapters: [
+        ch(id: 1, number: 6, name: 'Chapter 6', scanlator: 'A', sourceOrder: 0),
+        ch(id: 2, number: 6, name: 'Special 6', scanlator: 'A', sourceOrder: 1),
+        ch(id: 3, number: 1, name: 'Season 1 Chapter 1', scanlator: 'A', sourceOrder: 2),
+        ch(id: 4, number: 1, name: 'Season 2 Chapter 1', scanlator: 'A', sourceOrder: 3),
+      ],
+    );
+    expect(_ids(c), [4, 3, 2, 1]);
   });
 
   test('getNextAndPreviousChapters resolves neighbours from a hidden copy',
       () async {
-    // n1: A(id 1) + B(id 2); n2: B(id 3) only. Preference ['B'] would
-    // normally hide id 1 (A loses n1 to B), but the reader chain passes
-    // its own chapterId as keepChapterId, forcing id 1 to win n1 instead
-    // -> deduped chain is [id 1, id 3].
+    // The reader follows A for chapter 1 and falls back to B for chapter 2.
     final hiddenCopyChapters = [
       ch(id: 1, number: 1, scanlator: 'A', sourceOrder: 0),
       ch(id: 2, number: 1, scanlator: 'B', sourceOrder: 1),
@@ -150,7 +167,11 @@ void main() {
       preference: const ['B'],
     );
     final pair = c.read(
-      getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1),
+      getNextAndPreviousChaptersProvider(
+        mangaId: 1,
+        chapterId: 1,
+        readerScanlatorGroup: 'A',
+      ),
     );
     expect(pair, isNotNull);
     // Default sort is source-order descending (id 3 first, id 1 last), so
@@ -159,7 +180,8 @@ void main() {
     expect(pair.second, isNull);
   });
 
-  test('bulk-actions list dedups but stays unfiltered', () async {
+  test('bulk-actions list filters preferred groups but stays unfiltered',
+      () async {
     final c = await _container(preference: const ['B']);
     final rows = c
         .read(mangaChapterListForBulkActionsProvider(mangaId: 1))

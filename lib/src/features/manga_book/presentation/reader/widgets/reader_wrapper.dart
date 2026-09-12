@@ -146,6 +146,7 @@ class ReaderWrapper extends HookConsumerWidget {
     required this.scrollDirection,
     this.showReaderLayoutAnimation = false,
     required this.chapterPages,
+    this.readerScanlatorGroup,
     this.pageController,
     this.totalPageCount,
     this.childHandlesGestures = false,
@@ -172,6 +173,7 @@ class ReaderWrapper extends HookConsumerWidget {
   final Axis scrollDirection;
   final bool showReaderLayoutAnimation;
   final ChapterPagesDto chapterPages;
+  final String? readerScanlatorGroup;
   final PageController? pageController;
   final int? totalPageCount;
   final bool childHandlesGestures;
@@ -210,6 +212,7 @@ class ReaderWrapper extends HookConsumerWidget {
       getNextAndPreviousChaptersProvider(
         mangaId: manga.id,
         chapterId: chapter.id,
+        readerScanlatorGroup: readerScanlatorGroup,
       ),
     );
     final invertTap = ref.watch(invertTapProvider).ifNull();
@@ -411,6 +414,7 @@ class ReaderWrapper extends HookConsumerWidget {
         chapterId: nextPrevChapterPair!.first!.id,
         transVertical: transVertical,
         toPrev: toPrev,
+        readerScanlatorGroup: readerScanlatorGroup,
       ).pushReplacement(context);
       return true;
     }
@@ -429,6 +433,7 @@ class ReaderWrapper extends HookConsumerWidget {
         transVertical: transVertical,
         toPrev: toPrev,
         openAtEnd: openAtEnd,
+        readerScanlatorGroup: readerScanlatorGroup,
       ).pushReplacement(context);
       return true;
     }
@@ -640,6 +645,7 @@ class ReaderWrapper extends HookConsumerWidget {
                           },
                           scrollDirection: scrollDirection,
                           mangaId: manga.id,
+                          readerScanlatorGroup: readerScanlatorGroup ?? '',
                           mangaReaderPadding: mangaReaderPadding.value,
                           onNext: onReaderNext,
                           onPrevious: onReaderPrevious,
@@ -687,6 +693,7 @@ class ReaderWrapper extends HookConsumerWidget {
             // synchronized animation is a later increment).
             Positioned.fill(
               child: ReaderChrome(
+                readerScanlatorGroup: readerScanlatorGroup ?? '',
                 manga: manga,
                 chapter: chapter,
                 chapterPages: chapterPages,
@@ -931,6 +938,7 @@ class ReaderView extends HookConsumerWidget {
     required this.toggleVisibility,
     required this.scrollDirection,
     required this.mangaId,
+    required this.readerScanlatorGroup,
     required this.mangaReaderPadding,
     required this.onNext,
     required this.onPrevious,
@@ -956,6 +964,7 @@ class ReaderView extends HookConsumerWidget {
   final VoidCallback toggleVisibility;
   final Axis scrollDirection;
   final int mangaId;
+  final String readerScanlatorGroup;
   final double mangaReaderPadding;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
@@ -1091,6 +1100,7 @@ class ReaderView extends HookConsumerWidget {
       );
     } else {
       content = DirectionalSwipeGestureHandler(
+        readerScanlatorGroup: readerScanlatorGroup,
         onTap: toggleVisibility,
         // Null when nothing consumes it, so the recognizer is never registered
         // and a slow tap isn't lost to the long-press arena.
