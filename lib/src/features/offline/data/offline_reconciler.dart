@@ -103,12 +103,20 @@ class OfflineReconciler {
         .where((c) => c.deviceState == OfflineDeviceState.downloaded)
         .toList();
 
+    // The download-ahead set: what the keep-rule wants pulled to device.
     final desired =
         desiredChapterIds(chapters, manga.keepRule, manga.keepUnreadCount);
 
+    // The retention set: what may STAY on device. Broader than `desired` for
+    // nUnread — the window bounds new downloads only, it must not delete unread
+    // chapters already on disk (see retainedChapterIds). Drives eviction; the
+    // download loop below still uses `desired`.
+    final retained =
+        retainedChapterIds(chapters, manga.keepRule, manga.keepUnreadCount);
+
     final ev = applySafetyNets(
       downloaded: downloaded,
-      desired: desired,
+      desired: retained,
       nets: nets,
       now: now,
       protected: {

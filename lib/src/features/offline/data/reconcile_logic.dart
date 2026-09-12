@@ -26,16 +26,79 @@ Set<int> desiredChapterIds(
     // re-downloading an errored chapter every pass (so it never gets retried),
     // but nothing here ever let the (N+1)th unread chapter take its place, so
     // the user's "keep N downloaded" setting silently plateaus at N-1 forever.
-    OfflineKeepRule.nUnread => (chapters
-              .where((c) =>
-                  !c.isRead && c.deviceState != OfflineDeviceState.error)
-              .toList()
-          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex)))
-        .take(keepUnreadCount)
-        .map((c) => c.id)
-        .toSet(),
+    //
+    // Also restricts to chapters AFTER the user's furthest-read position.
+    // Without this, an unread gap earlier in the series (e.g. the user skipped
+    // ch. 2 but read ch. 3+) causes the worker to download behind their reading
+    // progress instead of ahead of it.
+    //
+    // Ranks the whole manga on ONE axis so the furthest-read floor and the
+    // download-ahead window are always compared on the same scale. chapterNumber
+    // (the parsed chapter number: 1.0, 10.5, …) reflects narrative reading
+    // order, so it wins whenever the source assigns real numbers — including
+    // reverse-listed sources whose sourceOrder runs backwards. Only when NO
+    // chapter carries a usable number do we fall back to chapterIndex
+    // (sourceOrder) for all of them.
+    //
+    // In chapterNumber mode a chapter without a usable number (a bonus/special
+    // the source never numbered) has no place on the narrative axis, so it is
+    // excluded from both the floor and the window rather than ranked on the
+    // incompatible sourceOrder scale — mixing the two silently corrupted the
+    // floor (a read, high-sourceOrder special would shove it far past the real
+    // reading position and starve the window). Such chapters can still be
+    // pinned, and if already on-device+unread they survive via retainedChapterIds.
+    OfflineKeepRule.nUnread => () {
+      final byNumber = chapters.any((c) => (c.chapterNumber ?? 0) > 0);
+      bool ranked(OfflineChapter c) => !byNumber || (c.chapterNumber ?? 0) > 0;
+      double readOrder(OfflineChapter c) =>
+          byNumber ? c.chapterNumber! : c.chapterIndex.toDouble();
+
+      final floor = chapters
+          .where((c) => c.isRead && ranked(c))
+          .fold(-1.0, (m, c) => readOrder(c) > m ? readOrder(c) : m);
+      return (chapters
+                .where((c) =>
+                    !c.isRead &&
+                    ranked(c) &&
+                    c.deviceState != OfflineDeviceState.error &&
+                    readOrder(c) > floor)
+                .toList()
+            ..sort((a, b) => readOrder(a).compareTo(readOrder(b))))
+          .take(keepUnreadCount)
+          .map((c) => c.id)
+          .toSet();
+    }(),
   };
   return ruleSet..addAll(pinned);
+}
+
+/// Chapter ids allowed to REMAIN on-device for one manga, given its keep-rule.
+///
+/// Deliberately broader than [desiredChapterIds] (which drives what to
+/// *download*). The nUnread rule is a download-ahead window, not a deletion
+/// window: a chapter already on the device that is still UNREAD is never
+/// removed just for falling outside the next-N window or behind the
+/// furthest-read floor. Without this split, marking a far-ahead chapter read
+/// (or leaving a skipped gap) would silently delete unread chapters the reader
+/// already has — e.g. at ch. 10 with 11..20 downloaded, marking ch. 100 read
+/// would raise the floor to 100 and evict 11..20.
+///
+/// READ chapters are intentionally NOT retained here: under nUnread they still
+/// fall out of the window and are cleaned by the rule (the rolling window),
+/// on top of the delete-while-reading path. Every other rule retains exactly
+/// what it downloads.
+Set<int> retainedChapterIds(
+  List<OfflineChapter> chapters,
+  OfflineKeepRule rule,
+  int keepUnreadCount,
+) {
+  final desired = desiredChapterIds(chapters, rule, keepUnreadCount);
+  if (rule != OfflineKeepRule.nUnread) return desired;
+  return {
+    ...desired,
+    for (final c in chapters)
+      if (!c.isRead && c.deviceState == OfflineDeviceState.downloaded) c.id,
+  };
 }
 
 /// Read chapters the "finished chapters to keep" setting still wants kept.
