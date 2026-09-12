@@ -180,6 +180,17 @@ class LocalDownloadProtectionWindow extends _$LocalDownloadProtectionWindow
   bool? build() => initialize(DBKeys.localDownloadProtectionWindow);
 }
 
+/// When enabled, each chapter boundary during reading triggers an immediate
+/// reconcile with deleteWhileReading+1 slots (so the next chapter downloads
+/// ahead and one extra read chapter is buffered at the boundary). Reader exit
+/// re-reconciles with the normal deleteWhileReading slots to clean up.
+@riverpod
+class LocalRollingWindow extends _$LocalRollingWindow
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.localRollingWindow);
+}
+
 /// The on-device delete settings as one value (defaults all off).
 @riverpod
 DeleteChaptersSettings localDeleteSettings(Ref ref) => DeleteChaptersSettings(

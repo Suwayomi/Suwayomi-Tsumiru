@@ -20,6 +20,7 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../offline/data/offline_download_providers.dart';
+import '../../../settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../../../settings/presentation/general/widgets/force_portrait_tile.dart';
 import '../../../settings/presentation/incognito/incognito_mode.dart';
 import '../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
@@ -315,6 +316,11 @@ class ReaderScreen extends HookConsumerWidget {
             // the point where the just-read chapters may be deleted. Container-
             // driven: the server round-trip outlives this route's ref.
             unawaited(flushPendingReadDeletes(providerContainer));
+            // Rolling window cleanup: re-reconcile with the normal (not +1)
+            // deleteWhileReading slots so the boundary buffer is released.
+            if (providerContainer.read(localRollingWindowProvider) ?? false) {
+              unawaited(reconcileMangaContainer(providerContainer, mangaId));
+            }
             // The write above lands first (awaited); defer the list refreshes
             // past this frame — invalidating during the pop's build phase trips
             // the Riverpod-3 modify-during-build assert.

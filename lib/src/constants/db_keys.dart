@@ -192,6 +192,11 @@ enum DBKeys {
   // chapters if they are missing from the device (fills the protection window).
   // Off by default to preserve existing behavior.
   localDownloadProtectionWindow(false),
+  // When true, each chapter boundary during reading triggers an immediate
+  // reconcile with deleteWhileReading+1 slots (downloads the next chapter in
+  // the nUnread window and protects one extra read chapter at the boundary);
+  // reader exit re-reconciles with the normal deleteWhileReading slots.
+  localRollingWindow(false),
   // Lock phones to portrait (landscape on a phone currently looks broken). Off
   // by default — many readers prefer landscape; tablets/desktop ignore it.
   forcePortrait(false),
