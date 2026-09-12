@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import '../../../utils/crash/diagnostics.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
@@ -203,7 +204,21 @@ class OfflineSync {
   /// whole catalog.
   Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
     if (serverLibrary.isEmpty) return;
-    await _db.markNotInLibrary({for (final m in serverLibrary) m.id});
+    final libraryIds = {for (final m in serverLibrary) m.id};
+    // A kept series missing from this fetch is either genuinely removed (rare)
+    // or a partial/racy library response (the bug we chase): either way it is
+    // protected from the '0' stamp, so record it — a recurring id here points
+    // straight at an incomplete getAllLibraryMangas response.
+    final strandedKept = await _db.keepRuleMangaAbsentFromLibrary(libraryIds);
+    if (strandedKept.isNotEmpty) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-library: '
+        'prune-protected-keep-rule mangaIds=[${strandedKept.join(',')}] '
+        'libraryFetchCount=${libraryIds.length} — kept series absent from the '
+        'library fetch; left in-library instead of marking removed\n',
+      );
+    }
+    await _db.markNotInLibrary(libraryIds);
     await _db.purgeRemovedLibraryManga();
     await onSynced?.call();
   }

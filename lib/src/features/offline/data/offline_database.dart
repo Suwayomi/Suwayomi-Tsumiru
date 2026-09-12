@@ -1194,10 +1194,37 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// [purgeRemovedLibraryManga] then deletes the ones with nothing
   /// downloaded. Distinct from NULL, which means "synced before the column
   /// existed" and must keep counting as a library entry.
+  ///
+  /// A manga with an active keep rule is never stamped: the user explicitly
+  /// asked to keep it offline, and [libraryIds] comes from a single library
+  /// fetch that can transiently omit a live series (server hiccup, mid-add).
+  /// Stamping it would drop it from [libraryManga] — and so from the catch-up
+  /// work spec — silently stranding its new chapters in the background
+  /// download path until a foreground reconcile restores the row. Explicit
+  /// removal goes through the keep-rule UI, not this prune.
   Future<int> markNotInLibrary(Set<int> libraryIds) =>
-      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds))).write(
-        const OfflineMangasCompanion(inLibraryAt: Value('0')),
-      );
+      (update(offlineMangas)..where(
+            (t) =>
+                t.id.isNotIn(libraryIds) &
+                t.keepRule.equalsValue(OfflineKeepRule.off),
+          ))
+          .write(const OfflineMangasCompanion(inLibraryAt: Value('0')));
+
+  /// The keep-rule manga a prune would have stamped removed — absent from the
+  /// library fetch yet still marked in-library — now protected by
+  /// [markNotInLibrary]. Empty on a healthy fetch; a non-empty result is the
+  /// smoking gun for a partial library fetch dropping a kept series.
+  Future<List<int>> keepRuleMangaAbsentFromLibrary(Set<int> libraryIds) =>
+      (selectOnly(offlineMangas)
+            ..addColumns([offlineMangas.id])
+            ..where(
+              offlineMangas.id.isNotIn(libraryIds) &
+                  offlineMangas.keepRule.equalsValue(OfflineKeepRule.off).not() &
+                  (offlineMangas.inLibraryAt.equals('0').not() |
+                      offlineMangas.inLibraryAt.isNull()),
+            ))
+          .map((r) => r.read(offlineMangas.id)!)
+          .get();
 
   /// Deletes explicitly-removed manga with nothing downloaded. Scoped to the
   /// '0' mark so it can run concurrently with the per-manga metadata upserts
