@@ -100,6 +100,13 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _mutationTail = Future.value();
   DateTime? _lastRecovery;
   AppLifecycleState? _lastLifecycle;
+  // Latched when the app actually goes to the background (paused/hidden/
+  // detached). Flutter synthesises hidden → inactive → resumed on a genuine
+  // return, so by the time `resumed` arrives the previous state is always
+  // `inactive` and can't be used to tell a real background return from a
+  // notification-shade peek (inactive → resumed, never reaching hidden/paused).
+  // This latch can: the shade never trips it.
+  bool _wentBackground = false;
   bool? _retryBlocked;
   bool _disposed = false;
   String? _notifiedStall;
@@ -750,20 +757,28 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     if (!_isAndroid()) return;
     final previous = _lastLifecycle;
     _lastLifecycle = state;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      // A genuine background trip. The FGS already owns the queue, so do NOTHING
+      // else here — just latch that we left so the matching resume replays.
+      _wentBackground = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
-      // Only replay when coming back from a true background state (paused /
-      // hidden / detached). Pulling down the notification panel and closing it
-      // sends inactive → resumed without ever going to paused — treating that
-      // as a resume would re-send add ops for every pending chapter to the FGS,
-      // interrupting in-progress downloads unnecessarily.
-      final wasBackground = previous == AppLifecycleState.paused ||
-          previous == AppLifecycleState.hidden ||
-          previous == AppLifecycleState.detached ||
-          previous == null; // first resume at launch
+      // Replay only after a real background trip (latched above) or the very
+      // first resume at launch. Can't key off `previous`: Flutter synthesises
+      // hidden → inactive → resumed on a genuine return, so `previous` is
+      // always `inactive` here and would also match the notification-shade peek
+      // (inactive → resumed, which never reaches hidden/paused). Replaying on
+      // the shade would re-send an add op for every pending chapter to the FGS,
+      // interrupting in-progress downloads. The latch separates the two cleanly.
+      final wasBackground = _wentBackground || previous == null;
+      _wentBackground = false;
       if (!wasBackground) return;
       unawaited(replayOnResume());
     }
-    // paused/hidden/detached: NOTHING — the FGS already owns the queue.
+    // inactive: nothing.
   }
 
   /// Replay the completion log into drift (live-UI catch-up on resume).
