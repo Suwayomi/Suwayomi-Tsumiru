@@ -16,6 +16,7 @@ import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../downloads/widgets/rolling_window_switch_tile.dart';
 import 'widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import 'widgets/reader_feedback_toasts_tile/reader_feedback_toasts_tile.dart';
 import 'widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
@@ -100,6 +101,11 @@ class ReaderSettingsScreen extends ConsumerWidget {
                   ref.read(leftHandedVerticalSeekbarProvider.notifier).update,
             ),
           ],
+
+          // Same option as the on-device downloads settings (one shared
+          // widget, one setting) — surfaced here in the first, ungrouped
+          // category so it's reachable without leaving the reader settings.
+          const RollingWindowSwitchTile(),
 
           // ── Display ──
           _Header(context.l10n.readerGroupDisplay),

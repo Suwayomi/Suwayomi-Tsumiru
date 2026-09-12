@@ -15,6 +15,7 @@ import '../../domain/settings/settings.dart';
 import 'data/delete_chapters_settings_repository.dart';
 import 'data/downloads_settings_repository.dart';
 import 'widgets/auto_download_categories_dialog.dart';
+import 'widgets/rolling_window_switch_tile.dart';
 
 /// Labels for the "after reading automatically delete" select (0 = disabled,
 /// N = the Nth chapter behind), matching the Suwayomi-WebUI wording.
@@ -300,13 +301,7 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
                 ]
               : const [],
         ),
-        _SubSwitchTile(
-          title: context.l10n.rollingWindowTitle,
-          subtitle: context.l10n.rollingWindowDescription,
-          value: ref.watch(localRollingWindowProvider) ?? false,
-          onChanged: (v) async =>
-              ref.read(localRollingWindowProvider.notifier).update(v),
-        ),
+        const RollingWindowSwitchTile(),
         ...buildOnDeviceStorageTiles(context, ref),
       ],
     );
