@@ -28,7 +28,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 36 // bumped for background_downloader / flutter_foreground_task
+    compileSdk 36 // bumped for background_downloader / flutter_foreground_task
     ndkVersion "28.2.13676358"
     namespace "io.github.aaronbamblett.tsumiru"
     compileOptions {
@@ -43,18 +43,15 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "io.github.aaronbamblett.tsumiru"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
-        minSdkVersion flutter.minSdkVersion // raised for flutter_foreground_task (Android 6.0+)
-        targetSdkVersion flutter.targetSdkVersion
+        minSdk flutter.minSdkVersion // raised for flutter_foreground_task (Android 6.0+)
+        targetSdk flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         manifestPlaceholders += [appLabel: "Tsumiru"]
 
         // Opt-in side-by-side test build — leaves the daily driver untouched.
-        // Build with: ORG_GRADLE_PROJECT_devBuild=1 flutter build apk --debug
+        // Build with: flutter build apk --debug --android-project-arg=devBuild=1
         // Installs as a separate app id (…tsumiru.dev) named "Tsumiru Dev".
         if (project.hasProperty('devBuild')) {
             applicationIdSuffix ".dev"
