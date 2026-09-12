@@ -60,6 +60,35 @@ Set<int> desiredChapterIds(
   return ruleSet..addAll(pinned);
 }
 
+/// Chapter ids allowed to REMAIN on-device for one manga, given its keep-rule.
+///
+/// Deliberately broader than [desiredChapterIds] (which drives what to
+/// *download*). The nUnread rule is a download-ahead window, not a deletion
+/// window: a chapter already on the device that is still UNREAD is never
+/// removed just for falling outside the next-N window or behind the
+/// furthest-read floor. Without this split, marking a far-ahead chapter read
+/// (or leaving a skipped gap) would silently delete unread chapters the reader
+/// already has — e.g. at ch. 10 with 11..20 downloaded, marking ch. 100 read
+/// would raise the floor to 100 and evict 11..20.
+///
+/// READ chapters are intentionally NOT retained here: under nUnread they still
+/// fall out of the window and are cleaned by the rule (the rolling window),
+/// on top of the delete-while-reading path. Every other rule retains exactly
+/// what it downloads.
+Set<int> retainedChapterIds(
+  List<OfflineChapter> chapters,
+  OfflineKeepRule rule,
+  int keepUnreadCount,
+) {
+  final desired = desiredChapterIds(chapters, rule, keepUnreadCount);
+  if (rule != OfflineKeepRule.nUnread) return desired;
+  return {
+    ...desired,
+    for (final c in chapters)
+      if (!c.isRead && c.deviceState == OfflineDeviceState.downloaded) c.id,
+  };
+}
+
 /// Read chapters the "finished chapters to keep" setting still wants kept.
 /// Slot N targets the chapter N-1 behind the one just finished, so the N-1
 /// most recently read chapters are the ones the user asked to hold on to.

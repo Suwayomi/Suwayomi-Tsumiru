@@ -131,4 +131,78 @@ void main() {
       expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {30, 40});
     },
   );
+
+  group('retainedChapterIds (what may STAY on device)', () {
+    test(
+      'nUnread retains downloaded UNREAD chapters behind the floor '
+      '(regression: marking a far-ahead chapter read must not delete them)',
+      () {
+        // At ch.100 (read); 11..13 already downloaded but unread and behind the
+        // furthest-read floor. The download set only wants the next unread
+        // ahead of the floor, but retention must keep 11..13 so reconcile does
+        // not evict chapters the reader already has.
+        final c = [
+          ch(11, 11, deviceState: OfflineDeviceState.downloaded),
+          ch(12, 12, deviceState: OfflineDeviceState.downloaded),
+          ch(13, 13, deviceState: OfflineDeviceState.downloaded),
+          ch(100, 100, read: true),
+          ch(101, 101), // unread, ahead
+        ];
+        expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {101});
+        expect(retainedChapterIds(c, OfflineKeepRule.nUnread, 2),
+            {11, 12, 13, 101});
+      },
+    );
+
+    test('nUnread does NOT retain read chapters behind the frontier', () {
+      // A read, downloaded chapter still falls out of the retention set — the
+      // rolling window (and delete-while-reading) may clean it.
+      final c = [
+        ch(5, 5, read: true, deviceState: OfflineDeviceState.downloaded),
+        ch(6, 6, deviceState: OfflineDeviceState.downloaded), // unread, ahead
+      ];
+      final retained = retainedChapterIds(c, OfflineKeepRule.nUnread, 1);
+      expect(retained.contains(5), isFalse,
+          reason: 'read chapters are cleaned by the rule, not retained');
+      expect(retained.contains(6), isTrue);
+    });
+
+    test('nUnread retains an unread chapter beyond the N download window', () {
+      // count=1 wants only the first unread ahead, but a second already-present
+      // unread chapter must not be evicted for being beyond N.
+      final c = [
+        ch(1, 1, read: true),
+        ch(2, 2, deviceState: OfflineDeviceState.downloaded), // in window
+        ch(3, 3, deviceState: OfflineDeviceState.downloaded), // beyond N=1
+      ];
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 1), {2});
+      expect(retainedChapterIds(c, OfflineKeepRule.nUnread, 1), {2, 3});
+    });
+
+    test('nUnread retention ignores non-downloaded unread chapters', () {
+      // A queued/none-state unread chapter behind the floor is not on disk, so
+      // it is not part of the retention set (nothing to protect from eviction).
+      final c = [
+        ch(2, 2), // unread, deviceState none, behind floor
+        ch(10, 10, read: true),
+        ch(11, 11), // unread, ahead
+      ];
+      expect(retainedChapterIds(c, OfflineKeepRule.nUnread, 2), {11});
+    });
+
+    test('non-nUnread rules retain exactly what they download', () {
+      final c = [
+        ch(1, 1, read: true, deviceState: OfflineDeviceState.downloaded),
+        ch(2, 2, deviceState: OfflineDeviceState.downloaded),
+      ];
+      for (final rule in [
+        OfflineKeepRule.off,
+        OfflineKeepRule.all,
+        OfflineKeepRule.allUnread,
+      ]) {
+        expect(retainedChapterIds(c, rule, 3), desiredChapterIds(c, rule, 3),
+            reason: '$rule retention must equal its download set');
+      }
+    });
+  });
 }
