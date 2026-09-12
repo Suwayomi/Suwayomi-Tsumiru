@@ -326,6 +326,20 @@ class OfflineFilesView extends HookConsumerWidget {
     if (rows.isEmpty) return;
     final picked = await _pickRule(context);
     if (picked == null || !context.mounted) return;
+    // "Remove from device" selected — delegate to the dedicated bulk-delete
+    // flow which handles its own confirmation dialog.
+    if (picked.remove) {
+      return _bulkStopDelete(
+          context, ref, rows.map((r) => r.manga.id).toList(), clear);
+    }
+    // "Stop keeping" — off rule, no deletion.
+    if (picked.rule == OfflineKeepRule.off) {
+      clear();
+      for (final r in rows) {
+        await changeKeepRule(ref, r.manga.id, OfflineKeepRule.off, 5);
+      }
+      return;
+    }
     final growing = rows
         .where((r) => picked.rule.index > r.manga.keepRule.index)
         .length;
@@ -380,7 +394,7 @@ class OfflineFilesView extends HookConsumerWidget {
     }
   }
 
-  Future<({OfflineKeepRule rule, int count})?> _pickRule(
+  Future<({OfflineKeepRule rule, int count, bool remove})?> _pickRule(
     BuildContext context,
   ) => pickOfflineKeepRule(context);
 
