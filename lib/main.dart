@@ -408,14 +408,18 @@ Future<void> _startApp() async {
           await container.read(notificationsControllerProvider).sync();
         } catch (_) {}
         if (!container.read(offlineActiveProvider)) return;
-        // Replay FIRST: launch reconcile and the catch-up must see post-replay
-        // device state, or overnight background downloads read as missing and
-        // get re-fetched. The service restart stays after reconcile below.
+        // Settle disk FIRST: launch reconcile and the catch-up must see
+        // post-recovery device state, or overnight background downloads read as
+        // missing and get re-fetched. Android reaches this through the worker's
+        // replay; desktop/other has no replay, so it recovers here directly.
+        // The service restart / pump stays after reconcile below.
         if (isAndroidNative) {
           // register() already ran above; this is the catalog-dependent half.
           await container
               .read(backgroundDownloadControllerProvider)
               .replayAtLaunch();
+        } else {
+          await recoverDiskAtLaunch(container);
         }
         await pushPendingProgress(container);
         await reconcileAllAtLaunch(container);
