@@ -19,12 +19,18 @@ class NotificationPayload {
   const NotificationPayload.updates()
     : mangaId = null,
       chapterId = null,
-      chapterIds = const [];
+      chapterIds = const [],
+      isUpdateErrors = false;
+  const NotificationPayload.updateErrors()
+    : mangaId = null,
+      chapterId = null,
+      chapterIds = const [],
+      isUpdateErrors = true;
   const NotificationPayload.chapter({
     required this.mangaId,
     required this.chapterId,
     this.chapterIds = const [],
-  });
+  }) : isUpdateErrors = false;
 
   final int? mangaId;
 
@@ -35,16 +41,21 @@ class NotificationPayload {
   /// action targets.
   final List<int> chapterIds;
 
+  /// Routes the tap to the library update errors screen.
+  final bool isUpdateErrors;
+
   String encode() => jsonEncode({
     if (mangaId != null) 'm': mangaId,
     if (chapterId != null) 'c': chapterId,
     if (chapterIds.isNotEmpty) 'cs': chapterIds,
+    if (isUpdateErrors) 'e': 1,
   });
 
   static NotificationPayload decode(String? raw) {
     if (raw == null || raw.isEmpty) return const NotificationPayload.updates();
     try {
       final j = jsonDecode(raw) as Map<String, Object?>;
+      if (j['e'] == 1) return const NotificationPayload.updateErrors();
       final m = (j['m'] as num?)?.toInt();
       if (m == null) return const NotificationPayload.updates();
       return NotificationPayload.chapter(
@@ -333,6 +344,7 @@ class LocalNotificationService {
     channelName: 'Library update errors',
     title: title,
     body: body,
+    payload: const NotificationPayload.updateErrors().encode(),
   );
 
   Future<void> showDownloadError(String title, String body) => _showSimple(

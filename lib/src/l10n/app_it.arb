@@ -193,10 +193,6 @@
   "@pause": {
     "description": "Button text to pause downloads"
   },
-  "pending": "In attesa",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "pinchToZoom": "Pizzica per ingrandire",
   "@pinchToZoom": {
     "description": "Switch title to enable pinch to zoom in reader screen"
@@ -289,10 +285,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "running": "In esecuzione",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "save": "Salva",
   "@save": {
     "description": "Save Button Text"
@@ -360,10 +352,6 @@
   "themeModeSystem": "Sistema",
   "@themeModeSystem": {
     "description": "Radio button text for App theme - System"
-  },
-  "updatesSummary": "Sintesi degli aggiornamenti",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "updating": "Aggiornando",
   "@updating": {
@@ -483,10 +471,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Completato",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' Copiati!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -598,10 +582,6 @@
   "general": "Generale",
   "@general": {
     "description": "Screen title and Button text of General setting screen"
-  },
-  "failed": "Fallito",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "findServer": "Trova",
   "@findServer": {

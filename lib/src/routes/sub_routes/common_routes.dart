@@ -31,11 +31,12 @@ class RecommendsBrowseRoute extends GoRouteData with $RecommendsBrowseRoute {
       RecommendsBrowseScreen(mangaId: mangaId, providerName: providerName);
 }
 
-class UpdateStatusRoute extends GoRouteData with $UpdateStatusRoute {
-  const UpdateStatusRoute();
+class LibraryUpdateErrorsRoute extends GoRouteData
+    with $LibraryUpdateErrorsRoute {
+  const LibraryUpdateErrorsRoute();
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const UpdateStatusSummaryDialog();
+      const LibraryUpdateErrorsScreen();
 }
 
 class ReaderRoute extends GoRouteData with $ReaderRoute {

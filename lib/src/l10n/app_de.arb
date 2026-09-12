@@ -19,10 +19,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Abgeschlossen",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "credentials": "Anmeldedaten",
   "@credentials": {
     "description": "Popup title and Button text to enter Authentication credentials"
@@ -179,10 +175,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "running": "",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "save": "",
   "@save": {
     "description": "Save Button Text"
@@ -246,10 +238,6 @@
   "updates": "",
   "@updates": {
     "description": "Screen title and Button text of Updates screen"
-  },
-  "updatesSummary": "",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "updating": "",
   "@updating": {
@@ -587,10 +575,6 @@
   "@readerModeWebtoon": {
     "description": "Radio button text for Reader Mode Type - Webtoon"
   },
-  "failed": "",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
-  },
   "readerModeDefaultReader": "",
   "@readerModeDefaultReader": {
     "description": "Radio button text for Reader Mode Type - Default"
@@ -770,10 +754,6 @@
   "pause": "",
   "@pause": {
     "description": "Button text to pause downloads"
-  },
-  "pending": "",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
   },
   "reader": "",
   "@reader": {

@@ -645,10 +645,6 @@
   "@quickSearchSourceManga": {
     "description": "Quick Open Hint text for searching Manga M in Source S with prefill '@S/M'"
   },
-  "completed": "已完成",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "quickSearchSource": "搜尋來源 'S'",
   "@quickSearchSource": {
     "description": "Quick Open Hint text for Source S with prefill '@S'"
@@ -709,10 +705,6 @@
   "@webView": {
     "description": "Button text to open manga website"
   },
-  "running": "運作中",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "createBackupTitle": "建立備份",
   "@createBackupTitle": {
     "description": "Button text to create backup"
@@ -733,10 +725,6 @@
   "@readerNavigationLayoutEdge": {
     "description": "Radio button text for Reader Navigation Layout - Edge"
   },
-  "pending": "等待中",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "errorExtension": "選擇的擴充套件不存在",
   "@errorExtension": {
     "description": "Error Description to show when user selected unknown extension from list"
@@ -744,10 +732,6 @@
   "noCategoriesFoundAlt": "尚未有任何分類。\n在設定內建立一個以管理你的書架",
   "@noCategoriesFoundAlt": {
     "description": "Hint text to add new Category in Settings when category list is empty"
-  },
-  "updatesSummary": "更新概要",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "noServerFound": "未在局域網內找到伺服器",
   "@noServerFound": {
@@ -832,10 +816,6 @@
   "latest": "最新",
   "@latest": {
     "description": "Button text to take user to the latest tab of Source manga screen"
-  },
-  "failed": "失敗",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "errorLaunchURL": "開啟失敗\n已複製 \"{url}\" 至剪貼簿",
   "@errorLaunchURL": {

@@ -97,10 +97,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Terminé",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "« {msg} » copié !",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -196,10 +192,6 @@
   "extensions": "Extensions",
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
-  },
-  "failed": "Échec",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "Filtrer",
   "@filter": {
@@ -583,10 +575,6 @@
   "@password": {
     "description": "Title text for password field"
   },
-  "pending": "En attente",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "noSourcesFound": "Aucune source trouvée",
   "@noSourcesFound": {
     "description": "Text to show that the Source list is empty"
@@ -663,10 +651,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "running": "En cours",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "search": "Rechercher",
   "@search": {
     "description": "Search field hint Text"
@@ -702,10 +686,6 @@
   "updates": "Mises à jour",
   "@updates": {
     "description": "Screen title and Button text of Updates screen"
-  },
-  "updatesSummary": "Récapitulatif des mises à jour",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "userName": "Nom d'utilisateur",
   "@userName": {

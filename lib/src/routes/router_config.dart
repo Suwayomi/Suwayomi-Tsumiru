@@ -28,8 +28,8 @@ import '../features/manga_book/presentation/reader/reader_screen.dart';
 import '../features/manga_book/presentation/recommends/recommends_browse_screen.dart';
 import '../features/manga_book/presentation/recommends/recommends_screen.dart';
 import '../features/manga_book/presentation/upcoming/upcoming_screen.dart';
+import '../features/manga_book/presentation/update_errors/library_update_errors_screen.dart';
 import '../features/manga_book/presentation/updates/updates_screen.dart';
-import '../features/manga_book/widgets/update_status_summary_sheet.dart';
 import '../features/migration/domain/migration_models.dart';
 import '../features/migration/presentation/screens/migration_bulk_config_screen.dart';
 import '../features/migration/presentation/screens/migration_bulk_run_screen.dart';
@@ -116,7 +116,7 @@ abstract class Routes {
   // Commons
   static const mangaRoute = '/manga/:mangaId';
   static const reader = 'chapter/:chapterId';
-  static const updateStatus = "/update-status";
+  static const libraryUpdateErrors = "/library-update-errors";
   static const about = 'about';
   static const globalSearch = '/global-search';
   static const recommends = '/recommends/:mangaId';
@@ -267,7 +267,7 @@ GoRouter routerConfig(Ref ref) {
       path: Routes.mangaRoute,
       routes: [TypedGoRoute<ReaderRoute>(path: Routes.reader)],
     ),
-    TypedGoRoute<UpdateStatusRoute>(path: Routes.updateStatus),
+    TypedGoRoute<LibraryUpdateErrorsRoute>(path: Routes.libraryUpdateErrors),
     TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
     TypedGoRoute<LibraryDuplicatesRoute>(path: Routes.libraryDuplicates),
     TypedGoRoute<RecommendsRoute>(path: Routes.recommends),

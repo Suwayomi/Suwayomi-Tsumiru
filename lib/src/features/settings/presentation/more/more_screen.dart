@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../auth/data/auth_state.dart';
+import '../../../manga_book/data/updates/updates_repository.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
@@ -80,6 +81,16 @@ class MoreScreen extends ConsumerWidget {
             title: Text(context.l10n.history),
             leading: const Icon(Icons.history_rounded),
             onTap: () => const HistoryRoute().go(context),
+          ),
+          Builder(
+            builder: (context) {
+              final count = ref.watch(failedUpdatesProvider).value?.length ?? 0;
+              return ListTile(
+                title: Text(context.l10n.libraryUpdateErrorsCount(count)),
+                leading: const Icon(Icons.error_outline_rounded),
+                onTap: () => const LibraryUpdateErrorsRoute().push(context),
+              );
+            },
           ),
           ListTile(
             title: Text(context.l10n.appearance),

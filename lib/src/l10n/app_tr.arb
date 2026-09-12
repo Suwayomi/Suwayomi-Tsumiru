@@ -51,10 +51,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Tamamlandı",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "createBackupTitle": "Yedek oluştur",
   "@createBackupTitle": {
     "description": "Button text to create backup"
@@ -240,10 +236,6 @@
   "extensions": "Eklentiler",
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
-  },
-  "failed": "Hata oluştu",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "Filtrele",
   "@filter": {
@@ -522,10 +514,6 @@
   "password": "Şifre",
   "@password": {
     "description": "Title text for password field"
-  },
-  "pending": "Askıda",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
   },
   "noResultFound": "Bir sonuç bulunamadı",
   "@noResultFound": {
