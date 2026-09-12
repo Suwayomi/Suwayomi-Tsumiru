@@ -28,7 +28,6 @@ import 'offline_background_downloads.dart';
 import 'offline_database.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
-import 'offline_types.dart';
 
 /// Closes the #310 gap: a library update told the SERVER to find new chapters,
 /// but nothing on the client synced or downloaded them for keep-rule manga —
@@ -329,6 +328,31 @@ touchedSinceWatermark({
     }
   }
   return (touched: touched, newestFetchedAt: newest, sawWatermark: false);
+}
+
+/// Fetch each manga's chapter list from the server, mirror it into drift, then
+/// reconcile. Called from the bulk keep-rule change path.
+///
+/// The server fetch is not optional even for a manga whose chapters are already
+/// mirrored: the reconciler routes purely on the stored `serverIsDownloaded`
+/// flag, and that mirror goes stale between syncs. A stale-true value routes a
+/// chapter straight to a device download that bypasses the server; a stale-false
+/// value re-enqueues a chapter the server already holds, which drains with no
+/// edge and never pulls to the device. Re-syncing first (syncChapters writes the
+/// server's current isDownloaded) is what keeps both hops correct.
+///
+/// Mirrors [_syncAndReconcile] but also kicks the download starter so the
+/// freshly-queued chapters begin transferring without waiting for the next
+/// library update.
+Future<void> syncAndReconcileMangaSet(
+  ProviderContainer container,
+  Set<int> mangaIds, {
+  bool userInitiated = false,
+}) async {
+  if (mangaIds.isEmpty) return;
+  if (!container.read(offlineActiveProvider)) return;
+  await _syncAndReconcile(container, mangaIds);
+  await container.read(downloadStarterProvider)(userInitiated: userInitiated);
 }
 
 /// The manga-details chain, minus the screen: stored chapters from the server,
