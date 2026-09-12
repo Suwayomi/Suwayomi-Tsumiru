@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -334,6 +335,52 @@ void main() {
       );
     },
   );
+
+  group('resume replay gating', () {
+    // A queued chapter is already in the setUp, so a replay that reaches
+    // ensureServiceRunning starts the FGS — service.starts is the signal.
+    test('notification-shade peek (inactive → resumed) does not replay',
+        () async {
+      // Seed a non-null previous so this isn't mistaken for the launch resume.
+      controller.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await pumpEventQueue();
+      expect(service.starts, 0);
+    });
+
+    test('genuine background return replays even though previous is inactive',
+        () async {
+      // Flutter synthesises hidden → inactive → resumed on a real return, so
+      // `previous` is inactive at `resumed` just like the shade — the latch,
+      // not `previous`, is what must let this through.
+      controller.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      controller.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await pumpUntil(() => service.starts > 0);
+      expect(service.starts, greaterThan(0));
+    });
+
+    test('first resume at launch replays', () async {
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await pumpUntil(() => service.starts > 0);
+      expect(service.starts, greaterThan(0));
+    });
+
+    test('a second shade peek after a real return still does not replay',
+        () async {
+      // Real return replays and resets the latch...
+      controller.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      controller.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await pumpUntil(() => service.starts > 0);
+      final afterReturn = service.starts;
+      // ...so a later shade peek (inactive → resumed) must not replay again.
+      controller.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await pumpEventQueue();
+      expect(service.starts, afterReturn);
+    });
+  });
 
   test('register restores a persisted stall silently', () async {
     useManualTimers();
