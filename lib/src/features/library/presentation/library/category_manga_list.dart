@@ -279,13 +279,16 @@ class CategoryMangaList extends HookConsumerWidget {
                     }
 
                     if (picked.rule == OfflineKeepRule.off) {
-                      // "Stop keeping offline" — just clear the rule, no
-                      // download or deletion.
+                      // "Stop keeping offline" — off rule, no deletion. Route
+                      // through the shared changeKeepRule helper (same as the
+                      // Offline files screen) instead of a bare setKeepRule: it
+                      // reconciles under ownership and rewrites the background
+                      // work spec, so the overnight worker stops treating these
+                      // series as kept. A bare setKeepRule leaves the spec stale
+                      // and the worker keeps downloading their chapters.
                       selection.value = const {};
-                      final db = ref.read(offlineDatabaseProvider);
                       for (final id in ids) {
-                        await db.setKeepRule(
-                            id, OfflineKeepRule.off, 5);
+                        await changeKeepRule(ref, id, OfflineKeepRule.off, 5);
                       }
                       return;
                     }
