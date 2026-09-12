@@ -698,6 +698,11 @@ Future<_MangaChapters?> _fetchMangaChapters(
         mangaId: mangaId,
         name: n['name'] as String? ?? '',
         chapterIndex: (n['sourceOrder'] as num?)?.toInt() ?? 0,
+        // Carry the parsed number so the background worker's nUnread window
+        // orders by chapterNumber exactly like the foreground reconciler — the
+        // query already fetches it; dropping it silently forced this path onto
+        // sourceOrder and diverged the two engines (see reconcile_logic.dart).
+        chapterNumber: (n['chapterNumber'] as num?)?.toDouble(),
         isRead: n['isRead'] as bool? ?? false,
         lastPageRead: 0,
         isBookmarked: n['isBookmarked'] as bool? ?? false,

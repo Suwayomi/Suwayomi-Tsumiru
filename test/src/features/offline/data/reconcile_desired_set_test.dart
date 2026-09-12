@@ -132,6 +132,53 @@ void main() {
     },
   );
 
+  test(
+    'nUnread ignores an unnumbered special when other chapters are numbered: '
+    'a read special at a high sourceOrder must not poison the floor',
+    () {
+      // Mixed numbering: real chapters carry numbers, one bonus/special never
+      // got one (chapterNumber == null) and sits at a high sourceOrder. Before
+      // the single-axis fix, the read special fell back to sourceOrder=99 and
+      // pushed the floor to 99, excluding the genuinely-next unread ch.3/ch.4.
+      final c = [
+        ch(10, 1, read: true, chapterNumber: 1.0),
+        ch(20, 2, read: true, chapterNumber: 2.0),
+        ch(30, 3, chapterNumber: 3.0), // unread, ahead
+        ch(40, 4, chapterNumber: 4.0), // unread, ahead
+        ch(50, 99, read: true), // special, no number, high sourceOrder
+      ];
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {30, 40});
+    },
+  );
+
+  test(
+    'nUnread does not download an unnumbered unread special in a numbered '
+    'manga (it has no place on the narrative axis), but retention keeps it '
+    'once already on-device',
+    () {
+      final c = [
+        ch(10, 1, read: true, chapterNumber: 1.0),
+        ch(20, 2, chapterNumber: 2.0), // unread, ahead
+        ch(30, 99,
+            deviceState: OfflineDeviceState.downloaded), // unnumbered special
+      ];
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 5), {20});
+      expect(retainedChapterIds(c, OfflineKeepRule.nUnread, 5), {20, 30});
+    },
+  );
+
+  test(
+    'nUnread still ranks by sourceOrder when NO chapter carries a number',
+    () {
+      final c = [
+        ch(1, 1, read: true),
+        ch(2, 2), // unread, ahead
+        ch(3, 3), // unread, ahead
+      ];
+      expect(desiredChapterIds(c, OfflineKeepRule.nUnread, 2), {2, 3});
+    },
+  );
+
   group('retainedChapterIds (what may STAY on device)', () {
     test(
       'nUnread retains downloaded UNREAD chapters behind the floor '

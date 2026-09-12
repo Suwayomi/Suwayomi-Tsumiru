@@ -32,22 +32,34 @@ Set<int> desiredChapterIds(
     // ch. 2 but read ch. 3+) causes the worker to download behind their reading
     // progress instead of ahead of it.
     //
-    // Uses chapterNumber (the parsed chapter number: 1.0, 10.5, …) as the
-    // ordering key because it reflects narrative reading order. Falls back to
-    // chapterIndex (sourceOrder) for chapters whose number is absent or ≤ 0
-    // (bonus/special chapters that the source never assigned a real number).
+    // Ranks the whole manga on ONE axis so the furthest-read floor and the
+    // download-ahead window are always compared on the same scale. chapterNumber
+    // (the parsed chapter number: 1.0, 10.5, …) reflects narrative reading
+    // order, so it wins whenever the source assigns real numbers — including
+    // reverse-listed sources whose sourceOrder runs backwards. Only when NO
+    // chapter carries a usable number do we fall back to chapterIndex
+    // (sourceOrder) for all of them.
+    //
+    // In chapterNumber mode a chapter without a usable number (a bonus/special
+    // the source never numbered) has no place on the narrative axis, so it is
+    // excluded from both the floor and the window rather than ranked on the
+    // incompatible sourceOrder scale — mixing the two silently corrupted the
+    // floor (a read, high-sourceOrder special would shove it far past the real
+    // reading position and starve the window). Such chapters can still be
+    // pinned, and if already on-device+unread they survive via retainedChapterIds.
     OfflineKeepRule.nUnread => () {
-      double readOrder(OfflineChapter c) {
-        final n = c.chapterNumber;
-        return (n != null && n > 0) ? n : c.chapterIndex.toDouble();
-      }
+      final byNumber = chapters.any((c) => (c.chapterNumber ?? 0) > 0);
+      bool ranked(OfflineChapter c) => !byNumber || (c.chapterNumber ?? 0) > 0;
+      double readOrder(OfflineChapter c) =>
+          byNumber ? c.chapterNumber! : c.chapterIndex.toDouble();
 
       final floor = chapters
-          .where((c) => c.isRead)
+          .where((c) => c.isRead && ranked(c))
           .fold(-1.0, (m, c) => readOrder(c) > m ? readOrder(c) : m);
       return (chapters
                 .where((c) =>
                     !c.isRead &&
+                    ranked(c) &&
                     c.deviceState != OfflineDeviceState.error &&
                     readOrder(c) > floor)
                 .toList()
