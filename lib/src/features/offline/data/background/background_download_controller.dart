@@ -237,6 +237,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   /// Connectivity listener used to enforce Wi-Fi-only while the app is alive.
   StreamSubscription<List<ConnectivityResult>>? _connSub;
+  ProviderSubscription<AsyncValue<String>>? _identitySubscription;
 
   /// Guards [ensureServiceRunning] against overlapping invocations (it does
   /// several awaited steps; concurrent enqueue + resume could double-start).
@@ -308,7 +309,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       });
       if (pending.isEmpty) unawaited(_clearStall());
     });
-    _ref.listen(serverInstanceIdProvider, (_, next) {
+    // Container-level: a provider-level listen makes this controller depend on
+    // the server address, which reads this controller while switching.
+    _identitySubscription ??= _ref.container.listen(serverInstanceIdProvider, (
+      _,
+      next,
+    ) {
       if (next.hasValue && _identityAllowed) {
         unawaited(_publishQueue().then((_) => ensureServiceRunning()));
       }
@@ -324,6 +330,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   void dispose() {
     _disposed = true;
+    _identitySubscription?.close();
     _queuePublishTimer?.cancel();
     _handoffTimer?.cancel();
     unawaited(_pendingSub?.cancel());

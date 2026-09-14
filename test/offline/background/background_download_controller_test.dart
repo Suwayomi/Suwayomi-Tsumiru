@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,7 @@ import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_settings_providers.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 import '../../helpers/offline_test_db.dart';
@@ -127,11 +129,24 @@ void main() {
   late List<bool> silentNotices;
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     db = testOfflineDatabase();
     final tmp = await Directory.systemTemp.createTemp('download-start-test');
     final paths = OfflinePaths(tmp.path);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (_) async => tmp.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
     pageStore = DelayedManifestStore(paths);
     service = FakeService();
     notices = [];
@@ -139,36 +154,37 @@ void main() {
     publishQueue = () async {};
     makeTimer = Timer.new;
     network = [ConnectivityResult.wifi];
-    final controllerProvider = Provider<BackgroundDownloadController>(
-      (ref) => BackgroundDownloadController(
-        ref,
-        gateway: service,
-        isAndroid: () => true,
-        identityAllowed: () => true,
-        publishQueue: () => publishQueue(),
-        timer: (duration, callback) => makeTimer(duration, callback),
-        connectivity: () async => network,
-        connectivityChanges: const Stream.empty(),
-        notifyStall: (reason, {required silent}) async {
-          notices.add(reason);
-          silentNotices.add(silent);
-        },
-      ),
-    );
     container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        offlineDatabaseProvider.overrideWithValue(db),
-        serverInstanceIdProvider.overrideWith(
-          (ref) => Completer<String>().future,
+        backgroundDownloadControllerProvider.overrideWith(
+          (ref) => BackgroundDownloadController(
+            ref,
+            gateway: service,
+            isAndroid: () => true,
+            identityAllowed: () => true,
+            publishQueue: () => publishQueue(),
+            timer: (duration, callback) => makeTimer(duration, callback),
+            connectivity: () async => network,
+            connectivityChanges: const Stream.empty(),
+            notifyStall: (reason, {required silent}) async {
+              notices.add(reason);
+              silentNotices.add(silent);
+            },
+          ),
         ),
+        offlineDatabaseProvider.overrideWithValue(db),
+        serverInstanceIdProvider.overrideWith((ref) {
+          ref.watch(serverUrlProvider);
+          return Completer<String>().future;
+        }),
         offlinePathsProvider.overrideWithValue(paths),
         offlinePageStoreProvider.overrideWithValue(pageStore),
         offlineEnabledProvider.overrideWith((ref) => true),
         offlineActiveProvider.overrideWith((ref) => true),
       ],
     );
-    controller = container.read(controllerProvider);
+    controller = container.read(backgroundDownloadControllerProvider);
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.upsertChapterMetadata(
       id: 5,
@@ -197,6 +213,17 @@ void main() {
       ),
     );
   }
+
+  test(
+    'registered Android controller allows changing the server address',
+    () async {
+      controller.register();
+      await container
+          .read(serverExternalUrlProvider.notifier)
+          .update('http://127.0.0.1:4598');
+      expect(container.read(serverUrlProvider), 'http://127.0.0.1:4598');
+    },
+  );
 
   /// Pumps until [ready] holds. A bare `pumpEventQueue()` gives a fixed number
   /// of turns, so on a loaded machine an in-flight restart is asserted before
