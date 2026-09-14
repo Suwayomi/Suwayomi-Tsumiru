@@ -243,13 +243,10 @@ class CategoryMangaList extends HookConsumerWidget {
                               icon: Icon(Icons.delete_outline_rounded,
                                   color:
                                       ctx.theme.colorScheme.error),
-                              title: Text(ctx.l10n.offlineRemoveSeries),
+                              title: Text(ctx.l10n.manageDownloadsStopDelete),
                               content: Text(
-                                ids.length == 1
-                                    ? ctx.l10n.offlineRemoveAllConfirm
-                                    : ctx.l10n
-                                        .manageDownloadsDeleteConfirm(
-                                            ids.length),
+                                ctx.l10n.manageDownloadsDeleteConfirm(
+                                    ids.length),
                               ),
                               actions: [
                                 TextButton(

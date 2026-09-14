@@ -60,7 +60,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.bookmark_remove_outlined),
-              title: Text(sheetContext.l10n.keepOfflineOff),
+              title: Text(sheetContext.l10n.manageDownloadsStopKeep),
               onTap: () => Navigator.pop(
                   sheetContext,
                   (rule: OfflineKeepRule.off, count: 0, remove: false)),
@@ -69,7 +69,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
               leading: Icon(Icons.delete_outline_rounded,
                   color: sheetContext.theme.colorScheme.error),
               title: Text(
-                sheetContext.l10n.offlineRemoveSeries,
+                sheetContext.l10n.manageDownloadsStopDelete,
                 style:
                     TextStyle(color: sheetContext.theme.colorScheme.error),
               ),
