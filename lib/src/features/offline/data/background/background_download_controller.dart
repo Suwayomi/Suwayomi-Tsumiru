@@ -233,6 +233,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   /// Connectivity listener used to enforce Wi-Fi-only while the app is alive.
   StreamSubscription<List<ConnectivityResult>>? _connSub;
+  ProviderSubscription<AsyncValue<String>>? _identitySubscription;
 
   /// Guards [ensureServiceRunning] against overlapping invocations (it does
   /// several awaited steps; concurrent enqueue + resume could double-start).
@@ -286,7 +287,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _workerEventCallback ??= _onWorkerEvent;
     _gateway.addCallback(_workerEventCallback!);
     _bindStorage();
-    _ref.listen(serverInstanceIdProvider, (_, next) {
+    _identitySubscription ??= _ref.container.listen(serverInstanceIdProvider, (
+      _,
+      next,
+    ) {
       if (next.hasValue && _identityAllowed) {
         unawaited(_publishQueue().then((_) => ensureServiceRunning()));
       }
@@ -343,6 +347,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   void dispose() {
     _disposed = true;
+    _identitySubscription?.close();
     _activeAttemptId = null;
     _queuePublishTimer?.cancel();
     _handoffTimer?.cancel();
@@ -1407,9 +1412,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _restoreActiveAttempt() => withWorkOrderAdmission(
-    _paths.baseDir,
-    () async {
+  Future<void> _restoreActiveAttempt() async {
+    if (_disposed || !_ref.read(offlineEnabledProvider)) return;
+    await withWorkOrderAdmission(_paths.baseDir, () async {
       final order = decodeWorkOrder(await _gateway.read(kWorkOrderKey));
       if (_disposed) return;
       final controls = CatchupStateStore(_ref.read(sharedPreferencesProvider));
@@ -1425,8 +1430,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
               order?.identityEpoch == controls.identityEpoch
           ? order?.attemptId
           : null;
-    },
-  );
+    });
+  }
 
   Future<void> _invalidateAttempt(String attemptId) =>
       withWorkOrderAdmission(_paths.baseDir, () async {
@@ -1540,7 +1545,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   /// LIMITATION: a switch entirely while backgrounded isn't caught here — only
   /// reconciled on the next foreground/launch.
   void _onConnectivityChanged(List<ConnectivityResult> result) {
-    if (!_isAndroid()) return;
+    if (!_isAndroid() || _disposed || !_ref.read(offlineEnabledProvider)) {
+      return;
+    }
     final wifiOnly = _ref.read(offlineWifiOnlyProvider) ?? true;
     final hasUnmetered =
         result.contains(ConnectivityResult.wifi) ||

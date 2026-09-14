@@ -27,10 +27,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "完結済",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' をコピーしました!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -216,10 +212,6 @@
   "extensionListEmpty": "拡張機能のリストは空です",
   "@extensionListEmpty": {
     "description": "Description to show that Extension list is empty in Extension list tab of Browse screen"
-  },
-  "failed": "失敗しました",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "フィルター",
   "@filter": {
@@ -495,10 +487,6 @@
   "@obsolete": {
     "description": "Text to show that the extension has become Obsolete"
   },
-  "pending": "保留中",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "quickSearchCategory": "カテゴリ「C」に移動",
   "@quickSearchCategory": {
     "description": "Quick Open Hint text for Category C with prefill '#C'"
@@ -673,10 +661,6 @@
   "@unread": {
     "description": "Checkbox text to unread bookmarked manga/chapters across app"
   },
-  "updatesSummary": "アップデートの概要",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
-  },
   "isTrueBlack": "漆黒",
   "@isTrueBlack": {
     "description": "Switch title to enable {} black theme"
@@ -842,10 +826,6 @@
   "reddit": "Reddit",
   "@reddit": {
     "description": "Reddit app title"
-  },
-  "running": "実行中",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
   },
   "themeModeLight": "ライト",
   "@themeModeLight": {

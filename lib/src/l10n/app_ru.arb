@@ -129,10 +129,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Завершено",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' Скопировано!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -238,10 +234,6 @@
   "extensions": "Расширения",
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
-  },
-  "failed": "Не удалось",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "Фильтр",
   "@filter": {
@@ -455,10 +447,6 @@
   "@themeModeSystem": {
     "description": "Radio button text for App theme - System"
   },
-  "updatesSummary": "Сводка обновлений",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
-  },
   "whatsNew": "Что нового?",
   "@whatsNew": {
     "description": "Button text to open whats new page of app in web"
@@ -554,10 +542,6 @@
   "pause": "Пауза",
   "@pause": {
     "description": "Button text to pause downloads"
-  },
-  "pending": "В ожидании",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
   },
   "missingTrackers": "Пропавшие трекеры",
   "@missingTrackers": {
@@ -774,10 +758,6 @@
   "save": "Сохранить",
   "@save": {
     "description": "Save Button Text"
-  },
-  "running": "Начато",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
   },
   "scanlators": "Сканлейт",
   "@scanlators": {

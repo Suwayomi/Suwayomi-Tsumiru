@@ -221,10 +221,6 @@
   "@backupInterval": {
     "description": "Title for file backup interval edit tile"
   },
-  "completed": "Fullført",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "daysAgo": "{days} dager siden",
   "@daysAgo": {
     "description": "Days ago text to show the release date of manga"

@@ -56,7 +56,9 @@ class Sorayomi extends HookConsumerWidget {
 
       void go(NotificationPayload p) {
         if (!allowed(p)) return;
-        if (p.mangaId != null && p.chapterId != null) {
+        if (p.isUpdateErrors) {
+          routes.go(const LibraryUpdateErrorsRoute().location);
+        } else if (p.mangaId != null && p.chapterId != null) {
           routes.go(
             ReaderRoute(mangaId: p.mangaId!, chapterId: p.chapterId!).location,
           );

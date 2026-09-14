@@ -15,6 +15,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../domain/extension/extension_model.dart';
+import 'controller/extension_actions.dart';
 import 'controller/extension_controller.dart';
 import 'widgets/extension_list_tile.dart';
 
@@ -55,7 +56,7 @@ class ExtensionScreen extends HookConsumerWidget {
     final update = extensionMap.remove("update");
     final all = extensionMap.remove("all");
 
-    refresh() => ref.refresh(extensionProvider.future);
+    refresh() => ref.read(extensionActionsProvider).refreshList();
 
     useEffect(() {
       // Effect bodies run during build; invalidating a provider there throws.
@@ -92,7 +93,7 @@ class ExtensionScreen extends HookConsumerWidget {
               ),
             )
           : RefreshIndicator(
-              onRefresh: () => ref.refresh(extensionProvider.future),
+              onRefresh: refresh,
               child: CustomScrollView(
                 slivers: [
                   if (update.isNotBlank)

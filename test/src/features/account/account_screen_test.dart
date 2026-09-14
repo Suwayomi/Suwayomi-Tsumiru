@@ -9,12 +9,23 @@ import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/account/presentation/account_screen.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_status.dart';
+import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
+
+import '../../../helpers/fake_extension_repository.dart';
+
+class ScreenUpdatesRepository extends UpdatesRepository {
+  ScreenUpdatesRepository() : super(dummyGraphQLClient(), dummyGraphQLClient());
+
+  @override
+  Future<List<MangaDto>> failedUpdates() async => [];
+}
 
 class ScreenAccountActions extends AccountActions {
   ScreenAccountActions(super.ref);
@@ -72,6 +83,7 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
+          updatesRepositoryProvider.overrideWithValue(ScreenUpdatesRepository()),
           currentAccountProvider.overrideWithValue(account),
           settledAccountAccessProvider.overrideWithValue(
             AccountAccess(

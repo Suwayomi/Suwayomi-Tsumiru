@@ -239,10 +239,6 @@
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
   },
-  "failed": "Thất bại",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
-  },
   "filter": "Bộ lọc",
   "@filter": {
     "description": "title of filter Tab across the app"
@@ -487,10 +483,6 @@
   "@pause": {
     "description": "Button text to pause downloads"
   },
-  "pending": "Chờ xử lý",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "previousChapter": "Chương trước đó: {chapterTitle}",
   "@previousChapter": {
     "description": "Text for Previous Chapter button in Manga Reader Screen"
@@ -669,10 +661,6 @@
   "@retry": {
     "description": "Retry Button Text"
   },
-  "running": "Đang chạy",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
-  },
   "save": "Lưu",
   "@save": {
     "description": "Save Button Text"
@@ -847,10 +835,6 @@
   "@pinchToZoom": {
     "description": "Switch title to enable pinch to zoom in reader screen"
   },
-  "completed": "Hoàn thành",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' Đã sao chép!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -884,10 +868,6 @@
   "unread": "Chưa đọc",
   "@unread": {
     "description": "Checkbox text to unread bookmarked manga/chapters across app"
-  },
-  "updatesSummary": "Tóm tắt cập nhật",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
   },
   "uninstalling": "Gỡ cài đặt",
   "@uninstalling": {

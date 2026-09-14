@@ -435,14 +435,7 @@ Future<bool> runCatchupDownloads({
         if (deviceSpent > 0) dlRetries[row.id] = deviceSpent;
       }
 
-      // A chapter that has spent its attempt budget on either hop is already a
-      // permanent dead end this run onward (both hops below `continue` once
-      // their own counter maxes out, and a counter only ever clears when the
-      // chapter leaves `desired` — which it never does on its own). Excluding
-      // it from the candidate pool here, rather than after, stops it wasting
-      // one of a `nUnread` rule's N slots forever: without this, the
-      // (N+1)th unread chapter never gets a turn, and "keep N downloaded"
-      // silently plateaus at N-1.
+      // Exclude exhausted chapters so they cannot occupy an nUnread slot indefinitely.
       final exhausted = <int>{};
       for (final r in chapters.rows) {
         final serverFetchSpent = retries[r.id] ?? 0;

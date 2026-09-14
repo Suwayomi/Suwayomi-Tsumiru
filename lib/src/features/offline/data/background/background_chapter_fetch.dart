@@ -13,7 +13,6 @@ import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
-import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../../utils/network/graphql_errors.dart';
 import '../../../account/data/account_permission.dart';
@@ -166,7 +165,7 @@ Future<Object?> postBackgroundGraphql({
           Enum$UserPermission.DOWNLOAD_CHAPTERS,
         );
       }
-      if (OperationMessageException(exception).toString() == 'Unauthorized') {
+      if (isGraphqlAuthError(decoded['errors'])) {
         return gqlAuthError;
       }
       return gqlNetworkError;

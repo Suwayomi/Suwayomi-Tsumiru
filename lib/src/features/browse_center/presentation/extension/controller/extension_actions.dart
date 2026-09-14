@@ -14,6 +14,7 @@ import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/extension_repository/extension_repository.dart';
 import '../../source/controller/source_controller.dart';
 import 'extension_controller.dart';
+import 'extension_update_badge.dart';
 
 part 'extension_actions.g.dart';
 
@@ -78,6 +79,17 @@ class ExtensionActions {
     }
   }
 
+  Future<void> refreshList() async {
+    final session = _ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    if (!_ref.mounted || !session()) return;
+    _ref.invalidate(extensionProvider);
+    await _ref.read(extensionProvider.future);
+    if (!_ref.mounted || !session()) return;
+    _ref.invalidate(extensionUpdateBadgeCountProvider);
+  }
+
   Future<void> _refreshAfter(
     Future<void> Function(bool Function()) mutate,
   ) async {
@@ -89,7 +101,7 @@ class ExtensionActions {
     await mutate(current);
     if (!current()) return;
     _ref.invalidate(sourceListProvider);
-    return _ref.refresh(extensionProvider.future);
+    return refreshList();
   }
 }
 

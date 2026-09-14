@@ -255,6 +255,25 @@ Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
   }
 }
 
+/// Extracts new items from a single fetched page when live-patching the
+/// Updates list after a background library check.
+///
+/// Returns all items from [nodes] that are not in [existingIds], stopping
+/// before the first known ID. [boundaryFound] is true when a known ID was
+/// encountered, meaning the caller has collected all new items up to the
+/// existing list and can stop fetching further pages.
+({List<ChapterWithMangaDto> items, bool boundaryFound})
+    extractNewUpdatesFromPage(
+  List<ChapterWithMangaDto> nodes,
+  Set<int> existingIds,
+) {
+  final knownIndex = nodes.indexWhere((c) => existingIds.contains(c.id));
+  if (knownIndex >= 0) {
+    return (items: nodes.take(knownIndex).toList(), boundaryFound: true);
+  }
+  return (items: nodes.toList(), boundaryFound: false);
+}
+
 class UpdatesScreen extends HookConsumerWidget {
   const UpdatesScreen({super.key});
 
@@ -306,9 +325,6 @@ class UpdatesScreen extends HookConsumerWidget {
     // post-await guards ask this one whether the screen itself is still alive.
     final screenContext = context;
     final updatesRepository = ref.watch(updatesRepositoryProvider);
-    final isUpdatesChecking = ref
-        .watch(updatesSocketProvider.select((value) => value.value?.isRunning))
-        .ifNull();
     final lastUpdated = ref.watch(libraryLastUpdatedProvider).value;
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final filter = ref.watch(updatesFilterProvider);
@@ -340,6 +356,56 @@ class UpdatesScreen extends HookConsumerWidget {
       );
       return;
     }, []);
+    // Use the lightweight running-only socket (not updatesSocketProvider, the
+    // heavy feed that goes silent mid-run on large updates and can miss the
+    // true→false edge). Pattern mirrors LibraryScreen's own update listener.
+    //
+    // On the true→false edge, fetch page 0 and prepend only the items that
+    // aren't already in the list, so the user keeps their scroll position.
+    // Falls back to doing nothing on error (pull-to-refresh still works).
+    final lastRunningUpdates = useRef<bool>(false);
+    Future<void> liveUpdate() async {
+      final gen = generation.value;
+      final existingIds = {
+        for (final item in controller.itemList ?? <ChapterWithMangaDto>[])
+          item.id,
+      };
+      final newItems = <ChapterWithMangaDto>[];
+      // Walk pages until we hit a known ID (the boundary) or run out of pages.
+      // Cap at 3 pages: beyond that the list is so stale that a full reset is
+      // cleaner than prepending dozens of out-of-context entries.
+      const maxPages = 3;
+      for (var pageNo = 0; pageNo < maxPages; pageNo++) {
+        final snapshot = await AsyncValue.guard(
+          () => updatesRepository.getRecentChaptersPage(
+            pageNo: pageNo,
+            filter: latestFilter.value,
+          ),
+        );
+        if (generation.value != gen) return;
+        final page = snapshot.asData?.value;
+        if (page == null) return;
+        final result = extractNewUpdatesFromPage(page.nodes, existingIds);
+        newItems.addAll(result.items);
+        if (result.boundaryFound) break;
+        if (!page.pageInfo.hasNextPage) break;
+        if (pageNo == maxPages - 1) {
+          resetList();
+          return;
+        }
+      }
+      if (newItems.isEmpty) return;
+      controller.itemList = [...newItems, ...?controller.itemList];
+    }
+
+    ref.listen(updateRunningSocketProvider, (_, next) {
+      final running = next.value;
+      if (running == null) return;
+      if (lastRunningUpdates.value && !running) {
+        liveUpdate();
+      }
+      lastRunningUpdates.value = running;
+    });
     // Filtering happens server-side, so a changed filter invalidates every page
     // already loaded. Skip the mount run or page 0 would be fetched twice.
     final isFilterMount = useRef(true);
@@ -351,16 +417,6 @@ class UpdatesScreen extends HookConsumerWidget {
       resetList();
       return null;
     }, [filter]);
-    useEffect(() {
-      if (!isUpdatesChecking) {
-        try {
-          resetList();
-        } catch (e) {
-          //
-        }
-      }
-      return null;
-    }, [isUpdatesChecking]);
     return Scaffold(
       floatingActionButton: selectedChapters.value.isEmpty
           ? const UpdateStatusFab()

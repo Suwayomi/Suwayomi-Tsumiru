@@ -232,6 +232,10 @@ class CatchupLedger {
   /// pass.
   final Set<int> backfilledMangaIds;
 
+  bool get hasActionableServerFetch => pendingServerFetch.keys.any(
+    (id) => (serverFetchRetries[id] ?? 0) < catchupMaxChapterAttempts,
+  );
+
   CatchupLedger copyWith({
     NewChapterWatermark? cursor,
     Map<int, int>? pendingDownloads,

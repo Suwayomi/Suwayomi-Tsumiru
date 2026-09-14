@@ -11,12 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../features/auth/data/auth_credentials_store.dart';
 import '../../features/manga_book/data/updates/updates_repository.dart';
 import '../../features/manga_book/domain/update_status/update_status_model.dart';
+import '../../features/notifications/controller/notifications_controller.dart';
 import '../../features/notifications/data/local_notification_service.dart';
+import '../../features/notifications/data/notification_state_store.dart';
 import '../../features/settings/presentation/library/widgets/show_update_progress_banner/show_update_progress_banner.dart';
+import '../../global_providers/global_providers.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import 'update_banner_state.dart';
 
@@ -144,9 +147,7 @@ class UpdateProgressBanner extends HookConsumerWidget {
           ? const SizedBox.shrink()
           : Material(
               color: scheme.secondary,
-              child: InkWell(
-                onTap: () => const UpdateStatusRoute().push(context),
-                child: Padding(
+              child: Padding(
                   padding: EdgeInsets.only(top: topInset) +
                       const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                   child: Row(
@@ -171,7 +172,6 @@ class UpdateProgressBanner extends HookConsumerWidget {
                     ],
                   ),
                 ),
-              ),
             ),
     );
   }
@@ -190,14 +190,37 @@ class UpdateProgressBanner extends HookConsumerWidget {
 Future<void> _notifyUpdateErrors(WidgetRef ref, AppLocalizations l10n) async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
   try {
+    final session = ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    final config = NotificationStateStore(
+      ref.read(sharedPreferencesProvider),
+    ).readConfig();
+    if (config == null) return;
+    final payload = NotificationPayload.updateErrors(
+      requiresSession: true,
+      identityEpoch: config.identityEpoch,
+      catalogServerId: config.catalogServerId,
+      sessionFingerprint: config.sessionFingerprint,
+    );
+    bool current() =>
+        ref.context.mounted &&
+        session() &&
+        ref.read(notificationsControllerProvider).acceptsNotification(payload);
+    if (!current()) return;
     final summary = await ref.read(updatesRepositoryProvider).summaryUpdates();
+    if (!current()) return;
     final failed = summary?.failedJobs.mangaList.length ?? 0;
     if (failed == 0) return;
     final service = LocalNotificationService();
     await service.init();
+    if (!current()) return;
     await service.showLibraryUpdateError(
       l10n.notificationLibraryErrorTitle,
       l10n.notificationLibraryErrorBody(failed),
+      identityEpoch: config.identityEpoch,
+      catalogServerId: config.catalogServerId,
+      sessionFingerprint: config.sessionFingerprint,
     );
   } catch (_) {
     // Best-effort — a missed error toast is not data loss.

@@ -19,7 +19,10 @@ final Provider<AccountRepository> accountRepositoryProvider =
     Provider<AccountRepository>((ref) {
       return AccountRepository(
         ref.watch(graphQlClientProvider),
-        access: () => ref.read(settledAccountAccessProvider),
+        access: () {
+          if (!ref.mounted) throw const AccountPermissionUnavailable();
+          return ref.container.read(settledAccountAccessProvider);
+        },
       );
     });
 

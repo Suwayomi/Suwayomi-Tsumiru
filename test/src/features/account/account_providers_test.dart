@@ -3,6 +3,8 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/account/data/account_administration.dart';
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
@@ -71,6 +73,67 @@ void main() {
     permissions: [],
     roles: [Enum$UserRole.ADMIN],
   );
+  test(
+    'management uses the real repository after account access settles',
+    () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      final client = GraphQLClient(
+        cache: GraphQLCache(),
+        link: Link.function(
+          (request, [forward]) => Stream.value(
+            Response(
+              response: {},
+              data: {
+                '__typename': 'Query',
+                'user': admin.toJson(),
+                'users': {
+                  '__typename': 'UserNodeList',
+                  'nodes': [admin.toJson()],
+                  'totalCount': 1,
+                  'pageInfo': {
+                    '__typename': 'PageInfo',
+                    'endCursor': null,
+                    'startCursor': null,
+                    'hasNextPage': false,
+                    'hasPreviousPage': false,
+                  },
+                },
+                'userCodes': [],
+              },
+            ),
+          ),
+        ),
+      );
+      final scope = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+          authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
+          authCredentialsStoreProvider.overrideWith(_SignedInCredentials.new),
+          graphQlClientProvider.overrideWithValue(client),
+        ],
+      );
+      addTearDown(scope.dispose);
+      await scope.read(authCredentialsStoreProvider.future);
+      await scope.read(accountAccessProvider.future);
+      expect(scope.read(settledAccountAccessProvider).canManageUsers, isTrue);
+      final users = await scope.read(
+        accountUsersProvider((search: '', after: null)).future,
+      );
+      expect(users.nodes.single.username, 'admin');
+      expect(await scope.read(accountCodesProvider.future), isEmpty);
+      scope.read(serverUnreachableProvider.notifier).set(true);
+      await scope.read(accountAccessProvider.future);
+      await expectLater(
+        scope.read(accountRepositoryProvider).users(first: 25),
+        throwsA(isA<AccountPermissionDenied>()),
+      );
+    },
+  );
+
   ProviderContainer container(
     FakeAccountRepository repository, {
     AuthType? authType = AuthType.uiLogin,

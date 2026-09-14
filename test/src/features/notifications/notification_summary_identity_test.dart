@@ -88,6 +88,43 @@ void main() {
     },
   );
 
+  test('update error taps retain their originating session', () async {
+    final plugin = RecordingPlugin();
+    final service = LocalNotificationService(plugin);
+    await service.showLibraryUpdateError(
+      'Library update errors',
+      'One update failed',
+      identityEpoch: 4,
+      catalogServerId: 'a',
+      sessionFingerprint: 'session-a',
+    );
+    final decoded = NotificationPayload.decode(plugin.payload);
+    final cold = await service.launchPayload();
+    for (final payload in [decoded, cold!]) {
+      expect(payload.isUpdateErrors, isTrue);
+      expect(payload.requiresSession, isTrue);
+      expect(payload.identityEpoch, 4);
+      expect(payload.catalogServerId, 'a');
+      expect(payload.sessionFingerprint, 'session-a');
+      expect(
+        payload.matchesConfig(
+          const NotificationWorkerConfig(
+            serverId: 's',
+            endpoint: NotificationEndpoint(baseUrl: 'https://s'),
+            newChaptersEnabled: true,
+            includedCategoryIds: {},
+            excludedCategoryIds: {},
+            hideContent: true,
+            identityEpoch: 5,
+            catalogServerId: 'b',
+            sessionFingerprint: 'session-b',
+          ),
+        ),
+        isFalse,
+      );
+    }
+  });
+
   test(
     'legacy chapter summaries require proof while generic notices do not',
     () {

@@ -18,10 +18,12 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
     final defaults = categories.where((category) => category.isDefaultCategory);
     return defaults.length == 1 ? defaults.single.id : null;
   }
-  final accessFuture = ref.watch(accountAccessProvider.future);
+  final capabilityFuture = ref.watch(
+    accountAccessProvider.selectAsync((access) => access.capability),
+  );
   final repository = ref.watch(categoryRepositoryProvider);
-  final access = await accessFuture;
-  return switch (access.capability) {
+  final capability = await capabilityFuture;
+  return switch (capability) {
     AccountCapability.unsupported => 0,
     AccountCapability.supported => repository.getDefaultCategoryId(),
     _ => null,

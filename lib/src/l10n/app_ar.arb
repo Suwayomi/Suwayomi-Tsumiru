@@ -109,10 +109,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "مكتملة",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' تم نسخ!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -256,10 +252,6 @@
         "type": "String"
       }
     }
-  },
-  "failed": "فشل",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "extensions": "الإضافات",
   "@extensions": {
@@ -533,10 +525,6 @@
   "@updates": {
     "description": "Screen title and Button text of Updates screen"
   },
-  "updatesSummary": "ملخص التحديثات",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
-  },
   "unread": "غير مقروء",
   "@unread": {
     "description": "Checkbox text to unread bookmarked manga/chapters across app"
@@ -592,10 +580,6 @@
   "pause": "إيقاف",
   "@pause": {
     "description": "Button text to pause downloads"
-  },
-  "pending": "في الانتظار",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
   },
   "reader": "القارئ",
   "@reader": {
@@ -660,10 +644,6 @@
   "readerNavigationLayoutRightAndLeft": "يمينا و يسارا",
   "@readerNavigationLayoutRightAndLeft": {
     "description": "Radio button text for Reader Navigation Layout - Right And Left"
-  },
-  "running": "جاري",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
   },
   "save": "حفظ",
   "@save": {

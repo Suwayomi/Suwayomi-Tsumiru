@@ -153,10 +153,6 @@
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
   },
-  "failed": "Не вдалося",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
-  },
   "filter": "Фільтр",
   "@filter": {
     "description": "title of filter Tab across the app"
@@ -481,10 +477,6 @@
   "@uninstalling": {
     "description": "Button text to show that the extension is uninstalling"
   },
-  "updatesSummary": "Підсумок оновлень",
-  "@updatesSummary": {
-    "description": "Screen title and Button text of Updates Summary screen"
-  },
   "updating": "Оновлення",
   "@updating": {
     "description": "Button text to show that the extension is updating"
@@ -554,10 +546,6 @@
   "clientVersion": "Версія клієнту",
   "@clientVersion": {
     "description": "Text title for the current version of the client in About screen"
-  },
-  "completed": "Завершено",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
   },
   "createBackupTitle": "Створити резервну копію",
   "@createBackupTitle": {
@@ -717,10 +705,6 @@
   "@restoreBackupTitle": {
     "description": "Button text to create backup"
   },
-  "pending": "В очікуванні",
-  "@pending": {
-    "description": "Pending status Manga Group title in Update Summary Screen"
-  },
   "quickSearchContext": "Пошук за запитом X (результати базуються на контексті екрана)",
   "@quickSearchContext": {
     "description": "Quick Open Hint text for query X"
@@ -740,10 +724,6 @@
   "readerNavigationLayoutInvert": "Інвертувати дотик",
   "@readerNavigationLayoutInvert": {
     "description": "Switch title to invert Tap to scroll in reader screen"
-  },
-  "running": "Запущено",
-  "@running": {
-    "description": "Running status Manga Group title in Update Summary Screen"
   },
   "sources": "Джерела",
   "@sources": {

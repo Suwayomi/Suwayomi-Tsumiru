@@ -24,6 +24,14 @@ class FakeExtensionRepository extends ExtensionRepository {
         permissions: permissions ?? legacyAccountPermissions,
       );
 
+  int updateCountCalls = 0;
+
+  @override
+  Future<int> getExtensionUpdateCount() async {
+    updateCountCalls++;
+    return 0;
+  }
+
   final List<String> installed = <String>[];
   final List<String> uninstalled = <String>[];
   final List<String> updated = <String>[];

@@ -179,7 +179,11 @@ void main() {
       },
     );
     WorkmanagerAndroid.registerWith();
-    for (final method in ['registerPeriodicTask', 'cancelByUniqueName']) {
+    for (final method in [
+      'registerPeriodicTask',
+      'registerOneOffTask',
+      'cancelByUniqueName',
+    ]) {
       messenger.setMockMessageHandler(
         'dev.flutter.pigeon.workmanager_platform_interface.WorkmanagerHostApi.$method',
         (_) async => const StandardMessageCodec().encodeMessage([null]),

@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_token_record.dart'
@@ -121,7 +122,17 @@ class NotificationBackgroundClient {
           fresh,
           downloadOperation: downloadOperation,
         );
+      } else {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-graphql: '
+          'refresh-failed transient=${broker.lastRefreshTransient}\n',
+        );
       }
+    } else if (identical(res, _authError)) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-graphql: '
+        'auth-rejected authType=${_record.authType} (no refresh path)\n',
+      );
     }
     return res is Map<String, Object?> ? res : null;
   }
@@ -132,6 +143,9 @@ class NotificationBackgroundClient {
     addPort: endpoint.addPort,
     client: _http,
     isCancelled: isCancelled,
+    onNetworkError: (error) => recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-graphql: $error\n',
+    ),
   );
 
   Future<Object?> _raw(

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,7 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_settings_providers.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 import '../../helpers/offline_test_db.dart';
@@ -39,6 +41,7 @@ class FakeService extends ForegroundServiceGateway {
   Future<bool> Function()? onRunning;
   final values = <String, String>{};
   final messages = <Object>[];
+  final reads = <String>[];
 
   @override
   Future<bool> get isRunningService async =>
@@ -61,7 +64,11 @@ class FakeService extends ForegroundServiceGateway {
   @override
   void send(Object data) => messages.add(data);
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    reads.add(key);
+    return values[key];
+  }
+
   @override
   Future<void> write(String key, String value) async {
     values[key] = value;
@@ -130,8 +137,12 @@ void main() {
   late Timer Function(Duration, void Function()) makeTimer;
   late List<bool> silentNotices;
   late bool android;
+  late bool offlineEnabled;
+  late int pathReads;
+  late StreamController<List<ConnectivityResult>> connectionChanges;
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({
       'offlineCatalogServerId': 'catalog-A',
     });
@@ -139,6 +150,18 @@ void main() {
     db = testOfflineDatabase();
     final tmp = await Directory.systemTemp.createTemp('download-start-test');
     final paths = OfflinePaths(tmp.path);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (_) async => tmp.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
     pageStore = DelayedManifestStore(paths);
     service = FakeService();
     notices = [];
@@ -147,36 +170,50 @@ void main() {
     makeTimer = Timer.new;
     network = [ConnectivityResult.wifi];
     android = true;
-    final controllerProvider = Provider<BackgroundDownloadController>(
-      (ref) => BackgroundDownloadController(
-        ref,
-        gateway: service,
-        isAndroid: () => android,
-        identityAllowed: () => true,
-        publishQueue: () => publishQueue(),
-        timer: (duration, callback) => makeTimer(duration, callback),
-        connectivity: () async => network,
-        connectivityChanges: const Stream.empty(),
-        notifyStall: (reason, {required silent}) async {
-          notices.add(reason);
-          silentNotices.add(silent);
-        },
-      ),
-    );
+    offlineEnabled = true;
+    pathReads = 0;
+    connectionChanges = StreamController<List<ConnectivityResult>>.broadcast();
+    addTearDown(connectionChanges.close);
+    final controllerOverride = backgroundDownloadControllerProvider
+        .overrideWith(
+          (ref) => BackgroundDownloadController(
+            ref,
+            gateway: service,
+            isAndroid: () => android,
+            identityAllowed: () => true,
+            publishQueue: () => publishQueue(),
+            timer: (duration, callback) => makeTimer(duration, callback),
+            connectivity: () async => network,
+            connectivityChanges: connectionChanges.stream,
+            notifyStall: (reason, {required silent}) async {
+              notices.add(reason);
+              silentNotices.add(silent);
+            },
+          ),
+        );
     container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        offlineDatabaseProvider.overrideWithValue(db),
-        serverInstanceIdProvider.overrideWith(
-          (ref) => Completer<String>().future,
-        ),
-        offlinePathsProvider.overrideWithValue(paths),
+        controllerOverride,
+        offlineDatabaseProvider.overrideWith((ref) {
+          if (!offlineEnabled) throw StateError('Offline storage unavailable');
+          return db;
+        }),
+        serverInstanceIdProvider.overrideWith((ref) {
+          ref.watch(serverUrlProvider);
+          return Completer<String>().future;
+        }),
+        offlinePathsProvider.overrideWith((ref) {
+          pathReads++;
+          if (!offlineEnabled) throw StateError('Offline storage unavailable');
+          return paths;
+        }),
         offlinePageStoreProvider.overrideWithValue(pageStore),
-        offlineEnabledProvider.overrideWith((ref) => true),
+        offlineEnabledProvider.overrideWith((ref) => offlineEnabled),
         offlineActiveProvider.overrideWith((ref) => true),
       ],
     );
-    controller = container.read(controllerProvider);
+    controller = container.read(backgroundDownloadControllerProvider);
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.upsertChapterMetadata(
       id: 5,
@@ -196,6 +233,35 @@ void main() {
     controller.dispose();
     container.dispose();
     await db.close();
+  });
+
+  test('Android registration waits for available offline storage', () async {
+    offlineEnabled = false;
+    expect(controller.register, returnsNormally);
+    await Future<void>.delayed(Duration.zero);
+    expect(pathReads, 0);
+    expect(service.reads, isNot(contains(kWorkOrderKey)));
+    expect(service.starts, 0);
+  });
+
+  test(
+    'registered Android controller allows changing the server address',
+    () async {
+      controller.register();
+      await container
+          .read(serverExternalUrlProvider.notifier)
+          .update('http://127.0.0.1:4598');
+      expect(container.read(serverUrlProvider), 'http://127.0.0.1:4598');
+    },
+  );
+
+  test('connectivity changes wait for offline storage', () async {
+    offlineEnabled = false;
+    controller.register();
+    connectionChanges.add([ConnectivityResult.wifi]);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(service.starts, 0);
+    expect(pathReads, 0);
   });
 
   test('endpoint handover retains exhausted chapter attempts', () async {

@@ -113,10 +113,6 @@
   "@close": {
     "description": "Text for close button"
   },
-  "completed": "Tamat",
-  "@completed": {
-    "description": "Checkbox text to filter Completed mangas in Library screen and Manga Grouping text in Update Summary screen"
-  },
   "copyMsg": "'{msg}' Disalin!",
   "@copyMsg": {
     "description": "Toast text to show that the message has been copied",
@@ -272,10 +268,6 @@
   "extensions": "Login",
   "@extensions": {
     "description": "Extension list Tab title in Browse Screen"
-  },
-  "failed": "Gagal",
-  "@failed": {
-    "description": "Failed status Manga Group title in Update Summary Screen"
   },
   "filter": "Filter",
   "@filter": {
