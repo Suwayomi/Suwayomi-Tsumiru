@@ -42,21 +42,7 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) =>
         final nets = read(safetyNetConfigProvider);
         final specs = <CatchupMangaSpec>[];
         var usedBytes = 0;
-        // Union the in-library rows with every kept series, keyed by id. A keep
-        // rule — not inLibraryAt — is what decides a background download; a row
-        // a prune stamped '0' (removed) while its rule was off, then turned on,
-        // is absent from libraryManga() yet the reconciler still honours it.
-        // Sourcing the spec from library alone made that manga invisible to the
-        // worker, so its new chapters were notified but never downloaded until a
-        // foreground reconcile ran. keepRuleManga() has no inLibraryAt filter.
-        final byId = <int, OfflineManga>{};
         for (final m in await db.libraryManga()) {
-          byId[m.id] = m;
-        }
-        for (final m in await db.keepRuleManga()) {
-          byId.putIfAbsent(m.id, () => m);
-        }
-        for (final m in byId.values) {
           final all = await db.chaptersForManga(m.id);
           for (final c in all) {
             if (c.deviceState == OfflineDeviceState.downloaded) {

@@ -712,28 +712,12 @@ class OfflineDatabase extends _$OfflineDatabase {
       );
 
   Future<void> setKeepRule(int mangaId, OfflineKeepRule rule, int count) =>
-      transaction(() async {
-        await (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
-          OfflineMangasCompanion(
-            keepRule: Value(rule),
-            keepUnreadCount: Value(count),
-          ),
-        );
-        // A keep rule is an explicit "keep this offline" — it must re-admit a
-        // row an earlier prune stamped '0' (removed) while the rule was still
-        // off. Left in place, '0' hides the manga from [libraryManga] and so
-        // from the catch-up work spec, stranding its new chapters in the
-        // background download path (they only land on a foreground reconcile,
-        // which reads the row directly). Clear the sentinel back to NULL ("in
-        // library, add-date unknown"); a later library sync restores the real
-        // timestamp.
-        if (rule != OfflineKeepRule.off) {
-          await (update(offlineMangas)..where(
-                (t) => t.id.equals(mangaId) & t.inLibraryAt.equals('0'),
-              ))
-              .write(const OfflineMangasCompanion(inLibraryAt: Value(null)));
-        }
-      });
+      (update(offlineMangas)..where((t) => t.id.equals(mangaId))).write(
+        OfflineMangasCompanion(
+          keepRule: Value(rule),
+          keepUnreadCount: Value(count),
+        ),
+      );
 
   Future<void> setChapterPinned(int chapterId, bool pinned) =>
       (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
@@ -1194,16 +1178,6 @@ class OfflineDatabase extends _$OfflineDatabase {
             ..orderBy([(t) => OrderingTerm(expression: t.title)]))
           .get();
 
-  /// Every manga carrying an active keep rule, regardless of [inLibraryAt] —
-  /// the reconciler's view, not [libraryManga]'s. The catch-up work spec unions
-  /// this in so a kept series a prune stamped '0' (or whose rule was turned on
-  /// after the stamp) still reaches the background download path, instead of
-  /// only ever downloading on a foreground reconcile that reads the row direct.
-  Future<List<OfflineManga>> keepRuleManga() =>
-      (select(offlineMangas)
-            ..where((t) => t.keepRule.equalsValue(OfflineKeepRule.off).not()))
-          .get();
-
   Future<bool> hasCatalogData() async =>
       (await (select(offlineMangas)..limit(1)).get()).isNotEmpty;
 
@@ -1221,36 +1195,14 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// downloaded. Distinct from NULL, which means "synced before the column
   /// existed" and must keep counting as a library entry.
   ///
-  /// A manga with an active keep rule is never stamped: the user explicitly
-  /// asked to keep it offline, and [libraryIds] comes from a single library
-  /// fetch that can transiently omit a live series (server hiccup, mid-add).
-  /// Stamping it would drop it from [libraryManga] — and so from the catch-up
-  /// work spec — silently stranding its new chapters in the background
-  /// download path until a foreground reconcile restores the row. Explicit
-  /// removal goes through the keep-rule UI, not this prune.
+  /// [libraryIds] must come from the COMPLETE library fetch
+  /// ([getAllLibraryMangas], which paginates to exhaustion and returns null on
+  /// any partial/failed page): an absent manga is then genuinely removed, so a
+  /// kept series left server-side is correctly pruned rather than protected.
   Future<int> markNotInLibrary(Set<int> libraryIds) =>
-      (update(offlineMangas)..where(
-            (t) =>
-                t.id.isNotIn(libraryIds) &
-                t.keepRule.equalsValue(OfflineKeepRule.off),
-          ))
-          .write(const OfflineMangasCompanion(inLibraryAt: Value('0')));
-
-  /// The keep-rule manga a prune would have stamped removed — absent from the
-  /// library fetch yet still marked in-library — now protected by
-  /// [markNotInLibrary]. Empty on a healthy fetch; a non-empty result is the
-  /// smoking gun for a partial library fetch dropping a kept series.
-  Future<List<int>> keepRuleMangaAbsentFromLibrary(Set<int> libraryIds) =>
-      (selectOnly(offlineMangas)
-            ..addColumns([offlineMangas.id])
-            ..where(
-              offlineMangas.id.isNotIn(libraryIds) &
-                  offlineMangas.keepRule.equalsValue(OfflineKeepRule.off).not() &
-                  (offlineMangas.inLibraryAt.equals('0').not() |
-                      offlineMangas.inLibraryAt.isNull()),
-            ))
-          .map((r) => r.read(offlineMangas.id)!)
-          .get();
+      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds))).write(
+        const OfflineMangasCompanion(inLibraryAt: Value('0')),
+      );
 
   /// Deletes explicitly-removed manga with nothing downloaded. Scoped to the
   /// '0' mark so it can run concurrently with the per-manga metadata upserts
