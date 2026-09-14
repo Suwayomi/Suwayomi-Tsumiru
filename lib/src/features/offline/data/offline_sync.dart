@@ -201,6 +201,13 @@ class OfflineSync {
   /// the libraryManga membership filter, still listed in On device). An empty
   /// [serverLibrary] is ignored — a failed or empty fetch must never prune the
   /// whole catalog.
+  ///
+  /// [serverLibrary] MUST be the COMPLETE library, not a page of it: this
+  /// stamps '0' on (and [purgeRemovedLibraryManga] then deletes) every off-rule
+  /// series absent from it, so a truncated list silently strands and deletes
+  /// real library manga. Its only caller feeds it `getAllLibraryMangas`, which
+  /// now paginates to exhaustion and returns null (never a short list) on any
+  /// partial/failed fetch — so a null there means this never runs at all.
   Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
     if (serverLibrary.isEmpty) return;
     await _db.markNotInLibrary({for (final m in serverLibrary) m.id});

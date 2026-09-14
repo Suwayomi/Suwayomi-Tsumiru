@@ -146,7 +146,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
               );
               result.showToastOnError(toast);
               if (!result.hasError) {
-                // Same expanded set (device ⊆ server).
+                // Same selected set (device ⊆ server).
                 await cascadeServerDeleteToDevice(containerRead, deleteIds);
               }
               await newUpdatePair(ref, (value) => isLoading.value = value);

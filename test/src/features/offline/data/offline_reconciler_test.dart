@@ -250,6 +250,41 @@ void main() {
         reason: 'the keep window has to reach the reconciler, not just exist');
   });
 
+  test(
+    'nUnread keeps already-downloaded UNREAD chapters behind the furthest-read '
+    'floor, but still evicts read ones (PR #451 review)',
+    () async {
+    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+    await db.setKeepRule(1, OfflineKeepRule.nUnread, 2);
+    // Reader is far ahead (ch.100 read) → floor = 100.
+    await seedChapter(100, 100, read: true);
+    // Already downloaded, unread, behind the floor — must survive the reconcile.
+    await seedChapter(11, 11, dev: OfflineDeviceState.downloaded);
+    await seedChapter(12, 12, dev: OfflineDeviceState.downloaded);
+    await seedChapter(13, 13, dev: OfflineDeviceState.downloaded);
+    // Downloaded but READ and behind the floor — the rule still cleans it.
+    await seedChapter(5, 5, read: true, dev: OfflineDeviceState.downloaded);
+    // Next unread ahead of the floor, on server, not yet on device.
+    await seedChapter(101, 101);
+
+    final downloaded = <int>[];
+    final evicted = <int>[];
+    final r = await OfflineReconciler(
+      db: db, nets: SafetyNetConfig.off,
+      onDownload: (id) async => downloaded.add(id),
+      onEvict: (id) async => evicted.add(id),
+      now: DateTime(2026, 3, 1),
+    ).reconcileManga(1);
+
+    expect(evicted, [5],
+        reason: 'only the READ downloaded chapter is cleaned; the unread '
+            '11..13 already on disk must not be deleted for falling behind a '
+            'far-ahead reading position');
+    expect(r.toDownload, {101},
+        reason: 'the download window still only pulls the next unread ahead');
+    expect(downloaded, [101]);
+  });
+
   // ── downloadProtectionWindow: re-download missing keep-window chapters ──────
 
   test('downloadProtectionWindow=true downloads a missing protection-window chapter',

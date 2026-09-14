@@ -9,6 +9,7 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generat
 Fragment$ChapterDto ch({
   required int id,
   required double number,
+  String? name,
   String? scanlator,
   bool isRead = false,
   bool isDownloaded = false,
@@ -19,7 +20,7 @@ Fragment$ChapterDto ch({
     Fragment$ChapterDto(
       id: id,
       mangaId: 1,
-      name: 'Chapter $number',
+      name: name ?? 'Chapter $number',
       chapterNumber: number,
       sourceOrder: sourceOrder,
       isRead: isRead,

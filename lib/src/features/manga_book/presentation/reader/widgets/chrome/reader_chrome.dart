@@ -59,6 +59,7 @@ class ReaderChrome extends HookConsumerWidget {
     required this.manga,
     required this.chapter,
     required this.chapterPages,
+    this.readerScanlatorGroup = '',
     required this.currentIndex,
     required this.totalPageCount,
     required this.visibility,
@@ -79,6 +80,7 @@ class ReaderChrome extends HookConsumerWidget {
   final MangaDto manga;
   final ChapterDto chapter;
   final ChapterPagesDto chapterPages;
+  final String readerScanlatorGroup;
   final int currentIndex;
 
   /// For infinity-scroll mode; null means use [chapterPages.chapter.pageCount].
@@ -416,6 +418,7 @@ class ReaderChrome extends HookConsumerWidget {
                       end: Offset.zero,
                     ).animate(slide),
                     child: ReaderBottomControls(
+                      readerScanlatorGroup: readerScanlatorGroup,
                       chapter: chapter,
                       chapterPages: chapterPages,
                       currentIndex: currentIndex,

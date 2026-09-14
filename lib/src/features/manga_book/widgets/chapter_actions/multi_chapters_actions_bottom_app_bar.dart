@@ -151,7 +151,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
             // it only depends on the already-selected chapters, nothing the
             // dialog reveals, so there is no reason for this `ref` use to
             // wait behind an await that could outlive the widget.
-            // Delete expands to every scanlator duplicate, grouped per manga.
+            // Delete includes confidently matched releases, grouped per manga.
             final deleteIds = <int>[
               for (final entry
                   in {for (final c in selectedChapterDtos) c.mangaId: true}

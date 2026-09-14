@@ -20,8 +20,8 @@ class ChapterDownloadPresetsButton extends ConsumerWidget {
     required this.refresh,
   });
 
-  /// Chapter list for preset computation: deduped one-row-per-chapter when a
-  /// scanlator preference is active, otherwise the full raw list.
+  /// Chapter list for preset computation: filtered to preferred scanlators
+  /// when a scanlator preference is active, otherwise the full raw list.
   final AsyncValue<List<ChapterDto>?> chapterList;
 
   /// Callback to re-fetch chapters after a successful enqueue.

@@ -29,6 +29,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     required this.currentIndex,
     required this.chapterPages,
     required this.mangaId,
+    this.readerScanlatorGroup = '',
     required this.prevNextChapterPair,
     required this.onNextPage,
     required this.onPreviousPage,
@@ -47,6 +48,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   final int currentIndex;
   final ChapterPagesDto chapterPages;
   final int mangaId;
+  final String readerScanlatorGroup;
   final ({ChapterDto? first, ChapterDto? second})? prevNextChapterPair;
   final VoidCallback onNextPage;
   final VoidCallback onPreviousPage;
@@ -285,6 +287,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
           mangaId: mangaId,
           chapterId: prevNextChapterPair!.first!.id,
           transVertical: scrollDirection == Axis.vertical,
+          readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context);
       } catch (e) {
         onNextPage();
@@ -303,6 +306,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
           toPrev: true,
           transVertical: scrollDirection == Axis.vertical,
           openAtEnd: true,
+          readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context);
       } catch (e) {
         onPreviousPage();

@@ -18,6 +18,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../../manga_details/controller/scanlator_dedup.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
 import '../reader_wrapper.dart';
@@ -167,6 +168,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
         effectiveReaderMode ?? _singlePageReaderMode(scrollDirection, reverse);
 
     return ReaderWrapper(
+      readerScanlatorGroup: scanlatorGroupOf(chapter),
       scrollDirection: scrollDirection,
       chapter: chapter,
       manga: manga,

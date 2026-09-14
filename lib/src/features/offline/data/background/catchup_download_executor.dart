@@ -77,11 +77,25 @@ Future<bool> runCatchupDownloads({
   var needsBackfill = spec.keepRuleMangaIds.difference(
     ledger.backfilledMangaIds,
   );
+  // Only the manga this run will actually touch — the union of the ledger's
+  // pending obligations and the backfill set. The full keep-rule scope is a
+  // ~100-id wall of noise every wake; a missing kept series now surfaces at the
+  // point it matters instead (the download resolution's `droppedOutOfScope`).
+  final workMangaIds = <int>{
+    ...ledger.pendingDownloads.values,
+    ...ledger.pendingServerFetch.values,
+    ...needsBackfill,
+  };
   recordDiagnostic(
     '[${DateTime.now().toIso8601String()}] offline-catchup: run-started '
     'pendingDownloads=${ledger.pendingDownloads.length} '
     'pendingServerFetch=${ledger.pendingServerFetch.length} '
-    'needsBackfill=${needsBackfill.length}\n',
+    'needsBackfill=${needsBackfill.length} '
+    'pendingDownloadIds=[${ledger.pendingDownloads.keys.join(',')}] '
+    'pendingServerFetchIds=[${ledger.pendingServerFetch.keys.join(',')}] '
+    'needsBackfillIds=[${needsBackfill.join(',')}] '
+    'keepRuleMangaCount=${spec.keepRuleMangaIds.length} '
+    'workMangaIds=[${workMangaIds.join(',')}]\n',
   );
   if (ledger.pendingDownloads.isEmpty &&
       ledger.pendingServerFetch.isEmpty &&
@@ -336,6 +350,12 @@ Future<bool> runCatchupDownloads({
           .firstOrNull;
       if (mangaSpec == null) {
         // Rule removed since resolution: drop the obligations.
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'skip-manga mangaId=$mangaId reason=not-in-work-spec '
+          '— keep rule removed or the spec is stale; dropping its '
+          'ledger obligations\n',
+        );
         ledger = _dropManga(ledger, mangaId);
         await catchupStore.writeLedger(spec.serverId, ledger);
         continue;
@@ -418,20 +438,42 @@ Future<bool> runCatchupDownloads({
         ...await _loggedOrCommitted(logEntries, store, mangaId, desired),
       };
 
-      for (final chapterId in desired.difference(present)) {
+      final toDownload = desired.difference(present);
+      if (toDownload.isNotEmpty) {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'manga-plan mangaId=$mangaId keepRule=${mangaSpec.keepRule.name} '
+          'keepN=${mangaSpec.keepUnreadCount} desired=${desired.length} '
+          'onDevice=${mangaSpec.onDeviceChapterIds.length} '
+          'toDownload=[${toDownload.join(',')}]\n',
+        );
+      }
+      for (final chapterId in toDownload) {
         if (downloaded >= _maxChaptersPerRun) break;
         if (DateTime.now().isAfter(deadline)) break;
         if (await capBlocked()) {
           final partial = await store.readManifest(mangaId, chapterId);
           if (partial?.generation != mangaSpec.generationOf(chapterId) ||
               await store.stagedBytes(mangaId, chapterId) == 0) {
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+              'reason=storage-cap\n',
+            );
             continue;
           }
         }
         await checkControls();
         if (cancelled) break;
         final row = chapters.byId[chapterId];
-        if (row == null) continue;
+        if (row == null) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+            'reason=not-in-server-list\n',
+          );
+          continue;
+        }
 
         // A budget per hop, spent only on that hop's own failures. Sharing one
         // meant a slow source could exhaust a chapter before the device had
@@ -448,6 +490,12 @@ Future<bool> runCatchupDownloads({
             // which manga this chapter belongs to, so the window cleanup below
             // can drop the counter with it once the chapter is no longer
             // wanted. Skipping costs nothing — the gate is ahead of any I/O.
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+              'reason=server-fetch-budget-exhausted '
+              'attempts=$spent/$kMaxChapterAttempts\n',
+            );
             serverFetch.remove(chapterId);
             continue;
           }
@@ -486,7 +534,15 @@ Future<bool> runCatchupDownloads({
         // many runs the fetch above took.
         serverFetch.remove(chapterId);
         final dlSpent = dlRetries[chapterId] ?? 0;
-        if (dlSpent >= kMaxChapterAttempts) continue;
+        if (dlSpent >= kMaxChapterAttempts) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'skip-chapter mangaId=$mangaId chapterId=$chapterId '
+            'reason=download-budget-exhausted '
+            'attempts=$dlSpent/$kMaxChapterAttempts\n',
+          );
+          continue;
+        }
 
         // Re-check connectivity before each chapter's page downloads — the
         // one-time gate at run start can't catch a WiFi drop mid-run.
@@ -522,6 +578,20 @@ Future<bool> runCatchupDownloads({
           );
         } else if (!attempt.transient) {
           dlRetries[chapterId] = dlSpent + 1;
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'download-failed mangaId=$mangaId chapterId=$chapterId '
+            'transient=false attempt=${dlSpent + 1}/$kMaxChapterAttempts\n',
+          );
+        } else {
+          // Transient (network blip, server busy): keep the obligation and let
+          // the next wake retry — this is why a pending chapter can silently
+          // carry over run after run without ever spending its budget.
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-catchup: '
+            'download-deferred mangaId=$mangaId chapterId=$chapterId '
+            'reason=transient\n',
+          );
         }
       }
 
@@ -558,6 +628,21 @@ Future<bool> runCatchupDownloads({
                   present.contains(e.key)))
             e.key,
       };
+      if (done.isNotEmpty) {
+        // The exclusion reason for a pending chapter that never downloaded:
+        // already on the device (present — the common "re-notified a chapter
+        // it already has" case) vs. no longer inside the keep window.
+        final droppedPresent =
+            [for (final c in done) if (present.contains(c)) c];
+        final droppedNotDesired =
+            [for (final c in done) if (!present.contains(c)) c];
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-catchup: '
+          'dropped-pending mangaId=$mangaId '
+          'alreadyPresent=[${droppedPresent.join(',')}] '
+          'noLongerDesired=[${droppedNotDesired.join(',')}]\n',
+        );
+      }
       for (final c in done) {
         pending.remove(c);
         serverFetch.remove(c);
@@ -698,6 +783,11 @@ Future<_MangaChapters?> _fetchMangaChapters(
         mangaId: mangaId,
         name: n['name'] as String? ?? '',
         chapterIndex: (n['sourceOrder'] as num?)?.toInt() ?? 0,
+        // Carry the parsed number so the background worker's nUnread window
+        // orders by chapterNumber exactly like the foreground reconciler — the
+        // query already fetches it; dropping it silently forced this path onto
+        // sourceOrder and diverged the two engines (see reconcile_logic.dart).
+        chapterNumber: (n['chapterNumber'] as num?)?.toDouble(),
         isRead: n['isRead'] as bool? ?? false,
         lastPageRead: 0,
         isBookmarked: n['isBookmarked'] as bool? ?? false,

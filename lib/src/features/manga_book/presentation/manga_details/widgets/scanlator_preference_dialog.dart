@@ -15,7 +15,7 @@ import '../controller/scanlator_dedup.dart';
 
 /// Set-once ranking dialog for issue #141's preferred-scanlator-groups
 /// feature: checked groups (in drag order) become the preference; unchecked
-/// groups fall back to source order at dedup time.
+/// groups are hidden from the chapter list and remain reader fallbacks.
 class ScanlatorPreferenceDialog extends HookConsumerWidget {
   const ScanlatorPreferenceDialog({super.key, required this.mangaId});
   final int mangaId;

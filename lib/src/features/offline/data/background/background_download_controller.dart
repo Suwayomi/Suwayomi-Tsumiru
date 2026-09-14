@@ -237,6 +237,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   /// Connectivity listener used to enforce Wi-Fi-only while the app is alive.
   StreamSubscription<List<ConnectivityResult>>? _connSub;
+  ProviderSubscription<AsyncValue<String>>? _identitySubscription;
 
   /// Guards [ensureServiceRunning] against overlapping invocations (it does
   /// several awaited steps; concurrent enqueue + resume could double-start).
@@ -308,7 +309,12 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       });
       if (pending.isEmpty) unawaited(_clearStall());
     });
-    _ref.listen(serverInstanceIdProvider, (_, next) {
+    // Container-level: a provider-level listen makes this controller depend on
+    // the server address, which reads this controller while switching.
+    _identitySubscription ??= _ref.container.listen(serverInstanceIdProvider, (
+      _,
+      next,
+    ) {
       if (next.hasValue && _identityAllowed) {
         unawaited(_publishQueue().then((_) => ensureServiceRunning()));
       }
@@ -324,6 +330,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
 
   void dispose() {
     _disposed = true;
+    _identitySubscription?.close();
     _queuePublishTimer?.cancel();
     _handoffTimer?.cancel();
     unawaited(_pendingSub?.cancel());
@@ -1164,6 +1171,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         if (ch == null ||
             ch.deviceState == OfflineDeviceState.none ||
             (data['gen'] as int? ?? 0) != ch.downloadGeneration) {
+          recordDiagnostic(
+            '[${_now().toIso8601String()}] offline-fgs: chapter-dropped '
+            'chapterId=$chapterId reason=stale-or-deleted '
+            'deviceState=${ch?.deviceState.name ?? 'missing'}\n',
+          );
           return;
         }
         final result = await commitStagedChapter(
@@ -1178,6 +1190,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         // notification claim chapters the user doesn't have.
         if (result == ChapterCommitResult.committed) {
           _sessionDownloaded++;
+          recordDiagnostic(
+            '[${_now().toIso8601String()}] offline-fgs: downloaded-chapter '
+            'mangaId=${ch.mangaId} chapterId=$chapterId\n',
+          );
           // A chapter landed, so the server is demonstrably fine — unless a
           // later chapter parked while this one was committing.
           if (_parkEpoch == epoch) _clearPark();
@@ -1211,13 +1227,31 @@ class BackgroundDownloadController with WidgetsBindingObserver {
                 OfflineDeviceState.error,
               );
               _sessionFailed++;
+              recordDiagnostic(
+                '[${_now().toIso8601String()}] offline-fgs: commit-failed '
+                'mangaId=${ch.mangaId} chapterId=$chapterId '
+                'result=${result.name} attempts=$attempts/$_maxCommitFailures '
+                '— marked error\n',
+              );
             } else {
               await _db.setChapterDeviceState(
                 chapterId,
                 OfflineDeviceState.queued,
                 bytes: 0,
               );
+              recordDiagnostic(
+                '[${_now().toIso8601String()}] offline-fgs: commit-incomplete '
+                'mangaId=${ch.mangaId} chapterId=$chapterId '
+                'result=${result.name} attempts=$attempts/$_maxCommitFailures '
+                '— requeued\n',
+              );
             }
+          } else if (result == ChapterCommitResult.refused) {
+            recordDiagnostic(
+              '[${_now().toIso8601String()}] offline-fgs: commit-refused '
+              'mangaId=${ch.mangaId} chapterId=$chapterId '
+              '— deleted or re-queued under a new generation\n',
+            );
           }
         }
       } else {
@@ -1228,6 +1262,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           eventGeneration: data['gen'] as int? ?? 0,
         );
         if (status == 'error') _sessionFailed++;
+        recordDiagnostic(
+          '[${_now().toIso8601String()}] offline-fgs: chapter-terminal '
+          'mangaId=${data['mangaId']} chapterId=$chapterId status=$status\n',
+        );
       }
     }
   }
@@ -1288,6 +1326,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           await _gateway.remove(kWorkOrderKey);
           rethrow;
         }
+        recordDiagnostic(
+          '[${_now().toIso8601String()}] offline-fgs: work-order-dispatched '
+          'count=${pending.length} '
+          'chapterIds=[${[for (final c in pending) c.id].join(',')}]\n',
+        );
         return attemptId;
       });
     } finally {

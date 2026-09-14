@@ -38,6 +38,9 @@ class ChapterListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final showChapterNumber = ref.watch(mangaChapterDisplayModeProvider) ==
         ChapterDisplay.chapterNumber;
+    final scanlator = chapter.scanlator.isNotBlank
+        ? chapter.scanlator!
+        : context.l10n.unknownScanlator;
     return GestureDetector(
       key: Key("manga-${manga.id}-chapter-${chapter.id}"),
       onSecondaryTap: () => toggleSelect(chapter),
@@ -82,16 +85,15 @@ class ChapterListTile extends ConsumerWidget {
                 style: const TextStyle(color: Colors.grey),
                 overflow: TextOverflow.ellipsis,
               ),
-            if (chapter.scanlator.isNotBlank)
-              Expanded(
-                child: Text(
-                  " • ${chapter.scanlator}",
-                  style: TextStyle(
-                    color: chapter.isRead.ifNull() ? Colors.grey : null,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+            Expanded(
+              child: Text(
+                " • $scanlator",
+                style: TextStyle(
+                  color: chapter.isRead.ifNull() ? Colors.grey : null,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
+            ),
           ],
         ),
         trailing: Row(

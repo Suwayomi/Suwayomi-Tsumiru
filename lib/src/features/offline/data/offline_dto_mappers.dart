@@ -195,8 +195,7 @@ ChapterDto offlineChapterToDto(OfflineChapter c) => Fragment$ChapterDto(
       id: c.id,
       mangaId: c.mangaId,
       name: c.name,
-      // Real number when synced (lets dedup group duplicates offline, #141);
-      // index fallback for pre-v9 rows keeps numbers unique = no collapse.
+      // Real number when synced; index fallback supports pre-v9 rows.
       chapterNumber: c.chapterNumber ?? c.chapterIndex.toDouble(),
       sourceOrder: c.chapterIndex,
       isRead: c.isRead,

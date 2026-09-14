@@ -240,6 +240,21 @@ Future<bool> _runNewChapters(
     allowedMangaIds: config.allowedMangaIds(mangaCategories),
   );
 
+  // The notify list this pass will actually surface, per manga. Paired with the
+  // download side's `offline-download-resolve` line, this is how you tell
+  // "notified but not downloaded" apart: a manga appearing here but not in the
+  // download pass's `queued` (and showing up in its `droppedOutOfScope`) was
+  // notified yet is outside the background download scope.
+  final notifyList = [
+    for (final g in result.groups)
+      '${g.mangaId}:${g.chapters.map((c) => c.id).join('|')}',
+  ].join(',');
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-notify: detected '
+    'candidates=${all.length} groups=${result.groups.length} '
+    'notify=[$notifyList]\n',
+  );
+
   if (result.groups.isEmpty) {
     await store.writeWatermark(config.serverId, result.watermark);
     return true;
@@ -339,6 +354,31 @@ Future<bool> _runDownloadResolution(
       ],
       watermark: ledger.cursor,
       allowedMangaIds: spec.keepRuleMangaIds,
+    );
+
+    // Fresh detections whose manga carries no keep rule in the spec: they are
+    // dropped from the download plan here, even though the notify pass (scoped
+    // by the category filter, not this one) may have just surfaced them. A
+    // non-empty list for a series you expect kept means the spec — a foreground
+    // snapshot built from libraryManga() — is stale or dropped that manga while
+    // it still carries a rule (e.g. inLibraryAt='0' desync). This is the exact
+    // signature of "notified but never downloaded".
+    final droppedOutOfScope = <int, int>{
+      for (final n in all)
+        if (!ledger.cursor.recent.containsKey(n.id) &&
+            !spec.keepRuleMangaIds.contains(n.mangaId))
+          n.id: n.mangaId,
+    };
+    final queuedList = [
+      for (final group in result.groups)
+        '${group.mangaId}:${group.chapters.map((c) => c.id).join('|')}',
+    ].join(',');
+    final droppedList =
+        droppedOutOfScope.entries.map((e) => '${e.value}:${e.key}').join(',');
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-download-resolve: '
+      'candidates=${all.length} queued=[$queuedList] '
+      'droppedOutOfScope=[$droppedList]\n',
     );
 
     // Obligations and the advanced cursor land in ONE atomic write: the cursor

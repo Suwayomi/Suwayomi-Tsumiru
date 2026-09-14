@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/network/paginate.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
 import '../domain/category/category_model.dart';
 import './graphql/__generated__/query.graphql.dart';
@@ -121,18 +122,38 @@ class CategoryRepository {
           .getData((data) {});
 
   //  Manga
-  Future<List<MangaDto>?> getAllLibraryMangas() =>
-      ferryClient
-          .query$GetCategoryMangas(
-            Options$Query$GetCategoryMangas(
-              variables: Variables$Query$GetCategoryMangas(
-                filter: Input$MangaFilterInput(
-                  inLibrary: Input$BooleanFilterInput(equalTo: true),
+  //
+  // Paginated to exhaustion. This fetch drives BOTH the offline metadata sync
+  // (per-manga upsert) and the prune (markNotInLibrary + purgeRemovedLibrary):
+  // a single truncated page would leave every series past it unsynced — its
+  // inLibraryAt frozen — AND, for off-rule series, stamp it '0' ("removed") and
+  // delete it. The server paginates the `mangas` list (the notification feed
+  // pages the sibling `chapters` query the same way), and the old single-shot
+  // call kept only the first page while silently discarding pageInfo/totalCount.
+  // A partial or failed page therefore yields null — treated by the caller as a
+  // failed fetch (no sync, no prune, offline fallback) — never a short list.
+  Future<List<MangaDto>?> getAllLibraryMangas() => collectAllPages<MangaDto>(
+        (after) => ferryClient
+            .query$GetCategoryMangas(
+              Options$Query$GetCategoryMangas(
+                variables: Variables$Query$GetCategoryMangas(
+                  filter: Input$MangaFilterInput(
+                    inLibrary: Input$BooleanFilterInput(equalTo: true),
+                  ),
+                  first: 500,
+                  after: after,
                 ),
               ),
+            )
+            .getData(
+              (data) => (
+                nodes: data.mangas.nodes,
+                hasNextPage: data.mangas.pageInfo.hasNextPage,
+                endCursor: data.mangas.pageInfo.endCursor,
+                totalCount: data.mangas.totalCount,
+              ),
             ),
-          )
-          .getData((data) => data.mangas.nodes);
+      );
 
   Future<List<MangaDto>?> getMangasFromCategory({
     required int categoryId,

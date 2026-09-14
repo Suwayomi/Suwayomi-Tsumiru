@@ -52,8 +52,8 @@ class MultiChaptersActionIcon extends ConsumerWidget {
         // a container obtained now stays valid regardless.
         final containerRead = ProviderScope.containerOf(context, listen: false).read;
         final ids = [for (final c in chapters) c.id];
-        // Read/unread expands to every scanlator duplicate; other patches
-        // stay per-copy.
+        // Read/unread expands across confidently matched releases; unrelated
+        // patches stay scoped to the selected rows.
         final expandedByManga = <int, List<int>>{
           if (change.isRead != null)
             for (final mangaId in {for (final c in chapters) c.mangaId})
