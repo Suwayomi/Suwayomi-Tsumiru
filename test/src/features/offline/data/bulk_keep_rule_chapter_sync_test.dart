@@ -13,6 +13,9 @@
 // no device download. syncAndReconcileMangaSet is the fix: it runs the full
 // fetch→sync→reconcile chain for exactly these manga.
 
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -54,6 +57,17 @@ class _NullChapterRepo extends MangaBookRepository {
 // ---------------------------------------------------------------------------
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    final tmp = await Directory.systemTemp.createTemp('bulk-keep-rule-');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (_) async => tmp.path,
+        );
+  });
+
   setUp(resetChapterCatchUpStateForTest);
   tearDown(resetChapterCatchUpStateForTest);
 

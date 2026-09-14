@@ -352,6 +352,11 @@ Future<void> syncAndReconcileMangaSet(
   if (mangaIds.isEmpty) return;
   if (!container.read(offlineActiveProvider)) return;
   await _syncAndReconcile(container, mangaIds);
+  try {
+    await writeCatchupWorkSpec(container.read);
+  } catch (e) {
+    logger.w('Offline: work spec after bulk keep-rule change failed: $e');
+  }
   await container.read(downloadStarterProvider)(userInitiated: userInitiated);
 }
 
