@@ -14,6 +14,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
 import '../../../offline/presentation/offline_files_view.dart';
+import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
 import '../../domain/downloads_queue/downloads_queue_model.dart';
 import 'controller/downloads_controller.dart';
@@ -29,6 +30,10 @@ class DownloadsScreen extends HookConsumerWidget {
     final queueStatus = ref.watch(downloadStatusProvider);
     final downloaderRunState = ref.watch(downloaderRunStateProvider);
     final showDownloadsFAB = ref.watch(showDownloadsFABProvider);
+    final erroredChapterIds = ref.watch(downloadsMapProvider.select((map) => [
+          for (final d in map.values)
+            if (d.state == DownloadState.ERROR) d.chapter.id,
+        ]));
     // Own the tab controller so the FAB can be tab-contextual: the server queue
     // pause on the Server tab, the on-device pause on the On-device tab.
     final tabController = useTabController(initialLength: 2);
@@ -48,6 +53,22 @@ class DownloadsScreen extends HookConsumerWidget {
           ],
         ),
         actions: [
+          if (!onDeviceTab && erroredChapterIds.isNotEmpty)
+            IconButton(
+              tooltip: context.l10n.retryAll,
+              onPressed: () async {
+                final toast = ref.read(toastProvider);
+                final repo = ref.read(downloadsRepositoryProvider);
+                final result = await AsyncValue.guard(() async {
+                  for (final id in erroredChapterIds) {
+                    await repo.removeChapterFromDownloadQueue(id);
+                  }
+                  await repo.addChaptersBatchToDownloadQueue(erroredChapterIds);
+                });
+                result.showToastOnError(toast);
+              },
+              icon: const Icon(Icons.replay_rounded),
+            ),
           if (!onDeviceTab && (downloadsChapterIds).isNotBlank)
             IconButton(
               onPressed: () => AsyncValue.guard(

@@ -48,7 +48,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
     }
   }
 
-  Future toggleChapterToQueue(
+  Future<bool> toggleChapterToQueue(
     Toast? toast,
     WidgetRef ref, {
     bool isAdd = false,
@@ -56,7 +56,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
     bool isError = false,
   }) async {
     try {
-      (await AsyncValue.guard(() async {
+      final result = await AsyncValue.guard(() async {
         final repo = ref.read(downloadsRepositoryProvider);
         if (isRemove || isError) {
           await repo.removeChapterFromDownloadQueue(chapter.id);
@@ -64,15 +64,18 @@ class DownloadStatusIcon extends HookConsumerWidget {
         if (isAdd || isError) {
           await repo.addChaptersBatchToDownloadQueue([chapter.id]);
         }
-      })).showToastOnError(toast);
+      });
+      result.showToastOnError(toast);
+      return !result.hasError;
     } catch (e) {
-      //
+      return false;
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = useState(false);
+    final isEnqueuing = useState(false);
 
     final toast = ref.watch(toastProvider);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapter.id));
@@ -84,6 +87,14 @@ class DownloadStatusIcon extends HookConsumerWidget {
       }
       return;
     }, [downloadUpdate?.state]);
+    useEffect(() {
+      if (downloadUpdate != null) {
+        Future.microtask(() {
+          if (context.mounted) isEnqueuing.value = false;
+        });
+      }
+      return;
+    }, [downloadUpdate != null]);
 
     if (isLoading.value) {
       return Padding(
@@ -153,14 +164,26 @@ class DownloadStatusIcon extends HookConsumerWidget {
             },
           );
         } else {
+          if (isEnqueuing.value) {
+            return IconButton(
+              onPressed: null,
+              icon: MiniCircularProgressIndicator(color: context.iconColor),
+            );
+          }
           return IconButton(
             // Muted outline = a "get it on the server" button.
             icon: Icon(
               Icons.cloud_download_outlined,
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: () {
-              toggleChapterToQueue(toast, ref, isAdd: true);
+            onPressed: () async {
+              isEnqueuing.value = true;
+              // Held until the queue feed reports the chapter, but not forever
+              // if the feed is down or the server skips it.
+              if (await toggleChapterToQueue(toast, ref, isAdd: true)) {
+                await Future.delayed(const Duration(seconds: 10));
+              }
+              if (context.mounted) isEnqueuing.value = false;
             },
           );
         }

@@ -146,7 +146,10 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
             // obtained now stays valid regardless.
             final containerRead =
                 ProviderScope.containerOf(context, listen: false).read;
-            final repo = ref.read(offlineRepositoryProvider);
+            // Web has no device database, so reading it would throw.
+            final repo = ref.read(offlineActiveProvider)
+                ? ref.read(offlineRepositoryProvider)
+                : null;
             // Computed up front, before the confirmation dialog's own await:
             // it only depends on the already-selected chapters, nothing the
             // dialog reveals, so there is no reason for this `ref` use to
@@ -166,28 +169,29 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                 ),
             ];
             final onDevice =
-                await repo.deviceDownloadedCount(selectedChapterList);
-            if (onDevice > 0) {
-              if (!context.mounted) return;
-              final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(ctx.l10n.delete),
-                      content:
-                          Text(ctx.l10n.offlineBulkDeleteWarning(onDevice)),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(ctx.l10n.cancel)),
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(ctx.l10n.delete)),
-                      ],
-                    ),
-                  ) ??
-                  false;
-              if (!ok) return;
-            }
+                await repo?.deviceDownloadedCount(selectedChapterList) ?? 0;
+            if (!context.mounted) return;
+            final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(ctx.l10n.delete),
+                    content: Text([
+                      ctx.l10n.deleteChaptersConfirm,
+                      if (onDevice > 0)
+                        ctx.l10n.offlineBulkDeleteWarning(onDevice),
+                    ].join('\n\n')),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(ctx.l10n.cancel)),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(ctx.l10n.delete)),
+                    ],
+                  ),
+                ) ??
+                false;
+            if (!ok) return;
             final result = await AsyncValue.guard(
               () => ref
                   .read(mangaBookRepositoryProvider)

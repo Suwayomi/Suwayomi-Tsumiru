@@ -218,7 +218,7 @@ class _ActiveChapterTile extends ConsumerWidget {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(subtitle),
-      // No onTap — the chapter isn't readable until it commits.
+      onTap: () => deleteChapterFromDevice(ref, chapter.id),
     );
   }
 }

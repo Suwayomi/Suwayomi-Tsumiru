@@ -67,17 +67,12 @@ class FilterToWidget extends StatelessWidget {
         name: String? name,
         tristate: TriState state,
       ) =>
-        CheckboxListTile(
-          value: firstCurrentChange?.triState?.toBool ?? state.toBool,
+        _TriStateTile(
+          name: name,
+          state: firstCurrentChange?.triState ?? state,
           onChanged: (value) => onChanged([
-            FilterChange(
-              triState: TriStateExtension.fromBool(value),
-              position: kPositionPlaceholder,
-            )
+            FilterChange(triState: value, position: kPositionPlaceholder)
           ]),
-          title: Text(name),
-          controlAffinity: ListTileControlAffinity.leading,
-          tristate: true,
         ),
       FilterSort(
         name: String name,
@@ -258,6 +253,37 @@ class FilterGroupWidget extends HookWidget {
             },
           ),
       ],
+    );
+  }
+}
+
+class _TriStateTile extends StatelessWidget {
+  const _TriStateTile({
+    required this.name,
+    required this.state,
+    required this.onChanged,
+  });
+  final String name;
+  final TriState state;
+  final ValueChanged<TriState> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.theme.colorScheme;
+    final (icon, next) = switch (state) {
+      TriState.INCLUDE => (Icons.check_box_rounded, TriState.EXCLUDE),
+      TriState.EXCLUDE => (Icons.disabled_by_default_rounded, TriState.IGNORE),
+      _ => (Icons.check_box_outline_blank_rounded, TriState.INCLUDE),
+    };
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: state == TriState.IGNORE
+            ? scheme.onSurfaceVariant
+            : scheme.primary,
+      ),
+      title: Text(name),
+      onTap: () => onChanged(next),
     );
   }
 }
