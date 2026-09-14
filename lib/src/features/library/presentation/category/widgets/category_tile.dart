@@ -12,18 +12,16 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../controller/edit_category_controller.dart';
 import 'edit_category_dialog.dart';
 
 /// A category row in the Edit Categories screen: drag handle · name
 /// (struck-through + dimmed when hidden) · edit · hide-toggle · delete.
+
 class CategoryTile extends HookConsumerWidget {
-  const CategoryTile({
-    super.key,
-    required this.category,
-    required this.index,
-  });
+  const CategoryTile({super.key, required this.category, required this.index});
 
   final CategoryDto category;
 
@@ -32,10 +30,8 @@ class CategoryTile extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The pinned "Default" category (id 0 / order 0) can't be reordered or
-    // deleted, so it gets no drag handle and a disabled delete (parity with the
-    // old behaviour + the backend reserving order 0).
-    final isDefault = category.id == 0 || category.order == 0;
+    final defaultId = ref.watch(settledDefaultCategoryIdProvider);
+    final isDefault = defaultId == null || category.id == defaultId;
     final isHidden = category.isHidden;
     final baseColor = context.theme.colorScheme.onSurface;
 
@@ -64,23 +60,24 @@ class CategoryTile extends HookConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: isHidden ? baseColor.withValues(alpha: 0.6) : null,
-                  decoration:
-                      isHidden ? TextDecoration.lineThrough : null,
+                  decoration: isHidden ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),
             IconButton(
               visualDensity: VisualDensity.compact,
               tooltip: context.l10n.editCategory,
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => EditCategoryDialog(
-                  category: category,
-                  editCategory: (updated) => ref
-                      .read(categoryControllerProvider.notifier)
-                      .editCategory(category.id, updated),
-                ),
-              ),
+              onPressed: isDefault
+                  ? null
+                  : () => showDialog(
+                      context: context,
+                      builder: (context) => EditCategoryDialog(
+                        category: category,
+                        editCategory: (updated) => ref
+                            .read(categoryControllerProvider.notifier)
+                            .editCategory(category.id, updated),
+                      ),
+                    ),
               icon: const Icon(Icons.edit_rounded),
               color: Colors.grey,
             ),
@@ -98,17 +95,19 @@ class CategoryTile extends HookConsumerWidget {
                     .setHidden(category.id, !isHidden);
                 if (!context.mounted) return;
                 switch (result) {
-                  case AsyncData(
-                      value: CategoryVisibilityOutcome.deviceOnly
-                    ):
-                    ref.read(toastProvider)?.show(
-                          context.l10n.categoryVisibilityDeviceOnly,
-                        );
+                  case AsyncData(value: CategoryVisibilityOutcome.deviceOnly):
+                    ref
+                        .read(toastProvider)
+                        ?.show(context.l10n.categoryVisibilityDeviceOnly);
                   case AsyncError(:final error):
-                    ref.read(toastProvider)?.showError(
-                          isConnectionError(error is OperationMessageException
-                                  ? error.exception
-                                  : error)
+                    ref
+                        .read(toastProvider)
+                        ?.showError(
+                          isConnectionError(
+                                error is OperationMessageException
+                                    ? error.exception
+                                    : error,
+                              )
                               ? context.l10n.needsServerConnection
                               : context.l10n.errorSomethingWentWrong,
                         );
@@ -127,42 +126,44 @@ class CategoryTile extends HookConsumerWidget {
               tooltip: context.l10n.delete,
               onPressed: !isDefault
                   ? () => showDialog(
-                        context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title:
-                              Text(dialogContext.l10n.deleteCategoryTitle),
-                          content: Text(
-                              dialogContext.l10n.deleteCategoryDescription),
-                          actions: [
-                            const PopButton(),
-                            ElevatedButton(
-                              onPressed: () async {
-                                Navigator.pop(dialogContext);
-                                final result = await ref
-                                    .read(categoryControllerProvider.notifier)
-                                    .deleteCategory(category.id);
-                                // Deliberately the TILE's context: the dialog
-                                // unmounts with the pop, and this resolves
-                                // long after on the failure paths.
-                                if (result is AsyncError && context.mounted) {
-                                  final error = result.error;
-                                  final cause =
-                                      error is OperationMessageException
-                                          ? error.exception
-                                          : error;
-                                  ref.read(toastProvider)?.showError(
-                                        isConnectionError(cause)
-                                            ? context.l10n.needsServerConnection
-                                            : context
-                                                .l10n.errorSomethingWentWrong,
-                                      );
-                                }
-                              },
-                              child: Text(dialogContext.l10n.delete),
-                            ),
-                          ],
+                      context: context,
+                      builder: (dialogContext) => AlertDialog(
+                        title: Text(dialogContext.l10n.deleteCategoryTitle),
+                        content: Text(
+                          dialogContext.l10n.deleteCategoryDescription,
                         ),
-                      )
+                        actions: [
+                          const PopButton(),
+                          ElevatedButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              final result = await ref
+                                  .read(categoryControllerProvider.notifier)
+                                  .deleteCategory(category.id);
+                              // Deliberately the TILE's context: the dialog
+                              // unmounts with the pop, and this resolves
+                              // long after on the failure paths.
+                              if (result is AsyncError && context.mounted) {
+                                final error = result.error;
+                                final cause = error is OperationMessageException
+                                    ? error.exception
+                                    : error;
+                                ref
+                                    .read(toastProvider)
+                                    ?.showError(
+                                      isConnectionError(cause)
+                                          ? context.l10n.needsServerConnection
+                                          : context
+                                                .l10n
+                                                .errorSomethingWentWrong,
+                                    );
+                              }
+                            },
+                            child: Text(dialogContext.l10n.delete),
+                          ),
+                        ],
+                      ),
+                    )
                   : null,
               icon: const Icon(Icons.delete_rounded),
               color: Colors.grey,

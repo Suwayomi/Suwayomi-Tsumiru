@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/library/data/category_repository.dart';
+import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
@@ -46,12 +47,16 @@ void main() {
     addTearDown(() => FlutterError.onError = prevOnError);
 
     await runZonedGuarded(() async {
-      final container = ProviderContainer(overrides: [
-        categoryRepositoryProvider
-            .overrideWithValue(_PendingCategoryRepo(fetch)),
-        offlineReadDatabaseProvider.overrideWithValue(null),
-        offlineSyncProvider.overrideWithValue(null),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          defaultCategoryIdProvider.overrideWith((ref) async => 0),
+          categoryRepositoryProvider.overrideWithValue(
+            _PendingCategoryRepo(fetch),
+          ),
+          offlineReadDatabaseProvider.overrideWithValue(null),
+          offlineSyncProvider.overrideWithValue(null),
+        ],
+      );
       addTearDown(container.dispose);
 
       // Mirror add-to-library: read .future with NO retained listener, so this
@@ -72,9 +77,13 @@ void main() {
       await Future<void>.delayed(Duration.zero);
     }, (error, _) => errors.add(error));
 
-    final disposedRefUse =
-        errors.where((e) => e.toString().contains('after it has been disposed'));
-    expect(disposedRefUse, isEmpty,
-        reason: 'build() used ref after the provider was disposed: $errors');
+    final disposedRefUse = errors.where(
+      (e) => e.toString().contains('after it has been disposed'),
+    );
+    expect(
+      disposedRefUse,
+      isEmpty,
+      reason: 'build() used ref after the provider was disposed: $errors',
+    );
   });
 }

@@ -10,6 +10,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -19,24 +20,25 @@ import 'package:workmanager/workmanager.dart';
 import 'src/constants/enum.dart';
 import 'src/constants/timeout_constants.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
+import 'src/features/account/data/account_bootstrap.dart';
+import 'src/features/account/data/account_session_startup.dart';
+import 'src/features/account/data/account_session_storage.dart';
+import 'src/features/account/presentation/account_session_host.dart';
 import 'src/features/auth/data/auth_coordinator.dart';
 import 'src/features/auth/data/auth_credentials_store.dart';
+import 'src/features/auth/data/auth_session_transition.dart';
 import 'src/features/auth/data/basic_auth_migration.dart';
 import 'src/features/auth/data/custom_headers_store.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
 import 'src/features/library/data/badge_preference_migration.dart';
-import 'src/features/migration/controller/bulk_migration_providers.dart';
-import 'src/features/notifications/controller/notifications_controller.dart';
 import 'src/features/notifications/data/background/notification_background_entry.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
-import 'src/features/offline/data/background/catchup_spec_writer.dart';
+import 'src/features/offline/data/background/catchup_work_spec.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
-import 'src/features/offline/data/offline_bootstrap.dart';
-import 'src/features/offline/data/offline_chapter_catchup.dart';
-import 'src/features/offline/data/offline_download_providers.dart';
+import 'src/features/offline/data/offline_download_coordinator.dart';
 import 'src/features/offline/data/offline_repository.dart';
+import 'src/features/offline/data/offline_runtime_storage.dart';
 import 'src/features/offline/data/offline_server_identity_repository.dart';
-import 'src/features/offline/data/server_reachability.dart';
 import 'src/features/onboarding/data/onboarding_complete.dart';
 import 'src/features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import 'src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -53,9 +55,9 @@ import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
 import 'src/utils/misc/toast/toast.dart';
 import 'src/utils/network/graphql_errors.dart';
-import 'src/utils/platform/is_android_native.dart';
 import 'src/utils/soft_clear_image_cache.dart';
 import 'src/widgets/app_error_app.dart';
+import 'src/widgets/cover_cache/cover_cache.dart';
 
 /// Absolute path of the crash-log file (native only; null on web / if setup
 /// fails). The error handlers append to it synchronously.
@@ -123,40 +125,7 @@ Future<void> _startApp() async {
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
 
-  // Open the on-device offline catalog. Null on web (offline disabled there);
-  // failure is non-fatal — the app still launches, offline features stay off.
-  final offlineStorage = await () async {
-    try {
-      return await initOfflineStorage();
-    } catch (e, st) {
-      debugPrint('offline storage init failed: $e\n$st');
-      _logBoot('offline storage init FAILED: ${redactTokens('$e')}');
-      return null;
-    }
-  }();
-  _logBoot(offlineStorage != null ? 'offline storage ready' : 'offline off');
-
-  // Build a ProviderContainer so we can run migration and preload auth
-  // providers before the first frame. Using UncontrolledProviderScope below
-  // ensures the widget tree uses this same container instance.
-  final container = ProviderContainer(
-    // Riverpod's 10 retries cost ~45s of doomed requests per on-screen
-    // provider before the offline UI appears, and a dead connection won't
-    // recover inside that window.
-    retry: (retryCount, error) => isConnectionError(error)
-        ? null
-        : ProviderContainer.defaultRetry(retryCount, error),
-    overrides: [
-      packageInfoProvider.overrideWithValue(packageInfo),
-      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      if (offlineStorage != null) ...[
-        offlineDatabaseProvider.overrideWithValue(offlineStorage.db),
-        offlinePathsProvider.overrideWithValue(offlineStorage.paths),
-        offlinePageStoreProvider.overrideWithValue(offlineStorage.store),
-        offlineEnabledProvider.overrideWithValue(true),
-      ],
-    ],
-  );
+  final container = _createSessionContainer(packageInfo, sharedPreferences);
 
   final secure = container.read(secureStorageProvider);
 
@@ -305,157 +274,116 @@ Future<void> _startApp() async {
     debugPrint('test-config seed failed: $e\n$st');
   }
 
-  // Select the LAN URL when it is reachable, otherwise retain the remote URL;
-  // the resolver also listens for later Wi-Fi/mobile network changes.
-  container.read(serverEndpointResolverProvider.notifier);
-
-  _setupDeepLinkListener(container);
-
-  // 7) Sweep any chapter left mid-download by a prior crash/kill back to a
-  //    clean state so it can be retried. Fire-and-forget; native only.
-  if (offlineStorage != null) {
-    // Push read progress made offline, re-apply keep-rules (queues anything
-    // missing), then resume the download queue: chapters stranded `downloading`
-    // by the last exit and previously-errored ones are retried, one at a time,
-    // re-fetching only pages not already on disk. Fire-and-forget; native only.
-    unawaited(
-      Future(() async {
-        // Wire the worker's event callback before anything can start the
-        // service — the reconnect listener below can, and a service running
-        // with no callback finishes chapters nobody applies to the catalog
-        // until a later launch replays the log. Idempotent, and independent of
-        // both the server and the catalog, so it belongs ahead of both gates.
-        if (isAndroidNative) {
-          container.read(backgroundDownloadControllerProvider).register();
-          container.listen<String?>(serverUrlProvider, (previous, next) {
-            if (previous != null && previous != next) {
-              unawaited(
-                container
-                    .read(backgroundDownloadControllerProvider)
-                    .restartForEndpointChange(),
-              );
-            }
-          });
-        }
-
-        // Push queued progress the moment the server comes back, not just on
-        // next cold launch.
-        //
-        // Registered ahead of BOTH gates below. The server-id probe returns
-        // early when the server is unreachable at launch, which is exactly when
-        // this listener matters — leaving it after meant a session started
-        // offline never resumed anything for its whole life. The offline gate
-        // is the same story: the flush no-ops while inactive, and the catalog
-        // can activate later in the session.
-        //
-        // A transition landing mid-flush queues one re-run, so rows dirtied
-        // after the snapshot aren't stranded with no later transition to catch
-        // them.
-        var flushing = false;
-        var rerun = false;
-        void flush() {
-          if (flushing) {
-            rerun = true;
-            return;
-          }
-          flushing = true;
-          unawaited(
-            pushPendingProgress(container)
-                .catchError((Object e) {
-                  debugPrint('reconnect progress flush failed: $e');
-                })
-                .whenComplete(() {
-                  flushing = false;
-                  if (rerun) {
-                    rerun = false;
-                    flush();
-                  }
-                }),
-          );
-          // Desktop pump parks while offline; reconnect restarts it.
-          final coordinator = container.read(
-            offlineDownloadCoordinatorProvider,
-          );
-          if (coordinator != null) unawaited(coordinator.pumpDownloads());
-          // Android's worker owns downloads, and connectivity callbacks only
-          // fire on interface changes — a server that went down and came back
-          // over the same Wi-Fi produces no such event, so the queue stayed
-          // parked until something else happened to start it.
-          if (isAndroidNative) {
-            unawaited(
-              container
-                  .read(backgroundDownloadControllerProvider)
-                  .ensureServiceRunning(force: true),
-            );
-          }
-        }
-
-        container.listen<bool>(serverUnreachableProvider, (prev, next) {
-          if (prev == true && !next) flush();
-        });
-
-        try {
-          await container.read(serverInstanceIdProvider.future);
-        } catch (_) {
-          return;
-        }
-        // Drain any bulk-migration journal left by a mid-batch crash. Independent
-        // of the offline feature, so it runs before that guard.
-        await recoverBulkMigrationsAtLaunch(container);
-        // Reconcile the notification schedule + write the worker's endpoint-bound
-        // config now that auth is ready. Best-effort — never blocks launch.
-        try {
-          await container.read(notificationsControllerProvider).sync();
-        } catch (_) {}
-        if (!container.read(offlineActiveProvider)) return;
-        // Replay FIRST: launch reconcile and the catch-up must see post-replay
-        // device state, or overnight background downloads read as missing and
-        // get re-fetched. The service restart stays after reconcile below.
-        if (isAndroidNative) {
-          // register() already ran above; this is the catalog-dependent half.
-          await container
-              .read(backgroundDownloadControllerProvider)
-              .replayAtLaunch();
-        }
-        await pushPendingProgress(container);
-        await reconcileAllAtLaunch(container);
-        // New-chapter catch-up for keep-rule manga (#310): launch pass now, then
-        // re-runs when an update finishes or the server download queue drains.
-        initChapterCatchUp(container);
-        // Snapshot the background worker's planning state whenever the app
-        // leaves the foreground — the binding keeps the listener alive.
-        AppLifecycleListener(
-          onPause: () => unawaited(writeCatchupWorkSpec(container.read)),
-          onHide: () => unawaited(writeCatchupWorkSpec(container.read)),
-        );
-        // One-time sweep of phantom (browsed-not-added) catalog entries.
-        if (sharedPreferences.getBool('offlinePhantomCleanupDone') != true) {
-          try {
-            await container
-                .read(offlineDatabaseProvider)
-                .purgeNonLibraryManga();
-            await sharedPreferences.setBool('offlinePhantomCleanupDone', true);
-          } catch (e, st) {
-            debugPrint('phantom cleanup failed: $e\n$st');
-          }
-        }
-        if (isAndroidNative) {
-          // Replay already ran above (before reconcile); restart the service if
-          // the queue is non-empty.
-          final controller = container.read(
-            backgroundDownloadControllerProvider,
-          );
-          await controller.maybeStartAfterReplay();
-        } else {
-          await initOfflineDownloads(container);
-        }
-      }),
+  await CatchupStateStore(sharedPreferences).setIdentityAuthorized(false);
+  try {
+    await restoreAccountSession(container);
+    _logBoot(
+      container.read(offlineEnabledProvider)
+          ? 'offline storage ready'
+          : 'offline off',
     );
+  } catch (error, stack) {
+    debugPrint('account storage initialization failed: $error\n$stack');
+    _logBoot(
+      'account storage initialization failed: ${redactTokens('$error')}',
+    );
+  }
+  container.read(authCredentialsStoreProvider.notifier).activateSession();
+  container.read(serverEndpointResolverProvider.notifier);
+  var activeContainer = container;
+  var startup = AccountSessionStartup(container)..start();
+  _setupDeepLinkListener(() => activeContainer);
+
+  Future<ProviderContainer> restartSession(ProviderContainer previous) async {
+    startup.dispose();
+    previous.read(offlineDownloadCoordinatorProvider)?.pause();
+    await previous.read(backgroundDownloadControllerProvider).detachStorage();
+    await OfflineDownloadCoordinator.stopAll();
+    final oldStorage = previous.read(offlineRuntimeStorageProvider.notifier);
+    await oldStorage.drain();
+    await previous.read(authCredentialsStoreProvider.notifier).retire();
+    final next = _createSessionContainer(
+      packageInfo,
+      sharedPreferences,
+      coverCache: previous.read(coverCacheManagerProvider),
+    );
+    OfflineStorage? transferred;
+    AccountSessionStartup? nextStartup;
+    try {
+      await Future.wait([
+        next.read(authCredentialsStoreProvider.future),
+        next.read(credentialsProvider.future),
+        next.read(customHttpHeadersProvider.future),
+      ]);
+      await CatchupStateStore(sharedPreferences).setIdentityAuthorized(false);
+      transferred = oldStorage.take();
+      await next
+          .read(offlineRuntimeStorageProvider.notifier)
+          .replace(drain: () async {}, open: () async => transferred);
+      next.read(authCredentialsStoreProvider.notifier).activateSession();
+      next.read(authCoordinatorProvider.notifier);
+      next.read(serverEndpointResolverProvider.notifier);
+      nextStartup = AccountSessionStartup(next);
+      nextStartup.start();
+      startup = nextStartup;
+      activeContainer = next;
+      return next;
+    } catch (_) {
+      nextStartup?.dispose();
+      try {
+        final runtime = next.read(offlineRuntimeStorageProvider.notifier);
+        if (next.read(offlineRuntimeStorageProvider) == null) {
+          await transferred?.db.close();
+        } else {
+          await runtime.replace(
+            drain: runtime.whenIdle,
+            open: () async => null,
+          );
+        }
+      } finally {
+        next.dispose();
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> retainSession(ProviderContainer retained) async {
+    startup.dispose();
+    retained.read(authCredentialsStoreProvider.notifier).activateSession();
+    final current = retained
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    await retained.read(offlineRuntimeStorageProvider.notifier).whenIdle();
+    if (!current() || activeContainer != retained) return;
+    retained.invalidate(backgroundDownloadControllerProvider);
+    startup = AccountSessionStartup(retained);
+    await startup.start();
   }
 
   _logBoot('runApp');
   runApp(
-    UncontrolledProviderScope(container: container, child: const Sorayomi()),
+    AccountSessionHost(
+      initialContainer: container,
+      restart: restartSession,
+      onRetained: retainSession,
+      sessionKey: (session) {
+        final credentials = session.read(authCredentialsStoreProvider).value;
+        return (
+          session.read(authTypeKeyProvider),
+          session.read(currentServerAddressProvider),
+          session.read(credentialsProvider).value,
+          credentials?.accountBinding,
+          credentials?.uiAccessToken,
+          credentials?.uiRefreshToken,
+          credentials?.simpleLoginCookie,
+          session.read(offlineRuntimeStorageProvider),
+        );
+      },
+      builder: (changing) => Sorayomi(sessionChanging: changing),
+      loading: const AccountSessionLoading(),
+      errorBuilder: (error) =>
+          AppErrorApp(message: redactTokens('$error'), logPath: _crashLogPath),
+    ),
   );
   // Mark the app as up once it has painted a frame. After this, a stray
   // uncaught async error is recoverable and must NOT replace the whole UI with
@@ -465,6 +393,25 @@ Future<void> _startApp() async {
     _logBoot('first frame');
   });
 }
+
+ProviderContainer _createSessionContainer(
+  PackageInfo packageInfo,
+  SharedPreferences preferences, {
+  CacheManager? coverCache,
+}) => ProviderContainer(
+  retry: (retryCount, error) => isConnectionError(error)
+      ? null
+      : ProviderContainer.defaultRetry(retryCount, error),
+  overrides: [
+    packageInfoProvider.overrideWithValue(packageInfo),
+    sharedPreferencesProvider.overrideWithValue(preferences),
+    if (coverCache != null)
+      coverCacheManagerProvider.overrideWithValue(coverCache),
+    authSessionTransitionProvider.overrideWith(
+      (ref) => ref.read(accountSessionStorageProvider),
+    ),
+  ],
+);
 
 /// Startup breadcrumbs in the crash log: a boot that dies pre-frame leaves the
 /// last completed stage next to the error, instead of a bare stack with no
@@ -531,7 +478,7 @@ void _onFatalError(Object error, StackTrace stack) {
 /// Checks for an initial link (cold-start) and subscribes to the uriLinkStream
 /// (warm-start). Both paths parse the tracker ID from the `state` query param,
 /// call `loginOAuth`, and invalidate `trackersProvider`.
-void _setupDeepLinkListener(ProviderContainer container) {
+void _setupDeepLinkListener(ProviderContainer Function() currentContainer) {
   final appLinks = AppLinks();
 
   Future<void> handleUri(Uri uri) async {
@@ -541,12 +488,19 @@ void _setupDeepLinkListener(ProviderContainer container) {
       debugPrint('tracker-oauth callback: missing/invalid trackerId in state');
       return;
     }
+    final container = currentContainer();
+    final current = container
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    if (!current()) return;
     try {
       await container
           .read(trackerRepositoryProvider)
           .loginOAuth(trackerId: trackerId, callbackUrl: uri.toString());
+      if (!current()) return;
       container.invalidate(trackersProvider);
     } catch (e) {
+      if (!current()) return;
       debugPrint('tracker-oauth loginOAuth failed: $e');
       try {
         container.read(toastProvider)?.showError(e.toString());

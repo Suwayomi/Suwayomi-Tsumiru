@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../account_storage_paths.dart';
 import 'background_download_lock.dart';
 import 'background_work_order.dart';
 
@@ -10,7 +11,9 @@ Future<T> withWorkOrderAdmission<T>(
   String baseDir,
   Future<T> Function() action,
 ) async {
-  final lock = BackgroundDownloadLock(File('$baseDir/.bg_admission'));
+  final lock = BackgroundDownloadLock(
+    File('${offlineControlRoot(baseDir)}/.bg_admission'),
+  );
   for (var i = 0; i < 600; i++) {
     if (await lock.acquire('admission')) {
       try {

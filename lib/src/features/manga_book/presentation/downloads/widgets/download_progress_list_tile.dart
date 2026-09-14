@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../account/data/account_providers.dart';
+import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../controller/downloads_controller.dart';
@@ -37,13 +40,16 @@ class DownloadProgressListTile extends HookConsumerWidget {
   ) async {
     try {
       (await AsyncValue.guard(() async {
+        final current = ref
+            .read(authCredentialsStoreProvider.notifier)
+            .captureSession();
         final repo = ref.read(downloadsRepositoryProvider);
         await repo.removeChapterFromDownloadQueue(chapterId);
+        if (!current()) return;
         if (addToDownload) {
           await repo.addChaptersBatchToDownloadQueue([chapterId]);
         }
-      }))
-          .showToastOnError(toast);
+      })).showToastOnError(toast);
     } catch (e) {
       //
     }
@@ -65,13 +71,15 @@ class DownloadProgressListTile extends HookConsumerWidget {
         DownloadState.QUEUED => context.l10n.queued,
         DownloadState.DOWNLOADING => _downloadingText(context, downloadUpdate),
         DownloadState.ERROR ||
-        DownloadState.FINISHED =>
-          downloadUpdate.toDisplayName(context),
+        DownloadState.FINISHED => downloadUpdate.toDisplayName(context),
         DownloadState.$unknown => throw UnimplementedError(),
       };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapterId));
     if (downloadUpdate == null) return const SizedBox.shrink();
     final colorScheme = context.theme.colorScheme;
@@ -79,6 +87,7 @@ class DownloadProgressListTile extends HookConsumerWidget {
     final isDownloading = downloadUpdate.state == DownloadState.DOWNLOADING;
     return ReorderableDelayedDragStartListener(
       index: index,
+      enabled: canDownload,
       child: Column(
         children: [
           ListTile(
@@ -123,6 +132,10 @@ class DownloadProgressListTile extends HookConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 PopupMenuButton(
+                  enabled: canDownload,
+                  tooltip: canDownload
+                      ? null
+                      : context.l10n.accountPermissionDenied,
                   shape: RoundedRectangleBorder(
                     borderRadius: KBorderRadius.r16.radius,
                   ),
@@ -131,12 +144,20 @@ class DownloadProgressListTile extends HookConsumerWidget {
                       PopupMenuItem(
                         child: Text(context.l10n.retry),
                         onTap: () => toggleChapterToQueue(
-                            toast, ref, true, downloadUpdate.chapter.id),
+                          toast,
+                          ref,
+                          true,
+                          downloadUpdate.chapter.id,
+                        ),
                       ),
                     PopupMenuItem(
                       child: Text(context.l10n.cancel),
                       onTap: () => toggleChapterToQueue(
-                          toast, ref, false, downloadUpdate.chapter.id),
+                        toast,
+                        ref,
+                        false,
+                        downloadUpdate.chapter.id,
+                      ),
                     ),
                     if (!index.isZero)
                       PopupMenuItem(
@@ -151,12 +172,15 @@ class DownloadProgressListTile extends HookConsumerWidget {
                         onTap: () => ref
                             .read(downloadsMapProvider.notifier)
                             .reorder(
-                                downloadUpdate.chapter.id, downloadsCount - 1),
+                              downloadUpdate.chapter.id,
+                              downloadsCount - 1,
+                            ),
                       ),
                   ],
                 ),
                 ReorderableDragStartListener(
                   index: index,
+                  enabled: canDownload,
                   child: Icon(
                     Icons.drag_handle_rounded,
                     color: colorScheme.onSurfaceVariant,

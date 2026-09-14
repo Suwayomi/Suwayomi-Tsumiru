@@ -7,15 +7,22 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/widgets.dart';
 import 'package:graphql/client.dart';
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_repository/extension_repository.dart';
 import 'package:tsumiru/src/features/browse_center/domain/extension/extension_model.dart';
+
+import 'legacy_account_access.dart';
 
 GraphQLClient dummyGraphQLClient() =>
     GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 /// Records every mutation the app sends; [calls] keeps their order.
 class FakeExtensionRepository extends ExtensionRepository {
-  FakeExtensionRepository() : super(dummyGraphQLClient());
+  FakeExtensionRepository({AccountPermissionGuard? permissions})
+    : super(
+        dummyGraphQLClient(),
+        permissions: permissions ?? legacyAccountPermissions,
+      );
 
   final List<String> installed = <String>[];
   final List<String> uninstalled = <String>[];

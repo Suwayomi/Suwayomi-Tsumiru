@@ -14,6 +14,7 @@ import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/network/graphql_errors.dart';
 import '../../../data/category_repository.dart';
+import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../../library/controller/library_controller.dart';
 
@@ -28,38 +29,67 @@ class CategoryController extends _$CategoryController {
     // .future), after which any ref access throws "used after it has been
     // disposed" — the crash this guards against.
     final offlineDb = ref.watch(offlineReadDatabaseProvider);
-    final viewOffline = ref.watch(viewOfflineNowProvider) ||
+    final viewOffline =
+        ref.watch(viewOfflineNowProvider) ||
         ref.watch(serverUnreachableProvider);
     final categoryRepository = ref.watch(categoryRepositoryProvider);
     final sync = ref.read(offlineSyncProvider);
+    final defaultIdFuture = ref.watch(defaultCategoryIdProvider.future);
+    final defaultId = await defaultIdFuture.catchError((Object _) => null);
     var servedFromCatalog = false;
     final result = await categoriesWithOfflineFallback(
       fetch: () => categoryRepository.getCategoryList(),
       db: offlineDb,
       offlineEnabled: offlineDb != null,
       offlineFirst: viewOffline,
+      defaultCategoryId: defaultId,
       onCatalogServe: () => servedFromCatalog = true,
     );
     // A catalog-served list is an echo — never mirror it back.
-    if (sync != null && result != null && !servedFromCatalog) {
-      unawaited(sync.syncCategories(result));
+    if (sync != null &&
+        result != null &&
+        defaultId != null &&
+        !servedFromCatalog) {
+      unawaited(sync.syncCategories(result, defaultCategoryId: defaultId));
     }
     return result;
   }
 
   Future<AsyncValue<void>> deleteCategory(int categoryId) async {
-    final response = await AsyncValue.guard(() => ref
-        .read(categoryRepositoryProvider)
-        .deleteCategory(categoryId: categoryId));
+    final defaultId = ref.read(settledDefaultCategoryIdProvider);
+    if (defaultId == null || categoryId == defaultId) {
+      return AsyncError(
+        StateError('Category cannot be modified'),
+        StackTrace.current,
+      );
+    }
+    final response = await AsyncValue.guard(
+      () => ref
+          .read(categoryRepositoryProvider)
+          .deleteCategory(categoryId: categoryId),
+    );
     ref.invalidateSelf();
     return response;
   }
 
   Future<AsyncValue<void>> editCategory(
-      int categoryId, CategoryUpdate category) async {
+    int categoryId,
+    CategoryUpdate category,
+  ) async {
+    final defaultId = ref.read(settledDefaultCategoryIdProvider);
+    if (defaultId == null || categoryId == defaultId) {
+      return AsyncError(
+        StateError('Category cannot be modified'),
+        StackTrace.current,
+      );
+    }
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    final response = await AsyncValue.guard(() => categoryRepository
-        .editCategory(categoryId: categoryId, category: category));
+    final response = await AsyncValue.guard(
+      () => categoryRepository.editCategory(
+        categoryId: categoryId,
+        category: category,
+      ),
+    );
     ref.invalidateSelf();
     return response;
   }
@@ -67,15 +97,25 @@ class CategoryController extends _$CategoryController {
   Future<AsyncValue<void>> createCategory(CategoryCreate category) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
     final response = await AsyncValue.guard(
-        () => categoryRepository.createCategory(category: category));
+      () => categoryRepository.createCategory(category: category),
+    );
     ref.invalidateSelf();
     return response;
   }
 
   Future<AsyncValue<void>> reorderCategory(int categoryId, int position) async {
-    final response = await AsyncValue.guard(() => ref
-        .read(categoryRepositoryProvider)
-        .reorderCategory(categoryId: categoryId, position: position));
+    final defaultId = ref.read(settledDefaultCategoryIdProvider);
+    if (defaultId == null || categoryId == defaultId) {
+      return AsyncError(
+        StateError('Category cannot be modified'),
+        StackTrace.current,
+      );
+    }
+    final response = await AsyncValue.guard(
+      () => ref
+          .read(categoryRepositoryProvider)
+          .reorderCategory(categoryId: categoryId, position: position),
+    );
     ref.invalidateSelf();
     return response;
   }
@@ -86,7 +126,9 @@ class CategoryController extends _$CategoryController {
   /// category must stay reachable — and the server's flag reasserts on the
   /// next online sync.
   Future<AsyncValue<CategoryVisibilityOutcome>> setHidden(
-      int categoryId, bool hidden) async {
+    int categoryId,
+    bool hidden,
+  ) async {
     // Captured before the awaits: this provider auto-disposes (see build).
     final repo = ref.read(categoryRepositoryProvider);
     final offlineDb = ref.read(offlineReadDatabaseProvider);
@@ -129,10 +171,7 @@ class CategoryController extends _$CategoryController {
 enum CategoryVisibilityOutcome { synced, deviceOnly }
 
 @riverpod
-List<CategoryDto>? categoryListQuery(
-  Ref ref, {
-  required String query,
-}) {
+List<CategoryDto>? categoryListQuery(Ref ref, {required String query}) {
   final categoryList = ref.watch(categoryControllerProvider).value;
   return categoryList
       ?.where((element) => (element.name.query(query)).ifNull())
@@ -146,12 +185,17 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   // means not-downloaded-yet, not empty. Dropping those took the whole tab bar
   // with them whenever a user's downloads sat in one category — their other
   // categories looked deleted, with no way to reach them.
-  final offline = ref.watch(viewOfflineNowProvider) ||
-      ref.watch(serverUnreachableProvider);
+  final offline =
+      ref.watch(viewOfflineNowProvider) || ref.watch(serverUnreachableProvider);
   if (offline) return categoryList;
-  return categoryList.copyWithData((_) => categoryList.value
-      ?.where((element) => element.mangas.totalCount > 0)
-      .toList());
+  final defaultId = ref.watch(settledDefaultCategoryIdProvider);
+  return categoryList.copyWithData(
+    (_) => categoryList.value
+        ?.where(
+          (element) => element.id == defaultId || element.mangas.totalCount > 0,
+        )
+        .toList(),
+  );
 }
 
 /// Categories shown as tabs on the Library screen: non-empty, and hidden only
@@ -162,7 +206,9 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
 AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
   final categoryList = ref.watch(nonZeroCategoryListProvider);
   final showHidden = ref.watch(showHiddenCategoriesProvider).ifNull(false);
-  return categoryList.copyWithData((_) => categoryList.value
-      ?.where((element) => showHidden || !element.isHidden)
-      .toList());
+  return categoryList.copyWithData(
+    (_) => categoryList.value
+        ?.where((element) => showHidden || !element.isHidden)
+        .toList(),
+  );
 }

@@ -7,8 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../account/data/account_providers.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/chapter/chapter_download_presets.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -61,14 +63,20 @@ class ChapterDownloadPresetsButton extends ConsumerWidget {
     }
     // Enqueuing a download doesn't change the source's chapter list — refresh
     // from the server's stored chapters (updated download state), no re-scrape.
-    await refresh(false);
+    if (context.mounted) await refresh(false);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     return PopupMenuButton<DownloadPreset>(
+      enabled: canDownload,
       icon: const Icon(Icons.cloud_download_outlined),
-      tooltip: context.l10n.downloadToServer,
+      tooltip: canDownload
+          ? context.l10n.downloadToServer
+          : context.l10n.accountPermissionDenied,
       onSelected: (preset) => _handlePreset(context, ref, preset),
       itemBuilder: (context) => <PopupMenuEntry<DownloadPreset>>[
         PopupMenuItem(

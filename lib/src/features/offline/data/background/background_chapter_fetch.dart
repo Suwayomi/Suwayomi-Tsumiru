@@ -8,10 +8,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
+import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../../utils/network/graphql_errors.dart';
+import '../../../account/data/account_permission.dart';
+import '../../../account/data/graphql/__generated__/account.graphql.dart';
+import '../../../account/domain/account_access.dart';
 import '../chapter_download_engine.dart';
 import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store.dart';
@@ -43,12 +50,14 @@ class BackgroundServerTarget {
     required this.addPort,
     this.client,
     this.isCancelled,
+    this.onNetworkError,
   });
   final String serverBase;
   final int? port;
   final bool addPort;
   final http.Client? client;
   final bool Function()? isCancelled;
+  final void Function(String)? onNetworkError;
 
   String get graphql => Endpoints.baseApi(
     baseUrl: serverBase,
@@ -65,7 +74,7 @@ class BackgroundServerTarget {
   );
 }
 
-/// Sentinel: 401/403 — distinct from "no pages / other error" (empty list).
+/// Sentinel for authentication failures.
 const Object gqlAuthError = Object();
 
 /// Sentinel: server unreachable (transient) — the caller parks, doesn't error.
@@ -102,6 +111,7 @@ Future<Object?> postBackgroundGraphql({
   required String query,
   required Map<String, Object?> variables,
   String? accessToken,
+  bool accountCapability = false,
 }) async {
   if (target.isCancelled?.call() ?? false) return gqlNetworkError;
   final headers = <String, String>{'Content-Type': 'application/json'};
@@ -114,20 +124,118 @@ Future<Object?> postBackgroundGraphql({
           body: jsonEncode({'query': query, 'variables': variables}),
         )
         .timeout(_httpTimeout);
-    if (res.statusCode == 401 || res.statusCode == 403) return gqlAuthError;
+    if (target.isCancelled?.call() ?? false) return gqlNetworkError;
+    if (res.statusCode == 401) return gqlAuthError;
+    if (res.statusCode == 403) {
+      throw const AccountPermissionDenied(
+        Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      );
+    }
     // A proxy answering for a dead origin is an outage, not a bad request —
     // the same rule the foreground worker and the app itself use.
-    if (isGatewayStatus(res.statusCode)) return gqlNetworkError;
+    if (isGatewayStatus(res.statusCode)) {
+      target.onNetworkError?.call('HTTP ${res.statusCode} on GraphQL request');
+      return gqlNetworkError;
+    }
     if (res.statusCode != 200) return null;
     final decoded = jsonDecode(res.body) as Map<String, Object?>;
+    final errors = (decoded['errors'] as List? ?? const []).map((value) {
+      final error = (value as Map).cast<String, dynamic>();
+      return GraphQLError(
+        message: error['message'] as String,
+        extensions: (error['extensions'] as Map?)?.cast<String, dynamic>(),
+      );
+    }).toList();
+    final exception = errors.isEmpty
+        ? null
+        : OperationException(graphqlErrors: errors);
+    if (accountCapability) {
+      final capability = classifyAccountResponse(
+        QueryResult<Query$AccountCapability>(
+          options: Options$Query$AccountCapability(),
+          source: QueryResultSource.network,
+          data: (decoded['data'] as Map?)?.cast<String, dynamic>(),
+          exception: exception,
+        ),
+      );
+      if (capability != AccountCapability.unknown) return capability;
+    }
+    if (exception != null) {
+      if (isPermissionDenied(exception)) {
+        throw const AccountPermissionDenied(
+          Enum$UserPermission.DOWNLOAD_CHAPTERS,
+        );
+      }
+      if (OperationMessageException(exception).toString() == 'Unauthorized') {
+        return gqlAuthError;
+      }
+      return gqlNetworkError;
+    }
     return decoded['data'];
-  } on SocketException {
+  } on AccountPermissionDenied {
+    rethrow;
+  } on SocketException catch (error) {
+    target.onNetworkError?.call('SocketException: $error');
     return gqlNetworkError;
   } on TimeoutException {
+    target.onNetworkError?.call('GraphQL request timed out');
     return gqlNetworkError;
   } catch (_) {
     return null;
   }
+}
+
+Future<bool> verifyBackgroundDownloadAccess({
+  required BackgroundServerTarget target,
+  required BackgroundTokenRecord Function() record,
+  required TokenBroker broker,
+}) async {
+  if (target.isCancelled?.call() ?? false) return false;
+  if (record().authType != 'uiLogin') return true;
+  Future<Object?> read(String query, {bool capability = false}) async {
+    Future<Object?> post(String? token) => postBackgroundGraphql(
+      target: target,
+      record: record(),
+      query: query,
+      variables: const {},
+      accessToken: token,
+      accountCapability: capability,
+    );
+    var result = await post(null);
+    if (target.isCancelled?.call() ?? false) return null;
+    if (result == gqlAuthError) {
+      final fresh = await broker.resolveAfter401(record().accessToken ?? '');
+      if (fresh != null) result = await post(fresh);
+    }
+    return (target.isCancelled?.call() ?? false) ? null : result;
+  }
+
+  final capability = await read(
+    'query AccountCapability { user { id } }',
+    capability: true,
+  );
+  if (capability == AccountCapability.unsupported) return true;
+  if (capability != AccountCapability.supported) return false;
+  final result = await read(
+    'query DownloadAccount { user { id username roles permissions __typename } }',
+  );
+  if (result is! Map || result['user'] is! Map) return false;
+  final Fragment$AccountDto user;
+  try {
+    user = Fragment$AccountDto.fromJson(
+      (result['user'] as Map).cast<String, dynamic>(),
+    );
+  } catch (_) {
+    return false;
+  }
+  if (user.id <= 0 || user.username.isEmpty) return false;
+  if (!AccountAccess(
+    capability: AccountCapability.supported,
+    user: user,
+  ).allows(Enum$UserPermission.DOWNLOAD_CHAPTERS)) {
+    throw const AccountPermissionDenied(Enum$UserPermission.DOWNLOAD_CHAPTERS);
+  }
+  return true;
 }
 
 /// A chapter's page URLs: the list on success, empty on terminal failure, null
@@ -139,6 +247,13 @@ Future<List<String>?> resolveChapterPageUrls({
   required TokenBroker broker,
   required int chapterId,
 }) async {
+  if (!await verifyBackgroundDownloadAccess(
+    target: target,
+    record: record,
+    broker: broker,
+  )) {
+    return null;
+  }
   const query =
       'mutation GetChapterPages(\$input: FetchChapterPagesInput!){ fetchChapterPages(input: \$input){ pages } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
@@ -175,11 +290,13 @@ Future<List<String>?> resolveChapterPageUrls({
   // ambiguous failure in this file gets.
   if (result == gqlNetworkError || result == gqlAuthError) return null;
   if (result is Map<String, Object?>) {
-    final pages =
-        (result['fetchChapterPages'] as Map<String, Object?>?)?['pages'];
-    if (pages is List) return pages.cast<String>();
+    final chapter = result['fetchChapterPages'];
+    final pages = chapter is Map ? chapter['pages'] : null;
+    if (pages is List && pages.every((page) => page is String)) {
+      return pages.cast<String>();
+    }
   }
-  return const <String>[];
+  return null;
 }
 
 /// The page-download engine over the isolate-side auth — shared verbatim
@@ -225,13 +342,18 @@ ChapterDownloadEngine buildBackgroundEngine({
       res = await (target.client ?? backgroundHttpClient)
           .get(Uri.parse(fetchUrl), headers: headers)
           .timeout(_httpTimeout);
+    } on http.ClientException catch (e) {
+      throw PageOfflineException('ClientException: $e');
     } on SocketException catch (e) {
       throw PageOfflineException('SocketException: $e');
     } on TimeoutException {
       throw PageOfflineException('timed out after $_httpTimeout on page fetch');
     }
-    if (res.statusCode == 401 || res.statusCode == 403) {
-      throw const PageAuthException();
+    if (res.statusCode == 401) throw const PageAuthException();
+    if (res.statusCode == 403) {
+      throw const AccountPermissionDenied(
+        Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      );
     }
     if (isGatewayStatus(res.statusCode)) {
       throw PageOfflineException('HTTP ${res.statusCode} on page fetch');
@@ -266,15 +388,19 @@ Future<bool> verifyBackgroundServerIdentity({
     variables: {'key': kTsumiruServerIdMetaKey},
     accessToken: accessToken,
   );
-  var result = await read(null);
-  if (target.isCancelled?.call() ?? false) return false;
-  if (result == gqlAuthError && record().authType == 'uiLogin') {
-    final access = await broker.resolveAfter401(record().accessToken ?? '');
-    if (access != null) result = await read(access);
+  try {
+    var result = await read(null);
+    if (target.isCancelled?.call() ?? false) return false;
+    if (result == gqlAuthError && record().authType == 'uiLogin') {
+      final access = await broker.resolveAfter401(record().accessToken ?? '');
+      if (access != null) result = await read(access);
+    }
+    if (result is! Map) return false;
+    final nodes = (result['metas'] as Map?)?['nodes'];
+    return nodes is List &&
+        nodes.isNotEmpty &&
+        (nodes.first as Map)['value'] == expected;
+  } on AccountPermissionDenied {
+    return false;
   }
-  if (result is! Map) return false;
-  final nodes = (result['metas'] as Map?)?['nodes'];
-  return nodes is List &&
-      nodes.isNotEmpty &&
-      (nodes.first as Map)['value'] == expected;
 }

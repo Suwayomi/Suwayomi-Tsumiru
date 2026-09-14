@@ -85,9 +85,9 @@ class OfflineReconciler {
   final Future<void> Function(Set<int> chapterIds)? onServerDownload;
 
   Future<ReconcilePlan> reconcileManga(int mangaId) async {
-    final manga = await (db.select(db.offlineMangas)
-          ..where((t) => t.id.equals(mangaId)))
-        .getSingleOrNull();
+    final manga = await (db.select(
+      db.offlineMangas,
+    )..where((t) => t.id.equals(mangaId))).getSingleOrNull();
     if (manga == null) return ReconcilePlan.empty;
 
     final chapters = await db.chaptersForManga(mangaId);
@@ -103,8 +103,11 @@ class OfflineReconciler {
         .where((c) => c.deviceState == OfflineDeviceState.downloaded)
         .toList();
 
-    final desired =
-        desiredChapterIds(chapters, manga.keepRule, manga.keepUnreadCount);
+    final desired = desiredChapterIds(
+      chapters,
+      manga.keepRule,
+      manga.keepUnreadCount,
+    );
 
     final ev = applySafetyNets(
       downloaded: downloaded,
@@ -134,8 +137,10 @@ class OfflineReconciler {
       final newlyReadDownloaded = downloaded
           .where((c) => newlyReadChapterIds.contains(c.id))
           .toList();
-      final readProtected =
-          readChaptersInDeleteWindow(newlyReadDownloaded, deleteWhileReadingSlots);
+      final readProtected = readChaptersInDeleteWindow(
+        newlyReadDownloaded,
+        deleteWhileReadingSlots,
+      );
       for (final c in newlyReadDownloaded) {
         if (!c.pinned &&
             !sessionProtected.contains(c.id) &&
@@ -154,7 +159,8 @@ class OfflineReconciler {
     // Protection-window download: ensure the slots-1 most recently read
     // chapters are on-device when the user opted in. Meaningless for keep=off
     // (nothing is kept) and requires slots >= 2 (slots=1 means delete-all).
-    final protectionWindowIds = downloadProtectionWindow &&
+    final protectionWindowIds =
+        downloadProtectionWindow &&
             deleteWhileReadingSlots >= 2 &&
             manga.keepRule != OfflineKeepRule.off
         ? readChaptersInDeleteWindow(chapters, deleteWhileReadingSlots)
@@ -177,7 +183,7 @@ class OfflineReconciler {
 
     for (final id in {...desired, ...protectionWindowIds}) {
       final c = byId[id];
-      if (c == null) continue;
+      if (c == null || c.deviceState == OfflineDeviceState.error) continue;
       // Wanted but the server hasn't downloaded it yet: ask the server to
       // download it (it fetches the source); a later reconcile pass pulls the
       // device copy once serverIsDownloaded flips. Only when a handler is wired.
@@ -185,6 +191,14 @@ class OfflineReconciler {
         if (onServerDownload != null &&
             c.deviceState != OfflineDeviceState.downloaded) {
           if (c.serverFetchAttempts >= _maxServerFetchAttempts) {
+            await db.transaction(() async {
+              final latest = await db.chapterById(id);
+              if (latest != null &&
+                  latest.downloadGeneration == c.downloadGeneration &&
+                  latest.deviceState != OfflineDeviceState.downloaded) {
+                await db.setChapterDeviceState(id, OfflineDeviceState.error);
+              }
+            });
             recordDiagnostic(
               '[${DateTime.now().toIso8601String()}] offline-reconcile: '
               'giving-up-on-server-fetch mangaId=$mangaId chapterId=$id '
@@ -208,10 +222,6 @@ class OfflineReconciler {
       }
       // Already on device — nothing to do.
       if (c.deviceState == OfflineDeviceState.downloaded) continue;
-      // Re-planning a failed chapter every pass is what let one unfetchable
-      // chapter keep a device and a server busy forever. Network failures park
-      // as `downloading`, so nothing a reconnect should resume is stranded.
-      if (c.deviceState == OfflineDeviceState.error) continue;
 
       if (nets.storageCapEnabled) {
         // RC5 convergence guard: stop adding if there is no room.
@@ -240,8 +250,14 @@ class OfflineReconciler {
       await onDownload(id);
     }
     if (onServerDownload != null && toServerDownload.isNotEmpty) {
+      await onServerDownload!(toServerDownload);
       for (final id in toServerDownload) {
-        await db.incrementServerFetchAttempts(id);
+        await db.transaction(() async {
+          final chapter = await db.chapterById(id);
+          if (chapter?.downloadGeneration == byId[id]?.downloadGeneration) {
+            await db.incrementServerFetchAttempts(id);
+          }
+        });
         // A trail of every attempt, not just the final give-up — so a session
         // that never reaches the cap (or one where the enqueue mutation itself
         // silently no-ops server-side) is still visible, not only the ones
@@ -255,7 +271,6 @@ class OfflineReconciler {
           '$_maxServerFetchAttempts\n',
         );
       }
-      await onServerDownload!(toServerDownload);
     }
 
     return ReconcilePlan(

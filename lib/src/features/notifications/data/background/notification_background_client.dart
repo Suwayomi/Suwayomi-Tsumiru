@@ -5,11 +5,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
+import '../../../account/data/account_permission.dart';
+import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_token_record.dart'
     show BackgroundTokenRecord, TokenBroker, applyIsolateCustomHeaders;
 
@@ -74,10 +75,16 @@ class NotificationBackgroundClient {
     required BackgroundTokenRecord record,
     required this.broker,
     http.Client? httpClient,
+    this.isCancelled,
+    this.onDownloadPermissionDenied,
+    this.admitDownload,
   }) : _record = record,
        _http = httpClient ?? http.Client();
 
   final NotificationEndpoint endpoint;
+  final bool Function()? isCancelled;
+  final Future<void> Function()? onDownloadPermissionDenied;
+  final Future<bool> Function()? admitDownload;
   final TokenBroker broker;
   final http.Client _http;
   BackgroundTokenRecord _record;
@@ -86,68 +93,81 @@ class NotificationBackgroundClient {
   /// catch-up executor shares this client's auth.
   BackgroundTokenRecord currentRecord() => _record;
 
-  static const Object _authError = Object();
-  static const Object _networkError = Object();
+  static const Object _authError = gqlAuthError;
+  static const Object _networkError = gqlNetworkError;
 
   /// One raw GraphQL POST, retrying once through the broker on a ui_login 401.
   /// Returns the `data` map, or null on auth-dead / network / server error.
   Future<Map<String, Object?>?> _post(
     String query,
-    Map<String, Object?> variables,
-  ) async {
-    var res = await _raw(query, variables, _record.accessToken);
+    Map<String, Object?> variables, {
+    bool downloadOperation = false,
+  }) async {
+    var res = await _raw(
+      query,
+      variables,
+      _record.accessToken,
+      downloadOperation: downloadOperation,
+    );
     if (identical(res, _authError) && _record.authType == 'uiLogin') {
       final fresh = await broker.resolveAfter401(_record.accessToken ?? '');
       if (fresh != null) {
         final current = await broker.readCurrent();
         if (current == null || !current.sameIdentity(_record)) return null;
         _record = current;
-        res = await _raw(query, variables, fresh);
+        res = await _raw(
+          query,
+          variables,
+          fresh,
+          downloadOperation: downloadOperation,
+        );
       }
     }
     return res is Map<String, Object?> ? res : null;
   }
 
+  BackgroundServerTarget get _target => BackgroundServerTarget(
+    serverBase: endpoint.baseUrl,
+    port: endpoint.port,
+    addPort: endpoint.addPort,
+    client: _http,
+    isCancelled: isCancelled,
+  );
+
   Future<Object?> _raw(
     String query,
     Map<String, Object?> variables,
-    String? accessToken,
-  ) async {
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    _applyAuth(headers, accessToken);
+    String? accessToken, {
+    bool downloadOperation = false,
+  }) async {
     try {
-      final res = await _http
-          .post(
-            Uri.parse(endpoint.graphqlUrl),
-            headers: headers,
-            body: jsonEncode({'query': query, 'variables': variables}),
-          )
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 401 || res.statusCode == 403) return _authError;
-      if (res.statusCode != 200) return _networkError;
-      final decoded = jsonDecode(res.body) as Map<String, Object?>;
-      return decoded['data'] as Map<String, Object?>?;
-    } on SocketException {
-      return _networkError;
-    } catch (_) {
+      return await postBackgroundGraphql(
+        target: _target,
+        record: _record,
+        query: query,
+        variables: variables,
+        accessToken: accessToken,
+      );
+    } on AccountPermissionDenied {
+      if (downloadOperation) rethrow;
       return _networkError;
     }
   }
 
-  void _applyAuth(Map<String, String> headers, String? accessToken) {
-    switch (_record.authType) {
-      case 'uiLogin':
-        if (accessToken != null && accessToken.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $accessToken';
-        }
-      case 'basic':
-        final cred = _record.basicCredential;
-        if (cred != null && cred.isNotEmpty) headers['Authorization'] = cred;
-      case 'simpleLogin':
-        final cookie = _record.simpleCookie;
-        if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
+  Future<bool> verifyDownloadAccess() async {
+    if (admitDownload != null && !await admitDownload!()) return false;
+    try {
+      return await verifyBackgroundDownloadAccess(
+        target: _target,
+        record: currentRecord,
+        broker: broker,
+      );
+    } on AccountPermissionDenied {
+      if (!(isCancelled?.call() ?? false)) {
+        await onDownloadPermissionDenied?.call();
+      }
+      return false;
     }
-    applyIsolateCustomHeaders(headers, _record.extraHeaders);
   }
 
   static const _newChaptersQuery = r'''
@@ -255,8 +275,19 @@ mutation NotifEnqueue($ids: [Int!]!) {
 
   Future<bool> enqueueDownloads(List<int> chapterIds) async {
     if (chapterIds.isEmpty) return true;
-    final data = await _post(_enqueueMutation, {'ids': chapterIds});
-    return data != null;
+    if (!await verifyDownloadAccess()) return false;
+    try {
+      final data = await _post(_enqueueMutation, {
+        'ids': chapterIds,
+      }, downloadOperation: true);
+      return !(isCancelled?.call() ?? false) &&
+          data?['enqueueChapterDownloads'] is Map;
+    } on AccountPermissionDenied {
+      if (!(isCancelled?.call() ?? false)) {
+        await onDownloadPermissionDenied?.call();
+      }
+      return false;
+    }
   }
 
   /// Fetch a manga cover's bytes for the per-series notification, mirroring

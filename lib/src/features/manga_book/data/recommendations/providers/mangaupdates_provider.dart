@@ -6,6 +6,8 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import '../recommendation_provider.dart';
 
 // 1:1 with exh/recs/sources/MangaUpdatesPagingSource.kt.
@@ -23,23 +25,32 @@ abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
   String get recommendationsKey;
 
   @override
+  Future<List<Recommendation>> fetch(RecommendationContext ctx) => kIsWeb
+      ? Future.error(const RecommendationUnavailableOnWeb())
+      : super.fetch(ctx);
+
+  @override
   Future<List<Recommendation>> fetchById(
-      RecommendationContext ctx, String remoteId) async {
-    final response =
-        await ctx.client.get(Uri.parse('$_endpoint/series/$remoteId'));
+    RecommendationContext ctx,
+    String remoteId,
+  ) async {
+    final response = await ctx.client.get(
+      Uri.parse('$_endpoint/series/$remoteId'),
+    );
     if (response.statusCode != 200) {
       throw RecommendationHttpException(response.statusCode);
     }
-    final list = (jsonDecode(response.body)[recommendationsKey] as List?) ??
-        const [];
+    final list =
+        (jsonDecode(response.body)[recommendationsKey] as List?) ?? const [];
     return [
       for (final rec in list)
         Recommendation(
           title: (rec as Map)['series_name'] as String,
           category: category,
           sourceUrl: rec['series_url'] as String?,
-          coverUrl: (((rec['series_image'] as Map?)?['url']) as Map?)?['original']
-              as String?,
+          coverUrl:
+              (((rec['series_image'] as Map?)?['url']) as Map?)?['original']
+                  as String?,
         ),
     ];
   }
@@ -56,8 +67,7 @@ abstract class _MangaUpdatesProvider extends TrackerRecommendationProvider {
     }
     final results = (jsonDecode(response.body)['results'] as List?) ?? const [];
     if (results.isEmpty) return const [];
-    final seriesId =
-        ((results.first as Map)['record'] as Map?)?['series_id'];
+    final seriesId = ((results.first as Map)['record'] as Map?)?['series_id'];
     if (seriesId == null) return const [];
     return fetchById(ctx, seriesId.toString());
   }

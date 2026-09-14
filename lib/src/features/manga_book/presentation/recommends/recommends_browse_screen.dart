@@ -11,6 +11,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/navigation.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
 
 /// Komikku's BrowseRecommendsScreen: one provider's full recommendation list as
@@ -30,11 +31,12 @@ class RecommendsBrowseScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recs =
-        ref.watch(providerRecommendationsProvider(mangaId, providerName));
+    final recs = ref.watch(
+      providerRecommendationsProvider(mangaId, providerName),
+    );
     final providers =
         ref.watch(recommendationSetupProvider(mangaId)).value?.providers ??
-            const [];
+        const [];
     var title = providerName.split('|').first;
     for (final p in providers) {
       if (p.key == providerName) {
@@ -46,7 +48,11 @@ class RecommendsBrowseScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(title)),
       body: recs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Emoticons(title: context.l10n.errorSomethingWentWrong),
+        error: (e, _) => Emoticons(
+          title: e is RecommendationUnavailableOnWeb
+              ? context.l10n.recommendationsUnavailableWeb
+              : context.l10n.errorSomethingWentWrong,
+        ),
         data: (list) => list.isEmpty
             ? Emoticons(title: context.l10n.noResultFound)
             : GridView.builder(
@@ -65,8 +71,7 @@ class RecommendsBrowseScreen extends ConsumerWidget {
                   final r = list[i];
                   return InkWell(
                     borderRadius: KBorderRadius.r8.radius,
-                    onTap: () =>
-                        openGlobalSearch(context, query: r.title),
+                    onTap: () => openGlobalSearch(context, query: r.title),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

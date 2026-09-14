@@ -25,18 +25,18 @@ class Recommendation {
   final String? sourceUrl;
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'category': category,
-        'coverUrl': coverUrl,
-        'sourceUrl': sourceUrl,
-      };
+    'title': title,
+    'category': category,
+    'coverUrl': coverUrl,
+    'sourceUrl': sourceUrl,
+  };
 
   factory Recommendation.fromJson(Map<String, dynamic> json) => Recommendation(
-        title: json['title'] as String,
-        category: json['category'] as String,
-        coverUrl: json['coverUrl'] as String?,
-        sourceUrl: json['sourceUrl'] as String?,
-      );
+    title: json['title'] as String,
+    category: json['category'] as String,
+    coverUrl: json['coverUrl'] as String?,
+    sourceUrl: json['sourceUrl'] as String?,
+  );
 }
 
 /// Everything a provider needs to decide between an exact tracker-id lookup and
@@ -60,6 +60,10 @@ class RecommendationContext {
   final String sourceName;
   final String? mangaUrl;
   final http.Client client;
+}
+
+class RecommendationUnavailableOnWeb implements Exception {
+  const RecommendationUnavailableOnWeb();
 }
 
 /// A provider's HTTP call returned a non-200. Surfaced per-section as an error
@@ -97,7 +101,9 @@ abstract class TrackerRecommendationProvider extends RecommendationProvider {
   String get trackerKey;
 
   Future<List<Recommendation>> fetchById(
-      RecommendationContext ctx, String remoteId);
+    RecommendationContext ctx,
+    String remoteId,
+  );
   Future<List<Recommendation>> fetchBySearch(RecommendationContext ctx);
 
   @override

@@ -15,7 +15,7 @@ dynamic dateTimeToJson(DateTime data) {
 }
 
 DateTime dateTimeFromJson(dynamic data) {
-  return DateTime.fromMillisecondsSinceEpoch(data & 1000);
+  return DateTime.fromMillisecondsSinceEpoch(data * 1000);
 }
 
 dynamic longStringToJson(String data) {

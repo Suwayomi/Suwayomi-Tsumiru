@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../global_providers/global_providers.dart';
+import '../account_storage_paths.dart';
 import '../offline_database.dart';
 import '../offline_download_providers.dart';
 import '../offline_repository.dart';
@@ -23,7 +24,7 @@ typedef CatchupRead = T Function<T>(ProviderListenable<T> provider);
 /// Snapshot the background download step's world from drift + settings.
 /// Called after catch-up/reconcile passes, on keep-rule changes, and on app
 /// pause — the worker reads the newest snapshot it can get, never drift.
-Future<void> writeCatchupWorkSpec(CatchupRead read) =>
+Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
     withBackgroundScheduleLock(
       () async {
         if (!read(offlineEnabledProvider) ||
@@ -31,12 +32,17 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) =>
             !CatchupStateStore(
               read(sharedPreferencesProvider),
             ).identityAuthorized) {
-          return;
+          return false;
         }
         final serverId = read(
           sharedPreferencesProvider,
         ).getString(DBKeys.offlineCatalogServerId.name);
-        if (serverId == null) return;
+        if (serverId == null ||
+            CatchupStateStore(
+              read(sharedPreferencesProvider),
+            ).downloadPermissionPaused(serverId)) {
+          return false;
+        }
 
         final db = read(offlineDatabaseProvider);
         final nets = read(safetyNetConfigProvider);
@@ -69,6 +75,10 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) =>
                   if (c.pinned) c.id,
               },
               // Only the deleted-at-least-once chapters; everything else is 0.
+              serverFetchAttempts: {
+                for (final c in chapters)
+                  if (c.serverFetchAttempts != 0) c.id: c.serverFetchAttempts,
+              },
               chapterGenerations: {
                 for (final c in chapters)
                   if (c.downloadGeneration != 0) c.id: c.downloadGeneration,
@@ -81,6 +91,9 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) =>
         await store.writeSpec(
           CatchupWorkSpec(
             serverId: serverId,
+            accountScoped:
+                offlineControlRoot(read(offlinePathsProvider).baseDir) !=
+                read(offlinePathsProvider).baseDir,
             wifiOnly: read(offlineWifiOnlyProvider) ?? true,
             storageCapEnabled: nets.storageCapEnabled,
             storageCapBytes: nets.storageCapBytes,
@@ -95,10 +108,12 @@ Future<void> writeCatchupWorkSpec(CatchupRead read) =>
                   chapterId: c.id,
                   mangaId: c.mangaId,
                   generation: c.downloadGeneration,
+                  serverFetchAttempts: c.serverFetchAttempts,
                 ),
             ],
           ),
         );
+        return true;
       },
       baseDir: read(offlineEnabledProvider)
           ? read(offlinePathsProvider).baseDir

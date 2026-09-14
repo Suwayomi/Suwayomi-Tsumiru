@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:convert';
-
 import '../../library/domain/category/category_model.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
@@ -17,8 +16,22 @@ import 'offline_database.dart';
 /// preserve device-managed columns (deviceState, bytes, thumbnailRelPath) — so
 /// a re-sync never clobbers what the user has downloaded. Called online only;
 /// a no-op offline (the caller guards via [offlineSyncProvider] being null).
+
 class OfflineSync {
-  const OfflineSync(this._db, {this.onSynced, this.refetchManga});
+  const OfflineSync(
+    this._db, {
+    this.onSynced,
+    this.refetchManga,
+    this.taskTracker,
+    this.isCurrentSession,
+  });
+
+  final Future<T> Function<T>(Future<T> Function())? taskTracker;
+  final bool Function()? isCurrentSession;
+  bool get _current => isCurrentSession?.call() ?? true;
+
+  Future<T> _track<T>(Future<T> Function() action) =>
+      taskTracker?.call(action) ?? action();
 
   final OfflineDatabase _db;
   final Future<void> Function()? onSynced;
@@ -38,7 +51,20 @@ class OfflineSync {
     MangaDto manga, {
     required int fetchedAtGen,
     bool isSettleRetry = false,
+  }) => _track(
+    () => _syncManga(
+      manga,
+      fetchedAtGen: fetchedAtGen,
+      isSettleRetry: isSettleRetry,
+    ),
+  );
+
+  Future<void> _syncManga(
+    MangaDto manga, {
+    required int fetchedAtGen,
+    required bool isSettleRetry,
   }) async {
+    if (!_current) return;
     // One transaction: the count and the baselines it retires are two halves
     // of the same invariant, and a kill between them would persist the new
     // count with the old corrections still live — double-counted on the next
@@ -79,11 +105,13 @@ class OfflineSync {
     // postdates the ack rather than leaving a possible double-count until an
     // unrelated refresh. One retry only — its own skips can only come from
     // yet another concurrent push, which will trigger its own settling.
+    if (!_current) return;
     if (skippedLateAcks > 0 && !isSettleRetry && refetchManga != null) {
       final retryGen = _db.syncGeneration;
       final fresh = await refetchManga!(manga.id);
+      if (!_current) return;
       if (fresh != null && fresh.inLibrary) {
-        await syncManga(fresh, fetchedAtGen: retryGen, isSettleRetry: true);
+        await _syncManga(fresh, fetchedAtGen: retryGen, isSettleRetry: true);
         return;
       }
     }
@@ -91,7 +119,7 @@ class OfflineSync {
       manga.id,
       manga.categories.nodes.map((c) => c.id).toList(),
     );
-    await onSynced?.call();
+    if (_current) await onSynced?.call();
   }
 
   static bool _keepReadBaseline(OfflineChapter? row, ChapterDto server) {
@@ -107,17 +135,23 @@ class OfflineSync {
   /// during this sync (chapters the user read outside Tsumiru, e.g. in WebUI).
   /// The caller passes these to the immediately-following reconcile so that the
   /// local delete-while-reading setting fires for those chapters too.
-  Future<Set<int>> syncChapters(List<ChapterDto> chapters) async {
+  Future<Set<int>> syncChapters(List<ChapterDto> chapters) =>
+      _track(() => _syncChapters(chapters));
+
+  Future<Set<int>> _syncChapters(List<ChapterDto> chapters) async {
+    if (!_current) return {};
     final now = DateTime.now();
     // Preserve read progress that was updated locally but not yet pushed to the
     // server — otherwise a down-sync would overwrite it with the stale server
     // value (the up-sync pushes it; this just stops it being lost in the gap).
     final dirty = {for (final c in await _db.dirtyChapters()) c.id: c};
+    if (!_current) return {};
     // Persisted state decides baseline handling below — it, unlike any
     // in-memory record, survives a restart between an ack and its aggregate.
     final existingRows = await _db.chaptersByIds([
       for (final c in chapters) c.id,
     ]);
+    if (!_current) return {};
     // Collect IDs whose read state flips from false to true in this sync pass.
     // Excludes locally-dirty chapters (their isRead is a pending local write,
     // not a server-originated change) and brand-new rows (no prior local state).
@@ -178,11 +212,13 @@ class OfflineSync {
     // orphan everything). A chapter the server lists but hasn't downloaded
     // server-side yet is still present here, so a device-on-demand download is
     // NOT orphaned (#32).
+    if (!_current) return {};
     final serverIdsByManga = <int, Set<int>>{};
     for (final c in chapters) {
       (serverIdsByManga[c.mangaId] ??= <int>{}).add(c.id);
     }
     for (final entry in serverIdsByManga.entries) {
+      if (!_current) return {};
       final serverIds = entry.value;
       final goneIds = [
         for (final lc in await _db.chaptersForManga(entry.key))
@@ -190,10 +226,11 @@ class OfflineSync {
               lc.deviceState == OfflineDeviceState.downloaded)
             lc.id,
       ];
+      if (!_current) return {};
       if (goneIds.isNotEmpty) await _db.markChaptersOrphaned(goneIds);
     }
-    await onSynced?.call();
-    return newlyRead;
+    if (_current) await onSynced?.call();
+    return _current ? newlyRead : {};
   }
 
   /// Removes manga that have left the server library from the offline catalog.
@@ -201,18 +238,32 @@ class OfflineSync {
   /// the libraryManga membership filter, still listed in On device). An empty
   /// [serverLibrary] is ignored — a failed or empty fetch must never prune the
   /// whole catalog.
-  Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
-    if (serverLibrary.isEmpty) return;
+  Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) =>
+      _track(() => _pruneRemovedLibraryManga(serverLibrary));
+
+  Future<void> _pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
+    if (!_current || serverLibrary.isEmpty) return;
     await _db.markNotInLibrary({for (final m in serverLibrary) m.id});
+    if (!_current) return;
     await _db.purgeRemovedLibraryManga();
-    await onSynced?.call();
+    if (_current) await onSynced?.call();
   }
 
   /// Full mirror, not an accumulate: categories deleted on the server must
   /// stop haunting the offline tabs. Empty is ignored for the same reason as
   /// [pruneRemovedLibraryManga] — a failed fetch must never wipe the mirror.
-  Future<void> syncCategories(List<CategoryDto> categories) async {
-    if (categories.isEmpty) return;
+  Future<void> syncCategories(
+    List<CategoryDto> categories, {
+    int? defaultCategoryId = 0,
+  }) => _track(
+    () => _syncCategories(categories, defaultCategoryId: defaultCategoryId),
+  );
+
+  Future<void> _syncCategories(
+    List<CategoryDto> categories, {
+    required int? defaultCategoryId,
+  }) async {
+    if (!_current || categories.isEmpty) return;
     // One transaction: overlapping syncs (fired unawaited on every category
     // rebuild) must not interleave an old upsert after a newer prune.
     await _db.transaction(() async {
@@ -222,10 +273,12 @@ class OfflineSync {
           cat.name,
           cat.order,
           isHidden: cat.isHidden,
+          isDefaultCategory: cat.id == defaultCategoryId,
+          autoAdd: cat.defaultCategory,
         );
       }
       await _db.pruneRemovedCategories({for (final c in categories) c.id});
     });
-    await onSynced?.call();
+    if (_current) await onSynced?.call();
   }
 }

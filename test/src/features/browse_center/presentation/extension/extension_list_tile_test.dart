@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/browse_center/data/extension_repository/extension_repository.dart';
 import 'package:tsumiru/src/features/browse_center/domain/extension/extension_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/extension/widgets/extension_list_tile.dart';
@@ -18,22 +19,23 @@ import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import '../../../../../helpers/fake_extension_repository.dart';
+import '../../../../../helpers/legacy_account_access.dart';
 
 const _name = 'A Rather Long Extension Name';
 
 Extension _extension({bool hasUpdate = false}) => Extension(
-      hasUpdate: hasUpdate,
-      iconUrl: '',
-      isInstalled: true,
-      contentWarning: Enum$ContentWarning.SAFE,
-      isObsolete: false,
-      lang: 'en',
-      name: _name,
-      pkgName: 'com.example.ext',
-      // ignore: deprecated_member_use_from_same_package
-      versionCode: 1,
-      versionName: '1.4.2',
-    );
+  hasUpdate: hasUpdate,
+  iconUrl: '',
+  isInstalled: true,
+  contentWarning: Enum$ContentWarning.SAFE,
+  isObsolete: false,
+  lang: 'en',
+  name: _name,
+  pkgName: 'com.example.ext',
+  // ignore: deprecated_member_use_from_same_package
+  versionCode: 1,
+  versionName: '1.4.2',
+);
 
 /// The real tile's leading image talks to the server; this is its stand-in.
 Future<void> _pumpTile(
@@ -46,30 +48,32 @@ Future<void> _pumpTile(
   tester.view.physicalSize = const Size(360, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(UncontrolledProviderScope(
-    container: container,
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: Consumer(
-          builder: (context, ref, _) => ValueListenableBuilder<String?>(
-            valueListenable: running,
-            builder: (context, _, _) => ListTile(
-              leading: const SizedBox.square(dimension: 48),
-              title: const Text(_name, overflow: TextOverflow.ellipsis),
-              subtitle: const Text('English 1.4.2'),
-              trailing: ExtensionListTileTailing(
-                extension: _extension(hasUpdate: hasUpdate),
-                runningAction: running,
-                ref: ref,
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) => ValueListenableBuilder<String?>(
+              valueListenable: running,
+              builder: (context, _, _) => ListTile(
+                leading: const SizedBox.square(dimension: 48),
+                title: const Text(_name, overflow: TextOverflow.ellipsis),
+                subtitle: const Text('English 1.4.2'),
+                trailing: ExtensionListTileTailing(
+                  extension: _extension(hasUpdate: hasUpdate),
+                  runningAction: running,
+                  ref: ref,
+                ),
               ),
             ),
           ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 /// Holds the uninstall open so a test can look at the tile mid-reinstall.
@@ -95,17 +99,22 @@ void main() {
   setUp(() async {
     extensions = FakeExtensionRepository();
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    container = ProviderContainer(overrides: [
-      extensionRepositoryProvider.overrideWithValue(extensions),
-      sharedPreferencesProvider
-          .overrideWithValue(await SharedPreferences.getInstance()),
-    ]);
+    container = ProviderContainer(
+      overrides: [
+        settledAccountAccessProvider.overrideWithValue(legacyAccountAccess),
+        extensionRepositoryProvider.overrideWithValue(extensions),
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
+        ),
+      ],
+    );
   });
 
   tearDown(() => container.dispose());
 
-  testWidgets('an installed extension can be reinstalled in one tap',
-      (tester) async {
+  testWidgets('an installed extension can be reinstalled in one tap', (
+    tester,
+  ) async {
     await _pumpTile(tester, container);
 
     await tester.tap(find.byTooltip('Reinstall'));
@@ -114,14 +123,19 @@ void main() {
     expect(extensions.calls, _reinstalled);
   });
 
-  testWidgets('the button says what is happening while it runs',
-      (tester) async {
+  testWidgets('the button says what is happening while it runs', (
+    tester,
+  ) async {
     final paused = _PausedExtensionRepository();
-    final pausedContainer = ProviderContainer(overrides: [
-      extensionRepositoryProvider.overrideWithValue(paused),
-      sharedPreferencesProvider
-          .overrideWithValue(await SharedPreferences.getInstance()),
-    ]);
+    final pausedContainer = ProviderContainer(
+      overrides: [
+        settledAccountAccessProvider.overrideWithValue(legacyAccountAccess),
+        extensionRepositoryProvider.overrideWithValue(paused),
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
+        ),
+      ],
+    );
     addTearDown(pausedContainer.dispose);
     await _pumpTile(tester, pausedContainer);
     expect(find.text('Uninstall'), findsOneWidget);
@@ -135,8 +149,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('an extension with an update pending can still be reinstalled',
-      (tester) async {
+  testWidgets('an extension with an update pending can still be reinstalled', (
+    tester,
+  ) async {
     await _pumpTile(tester, container, hasUpdate: true);
     expect(find.text('Update'), findsOneWidget);
 
@@ -159,20 +174,27 @@ void main() {
     expect(extensions.calls, <String>['uninstall com.example.ext']);
   });
 
-  testWidgets('the actions never crowd the extension name off a phone',
-      (tester) async {
+  testWidgets('the actions never crowd the extension name off a phone', (
+    tester,
+  ) async {
     for (final hasUpdate in [false, true]) {
       await _pumpTile(tester, container, hasUpdate: hasUpdate);
 
       expect(tester.takeException(), isNull, reason: 'hasUpdate: $hasUpdate');
       // Measured at 360dp: a third control squeezes the name to one letter.
-      final actions = tester.widget<Row>(find
-          .descendant(
+      final actions = tester.widget<Row>(
+        find
+            .descendant(
               of: find.byType(ExtensionListTileTailing),
-              matching: find.byType(Row))
-          .first);
-      expect(actions.children.length, lessThanOrEqualTo(2),
-          reason: 'hasUpdate: $hasUpdate');
+              matching: find.byType(Row),
+            )
+            .first,
+      );
+      expect(
+        actions.children.length,
+        lessThanOrEqualTo(2),
+        reason: 'hasUpdate: $hasUpdate',
+      );
     }
   });
 }

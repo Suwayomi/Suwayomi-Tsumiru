@@ -15,7 +15,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/endpoints.dart';
+import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../account/data/account_permission.dart';
 import '../chapter_download_engine.dart';
 import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
@@ -109,6 +111,16 @@ class DownloadTaskHandler extends TaskHandler {
   final http.Client _http = http.Client();
 
   BackgroundWorkOrder? _order;
+
+  void _sendEvent(Map<String, Object?> data) {
+    FlutterForegroundTask.sendDataToMain({
+      ...data,
+      'catalogServerId': _order?.catalogServerId,
+      'identityEpoch': _order?.identityEpoch,
+      'attemptId': _order?.attemptId,
+    });
+  }
+
   BackgroundDownloadLock? _lock;
   late BackgroundCompletionLog _log;
   late OfflinePaths _paths;
@@ -130,10 +142,7 @@ class DownloadTaskHandler extends TaskHandler {
       // driven by the OS's own restart policy rather than anything in this
       // app's own retry/backoff logic, which would explain a notification
       // flashing far faster than any network timeout could produce.
-      FlutterForegroundTask.sendDataToMain({
-        'kind': 'noWorkOrder',
-        'starter': starter.name,
-      });
+      _sendEvent({'kind': 'noWorkOrder', 'starter': starter.name});
       await FlutterForegroundTask.stopService();
       return;
     }
@@ -168,7 +177,7 @@ class DownloadTaskHandler extends TaskHandler {
       // over and over, every time something re-triggers a start — showing as
       // the notification repeatedly appearing and disappearing with no
       // download ever actually attempted and nothing explaining why.
-      FlutterForegroundTask.sendDataToMain({'kind': 'lockFailed'});
+      _sendEvent({'kind': 'lockFailed'});
       await FlutterForegroundTask.stopService();
       return;
     }
@@ -197,10 +206,7 @@ class DownloadTaskHandler extends TaskHandler {
       });
     } catch (error) {
       await _releaseOwnership();
-      FlutterForegroundTask.sendDataToMain({
-        'kind': 'lockFailed',
-        'error': '$error',
-      });
+      _sendEvent({'kind': 'lockFailed', 'error': '$error'});
       await FlutterForegroundTask.stopService();
       return;
     }
@@ -213,10 +219,7 @@ class DownloadTaskHandler extends TaskHandler {
     _order = admitted;
     _record = order.auth;
     _broker = _buildBroker();
-    FlutterForegroundTask.sendDataToMain({
-      'kind': 'owned',
-      'attemptId': order.attemptId,
-    });
+    _sendEvent({'kind': 'owned', 'attemptId': order.attemptId});
 
     _queue.addAll(order.chapterIds);
     _mangaOf.addAll(order.mangaIdByChapter);
@@ -236,10 +239,7 @@ class DownloadTaskHandler extends TaskHandler {
     try {
       await _drainFuture;
     } catch (error) {
-      FlutterForegroundTask.sendDataToMain({
-        'kind': 'parked',
-        'reason': '$error',
-      });
+      _sendEvent({'kind': 'parked', 'reason': '$error'});
       await _releaseOwnership();
       await FlutterForegroundTask.stopService();
     } finally {
@@ -264,10 +264,7 @@ class DownloadTaskHandler extends TaskHandler {
           expected: order.catalogServerId!,
         )) {
       _paused = true;
-      FlutterForegroundTask.sendDataToMain({
-        'kind': 'parked',
-        'reason': 'server identity not verified',
-      });
+      _sendEvent({'kind': 'parked', 'reason': 'server identity not verified'});
     }
     await _drain();
   }
@@ -338,10 +335,7 @@ class DownloadTaskHandler extends TaskHandler {
       }
     }
     if (isTimeout) {
-      FlutterForegroundTask.sendDataToMain({
-        'kind': 'timedOut',
-        'at': timestamp.toIso8601String(),
-      });
+      _sendEvent({'kind': 'timedOut', 'at': timestamp.toIso8601String()});
     }
   }
 
@@ -350,6 +344,8 @@ class DownloadTaskHandler extends TaskHandler {
     await prefs.reload();
     final controls = CatchupStateStore(prefs);
     if (controls.paused ||
+        (order.catalogServerId != null &&
+            controls.downloadPermissionPaused(order.catalogServerId!)) ||
         !controls.identityAuthorized ||
         controls.identityEpoch != order.identityEpoch ||
         order.catalogServerId == null ||
@@ -416,7 +412,7 @@ class DownloadTaskHandler extends TaskHandler {
         // and restart us), then self-stop.
         await _log.appendDrained();
         if (_stopping) return;
-        FlutterForegroundTask.sendDataToMain({'kind': 'drained'});
+        _sendEvent({'kind': 'drained'});
         await _releaseOwnership();
         await FlutterForegroundTask.stopService();
         return;
@@ -447,7 +443,13 @@ class DownloadTaskHandler extends TaskHandler {
   /// Returns true when the chapter was parked (server unreachable) — the drain
   /// should stop and leave the queue intact for a later resume.
   Future<bool> _downloadChapter(int chapterId, int mangaId) async {
-    final urls = await _resolvePageUrls(chapterId);
+    final List<String>? urls;
+    try {
+      urls = await _resolvePageUrls(chapterId);
+    } on AccountPermissionDenied {
+      await _recordPermissionDenied(chapterId);
+      return true;
+    }
     if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
     if (urls == null) {
       // Server unreachable resolving pages: leave `downloading` (resumable) and
@@ -465,7 +467,7 @@ class DownloadTaskHandler extends TaskHandler {
       // from "the server is actually down" (parks would spread across whatever
       // chapter happens to be first each restart) — without this, the main
       // isolate had no way to attribute a park to a chapter at all.
-      FlutterForegroundTask.sendDataToMain({
+      _sendEvent({
         'kind': 'parked',
         'chapterId': chapterId,
         'mangaId': mangaId,
@@ -491,7 +493,7 @@ class DownloadTaskHandler extends TaskHandler {
     // Tell the UI this chapter is downloading so the progress arc shows in
     // foreground (the main isolate applies it to the catalog); while
     // backgrounded it's dropped and covered by log replay.
-    FlutterForegroundTask.sendDataToMain({
+    _sendEvent({
       'kind': 'chapterStart',
       'chapterId': chapterId,
       'gen': _genOf[chapterId] ?? 0,
@@ -519,16 +521,20 @@ class DownloadTaskHandler extends TaskHandler {
         // Progress only. Pages sit in staging until the MAIN isolate commits
         // the chapter, so there is no row for this isolate to write — and no
         // per-page log line either, which was a second fsync on every page.
-        FlutterForegroundTask.sendDataToMain({
+        _sendEvent({
           'kind': 'page',
           'chapterId': chapterId,
           'gen': generation,
           'done': ++done,
-          'total': urls.length,
+          'total': urls!.length,
         });
       },
     );
 
+    if (outcome.error is AccountPermissionDenied && !outcome.cancelled) {
+      await _recordPermissionDenied(chapterId);
+      return true;
+    }
     final String? status = outcome.cancelled || _paused || _stopping
         ? null
         : outcome.succeeded
@@ -554,7 +560,7 @@ class DownloadTaskHandler extends TaskHandler {
     _afterChapter(chapterId, status, offlineReason: outcome.offlineReason);
     // Network died mid-download: the chapter is recorded `offline` (resumable),
     // so park rather than churn every remaining chapter through the same drop.
-    return status == 'offline';
+    return status == 'offline' || status == 'authFailed';
   }
 
   /// Open (or adopt) the chapter's staging directory, returning the pages
@@ -585,7 +591,7 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Notification + main-isolate notification after each chapter settles.
   void _afterChapter(int chapterId, String? status, {String? offlineReason}) {
-    FlutterForegroundTask.sendDataToMain({
+    _sendEvent({
       'kind': 'chapterDone',
       'chapterId': chapterId,
       'mangaId': _mangaOf[chapterId],
@@ -611,113 +617,66 @@ class DownloadTaskHandler extends TaskHandler {
   /// Resolves a chapter's page URLs: the list on success, empty on terminal
   /// failure (no pages), or null when the server was unreachable (transient —
   /// the caller parks, doesn't error).
-  Future<List<String>?> _resolvePageUrls(int chapterId) async {
-    var result = await _postChapterPages(chapterId, _record.accessToken);
-    if (result == _gqlAuthError && _record.authType == 'uiLogin') {
-      final newAccess = await _broker.resolveAfter401(
-        _record.accessToken ?? '',
-      );
-      if (newAccess != null) {
-        result = await _postChapterPages(chapterId, newAccess);
-      } else if (_broker.lastRefreshTransient) {
-        // The refresh call itself couldn't reach the server — likely the
-        // same blip that produced the 401 in the first place (e.g. right
-        // after the device reconnects, before the network has actually
-        // settled). Park instead of condemning the chapter outright.
-        _lastNetworkErrorReason = 'token refresh unreachable after 401';
-        return null;
-      }
+  Future<void> _recordPermissionDenied(int chapterId) async {
+    final order = _order!;
+    final catalogId = order.catalogServerId;
+    if (catalogId == null ||
+        _paused ||
+        _stopping ||
+        _cancelled.contains(chapterId)) {
+      return;
     }
-    if (result is List<String>) return result;
-    if (result == _gqlNetworkError) return null; // transient — park
-    return const <String>[]; // terminal
+    final controls = await CatchupStateStore.open();
+    bool current() =>
+        !_stopping &&
+        !_cancelled.contains(chapterId) &&
+        controls.identityAuthorized &&
+        controls.identityEpoch == order.identityEpoch &&
+        controls.catalogServerId == catalogId;
+    final saved = await controls.recordDownloadPermission(
+      catalogId,
+      allowed: false,
+      expectedRevision: controls.downloadPermissionRevision(catalogId),
+      isCurrent: current,
+      baseDir: _paths.baseDir,
+    );
+    if (!saved || !current()) return;
+    await _log.appendChapter(
+      chapterId: chapterId,
+      status: 'permissionDenied',
+      pages: 0,
+      bytes: 0,
+      generation: _genOf[chapterId] ?? 0,
+    );
+    if (current()) {
+      _sendEvent({
+        'kind': 'chapterDone',
+        'chapterId': chapterId,
+        'mangaId': order.mangaIdByChapter[chapterId],
+        'status': 'permissionDenied',
+        'gen': _genOf[chapterId] ?? 0,
+      });
+    }
+    _paused = true;
   }
 
-  /// Sentinel returned by [_postChapterPages] to signal an auth (401/403)
-  /// failure distinctly from "no pages / other error" (an empty list).
-  static const Object _gqlAuthError = Object();
-
-  /// Sentinel: the page-list POST couldn't reach the server (transient),
-  /// distinct from an empty (terminal) result — so a network blip parks the
-  /// chapter instead of erroring and poisoning the queue.
-  static const Object _gqlNetworkError = Object();
-
-  /// Short technical detail behind the most recent [_gqlNetworkError] — set
-  /// right before returning it, read back by [_resolvePageUrls] so the
-  /// 'parked' event can say WHY, not just that it happened.
   String? _lastNetworkErrorReason;
 
-  /// Returns the page-URL list on success, [_gqlAuthError] on 401/403, or an
-  /// empty list on any other failure.
-  Future<Object> _postChapterPages(int chapterId, String? accessToken) async {
-    final order = _order!;
-    final endpoint = Endpoints.baseApi(
-      baseUrl: order.serverBase,
-      port: order.port,
-      addPort: order.addPort,
-      isGraphQl: true,
-    );
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    _applyAuthHeaders(headers, accessToken);
-    final body = jsonEncode({
-      'query':
-          'mutation GetChapterPages(\$input: FetchChapterPagesInput!){ fetchChapterPages(input: \$input){ pages } }',
-      'variables': {
-        'input': {'chapterId': chapterId},
-      },
-    });
-    try {
-      final res = await _http
-          .post(Uri.parse(endpoint), headers: headers, body: body)
-          .timeout(_httpTimeout);
-      if (res.statusCode == 401 || res.statusCode == 403) return _gqlAuthError;
-      // A proxy answering for a dead origin is the server being unreachable,
-      // not the chapter being broken. Without this the queue marches through a
-      // brief outage condemning every chapter in it.
-      if (isGatewayStatus(res.statusCode)) {
-        _lastNetworkErrorReason = 'HTTP ${res.statusCode} on page-list fetch';
-        return _gqlNetworkError;
-      }
-      if (res.statusCode != 200) return const <String>[];
-      final decoded = jsonDecode(res.body) as Map<String, Object?>;
-      final data = decoded['data'] as Map<String, Object?>?;
-      final fetch = data?['fetchChapterPages'] as Map<String, Object?>?;
-      final pages = fetch?['pages'];
-      if (pages is List) return pages.cast<String>();
-      return const <String>[];
-    } on SocketException catch (e) {
-      _lastNetworkErrorReason = 'SocketException: $e';
-      return _gqlNetworkError; // transient — park, don't error
-    } on TimeoutException {
-      _lastNetworkErrorReason =
-          'timed out after $_httpTimeout on page-list fetch';
-      return _gqlNetworkError; // transient — park, don't error
-    } catch (_) {
-      return const <String>[];
-    }
-  }
-
-  /// Applies the in-isolate auth to a GraphQL/REST request's headers, mirroring
-  /// the app's auth modes (uiLogin Bearer, basic, simpleLogin cookie).
-  void _applyAuthHeaders(Map<String, String> headers, String? accessToken) {
-    switch (_record.authType) {
-      case 'uiLogin':
-        if (accessToken != null && accessToken.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $accessToken';
-        }
-      case 'basic':
-        final cred = _record.basicCredential;
-        if (cred != null && cred.isNotEmpty) headers['Authorization'] = cred;
-      case 'simpleLogin':
-        final cookie = _record.simpleCookie;
-        if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
-    }
-    applyIsolateCustomHeaders(headers, _record.extraHeaders);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Engine wiring (in-isolate deps)
-  // ---------------------------------------------------------------------------
+  Future<List<String>?> _resolvePageUrls(int chapterId) =>
+      resolveChapterPageUrls(
+        target: BackgroundServerTarget(
+          serverBase: _order!.serverBase,
+          port: _order!.port,
+          addPort: _order!.addPort,
+          client: _http,
+          onNetworkError: (reason) => _lastNetworkErrorReason = reason,
+          isCancelled: () =>
+              _paused || _stopping || _cancelled.contains(chapterId),
+        ),
+        record: () => _record,
+        broker: _broker,
+        chapterId: chapterId,
+      );
 
   ChapterDownloadEngine _buildEngine() => ChapterDownloadEngine(
     writePage: _store,
@@ -729,6 +688,8 @@ class DownloadTaskHandler extends TaskHandler {
         res = await _http
             .get(Uri.parse(url), headers: headers)
             .timeout(_httpTimeout);
+      } on http.ClientException catch (e) {
+        throw PageOfflineException('ClientException: $e');
       } on SocketException catch (e) {
         // Device offline (connection refused / unreachable host / DNS).
         throw PageOfflineException('SocketException: $e');
@@ -737,8 +698,11 @@ class DownloadTaskHandler extends TaskHandler {
           'timed out after $_httpTimeout on page fetch',
         );
       }
-      if (res.statusCode == 401 || res.statusCode == 403) {
-        throw const PageAuthException();
+      if (res.statusCode == 401) throw const PageAuthException();
+      if (res.statusCode == 403) {
+        throw const AccountPermissionDenied(
+          Enum$UserPermission.DOWNLOAD_CHAPTERS,
+        );
       }
       // Same as the page-list POST: a gateway speaking for a dead origin leaves
       // the chapter resumable rather than failing it.

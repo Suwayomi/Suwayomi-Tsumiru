@@ -14,10 +14,30 @@ void main() {
       finish: () => events.add('finish'),
     );
 
-    expect(
-      events,
-      ['background', 'main', 'database', 'files', 'identity', 'finish'],
+    expect(events, [
+      'background',
+      'main',
+      'database',
+      'files',
+      'identity',
+      'finish',
+    ]);
+  });
+
+  test('a failed drain preserves catalog rows, files and identity', () async {
+    final events = <String>[];
+    await expectLater(
+      clearOfflineCatalogWithDependencies(
+        stopBackground: () async => events.add('background'),
+        stopMainPump: () async => throw StateError('Downloads did not stop'),
+        clearDatabase: () async => events.add('database'),
+        clearFiles: () async => events.add('files'),
+        clearIdentity: () async => events.add('identity'),
+        finish: () => events.add('finish'),
+      ),
+      throwsStateError,
     );
+    expect(events, ['background', 'finish']);
   });
 
   test('restart suppression is released when a wipe fails', () async {

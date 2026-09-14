@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../extensions/custom_extensions.dart';
+import '../../network/graphql_errors.dart';
 
 part 'toast.g.dart';
 
@@ -30,10 +31,7 @@ class Toast {
     toast() {
       if (instantShow) close();
       _fToast.showToast(
-        child: ToastWidget(
-          text: msg,
-          backgroundColor: Colors.black,
-        ),
+        child: ToastWidget(text: msg, backgroundColor: Colors.black),
         gravity: ToastGravity.BOTTOM,
       );
     }
@@ -50,7 +48,9 @@ class Toast {
     bool withMicrotask = false,
     bool instantShow = false,
   }) {
-    final text = error.trim().isNotBlank
+    final text = isPermissionDenied(error)
+        ? _context.l10n.accountPermissionDenied
+        : error.trim().isNotBlank
         ? error.trim()
         : _context.l10n.errorSomethingWentWrong;
     toast() {
@@ -91,8 +91,9 @@ class ToastWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget textWidget = Text(
       text,
-      style:
-          TextStyle(color: textColor ?? context.colorScheme.onPrimaryContainer),
+      style: TextStyle(
+        color: textColor ?? context.colorScheme.onPrimaryContainer,
+      ),
       textAlign: TextAlign.center,
     );
     return Container(
@@ -102,13 +103,7 @@ class ToastWidget extends StatelessWidget {
         color: backgroundColor ?? context.colorScheme.primaryContainer,
       ),
       child: icon != null
-          ? Row(
-              children: [
-                icon!,
-                const Gap(16),
-                textWidget,
-              ],
-            )
+          ? Row(children: [icon!, const Gap(16), textWidget])
           : textWidget,
     );
   }

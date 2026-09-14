@@ -1,6 +1,6 @@
 # Settings
 
-The largest feature area (~103 files). Split into two persistence tiers: **client-local** (SharedPreferences) and **server-side** (Suwayomi GraphQL mutations).
+The largest feature area (~103 files). Uses client-local preferences plus server-global and per-account GraphQL settings.
 
 ## Structure & routing
 
@@ -41,3 +41,19 @@ Entry is the "More" tab (`more_screen.dart`, a shell-nav destination) — it inl
 - **`reader_continuous_reading_tile.dart` is an empty (0-byte) file** — dead placeholder.
 - **`more_screen.dart` ≠ `settings_screen.dart`** — MoreScreen is a main tab with an inline `ServerUrlTile` (same provider as the Server section) plus an Appearance shortcut; the old duplicate theme-mode tile was removed so theming lives only under Appearance.
 - **Server-side sections silently show nothing if the server is offline** (no error UI).
+
+## Account settings
+
+`data/user_settings.dart` reads the account-only settings document on supported
+UI Login servers and overlays seven fields for the Library and Downloads screens:
+`updateMangas`, `excludeCompleted`, `excludeNotStarted`, `excludeUnreadChapters`,
+`autoDownloadNewChapters`, `autoDownloadNewChaptersLimit`, and
+`excludeEntryWithUnreadChapters`. The existing automatic-add category preference
+remains independent.
+
+The Library and Downloads repositories require `UserSettingsRouting`. Supported
+accounts write those seven fields with `setUserSettings`; legacy and non-UI Login
+servers keep the existing mutations. Unknown account capability blocks writes.
+The shared update interval, download directory and CBZ format require
+`MANAGE_SETTINGS` at the repository boundary and appear disabled with an
+explanation for other accounts. Device download settings remain separate.

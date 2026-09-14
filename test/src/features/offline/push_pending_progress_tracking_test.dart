@@ -4,11 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
@@ -27,10 +30,42 @@ import '../../../helpers/offline_test_db.dart';
 // Stub implementations
 // ---------------------------------------------------------------------------
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+class _SessionStore extends AuthCredentialsStore {
+  int epoch = 0;
+  @override
+  int get sessionEpoch => epoch;
+  @override
+  Future<AuthCredentialsState> build() async => const AuthCredentialsState();
+}
+
+class _DelayedMutationRepository extends _CapturingMangaBookRepository {
+  final entered = Completer<void>();
+  final response = Completer<void>();
+  @override
+  Future<ChapterDto?> getChapter({required int chapterId}) async => null;
+  @override
+  Future<void> putChapter({
+    required int chapterId,
+    required ChapterChange patch,
+  }) {
+    patches.add(patch);
+    entered.complete();
+    return response.future;
+  }
+}
+
+class _DelayedChapterRepository extends _CapturingMangaBookRepository {
+  final entered = Completer<void>();
+  final response = Completer<ChapterDto?>();
+  @override
+  Future<ChapterDto?> getChapter({required int chapterId}) {
+    entered.complete();
+    return response.future;
+  }
+}
+
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 /// Records trackProgress calls without touching a real GraphQL server.
 class _FakeTrackerRepository extends TrackerRepository {
@@ -115,24 +150,23 @@ ChapterDto _serverChapter({
   required int id,
   required bool isRead,
   required int lastPageRead,
-}) =>
-    ChapterDto(
-      chapterNumber: id.toDouble(),
-      fetchedAt: '0',
-      id: id,
-      isBookmarked: false,
-      isDownloaded: true,
-      isRead: isRead,
-      lastPageRead: lastPageRead,
-      lastReadAt: '0',
-      mangaId: 1,
-      name: 'c$id',
-      pageCount: 10,
-      sourceOrder: id,
-      uploadDate: '0',
-      url: 'u$id',
-      meta: const [],
-    );
+}) => ChapterDto(
+  chapterNumber: id.toDouble(),
+  fetchedAt: '0',
+  id: id,
+  isBookmarked: false,
+  isDownloaded: true,
+  isRead: isRead,
+  lastPageRead: lastPageRead,
+  lastReadAt: '0',
+  mangaId: 1,
+  name: 'c$id',
+  pageCount: 10,
+  sourceOrder: id,
+  uploadDate: '0',
+  url: 'u$id',
+  meta: const [],
+);
 
 /// Notifier subclass that returns a fixed bool? without touching SharedPreferences.
 class _FixedToggle extends UpdateProgressAfterReading {
@@ -186,32 +220,36 @@ Future<void> _seed(
 
 /// One fake track-record stub (the test only cares about .length, not content).
 Fragment$TrackRecordDto _fakeRecord() => Fragment$TrackRecordDto(
-      id: 99,
-      trackerId: 1,
-      remoteId: 'remote-1',
-      title: 'Manga',
-      remoteUrl: 'https://example.com',
-      status: 1,
-      lastChapterRead: 0,
-      totalChapters: 0,
-      score: 0,
-      displayScore: '0',
-      startDate: '',
-      finishDate: '',
-      private: false,
-    );
+  id: 99,
+  trackerId: 1,
+  remoteId: 'remote-1',
+  title: 'Manga',
+  remoteUrl: 'https://example.com',
+  status: 1,
+  lastChapterRead: 0,
+  totalChapters: 0,
+  score: 0,
+  displayScore: '0',
+  startDate: '',
+  finishDate: '',
+  private: false,
+);
 
 Future<
-    ({
-      ProviderContainer container,
-      OfflineDatabase db,
-      _FakeTrackerRepository tracker,
-    })> _build({
+  ({
+    ProviderContainer container,
+    OfflineDatabase db,
+    _FakeTrackerRepository tracker,
+  })
+>
+_build({
   required List<int> mangaIds,
   int trackRecordCount = 1,
   bool toggleOn = true,
   bool manualToggleOn = false,
   MangaBookRepository? repository,
+  _SessionStore? session,
+  Future<List<Fragment$TrackRecordDto>> Function()? recordsLookup,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
@@ -222,19 +260,23 @@ Future<
   final records = List.generate(trackRecordCount, (_) => _fakeRecord());
 
   final overrides = <Override>[
+    authCredentialsStoreProvider.overrideWith(() => session ?? _SessionStore()),
     sharedPreferencesProvider.overrideWithValue(prefs),
     offlineEnabledProvider.overrideWithValue(true),
     offlineActiveProvider.overrideWithValue(true),
     offlineDatabaseProvider.overrideWithValue(db),
     mangaBookRepositoryProvider.overrideWithValue(fakeMangaBook),
     trackerRepositoryProvider.overrideWithValue(fakeTracker),
-    updateProgressAfterReadingProvider
-        .overrideWith(() => _FixedToggle(toggleOn)),
-    updateProgressManualMarkReadProvider
-        .overrideWith(() => _FixedManualToggle(manualToggleOn)),
+    updateProgressAfterReadingProvider.overrideWith(
+      () => _FixedToggle(toggleOn),
+    ),
+    updateProgressManualMarkReadProvider.overrideWith(
+      () => _FixedManualToggle(manualToggleOn),
+    ),
     for (final id in mangaIds)
-      mangaTrackRecordsProvider(mangaId: id)
-          .overrideWith((_) => Future.value(records)),
+      mangaTrackRecordsProvider(
+        mangaId: id,
+      ).overrideWith((_) => recordsLookup?.call() ?? Future.value(records)),
   ];
 
   final container = ProviderContainer(overrides: overrides);
@@ -247,26 +289,100 @@ Future<
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('pushPendingProgress → tracker push', () {
-    test('toggle ON + manga has track records → trackProgress called once',
-        () async {
+  test(
+    'account replacement leaves delayed progress dirty and skips mutation',
+    () async {
+      final session = _SessionStore();
+      final repo = _DelayedChapterRepository();
       final (:container, :db, :tracker) = await _build(
         mangaIds: [1],
-        trackRecordCount: 1,
-        toggleOn: true,
+        repository: repo,
+        session: session,
       );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
-
+      addTearDown(container.dispose);
+      addTearDown(db.close);
       await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+      final pending = pushPendingProgress(container);
+      await repo.entered.future;
+      session.epoch++;
+      repo.response.complete(null);
+      await pending;
+      expect(repo.patches, isEmpty);
+      expect(tracker.trackProgressCalls, isEmpty);
+      expect((await db.dirtyProgressChapters()).map((row) => row.id), [10]);
+    },
+  );
 
-      await pushPendingProgress(container);
+  test('account replacement during mutation keeps progress pending', () async {
+    final session = _SessionStore();
+    final repo = _DelayedMutationRepository();
+    final (:container, :db, :tracker) = await _build(
+      mangaIds: [1],
+      repository: repo,
+      session: session,
+    );
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+    await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+    final pending = pushPendingProgress(container);
+    await repo.entered.future;
+    session.epoch++;
+    repo.response.complete();
+    await pending;
+    expect(repo.patches, hasLength(1));
+    expect(tracker.trackProgressCalls, isEmpty);
+    expect((await db.dirtyProgressChapters()).map((row) => row.id), [10]);
+  });
 
-      expect(tracker.trackProgressCalls, [1],
-          reason: 'trackProgress must fire once for manga 1');
-    });
+  test(
+    'account replacement during tracker lookup skips tracker mutation',
+    () async {
+      final session = _SessionStore();
+      final entered = Completer<void>();
+      final response = Completer<List<Fragment$TrackRecordDto>>();
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        session: session,
+        recordsLookup: () {
+          entered.complete();
+          return response.future;
+        },
+      );
+      addTearDown(container.dispose);
+      addTearDown(db.close);
+      await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+      final pending = pushPendingProgress(container);
+      await entered.future;
+      session.epoch++;
+      response.complete([_fakeRecord()]);
+      await pending;
+      expect(tracker.trackProgressCalls, isEmpty);
+    },
+  );
+
+  group('pushPendingProgress → tracker push', () {
+    test(
+      'toggle ON + manga has track records → trackProgress called once',
+      () async {
+        final (:container, :db, :tracker) = await _build(
+          mangaIds: [1],
+          trackRecordCount: 1,
+          toggleOn: true,
+        );
+        addTearDown(() {
+          container.dispose();
+          db.close();
+        });
+
+        await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+
+        await pushPendingProgress(container);
+
+        expect(tracker.trackProgressCalls, [
+          1,
+        ], reason: 'trackProgress must fire once for manga 1');
+      },
+    );
 
     test('toggle OFF → trackProgress NOT called', () async {
       final (:container, :db, :tracker) = await _build(
@@ -283,36 +399,42 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, isEmpty,
-          reason: 'toggle is off — no tracker push');
+      expect(
+        tracker.trackProgressCalls,
+        isEmpty,
+        reason: 'toggle is off — no tracker push',
+      );
     });
 
     test(
-        'failed push KEEPS the dirty flag (stays pending, server never got it)',
-        () async {
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final db = testOfflineDatabase();
-      addTearDown(db.close);
-      final container = ProviderContainer(overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        offlineEnabledProvider.overrideWithValue(true),
-        offlineActiveProvider.overrideWithValue(true),
-        offlineDatabaseProvider.overrideWithValue(db),
-        mangaBookRepositoryProvider
-            .overrideWithValue(_FailingMangaBookRepository()),
-      ]);
-      addTearDown(container.dispose);
+      'failed push KEEPS the dirty flag (stays pending, server never got it)',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final db = testOfflineDatabase();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            offlineEnabledProvider.overrideWithValue(true),
+            offlineActiveProvider.overrideWithValue(true),
+            offlineDatabaseProvider.overrideWithValue(db),
+            mangaBookRepositoryProvider.overrideWithValue(
+              _FailingMangaBookRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+        await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
 
-      await pushPendingProgress(container);
+        await pushPendingProgress(container);
 
-      // The push threw → the chapter must remain dirty so it retries later,
-      // instead of being silently marked synced.
-      expect((await db.dirtyProgressChapters()).map((c) => c.id), [10],
-          reason: 'a failed push must not clear the dirty flag');
-    });
+        expect((await db.dirtyProgressChapters()).map((c) => c.id), [
+          10,
+        ], reason: 'a failed push must not clear the dirty flag');
+      },
+    );
 
     test('zero track records → trackProgress NOT called', () async {
       final (:container, :db, :tracker) = await _build(
@@ -329,34 +451,40 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, isEmpty,
-          reason: 'no tracker bound — gate must reject');
+      expect(
+        tracker.trackProgressCalls,
+        isEmpty,
+        reason: 'no tracker bound — gate must reject',
+      );
     });
 
     test(
-        'toggle ON + multiple chapters for same manga → trackProgress called only ONCE',
-        () async {
-      final (:container, :db, :tracker) = await _build(
-        mangaIds: [1],
-        trackRecordCount: 1,
-        toggleOn: true,
-      );
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
+      'toggle ON + multiple chapters for same manga → trackProgress called only ONCE',
+      () async {
+        final (:container, :db, :tracker) = await _build(
+          mangaIds: [1],
+          trackRecordCount: 1,
+          toggleOn: true,
+        );
+        addTearDown(() {
+          container.dispose();
+          db.close();
+        });
 
-      // Three read+dirty chapters all for manga 1.
-      await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
-      await _seed(db, 11, mangaId: 1, isRead: true, dirty: true);
-      await _seed(db, 12, mangaId: 1, isRead: true, dirty: true);
+        await _seed(db, 10, mangaId: 1, isRead: true, dirty: true);
+        await _seed(db, 11, mangaId: 1, isRead: true, dirty: true);
+        await _seed(db, 12, mangaId: 1, isRead: true, dirty: true);
 
-      await pushPendingProgress(container);
+        await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls.length, 1,
-          reason: 'deduplication: only one trackProgress call per manga');
-      expect(tracker.trackProgressCalls.first, 1);
-    });
+        expect(
+          tracker.trackProgressCalls.length,
+          1,
+          reason: 'deduplication: only one trackProgress call per manga',
+        );
+        expect(tracker.trackProgressCalls.first, 1);
+      },
+    );
 
     test('chapters with isRead=false do NOT trigger tracker push', () async {
       final (:container, :db, :tracker) = await _build(
@@ -374,14 +502,16 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, isEmpty,
-          reason: 'isRead=false chapters must not trigger tracker');
+      expect(
+        tracker.trackProgressCalls,
+        isEmpty,
+        reason: 'isRead=false chapters must not trigger tracker',
+      );
     });
   });
 
   group('pushPendingProgress → manual vs auto tracker gate', () {
-    test(
-        'a manual mark-read queued offline is gated on the MANUAL toggle, '
+    test('a manual mark-read queued offline is gated on the MANUAL toggle, '
         'not the after-reading toggle', () async {
       // after-reading OFF, manual-mark-read ON: an offline manual mark-read
       // must still reach the tracker once reconnected.
@@ -408,13 +538,16 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, [1],
-          reason: 'manual-mark-read toggle is ON — the flush must use it, '
-              'not the (OFF) after-reading toggle');
+      expect(
+        tracker.trackProgressCalls,
+        [1],
+        reason:
+            'manual-mark-read toggle is ON — the flush must use it, '
+            'not the (OFF) after-reading toggle',
+      );
     });
 
-    test(
-        'a manual mark-read queued offline is suppressed when the MANUAL '
+    test('a manual mark-read queued offline is suppressed when the MANUAL '
         'toggle is off, even with after-reading ON', () async {
       final (:container, :db, :tracker) = await _build(
         mangaIds: [1],
@@ -439,13 +572,16 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, isEmpty,
-          reason: 'manual-mark-read toggle is OFF — a manual action must not '
-              'borrow the (ON) after-reading toggle');
+      expect(
+        tracker.trackProgressCalls,
+        isEmpty,
+        reason:
+            'manual-mark-read toggle is OFF — a manual action must not '
+            'borrow the (ON) after-reading toggle',
+      );
     });
 
-    test(
-        'ordinary offline reading progress still uses the after-reading '
+    test('ordinary offline reading progress still uses the after-reading '
         'toggle, unaffected by the manual toggle', () async {
       final (:container, :db, :tracker) = await _build(
         mangaIds: [1],
@@ -470,17 +606,23 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(tracker.trackProgressCalls, [1],
-          reason: 'the auto/reading path is untouched by this fix — still '
-              'gated on after-reading alone');
+      expect(
+        tracker.trackProgressCalls,
+        [1],
+        reason:
+            'the auto/reading path is untouched by this fix — still '
+            'gated on after-reading alone',
+      );
     });
   });
 
   group('pushPendingProgress → per-field push', () {
     test('position-dirty row never pushes isRead (ch-99 revert)', () async {
       final repo = _CapturingMangaBookRepository();
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();
@@ -498,8 +640,10 @@ void main() {
 
     test('read-state-dirty row pushes isRead and clears its flag', () async {
       final repo = _CapturingMangaBookRepository();
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();
@@ -521,8 +665,10 @@ void main() {
     test('ch-99 loop is dead: offline partial-read then mark-read syncs '
         'read=true, never a stale unread', () async {
       final repo = _CapturingMangaBookRepository();
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();
@@ -552,8 +698,11 @@ void main() {
       await pushPendingProgress(container);
 
       final patch = repo.patches.single;
-      expect(patch.isRead, isTrue,
-          reason: 'the mark-read reaches the server (used to revert to unread)');
+      expect(
+        patch.isRead,
+        isTrue,
+        reason: 'the mark-read reaches the server (used to revert to unread)',
+      );
       expect(patch.lastPageRead, 0, reason: 'mark-read reset the position');
       final c = (await db.chapterById(99))!;
       expect(c.isRead, isTrue);
@@ -563,34 +712,44 @@ void main() {
   });
 
   group('pushPendingProgress → cross-device never-regress', () {
-    test('local completion beats a server partial (marked-read, low position)',
-        () async {
-      // The reported failure: mark-read leaves lastPageRead low, a server
-      // partial sits at a higher page — the guard used to drop the completion.
-      final repo = _ServerStateRepository(
-          _serverChapter(id: 10, isRead: false, lastPageRead: 7));
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
-      addTearDown(() {
-        container.dispose();
-        db.close();
-      });
+    test(
+      'local completion beats a server partial (marked-read, low position)',
+      () async {
+        final repo = _ServerStateRepository(
+          _serverChapter(id: 10, isRead: false, lastPageRead: 7),
+        );
+        final (:container, :db, :tracker) = await _build(
+          mangaIds: [1],
+          repository: repo,
+        );
+        addTearDown(() {
+          container.dispose();
+          db.close();
+        });
 
-      await _seed(db, 10, mangaId: 1);
-      await db.setChapterReadState(10, true); // local complete, position 0
+        await _seed(db, 10, mangaId: 1);
+        await db.setChapterReadState(10, true); // local complete, position 0
 
-      await pushPendingProgress(container);
+        await pushPendingProgress(container);
 
-      expect(repo.patches.single.isRead, isTrue,
-          reason: 'a finished local chapter must still push over a server partial');
-      expect((await db.chapterById(10))!.readStateDirty, isFalse);
-    });
+        expect(
+          repo.patches.single.isRead,
+          isTrue,
+          reason:
+              'a finished local chapter must still push over a server partial',
+        );
+        expect((await db.chapterById(10))!.readStateDirty, isFalse);
+      },
+    );
 
     test('server completion is not un-finished by a local partial', () async {
       final repo = _ServerStateRepository(
-          _serverChapter(id: 10, isRead: true, lastPageRead: 0));
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+        _serverChapter(id: 10, isRead: true, lastPageRead: 0),
+      );
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();
@@ -601,16 +760,22 @@ void main() {
 
       await pushPendingProgress(container);
 
-      expect(repo.patches, isEmpty,
-          reason: 'the server already finished it — no lesser push');
+      expect(
+        repo.patches,
+        isEmpty,
+        reason: 'the server already finished it — no lesser push',
+      );
       expect((await db.chapterById(10))!.progressDirty, isFalse);
     });
 
     test('a further server position wins over a lesser local one', () async {
       final repo = _ServerStateRepository(
-          _serverChapter(id: 10, isRead: false, lastPageRead: 8));
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+        _serverChapter(id: 10, isRead: false, lastPageRead: 8),
+      );
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();
@@ -627,9 +792,12 @@ void main() {
 
     test('a further local position wins over a lesser server one', () async {
       final repo = _ServerStateRepository(
-          _serverChapter(id: 10, isRead: false, lastPageRead: 3));
-      final (:container, :db, :tracker) =
-          await _build(mangaIds: [1], repository: repo);
+        _serverChapter(id: 10, isRead: false, lastPageRead: 3),
+      );
+      final (:container, :db, :tracker) = await _build(
+        mangaIds: [1],
+        repository: repo,
+      );
       addTearDown(() {
         container.dispose();
         db.close();

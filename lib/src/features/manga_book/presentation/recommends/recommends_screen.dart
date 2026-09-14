@@ -28,9 +28,11 @@ class RecommendsScreen extends ConsumerWidget {
     final setup = ref.watch(recommendationSetupProvider(mangaId));
     return Scaffold(
       appBar: AppBar(
-        title: Text(mangaTitle != null
-            ? context.l10n.similarTo(mangaTitle!)
-            : context.l10n.recommendations),
+        title: Text(
+          mangaTitle != null
+              ? context.l10n.similarTo(mangaTitle!)
+              : context.l10n.recommendations,
+        ),
       ),
       body: setup.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -46,19 +48,20 @@ class RecommendsScreen extends ConsumerWidget {
           // (still-loading stay in the middle); keep original order within a
           // rank, and key each section so a reorder doesn't reload it.
           int rankOf(RecommendationProvider p) {
-            final recs =
-                ref.watch(providerRecommendationsProvider(mangaId, p.key));
+            final recs = ref.watch(
+              providerRecommendationsProvider(mangaId, p.key),
+            );
             if (recs.hasError) return 2;
             if (recs.hasValue) return recs.value!.isEmpty ? 2 : 0;
             return 1;
           }
 
-          final ordered = [
-            for (var i = 0; i < providers.length; i++) (i, providers[i])
-          ]..sort((a, b) {
-              final r = rankOf(a.$2).compareTo(rankOf(b.$2));
-              return r != 0 ? r : a.$1.compareTo(b.$1);
-            });
+          final ordered =
+              [for (var i = 0; i < providers.length; i++) (i, providers[i])]
+                ..sort((a, b) {
+                  final r = rankOf(a.$2).compareTo(rankOf(b.$2));
+                  return r != 0 ? r : a.$1.compareTo(b.$1);
+                });
           return ListView(
             children: [
               for (final e in ordered)
@@ -76,16 +79,20 @@ class RecommendsScreen extends ConsumerWidget {
 }
 
 class _ProviderSection extends ConsumerWidget {
-  const _ProviderSection(
-      {super.key, required this.mangaId, required this.provider});
+  const _ProviderSection({
+    super.key,
+    required this.mangaId,
+    required this.provider,
+  });
 
   final int mangaId;
   final RecommendationProvider provider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recs =
-        ref.watch(providerRecommendationsProvider(mangaId, provider.key));
+    final recs = ref.watch(
+      providerRecommendationsProvider(mangaId, provider.key),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -102,12 +109,12 @@ class _ProviderSection extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(provider.name,
-                          style: context.textTheme.titleMedium),
+                      Text(provider.name, style: context.textTheme.titleMedium),
                       Text(
                         provider.category,
-                        style: context.textTheme.bodySmall
-                            ?.copyWith(color: context.theme.hintColor),
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.theme.hintColor,
+                        ),
                       ),
                     ],
                   ),
@@ -119,9 +126,13 @@ class _ProviderSection extends ConsumerWidget {
         ),
         recs.when(
           loading: () => const SizedBox(
-              height: 200, child: Center(child: CircularProgressIndicator())),
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          ),
           error: (e, _) => _SectionMessage(
-            e is RecommendationHttpException
+            e is RecommendationUnavailableOnWeb
+                ? context.l10n.recommendationsUnavailableWeb
+                : e is RecommendationHttpException
                 ? context.l10n.httpErrorCheckWebView(e.statusCode)
                 : context.l10n.errorSomethingWentWrong,
           ),
@@ -165,8 +176,9 @@ class _SectionMessage extends StatelessWidget {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: context.textTheme.bodyMedium
-                  ?.copyWith(color: context.theme.hintColor),
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: context.theme.hintColor,
+              ),
             ),
           ],
         ),

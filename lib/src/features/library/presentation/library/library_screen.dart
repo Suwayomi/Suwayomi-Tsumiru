@@ -257,10 +257,10 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
       (data) {
         if (data.isBlank) {
           return Emoticons(
-            title: context.l10n.noCategoriesFound,
+            title: context.l10n.noVisibleCategories,
             button: TextButton(
-              onPressed: () => ref.refresh(categoryControllerProvider.future),
-              child: Text(context.l10n.refresh),
+              onPressed: () => const EditCategoriesRoute().push(context),
+              child: Text(context.l10n.categories),
             ),
           );
         } else {
@@ -439,10 +439,10 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           return Scaffold(
             appBar: AppBar(title: Text(context.l10n.library)),
             body: Emoticons(
-              title: context.l10n.noCategoriesFound,
+              title: context.l10n.noVisibleCategories,
               button: TextButton(
-                onPressed: () => ref.refresh(categoryControllerProvider.future),
-                child: Text(context.l10n.refresh),
+                onPressed: () => const EditCategoriesRoute().push(context),
+                child: Text(context.l10n.categories),
               ),
             ),
           );
@@ -632,10 +632,10 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
           return Scaffold(
             appBar: AppBar(title: Text(context.l10n.library)),
             body: Emoticons(
-              title: context.l10n.noCategoriesFound,
+              title: context.l10n.noVisibleCategories,
               button: TextButton(
-                onPressed: () => ref.refresh(libraryGroupedTabsProvider.future),
-                child: Text(context.l10n.refresh),
+                onPressed: () => const EditCategoriesRoute().push(context),
+                child: Text(context.l10n.categories),
               ),
             ),
           );
@@ -794,10 +794,10 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
           return Scaffold(
             appBar: AppBar(title: Text(context.l10n.library)),
             body: Emoticons(
-              title: context.l10n.noCategoriesFound,
+              title: context.l10n.noVisibleCategories,
               button: TextButton(
-                onPressed: () => ref.refresh(libraryGroupedTabsProvider.future),
-                child: Text(context.l10n.refresh),
+                onPressed: () => const EditCategoriesRoute().push(context),
+                child: Text(context.l10n.categories),
               ),
             ),
           );

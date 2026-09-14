@@ -15,7 +15,7 @@ All manga/chapter/library data is fetched via the Suwayomi GraphQL API (`/api/gr
 | `lib/src/constants/db_keys.dart` | `DBKeys` — every SharedPreferences key + default |
 | `lib/src/utils/mixin/shared_preferences_client_mixin.dart` | `SharedPreferenceClientMixin<T>` / `SharedPreferenceEnumClientMixin<T>` |
 | `lib/src/widgets/server_image.dart` | `ServerImage` — `CachedNetworkImage` with per-auth-type header/token injection |
-| `lib/src/utils/extensions/cache_manager_extensions.dart` | Same auth/URL logic for imperative `CacheManager.getSingleFile` |
+| `lib/src/utils/extensions/cache_manager_extensions.dart` | Uses `serverImageRequest` for imperative `CacheManager.getSingleFile` |
 | `lib/src/features/<f>/data/<name>_repository.dart` (+ `graphql/*.graphql`) | Per-feature repositories + operations |
 
 ## The two GraphQL clients
@@ -55,13 +55,16 @@ features/<f>/domain/<type>/graphql/fragment.graphql  # fragments near their doma
 
 - `basic` → `Authorization` header.
 - `simple_login` → `Cookie` header (watched reactively via `.select`).
-- `ui_login` → token as `?token=<urlencoded>` query param (headers unreliable for `cached_network_image`); **`cacheKey` is always the bare `baseApi` URL (no token)** so cache survives token rotation; token read via `ref.read` (non-reactive) to avoid rebuild storms in webtoon scroll.
+- `ui_login` sends the token in the fetch URL and uses `accountImageCacheKey` for storage. A verified account key combines the catalog ID and untokened URL; token rotation and restart preserve it. Missing or changing accounts use an ephemeral session key. Other auth modes retain their URL keys.
+- `serverImageRequest` supplies the same fetch URL, key, and headers to raw reads, page prefetch, and reader share/gallery actions. `getServerFile` delegates to it. Covers and crop rendering use the same account-key helper; cache directories and manager instances stay shared.
+
+- Web server images use `ImageRenderMethodForWeb.HttpGet` to decode downloaded bytes. The HTML-image path can turn cached covers and source icons black after navigation on Flutter 3.47 ([upstream issue](https://github.com/flutter/flutter/issues/191800)).
 
 ## Gotchas
 
 - **WebSocket auth via a `Link` is silently ineffective** — must use `initialPayload`/`SocketClientConfig.headers`. (Cost a debug session historically.)
 - **`ui_login` WS sends a bare token, not `Bearer <token>`** (server `onInit` doesn't strip the prefix). HTTP uses `Bearer`.
-- **`cacheKey` must be the un-tokened URL** — otherwise every token rotation busts the whole image cache.
+- **Keep fetch URLs separate from account cache keys.** Never use a bare URL key for UI-login images or include credentials in a cache key.
 - **Subscription 401 mid-stream is not handled** — `SuwayomiAuthLink` only inspects the first event. Acceptable because Suwayomi subscriptions are short-lived.
 - **Token refresh uses a raw, un-authed client** to avoid infinite recursion on 401.
 - **Default `FetchPolicy.noCache`** — don't expect GraphQL cache reads.

@@ -377,6 +377,52 @@ void main() {
     },
   );
 
+  test(
+    'saved permission denial blocks queue scheduling without changing user pause',
+    () async {
+      await config();
+      await writeCatchupWorkSpec(container.read);
+      final state = CatchupStateStore(prefs);
+      await state.recordDownloadPermission(
+        'catalog',
+        allowed: false,
+        expectedRevision: 0,
+        isCurrent: () => true,
+        baseDir: paths.baseDir,
+      );
+      await reconcileBackgroundSchedule();
+      expect(state.paused, isFalse);
+      expect(schedule.registrations, isEmpty);
+      expect(schedule.cancellations, [kNewChapterPeriodicName]);
+      await state.recordDownloadPermission(
+        'catalog',
+        allowed: true,
+        expectedRevision: 1,
+        isCurrent: () => true,
+        baseDir: paths.baseDir,
+      );
+      await reconcileBackgroundSchedule();
+      expect(schedule.registrations, hasLength(1));
+    },
+  );
+
+  test(
+    'publication carries database attempts into both worker snapshots',
+    () async {
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await db.bumpChapterGeneration(5);
+      for (var i = 0; i < 4; i++) {
+        await db.incrementServerFetchAttempts(5);
+      }
+      await writeCatchupWorkSpec(container.read);
+      final spec = CatchupStateStore(prefs).readSpec()!;
+      expect(spec.queuedChapters.single.serverFetchAttempts, 4);
+      expect(spec.queuedChapters.single.generation, 1);
+      expect(spec.manga.single.serverFetchAttempts, {5: 4});
+      expect(spec.manga.single.generationOf(5), 1);
+    },
+  );
+
   test('pausing cancels a queue-only schedule', () async {
     await config();
     await writeCatchupWorkSpec(container.read);

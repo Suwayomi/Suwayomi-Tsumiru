@@ -65,7 +65,8 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
   Widget build(context, state) => const ReaderSettingsScreen();
 }
 
-class AppearanceSettingsRoute extends GoRouteData with $AppearanceSettingsRoute {
+class AppearanceSettingsRoute extends GoRouteData
+    with $AppearanceSettingsRoute {
   const AppearanceSettingsRoute();
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
@@ -173,4 +174,22 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const HotkeysSettingsScreen();
+}
+
+class AccountRoute extends GoRouteData with $AccountRoute {
+  const AccountRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Widget build(context, state) => const AccountScreen();
+}
+
+class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
+  const ManageUsersRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Widget build(context, state) => const ManageUsersScreen();
 }

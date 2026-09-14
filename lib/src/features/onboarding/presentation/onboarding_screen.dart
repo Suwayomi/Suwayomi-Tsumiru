@@ -21,6 +21,11 @@ import '../../../utils/launch_url_in_web.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/theme/brand.dart';
 import '../../about/data/about_repository.dart';
+import '../../account/data/account_actions.dart';
+import '../../account/data/account_providers.dart';
+import '../../account/domain/account_access.dart';
+import '../../account/presentation/account_code_dialog.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
@@ -41,8 +46,34 @@ class OnboardingScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final step = useState(0);
-    final serverVerified = useState(false);
+    final credentials = ref.watch(authCredentialsStoreProvider).value;
+    final resume =
+        ref.watch(onboardingCompleteProvider) != true &&
+        ref.watch(authTypeKeyProvider) == AuthType.uiLogin &&
+        credentials?.accountBinding != null &&
+        credentials?.sessionChanging == false &&
+        credentials?.uiAccessToken?.isNotEmpty == true &&
+        credentials?.uiRefreshToken?.isNotEmpty == true;
+    final preferences = ref.watch(sharedPreferencesProvider);
+    final step = useState(
+      resume ? 2 : (preferences.getInt('onboarding.step') ?? 0).clamp(0, 1),
+    );
+    final serverVerified = useState(resume);
+    useEffect(() {
+      if (resume) {
+        Future.microtask(() {
+          if (!context.mounted) return;
+          step.value = 2;
+          serverVerified.value = true;
+        });
+      }
+      return null;
+    }, [resume]);
+
+    Future<void> moveTo(int next) async {
+      await preferences.setInt('onboarding.step', next.clamp(0, 1));
+      if (context.mounted) step.value = next;
+    }
 
     bool stepComplete(int i) => switch (i) {
       1 => serverVerified.value,
@@ -52,6 +83,7 @@ class OnboardingScreen extends HookConsumerWidget {
     final isLast = step.value == _stepCount - 1;
 
     void finish() {
+      preferences.setInt('onboarding.step', 0);
       ref.read(onboardingCompleteProvider.notifier).update(true);
       const LibraryRoute(categoryId: 0).go(context);
     }
@@ -118,8 +150,8 @@ class OnboardingScreen extends HookConsumerWidget {
                   showBack: step.value > 0,
                   canAdvance: stepComplete(step.value),
                   isLast: isLast,
-                  onBack: () => step.value--,
-                  onNext: () => isLast ? finish() : step.value++,
+                  onBack: () => moveTo(step.value - 1),
+                  onNext: () => isLast ? finish() : moveTo(step.value + 1),
                 ),
               ],
             ),
@@ -301,6 +333,10 @@ class _ServerStep extends HookConsumerWidget {
             : stored;
       }(),
     );
+    final preferences = ref.watch(sharedPreferencesProvider);
+    final pendingProbe = useMemoized(
+      () => preferences.getString('onboarding.pendingProbe'),
+    );
     final state = useState(_TestState.idle);
     final version = useState<String?>(null);
     final errorDetail = useState<String?>(null);
@@ -311,15 +347,11 @@ class _ServerStep extends HookConsumerWidget {
     final passController = useTextEditingController();
     final authChoice = useState(AuthType.basic);
     final credsRejected = useState(false);
-
-    // The URL field carries the full address (scheme + host + port), so never
-    // let the client auto-append a port.
-    useEffect(() {
-      Future.microtask(
-        () => ref.read(serverPortToggleProvider.notifier).update(false),
-      );
-      return null;
-    }, const []);
+    final showAccountCodes =
+        authChoice.value == AuthType.uiLogin &&
+        (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
+            ref.watch(settledAccountAccessProvider).capability !=
+                AccountCapability.unsupported);
 
     void resetToIdle() {
       if (state.value != _TestState.idle) {
@@ -331,9 +363,32 @@ class _ServerStep extends HookConsumerWidget {
     // Persist a resolved/typed base URL as the active server URL.
     Future<void> adopt(String url) async {
       resolvedUrl.value = url;
-      await ref.read(serverPortToggleProvider.notifier).update(false);
+      final ports = ref.read(serverPortToggleProvider.notifier);
+      await ports.update(false);
+      if (!context.mounted) return;
       await ref.read(serverExternalUrlProvider.notifier).update(url);
+      if (!context.mounted) return;
       if (urlController.text != url) urlController.text = url;
+    }
+
+    Future<void> openCodeDialog(AccountCodeMode mode) async {
+      final base = resolvedUrl.value;
+      if (base == null || base.isEmpty) return;
+      await adopt(base);
+      if (!context.mounted) return;
+      final redeem = ref.read(accountActionsProvider).redeemCode;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AccountCodeDialog(
+          mode: mode,
+          onSubmit: ({required code, username, required password}) async {
+            await redeem(code: code, username: username, password: password);
+            if (!context.mounted) return;
+            state.value = _TestState.connected;
+            onVerifiedChanged(true);
+          },
+        ),
+      );
     }
 
     // Validate + commit the entered credentials against [base] using
@@ -383,7 +438,9 @@ class _ServerStep extends HookConsumerWidget {
       } catch (_) {
         return false;
       }
-      ref.read(authTypeKeyProvider.notifier).update(authChoice.value);
+      if (context.mounted) {
+        ref.read(authTypeKeyProvider.notifier).update(authChoice.value);
+      }
       return true;
     }
 
@@ -401,11 +458,15 @@ class _ServerStep extends HookConsumerWidget {
       credsRejected.value = false;
       onVerifiedChanged(false);
       await ref.read(serverPortToggleProvider.notifier).update(false);
+      if (!context.mounted) return;
       await ref.read(serverExternalUrlProvider.notifier).update(url);
+      if (!context.mounted) return;
       await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (!context.mounted) return;
       final result = await AsyncValue.guard(
         () => ref.read(aboutRepositoryProvider).getAbout(),
       );
+      if (!context.mounted) return;
       if (result.hasError || result.value == null) {
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
@@ -416,9 +477,11 @@ class _ServerStep extends HookConsumerWidget {
       resolvedUrl.value = url;
       final client = ref.read(onboardingHttpClientProvider)();
       try {
-        if (!await webAuthRequired(url,
-            client: client,
-            extraHeaders: ref.read(customHttpHeadersProvider).value)) {
+        if (!await webAuthRequired(
+          url,
+          client: client,
+          extraHeaders: ref.read(customHttpHeadersProvider).value,
+        )) {
           state.value = _TestState.connected;
           onVerifiedChanged(true);
           return;
@@ -450,7 +513,18 @@ class _ServerStep extends HookConsumerWidget {
         onVerifiedChanged(false);
         return;
       }
-      if (kIsWeb) return testWeb();
+      await preferences.setString('onboarding.pendingProbe', input);
+      if (!context.mounted) return;
+      if (kIsWeb) {
+        try {
+          await testWeb();
+        } finally {
+          if (context.mounted) {
+            await preferences.setString('onboarding.pendingProbe', '');
+          }
+        }
+        return;
+      }
 
       state.value = _TestState.testing;
       version.value = null;
@@ -460,9 +534,11 @@ class _ServerStep extends HookConsumerWidget {
 
       final client = ref.read(onboardingHttpClientProvider)();
       try {
-        final result = await resolveServer(input,
-            client: client,
-            extraHeaders: ref.read(customHttpHeadersProvider).value);
+        final result = await resolveServer(
+          input,
+          client: client,
+          extraHeaders: ref.read(customHttpHeadersProvider).value,
+        );
         switch (result.outcome) {
           case ResolveOutcome.notReached:
             state.value = _TestState.failed;
@@ -474,6 +550,7 @@ class _ServerStep extends HookConsumerWidget {
           case ResolveOutcome.found:
           case ResolveOutcome.basicGated:
             await adopt(result.baseUrl);
+            if (!context.mounted) return;
             version.value = result.serverVersion;
             final needsLogin =
                 result.outcome == ResolveOutcome.basicGated ||
@@ -497,13 +574,28 @@ class _ServerStep extends HookConsumerWidget {
             }
         }
       } catch (e) {
+        if (!context.mounted) return;
         errorDetail.value = e.toString();
         state.value = _TestState.failed;
         onVerifiedChanged(false);
       } finally {
         client.close();
+        if (context.mounted) {
+          await preferences.setString('onboarding.pendingProbe', '');
+        }
       }
     }
+
+    useEffect(() {
+      if (pendingProbe?.isNotEmpty == true) {
+        Future.microtask(() async {
+          if (!context.mounted) return;
+          urlController.text = pendingProbe!;
+          await testConnection();
+        });
+      }
+      return null;
+    }, const []);
 
     // "Search my network": scan the LAN for a Suwayomi server on :4567, fill
     // the field, then test it.
@@ -551,6 +643,7 @@ class _ServerStep extends HookConsumerWidget {
       } finally {
         client.close();
       }
+      if (!context.mounted) return;
       if (ok) {
         state.value = _TestState.connected;
         onVerifiedChanged(true);
@@ -714,6 +807,23 @@ class _ServerStep extends HookConsumerWidget {
             ),
             onSubmitted: (_) => signIn(),
           ),
+          if (showAccountCodes)
+            Wrap(
+              children: [
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => openCodeDialog(AccountCodeMode.registration),
+                  child: Text(context.l10n.accountRegistrationTitle),
+                ),
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => openCodeDialog(AccountCodeMode.recovery),
+                  child: Text(context.l10n.accountRecoveryTitle),
+                ),
+              ],
+            ),
           if (credsRejected.value) ...[
             const SizedBox(height: 8),
             _StatusRow(

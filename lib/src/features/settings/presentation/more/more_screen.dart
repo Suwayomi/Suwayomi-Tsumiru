@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/enum.dart';
 import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
 import '../../../../global_providers/global_providers.dart';
@@ -14,6 +15,8 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../account/data/account_providers.dart';
+import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
@@ -25,10 +28,11 @@ class MoreScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authType = ref.watch(authTypeKeyProvider);
+    final account = ref.watch(currentAccountProvider);
+    final showAccount = authType == AuthType.uiLogin;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.more),
-      ),
+      appBar: AppBar(title: Text(context.l10n.more)),
       body: ListView(
         children: [
           ImageIcon(
@@ -45,7 +49,9 @@ class MoreScreen extends ConsumerWidget {
               );
               final statusLabel = switch (connectionAuthStatus(
                 ref.watch(authTypeKeyProvider),
-                ref.watch(needsReauthProvider),
+                ref.watch(needsReauthProvider) ||
+                    ((authType ?? AuthType.none) != AuthType.none &&
+                        !ref.watch(hasStoredCredentialsProvider)),
               )) {
                 ConnectionAuthStatus.signedIn =>
                   context.l10n.connectionAuthSignedIn,
@@ -53,8 +59,9 @@ class MoreScreen extends ConsumerWidget {
                 ConnectionAuthStatus.signInNeeded =>
                   context.l10n.connectionAuthSignInNeeded,
               };
-              final subtitle =
-                  host.isEmpty ? statusLabel : '$host · $statusLabel';
+              final subtitle = host.isEmpty
+                  ? statusLabel
+                  : '$host · $statusLabel';
               return ListTile(
                 leading: const Icon(Icons.dns_rounded),
                 title: Text(context.l10n.connection),
@@ -71,6 +78,13 @@ class MoreScreen extends ConsumerWidget {
             onChanged: (value) =>
                 ref.read(incognitoModeProvider.notifier).set(value),
           ),
+          if (showAccount)
+            ListTile(
+              leading: const Icon(Icons.person_rounded),
+              title: Text(context.l10n.accountTitle),
+              subtitle: account == null ? null : Text(account.username),
+              onTap: () => const AccountRoute().push(context),
+            ),
           ListTile(
             title: Text(context.l10n.categories),
             leading: const Icon(Icons.label_rounded),

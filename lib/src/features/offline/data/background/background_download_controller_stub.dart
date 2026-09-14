@@ -22,6 +22,9 @@ class BackgroundDownloadController {
 
   void register() {}
   void dispose() {}
+  Future<void> detachStorage() async {}
+  Future<void> rebindStorage() async {}
+  String? get ownedStorageRoot => null;
   Future<void> ensureServiceRunning({bool force = false}) async {}
   Future<void> restartForEndpointChange() async {}
   Future<void> onEnqueued(List<int> chapterIds) async {}

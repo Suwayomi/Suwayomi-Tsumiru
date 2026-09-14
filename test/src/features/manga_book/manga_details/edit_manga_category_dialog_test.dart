@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
@@ -18,7 +19,8 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widge
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
-CategoryDto _cat({required int id, required String name}) => Fragment$CategoryDto(
+CategoryDto _cat({required int id, required String name}) =>
+    Fragment$CategoryDto(
       defaultCategory: false,
       id: id,
       includeInDownload: Enum$IncludeOrExclude.UNSET,
@@ -29,10 +31,8 @@ CategoryDto _cat({required int id, required String name}) => Fragment$CategoryDt
       meta: const [],
     );
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _RecordingMangaBookRepo extends MangaBookRepository {
   _RecordingMangaBookRepo({this.failAdd = false}) : super(_dummyClient());
@@ -42,8 +42,9 @@ class _RecordingMangaBookRepo extends MangaBookRepository {
   List<CategoryDto> current = <CategoryDto>[];
 
   @override
-  Future<List<CategoryDto>?> getMangaCategoryList({required int mangaId}) async =>
-      current;
+  Future<List<CategoryDto>?> getMangaCategoryList({
+    required int mangaId,
+  }) async => current;
 
   @override
   Future<void> addMangaToCategory(int mangaId, int categoryId) async {
@@ -61,60 +62,103 @@ class _FixedCategories extends CategoryController {
 }
 
 Widget _app(ProviderContainer container) => UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: EditMangaCategoryDialog(mangaId: 76)),
-      ),
-    );
+  container: container,
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const Scaffold(body: EditMangaCategoryDialog(mangaId: 76)),
+  ),
+);
+
+class _AccountCategories extends CategoryController {
+  @override
+  Future<List<CategoryDto>?> build() async => [
+    _cat(id: 81, name: 'Account default'),
+    _cat(id: 2, name: 'Auto add').copyWith(defaultCategory: true),
+  ];
+}
 
 void main() {
-  testWidgets(
-      'toggling a category persists via the repo and re-fetches the library',
-      (tester) async {
-    final repo = _RecordingMangaBookRepo();
-    var libraryBuilds = 0;
-    final container = ProviderContainer(overrides: [
-      mangaBookRepositoryProvider.overrideWithValue(repo),
-      categoryControllerProvider.overrideWith(() => _FixedCategories()),
-      libraryMangaListProvider.overrideWith((ref) async {
-        libraryBuilds++;
-        return const <MangaDto>[];
-      }),
-    ]);
+  testWidgets('nonzero default is excluded while auto-add stays assignable', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        defaultCategoryIdProvider.overrideWith((ref) async => 81),
+        mangaBookRepositoryProvider.overrideWithValue(
+          _RecordingMangaBookRepo(),
+        ),
+        categoryControllerProvider.overrideWith(_AccountCategories.new),
+      ],
+    );
     addTearDown(container.dispose);
-    // Keep the library source alive so an invalidation actually rebuilds it.
-    container.listen(libraryMangaListProvider, (_, _) {}, fireImmediately: true);
-
     await tester.pumpWidget(_app(container));
     await tester.pumpAndSettle();
-    expect(libraryBuilds, 1);
-
-    await tester.tap(find.text('Pornhwa'));
-    await tester.pumpAndSettle();
-
-    // The change persisted through the repo (the mutation actually ran)...
-    expect(repo.added, contains(2));
-    // ...and the library's single source list was invalidated + rebuilt, so
-    // the manga will show under the new category tab (the reported bug).
-    expect(libraryBuilds, 2);
+    expect(find.text('Account default'), findsNothing);
+    expect(find.text('Auto add'), findsOneWidget);
   });
 
-  testWidgets('a failed toggle reverts the checkbox and does not refetch',
-      (tester) async {
+  testWidgets(
+    'toggling a category persists via the repo and re-fetches the library',
+    (tester) async {
+      final repo = _RecordingMangaBookRepo();
+      var libraryBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          defaultCategoryIdProvider.overrideWith((ref) async => 0),
+          mangaBookRepositoryProvider.overrideWithValue(repo),
+          categoryControllerProvider.overrideWith(() => _FixedCategories()),
+          libraryMangaListProvider.overrideWith((ref) async {
+            libraryBuilds++;
+            return const <MangaDto>[];
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Keep the library source alive so an invalidation actually rebuilds it.
+      container.listen(
+        libraryMangaListProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+
+      await tester.pumpWidget(_app(container));
+      await tester.pumpAndSettle();
+      expect(libraryBuilds, 1);
+
+      await tester.tap(find.text('Pornhwa'));
+      await tester.pumpAndSettle();
+
+      // The change persisted through the repo (the mutation actually ran)...
+      expect(repo.added, contains(2));
+      // ...and the library's single source list was invalidated + rebuilt, so
+      // the manga will show under the new category tab (the reported bug).
+      expect(libraryBuilds, 2);
+    },
+  );
+
+  testWidgets('a failed toggle reverts the checkbox and does not refetch', (
+    tester,
+  ) async {
     final repo = _RecordingMangaBookRepo(failAdd: true);
     var libraryBuilds = 0;
-    final container = ProviderContainer(overrides: [
-      mangaBookRepositoryProvider.overrideWithValue(repo),
-      categoryControllerProvider.overrideWith(() => _FixedCategories()),
-      libraryMangaListProvider.overrideWith((ref) async {
-        libraryBuilds++;
-        return const <MangaDto>[];
-      }),
-    ]);
+    final container = ProviderContainer(
+      overrides: [
+        defaultCategoryIdProvider.overrideWith((ref) async => 0),
+        mangaBookRepositoryProvider.overrideWithValue(repo),
+        categoryControllerProvider.overrideWith(() => _FixedCategories()),
+        libraryMangaListProvider.overrideWith((ref) async {
+          libraryBuilds++;
+          return const <MangaDto>[];
+        }),
+      ],
+    );
     addTearDown(container.dispose);
-    container.listen(libraryMangaListProvider, (_, _) {}, fireImmediately: true);
+    container.listen(
+      libraryMangaListProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
 
     await tester.pumpWidget(_app(container));
     await tester.pumpAndSettle();

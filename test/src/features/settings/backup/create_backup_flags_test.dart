@@ -14,10 +14,17 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 import 'package:tsumiru/src/widgets/async_buttons/async_elevated_button.dart';
 
+import '../../../../helpers/legacy_account_access.dart';
+
 class _SpyBackupRepo extends BackupSettingsRepository {
   _SpyBackupRepo()
-      : super(GraphQLClient(link: HttpLink('http://localhost:0'),
-            cache: GraphQLCache()));
+    : super(
+        GraphQLClient(
+          link: HttpLink('http://localhost:0'),
+          cache: GraphQLCache(),
+        ),
+        permissions: legacyAccountPermissions,
+      );
 
   Map<String, bool>? captured;
 

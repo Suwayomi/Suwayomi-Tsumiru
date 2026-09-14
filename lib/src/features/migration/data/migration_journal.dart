@@ -63,25 +63,23 @@ class MigrationJournalEntry {
     MigrationPairState? state,
     List<int>? copiedSourceRecordIds,
     String? failureReason,
-  }) =>
-      MigrationJournalEntry(
-        fromMangaId: fromMangaId,
-        toMangaId: toMangaId,
-        state: state ?? this.state,
-        options: options,
-        copiedSourceRecordIds:
-            copiedSourceRecordIds ?? this.copiedSourceRecordIds,
-        failureReason: failureReason ?? this.failureReason,
-      );
+  }) => MigrationJournalEntry(
+    fromMangaId: fromMangaId,
+    toMangaId: toMangaId,
+    state: state ?? this.state,
+    options: options,
+    copiedSourceRecordIds: copiedSourceRecordIds ?? this.copiedSourceRecordIds,
+    failureReason: failureReason ?? this.failureReason,
+  );
 
   Map<String, dynamic> toJson() => {
-        'from': fromMangaId,
-        'to': toMangaId,
-        'state': state.name,
-        'opts': options.toJson(),
-        'recs': copiedSourceRecordIds,
-        if (failureReason != null) 'err': failureReason,
-      };
+    'from': fromMangaId,
+    'to': toMangaId,
+    'state': state.name,
+    'opts': options.toJson(),
+    'recs': copiedSourceRecordIds,
+    if (failureReason != null) 'err': failureReason,
+  };
 
   factory MigrationJournalEntry.fromJson(Map<String, dynamic> j) =>
       MigrationJournalEntry(
@@ -102,7 +100,16 @@ class MigrationJournalEntry {
 /// transition is cheap and atomic enough for crash-safety. Only ONE batch is
 /// journalled at a time.
 class MigrationJournal {
-  MigrationJournal(this._prefs);
+  MigrationJournal(this._prefs, {this.accountId}) {
+    if (accountId != null && accountId!.isEmpty) {
+      throw ArgumentError.value(accountId, 'accountId');
+    }
+  }
+
+  final String? accountId;
+  String get _prefsKey => accountId == null
+      ? prefsKey
+      : '$prefsKey:${Uri.encodeComponent(accountId!)}';
 
   final SharedPreferences _prefs;
   static const String prefsKey = 'bulk_migration_journal_v1';
@@ -112,7 +119,7 @@ class MigrationJournal {
   Map<int, MigrationJournalEntry> get _entries {
     final cache = _cache;
     if (cache != null) return cache;
-    final raw = _prefs.getString(prefsKey);
+    final raw = _prefs.getString(_prefsKey);
     final loaded = <int, MigrationJournalEntry>{};
     if (raw != null && raw.isNotEmpty) {
       try {
@@ -135,7 +142,7 @@ class MigrationJournal {
 
   Future<void> _flush() async {
     final list = _entries.values.map((e) => e.toJson()).toList();
-    await _prefs.setString(prefsKey, jsonEncode(list));
+    await _prefs.setString(_prefsKey, jsonEncode(list));
   }
 
   /// Write-ahead a transition: caller MUST await this before the corresponding
@@ -168,6 +175,6 @@ class MigrationJournal {
 
   Future<void> clear() async {
     _cache = {};
-    await _prefs.remove(prefsKey);
+    await _prefs.remove(_prefsKey);
   }
 }

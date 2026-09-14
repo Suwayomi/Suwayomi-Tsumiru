@@ -21,6 +21,7 @@ import '../constants/enum.dart';
 import '../constants/timeout_constants.dart';
 import '../features/auth/data/auth_coordinator.dart';
 import '../features/auth/data/auth_credentials_store.dart';
+import '../features/auth/data/auth_session_status.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/custom_headers_store.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
@@ -213,7 +214,9 @@ GraphQLClient graphQlClient(Ref ref) {
             .refreshUiAccessToken(gqlClient: rawClient);
       },
       onNeedsReauth: () {
-        ref.read(needsReauthProvider.notifier).set(true);
+        if (ref.read(hasStoredCredentialsProvider)) {
+          ref.read(needsReauthProvider.notifier).set(true);
+        }
       },
     );
     link = suwayomiAuthLink.concat(link);

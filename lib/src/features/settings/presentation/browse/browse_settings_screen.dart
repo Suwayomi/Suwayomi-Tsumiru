@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../account/data/account_providers.dart';
 import '../../../browse_center/data/extension_store_repository/extension_store_repository.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
@@ -23,6 +25,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
+    final canManage = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.MANAGE_SETTINGS);
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final BrowserSettingsDto? browseSettings = serverSettings.value;
@@ -42,41 +47,55 @@ class BrowseSettingsScreen extends ConsumerWidget {
               Row(
                 children: [
                   const Gap(16),
-                  const Icon(Icons.info_outline_rounded,
-                      color: Colors.grey, size: 18),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.grey,
+                    size: 18,
+                  ),
                   const Gap(10),
                   Expanded(
                     child: Text(
                       context.l10n.nsfwInfo,
-                      style: context.textTheme.bodySmall
-                          ?.copyWith(color: Colors.grey),
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                   const Gap(10),
                 ],
               ),
               const Divider(),
+              if (!canManage)
+                ListTile(
+                  subtitle: Text(context.l10n.manageSettingsPermissionRequired),
+                ),
               if (serverSettings.value != null) ...[
                 SettingsPropTile(
                   leading: const Icon(Icons.swap_vert_rounded),
                   title: context.l10n.parallelSourceRequest,
                   subtitle: context.l10n.nSources(
-                      (browseSettings?.maxSourcesInParallel).ifNull()),
+                    (browseSettings?.maxSourcesInParallel).ifNull(),
+                  ),
                   type: SettingsPropType.numberSlider(
                     min: 1,
                     max: 20,
                     value: browseSettings?.maxSourcesInParallel,
-                    onChanged: repository.updateSourceInParallel,
+                    onChanged: canManage
+                        ? repository.updateSourceInParallel
+                        : null,
                   ),
                 ),
                 SettingsPropTile(
                   leading: const Icon(Icons.folder_rounded),
                   title: context.l10n.localSourceLocation,
                   type: SettingsPropType.textField(
-                    hintText: context.l10n
-                        .enterProp(context.l10n.localSourceLocation),
+                    hintText: context.l10n.enterProp(
+                      context.l10n.localSourceLocation,
+                    ),
                     value: browseSettings?.localSourcePath,
-                    onChanged: repository.updateLocalSourcePath,
+                    onChanged: canManage
+                        ? repository.updateLocalSourcePath
+                        : null,
                   ),
                   description: context.l10n.localSourceLocationDescription,
                   subtitle: browseSettings?.localSourcePath,

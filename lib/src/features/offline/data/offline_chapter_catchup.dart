@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/db_keys.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/logger/logger.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../manga_book/data/downloads/downloads_repository.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../manga_book/data/updates/updates_repository.dart';
@@ -26,8 +27,10 @@ import 'background/catchup_work_spec.dart';
 import 'offline_awaiting_server_downloads.dart';
 import 'offline_background_downloads.dart';
 import 'offline_database.dart';
+import 'offline_download_permission.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
+import 'offline_runtime_storage.dart';
 import 'offline_types.dart';
 
 /// Closes the #310 gap: a library update told the SERVER to find new chapters,
@@ -40,6 +43,20 @@ import 'offline_types.dart';
 const _maxCatchUpPages = 3;
 
 bool _running = false;
+final _subscriptions = <ProviderSubscription<Object?>>[];
+
+void detachChapterCatchUp() {
+  for (final subscription in _subscriptions) {
+    subscription.close();
+  }
+  _subscriptions.clear();
+}
+
+void resetChapterCatchUp() {
+  if (_running) throw StateError('Chapter catch-up is still running');
+  _drainMissedDuringPass = false;
+  awaitingServerDownloads.clear();
+}
 
 /// Set by the [downloadsMapProvider] drain listener when a drain event fires
 /// while a catch-up pass holds [_running]. Rather than dropping the event, we
@@ -80,12 +97,19 @@ void simulateQueueDrainForTest(ProviderContainer container) {
 
 /// Called once from app bootstrap, after the offline engine is up.
 void initChapterCatchUp(ProviderContainer container) {
+  detachChapterCatchUp();
+  resetChapterCatchUp();
   // Restore the second-hop obligations — the watermark has already moved past
   // these manga, so losing the set to a restart would strand their pulls.
   awaitingServerDownloads.addAll(
     container
             .read(sharedPreferencesProvider)
-            .getStringList(DBKeys.offlineCatchUpAwaitingPull.name)
+            .getStringList(
+              offlinePreferenceKey(
+                container.read,
+                DBKeys.offlineCatchUpAwaitingPull,
+              ),
+            )
             ?.map(int.tryParse)
             .whereType<int>() ??
         const [],
@@ -94,18 +118,25 @@ void initChapterCatchUp(ProviderContainer container) {
   // server-side get pulled by the foreground machinery now instead of waiting
   // for the next background wake. Exhausted retries hand off the same way —
   // foreground reconcile owns surfacing stuck downloads.
-  unawaited(_adoptWorkerObligations(container));
+  unawaited(adoptWorkerObligations(container.read));
   // A finished server update run is the moment new chapters exist to pull.
-  container.listen(updateRunningSocketProvider, (previous, next) {
+  final updateSubscription = container.listen(updateRunningSocketProvider, (
+    previous,
+    next,
+  ) {
     final wasRunning = previous?.value ?? false;
     final isRunning = next.value ?? wasRunning;
     if (wasRunning && !isRunning) {
       unawaited(runKeepRuleCatchUp(container));
     }
   });
+  _subscriptions.add(updateSubscription);
   // The server's download queue draining is the moment chapters queued by a
   // catch-up reconcile become pullable to the device.
-  container.listen(downloadsMapProvider, (previous, next) {
+  final downloadSubscription = container.listen(downloadsMapProvider, (
+    previous,
+    next,
+  ) {
     if ((previous?.isNotEmpty ?? false) && next.isEmpty) {
       if (_running) {
         // A catch-up pass is in flight — defer rather than drop. The pass's
@@ -116,6 +147,7 @@ void initChapterCatchUp(ProviderContainer container) {
       }
     }
   });
+  _subscriptions.add(downloadSubscription);
   // Catch anything the server found while the app was closed.
   unawaited(runKeepRuleCatchUp(container));
 }
@@ -123,39 +155,168 @@ void initChapterCatchUp(ProviderContainer container) {
 /// Read-modify-write on the worker's ledger, so it runs under the download
 /// lock (a live worker run means skip — next launch retries) and against a
 /// freshly reloaded prefs cache, never this isolate's stale snapshot.
-Future<void> _adoptWorkerObligations(ProviderContainer container) async {
-  try {
-    final catalogServerId = container
-        .read(sharedPreferencesProvider)
-        .getString(DBKeys.offlineCatalogServerId.name);
-    if (catalogServerId == null) return;
-    final catchupStore = await CatchupStateStore.open();
-    final ledger = catchupStore.readLedger(catalogServerId);
-    if (ledger.pendingServerFetch.isEmpty) return;
+Future<bool> adoptWorkerObligations(OfflineRead read) => read(
+  offlineRuntimeStorageProvider.notifier,
+).track(() => _runWorkerObligations(read));
 
-    final paths = container.read(offlinePathsProvider);
-    final lock = BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
-    if (!await lock.acquire('handoff')) return;
+Future<bool> _runWorkerObligations(OfflineRead read) async {
+  final current = read(authCredentialsStoreProvider.notifier).captureSession();
+  if (!current() || !downloadPermissionAllowed(read)) return false;
+  try {
+    final catalogServerId = read(
+      sharedPreferencesProvider,
+    ).getString(DBKeys.offlineCatalogServerId.name);
+    if (catalogServerId == null) return true;
+    final paths = read(offlinePathsProvider);
+    final catchupStore = await CatchupStateStore.open();
+    if (!current()) return false;
+    final ledger = catchupStore.readLedger(catalogServerId);
+    if (ledger.pendingServerFetch.isEmpty &&
+        ledger.pendingDownloads.isEmpty &&
+        ledger.queuedServerRetries.isEmpty &&
+        ledger.queuedDownloadRetries.isEmpty) {
+      return true;
+    }
+
+    final alreadyOwned =
+        read(backgroundDownloadControllerProvider).ownedStorageRoot ==
+        paths.baseDir;
+    final lock = alreadyOwned
+        ? null
+        : BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
+    if (lock != null && !await lock.acquire('handoff')) return false;
     try {
       // Re-open INSIDE the lock: open() reloads the prefs cache, so the read
       // below cannot predate a worker write that slipped in before acquire.
       final lockedStore = await CatchupStateStore.open();
+      if (!current()) return false;
       final fresh = lockedStore.readLedger(catalogServerId);
-      if (fresh.pendingServerFetch.isEmpty) return;
+      if (fresh.pendingServerFetch.isEmpty &&
+          fresh.pendingDownloads.isEmpty &&
+          fresh.queuedServerRetries.isEmpty &&
+          fresh.queuedDownloadRetries.isEmpty) {
+        return true;
+      }
       awaitingServerDownloads.addAll(fresh.pendingServerFetch.values);
-      await persistAwaitingServerDownloads(container.read);
+      await persistAwaitingServerDownloads(read);
+      if (!current()) return false;
+      final pending = {...fresh.pendingServerFetch};
+      final retries = {...fresh.serverFetchRetries};
+      final generations = {...fresh.chapterGenerations};
+      final devicePending = {...fresh.pendingDownloads};
+      final deviceRetries = {...fresh.downloadRetries};
+      final queuedServerRetries = {...fresh.queuedServerRetries};
+      final queuedDownloadRetries = {...fresh.queuedDownloadRetries};
+      final db = read(offlineDatabaseProvider);
+      await db.transaction(() async {
+        for (final entry in fresh.pendingDownloads.entries) {
+          if ((deviceRetries[entry.key] ?? 0) < catchupMaxChapterAttempts) {
+            continue;
+          }
+          if (!current()) throw StateError('Authentication session changed');
+          final chapter = await db.chapterById(entry.key);
+          if (chapter == null) continue;
+          if (chapter.mangaId == entry.value &&
+              chapter.downloadGeneration ==
+                  (fresh.chapterGenerations[entry.key] ?? 0) &&
+              chapter.deviceState != OfflineDeviceState.downloaded) {
+            await db.setChapterDeviceState(entry.key, OfflineDeviceState.error);
+          }
+          devicePending.remove(entry.key);
+          deviceRetries.remove(entry.key);
+          if (!pending.containsKey(entry.key) &&
+              !retries.containsKey(entry.key)) {
+            generations.remove(entry.key);
+          }
+        }
+        for (final entry in {
+          ...fresh.pendingServerFetch,
+          for (final entry in fresh.pendingDownloads.entries)
+            if (fresh.serverFetchRetries.containsKey(entry.key))
+              entry.key: entry.value,
+        }.entries) {
+          if (!current()) throw StateError('Authentication session changed');
+          final chapter = await db.chapterById(entry.key);
+          if (chapter == null) continue;
+          if (chapter.mangaId == entry.value &&
+              chapter.downloadGeneration ==
+                  (fresh.chapterGenerations[entry.key] ?? 0) &&
+              chapter.deviceState != OfflineDeviceState.downloaded) {
+            final spent = retries[entry.key] ?? 0;
+            for (
+              var count = chapter.serverFetchAttempts;
+              count < spent;
+              count++
+            ) {
+              await db.incrementServerFetchAttempts(entry.key);
+            }
+          }
+          pending.remove(entry.key);
+          retries.remove(entry.key);
+          if (!devicePending.containsKey(entry.key) &&
+              !deviceRetries.containsKey(entry.key)) {
+            generations.remove(entry.key);
+          }
+        }
+        for (final key in {
+          ...fresh.queuedServerRetries.keys,
+          ...fresh.queuedDownloadRetries.keys,
+        }) {
+          if (!current()) throw StateError('Authentication session changed');
+          final parts = key.split(':');
+          if (parts.length != 2) continue;
+          final chapterId = int.tryParse(parts[0]);
+          final generation = int.tryParse(parts[1]);
+          if (chapterId == null || generation == null) continue;
+          final chapter = await db.chapterById(chapterId);
+          if (chapter == null) continue;
+          if (!current()) throw StateError('Authentication session changed');
+          final ownsChapter =
+              chapter.downloadGeneration == generation &&
+              chapter.deviceState != OfflineDeviceState.downloaded;
+          final spent = queuedServerRetries[key] ?? 0;
+          if (ownsChapter) {
+            for (
+              var count = chapter.serverFetchAttempts;
+              count < spent;
+              count++
+            ) {
+              await db.incrementServerFetchAttempts(chapterId);
+            }
+          }
+          queuedServerRetries.remove(key);
+          if ((queuedDownloadRetries[key] ?? 0) >= catchupMaxChapterAttempts) {
+            if (ownsChapter) {
+              await db.setChapterDeviceState(
+                chapterId,
+                OfflineDeviceState.error,
+              );
+            }
+            queuedDownloadRetries.remove(key);
+          }
+        }
+      });
+      if (!current()) return false;
+      if (!await writeCatchupWorkSpec(read) || !current()) return false;
       await lockedStore.writeLedger(
         catalogServerId,
         fresh.copyWith(
-          pendingServerFetch: const {},
-          serverFetchRetries: const {},
+          chapterGenerations: generations,
+          pendingDownloads: devicePending,
+          downloadRetries: deviceRetries,
+          pendingServerFetch: pending,
+          serverFetchRetries: retries,
+          queuedServerRetries: queuedServerRetries,
+          queuedDownloadRetries: queuedDownloadRetries,
         ),
       );
     } finally {
-      await lock.release();
+      await lock?.release();
     }
+    return true;
   } catch (e) {
     logger.w('Offline: adopting worker obligations failed: $e');
+    return false;
   }
 }
 
@@ -163,9 +324,17 @@ Future<void> _adoptWorkerObligations(ProviderContainer container) async {
 /// chapters are newer than the watermark and will be picked up by the next
 /// pass. A server-download drain event landing mid-pass is instead deferred
 /// via [_drainMissedDuringPass] and replayed at the tail of the current pass.
-Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
+Future<void> runKeepRuleCatchUp(ProviderContainer container) => container
+    .read(offlineRuntimeStorageProvider.notifier)
+    .track(() => _runRunKeepRuleCatchUp(container));
+
+Future<void> _runRunKeepRuleCatchUp(ProviderContainer container) async {
+  final current = container
+      .read(authCredentialsStoreProvider.notifier)
+      .captureSession();
+  if (!current() || !downloadPermissionAllowed(container.read)) return;
   if (_running) return;
-  if (!container.read(offlineActiveProvider)) return;
+  if (!container.read(offlineServerAccessProvider)) return;
   _running = true;
   try {
     final keepRuleManga = {
@@ -173,19 +342,25 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
           in await container.read(offlineDatabaseProvider).libraryManga())
         if (m.keepRule != OfflineKeepRule.off) m.id,
     };
+    if (!current()) return;
     if (keepRuleManga.isEmpty) {
-      if (_drainMissedDuringPass) {
+      if (current() && _drainMissedDuringPass) {
         _drainMissedDuringPass = false;
-        await _pullAwaiting(container);
+        await _pullAwaiting(container, current);
       }
       return;
     }
 
     final prefs = container.read(sharedPreferencesProvider);
-    final watermark = prefs.getInt(DBKeys.offlineCatchUpWatermark.name) ?? 0;
+    final watermark =
+        prefs.getInt(
+          offlinePreferenceKey(container.read, DBKeys.offlineCatchUpWatermark),
+        ) ??
+        0;
 
     final scan = await touchedSinceWatermark(
       fetchPage: (pageNo) async {
+        if (!current()) return null;
         final page = await container
             .read(updatesRepositoryProvider)
             .getRecentChaptersPage(pageNo: pageNo);
@@ -201,6 +376,7 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
     );
     // Didn't reach the watermark (or this is the first pass, with none yet)?
     // Fall back to every keep-rule manga instead of skipping the tail.
+    if (!current()) return;
     final feedTouched = scan.sawWatermark ? scan.touched : keepRuleManga;
     // Also include manga still awaiting a server-side download. Their
     // serverIsDownloaded flag can flip without generating a new feed entry
@@ -210,35 +386,33 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
       ...feedTouched,
       ...awaitingServerDownloads.where(keepRuleManga.contains),
     };
-    final allSynced = await _syncAndReconcile(container, touched);
+    final allSynced = await _syncAndReconcile(container, touched, current);
 
     // Only a fully-processed pass may advance the watermark — a skipped manga
     // must stay newer than it so the next pass retries. syncChapters is
     // idempotent, so re-processing the rest is just cheap.
+    if (!current()) return;
     if (allSynced && scan.newestFetchedAt > watermark) {
       await prefs.setInt(
-        DBKeys.offlineCatchUpWatermark.name,
+        offlinePreferenceKey(container.read, DBKeys.offlineCatchUpWatermark),
         scan.newestFetchedAt,
       );
     }
+    if (!current()) return;
     if (touched.isNotEmpty) {
       await container.read(downloadStarterProvider)();
     }
-    // Manga still waiting on server-side downloads get retried here too — the
-    // queue-drain edge alone can be missed when downloads finish faster than
-    // the subscription reports them. Skipping the ones this pass just
-    // reconciled: their chapters were enqueued moments ago, so a second
-    // reconcile can only re-ask the server for the same chapters (#413).
-    await _pullAwaiting(container, skip: touched);
+    await _pullAwaiting(container, current, skip: touched);
     // If a drain event arrived while this pass was in flight, the listener
     // deferred it instead of dropping it. Re-run the pull now so chapters that
     // became serverIsDownloaded during the pass are not stranded until the next
     // update cycle.
-    if (_drainMissedDuringPass) {
+    if (current() && _drainMissedDuringPass) {
       _drainMissedDuringPass = false;
-      await _pullAwaiting(container);
+      await _pullAwaiting(container, current);
     }
     // Freshest device-state snapshot for the background worker.
+    if (!current()) return;
     await writeCatchupWorkSpec(container.read);
   } catch (e) {
     logger.w('Offline: chapter catch-up pass failed: $e');
@@ -252,42 +426,52 @@ Future<void> runKeepRuleCatchUp(ProviderContainer container) async {
 /// the device copies get pulled. Single-flight with the catch-up pass; a drain
 /// event landing mid-pass sets [_drainMissedDuringPass] instead of being
 /// dropped, and is replayed at the pass's tail.
-Future<void> pullAfterServerDownloads(ProviderContainer container) async {
+Future<void> pullAfterServerDownloads(ProviderContainer container) => container
+    .read(offlineRuntimeStorageProvider.notifier)
+    .track(() => _runPullAfterServerDownloads(container));
+
+Future<void> _runPullAfterServerDownloads(ProviderContainer container) async {
+  final current = container
+      .read(authCredentialsStoreProvider.notifier)
+      .captureSession();
+  if (!current() || !downloadPermissionAllowed(container.read)) return;
   if (_running) return;
   _running = true;
   try {
-    await _pullAwaiting(container);
-    if (_drainMissedDuringPass) {
+    await _pullAwaiting(container, current);
+    if (current() && _drainMissedDuringPass) {
       _drainMissedDuringPass = false;
-      await _pullAwaiting(container);
+      await _pullAwaiting(container, current);
     }
   } finally {
     _running = false;
   }
 }
 
-/// [skip] holds manga already reconciled by the caller in this same pass.
-/// They keep their obligation for the next drain edge or pass; what they must
-/// not get is a second reconcile moments after the first.
 Future<void> _pullAwaiting(
-  ProviderContainer container, {
+  ProviderContainer container,
+  bool Function() current, {
   Set<int> skip = const {},
 }) async {
+  if (!current() || !downloadPermissionAllowed(container.read)) return;
   if (awaitingServerDownloads.isEmpty) return;
-  if (!container.read(offlineActiveProvider)) return;
+  if (!container.read(offlineServerAccessProvider)) return;
   var pulled = false;
   // One obligation at a time, persisted after each: a crash mid-loop keeps
   // the unprocessed rest, and a batch clear would lose them.
   for (final mangaId in {...awaitingServerDownloads}) {
+    if (!current() || !downloadPermissionAllowed(container.read)) return;
     if (skip.contains(mangaId)) continue;
     pulled = true;
     awaitingServerDownloads.remove(mangaId);
     // The reconcile may re-add this manga (a NEW server enqueue) — that is a
     // fresh obligation, not the one being consumed, so it must survive.
-    final ok = await _syncAndReconcile(container, {mangaId});
+    final ok = await _syncAndReconcile(container, {mangaId}, current);
+    if (!current()) return;
     if (!ok) awaitingServerDownloads.add(mangaId);
     await persistAwaitingServerDownloads(container.read);
   }
+  if (!current()) return;
   if (pulled) await container.read(downloadStarterProvider)();
 }
 
@@ -336,20 +520,31 @@ touchedSinceWatermark({
 Future<bool> _syncAndReconcile(
   ProviderContainer container,
   Set<int> mangaIds,
+  bool Function() current,
 ) async {
   var allSynced = true;
   for (final mangaId in mangaIds) {
+    if (!current()) return false;
     try {
+      final sync = container.read(offlineSyncProvider);
       final chapters = await container
           .read(mangaBookRepositoryProvider)
           .getStoredChapterList(mangaId);
-      final sync = container.read(offlineSyncProvider);
+      if (!current()) return false;
       if (chapters == null || sync == null) {
         allSynced = false;
         continue;
       }
       final newlyRead = await sync.syncChapters(chapters);
-      if (!await _reconcileTracked(container, mangaId, newlyReadChapterIds: newlyRead)) allSynced = false;
+      if (!current()) return false;
+      if (!await _reconcileTracked(
+        container,
+        mangaId,
+        current,
+        newlyReadChapterIds: newlyRead,
+      )) {
+        allSynced = false;
+      }
     } catch (e) {
       // Never reconcile on a failed fetch — evictions must not run against a
       // list the server didn't actually give us.
@@ -366,46 +561,64 @@ Future<bool> _syncAndReconcile(
 /// so the pass won't advance the watermark past an unqueued chapter.
 Future<bool> _reconcileTracked(
   ProviderContainer container,
-  int mangaId, {
+  int mangaId,
+  bool Function() current, {
   Set<int> newlyReadChapterIds = const {},
 }) async {
+  if (!current() || !downloadPermissionAllowed(container.read)) return false;
   final manager = container.read(offlineDownloadManagerProvider);
   final coordinator = container.read(offlineDownloadCoordinatorProvider);
   if (manager == null || coordinator == null) return false;
-  var enqueueFailed = false;
-  await reconcileMangaCore(
-    db: container.read(offlineDatabaseProvider),
-    repo: container.read(offlineRepositoryProvider),
-    manager: manager,
-    coordinator: coordinator,
-    nets: container.read(safetyNetConfigProvider),
-    mangaId: mangaId,
-    sessionProtected: container.read(sessionReadChaptersProvider),
-    deleteWhileReadingSlots: container
-        .read(localDeleteSettingsProvider)
-        .deleteWhileReading,
-    newlyReadChapterIds: newlyReadChapterIds,
-    downloadProtectionWindow:
-        container.read(localDownloadProtectionWindowProvider) ?? false,
-    enqueueServerDownload: (ids) async {
-      try {
-        await container
-            .read(downloadsRepositoryProvider)
-            .addChaptersBatchToDownloadQueue(ids);
-        // Recorded only on success: a failed enqueue produces no queue
-        // activity, so no drain edge would ever retry the waiting entry.
-        awaitingServerDownloads.add(mangaId);
-      } catch (_) {
-        enqueueFailed = true;
-        rethrow;
-      }
-    },
-    removeFromWorker: (id, gen) async {
-      final ctrl = container.read(backgroundDownloadControllerProvider);
-      await ctrl.onRemoved(id);
-      await ctrl.recordChapterDeleted(id, gen);
+  return container.read(backgroundDownloadControllerProvider).withOwnership(
+    () async {
+      if (!current()) return false;
+      if (!await adoptWorkerObligations(container.read)) return false;
+      var enqueueFailed = false;
+      await reconcileMangaCore(
+        verifyPermission: () => verifyDownloadPermission(container.read),
+        onPermissionDenied: () async {
+          if (current()) await pauseDownloadsForPermission(container.read);
+        },
+        isCurrent: current,
+        db: container.read(offlineDatabaseProvider),
+        repo: container.read(offlineRepositoryProvider),
+        manager: manager,
+        coordinator: coordinator,
+        nets: container.read(safetyNetConfigProvider),
+        mangaId: mangaId,
+        sessionProtected: container.read(sessionReadChaptersProvider),
+        deleteWhileReadingSlots: container
+            .read(localDeleteSettingsProvider)
+            .deleteWhileReading,
+        newlyReadChapterIds: newlyReadChapterIds,
+        downloadProtectionWindow:
+            container.read(localDownloadProtectionWindowProvider) ?? false,
+        enqueueServerDownload: (ids) async {
+          if (!current()) throw StateError('Authentication session changed');
+          try {
+            await container
+                .read(downloadsRepositoryProvider)
+                .addChaptersBatchToDownloadQueue(ids);
+            // Recorded only on success: a failed enqueue produces no queue
+            // activity, so no drain edge would ever retry the waiting entry.
+            if (!current()) throw StateError('Authentication session changed');
+            awaitingServerDownloads.add(mangaId);
+          } catch (_) {
+            enqueueFailed = true;
+            rethrow;
+          }
+        },
+        removeFromWorker: (id, gen) async {
+          if (!current()) throw StateError('Authentication session changed');
+          final ctrl = container.read(backgroundDownloadControllerProvider);
+          await ctrl.onRemoved(id);
+          if (!current()) throw StateError('Authentication session changed');
+          await ctrl.recordChapterDeleted(id, gen);
+        },
+      );
+      if (!current()) return false;
+      await persistAwaitingServerDownloads(container.read);
+      return current() && !enqueueFailed;
     },
   );
-  await persistAwaitingServerDownloads(container.read);
-  return !enqueueFailed;
 }

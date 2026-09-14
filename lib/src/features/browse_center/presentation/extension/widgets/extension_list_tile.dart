@@ -9,25 +9,25 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/server_image.dart';
+import '../../../../account/data/account_providers.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../controller/extension_actions.dart';
 
 class ExtensionListTile extends HookConsumerWidget {
-  const ExtensionListTile({
-    super.key,
-    required this.extension,
-  });
+  const ExtensionListTile({super.key, required this.extension});
 
   final Extension extension;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final runningAction = useState<String?>(null);
+    final access = ref.watch(settledAccountAccessProvider);
     return ListTile(
       key: key,
       leading: ClipRRect(
@@ -39,15 +39,21 @@ class ExtensionListTile extends HookConsumerWidget {
           isLoading: runningAction.value != null,
         ),
       ),
-      title: Text(
-        extension.name,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(extension.name, overflow: TextOverflow.ellipsis),
       subtitle: Text.rich(
         TextSpan(
           text: "${extension.language?.displayName} ",
           style: const TextStyle(fontWeight: FontWeight.bold),
           children: [
+            if (!access.allows(
+              extension.isInstalled.ifNull()
+                  ? Enum$UserPermission.UNINSTALL_EXTENSIONS
+                  : Enum$UserPermission.INSTALL_EXTENSIONS,
+            ))
+              TextSpan(
+                text: '${context.l10n.accountPermissionDenied} ',
+                style: const TextStyle(fontWeight: FontWeight.normal),
+              ),
             if (extension.versionName.isNotBlank)
               TextSpan(
                 text: "${extension.versionName} ",
@@ -109,14 +115,20 @@ class ExtensionListTileTailing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final access = ref.watch(settledAccountAccessProvider);
+    final canInstall = access.allows(Enum$UserPermission.INSTALL_EXTENSIONS);
+    final canUninstall = access.allows(
+      Enum$UserPermission.UNINSTALL_EXTENSIONS,
+    );
     final running = runningAction.value;
     if (extension.isObsolete.ifNull()) {
       return OutlinedButton(
-        onPressed: extension.isInstalled.ifNull() && running == null
+        onPressed:
+            extension.isInstalled.ifNull() && canUninstall && running == null
             ? () => _run(
-                  context.l10n.uninstalling,
-                  (actions) => actions.uninstall(extension.pkgName),
-                )
+                context.l10n.uninstalling,
+                (actions) => actions.uninstall(extension.pkgName),
+              )
             : null,
         child: Text(
           context.l10n.obsolete,
@@ -126,16 +138,16 @@ class ExtensionListTileTailing extends StatelessWidget {
     }
     if (!extension.isInstalled.ifNull()) {
       return TextButton(
-        onPressed: running == null
+        onPressed: canInstall && running == null
             ? () => _run(context.l10n.installing, (actions) async {
-                  if (extension.pkgName.isBlank) {
-                    throw context.l10n.errorExtension;
-                  }
-                  await actions.install(
-                    extension.pkgName,
-                    languageCode: extension.language?.code,
-                  );
-                })
+                if (extension.pkgName.isBlank) {
+                  throw context.l10n.errorExtension;
+                }
+                await actions.install(
+                  extension.pkgName,
+                  languageCode: extension.language?.code,
+                );
+              })
             : null,
         child: Text(running ?? context.l10n.install),
       );
@@ -145,22 +157,20 @@ class ExtensionListTileTailing extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         TextButton(
-          onPressed: running == null
+          onPressed: (hasUpdate || canUninstall) && running == null
               ? () => _run(
-                    hasUpdate
-                        ? context.l10n.updating
-                        : context.l10n.uninstalling,
-                    (actions) async {
-                      if (extension.pkgName.isBlank) {
-                        throw context.l10n.errorExtension;
-                      }
-                      if (hasUpdate) {
-                        await actions.update(extension.pkgName);
-                      } else {
-                        await actions.uninstall(extension.pkgName);
-                      }
-                    },
-                  )
+                  hasUpdate ? context.l10n.updating : context.l10n.uninstalling,
+                  (actions) async {
+                    if (extension.pkgName.isBlank) {
+                      throw context.l10n.errorExtension;
+                    }
+                    if (hasUpdate) {
+                      await actions.update(extension.pkgName);
+                    } else {
+                      await actions.uninstall(extension.pkgName);
+                    }
+                  },
+                )
               : null,
           child: Text(
             running ??
@@ -170,10 +180,11 @@ class ExtensionListTileTailing extends StatelessWidget {
         // A third control squeezes the extension name off a phone screen.
         if (hasUpdate)
           PopupMenuButton<VoidCallback>(
-            enabled: running == null,
+            enabled: canUninstall && running == null,
             onSelected: (selected) => selected(),
             itemBuilder: (context) => [
               PopupMenuItem(
+                enabled: canInstall && canUninstall,
                 value: _reinstall(context),
                 child: Text(context.l10n.reinstall),
               ),
@@ -188,16 +199,21 @@ class ExtensionListTileTailing extends StatelessWidget {
           )
         else
           IconButton(
-            tooltip: context.l10n.reinstall,
+            tooltip: canInstall && canUninstall
+                ? context.l10n.reinstall
+                : context.l10n.accountPermissionDenied,
             icon: const Icon(Icons.restart_alt_rounded),
-            onPressed: running == null ? _reinstall(context) : null,
+            onPressed: canInstall && canUninstall && running == null
+                ? _reinstall(context)
+                : null,
           ),
       ],
     );
   }
 
   /// Repairs an extension with no loaded sources or a phantom update (#428).
-  VoidCallback _reinstall(BuildContext context) => () => _run(
+  VoidCallback _reinstall(BuildContext context) =>
+      () => _run(
         context.l10n.reinstalling,
         (actions) => actions.reinstall(
           extension.pkgName,

@@ -13,6 +13,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../manga_book/data/manga_book/manga_book_repository.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../data/default_category.dart';
 import '../../category/controller/edit_category_controller.dart';
 import '../controller/library_manga_list.dart';
 
@@ -21,16 +22,17 @@ import '../controller/library_manga_list.dart';
 /// none are, dash = some are (mixed). Tapping resolves toward "add all"; only
 /// categories the user actually changes are written, so a mixed category left
 /// untouched keeps each series' membership. Applied in one bulk request.
+
 class EditMangasCategoryDialog extends HookConsumerWidget {
   const EditMangasCategoryDialog({super.key, required this.mangas});
   final List<MangaDto> mangas;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories =
-        (ref.watch(categoryControllerProvider).value ?? const [])
-            .where((c) => c.id != 0)
-            .toList();
+    final defaultId = ref.watch(settledDefaultCategoryIdProvider);
+    final categories = (ref.watch(categoryControllerProvider).value ?? const [])
+        .where((c) => defaultId != null && c.id != defaultId)
+        .toList();
 
     // Initial tri-state per category, from the selection's current membership.
     final memberIds = [
@@ -38,8 +40,7 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
     ];
     final initial = useMemoized<Map<int, bool?>>(
       () => {
-        for (final c in categories)
-          c.id: categoryMembership(memberIds, c.id),
+        for (final c in categories) c.id: categoryMembership(memberIds, c.id),
       },
       [categories.map((c) => c.id).join(','), mangas.length],
     );
@@ -69,7 +70,9 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
       }
       final toast = ref.read(toastProvider);
       try {
-        await ref.read(mangaBookRepositoryProvider).updateMangasCategories(
+        await ref
+            .read(mangaBookRepositoryProvider)
+            .updateMangasCategories(
               [for (final m in mangas) m.id],
               addTo: addTo,
               removeFrom: removeFrom,
@@ -88,10 +91,7 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(context.l10n.editCategory),
-          Text(
-            '${mangas.length} series',
-            style: context.textTheme.bodySmall,
-          ),
+          Text('${mangas.length} series', style: context.textTheme.bodySmall),
         ],
       ),
       contentPadding: KEdgeInsets.h8v16.size,
@@ -142,8 +142,9 @@ class EditMangasCategoryDialog extends HookConsumerWidget {
 /// category ids: all series in it → true, none → false, some → null (mixed).
 bool? categoryMembership(List<Set<int>> perMangaCategoryIds, int categoryId) {
   if (perMangaCategoryIds.isEmpty) return false;
-  final inCount =
-      perMangaCategoryIds.where((ids) => ids.contains(categoryId)).length;
+  final inCount = perMangaCategoryIds
+      .where((ids) => ids.contains(categoryId))
+      .length;
   if (inCount == 0) return false;
   if (inCount == perMangaCategoryIds.length) return true;
   return null;

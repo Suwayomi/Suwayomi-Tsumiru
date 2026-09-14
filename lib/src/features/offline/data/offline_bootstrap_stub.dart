@@ -11,4 +11,11 @@ import 'offline_paths.dart';
 /// Web stub: offline storage is disabled on web (no bulk file storage), so the
 /// providers are never overridden and the offline UI stays hidden.
 Future<({OfflineDatabase db, OfflinePaths paths, OfflinePageStore store})?>
-    openOfflineStorage() async => null;
+openOfflineStorage({
+  String? accountId,
+  String? legacyInstanceId,
+  String? ownedRoot,
+  String? accountOwner,
+}) async => null;
+
+Future<bool> accountStorageWasCleared(OfflinePaths paths) async => false;

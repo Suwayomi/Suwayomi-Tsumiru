@@ -4,10 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_reconciler.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import '../../../../helpers/offline_test_db.dart';
 
 void main() {
@@ -15,7 +19,9 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  Future<void> seedChapter(int id, int idx, {
+  Future<void> seedChapter(
+    int id,
+    int idx, {
     bool read = false,
     bool serverDl = true,
     OfflineDeviceState dev = OfflineDeviceState.none,
@@ -24,44 +30,201 @@ void main() {
     bool pinned = false,
   }) async {
     await db.upsertChapterMetadata(
-      id: id, mangaId: 1, name: 'c$id', chapterIndex: idx, isRead: read,
-      lastPageRead: 0, isBookmarked: false, serverIsDownloaded: serverDl,
-      pageCount: 1, updatedAt: DateTime(2026));
+      id: id,
+      mangaId: 1,
+      name: 'c$id',
+      chapterIndex: idx,
+      isRead: read,
+      lastPageRead: 0,
+      isBookmarked: false,
+      serverIsDownloaded: serverDl,
+      pageCount: 1,
+      updatedAt: DateTime(2026),
+    );
     if (dev != OfflineDeviceState.none) {
-      await db.setChapterDeviceState(id, dev,
-          bytes: bytes, downloadedAt: downloadedAt ?? DateTime(2026, 1, 1));
+      await db.setChapterDeviceState(
+        id,
+        dev,
+        bytes: bytes,
+        downloadedAt: downloadedAt ?? DateTime(2026, 1, 1),
+      );
     }
     if (pinned) await db.setChapterPinned(id, true);
   }
 
   // ── base brief tests ────────────────────────────────────────────────────────
 
-  test('downloads desired-but-missing on-server chapters; skips not-on-server', () async {
+  test(
+    'downloads desired-but-missing on-server chapters; skips not-on-server',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
+      await seedChapter(1, 1, read: false, serverDl: true);
+      await seedChapter(2, 2, read: false, serverDl: false); // unsatisfiable
+      final downloaded = <int>[];
+      final evicted = <int>[];
+      final r = await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async => downloaded.add(id),
+        onEvict: (id) async => evicted.add(id),
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
+      expect(downloaded, [1]); // ch1 desired + on server
+      expect(evicted, isEmpty);
+      expect(r.toDownload, {1});
+    },
+  );
+
+  test(
+    'exhausted server retries fail the pending generation and preserve completed copies',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await seedChapter(1, 1, serverDl: false);
+      await seedChapter(
+        2,
+        2,
+        serverDl: false,
+        dev: OfflineDeviceState.downloaded,
+      );
+      await db.bumpChapterGeneration(1);
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await db.incrementServerFetchAttempts(1);
+        await db.incrementServerFetchAttempts(2);
+      }
+      final before = (await db.chapterById(1))!;
+      final server = <int>{};
+      final device = <int>[];
+      await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async => device.add(id),
+        onEvict: (_) async {},
+        now: DateTime(2026),
+        onServerDownload: (ids) async => server.addAll(ids),
+      ).reconcileManga(1);
+      final failed = (await db.chapterById(1))!;
+      expect(failed.deviceState, OfflineDeviceState.error);
+      expect(failed.downloadGeneration, before.downloadGeneration);
+      expect(failed.serverFetchAttempts, 5);
+      expect(
+        (await db.chapterById(2))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
+      expect(server, isEmpty);
+      expect(device, isEmpty);
+    },
+  );
+
+  test(
+    'late accepted server response cannot spend a requeued generation',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await seedChapter(1, 1, serverDl: false);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final running = OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        now: DateTime(2026),
+        onDownload: (_) async {},
+        onEvict: (_) async {},
+        onServerDownload: (_) async {
+          entered.complete();
+          await release.future;
+        },
+      ).reconcileManga(1);
+      await entered.future;
+      await db.bumpChapterGeneration(1);
+      await db.setChapterDeviceState(1, OfflineDeviceState.queued);
+      await db.resetServerFetchAttempts(1);
+      release.complete();
+      await running;
+      expect((await db.chapterById(1))!.serverFetchAttempts, 0);
+      expect((await db.chapterById(1))!.downloadGeneration, 1);
+    },
+  );
+
+  test('terminal error never re-enqueues a missing server chapter', () async {
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
-    await seedChapter(1, 1, read: false, serverDl: true);
-    await seedChapter(2, 2, read: false, serverDl: false); // unsatisfiable
-    final downloaded = <int>[]; final evicted = <int>[];
-    final r = await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
-      onDownload: (id) async => downloaded.add(id),
-      onEvict: (id) async => evicted.add(id),
-      now: DateTime(2026, 3, 1),
+    await seedChapter(1, 1, serverDl: false, dev: OfflineDeviceState.error);
+    final enqueued = <int>{};
+    await OfflineReconciler(
+      db: db,
+      nets: SafetyNetConfig.off,
+      onDownload: (_) async {},
+      onEvict: (_) async {},
+      now: DateTime(2026),
+      onServerDownload: (ids) async => enqueued.addAll(ids),
     ).reconcileManga(1);
-    expect(downloaded, [1]);     // ch1 desired + on server
-    expect(evicted, isEmpty);
-    expect(r.toDownload, {1});
+    expect(enqueued, isEmpty);
+    expect((await db.chapterById(1))!.serverFetchAttempts, 0);
   });
+
+  for (final failure in [
+    const AccountPermissionDenied(Enum$UserPermission.DOWNLOAD_CHAPTERS),
+    const AccountPermissionUnavailable(),
+    StateError('The server did not accept the download request'),
+  ]) {
+    test('unaccepted server enqueue does not spend budget: $failure', () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await seedChapter(1, 1, serverDl: false);
+      await expectLater(
+        OfflineReconciler(
+          db: db,
+          nets: SafetyNetConfig.off,
+          now: DateTime(2026),
+          onDownload: (_) async {},
+          onEvict: (_) async {},
+          onServerDownload: (_) async => throw failure,
+        ).reconcileManga(1),
+        throwsA(same(failure)),
+      );
+      expect((await db.chapterById(1))!.serverFetchAttempts, 0);
+    });
+  }
 
   test('never re-plans a chapter that already failed', () async {
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
-    await seedChapter(1, 1, read: false, serverDl: true,
-        dev: OfflineDeviceState.error);
-    await seedChapter(2, 2, read: false, serverDl: true); // healthy, still wanted
-    final downloaded = <int>[]; final evicted = <int>[];
+    await seedChapter(
+      1,
+      1,
+      read: false,
+      serverDl: true,
+      dev: OfflineDeviceState.error,
+    );
+    await seedChapter(
+      2,
+      2,
+      read: false,
+      serverDl: true,
+    ); // healthy, still wanted
+    final downloaded = <int>[];
+    final evicted = <int>[];
     await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
+      db: db,
+      nets: SafetyNetConfig.off,
       onDownload: (id) async => downloaded.add(id),
       onEvict: (id) async => evicted.add(id),
       now: DateTime(2026, 3, 1),
@@ -75,10 +238,17 @@ void main() {
   test('evicts a downloaded chapter no longer desired', () async {
     await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
     await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
-    await seedChapter(1, 1, read: true, dev: OfflineDeviceState.downloaded); // read -> not desired
-    final downloaded = <int>[]; final evicted = <int>[];
+    await seedChapter(
+      1,
+      1,
+      read: true,
+      dev: OfflineDeviceState.downloaded,
+    ); // read -> not desired
+    final downloaded = <int>[];
+    final evicted = <int>[];
     await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
+      db: db,
+      nets: SafetyNetConfig.off,
       onDownload: (id) async => downloaded.add(id),
       onEvict: (id) async => evicted.add(id),
       now: DateTime(2026, 3, 1),
@@ -89,254 +259,410 @@ void main() {
 
   // ── RC6: orphaned chapters are evicted ──────────────────────────────────────
 
-  test('RC6: orphaned chapter is included in evict and onEvict is called', () async {
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
-    // An orphaned chapter (server-gone): was downloaded, now marked orphaned.
-    await seedChapter(10, 10, read: false, serverDl: false, dev: OfflineDeviceState.orphaned);
-    final evicted = <int>[];
-    final r = await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
-      onDownload: (id) async {},
-      onEvict: (id) async => evicted.add(id),
-      now: DateTime(2026, 3, 1),
-    ).reconcileManga(1);
-    expect(evicted, contains(10));
-    expect(r.toEvict, contains(10));
-  });
+  test(
+    'RC6: orphaned chapter is included in evict and onEvict is called',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.allUnread, 3);
+      // An orphaned chapter (server-gone): was downloaded, now marked orphaned.
+      await seedChapter(
+        10,
+        10,
+        read: false,
+        serverDl: false,
+        dev: OfflineDeviceState.orphaned,
+      );
+      final evicted = <int>[];
+      final r = await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async {},
+        onEvict: (id) async => evicted.add(id),
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
+      expect(evicted, contains(10));
+      expect(r.toEvict, contains(10));
+    },
+  );
 
   // ── RC5: convergence under storage cap ──────────────────────────────────────
 
   // ── RC5-cold: cap gating works with zero downloaded chapters ───────────────
 
-  test('RC5-cold: cold-start cap hole — first pass queues only a bounded subset', () async {
-    // Bug: when avgBytes == 0 (no downloaded chapters yet), the estimate was
-    // always 0, so projectedBytes never grew and the cap guard was a no-op,
-    // causing EVERY chapter to be queued on the first pass.
-    //
-    // Fix: fall back to pageCount * _estimatedBytesPerPage (5 pages * 256 KB =
-    // 1.28 MB per chapter).  With a 600 KB cap, at most 0 chapters fit (the
-    // first candidate already exceeds the cap), so toDownload must be empty.
-    const kBytesPerPage = 256 * 1024; // must match _estimatedBytesPerPage
-    const pageCount = 5; // per chapter
-    const estimatedChapterBytes = pageCount * kBytesPerPage; // 1.28 MB
-    const cap = SafetyNetConfig(
-      timeEvictEnabled: false,
-      keepDays: 30,
-      storageCapEnabled: true,
-      storageCapBytes: 600 * 1024, // 600 KB — less than one estimated chapter
-    );
-
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.all, 0);
-
-    // 5 chapters: all on server, none on device yet.
-    for (var i = 1; i <= 5; i++) {
-      await db.upsertChapterMetadata(
-        id: i, mangaId: 1, name: 'c$i', chapterIndex: i,
-        isRead: false, lastPageRead: 0, isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: pageCount, updatedAt: DateTime(2026),
+  test(
+    'RC5-cold: cold-start cap hole — first pass queues only a bounded subset',
+    () async {
+      // Bug: when avgBytes == 0 (no downloaded chapters yet), the estimate was
+      // always 0, so projectedBytes never grew and the cap guard was a no-op,
+      // causing EVERY chapter to be queued on the first pass.
+      //
+      // Fix: fall back to pageCount * _estimatedBytesPerPage (5 pages * 256 KB =
+      // 1.28 MB per chapter).  With a 600 KB cap, at most 0 chapters fit (the
+      // first candidate already exceeds the cap), so toDownload must be empty.
+      const kBytesPerPage = 256 * 1024; // must match _estimatedBytesPerPage
+      const pageCount = 5; // per chapter
+      const estimatedChapterBytes = pageCount * kBytesPerPage; // 1.28 MB
+      const cap = SafetyNetConfig(
+        timeEvictEnabled: false,
+        keepDays: 30,
+        storageCapEnabled: true,
+        storageCapBytes: 600 * 1024, // 600 KB — less than one estimated chapter
       );
-    }
 
-    final downloaded1 = <int>[];
-    final r1 = await OfflineReconciler(
-      db: db, nets: cap,
-      onDownload: (id) async => downloaded1.add(id),
-      onEvict: (id) async {},
-      now: DateTime(2026, 3, 1),
-    ).reconcileManga(1);
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 0);
 
-    // With a 600 KB cap and each chapter estimated at ~1.28 MB, none fit.
-    // Pre-fix this was 5 (all queued). The fix must make it 0.
-    expect(
-      r1.toDownload.length,
-      lessThan(5),
-      reason: 'cold-start cap guard must bound downloads below total chapter count',
-    );
-    // Specifically 0 chapters fit (cap < estimate).
-    expect(
-      r1.toDownload,
-      isEmpty,
-      reason: 'cap (600 KB) < one estimated chapter (${estimatedChapterBytes ~/ 1024} KB) — nothing fits',
-    );
+      // 5 chapters: all on server, none on device yet.
+      for (var i = 1; i <= 5; i++) {
+        await db.upsertChapterMetadata(
+          id: i,
+          mangaId: 1,
+          name: 'c$i',
+          chapterIndex: i,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: pageCount,
+          updatedAt: DateTime(2026),
+        );
+      }
 
-    // Second pass: state is unchanged (nothing was downloaded), so still empty.
-    final r2 = await OfflineReconciler(
-      db: db, nets: cap,
-      onDownload: (id) async {},
-      onEvict: (id) async {},
-      now: DateTime(2026, 3, 1),
-    ).reconcileManga(1);
-    expect(r2.toDownload, isEmpty, reason: 'no oscillation on second pass');
-  });
+      final downloaded1 = <int>[];
+      final r1 = await OfflineReconciler(
+        db: db,
+        nets: cap,
+        onDownload: (id) async => downloaded1.add(id),
+        onEvict: (id) async {},
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
 
-  test('RC5: reconcile converges — second pass yields empty toDownload and toEvict', () async {
-    // Setup: storage cap of 50 bytes. Seed 6 chapters each 10 bytes = 60 bytes
-    // total downloaded, already over cap. Rule is "all" (all desired).
-    const cap = SafetyNetConfig(
-      timeEvictEnabled: false,
-      keepDays: 30,
-      storageCapEnabled: true,
-      storageCapBytes: 50,
-    );
+      // With a 600 KB cap and each chapter estimated at ~1.28 MB, none fit.
+      // Pre-fix this was 5 (all queued). The fix must make it 0.
+      expect(
+        r1.toDownload.length,
+        lessThan(5),
+        reason:
+            'cold-start cap guard must bound downloads below total chapter count',
+      );
+      // Specifically 0 chapters fit (cap < estimate).
+      expect(
+        r1.toDownload,
+        isEmpty,
+        reason:
+            'cap (600 KB) < one estimated chapter (${estimatedChapterBytes ~/ 1024} KB) — nothing fits',
+      );
 
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.all, 0);
+      // Second pass: state is unchanged (nothing was downloaded), so still empty.
+      final r2 = await OfflineReconciler(
+        db: db,
+        nets: cap,
+        onDownload: (id) async {},
+        onEvict: (id) async {},
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
+      expect(r2.toDownload, isEmpty, reason: 'no oscillation on second pass');
+    },
+  );
 
-    // Seed 6 chapters as already-downloaded (60 bytes total > 50 cap).
-    for (var i = 1; i <= 6; i++) {
-      await seedChapter(i, i,
-          read: false, serverDl: true,
-          dev: OfflineDeviceState.downloaded, bytes: 10,
-          downloadedAt: DateTime(2026, 1, i));
-    }
+  test(
+    'RC5: reconcile converges — second pass yields empty toDownload and toEvict',
+    () async {
+      // Setup: storage cap of 50 bytes. Seed 6 chapters each 10 bytes = 60 bytes
+      // total downloaded, already over cap. Rule is "all" (all desired).
+      const cap = SafetyNetConfig(
+        timeEvictEnabled: false,
+        keepDays: 30,
+        storageCapEnabled: true,
+        storageCapBytes: 50,
+      );
 
-    final evicted1 = <int>[];
-    final downloaded1 = <int>[];
-    await OfflineReconciler(
-      db: db, nets: cap,
-      onDownload: (id) async => downloaded1.add(id),
-      onEvict: (id) async {
-        evicted1.add(id);
-        await db.setChapterDeviceState(id, OfflineDeviceState.none, bytes: 0);
-      },
-      now: DateTime(2026, 3, 1),
-    ).reconcileManga(1);
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 0);
 
-    // First pass must evict to bring under cap — don't assert specifics here,
-    // just verify something happened (sanity).
-    expect(evicted1, isNotEmpty, reason: 'first pass should evict over-cap chapters');
+      // Seed 6 chapters as already-downloaded (60 bytes total > 50 cap).
+      for (var i = 1; i <= 6; i++) {
+        await seedChapter(
+          i,
+          i,
+          read: false,
+          serverDl: true,
+          dev: OfflineDeviceState.downloaded,
+          bytes: 10,
+          downloadedAt: DateTime(2026, 1, i),
+        );
+      }
 
-    // Second pass: state is now stable — no new downloads should be emitted
-    // because adding any chapter would exceed the cap, and no evictions because
-    // we're already at or under it.
-    final evicted2 = <int>[];
-    final downloaded2 = <int>[];
-    final r2 = await OfflineReconciler(
-      db: db, nets: cap,
-      onDownload: (id) async => downloaded2.add(id),
-      onEvict: (id) async => evicted2.add(id),
-      now: DateTime(2026, 3, 1),
-    ).reconcileManga(1);
+      final evicted1 = <int>[];
+      final downloaded1 = <int>[];
+      await OfflineReconciler(
+        db: db,
+        nets: cap,
+        onDownload: (id) async => downloaded1.add(id),
+        onEvict: (id) async {
+          evicted1.add(id);
+          await db.setChapterDeviceState(id, OfflineDeviceState.none, bytes: 0);
+        },
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
 
-    expect(downloaded2, isEmpty, reason: 'second pass must not re-download (fixed point)');
-    expect(evicted2, isEmpty, reason: 'second pass must not evict (fixed point)');
-    expect(r2.toDownload, isEmpty);
-    expect(r2.toEvict, isEmpty);
-  });
+      // First pass must evict to bring under cap — don't assert specifics here,
+      // just verify something happened (sanity).
+      expect(
+        evicted1,
+        isNotEmpty,
+        reason: 'first pass should evict over-cap chapters',
+      );
 
-  test('a chapter read on another device survives the keep rule (#325)',
-      () async {
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.nUnread, 2);
-    // Read elsewhere, so nothing is in this device's reading session.
-    await seedChapter(1, 1, read: true, dev: OfflineDeviceState.downloaded);
-    await seedChapter(2, 2, read: true, dev: OfflineDeviceState.downloaded);
-    await seedChapter(3, 3, dev: OfflineDeviceState.downloaded);
+      // Second pass: state is now stable — no new downloads should be emitted
+      // because adding any chapter would exceed the cap, and no evictions because
+      // we're already at or under it.
+      final evicted2 = <int>[];
+      final downloaded2 = <int>[];
+      final r2 = await OfflineReconciler(
+        db: db,
+        nets: cap,
+        onDownload: (id) async => downloaded2.add(id),
+        onEvict: (id) async => evicted2.add(id),
+        now: DateTime(2026, 3, 1),
+      ).reconcileManga(1);
 
-    final evicted = <int>[];
-    await OfflineReconciler(
-      db: db,
-      nets: SafetyNetConfig.off,
-      onDownload: (id) async {},
-      onEvict: (id) async => evicted.add(id),
-      now: DateTime(2026, 3, 1),
-      deleteWhileReadingSlots: 2,
-    ).reconcileManga(1);
+      expect(
+        downloaded2,
+        isEmpty,
+        reason: 'second pass must not re-download (fixed point)',
+      );
+      expect(
+        evicted2,
+        isEmpty,
+        reason: 'second pass must not evict (fixed point)',
+      );
+      expect(r2.toDownload, isEmpty);
+      expect(r2.toEvict, isEmpty);
+    },
+  );
 
-    expect(evicted, [1],
-        reason: 'the keep window has to reach the reconciler, not just exist');
-  });
+  test(
+    'a chapter read on another device survives the keep rule (#325)',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.nUnread, 2);
+      // Read elsewhere, so nothing is in this device's reading session.
+      await seedChapter(1, 1, read: true, dev: OfflineDeviceState.downloaded);
+      await seedChapter(2, 2, read: true, dev: OfflineDeviceState.downloaded);
+      await seedChapter(3, 3, dev: OfflineDeviceState.downloaded);
+
+      final evicted = <int>[];
+      await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async {},
+        onEvict: (id) async => evicted.add(id),
+        now: DateTime(2026, 3, 1),
+        deleteWhileReadingSlots: 2,
+      ).reconcileManga(1);
+
+      expect(evicted, [
+        1,
+      ], reason: 'the keep window has to reach the reconciler, not just exist');
+    },
+  );
 
   // ── downloadProtectionWindow: re-download missing keep-window chapters ──────
 
-  test('downloadProtectionWindow=true downloads a missing protection-window chapter',
-      () async {
-    // Setup: allUnread rule, 3 chapters all read, slots=3 → protection window
-    // = top (slots-1)=2 most recently read = {ch3, ch2}.
-    // ch3 is on device, ch2 is NOT on device, ch1 is on device.
-    // allUnread → desired = {} (all read, nothing wanted by rule).
-    // With downloadProtectionWindow=true, ch2 must be re-downloaded because it
-    // is in the protection window and missing from device.
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
+  test(
+    'downloadProtectionWindow=true downloads a missing protection-window chapter',
+    () async {
+      // Setup: allUnread rule, 3 chapters all read, slots=3 → protection window
+      // = top (slots-1)=2 most recently read = {ch3, ch2}.
+      // ch3 is on device, ch2 is NOT on device, ch1 is on device.
+      // allUnread → desired = {} (all read, nothing wanted by rule).
+      // With downloadProtectionWindow=true, ch2 must be re-downloaded because it
+      // is in the protection window and missing from device.
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
 
-    await db.upsertChapterMetadata(
-        id: 1, mangaId: 1, name: 'c1', chapterIndex: 1, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '100');
-    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded,
-        bytes: 100, downloadedAt: DateTime(2026, 1, 1));
+      await db.upsertChapterMetadata(
+        id: 1,
+        mangaId: 1,
+        name: 'c1',
+        chapterIndex: 1,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '100',
+      );
+      await db.setChapterDeviceState(
+        1,
+        OfflineDeviceState.downloaded,
+        bytes: 100,
+        downloadedAt: DateTime(2026, 1, 1),
+      );
 
-    await db.upsertChapterMetadata(
-        id: 2, mangaId: 1, name: 'c2', chapterIndex: 2, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '200');
-    // ch2 intentionally left at deviceState=none — it was evicted earlier.
+      await db.upsertChapterMetadata(
+        id: 2,
+        mangaId: 1,
+        name: 'c2',
+        chapterIndex: 2,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '200',
+      );
+      // ch2 intentionally left at deviceState=none — it was evicted earlier.
 
-    await db.upsertChapterMetadata(
-        id: 3, mangaId: 1, name: 'c3', chapterIndex: 3, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '300');
-    await db.setChapterDeviceState(3, OfflineDeviceState.downloaded,
-        bytes: 100, downloadedAt: DateTime(2026, 1, 3));
+      await db.upsertChapterMetadata(
+        id: 3,
+        mangaId: 1,
+        name: 'c3',
+        chapterIndex: 3,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '300',
+      );
+      await db.setChapterDeviceState(
+        3,
+        OfflineDeviceState.downloaded,
+        bytes: 100,
+        downloadedAt: DateTime(2026, 1, 3),
+      );
 
-    final downloaded = <int>[];
-    final r = await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
-      onDownload: (id) async => downloaded.add(id),
-      onEvict: (id) async {},
-      now: DateTime(2026, 3, 1),
-      deleteWhileReadingSlots: 3,
-      downloadProtectionWindow: true,
-    ).reconcileManga(1);
+      final downloaded = <int>[];
+      final r = await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async => downloaded.add(id),
+        onEvict: (id) async {},
+        now: DateTime(2026, 3, 1),
+        deleteWhileReadingSlots: 3,
+        downloadProtectionWindow: true,
+      ).reconcileManga(1);
 
-    expect(r.toDownload, contains(2),
-        reason: 'ch2 is in the protection window (2nd most recently read) '
-            'but missing from device — must be re-downloaded');
-    expect(downloaded, contains(2));
-  });
+      expect(
+        r.toDownload,
+        contains(2),
+        reason:
+            'ch2 is in the protection window (2nd most recently read) '
+            'but missing from device — must be re-downloaded',
+      );
+      expect(downloaded, contains(2));
+    },
+  );
 
-  test('downloadProtectionWindow=false does not download missing protection-window chapters',
-      () async {
-    // Same topology as above but with downloadProtectionWindow=false (default).
-    // ch2 should NOT be re-downloaded because it is not in `desired`.
-    await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-    await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
+  test(
+    'downloadProtectionWindow=false does not download missing protection-window chapters',
+    () async {
+      // Same topology as above but with downloadProtectionWindow=false (default).
+      // ch2 should NOT be re-downloaded because it is not in `desired`.
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.allUnread, 0);
 
-    await db.upsertChapterMetadata(
-        id: 1, mangaId: 1, name: 'c1', chapterIndex: 1, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '100');
-    await db.setChapterDeviceState(1, OfflineDeviceState.downloaded,
-        bytes: 100, downloadedAt: DateTime(2026, 1, 1));
+      await db.upsertChapterMetadata(
+        id: 1,
+        mangaId: 1,
+        name: 'c1',
+        chapterIndex: 1,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '100',
+      );
+      await db.setChapterDeviceState(
+        1,
+        OfflineDeviceState.downloaded,
+        bytes: 100,
+        downloadedAt: DateTime(2026, 1, 1),
+      );
 
-    await db.upsertChapterMetadata(
-        id: 2, mangaId: 1, name: 'c2', chapterIndex: 2, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '200');
+      await db.upsertChapterMetadata(
+        id: 2,
+        mangaId: 1,
+        name: 'c2',
+        chapterIndex: 2,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '200',
+      );
 
-    await db.upsertChapterMetadata(
-        id: 3, mangaId: 1, name: 'c3', chapterIndex: 3, isRead: true,
-        lastPageRead: 0, isBookmarked: false, serverIsDownloaded: true,
-        pageCount: 1, updatedAt: DateTime(2026), lastReadAt: '300');
-    await db.setChapterDeviceState(3, OfflineDeviceState.downloaded,
-        bytes: 100, downloadedAt: DateTime(2026, 1, 3));
+      await db.upsertChapterMetadata(
+        id: 3,
+        mangaId: 1,
+        name: 'c3',
+        chapterIndex: 3,
+        isRead: true,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        lastReadAt: '300',
+      );
+      await db.setChapterDeviceState(
+        3,
+        OfflineDeviceState.downloaded,
+        bytes: 100,
+        downloadedAt: DateTime(2026, 1, 3),
+      );
 
-    final downloaded = <int>[];
-    await OfflineReconciler(
-      db: db, nets: SafetyNetConfig.off,
-      onDownload: (id) async => downloaded.add(id),
-      onEvict: (id) async {},
-      now: DateTime(2026, 3, 1),
-      deleteWhileReadingSlots: 3,
-      downloadProtectionWindow: false,
-    ).reconcileManga(1);
+      final downloaded = <int>[];
+      await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        onDownload: (id) async => downloaded.add(id),
+        onEvict: (id) async {},
+        now: DateTime(2026, 3, 1),
+        deleteWhileReadingSlots: 3,
+        downloadProtectionWindow: false,
+      ).reconcileManga(1);
 
-    expect(downloaded, isNot(contains(2)),
-        reason: 'without downloadProtectionWindow, a read chapter not in '
-            'desired must not be re-downloaded');
-  });
+      expect(
+        downloaded,
+        isNot(contains(2)),
+        reason:
+            'without downloadProtectionWindow, a read chapter not in '
+            'desired must not be re-downloaded',
+      );
+    },
+  );
 }

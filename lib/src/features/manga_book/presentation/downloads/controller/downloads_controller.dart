@@ -1,6 +1,9 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/downloads/graphql/__generated__/fragment.graphql.dart';
@@ -109,8 +112,9 @@ class DownloadsMap extends _$DownloadsMap {
         final generation = _generation;
         DownloadStatusDto? fresh;
         try {
-          fresh =
-              await ref.read(downloadsRepositoryProvider).getDownloadStatus();
+          fresh = await ref
+              .read(downloadsRepositoryProvider)
+              .getDownloadStatus();
         } catch (_) {
           // _reconcileNeeded stays set, so the next message retries — until
           // the failures say the server, not the race, is the problem.
@@ -162,7 +166,8 @@ class DownloadsMap extends _$DownloadsMap {
   }
 
   Map<int, DownloadDto> getStateFromUpdates(
-      DownloadStatusDto? downloadStatusDto) {
+    DownloadStatusDto? downloadStatusDto,
+  ) {
     final downloadsMap = <int, DownloadDto>{};
     for (final element in [...?downloadStatusDto?.queue]) {
       downloadsMap[element.chapter.id] = element;
@@ -170,12 +175,20 @@ class DownloadsMap extends _$DownloadsMap {
     return downloadsMap;
   }
 
-  void reorder(int chapterId, int to) async {
-    final downloadStatusDto = await ref
-        .read(downloadsRepositoryProvider)
-        .reorderDownload(chapterId, to);
-    if (!ref.mounted) return;
-    _publish(getStateFromUpdates(downloadStatusDto));
+  Future<void> reorder(int chapterId, int to) async {
+    final current = ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    final result = await AsyncValue.guard(
+      () =>
+          ref.read(downloadsRepositoryProvider).reorderDownload(chapterId, to),
+    );
+    if (!ref.mounted || !current()) return;
+    if (result.hasError) {
+      result.showToastOnError(ref.read(toastProvider));
+    } else {
+      _publish(getStateFromUpdates(result.value));
+    }
   }
 
   /// Clear the whole server download queue and empty the local map immediately.

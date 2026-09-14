@@ -4,9 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_commit.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -16,6 +20,8 @@ import 'package:tsumiru/src/features/offline/data/offline_download_providers.dar
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 import '../../../../helpers/fake_page_store.dart';
 import '../../../../helpers/offline_test_db.dart';
@@ -57,16 +63,24 @@ void main() {
     bool pageOffline = false,
     Object? resolveThrows,
     void Function()? onServerUnreachable,
+    Future<void> Function()? onPermissionDenied,
+    Future<void> Function()? onResolve,
+    bool Function()? isCurrentSession,
+    bool Function()? requiresAuth,
+    int parallelPageLimit = 5,
   }) {
     final engine = ChapterDownloadEngine(
       writePage: store,
+      parallelPageLimit: parallelPageLimit,
       maxAttempts: 2,
       backoff: (_) => Duration.zero,
       refreshAuth: () async => refreshOk,
       fetchPage: (url) async {
         if (onFetch != null) await onFetch();
         if (pageOffline) throw const PageOfflineException('test-offline');
-        if (auth401) throw const PageAuthException();
+        if (auth401 || (requiresAuth?.call() ?? false)) {
+          throw const PageAuthException();
+        }
         if (fail) throw Exception('boom');
         return (bytes: [1, 2, 3], ext: 'jpg');
       },
@@ -76,11 +90,166 @@ void main() {
       engine: engine,
       store: store,
       resolvePages: (_) async {
+        await onResolve?.call();
         if (resolveThrows != null) throw resolveThrows;
         return pages;
       },
       persistedPaused: persistedPaused,
       onServerUnreachable: onServerUnreachable,
+      onPermissionDenied: onPermissionDenied,
+      isCurrentSession: isCurrentSession,
+    );
+  }
+
+  for (final deleted in [true, false]) {
+    test(
+      deleted
+          ? 'late permission denial ignores a replaced generation'
+          : 'late permission denial ignores an old session',
+      () async {
+        await seedChapter(1, 7, 3);
+        final resolving = Completer<void>();
+        final release = Completer<void>();
+        var current = true;
+        var pauses = 0;
+        final coordinator = coord(
+          isCurrentSession: () => current,
+          onResolve: () async {
+            resolving.complete();
+            await release.future;
+          },
+          resolveThrows: const AccountPermissionDenied(
+            Enum$UserPermission.DOWNLOAD_CHAPTERS,
+          ),
+          onPermissionDenied: () async {
+            pauses++;
+          },
+        );
+        await coordinator.queueChapter(1);
+        final before = (await db.chapterById(1))!;
+        final running = coordinator.enqueueChapter(before);
+        await resolving.future;
+        if (deleted) {
+          await coordinator.beginDelete(1, timeout: Duration.zero);
+          await db.bumpChapterGeneration(1);
+          await db.setChapterDeviceState(1, OfflineDeviceState.none);
+          coordinator.endDelete(1);
+          await coordinator.queueChapter(1);
+        } else {
+          current = false;
+        }
+        release.complete();
+        await running;
+        expect(pauses, 0);
+        final after = (await db.chapterById(1))!;
+        expect(
+          after.deviceState,
+          deleted ? OfflineDeviceState.queued : OfflineDeviceState.downloading,
+        );
+        expect(
+          after.downloadGeneration,
+          before.downloadGeneration + (deleted ? 1 : 0),
+        );
+      },
+    );
+  }
+
+  test(
+    'permission denial pauses the queue and keeps completed chapters',
+    () async {
+      await seedChapter(1, 7, 3);
+      await seedChapter(2, 7, 3);
+      await seedChapter(3, 7, 3);
+      await db.setChapterDeviceState(
+        3,
+        OfflineDeviceState.downloaded,
+        bytes: 99,
+      );
+      var denied = 0;
+      final coordinator = coord(
+        resolveThrows: const AccountPermissionDenied(
+          Enum$UserPermission.DOWNLOAD_CHAPTERS,
+        ),
+        onPermissionDenied: () async {
+          denied++;
+        },
+      );
+      await coordinator.queueChapter(1);
+      await coordinator.queueChapter(2);
+      await coordinator.pumpDownloads();
+      expect(denied, 1);
+      expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
+      expect((await db.chapterById(2))!.deviceState, OfflineDeviceState.queued);
+      expect(
+        (await db.chapterById(3))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
+      expect((await db.chapterById(3))!.bytes, 99);
+    },
+  );
+
+  test(
+    'unverified permission parks without terminal errors or denial',
+    () async {
+      await seedChapter(1, 7, 3);
+      var denied = 0;
+      final coordinator = coord(
+        resolveThrows: const AccountPermissionUnavailable(),
+        onPermissionDenied: () async {
+          denied++;
+        },
+      );
+      await coordinator.queueChapter(1);
+      await coordinator.pumpDownloads();
+      expect(denied, 0);
+      expect(
+        (await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloading,
+      );
+    },
+  );
+
+  for (final error in <Object>[
+    OperationException(
+      graphqlErrors: const [GraphQLError(message: 'Unauthorized')],
+    ),
+    OperationException(
+      linkException: HttpLinkServerException(
+        response: http.Response('{"errors":[]}', 401),
+        parsedResponse: const Response(response: {}, errors: []),
+      ),
+    ),
+  ]) {
+    test(
+      'page-list authentication failure remains resumable: ${error.runtimeType}',
+      () async {
+        await seedChapter(1, 7, 3);
+        var reject = true;
+        var denials = 0;
+        final coordinator = coord(
+          onResolve: () async {
+            if (reject) {
+              throw OperationMessageException(error as OperationException);
+            }
+          },
+          onPermissionDenied: () async {
+            denials++;
+          },
+        );
+        await coordinator.queueChapter(1);
+        await coordinator.pumpDownloads();
+        expect(
+          (await db.chapterById(1))!.deviceState,
+          OfflineDeviceState.downloading,
+        );
+        expect(denials, 0);
+        reject = false;
+        await coordinator.pumpDownloads();
+        expect(
+          (await db.chapterById(1))!.deviceState,
+          OfflineDeviceState.downloaded,
+        );
+      },
     );
   }
 
@@ -95,6 +264,57 @@ void main() {
       expect(c.bytes, 9); // 3 pages x 3 bytes
     },
   );
+
+  test('drain refuses a paused transfer that has not unwound', () async {
+    await seedChapter(1, 7, 1);
+    final started = Completer<void>();
+    final release = Completer<void>();
+    final coordinator = coord(
+      pages: ['/p/0'],
+      onFetch: () async {
+        started.complete();
+        await release.future;
+      },
+    );
+    final transfer = coordinator.enqueueChapter((await db.chapterById(1))!);
+    await started.future;
+    coordinator.pause();
+    await expectLater(
+      coordinator.awaitIdle(timeout: Duration.zero),
+      throwsStateError,
+    );
+    release.complete();
+    await transfer;
+    await coordinator.awaitIdle(timeout: Duration.zero);
+  });
+
+  test('refused pause-and-drain restores the previous pause state', () async {
+    await seedChapter(1, 7, 1);
+    final started = Completer<void>();
+    final release = Completer<void>();
+    final coordinator = coord(
+      pages: ['/p/0'],
+      onFetch: () async {
+        started.complete();
+        await release.future;
+      },
+    );
+    final transfer = coordinator.enqueueChapter((await db.chapterById(1))!);
+    await started.future;
+    await expectLater(
+      coordinator.pauseAndDrain(timeout: Duration.zero),
+      throwsStateError,
+    );
+    expect(coordinator.isPaused, isFalse);
+    coordinator.pause();
+    await expectLater(
+      coordinator.pauseAndDrain(timeout: Duration.zero),
+      throwsStateError,
+    );
+    expect(coordinator.isPaused, isTrue);
+    release.complete();
+    await transfer;
+  });
 
   test('no resolved pages -> error', () async {
     await seedChapter(1, 7, 3);
@@ -126,11 +346,11 @@ void main() {
         (await db.chapterById(1))!.deviceState,
         OfflineDeviceState.downloaded,
       );
-      expect(
-        store.pages.keys.toSet(),
-        {'1/0', '1/1', '1/2'},
-        reason: 'every page re-fetched against the fresh list',
-      );
+      expect(store.pages.keys.toSet(), {
+        '1/0',
+        '1/1',
+        '1/2',
+      }, reason: 'every page re-fetched against the fresh list');
     },
   );
 
@@ -143,11 +363,11 @@ void main() {
 
     await coord().enqueueChapter((await db.chapterById(1))!);
 
-    expect(
-      store.pages.keys.toSet(),
-      {'1/0', '1/1', '1/2'},
-      reason: 'every page re-fetched rather than trusting orphaned files',
-    );
+    expect(store.pages.keys.toSet(), {
+      '1/0',
+      '1/1',
+      '1/2',
+    }, reason: 'every page re-fetched rather than trusting orphaned files');
     expect(
       (await db.chapterById(1))!.deviceState,
       OfflineDeviceState.downloaded,
@@ -180,13 +400,101 @@ void main() {
     );
   });
 
-  test('auth failure (401 + refresh dead) -> error', () async {
+  test(
+    'persisted pause during a page stops later pages and resumes after restoration',
+    () async {
+      await seedChapter(1, 7, 3);
+      final fetching = Completer<void>();
+      final release = Completer<void>();
+      var paused = false;
+      var fetched = 0;
+      final coordinator = coord(
+        parallelPageLimit: 1,
+        persistedPaused: () => paused,
+        onFetch: () async {
+          fetched++;
+          if (fetched == 1) {
+            fetching.complete();
+            await release.future;
+          }
+        },
+      );
+      await coordinator.queueChapter(1);
+      final running = coordinator.pumpDownloads();
+      await fetching.future;
+      paused = true;
+      release.complete();
+      await running;
+      expect(fetched, 1);
+      expect(
+        (await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloading,
+      );
+      paused = false;
+      await coordinator.pumpDownloads();
+      expect(
+        (await db.chapterById(1))!.deviceState,
+        OfflineDeviceState.downloaded,
+      );
+    },
+  );
+
+  for (final other in [
+    const PageOfflineException('HTTP 502'),
+    const PageAuthException(),
+  ]) {
+    test('parallel permission denial wins over ${other.runtimeType}', () async {
+      await seedChapter(1, 7, 2);
+      final bothFetching = Completer<void>();
+      var fetching = 0;
+      var denied = 0;
+      final coordinator = OfflineDownloadCoordinator(
+        db: db,
+        store: store,
+        engine: ChapterDownloadEngine(
+          writePage: store,
+          fetchPage: (url) async {
+            fetching++;
+            if (fetching == 2) bothFetching.complete();
+            await bothFetching.future;
+            if (url == '/denied') {
+              throw const AccountPermissionDenied(
+                Enum$UserPermission.DOWNLOAD_CHAPTERS,
+              );
+            }
+            throw other;
+          },
+          refreshAuth: () async => false,
+        ),
+        resolvePages: (_) async => ['/denied', '/other'],
+        onPermissionDenied: () async {
+          denied++;
+        },
+      );
+      await coordinator.queueChapter(1);
+      await coordinator.pumpDownloads();
+      expect(denied, 1);
+      expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
+      expect(store.committed, isEmpty);
+    });
+  }
+
+  test('failed auth refresh holds until credentials are restored', () async {
     await seedChapter(1, 7, 3);
-    await coord(
-      auth401: true,
-      refreshOk: false,
-    ).enqueueChapter((await db.chapterById(1))!);
-    expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
+    var needsAuth = true;
+    final coordinator = coord(requiresAuth: () => needsAuth);
+    await coordinator.queueChapter(1);
+    await coordinator.pumpDownloads();
+    expect(
+      (await db.chapterById(1))!.deviceState,
+      OfflineDeviceState.downloading,
+    );
+    needsAuth = false;
+    await coordinator.pumpDownloads();
+    expect(
+      (await db.chapterById(1))!.deviceState,
+      OfflineDeviceState.downloaded,
+    );
   });
 
   test('transient fetch failure exhausts retries -> error', () async {
@@ -295,6 +603,178 @@ void main() {
     },
   );
 
+  for (final chapterLock in [false, true]) {
+    for (final changed in ['pin', 'rule', 'generation']) {
+      test(
+        'stale eviction preserves $changed change while waiting for ${chapterLock ? 'chapter lock' : 'ownership'}',
+        () async {
+          await db.upsertMangaMetadata(
+            id: 7,
+            title: 'M',
+            updatedAt: DateTime(2026),
+          );
+          await db.setKeepRule(7, OfflineKeepRule.off, 3);
+          await seedChapter(9, 7, 1);
+          await db.setChapterDeviceState(
+            9,
+            OfflineDeviceState.downloaded,
+            bytes: 10,
+          );
+          store.seedCommitted(9, {0: 10});
+          final waiting = Completer<void>();
+          final release = Completer<void>();
+          Future<void>? heldLock;
+          if (chapterLock) {
+            final locked = Completer<void>();
+            heldLock = ChapterFileLock.run(9, () async {
+              locked.complete();
+              await release.future;
+            });
+            await locked.future;
+          }
+          var checks = 0;
+          final removed = <int>[];
+          final running = reconcileMangaCore(
+            db: db,
+            repo: OfflineRepository(db: db, paths: OfflinePaths('/tmp/x')),
+            manager: OfflineDownloadManager(
+              db: db,
+              store: store,
+              fetchPageUrls: (_) async => [],
+              fetchBytes: (_) async => (bytes: [1], ext: 'jpg'),
+            ),
+            coordinator: coord(),
+            nets: SafetyNetConfig.off,
+            mangaId: 7,
+            verifyPermission: () async {
+              if (chapterLock && ++checks == 2) waiting.complete();
+            },
+            withOwnership: chapterLock
+                ? null
+                : (action) async {
+                    waiting.complete();
+                    await release.future;
+                    await action();
+                  },
+            removeFromWorker: (id, gen) async => removed.add(id),
+          );
+          await waiting.future;
+          await pumpEventQueue();
+          switch (changed) {
+            case 'pin':
+              await db.setChapterPinned(9, true);
+            case 'rule':
+              await db.setKeepRule(7, OfflineKeepRule.all, 3);
+            case 'generation':
+              await db.bumpChapterGeneration(9);
+          }
+          final before = (await db.chapterById(9))!;
+          release.complete();
+          await running;
+          await heldLock;
+          final after = (await db.chapterById(9))!;
+          expect(after.downloadGeneration, before.downloadGeneration);
+          expect(after.deviceState, OfflineDeviceState.downloaded);
+          expect(store.committed[9], {0: 10});
+          expect(removed, isEmpty);
+        },
+      );
+    }
+  }
+
+  for (final chapterLock in [false, true]) {
+    test(
+      chapterLock
+          ? 'permission lost while waiting for chapter lock preserves files'
+          : 'permission lost while waiting for eviction ownership preserves files and generation',
+      () async {
+        await db.upsertMangaMetadata(
+          id: 7,
+          title: 'M',
+          updatedAt: DateTime(2026),
+        );
+        await db.setKeepRule(7, OfflineKeepRule.all, 3);
+        await seedChapter(9, 7, 1);
+        await db.setChapterDeviceState(
+          9,
+          OfflineDeviceState.orphaned,
+          bytes: 10,
+        );
+        store.seedCommitted(9, {0: 10});
+        await db.upsertChapterMetadata(
+          id: 10,
+          mangaId: 7,
+          name: 'pending',
+          chapterIndex: 2,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: false,
+          pageCount: 1,
+          updatedAt: DateTime(2026),
+        );
+        final waiting = Completer<void>();
+        final release = Completer<void>();
+        Future<void>? heldLock;
+        if (chapterLock) {
+          final locked = Completer<void>();
+          heldLock = ChapterFileLock.run(9, () async {
+            locked.complete();
+            await release.future;
+          });
+          await locked.future;
+        }
+        var allowed = true;
+        var permissionChecks = 0;
+        final enqueued = <int>[];
+        final before = (await db.chapterById(9))!;
+        final running = reconcileMangaCore(
+          db: db,
+          repo: OfflineRepository(db: db, paths: OfflinePaths('/tmp/x')),
+          manager: OfflineDownloadManager(
+            db: db,
+            store: store,
+            fetchPageUrls: (_) async => [],
+            fetchBytes: (_) async => (bytes: [1], ext: 'jpg'),
+          ),
+          coordinator: coord(),
+          nets: SafetyNetConfig.off,
+          mangaId: 7,
+          verifyPermission: () async {
+            permissionChecks++;
+            if (chapterLock && permissionChecks == 2) waiting.complete();
+            if (!allowed) {
+              throw const AccountPermissionDenied(
+                Enum$UserPermission.DOWNLOAD_CHAPTERS,
+              );
+            }
+          },
+          withOwnership: chapterLock
+              ? null
+              : (action) async {
+                  waiting.complete();
+                  await release.future;
+                  await action();
+                },
+          enqueueServerDownload: (ids) async => enqueued.addAll(ids),
+        );
+        final expectation = expectLater(
+          running,
+          throwsA(isA<AccountPermissionDenied>()),
+        );
+        await waiting.future;
+        allowed = false;
+        release.complete();
+        await expectation;
+        await heldLock;
+        final after = (await db.chapterById(9))!;
+        expect(after.downloadGeneration, before.downloadGeneration);
+        expect(after.deviceState, before.deviceState);
+        expect(store.committed[9], {0: 10});
+        expect(enqueued, isEmpty);
+      },
+    );
+  }
   test(
     'reconcile eviction cancels the worker before deleting the copy',
     () async {
@@ -326,11 +806,9 @@ void main() {
         removeFromWorker: (id, gen) async => removed.add(id),
       );
 
-      expect(
-        removed,
-        [9],
-        reason: 'the Android worker must be told to cancel before eviction',
-      );
+      expect(removed, [
+        9,
+      ], reason: 'the Android worker must be told to cancel before eviction');
       expect(
         (await db.chapterById(9))!.deviceState,
         OfflineDeviceState.none,

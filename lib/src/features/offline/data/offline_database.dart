@@ -172,6 +172,9 @@ class OfflineChapters extends Table {
 }
 
 class OfflineCategories extends Table {
+  BoolColumn get isDefaultCategory =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get autoAdd => boolean().withDefault(const Constant(false))();
   IntColumn get id => integer()();
   TextColumn get name => text()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
@@ -216,7 +219,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -414,6 +417,21 @@ class OfflineDatabase extends _$OfflineDatabase {
       if (from < 15 && !await _hasIndex('idx_offline_chapter_device_state')) {
         await m.createIndex(idxOfflineChapterDeviceState);
       }
+      if (from < 17 && await _hasTable(offlineCategories)) {
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.isDefaultCategory,
+        );
+        await _addColumnIfMissing(
+          m,
+          offlineCategories,
+          offlineCategories.autoAdd,
+        );
+        await customStatement(
+          'UPDATE offline_categories SET is_default_category = 1 WHERE id = 0',
+        );
+      }
       if (from < 16) {
         await _addColumnIfMissing(
           m,
@@ -575,12 +593,16 @@ class OfflineDatabase extends _$OfflineDatabase {
     String name,
     int sortOrder, {
     required bool isHidden,
+    bool? isDefaultCategory,
+    bool autoAdd = false,
   }) => into(offlineCategories).insertOnConflictUpdate(
     OfflineCategoriesCompanion(
       id: Value(id),
       name: Value(name),
       sortOrder: Value(sortOrder),
       isHidden: Value(isHidden),
+      isDefaultCategory: Value(isDefaultCategory ?? id == 0),
+      autoAdd: Value(autoAdd),
     ),
   );
 
@@ -635,9 +657,7 @@ class OfflineDatabase extends _$OfflineDatabase {
         offlineCategories,
         offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
       ),
-    ])
-          ..where(offlineMangaCategories.mangaId.isIn(mangaIds)))
-        .get();
+    ])..where(offlineMangaCategories.mangaId.isIn(mangaIds))).get();
     final categorized = {
       for (final row in rows) row.readTable(offlineMangaCategories).mangaId,
     };
@@ -683,18 +703,21 @@ class OfflineDatabase extends _$OfflineDatabase {
     Set<int> mangaIds,
   ) async {
     if (mangaIds.isEmpty) return {};
-    final query = select(offlineMangaCategories).join([
-      innerJoin(
-        offlineCategories,
-        offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
-      ),
-    ])
-      ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
-      ..orderBy([OrderingTerm(expression: offlineCategories.sortOrder)]);
+    final query =
+        select(offlineMangaCategories).join([
+            innerJoin(
+              offlineCategories,
+              offlineCategories.id.equalsExp(offlineMangaCategories.categoryId),
+            ),
+          ])
+          ..where(offlineMangaCategories.mangaId.isIn(mangaIds))
+          ..orderBy([OrderingTerm(expression: offlineCategories.sortOrder)]);
     final byManga = <int, List<OfflineCategory>>{};
     for (final row in await query.get()) {
       final mangaId = row.readTable(offlineMangaCategories).mangaId;
-      byManga.putIfAbsent(mangaId, () => []).add(row.readTable(offlineCategories));
+      byManga
+          .putIfAbsent(mangaId, () => [])
+          .add(row.readTable(offlineCategories));
     }
     return byManga;
   }
@@ -803,6 +826,7 @@ class OfflineDatabase extends _$OfflineDatabase {
       ),
     );
     if (clearSourceChapterId != null) {
+      await bumpChapterGeneration(clearSourceChapterId);
       await (delete(
         offlinePages,
       )..where((t) => t.chapterId.equals(clearSourceChapterId))).go();
@@ -911,8 +935,7 @@ class OfflineDatabase extends _$OfflineDatabase {
       // writes can't push a stale isRead (the ch-99 loop).
       isRead: isRead == null ? const Value.absent() : Value(isRead),
       readStateDirty: isRead == null ? const Value.absent() : const Value(true),
-      readStateManual:
-          isRead == null ? const Value.absent() : Value(manual),
+      readStateManual: isRead == null ? const Value.absent() : Value(manual),
     ),
   );
 
@@ -931,15 +954,15 @@ class OfflineDatabase extends _$OfflineDatabase {
     bool isRead, {
     bool manual = true,
   }) => (update(offlineChapters)..where((t) => t.id.equals(chapterId))).write(
-        OfflineChaptersCompanion(
-          isRead: Value(isRead),
-          readStateDirty: const Value(true),
-          readStateManual: Value(manual),
-          // Marking read counts as reading activity for the Last Read sort;
-          // un-reading is bookkeeping and leaves the timestamp alone.
-          lastReadAt: isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
-        ),
-      );
+    OfflineChaptersCompanion(
+      isRead: Value(isRead),
+      readStateDirty: const Value(true),
+      readStateManual: Value(manual),
+      // Marking read counts as reading activity for the Last Read sort;
+      // un-reading is bookkeeping and leaves the timestamp alone.
+      lastReadAt: isRead ? Value(_nowEpochSeconds()) : const Value.absent(),
+    ),
+  );
 
   /// Read-state changes this device has made that the manga's server-side
   /// `unreadCount` does not know about yet, as `newly read - newly unread`.
@@ -1332,7 +1355,17 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// The union makes Downloads → On device the single surface: a rule with
   /// nothing downloaded yet still appears, and hand-saved chapters with no
   /// rule still appear.
-  Stream<List<({OfflineManga manga, int downloaded, int inFlight, int bytes})>>
+  Stream<
+    List<
+      ({
+        OfflineManga manga,
+        int downloaded,
+        int inFlight,
+        int failed,
+        int bytes,
+      })
+    >
+  >
   watchOfflineSeries() {
     final downloaded = offlineChapters.id.count(
       filter: offlineChapters.deviceState.equalsValue(
@@ -1346,6 +1379,9 @@ class OfflineDatabase extends _$OfflineDatabase {
           ) |
           offlineChapters.deviceState.equalsValue(OfflineDeviceState.queued),
     );
+    final failed = offlineChapters.id.count(
+      filter: offlineChapters.deviceState.equalsValue(OfflineDeviceState.error),
+    );
     final byteSum = offlineChapters.bytes.sum(
       filter: offlineChapters.deviceState.equalsValue(
         OfflineDeviceState.downloaded,
@@ -1358,13 +1394,14 @@ class OfflineDatabase extends _$OfflineDatabase {
               offlineChapters.mangaId.equalsExp(offlineMangas.id),
             ),
           ])
-          ..addColumns([downloaded, inFlight, byteSum])
+          ..addColumns([downloaded, inFlight, failed, byteSum])
           ..groupBy(
             [offlineMangas.id],
             // Keep series that have files OR a rule; drop the rest of the library.
             having:
                 downloaded.isBiggerThanValue(0) |
                 inFlight.isBiggerThanValue(0) |
+                failed.isBiggerThanValue(0) |
                 offlineMangas.keepRule.equalsValue(OfflineKeepRule.off).not(),
           );
     return query.watch().map(
@@ -1374,6 +1411,7 @@ class OfflineDatabase extends _$OfflineDatabase {
             manga: row.readTable(offlineMangas),
             downloaded: row.read(downloaded) ?? 0,
             inFlight: row.read(inFlight) ?? 0,
+            failed: row.read(failed) ?? 0,
             bytes: row.read(byteSum) ?? 0,
           ),
       ],
@@ -1448,9 +1486,7 @@ class OfflineDatabase extends _$OfflineDatabase {
     final query = selectOnly(offlineChapters, distinct: true)
       ..addColumns([offlineChapters.mangaId])
       ..where(
-        offlineChapters.deviceState.equalsValue(
-          OfflineDeviceState.downloaded,
-        ),
+        offlineChapters.deviceState.equalsValue(OfflineDeviceState.downloaded),
       );
     return query.watch().map(
       (rows) => {for (final r in rows) r.read(offlineChapters.mangaId)!},

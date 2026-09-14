@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
@@ -27,14 +28,40 @@ CategoryDto cat(int id, String name, {int order = 0, bool hidden = false}) =>
       mangas: Fragment$CategoryDto$mangas(totalCount: 0),
       meta: [
         if (hidden)
-          Fragment$CategoryDto$meta(
-            key: kCategoryHiddenMetaKey,
-            value: 'true',
-          ),
+          Fragment$CategoryDto$meta(key: kCategoryHiddenMetaKey, value: 'true'),
       ],
     );
 
 void main() {
+  test(
+    'version 16 categories migrate special identity without guessing auto-add',
+    () async {
+      final legacy = OfflineDatabase(
+        NativeDatabase.memory(
+          setup: (db) {
+            db.execute(
+              'CREATE TABLE offline_categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, is_hidden INTEGER NOT NULL DEFAULT 0)',
+            );
+            db.execute(
+              "INSERT INTO offline_categories (id, name) VALUES (0, 'Default'), (5, 'Other')",
+            );
+            db.execute('PRAGMA user_version = 16');
+          },
+        ),
+      );
+      addTearDown(legacy.close);
+      final categories = await legacy.allOfflineCategories();
+      expect(
+        categories.singleWhere((c) => c.id == 0).isDefaultCategory,
+        isTrue,
+      );
+      expect(
+        categories.singleWhere((c) => c.id == 5).isDefaultCategory,
+        isFalse,
+      );
+      expect(categories.every((c) => !c.autoAdd), isTrue);
+    },
+  );
   late OfflineDatabase db;
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
@@ -64,6 +91,30 @@ void main() {
       bytes: 1,
     );
   }
+
+  test(
+    'nonzero default identity and auto-add remain independent offline',
+    () async {
+      final sync = OfflineSync(db);
+      await sync.syncCategories([
+        cat(81, 'Default').copyWith(defaultCategory: false),
+        cat(3, 'Auto add').copyWith(defaultCategory: true),
+      ], defaultCategoryId: 81);
+      await seedDownloadedManga(10, []);
+      final stored = await db.allOfflineCategories();
+      expect(stored.singleWhere((c) => c.id == 81).isDefaultCategory, isTrue);
+      expect(stored.singleWhere((c) => c.id == 81).autoAdd, isFalse);
+      final tabs = await categoriesWithOfflineFallback(
+        fetch: () async => throw const SocketException('offline'),
+        db: db,
+        offlineEnabled: true,
+        defaultCategoryId: 81,
+      );
+      expect(tabs!.map((c) => c.id), isNot(contains(0)));
+      expect(tabs.singleWhere((c) => c.id == 81).mangas.totalCount, 1);
+      expect(tabs.singleWhere((c) => c.id == 3).defaultCategory, isTrue);
+    },
+  );
 
   group('syncCategories', () {
     test('prunes categories the server no longer has', () async {
@@ -97,58 +148,60 @@ void main() {
       expect((await db.allOfflineCategories()).single.isHidden, isFalse);
     });
 
-    test('a device-local visibility flip yields to the server on re-sync',
-        () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([cat(1, 'A', hidden: true)]);
+    test(
+      'a device-local visibility flip yields to the server on re-sync',
+      () async {
+        final sync = OfflineSync(db);
+        await sync.syncCategories([cat(1, 'A', hidden: true)]);
 
-      // Offline unhide: the mirror flips so downloads stay reachable...
-      await db.setCategoryHidden(1, false);
-      expect((await db.allOfflineCategories()).single.isHidden, isFalse);
+        // Offline unhide: the mirror flips so downloads stay reachable...
+        await db.setCategoryHidden(1, false);
+        expect((await db.allOfflineCategories()).single.isHidden, isFalse);
 
-      // ...and the server's flag reasserts on the next online sync.
-      await sync.syncCategories([cat(1, 'A', hidden: true)]);
-      expect((await db.allOfflineCategories()).single.isHidden, isTrue);
-    });
+        // ...and the server's flag reasserts on the next online sync.
+        await sync.syncCategories([cat(1, 'A', hidden: true)]);
+        expect((await db.allOfflineCategories()).single.isHidden, isTrue);
+      },
+    );
   });
 
   group('categoriesWithOfflineFallback catalog serve', () {
     Future<Never> boom() async => throw const SocketException('unreachable');
 
     test(
-        'serves per-category counts, keeps hidden meta, keeps categories with '
-        'nothing downloaded, and homes uncategorized manga in Default',
-        () async {
-      final sync = OfflineSync(db);
-      await sync.syncCategories([
-        cat(1, 'Visible', order: 1),
-        cat(2, 'Empty', order: 2),
-        cat(3, 'Hidden', order: 3, hidden: true),
-      ]);
-      await seedDownloadedManga(10, [1]);
-      await seedDownloadedManga(11, [3]);
-      await seedDownloadedManga(12, []); // default category only
+      'serves per-category counts, keeps hidden meta, keeps categories with '
+      'nothing downloaded, and homes uncategorized manga in Default',
+      () async {
+        final sync = OfflineSync(db);
+        await sync.syncCategories([
+          cat(1, 'Visible', order: 1),
+          cat(2, 'Empty', order: 2),
+          cat(3, 'Hidden', order: 3, hidden: true),
+        ]);
+        await seedDownloadedManga(10, [1]);
+        await seedDownloadedManga(11, [3]);
+        await seedDownloadedManga(12, []); // default category only
 
-      final tabs = await categoriesWithOfflineFallback(
-        fetch: boom,
-        db: db,
-        offlineEnabled: true,
-      );
+        final tabs = await categoriesWithOfflineFallback(
+          fetch: boom,
+          db: db,
+          offlineEnabled: true,
+        );
 
-      expect(tabs, isNotNull);
-      final byId = {for (final t in tabs!) t.id: t};
-      // Default synthesized for the uncategorized download.
-      expect(byId[0]?.mangas.totalCount, 1);
-      expect(byId[1]?.mangas.totalCount, 1);
-      // Nothing downloaded from it, but the category still exists -- dropping
-      // it made a user's categories look deleted while offline.
-      expect(byId[2]?.mangas.totalCount, 0);
-      // Hidden flag survives the round trip into the synthetic DTO.
-      expect(byId[3]?.isHidden, isTrue);
-    });
+        expect(tabs, isNotNull);
+        final byId = {for (final t in tabs!) t.id: t};
+        // Default synthesized for the uncategorized download.
+        expect(byId[0]?.mangas.totalCount, 1);
+        expect(byId[1]?.mangas.totalCount, 1);
+        // Nothing downloaded from it, but the category still exists -- dropping
+        // it made a user's categories look deleted while offline.
+        expect(byId[2]?.mangas.totalCount, 0);
+        // Hidden flag survives the round trip into the synthetic DTO.
+        expect(byId[3]?.isHidden, isTrue);
+      },
+    );
 
-    test(
-        'orphaned membership rows (category never mirrored or pruned '
+    test('orphaned membership rows (category never mirrored or pruned '
         'mid-state) still count their manga into Default', () async {
       final sync = OfflineSync(db);
       await sync.syncCategories([cat(1, 'A')]);

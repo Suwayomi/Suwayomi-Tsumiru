@@ -16,17 +16,11 @@ import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../../../constants/endpoints.dart';
-import '../../../../../../constants/enum.dart';
-import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../widgets/server_image.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
-import '../../../../../auth/data/custom_headers_store.dart';
-import '../../../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
-import '../../../../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
-import '../../../../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import 'image_clipboard.dart';
 
@@ -45,6 +39,7 @@ Future<void> showReaderPageActionsSheet({
   required int pageIndex,
   int? secondaryPageIndex,
   List<int>? spreadPageIndexes,
+  CacheManager? cacheManager,
 }) {
   final pages = chapterPages.pages;
   bool isValidPage(int index) => index >= 0 && index < pages.length;
@@ -52,15 +47,13 @@ Future<void> showReaderPageActionsSheet({
     if (!isValidPage(index)) return false;
     final relative = pages[index];
     if (relative.startsWith('file:')) return true;
-    return _buildPageUrl(ref, chapterPages, index, withToken: false) != null &&
-        _buildPageUrl(ref, chapterPages, index, withToken: true) != null;
+    return serverImageRequest(ref, relative).fetchUrl.isNotEmpty;
   }
 
   if (!canResolvePage(pageIndex)) {
-    ref.read(toastProvider)?.showError(
-          context.l10n.errorSomethingWentWrong,
-          instantShow: true,
-        );
+    ref
+        .read(toastProvider)
+        ?.showError(context.l10n.errorSomethingWentWrong, instantShow: true);
     return Future<void>.value();
   }
 
@@ -82,42 +75,45 @@ Future<void> showReaderPageActionsSheet({
 
   final pageActionIndexes = actionPageIndexes();
   final firstPageIndex = pageActionIndexes.first;
-  final extraPageIndex =
-      pageActionIndexes.length == 2 ? pageActionIndexes.last : null;
+  final extraPageIndex = pageActionIndexes.length == 2
+      ? pageActionIndexes.last
+      : null;
 
-  String? localPathFor(int index) {
-    final relative = pages[index];
-    return relative.startsWith('file:')
-        ? Uri.parse(relative).toFilePath()
-        : null;
-  }
+  final sessionCurrent = ref
+      .read(authCredentialsStoreProvider.notifier)
+      .captureSession();
+  bool current() => context.mounted && sessionCurrent();
+  final requests = {
+    for (final index in pageActionIndexes)
+      index: serverImageRequest(ref, pages[index]),
+  };
+  final manager = cacheManager ?? DefaultCacheManager();
 
   Future<File> resolvePageFile(int index) async {
-    final localPath = localPathFor(index);
-    if (localPath != null) return File(localPath);
-    final shareUrl = _buildPageUrl(ref, chapterPages, index, withToken: false)!;
-    final openUrl = _buildPageUrl(ref, chapterPages, index, withToken: true)!;
-    return DefaultCacheManager().getSingleFile(
-      openUrl,
-      key: shareUrl,
-      headers: _buildHttpHeaders(ref) ?? const {},
+    if (!current()) throw StateError('Account session changed');
+    final request = requests[index]!;
+    if (request.localPath != null) return File(request.localPath!);
+    return manager.getSingleFile(
+      request.fetchUrl,
+      key: request.cacheKey,
+      headers: request.headers ?? const {},
     );
   }
 
   Future<File> resolveSpreadFile() async => _combineSpreadImages(
-        await resolvePageFile(firstPageIndex),
-        await resolvePageFile(extraPageIndex!),
-      );
+    await resolvePageFile(firstPageIndex),
+    await resolvePageFile(extraPageIndex!),
+  );
 
   // gal is mobile-only, so both extra actions are gated to real Android/iOS.
   // defaultTargetPlatform (not dart:io Platform) so widget tests can drive the
   // mobile path without faking the production gate.
-  final isMobile = !kIsWeb &&
+  final isMobile =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
-  final openUrl =
-      _buildPageUrl(ref, chapterPages, firstPageIndex, withToken: true);
+  final openUrl = requests[firstPageIndex]!.fetchUrl;
 
   return showModalBottomSheet<void>(
     context: context,
@@ -135,13 +131,16 @@ Future<void> showReaderPageActionsSheet({
           Navigator.pop(sheetContext);
           try {
             final file = await resolve();
-            if (await copyImageToClipboard(file.path)) {
+            if (!current()) return;
+            final copied = await copyImageToClipboard(file.path);
+            if (!current()) return;
+            if (copied) {
               toast?.show(copiedMsg, instantShow: true);
             } else {
               toast?.showError(errorMsg, instantShow: true);
             }
           } catch (_) {
-            toast?.showError(errorMsg, instantShow: true);
+            if (current()) toast?.showError(errorMsg, instantShow: true);
           }
         };
       }
@@ -154,10 +153,12 @@ Future<void> showReaderPageActionsSheet({
           Navigator.pop(sheetContext);
           try {
             final file = await resolve();
-            await SharePlus.instance
-                .share(ShareParams(files: [XFile(file.path)]));
+            if (!current()) return;
+            await SharePlus.instance.share(
+              ShareParams(files: [XFile(file.path)]),
+            );
           } catch (_) {
-            toast?.showError(errorMsg, instantShow: true);
+            if (current()) toast?.showError(errorMsg, instantShow: true);
           }
         };
       }
@@ -171,14 +172,16 @@ Future<void> showReaderPageActionsSheet({
           Navigator.pop(sheetContext);
           try {
             final file = await resolve();
+            if (!current()) return;
             if (!await Gal.requestAccess()) {
               toast?.showError(errorMsg, instantShow: true);
               return;
             }
+            if (!current()) return;
             await Gal.putImage(file.path);
             toast?.show(savedMsg, instantShow: true);
           } catch (_) {
-            toast?.showError(errorMsg, instantShow: true);
+            if (current()) toast?.showError(errorMsg, instantShow: true);
           }
         };
       }
@@ -223,8 +226,9 @@ Future<void> showReaderPageActionsSheet({
           copyLabel: hasSpread
               ? context.l10n.copyFirstPage
               : context.l10n.copyImageToClipboard,
-          shareLabel:
-              hasSpread ? context.l10n.shareFirstPage : context.l10n.shareImage,
+          shareLabel: hasSpread
+              ? context.l10n.shareFirstPage
+              : context.l10n.shareImage,
           saveLabel: hasSpread
               ? context.l10n.saveFirstPage
               : context.l10n.saveToGallery,
@@ -255,13 +259,14 @@ Future<void> showReaderPageActionsSheet({
         }
       }
 
-      if (!isMobile && openUrl != null) {
+      if (!isMobile) {
         rows.add([
           _PageAction(
             key: const ValueKey('reader-page-action-open-web'),
             icon: Icons.public_rounded,
             label: context.l10n.openInWeb,
             onTap: () {
+              if (!current()) return;
               Navigator.pop(sheetContext);
               launchUrlInWeb(context, openUrl, ref.read(toastProvider));
             },
@@ -281,10 +286,11 @@ Future<File> _combineSpreadImages(File firstFile, File secondFile) async {
   await _cleanStaleSpreadTemps(tempDir);
   final outputPath =
       '${tempDir.path}/tsumiru-spread-${DateTime.now().microsecondsSinceEpoch}.png';
-  await compute(
-    _combineSpreadImagesSync,
-    [firstFile.path, secondFile.path, outputPath],
-  );
+  await compute(_combineSpreadImagesSync, [
+    firstFile.path,
+    secondFile.path,
+    outputPath,
+  ]);
   return File(outputPath);
 }
 
@@ -337,66 +343,8 @@ void _combineSpreadImagesSync(List<String> paths) {
 /// Builds the fully-qualified page image URL the reader would fetch, mirroring
 /// [ServerImage]'s URL assembly (base + relative path, optional ui_login
 /// `?token=`). Returns null for out-of-range or offline (`file://`) pages.
-String? _buildPageUrl(
-  WidgetRef ref,
-  ChapterPagesDto chapterPages,
-  int pageIndex, {
-  required bool withToken,
-}) {
-  final pages = chapterPages.pages;
-  if (pageIndex < 0 || pageIndex >= pages.length) return null;
-  final relative = pages[pageIndex];
-  if (relative.startsWith('file:')) return null; // downloaded page, no URL
-
-  final base = Endpoints.baseApi(
-    baseUrl: ref.read(serverUrlProvider),
-    port: ref.read(serverPortProvider),
-    addPort: ref.read(serverPortToggleProvider).ifNull(),
-    appendApiToUrl: false,
-  );
-  var url = "$base$relative";
-
-  if (withToken && ref.read(authTypeKeyProvider) == AuthType.uiLogin) {
-    final token =
-        ref.read(authCredentialsStoreProvider).value?.uiAccessToken;
-    if (token != null && token.isNotEmpty) {
-      final sep = url.contains('?') ? '&' : '?';
-      url = "$url${sep}token=${Uri.encodeQueryComponent(token)}";
-    }
-  }
-  return url;
-}
-
-/// The auth headers [ServerImage] attaches when fetching a page: basic auth →
-/// `Authorization`; simple-login → the session cookie; ui_login → none (the
-/// token rides in the URL query instead). Mirrors [ServerImage.build], plus
-/// the generic custom headers (e.g. Cloudflare Zero Trust).
-Map<String, String>? _buildHttpHeaders(WidgetRef ref) {
-  final authType = ref.read(authTypeKeyProvider);
-  Map<String, String>? headers;
-  if (authType == AuthType.basic) {
-    final basicToken = ref.read(credentialsProvider).value;
-    if (basicToken != null) headers = {"Authorization": basicToken};
-  } else if (authType == AuthType.simpleLogin) {
-    headers = ref
-        .read(authCredentialsStoreProvider)
-        .value
-        ?.simpleLoginCookieHeader;
-  }
-  final custom = ref.read(customHttpHeadersProvider).value ?? const {};
-  if (custom.isNotEmpty) {
-    headers = applyCustomHeaders(
-      Map<String, String>.from(headers ?? const {}),
-      custom,
-    );
-  }
-  return headers;
-}
-
 class _PageActionsSheet extends StatelessWidget {
-  const _PageActionsSheet({
-    required this.rows,
-  });
+  const _PageActionsSheet({required this.rows});
 
   final List<List<_PageAction>> rows;
 

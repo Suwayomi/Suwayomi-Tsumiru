@@ -12,6 +12,7 @@ import '../../../../../utils/misc/language_flag.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../../../domain/library_group.dart';
 import '../../../domain/track_status.dart';
@@ -32,6 +33,7 @@ typedef MangaProxy = ({
   String sourceLang,
   String status,
   List<int> categoryIds,
+
   /// Track status integers from all bound track records.
   /// Empty for untracked manga.
   List<int> trackStatuses,
@@ -42,35 +44,26 @@ typedef MangaProxy = ({
 });
 
 /// Duck-typed projection of [CategoryDto] fields needed for grouping.
-typedef CategoryProxy = ({
-  int id,
-  String name,
-});
+typedef CategoryProxy = ({int id, String name});
 
 MangaProxy mangaToProxy(MangaDto m) => (
-      id: m.id,
-      sourceId: m.sourceId,
-      sourceName: m.source?.name ?? '',
-      sourceLang: m.source?.lang ?? '',
-      status: m.status.name,
-      categoryIds: m.categories.nodes.map((c) => c.id).toList(),
-      trackStatuses: m.trackRecords.nodes.map((n) => n.status).toList(),
-      // Same definition the tags FILTER uses, so buckets and `tag:` searches
-      // never disagree.
-      tags: [...m.genre, ...(m.metaData.userTags ?? const <String>[])],
-    );
+  id: m.id,
+  sourceId: m.sourceId,
+  sourceName: m.source?.name ?? '',
+  sourceLang: m.source?.lang ?? '',
+  status: m.status.name,
+  categoryIds: m.categories.nodes.map((c) => c.id).toList(),
+  trackStatuses: m.trackRecords.nodes.map((n) => n.status).toList(),
+  // Same definition the tags FILTER uses, so buckets and `tag:` searches
+  // never disagree.
+  tags: [...m.genre, ...(m.metaData.userTags ?? const <String>[])],
+);
 
 CategoryProxy categoryToProxy(CategoryDto c) => (id: c.id, name: c.name);
 
 // ─────────────────── GroupedTab ─────────────────────────────────────────────
 
-/// A single tab produced by [groupLibrary].
-///
-/// [id] is tab-type-specific:
-/// - BY_DEFAULT: category id (0 = uncategorized)
-/// - BY_SOURCE:  0 (not used for lookup)
-/// - BY_STATUS:  the [statusOrder] rank (1–7)
-/// - UNGROUPED:  0
+/// Tab ID is the category ID, status rank, or zero for other groups.
 typedef GroupedTab = ({int id, String name, List<int> mangaIds});
 
 // ─────────────────── pure grouping function ──────────────────────────────────
@@ -82,8 +75,9 @@ typedef GroupedTab = ({int id, String name, List<int> mangaIds});
 List<GroupedTab> groupLibrary(
   List<MangaProxy> all,
   int groupType,
-  List<CategoryProxy> categories,
-) {
+  List<CategoryProxy> categories, {
+  int? defaultCategoryId = 0,
+}) {
   switch (groupType) {
     case LibraryGroup.bySource:
       return _groupBySource(all);
@@ -101,66 +95,55 @@ List<GroupedTab> groupLibrary(
       return _groupByLanguage(all);
 
     case LibraryGroup.ungrouped:
-      return [
-        (id: 0, name: 'All', mangaIds: all.map((m) => m.id).toList()),
-      ];
+      return [(id: 0, name: 'All', mangaIds: all.map((m) => m.id).toList())];
 
     case LibraryGroup.byDefault:
     default:
-      return _groupByDefault(all, categories);
+      return _groupByDefault(all, categories, defaultCategoryId);
   }
 }
 
 List<GroupedTab> _groupByDefault(
   List<MangaProxy> all,
   List<CategoryProxy> categories,
+  int? defaultCategoryId,
 ) {
-  // Fan-out: a manga in N categories appears in all N tabs.
-  // No-category manga go to the Default tab (id 0).
-  final Map<int, List<int>> buckets = {};
-
-  // Seed with all visible categories so empty tabs still appear
-  // (existing category tabs stay even if 0 manga match).
-  for (final cat in categories) {
-    buckets[cat.id] = [];
+  final buckets = <int, List<int>>{
+    for (final category in categories) category.id: [],
+  };
+  if (defaultCategoryId != null) {
+    buckets.putIfAbsent(defaultCategoryId, () => []);
   }
-  // id 0 = Default/Uncategorized
-  buckets[0] = [];
-
-  for (final m in all) {
-    if (m.categoryIds.isEmpty) {
-      buckets[0]!.add(m.id);
-    } else {
-      for (final catId in m.categoryIds) {
-        buckets.putIfAbsent(catId, () => []).add(m.id);
-      }
+  for (final manga in all) {
+    final ids = manga.categoryIds.isEmpty && defaultCategoryId != null
+        ? [defaultCategoryId]
+        : manga.categoryIds;
+    for (final id in ids.toSet()) {
+      buckets.putIfAbsent(id, () => []).add(manga.id);
     }
   }
-
-  // Order: Default (0) first if non-empty, then seeded categories in order.
-  final List<GroupedTab> tabs = [];
-
-  // Default tab first
-  if (buckets[0]!.isNotEmpty) {
-    tabs.add((id: 0, name: 'Default', mangaIds: buckets[0]!));
-  }
-
-  // Then the seeded categories, in order
-  for (final cat in categories) {
-    final ids = buckets[cat.id] ?? [];
-    tabs.add((id: cat.id, name: cat.name, mangaIds: ids));
-  }
-
-  return tabs;
+  return [
+    if (defaultCategoryId != null &&
+        !categories.any((c) => c.id == defaultCategoryId) &&
+        buckets[defaultCategoryId]!.isNotEmpty)
+      (
+        id: defaultCategoryId,
+        name: 'Default',
+        mangaIds: buckets[defaultCategoryId]!,
+      ),
+    for (final category in categories)
+      (id: category.id, name: category.name, mangaIds: buckets[category.id]!),
+  ];
 }
 
 List<GroupedTab> _groupBySource(List<MangaProxy> all) {
-  final Map<String, ({String name, String lang, List<int> mangaIds})>
-      buckets = {};
+  final Map<String, ({String name, String lang, List<int> mangaIds})> buckets =
+      {};
   for (final m in all) {
     final sid = m.sourceId;
-    final name =
-        m.sourceLang == kLocalSourceLang ? 'Local source' : m.sourceName;
+    final name = m.sourceLang == kLocalSourceLang
+        ? 'Local source'
+        : m.sourceName;
     final entry = buckets.putIfAbsent(
       sid,
       () => (name: name, lang: m.sourceLang, mangaIds: []),
@@ -175,54 +158,56 @@ List<GroupedTab> _groupBySource(List<MangaProxy> all) {
   }
   // Sort source tabs case-insensitively by name.
   final sorted = buckets.entries.toList()
-    ..sort((a, b) =>
-        a.value.name.toLowerCase().compareTo(b.value.name.toLowerCase()));
+    ..sort(
+      (a, b) =>
+          a.value.name.toLowerCase().compareTo(b.value.name.toLowerCase()),
+    );
   // Each tab needs a UNIQUE id (the grouped-list provider is keyed by tab id).
   // Source ids are numeric strings; fall back to the string hash if not.
-  return sorted
-      .map((e) {
-        final isDuplicateName = (nameCounts[e.value.name] ?? 0) > 1;
-        final label = isDuplicateName && e.value.lang != kLocalSourceLang
-            ? '${e.value.name} (${e.value.lang.toUpperCase()})'
-            : e.value.name;
-        return (
-          id: int.tryParse(e.key) ?? e.key.hashCode,
-          name: label,
-          mangaIds: e.value.mangaIds,
-        );
-      })
-      .toList();
+  return sorted.map((e) {
+    final isDuplicateName = (nameCounts[e.value.name] ?? 0) > 1;
+    final label = isDuplicateName && e.value.lang != kLocalSourceLang
+        ? '${e.value.name} (${e.value.lang.toUpperCase()})'
+        : e.value.name;
+    return (
+      id: int.tryParse(e.key) ?? e.key.hashCode,
+      name: label,
+      mangaIds: e.value.mangaIds,
+    );
+  }).toList();
 }
 
 List<GroupedTab> _groupByStatus(List<MangaProxy> all) {
   final Map<String, List<int>> buckets = {};
   for (final m in all) {
-    final status =
-        statusOrder.containsKey(m.status) ? m.status : 'UNKNOWN';
+    final status = statusOrder.containsKey(m.status) ? m.status : 'UNKNOWN';
     buckets.putIfAbsent(status, () => []).add(m.id);
   }
   // Sort by statusOrder rank.
   final sorted = buckets.entries.toList()
     ..sort(
-        (a, b) => (statusOrder[a.key] ?? 7).compareTo(statusOrder[b.key] ?? 7));
+      (a, b) => (statusOrder[a.key] ?? 7).compareTo(statusOrder[b.key] ?? 7),
+    );
   return sorted
-      .map((e) => (
-            id: statusOrder[e.key] ?? 7,
-            name: _statusLabel(e.key),
-            mangaIds: e.value,
-          ))
+      .map(
+        (e) => (
+          id: statusOrder[e.key] ?? 7,
+          name: _statusLabel(e.key),
+          mangaIds: e.value,
+        ),
+      )
       .toList();
 }
 
 String _statusLabel(String status) => switch (status) {
-      'ONGOING' => 'Ongoing',
-      'COMPLETED' => 'Completed',
-      'PUBLISHING_FINISHED' => 'Publishing finished',
-      'LICENSED' => 'Licensed',
-      'ON_HIATUS' => 'On hiatus',
-      'CANCELLED' => 'Cancelled',
-      _ => 'Unknown',
-    };
+  'ONGOING' => 'Ongoing',
+  'COMPLETED' => 'Completed',
+  'PUBLISHING_FINISHED' => 'Publishing finished',
+  'LICENSED' => 'Licensed',
+  'ON_HIATUS' => 'On hiatus',
+  'CANCELLED' => 'Cancelled',
+  _ => 'Unknown',
+};
 
 /// Tab id for a bucket keyed by name rather than a server id — a positional
 /// index would shift as soon as a new tag or language appeared. The prefix
@@ -248,7 +233,9 @@ List<GroupedTab> _groupByTag(List<MangaProxy> all) {
       final key = tag.toLowerCase();
       // De-dup within one manga: a genre that's also a user tag is one bucket.
       if (!seen.add(key)) continue;
-      buckets.putIfAbsent(key, () => (display: tag, mangaIds: [])).mangaIds
+      buckets
+          .putIfAbsent(key, () => (display: tag, mangaIds: []))
+          .mangaIds
           .add(m.id);
     }
     if (seen.isEmpty) untagged.add(m.id);
@@ -287,17 +274,20 @@ List<GroupedTab> _groupByLanguage(List<MangaProxy> all) {
 
   // Sort by DISPLAY name, not ISO code: "German" before "Japanese", not de/ja.
   final sorted = buckets.entries.toList()
-    ..sort((a, b) => languageDisplayName(a.key)
-        .toLowerCase()
-        .compareTo(languageDisplayName(b.key).toLowerCase()));
+    ..sort(
+      (a, b) => languageDisplayName(
+        a.key,
+      ).toLowerCase().compareTo(languageDisplayName(b.key).toLowerCase()),
+    );
 
   return [
     for (final e in sorted)
       (
         id: _nameId('lang', e.key),
-        name: [languageFlagEmoji(e.key), languageDisplayName(e.key)]
-            .whereType<String>()
-            .join(' '),
+        name: [
+          languageFlagEmoji(e.key),
+          languageDisplayName(e.key),
+        ].whereType<String>().join(' '),
         mangaIds: e.value,
       ),
     if (unknown.isNotEmpty)
@@ -325,14 +315,12 @@ List<GroupedTab> _groupByTrackStatus(List<MangaProxy> all) {
 
   // Sort buckets: known statuses by kTrackStatusInfo order, then Other (99) last.
   final sorted = buckets.entries.toList()
-    ..sort((a, b) => trackStatusOrder(a.key).compareTo(trackStatusOrder(b.key)));
+    ..sort(
+      (a, b) => trackStatusOrder(a.key).compareTo(trackStatusOrder(b.key)),
+    );
 
   return sorted
-      .map((e) => (
-            id: e.key,
-            name: trackStatusLabel(e.key),
-            mangaIds: e.value,
-          ))
+      .map((e) => (id: e.key, name: trackStatusLabel(e.key), mangaIds: e.value))
       .toList();
 }
 
@@ -381,14 +369,22 @@ Future<List<GroupedTab>> libraryGroupedTabs(Ref ref) async {
   // loop above and isn't used.
   final List<CategoryProxy> catProxies = groupType == LibraryGroup.byDefault
       ? (ref.watch(visibleCategoryListProvider).value ?? const [])
-          .map(categoryToProxy)
-          .toList()
+            .map(categoryToProxy)
+            .toList()
       : const [];
+  final defaultId = groupType == LibraryGroup.byDefault
+      ? ref.watch(settledDefaultCategoryIdProvider)
+      : null;
   final allFuture = ref.watch(libraryMangaListProvider.future);
 
   final all = await allFuture;
   if (all == null) return const [];
 
   final proxies = all.map(mangaToProxy).toList();
-  return groupLibrary(proxies, groupType, catProxies);
+  return groupLibrary(
+    proxies,
+    groupType,
+    catProxies,
+    defaultCategoryId: defaultId,
+  );
 }

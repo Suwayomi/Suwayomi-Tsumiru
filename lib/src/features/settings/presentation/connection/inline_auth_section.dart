@@ -19,6 +19,11 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../account/data/account_actions.dart';
+import '../../../account/data/account_providers.dart';
+import '../../../account/domain/account_access.dart';
+import '../../../account/presentation/account_code_dialog.dart';
+import '../../../auth/data/auth_session_status.dart';
 import '../../../offline/data/background/background_download_controller_shim.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
@@ -40,10 +45,14 @@ class InlineAuthSection extends HookConsumerWidget {
     final needsReauth = ref.watch(needsReauthProvider);
     final storedUsername = ref.watch(authUsernameProvider);
 
-    // "Signed in" = an auth mode is set and the session isn't flagged broken.
-    // Changing the auth mode (below) sets needsReauth, so a freshly-picked
-    // mode correctly shows the login form until the user actually signs in.
-    final signedIn = authType != AuthType.none && !needsReauth;
+    final signedIn =
+        authType != AuthType.none &&
+        ref.watch(hasStoredCredentialsProvider) &&
+        !needsReauth;
+    final showAccountCodes =
+        authType == AuthType.uiLogin &&
+        ref.watch(settledAccountAccessProvider).capability !=
+            AccountCapability.unsupported;
 
     final username = useTextEditingController(text: storedUsername ?? '');
     final password = useTextEditingController();
@@ -75,7 +84,8 @@ class InlineAuthSection extends HookConsumerWidget {
               serverBaseUrl: resolvedBaseUrl(),
               username: username.text.trim(),
               password: password.text,
-              makeGqlClient: () => ref.read(unauthenticatedGraphQlClientProvider),
+              makeGqlClient: () =>
+                  ref.read(unauthenticatedGraphQlClientProvider),
             );
         if (!context.mounted) return;
         if (result is TestConnectionSuccess) {
@@ -125,7 +135,19 @@ class InlineAuthSection extends HookConsumerWidget {
       }
     }
 
+    Future<void> openCodeDialog(AccountCodeMode mode) async {
+      final redeem = ref.read(accountActionsProvider).redeemCode;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AccountCodeDialog(mode: mode, onSubmit: redeem),
+      );
+    }
+
     Future<void> logout() async {
+      final signOut = ref.read(accountActionsProvider).signOut;
+      final current = ref
+          .read(authCredentialsStoreProvider.notifier)
+          .captureSession();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogCtx) => AlertDialog(
@@ -147,18 +169,9 @@ class InlineAuthSection extends HookConsumerWidget {
           ],
         ),
       );
-      if (confirmed != true) return;
-      await ref.read(backgroundDownloadControllerProvider).changeIdentity(
-        () async {
-          final store = ref.read(authCredentialsStoreProvider.notifier);
-          await store.clearUiLoginTokens();
-          await store.clearSimpleLoginCookie();
-          await store.clearPassword();
-          await store.clearBasicCredentials();
-          ref.read(authTypeKeyProvider.notifier).update(AuthType.none);
-          ref.read(needsReauthProvider.notifier).set(false);
-        },
-      );
+      if (confirmed != true || !context.mounted || !current()) return;
+      await signOut();
+      if (!context.mounted) return;
       password.clear();
       message.value = null;
     }
@@ -179,6 +192,7 @@ class InlineAuthSection extends HookConsumerWidget {
           ref.read(authTypeKeyProvider.notifier).update(next);
         },
       );
+      if (!context.mounted) return;
       message.value = null;
       password.clear();
     }
@@ -271,6 +285,25 @@ class InlineAuthSection extends HookConsumerWidget {
                 onSubmitted: (_) => signIn(),
               ),
             ),
+            if (showAccountCodes)
+              pad(
+                Wrap(
+                  children: [
+                    TextButton(
+                      onPressed: busy.value || testing.value
+                          ? null
+                          : () => openCodeDialog(AccountCodeMode.registration),
+                      child: Text(context.l10n.accountRegistrationTitle),
+                    ),
+                    TextButton(
+                      onPressed: busy.value || testing.value
+                          ? null
+                          : () => openCodeDialog(AccountCodeMode.recovery),
+                      child: Text(context.l10n.accountRecoveryTitle),
+                    ),
+                  ],
+                ),
+              ),
             if (message.value != null)
               pad(
                 Text(

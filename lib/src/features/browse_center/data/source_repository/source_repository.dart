@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../account/data/account_permission.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/manga_page/manga_page.dart';
 import '../../domain/source/source_model.dart';
@@ -21,7 +22,9 @@ part 'source_repository.g.dart';
 class SourceRepository {
   final GraphQLClient ferryClient;
 
-  SourceRepository(this.ferryClient);
+  SourceRepository(this.ferryClient, {required this.permissions});
+
+  final AccountPermissionGuard permissions;
 
   Future<List<SourceDto>?> getSourceList() =>
       ferryClient.query$SourceList().getData((data) => data.sources.nodes);
@@ -32,54 +35,66 @@ class SourceRepository {
     required int page,
     String? query,
     List<FilterChange>? filters,
-  }) =>
-      ferryClient
-          .mutate$FetchSourceManga(
-            Options$Mutation$FetchSourceManga(
-              variables: Variables$Mutation$FetchSourceManga(
-                input: Input$FetchSourceMangaInput(
-                  query: query,
-                  page: page,
-                  source: sourceId,
-                  type: sourceType,
-                  filters: filters,
-                ),
-              ),
+  }) => ferryClient
+      .mutate$FetchSourceManga(
+        Options$Mutation$FetchSourceManga(
+          variables: Variables$Mutation$FetchSourceManga(
+            input: Input$FetchSourceMangaInput(
+              query: query,
+              page: page,
+              source: sourceId,
+              type: sourceType,
+              filters: filters,
             ),
-          )
-          .getData((data) => data.fetchSourceManga);
+          ),
+        ),
+      )
+      .getData((data) => data.fetchSourceManga);
 
   Future<SourceDto?> getSource(String sourceId) => ferryClient
-      .query$SourceById(Options$Query$SourceById(
-          variables: Variables$Query$SourceById(id: sourceId)))
+      .query$SourceById(
+        Options$Query$SourceById(
+          variables: Variables$Query$SourceById(id: sourceId),
+        ),
+      )
       .getData((data) => data.source);
 
   Future<List<SourcePreference>?> getSourcePreference(String sourceId) =>
       ferryClient
-          .query$SourcePreferenceById(Options$Query$SourcePreferenceById(
+          .query$SourcePreferenceById(
+            Options$Query$SourcePreferenceById(
               variables: Variables$Query$SourcePreferenceById(id: sourceId),
-              fetchPolicy: FetchPolicy.noCache))
+              fetchPolicy: FetchPolicy.noCache,
+            ),
+          )
           .getData((data) => data.source.preferences);
 
   Future<List<Filter>?> getSourceFilter(String sourceId) => ferryClient
-      .query$SourceFilterById(Options$Query$SourceFilterById(
-          variables: Variables$Query$SourceFilterById(id: sourceId)))
+      .query$SourceFilterById(
+        Options$Query$SourceFilterById(
+          variables: Variables$Query$SourceFilterById(id: sourceId),
+        ),
+      )
       .getData((data) => data.source.filters);
 
   Future<void> updateSourcePreferenceById(
-          String sourceId, SourcePreferenceChange change) =>
-      ferryClient
-          .mutate$UpdateSourcePreference(
-            Options$Mutation$UpdateSourcePreference(
-              variables: Variables$Mutation$UpdateSourcePreference(
-                input: Input$UpdateSourcePreferenceInput(
-                  change: change,
-                  source: sourceId,
-                ),
+    String sourceId,
+    SourcePreferenceChange change,
+  ) => permissions.run(
+    Enum$UserPermission.MANAGE_SOURCE_PREFERENCES,
+    () => ferryClient
+        .mutate$UpdateSourcePreference(
+          Options$Mutation$UpdateSourcePreference(
+            variables: Variables$Mutation$UpdateSourcePreference(
+              input: Input$UpdateSourcePreferenceInput(
+                change: change,
+                source: sourceId,
               ),
             ),
-          )
-          .getData((data) => data.updateSourcePreference?.preferences);
+          ),
+        )
+        .getData((data) => data.updateSourcePreference?.preferences),
+  );
 
   /// Pins/unpins a source by writing the `webUI_isPinned` server meta key
   /// (the exact key WebUI uses, so the state syncs across clients).
@@ -119,5 +134,7 @@ class SourceRepository {
 }
 
 @riverpod
-SourceRepository sourceRepository(Ref ref) =>
-    SourceRepository(ref.watch(graphQlClientProvider));
+SourceRepository sourceRepository(Ref ref) => SourceRepository(
+  ref.watch(graphQlClientProvider),
+  permissions: ref.watch(accountPermissionGuardProvider),
+);

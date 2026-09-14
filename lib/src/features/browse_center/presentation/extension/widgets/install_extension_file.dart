@@ -8,9 +8,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../account/data/account_providers.dart';
 import '../controller/extension_actions.dart';
 
 class InstallExtensionFile extends ConsumerWidget {
@@ -22,29 +24,27 @@ class InstallExtensionFile extends ConsumerWidget {
       type: FileType.custom,
       allowedExtensions: ['apk'],
     );
-    if (file != null) {
+    if (!context.mounted || file == null) return;
+    toast?.show(context.l10n.installingExtension);
+    AppUtils.guard(() async {
+      await ref.read(extensionActionsProvider).installFile(context, file: file);
       if (context.mounted) {
-        toast?.show(context.l10n.installingExtension);
+        toast?.show(context.l10n.extensionInstalled, instantShow: true);
       }
-    }
-    AppUtils.guard(
-      () async {
-        await ref
-            .read(extensionActionsProvider)
-            .installFile(context, file: file);
-        if (context.mounted) {
-          toast?.show(context.l10n.extensionInstalled, instantShow: true);
-        }
-      },
-      toast,
-    );
+    }, toast);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final allowed = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.INSTALL_EXTERNAL_EXTENSIONS);
     return IconButton(
+      tooltip: allowed
+          ? context.l10n.install
+          : context.l10n.accountPermissionDenied,
       icon: const Icon(Icons.add_rounded),
-      onPressed: () => extensionFilePicker(ref, context),
+      onPressed: allowed ? () => extensionFilePicker(ref, context) : null,
     );
   }
 }

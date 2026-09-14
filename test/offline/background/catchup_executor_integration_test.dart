@@ -3,8 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/account/data/account_providers.dart';
+import 'package:tsumiru/src/features/account/domain/account_access.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_client.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
@@ -13,11 +18,18 @@ import 'package:tsumiru/src/features/offline/data/background/background_token_re
 import 'package:tsumiru/src/features/offline/data/background/catchup_download_executor.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
+
+import 'package:tsumiru/src/features/offline/data/offline_chapter_catchup.dart';
+import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
+import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity.dart';
 import 'package:tsumiru/src/features/offline/data/offline_types.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:workmanager_android/workmanager_android.dart';
+
+import '../../helpers/offline_test_db.dart';
 
 class _RealHttpOverrides extends HttpOverrides {}
 
@@ -32,8 +44,14 @@ void main() {
   late int requests;
   late bool holdPage;
   late bool failPage;
+  late bool denyPage;
+  late int pageStatus;
   late List<int> resolvedPages;
   late int serverChapterCount;
+  late bool serverDownloaded;
+  late List<int> enqueued;
+  late bool revokeIdentityAfterEnqueue;
+  late Set<int> serverMissing;
   late String serverIdentity;
   late Map<int, List<String>> pageUrls;
   late Completer<void> pageRequested;
@@ -61,8 +79,14 @@ void main() {
     requests = 0;
     holdPage = false;
     failPage = false;
+    denyPage = false;
+    pageStatus = 200;
     resolvedPages = [];
     serverChapterCount = 30;
+    serverDownloaded = true;
+    enqueued = [];
+    revokeIdentityAfterEnqueue = false;
+    serverMissing = {};
     serverIdentity = 'catalog-uuid';
     pageUrls = {};
     pageRequested = Completer<void>();
@@ -75,7 +99,9 @@ void main() {
         pages.add(id);
         if (!pageRequested.isCompleted) pageRequested.complete();
         if (holdPage) await releasePage.future;
+        request.response.statusCode = pageStatus;
         if (failPage) request.response.statusCode = 500;
+        if (denyPage) request.response.statusCode = 403;
         request.response.headers.contentType = ContentType('image', 'jpeg');
         request.response.add([1, 2, 3]);
       } else {
@@ -90,6 +116,18 @@ void main() {
               ],
             },
           };
+        } else if (query.contains('EnqueueDownloads')) {
+          enqueued.addAll(
+            ((body['variables'] as Map)['input']['ids'] as List).cast<int>(),
+          );
+          if (revokeIdentityAfterEnqueue) {
+            await state.setIdentityAuthorized(false);
+          }
+          data = {
+            'enqueueChapterDownloads': {
+              '__typename': 'EnqueueChapterDownloadsPayload',
+            },
+          };
         } else if (query.contains('MangaChapters')) {
           data = {
             'chapters': {
@@ -102,7 +140,8 @@ void main() {
                   'chapterNumber': index + 1,
                   'isRead': false,
                   'isBookmarked': false,
-                  'isDownloaded': true,
+                  'isDownloaded':
+                      serverDownloaded && !serverMissing.contains(index + 1),
                   'pageCount': 1,
                 },
               ),
@@ -199,6 +238,8 @@ void main() {
 
   Future<void> enableOverlap({
     int queuedCount = 1,
+    Map<int, int> chapterGenerations = const {},
+    Map<int, int> serverFetchAttempts = const {},
     Set<int> failedChapterIds = const {},
     OfflineKeepRule keepRule = OfflineKeepRule.all,
   }) async {
@@ -218,6 +259,8 @@ void main() {
             onDeviceChapterIds: {},
             pinnedChapterIds: {},
             failedChapterIds: failedChapterIds,
+            chapterGenerations: chapterGenerations,
+            serverFetchAttempts: serverFetchAttempts,
           ),
         ],
         queuedChapters: List.generate(
@@ -231,6 +274,107 @@ void main() {
       ),
     );
   }
+
+  test(
+    'late denial after account switch leaves old catalog state untouched',
+    () async {
+      serverChapterCount = 1;
+      holdPage = true;
+      denyPage = true;
+      await enableOverlap(queuedCount: 0);
+      final before = state.readLedger('catalog-uuid').toJson();
+      final running = run();
+      await pageRequested.future.timeout(const Duration(seconds: 5));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('offlineCatalogServerId', 'catalog-B');
+      await prefs.setString('offlineLastServerId', 'catalog-B');
+      releasePage.complete();
+      expect(await running.timeout(const Duration(seconds: 5)), isTrue);
+      await state.reload();
+      expect(await log.parse(), isEmpty);
+      expect(state.readLedger('catalog-uuid').toJson(), before);
+      expect(state.downloadPermissionPaused('catalog-uuid'), isFalse);
+      expect(state.downloadPermissionPaused('catalog-B'), isFalse);
+    },
+  );
+
+  test(
+    'exhausted keep-rule budget publishes a failed metadata chapter once',
+    () async {
+      serverChapterCount = 1;
+      await enableOverlap(queuedCount: 0);
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(downloadRetries: {1: 5}, pendingDownloads: {1: 1}),
+      );
+      expect(await run(), isTrue);
+      expect(await run(), isTrue);
+      final entries = await log.parse();
+      expect(entries.whereType<AdoptChapterEntry>(), hasLength(1));
+      expect(entries.whereType<ChapterEntry>().single.status, 'error');
+      expect(pages, isEmpty);
+      final db = testOfflineDatabase();
+      addTearDown(db.close);
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await db.upsertChapterMetadata(
+        id: 1,
+        mangaId: 1,
+        name: 'C',
+        chapterIndex: 0,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: false,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+      );
+      await replayCompletionLog(
+        db: db,
+        store: IoOfflinePageStore(OfflinePaths('${tmp.path}/offline')),
+        log: log,
+        catalogServerId: 'catalog-uuid',
+      );
+      expect((await db.chapterById(1))!.deviceState, OfflineDeviceState.error);
+    },
+  );
+
+  for (final status in [401, 503]) {
+    test(
+      'backfill retains interrupted download obligation for status $status',
+      () async {
+        serverChapterCount = 1;
+        pageStatus = status;
+        await enableOverlap(queuedCount: 0);
+        expect(await run(), isTrue);
+        expect(state.readLedger('catalog-uuid').pendingDownloads, {1: 1});
+        expect(state.readLedger('catalog-uuid').downloadRetries, isEmpty);
+        pageStatus = 200;
+        expect(await run(), isTrue);
+        expect(
+          (await log.parse()).whereType<AdoptChapterEntry>().single.status,
+          isNull,
+        );
+        expect(state.readLedger('catalog-uuid').pendingDownloads, isEmpty);
+      },
+    );
+  }
+
+  test('backfill retains chapters beyond one run allowance', () async {
+    await enableOverlap(queuedCount: 0);
+    for (var wake = 1; wake <= 3; wake++) {
+      expect(await run(), isTrue);
+      expect(pages.length, wake * 10);
+      expect(
+        state.readLedger('catalog-uuid').pendingDownloads.length,
+        30 - wake * 10,
+      );
+    }
+  });
 
   test(
     'resumed bytes count once and crossing cap blocks the next fresh chapter',
@@ -290,6 +434,54 @@ void main() {
       expect(await run(), isTrue);
       expect(pages, [2, 3, 4]);
       expect(resolvedPages, [2, 3, 4]);
+    },
+  );
+
+  test(
+    'a new keep generation starts with a fresh device retry budget',
+    () async {
+      serverChapterCount = 1;
+      failPage = true;
+      await enableOverlap(queuedCount: 0, chapterGenerations: {1: 1});
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          pendingDownloads: {1: 1},
+          pendingServerFetch: {1: 1},
+          serverFetchRetries: {1: 5},
+          downloadRetries: {1: 5},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(resolvedPages, [1]);
+      expect(state.readLedger('catalog-uuid').downloadRetries, {1: 1});
+      expect(state.readLedger('catalog-uuid').chapterGenerations, {1: 1});
+      expect(state.readLedger('catalog-uuid').serverFetchRetries, isEmpty);
+    },
+  );
+
+  test(
+    'a new keep generation starts with a fresh server retry budget',
+    () async {
+      serverChapterCount = 1;
+      serverDownloaded = false;
+      await enableOverlap(queuedCount: 0, chapterGenerations: {1: 2});
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          pendingServerFetch: {1: 1},
+          serverFetchRetries: {1: 5},
+          chapterGenerations: {1: 1},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(enqueued, [1]);
+      final ledger = state.readLedger('catalog-uuid');
+      expect(ledger.serverFetchRetries, {1: 1});
+      expect(ledger.chapterGenerations, {1: 2});
+      serverDownloaded = true;
+      expect(await run(), isTrue);
+      expect(state.readLedger('catalog-uuid').chapterGenerations, isEmpty);
     },
   );
 
@@ -419,6 +611,218 @@ void main() {
       await state.setIdentityAuthorized(false);
       expect(await run(), isTrue);
       expect(requests, 0);
+    },
+  );
+
+  for (final source in ['snapshot', 'queued', 'both']) {
+    test('keep worker carries four server attempts from $source', () async {
+      serverChapterCount = 1;
+      serverDownloaded = false;
+      await enableOverlap(
+        queuedCount: 0,
+        serverFetchAttempts: source == 'queued' ? const {} : const {1: 4},
+      );
+      await state.writeLedger(
+        'catalog-uuid',
+        CatchupLedger(
+          pendingServerFetch: const {1: 1},
+          serverFetchRetries: const {1: 2},
+          queuedServerRetries: source == 'snapshot'
+              ? const {}
+              : const {'1:0': 4},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(enqueued, [1]);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries[1], 5);
+      expect(await run(), isTrue);
+      expect(enqueued, [1]);
+    });
+  }
+
+  for (final queued in [true, false]) {
+    test(
+      'accepted fifth ${queued ? 'queued' : 'keep-rule'} server attempt survives identity revocation',
+      () async {
+        serverChapterCount = 2;
+        serverDownloaded = false;
+        revokeIdentityAfterEnqueue = true;
+        await enableOverlap(queuedCount: queued ? 2 : 0);
+        await state.writeLedger(
+          'catalog-uuid',
+          CatchupLedger(
+            pendingServerFetch: queued ? const {} : const {1: 1},
+            serverFetchRetries: queued ? const {} : const {1: 4},
+            queuedServerRetries: queued ? const {'1:0': 4} : const {},
+          ),
+        );
+        expect(await run(), isTrue);
+        await state.reload();
+        expect(state.identityAuthorized, isFalse);
+        expect(enqueued, [1]);
+        expect(resolvedPages, isEmpty);
+        expect(pages, isEmpty);
+        final ledger = state.readLedger('catalog-uuid');
+        expect(
+          queued
+              ? ledger.queuedServerRetries['1:0']
+              : ledger.serverFetchRetries[1],
+          5,
+        );
+        final firstRequests = requests;
+        expect(await run(), isTrue);
+        expect(requests, firstRequests);
+        expect(enqueued, [1]);
+      },
+    );
+  }
+
+  test(
+    'adoption publishes exhausted work before an immediate scheduled wake',
+    () async {
+      serverChapterCount = 1;
+      serverDownloaded = false;
+      await enableOverlap();
+      final db = testOfflineDatabase();
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      await db.upsertChapterMetadata(
+        id: 1,
+        mangaId: 1,
+        name: 'C',
+        chapterIndex: 0,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: false,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+      );
+      await db.setChapterDeviceState(1, OfflineDeviceState.queued);
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          queuedServerRetries: {'1:0': 5},
+          queuedDownloadRetries: {'1:0': 5},
+        ),
+      );
+      FlutterSecureStorage.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+          offlineDatabaseProvider.overrideWithValue(db),
+          offlinePathsProvider.overrideWithValue(
+            OfflinePaths('${tmp.path}/offline'),
+          ),
+          offlineEnabledProvider.overrideWith((ref) => true),
+          offlineActiveProvider.overrideWith((ref) => true),
+          settledAccountAccessProvider.overrideWith(
+            (ref) => AccountAccess(capability: AccountCapability.unsupported),
+          ),
+        ],
+      );
+      try {
+        await container.read(authCredentialsStoreProvider.future);
+        expect(await adoptWorkerObligations(container.read), isTrue);
+        final snapshot = state.readSpec()!;
+        expect(snapshot.queuedChapters, isEmpty);
+        expect(snapshot.manga.single.serverFetchAttempts, {1: 5});
+        expect(snapshot.manga.single.failedChapterIds, {1});
+        expect(state.readLedger('catalog-uuid').queuedServerRetries, isEmpty);
+        expect(state.readLedger('catalog-uuid').queuedDownloadRetries, isEmpty);
+        expect(await run(), isTrue);
+        expect(enqueued, isEmpty);
+        expect(pages, isEmpty);
+      } finally {
+        container.dispose();
+        await db.close();
+      }
+    },
+  );
+
+  test(
+    'successful fifth server request leaves the device budget available',
+    () async {
+      serverChapterCount = 1;
+      await enableOverlap(queuedCount: 0, serverFetchAttempts: {1: 5});
+      expect(await run(), isTrue);
+      expect(pages, [1]);
+      expect(enqueued, isEmpty);
+    },
+  );
+
+  test(
+    'keep worker ignores queued attempts from an older generation',
+    () async {
+      serverChapterCount = 1;
+      serverDownloaded = false;
+      await enableOverlap(queuedCount: 0, chapterGenerations: {1: 1});
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          queuedServerRetries: {'1:0': 5},
+          queuedDownloadRetries: {'1:0': 5},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(enqueued, [1]);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries[1], 1);
+      expect(state.readLedger('catalog-uuid').chapterGenerations[1], 1);
+    },
+  );
+
+  test(
+    'keep worker retains queued device attempts for the same generation',
+    () async {
+      serverChapterCount = 1;
+      pageUrls[1] = [];
+      await enableOverlap(queuedCount: 0);
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          downloadRetries: {1: 2},
+          pendingDownloads: {1: 1},
+          queuedDownloadRetries: {'1:0': 4},
+        ),
+      );
+      expect(await run(), isTrue);
+      expect(state.readLedger('catalog-uuid').downloadRetries[1], 5);
+      final firstRequests = resolvedPages.length;
+      expect(await run(), isTrue);
+      expect(resolvedPages.length, firstRequests);
+    },
+  );
+
+  test(
+    'accepted fifth server attempt survives yield during the next chapter',
+    () async {
+      serverChapterCount = 2;
+      serverMissing = {1};
+      holdPage = true;
+      await enableOverlap(queuedCount: 0);
+      await state.writeLedger(
+        'catalog-uuid',
+        const CatchupLedger(
+          pendingServerFetch: {1: 1},
+          serverFetchRetries: {1: 4},
+        ),
+      );
+      final running = run();
+      await pageRequested.future.timeout(const Duration(seconds: 5));
+      expect(enqueued, [1]);
+      final contender = BackgroundDownloadLock(
+        File('${tmp.path}/offline/.bg_lock'),
+      );
+      await contender.requestYield();
+      expect(await running.timeout(const Duration(seconds: 5)), isTrue);
+      expect(state.readLedger('catalog-uuid').serverFetchRetries, {1: 5});
+      expect(state.readLedger('catalog-uuid').chapterGenerations[1], 0);
     },
   );
 

@@ -8,6 +8,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/logger/logger.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../../utils/platform/is_android_native.dart';
+import '../../account/data/account_permission.dart';
 import 'chapter_commit.dart';
 import 'chapter_download_engine.dart';
 import 'chapter_manifest.dart';
@@ -36,6 +37,8 @@ class OfflineDownloadCoordinator {
     required this.store,
     this.persistedPaused,
     this.onServerUnreachable,
+    this.onPermissionDenied,
+    this.isCurrentSession,
     this.onProgress,
     this.onProgressDone,
   });
@@ -56,6 +59,9 @@ class OfflineDownloadCoordinator {
   /// outage that no UI read ever notices, and the reconnect listener (which
   /// needs a true->false transition) would never fire to unpark it.
   void Function()? onServerUnreachable;
+  final Future<void> Function()? onPermissionDenied;
+  final bool Function()? isCurrentSession;
+  bool _permissionHeld = false;
 
   /// Reads the persisted "downloads paused" flag (injected so a restart
   /// survives with the pause intact, without depending on SharedPreferences
@@ -152,17 +158,35 @@ class OfflineDownloadCoordinator {
     _cancelled.addAll(_active);
   }
 
-  /// Wait until nothing is downloading and the pump has exited, so a catalog
-  /// clear is sure no `onPageStored` write lands after it wipes the DB/files.
-  /// Bounded so it never hangs the clear — worst case is one orphan row,
-  /// cleaned up later.
-  Future<void> awaitIdle({
+  Future<void> awaitIdle({Duration timeout = const Duration(seconds: 3)}) =>
+      _awaitIdle(timeout);
+
+  Future<void> pauseAndDrain({
     Duration timeout = const Duration(seconds: 3),
   }) async {
+    final wasPaused = _paused;
+    pause();
+    try {
+      await awaitIdle(timeout: timeout);
+    } catch (_) {
+      _paused = wasPaused;
+      rethrow;
+    }
+  }
+
+  static Future<void> stopAll({Duration timeout = const Duration(seconds: 3)}) {
+    _cancelled.addAll(_active);
+    return _awaitIdle(timeout);
+  }
+
+  static Future<void> _awaitIdle(Duration timeout) async {
     final deadline = DateTime.now().add(timeout);
     while ((_active.isNotEmpty || _pumping) &&
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    if (_active.isNotEmpty || _pumping) {
+      throw StateError('Downloads did not stop');
     }
   }
 
@@ -224,7 +248,10 @@ class OfflineDownloadCoordinator {
   /// chapter, doesn't re-fetch pages already on disk, and simply resumes a
   /// chapter left `downloading` by a prior run.
   Future<void> enqueueChapter(OfflineChapter chapter) async {
-    if (_deleting.containsKey(chapter.id)) return;
+    if (_deleting.containsKey(chapter.id) ||
+        isCurrentSession?.call() == false) {
+      return;
+    }
     if (chapter.deviceState == OfflineDeviceState.downloaded) return;
     // Paused: don't start (or re-start a stranded) chapter. Guarded here too,
     // not just in pumpDownloads — enqueueChapter's `finally` clears
@@ -238,7 +265,16 @@ class OfflineDownloadCoordinator {
       // deleteChapter) — a mid-flight delete claim must win; `none` is itself
       // a valid fresh-download start, so only an active delete blocks it.
       final started = await db.transaction(() async {
-        if (_deleting.containsKey(chapter.id)) return false;
+        if (_deleting.containsKey(chapter.id) ||
+            isCurrentSession?.call() == false) {
+          return false;
+        }
+        final latest = await db.chapterById(chapter.id);
+        if (latest == null ||
+            latest.downloadGeneration != chapter.downloadGeneration ||
+            latest.deviceState == OfflineDeviceState.downloaded) {
+          return false;
+        }
         await db.setChapterDeviceState(
           chapter.id,
           OfflineDeviceState.downloading,
@@ -247,20 +283,17 @@ class OfflineDownloadCoordinator {
       });
       if (!started) return;
       final urls = await resolvePages(chapter.id);
+      if (!await _ownsAttempt(chapter)) return;
       if (urls.isEmpty) {
         logger.e(
           'Offline: no pages resolved for chapter ${chapter.id}; '
           'marking error',
         );
-        await _applyTerminalError(chapter.id);
+        await _applyTerminalError(chapter);
         return;
       }
       final indices = [for (var i = 0; i < urls.length; i++) i];
-      // The generation is read fresh (not taken from the possibly-stale row we
-      // were handed) and stamped into staging, so commit can tell whether this
-      // download still belongs to the chapter it started on.
-      final generation =
-          (await db.chapterById(chapter.id))?.downloadGeneration ?? 0;
+      final generation = chapter.downloadGeneration;
       final staged = await _openStaging(
         chapter.mangaId,
         chapter.id,
@@ -282,7 +315,10 @@ class OfflineDownloadCoordinator {
         mangaId: chapter.mangaId,
         chapterId: chapter.id,
         pages: pages,
-        isCancelled: () => _cancelled.contains(chapter.id),
+        isCancelled: () =>
+            _cancelled.contains(chapter.id) ||
+            isPaused ||
+            isCurrentSession?.call() == false,
         onPageStored: (pageIndex, relPath, bytes) async {
           // Pages live in staging until the chapter commits, so there is no
           // catalog row to write here — only progress to report.
@@ -291,6 +327,13 @@ class OfflineDownloadCoordinator {
       );
 
       if (outcome.cancelled) return; // leave staging; resume later
+      if (outcome.error != null && isPermissionDenied(outcome.error!)) {
+        _permissionHeld = true;
+        if (!await _ownsAttempt(chapter)) return;
+        await onPermissionDenied?.call();
+        await _applyTerminalError(chapter);
+        return;
+      }
       if (outcome.offline) {
         // No network / Wi-Fi-only blocked it — leave the chapter `downloading`
         // so it resumes on reconnect, NOT `error`. Stop the pump too: the
@@ -309,19 +352,19 @@ class OfflineDownloadCoordinator {
         return;
       }
       if (outcome.authFailed) {
-        logger.e('Offline: chapter ${chapter.id} auth failed (token dead)');
-        await _applyTerminalError(chapter.id);
+        _permissionHeld = true;
         return;
       }
       if (outcome.error != null) {
         logger.e('Offline: chapter ${chapter.id} failed: ${outcome.error}');
-        await _applyTerminalError(chapter.id);
+        await _applyTerminalError(chapter);
         return;
       }
       logger.i(
         'Offline: enqueued ${pages.length} page tasks for chapter '
         '${chapter.id} (manga ${chapter.mangaId})',
       );
+      if (isPaused || isCurrentSession?.call() == false) return;
       await commitStagedChapter(
         db: db,
         store: store,
@@ -330,7 +373,16 @@ class OfflineDownloadCoordinator {
       );
     } catch (e) {
       final cause = e is OperationMessageException ? e.exception : e;
-      if (isConnectionError(cause)) {
+      if (cause is AccountPermissionUnavailable ||
+          cause is PageAuthException ||
+          isAuthenticationRequired(cause)) {
+        _permissionHeld = true;
+      } else if (isPermissionDenied(cause)) {
+        _permissionHeld = true;
+        if (!await _ownsAttempt(chapter)) return;
+        await onPermissionDenied?.call();
+        await _applyTerminalError(chapter);
+      } else if (isConnectionError(cause)) {
         // Page-list resolve hit a dead network, not a real chapter failure:
         // leave it downloading so the next pump resumes it (Android worker
         // parity). Park the pump too — a proxy answering 502 fails in
@@ -344,7 +396,7 @@ class OfflineDownloadCoordinator {
         );
       } else {
         logger.e('Offline: chapter ${chapter.id} download error: $e');
-        await _applyTerminalError(chapter.id);
+        await _applyTerminalError(chapter);
       }
     } finally {
       _active.remove(chapter.id);
@@ -391,17 +443,27 @@ class OfflineDownloadCoordinator {
     return const {};
   }
 
-  /// Write a terminal error state only if the chapter is still ours. beginDelete
-  /// waits only briefly for the engine to stop, so a slow fetch can outlive a
-  /// delete that already committed `none` — a late error must not resurrect it.
-  Future<void> _applyTerminalError(int chapterId) async {
-    if (_deleting.containsKey(chapterId)) return;
-    await db.transaction(() async {
-      final c = await db.chapterById(chapterId);
-      if (c == null || c.deviceState == OfflineDeviceState.none) return;
-      await db.setChapterDeviceState(chapterId, OfflineDeviceState.error);
-    });
+  Future<bool> _ownsAttempt(OfflineChapter chapter) async {
+    if (_deleting.containsKey(chapter.id) ||
+        _cancelled.contains(chapter.id) ||
+        isCurrentSession?.call() == false) {
+      return false;
+    }
+    final latest = await db.chapterById(chapter.id);
+    return isCurrentSession?.call() != false &&
+        !_deleting.containsKey(chapter.id) &&
+        !_cancelled.contains(chapter.id) &&
+        latest != null &&
+        latest.downloadGeneration == chapter.downloadGeneration &&
+        latest.deviceState != OfflineDeviceState.none &&
+        latest.deviceState != OfflineDeviceState.downloaded;
   }
+
+  Future<void> _applyTerminalError(OfflineChapter chapter) =>
+      db.transaction(() async {
+        if (!await _ownsAttempt(chapter)) return;
+        await db.setChapterDeviceState(chapter.id, OfflineDeviceState.error);
+      });
 
   /// Drain the queue one chapter at a time: resume any chapter left
   /// `downloading` (stranded by an app restart) first, then pull from the
@@ -419,9 +481,10 @@ class OfflineDownloadCoordinator {
     // A fresh pump is a fresh chance: the offline park below stops THIS drain;
     // the next trigger (launch resume, a new save, reconnect) tries again.
     _pausedForOffline = false;
+    _permissionHeld = false;
     try {
       while (true) {
-        if (isPaused || _pausedForOffline) break;
+        if (isPaused || _pausedForOffline || _permissionHeld) break;
         final next = await _nextChapter();
         if (next == null) break;
         await enqueueChapter(next);

@@ -4,8 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/chapter_download_engine.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+
 import '../../../helpers/fake_page_store.dart';
 
 List<PageRef> _pages(int n) => [
@@ -14,6 +19,34 @@ List<PageRef> _pages(int n) => [
 
 void main() {
   const noBackoff = Duration.zero;
+
+  test('a later permission denial outranks an ordinary page failure', () async {
+    final secondStarted = Completer<void>();
+    final engine = ChapterDownloadEngine(
+      writePage: FakePageStore(),
+      maxAttempts: 1,
+      parallelPageLimit: 2,
+      refreshAuth: () async => false,
+      fetchPage: (url) async {
+        if (url.endsWith('p0')) {
+          await secondStarted.future;
+          throw StateError('missing page');
+        }
+        secondStarted.complete();
+        await Future<void>.delayed(Duration.zero);
+        throw const AccountPermissionDenied(
+          Enum$UserPermission.DOWNLOAD_CHAPTERS,
+        );
+      },
+    );
+    final outcome = await engine.download(
+      mangaId: 1,
+      chapterId: 2,
+      pages: _pages(2),
+      isCancelled: () => false,
+    );
+    expect(outcome.error, isA<AccountPermissionDenied>());
+  });
 
   test('downloads all pages and reports each stored', () async {
     final store = FakePageStore();

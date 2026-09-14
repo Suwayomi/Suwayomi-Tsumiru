@@ -166,8 +166,9 @@ degrades to title-only matching (no fresh tracker/description data to trust).
 - **`lastRead` sort is internally reversed** — the comparator swaps m1/m2 arguments.
   "Ascending" direction yields **most-recently-read first**. Do not fix — Mihon parity,
   and the **default sort is `lastRead`**, so new installs open most-recent-first.
-- **Empty categories are hidden** (`visibleCategoryListProvider`) — a new empty
-  category is invisible in the tab bar until it has manga. The edit screen shows all.
+- **Empty custom categories are hidden** (`visibleCategoryListProvider`). The
+  default category remains available when empty, unless deliberately hidden. The
+  empty library links to Categories, where users can add or unhide categories.
 - **Filter/sort/display/group changes are global** — applied to all tabs at once.
 - **Tab index** (BY_DEFAULT mode) comes from the `:categoryId` route param matched
   to the visible category list — not persisted as a tab index.
@@ -178,3 +179,16 @@ degrades to title-only matching (no fresh tracker/description data to trust).
 - **BY_TRACK_STATUS** tab is only offered in the Group tab when at least one tracker
   is logged in (`loggedInTrackersProvider`).
 - **Random sort seed** is session-stable: resets on app restart, not on every toggle.
+
+## Account default category
+
+`data/default_category.dart` resolves the special default category separately from
+the category list. Account-capable servers use the paged `AccountCategoryIdentities`
+query; legacy servers use ID 0. An unresolved identity disables protected category
+actions and category assignment. The legacy category document does not contain
+account-only fields.
+
+`CategoryDto.defaultCategory` is the automatic-add preference. It is independent
+of the special category identity. Offline category rows preserve both values,
+and uncategorized downloads use the mirrored special category. The add-to-library
+setting keeps 0 as its uncategorized choice regardless of the server category ID.

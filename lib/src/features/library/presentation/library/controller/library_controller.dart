@@ -19,6 +19,7 @@ import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
+import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
 import '../../../domain/library_search_query.dart';
 import '../../../domain/track_status.dart';
@@ -47,9 +48,9 @@ int randomKey(int id, int seed) => ((id ^ seed) * 2654435761) & 0x7fffffff;
 /// is in the set pass through (used by [GroupedMangaListWithQueryAndFilter]).
 /// Komikku uses a PRIMARY-strength collator (case/accent-insensitive); Dart
 /// has none, so we fold instead — misses locale quirks like Swedish "å" > "z".
-int compareTitlesFolded(String a, String b) =>
-    removeDiacritics(a.toLowerCase())
-        .compareTo(removeDiacritics(b.toLowerCase()));
+int compareTitlesFolded(String a, String b) => removeDiacritics(
+  a.toLowerCase(),
+).compareTo(removeDiacritics(b.toLowerCase()));
 
 List<MangaDto> applyLibraryFilterSort(
   List<MangaDto> input, {
@@ -80,10 +81,12 @@ List<MangaDto> applyLibraryFilterSort(
   final searchQuery = LibrarySearchQuery.parse(query);
   // Tags match case-insensitively (aligning with the `tag:` search operator),
   // so lower-case the selections once up front.
-  final filterTagsIncludeLower =
-      filterTagsInclude.map((e) => e.toLowerCase()).toSet();
-  final filterTagsExcludeLower =
-      filterTagsExclude.map((e) => e.toLowerCase()).toSet();
+  final filterTagsIncludeLower = filterTagsInclude
+      .map((e) => e.toLowerCase())
+      .toSet();
+  final filterTagsExcludeLower = filterTagsExclude
+      .map((e) => e.toLowerCase())
+      .toSet();
 
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
@@ -127,8 +130,7 @@ List<MangaDto> applyLibraryFilterSort(
       return false;
     }
     if (filterCategories) {
-      final ids =
-          manga.categories.nodes.map((c) => c.id.toString()).toSet();
+      final ids = manga.categories.nodes.map((c) => c.id.toString()).toSet();
       if (filterCategoriesInclude.isNotEmpty &&
           ids.intersection(filterCategoriesInclude).isEmpty) {
         return false;
@@ -160,8 +162,9 @@ List<MangaDto> applyLibraryFilterSort(
     for (final entry in trackerFilters.entries) {
       final pref = entry.value;
       if (pref == null) continue;
-      final hasTracker = manga.trackRecords.nodes
-          .any((n) => n.trackerId == entry.key);
+      final hasTracker = manga.trackRecords.nodes.any(
+        (n) => n.trackerId == entry.key,
+      );
       if (pref ^ hasTracker) return false;
     }
     if (!searchQuery.matches(fields)) return false;
@@ -178,12 +181,16 @@ List<MangaDto> applyLibraryFilterSort(
     // Tracker-score sort: untracked manga (sentinel -1) always sort last,
     // regardless of direction — must be handled before the direction toggle.
     if (sortedBy == MangaSort.trackerScore) {
-      final s1 = meanNormalizedScore(m1.trackRecords.nodes,
-          trackerScales: trackerScales);
-      final s2 = meanNormalizedScore(m2.trackRecords.nodes,
-          trackerScales: trackerScales);
+      final s1 = meanNormalizedScore(
+        m1.trackRecords.nodes,
+        trackerScales: trackerScales,
+      );
+      final s2 = meanNormalizedScore(
+        m2.trackRecords.nodes,
+        trackerScales: trackerScales,
+      );
       if (s1 < 0 && s2 < 0) return 0;
-      if (s1 < 0) return 1;  // m1 untracked → always last
+      if (s1 < 0) return 1; // m1 untracked → always last
       if (s2 < 0) return -1; // m2 untracked → always last
       return s1.compareTo(s2) * sortDirToggle;
     }
@@ -201,30 +208,35 @@ List<MangaDto> applyLibraryFilterSort(
           MangaSort.alphabetical => compareTitlesFolded(m1.title, m2.title),
           // unread is handled above; this arm is unreachable.
           MangaSort.unread => 0,
-          MangaSort.dateAdded => (m1.inLibraryAt.getValueOnNullOrNegative())
-              .compareTo(m2.inLibraryAt.getValueOnNullOrNegative()),
+          MangaSort.dateAdded =>
+            (m1.inLibraryAt.getValueOnNullOrNegative()).compareTo(
+              m2.inLibraryAt.getValueOnNullOrNegative(),
+            ),
           MangaSort.lastUpdated =>
             (int.tryParse(m1.latestFetchedChapter?.fetchedAt ?? '0') ?? 0)
                 .compareTo(
-                    int.tryParse(m2.latestFetchedChapter?.fetchedAt ?? '0') ??
-                        0),
-          MangaSort.lastChapterDate => (int.tryParse(
-                      m1.latestUploadedChapter?.uploadDate ?? '0') ??
-                  0)
-              .compareTo(
+                  int.tryParse(m2.latestFetchedChapter?.fetchedAt ?? '0') ?? 0,
+                ),
+          MangaSort.lastChapterDate =>
+            (int.tryParse(m1.latestUploadedChapter?.uploadDate ?? '0') ?? 0)
+                .compareTo(
                   int.tryParse(m2.latestUploadedChapter?.uploadDate ?? '0') ??
-                      0),
-          MangaSort.totalChapters =>
-            m1.chapters.totalCount.compareTo(m2.chapters.totalCount),
+                      0,
+                ),
+          MangaSort.totalChapters => m1.chapters.totalCount.compareTo(
+            m2.chapters.totalCount,
+          ),
           // "Last update" = the manga's library-update time. Suwayomi's
           // chaptersLastFetchedAt is when this manga's chapter list was last
           // refreshed (distinct from ChapterFetchDate/LatestChapter above).
           MangaSort.lastUpdate =>
-            (int.tryParse(m1.chaptersLastFetchedAt ?? '0') ?? 0)
-                .compareTo(int.tryParse(m2.chaptersLastFetchedAt ?? '0') ?? 0),
+            (int.tryParse(m1.chaptersLastFetchedAt ?? '0') ?? 0).compareTo(
+              int.tryParse(m2.chaptersLastFetchedAt ?? '0') ?? 0,
+            ),
           // Personal star rating (0 = unrated, sorts lowest).
-          MangaSort.rating => (m1.metaData.rating ?? 0)
-              .compareTo(m2.metaData.rating ?? 0),
+          MangaSort.rating => (m1.metaData.rating ?? 0).compareTo(
+            m2.metaData.rating ?? 0,
+          ),
           // Normal order (m1 vs m2): ascending = oldest-read first,
           // descending = newest-read first. (Previously the operands were
           // swapped, which inverted our arrows — our "ascending" showed
@@ -232,10 +244,13 @@ List<MangaDto> applyLibraryFilterSort(
           MangaSort.lastRead =>
             (int.tryParse(m1.lastReadChapter?.lastReadAt ?? '0') ?? 0)
                 .compareTo(
-                    int.tryParse(m2.lastReadChapter?.lastReadAt ?? '0') ?? 0),
+                  int.tryParse(m2.lastReadChapter?.lastReadAt ?? '0') ?? 0,
+                ),
           // random is handled above; this arm is unreachable.
-          MangaSort.random =>
-            randomKey(m1.id, seed).compareTo(randomKey(m2.id, seed)),
+          MangaSort.random => randomKey(
+            m1.id,
+            seed,
+          ).compareTo(randomKey(m2.id, seed)),
           // trackerScore is handled above; this arm is unreachable.
           MangaSort.trackerScore => 0,
         }) *
@@ -256,12 +271,14 @@ List<MangaDto> applyLibraryFilterSort(
 
 @riverpod
 Future<List<MangaDto>?> categoryMangaList(Ref ref, int categoryId) async {
-  final all = await ref.watch(libraryMangaListProvider.future);
+  final defaultIdFuture = ref.watch(defaultCategoryIdProvider.future);
+  final allFuture = ref.watch(libraryMangaListProvider.future);
+  final defaultId = await defaultIdFuture;
+  final all = await allFuture;
   if (all == null) return null;
   return all.where((m) {
     final ids = m.categories.nodes.map((c) => c.id).toList();
-    // categoryId 0 == Default/Uncategorized (no categories)
-    return categoryId == 0 ? ids.isEmpty : ids.contains(categoryId);
+    return ids.contains(categoryId) || (categoryId == defaultId && ids.isEmpty);
   }).toList();
 }
 
@@ -280,18 +297,21 @@ class CategoryMangaListWithQueryAndFilter
     final mangaList = ref.watch(categoryMangaListProvider(categoryId));
     final query = ref.watch(libraryQueryDebouncedProvider);
     final mangaFilterUnread = ref.watch(libraryMangaFilterUnreadProvider);
-    final mangaFilterDownloaded =
-        ref.watch(libraryMangaFilterDownloadedProvider);
+    final mangaFilterDownloaded = ref.watch(
+      libraryMangaFilterDownloadedProvider,
+    );
     final mangaFilterCompleted = ref.watch(libraryMangaFilterCompletedProvider);
     final mangaFilterStarted = ref.watch(libraryMangaFilterStartedProvider);
-    final mangaFilterBookmarked =
-        ref.watch(libraryMangaFilterBookmarkedProvider);
+    final mangaFilterBookmarked = ref.watch(
+      libraryMangaFilterBookmarkedProvider,
+    );
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
-    final filterCategories =
-        ref.watch(libraryFilterCategoriesProvider).ifNull(false);
+    final filterCategories = ref
+        .watch(libraryFilterCategoriesProvider)
+        .ifNull(false);
     final filterCategoriesInclude =
         (ref.watch(libraryFilterCategoriesIncludeProvider) ?? const <String>[])
             .toSet();
@@ -307,40 +327,44 @@ class CategoryMangaListWithQueryAndFilter
             .toSet();
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
-    final sortedDirection =
-        ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
+    final sortedDirection = ref
+        .watch(libraryMangaSortDirectionProvider)
+        .ifNull(true);
     final seed =
-        ref.watch(librarySortRandomSeedProvider) ?? DBKeys.librarySortRandomSeed.initial as int;
+        ref.watch(librarySortRandomSeedProvider) ??
+        DBKeys.librarySortRandomSeed.initial as int;
 
     return mangaList.map<AsyncValue<List<MangaDto>?>>(
-      data: (e) => AsyncData(e.value == null
-          ? null
-          : applyLibraryFilterSort(
-              e.value!,
-              query: query,
-              mangaFilterUnread: mangaFilterUnread,
-              mangaFilterDownloaded: mangaFilterDownloaded,
-              mangaFilterCompleted: mangaFilterCompleted,
-              mangaFilterStarted: mangaFilterStarted,
-              mangaFilterBookmarked: mangaFilterBookmarked,
-              mangaFilterOffline: mangaFilterOffline,
-              offlineMangaIds: offlineMangaIds,
-              mangaFilterLewd: mangaFilterLewd,
-              mangaFilterMinRating:
-                  ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
-              filterCategories: filterCategories,
-              filterCategoriesInclude: filterCategoriesInclude,
-              filterCategoriesExclude: filterCategoriesExclude,
-              filterTags: filterTags,
-              filterTagsInclude: filterTagsInclude,
-              filterTagsExclude: filterTagsExclude,
-              sortedBy: sortedBy,
-              sortedDirection: sortedDirection,
-              seed: seed,
-              trackerScales: ref.watch(libraryTrackerScalesProvider),
-              trackerFilters: ref.watch(libraryTrackerFiltersProvider),
-              trackerNames: ref.watch(libraryTrackerNamesProvider),
-            )),
+      data: (e) => AsyncData(
+        e.value == null
+            ? null
+            : applyLibraryFilterSort(
+                e.value!,
+                query: query,
+                mangaFilterUnread: mangaFilterUnread,
+                mangaFilterDownloaded: mangaFilterDownloaded,
+                mangaFilterCompleted: mangaFilterCompleted,
+                mangaFilterStarted: mangaFilterStarted,
+                mangaFilterBookmarked: mangaFilterBookmarked,
+                mangaFilterOffline: mangaFilterOffline,
+                offlineMangaIds: offlineMangaIds,
+                mangaFilterLewd: mangaFilterLewd,
+                mangaFilterMinRating:
+                    ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
+                filterCategories: filterCategories,
+                filterCategoriesInclude: filterCategoriesInclude,
+                filterCategoriesExclude: filterCategoriesExclude,
+                filterTags: filterTags,
+                filterTagsInclude: filterTagsInclude,
+                filterTagsExclude: filterTagsExclude,
+                sortedBy: sortedBy,
+                sortedDirection: sortedDirection,
+                seed: seed,
+                trackerScales: ref.watch(libraryTrackerScalesProvider),
+                trackerFilters: ref.watch(libraryTrackerFiltersProvider),
+                trackerNames: ref.watch(libraryTrackerNamesProvider),
+              ),
+      ),
       error: (e) => e,
       loading: (e) => e,
     );
@@ -505,10 +529,8 @@ Future<List<String>> libraryTagList(Ref ref) async {
 class LibraryMangaSort extends _$LibraryMangaSort
     with SharedPreferenceEnumClientMixin<MangaSort> {
   @override
-  MangaSort? build() => initialize(
-        DBKeys.mangaSort,
-        enumList: MangaSort.values,
-      );
+  MangaSort? build() =>
+      initialize(DBKeys.mangaSort, enumList: MangaSort.values);
 }
 
 @riverpod
@@ -561,12 +583,12 @@ class LibraryMangaFilterTracker extends _$LibraryMangaFilterTracker {
 /// Only includes entries with a non-null filter value (i.e., active filters).
 @riverpod
 Map<int, bool?> libraryTrackerFilters(Ref ref) {
-  final loggedIn =
-      ref.watch(loggedInTrackersProvider).value ?? const [];
+  final loggedIn = ref.watch(loggedInTrackersProvider).value ?? const [];
   final Map<int, bool?> result = {};
   for (final tracker in loggedIn) {
     final pref = ref.watch(
-        libraryMangaFilterTrackerProvider(trackerId: tracker.id));
+      libraryMangaFilterTrackerProvider(trackerId: tracker.id),
+    );
     result[tracker.id] = pref;
   }
   return result;
@@ -583,14 +605,13 @@ Map<int, bool?> libraryTrackerFilters(Ref ref) {
 /// Used by [applyLibraryFilterSort] to normalize scores to 0–10.
 @riverpod
 Map<int, double> libraryTrackerScales(Ref ref) {
-  final loggedIn =
-      ref.watch(loggedInTrackersProvider).value ?? const [];
+  final loggedIn = ref.watch(loggedInTrackersProvider).value ?? const [];
   return {
     for (final t in loggedIn)
       t.id: t.scores.isEmpty
           ? 10.0
           : (double.tryParse(t.scores.last) ??
-              (t.scores.length - 1).toDouble()),
+                (t.scores.length - 1).toDouble()),
   };
 }
 
@@ -607,10 +628,8 @@ Map<int, String> libraryTrackerNames(Ref ref) {
 class LibraryDisplayMode extends _$LibraryDisplayMode
     with SharedPreferenceEnumClientMixin<DisplayMode> {
   @override
-  DisplayMode? build() => initialize(
-        DBKeys.libraryDisplayMode,
-        enumList: DisplayMode.values,
-      );
+  DisplayMode? build() =>
+      initialize(DBKeys.libraryDisplayMode, enumList: DisplayMode.values);
 }
 
 @riverpod
@@ -689,18 +708,21 @@ class GroupedMangaListWithQueryAndFilter
     final allAsync = ref.watch(libraryMangaListProvider);
     final query = ref.watch(libraryQueryDebouncedProvider);
     final mangaFilterUnread = ref.watch(libraryMangaFilterUnreadProvider);
-    final mangaFilterDownloaded =
-        ref.watch(libraryMangaFilterDownloadedProvider);
+    final mangaFilterDownloaded = ref.watch(
+      libraryMangaFilterDownloadedProvider,
+    );
     final mangaFilterCompleted = ref.watch(libraryMangaFilterCompletedProvider);
     final mangaFilterStarted = ref.watch(libraryMangaFilterStartedProvider);
-    final mangaFilterBookmarked =
-        ref.watch(libraryMangaFilterBookmarkedProvider);
+    final mangaFilterBookmarked = ref.watch(
+      libraryMangaFilterBookmarkedProvider,
+    );
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
-    final filterCategories =
-        ref.watch(libraryFilterCategoriesProvider).ifNull(false);
+    final filterCategories = ref
+        .watch(libraryFilterCategoriesProvider)
+        .ifNull(false);
     final filterCategoriesInclude =
         (ref.watch(libraryFilterCategoriesIncludeProvider) ?? const <String>[])
             .toSet();
@@ -716,41 +738,45 @@ class GroupedMangaListWithQueryAndFilter
             .toSet();
     final MangaSort sortedBy =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
-    final sortedDirection =
-        ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
+    final sortedDirection = ref
+        .watch(libraryMangaSortDirectionProvider)
+        .ifNull(true);
     final seed =
-        ref.watch(librarySortRandomSeedProvider) ?? DBKeys.librarySortRandomSeed.initial as int;
+        ref.watch(librarySortRandomSeedProvider) ??
+        DBKeys.librarySortRandomSeed.initial as int;
 
     return allAsync.map<AsyncValue<List<MangaDto>?>>(
-      data: (e) => AsyncData(e.value == null
-          ? null
-          : applyLibraryFilterSort(
-              e.value!,
-              mangaIds: mangaIds,
-              query: query,
-              mangaFilterUnread: mangaFilterUnread,
-              mangaFilterDownloaded: mangaFilterDownloaded,
-              mangaFilterCompleted: mangaFilterCompleted,
-              mangaFilterStarted: mangaFilterStarted,
-              mangaFilterBookmarked: mangaFilterBookmarked,
-              mangaFilterOffline: mangaFilterOffline,
-              offlineMangaIds: offlineMangaIds,
-              mangaFilterLewd: mangaFilterLewd,
-              mangaFilterMinRating:
-                  ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
-              filterCategories: filterCategories,
-              filterCategoriesInclude: filterCategoriesInclude,
-              filterCategoriesExclude: filterCategoriesExclude,
-              filterTags: filterTags,
-              filterTagsInclude: filterTagsInclude,
-              filterTagsExclude: filterTagsExclude,
-              sortedBy: sortedBy,
-              sortedDirection: sortedDirection,
-              seed: seed,
-              trackerScales: ref.watch(libraryTrackerScalesProvider),
-              trackerFilters: ref.watch(libraryTrackerFiltersProvider),
-              trackerNames: ref.watch(libraryTrackerNamesProvider),
-            )),
+      data: (e) => AsyncData(
+        e.value == null
+            ? null
+            : applyLibraryFilterSort(
+                e.value!,
+                mangaIds: mangaIds,
+                query: query,
+                mangaFilterUnread: mangaFilterUnread,
+                mangaFilterDownloaded: mangaFilterDownloaded,
+                mangaFilterCompleted: mangaFilterCompleted,
+                mangaFilterStarted: mangaFilterStarted,
+                mangaFilterBookmarked: mangaFilterBookmarked,
+                mangaFilterOffline: mangaFilterOffline,
+                offlineMangaIds: offlineMangaIds,
+                mangaFilterLewd: mangaFilterLewd,
+                mangaFilterMinRating:
+                    ref.watch(libraryMangaFilterMinRatingProvider) ?? 0,
+                filterCategories: filterCategories,
+                filterCategoriesInclude: filterCategoriesInclude,
+                filterCategoriesExclude: filterCategoriesExclude,
+                filterTags: filterTags,
+                filterTagsInclude: filterTagsInclude,
+                filterTagsExclude: filterTagsExclude,
+                sortedBy: sortedBy,
+                sortedDirection: sortedDirection,
+                seed: seed,
+                trackerScales: ref.watch(libraryTrackerScalesProvider),
+                trackerFilters: ref.watch(libraryTrackerFiltersProvider),
+                trackerNames: ref.watch(libraryTrackerNamesProvider),
+              ),
+      ),
       error: (e) => e,
       loading: (e) => e,
     );

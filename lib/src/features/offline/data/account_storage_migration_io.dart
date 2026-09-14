@@ -6,6 +6,7 @@ import 'package:sqlite3/sqlite3.dart';
 import 'account_storage_paths.dart';
 
 const accountStorageMarker = '.account-complete';
+const accountStorageClearedMarker = '.account-cleared';
 typedef AccountFileCopy = Future<void> Function(File source, File destination);
 
 Future<bool> accountStorageComplete({
@@ -23,17 +24,54 @@ Future<bool> accountStorageComplete({
   return await marker.readAsString() == instanceId;
 }
 
+Future<bool> accountStorageCleared({
+  required String offlineRoot,
+  required String instanceId,
+}) async {
+  final target = accountStoragePath(offlineRoot, instanceId);
+  await _checkAncestors(target, offlineRoot);
+  final marker = File(p.join(target, accountStorageClearedMarker));
+  final type = await FileSystemEntity.type(marker.path, followLinks: false);
+  if (type == FileSystemEntityType.notFound) return false;
+  if (type != FileSystemEntityType.file ||
+      await marker.readAsString() != instanceId) {
+    throw FileSystemException('Invalid account cleared marker', marker.path);
+  }
+  return true;
+}
+
 // The caller must close the catalogue and hold exclusive worker ownership.
 Future<String> prepareAccountStorage({
   required String offlineRoot,
   required String instanceId,
   String? legacyInstanceId,
+  String? accountOwner,
   AccountFileCopy? copyFile,
 }) async {
   final target = Directory(accountStoragePath(offlineRoot, instanceId));
   await _checkAncestors(target.path, offlineRoot);
   await target.create(recursive: true);
   await _checkTree(target);
+  final cleared = await accountStorageCleared(
+    offlineRoot: offlineRoot,
+    instanceId: instanceId,
+  );
+  if (accountOwner != null) {
+    final owner = File(p.join(target.path, '.account-owner'));
+    if (await owner.exists()) {
+      if (await owner.readAsString() != accountOwner) {
+        throw StateError('Catalogue belongs to a different account');
+      }
+    } else {
+      if (await accountStorageComplete(
+        offlineRoot: offlineRoot,
+        instanceId: instanceId,
+      )) {
+        throw StateError('Catalogue owner is unknown');
+      }
+      await owner.writeAsString(accountOwner, flush: true);
+    }
+  }
   if (await accountStorageComplete(
     offlineRoot: offlineRoot,
     instanceId: instanceId,
@@ -46,9 +84,29 @@ Future<String> prepareAccountStorage({
     followLinks: false,
   );
   final canResume =
+      !cleared &&
       legacyInstanceId == instanceId &&
       sourceType != FileSystemEntityType.notFound;
-  if (!canResume && !await target.list(followLinks: false).isEmpty) {
+  final hasAccountData = await target
+      .list(followLinks: false)
+      .any(
+        (entry) => !const {
+          '.bg_lock.sqlite',
+          '.bg_lock.sqlite-journal',
+          '.bg_lock.sqlite-wal',
+          '.bg_lock.sqlite-shm',
+          '.bg_lock.yield',
+          '.bg_permission',
+          '.bg_permission.sqlite',
+          '.bg_permission.sqlite-journal',
+          '.bg_permission.sqlite-wal',
+          '.bg_permission.sqlite-shm',
+          '.bg_permission.yield',
+          '.account-owner',
+          accountStorageClearedMarker,
+        }.contains(p.basename(entry.path)),
+      );
+  if (!canResume && hasAccountData) {
     throw FileSystemException(
       'Incomplete account storage needs its legacy source',
       target.path,

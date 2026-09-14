@@ -14,18 +14,21 @@ class RealHttpOverrides extends HttpOverrides {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  BackgroundTokenRecord token(String account, String endpoint) =>
-      BackgroundTokenRecord(
-        gen: 0,
-        authType: 'uiLogin',
-        endpoint: endpoint,
-        identityEpoch: 1,
-        catalogServerId: 'catalog',
-        originalRefreshToken: 'refresh-$account',
-        notificationSessionId: 'session-$account',
-        refreshToken: 'refresh-$account',
-        accessToken: account,
-      );
+  BackgroundTokenRecord token(
+    String account,
+    String endpoint, {
+    String? catalog = 'catalog',
+  }) => BackgroundTokenRecord(
+    gen: 0,
+    authType: 'uiLogin',
+    endpoint: endpoint,
+    identityEpoch: 1,
+    catalogServerId: catalog,
+    originalRefreshToken: 'refresh-$account',
+    notificationSessionId: 'session-$account',
+    refreshToken: 'refresh-$account',
+    accessToken: account,
+  );
   NotificationWorkerConfig config(
     BackgroundTokenRecord record,
     NotificationEndpoint endpoint,
@@ -89,71 +92,82 @@ void main() {
     expect(decoded.sessionFingerprint, notificationIdentityFingerprint(a));
   });
 
-  test('old and unowned actions never send with a new account token', () async {
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    addTearDown(() => server.close(force: true));
-    final sent = <String?>[];
-    server.listen((request) async {
-      sent.add(request.headers.value('authorization'));
-      await request.drain<void>();
-      request.response.headers.contentType = ContentType.json;
-      request.response.write(
-        jsonEncode({
-          'data': {
-            'updateChapters': {'clientMutationId': null},
-          },
-        }),
-      );
-      await request.response.close();
-    });
-    await HttpOverrides.runZoned(() async {
-      SharedPreferences.setMockInitialValues({});
-      final store = await NotificationStateStore.open();
-      final endpoint = NotificationEndpoint(
-        baseUrl: 'http://127.0.0.1',
-        port: server.port,
-      );
-      final address = 'http://127.0.0.1|${server.port}';
-      final a = token('A', address);
-      final b = token('B', address);
-      final oldAction = NotificationPayload.chapter(
-        mangaId: 1,
-        chapterId: 2,
-        chapterIds: [2],
-        identityEpoch: 1,
-        catalogServerId: 'catalog',
-        sessionFingerprint: notificationIdentityFingerprint(a),
-      );
-      await store.writeConfig(config(a, endpoint));
-      await store.writeTokenRecord(b);
-      await handleNotificationAction(kNotifActionMarkRead, oldAction.encode());
-      expect(sent, isEmpty);
-      await store.writeConfig(config(b, endpoint));
-      await handleNotificationAction(kNotifActionDownload, oldAction.encode());
-      await handleNotificationAction(
-        kNotifActionMarkRead,
-        const NotificationPayload.chapter(
-          mangaId: 1,
-          chapterId: 2,
-          chapterIds: [2],
-        ).encode(),
-      );
-      expect(sent, isEmpty);
-      final currentAction = NotificationPayload.chapter(
-        mangaId: 1,
-        chapterId: 2,
-        chapterIds: [2],
-        identityEpoch: 1,
-        catalogServerId: 'catalog',
-        sessionFingerprint: notificationIdentityFingerprint(b),
-      );
-      await handleNotificationAction(
-        kNotifActionMarkRead,
-        currentAction.encode(),
-      );
-      expect(sent, ['Bearer B']);
-    }, createHttpClient: RealHttpOverrides().createHttpClient);
-  });
+  for (final catalog in <String?>['catalog', null]) {
+    test(
+      'old and unowned actions never send with a new account token ($catalog)',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => server.close(force: true));
+        final sent = <String?>[];
+        server.listen((request) async {
+          sent.add(request.headers.value('authorization'));
+          await request.drain<void>();
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'data': {
+                'updateChapters': {'clientMutationId': null},
+              },
+            }),
+          );
+          await request.response.close();
+        });
+        await HttpOverrides.runZoned(() async {
+          SharedPreferences.setMockInitialValues({});
+          final store = await NotificationStateStore.open();
+          final endpoint = NotificationEndpoint(
+            baseUrl: 'http://127.0.0.1',
+            port: server.port,
+          );
+          final address = 'http://127.0.0.1|${server.port}';
+          final a = token('A', address, catalog: catalog);
+          final b = token('B', address, catalog: catalog);
+          final oldAction = NotificationPayload.chapter(
+            mangaId: 1,
+            chapterId: 2,
+            chapterIds: [2],
+            identityEpoch: 1,
+            catalogServerId: catalog,
+            sessionFingerprint: notificationIdentityFingerprint(a),
+          );
+          await store.writeConfig(config(a, endpoint));
+          await store.writeTokenRecord(b);
+          await handleNotificationAction(
+            kNotifActionMarkRead,
+            oldAction.encode(),
+          );
+          expect(sent, isEmpty);
+          await store.writeConfig(config(b, endpoint));
+          await handleNotificationAction(
+            kNotifActionDownload,
+            oldAction.encode(),
+          );
+          await handleNotificationAction(
+            kNotifActionMarkRead,
+            const NotificationPayload.chapter(
+              mangaId: 1,
+              chapterId: 2,
+              chapterIds: [2],
+            ).encode(),
+          );
+          expect(sent, isEmpty);
+          final currentAction = NotificationPayload.chapter(
+            mangaId: 1,
+            chapterId: 2,
+            chapterIds: [2],
+            identityEpoch: 1,
+            catalogServerId: catalog,
+            sessionFingerprint: notificationIdentityFingerprint(b),
+          );
+          await handleNotificationAction(
+            kNotifActionMarkRead,
+            currentAction.encode(),
+          );
+          expect(sent, ['Bearer B']);
+        }, createHttpClient: RealHttpOverrides().createHttpClient);
+      },
+    );
+  }
   test('stranded outbox retains its original account proof', () {
     const endpoint = NotificationEndpoint(
       baseUrl: 'https://server',

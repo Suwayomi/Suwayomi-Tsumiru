@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
-
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
@@ -18,6 +17,7 @@ import 'offline_dto_mappers.dart';
 
 /// Fall back to the on-device cache only on a genuine loss of connectivity; a
 /// server that answered with an error must surface, not be masked as offline.
+
 bool _shouldFallBack(Object e) =>
     isConnectionError(e is OperationMessageException ? e.exception : e);
 
@@ -88,10 +88,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     String? mergedLastRead(OfflineManga m) {
       final fromChapters = int.tryParse(lastReadByManga[m.id] ?? '');
       final fromManga = int.tryParse(m.lastReadAt ?? '');
-      final best = [
-        ?fromChapters,
-        ?fromManga,
-      ];
+      final best = [?fromChapters, ?fromManga];
       if (best.isEmpty) return null;
       return best.reduce((a, b) => a > b ? a : b).toString();
     }
@@ -223,6 +220,7 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
   required bool offlineEnabled,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
+  int? defaultCategoryId = 0,
   void Function()? onCatalogServe,
 }) async {
   Future<List<CategoryDto>?> serveCatalog() async {
@@ -234,7 +232,14 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
     if (downloadedInLibrary.isEmpty) return null;
     final storedCats = await db.allOfflineCategories();
     if (storedCats.isEmpty) {
-      return [offlineDefaultCategoryDto(downloadedInLibrary.length)];
+      return defaultCategoryId == null
+          ? null
+          : [
+              offlineDefaultCategoryDto(
+                downloadedInLibrary.length,
+                categoryId: defaultCategoryId,
+              ),
+            ];
     }
     // Real per-tab counts. Every mirrored category is kept even at zero:
     // offline, empty means "nothing downloaded from it", not "you put nothing
@@ -245,11 +250,12 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
     final counts = await db.mangaCountByCategory(downloadedInLibrary);
     final uncategorized = await db.uncategorizedOf(downloadedInLibrary);
     int countFor(OfflineCategory cat) =>
-        (counts[cat.id] ?? 0) + (cat.id == 0 ? uncategorized.length : 0);
+        (counts[cat.id] ?? 0) +
+        (cat.isDefaultCategory ? uncategorized.length : 0);
     final tabs = [
       for (final cat in storedCats)
         Fragment$CategoryDto(
-          defaultCategory: cat.id == 0,
+          defaultCategory: cat.autoAdd,
           id: cat.id,
           includeInDownload: Enum$IncludeOrExclude.UNSET,
           includeInUpdate: Enum$IncludeOrExclude.UNSET,
@@ -268,12 +274,29 @@ Future<List<CategoryDto>?> categoriesWithOfflineFallback({
     ];
     // Downloads with no home tab (uncategorizedOf already covers orphaned
     // memberships) get a synthetic Default.
-    final defaultCovered = tabs.any((t) => t.id == 0);
-    if (!defaultCovered && uncategorized.isNotEmpty) {
-      tabs.insert(0, offlineDefaultCategoryDto(uncategorized.length));
+    final defaultCovered = storedCats.any(
+      (category) => category.isDefaultCategory,
+    );
+    if (!defaultCovered &&
+        defaultCategoryId != null &&
+        uncategorized.isNotEmpty) {
+      tabs.insert(
+        0,
+        offlineDefaultCategoryDto(
+          uncategorized.length,
+          categoryId: defaultCategoryId,
+        ),
+      );
     }
     if (tabs.isEmpty) {
-      return [offlineDefaultCategoryDto(downloadedInLibrary.length)];
+      return defaultCategoryId == null
+          ? null
+          : [
+              offlineDefaultCategoryDto(
+                downloadedInLibrary.length,
+                categoryId: defaultCategoryId,
+              ),
+            ];
     }
     return tabs;
   }

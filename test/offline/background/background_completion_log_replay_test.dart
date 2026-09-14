@@ -350,6 +350,116 @@ void main() {
     },
   );
 
+  for (final status in ['permissionDenied', 'error']) {
+    for (final existingMetadata in [false, true]) {
+      test(
+        'failed adoption replays as terminal with metadata present=$existingMetadata',
+        () async {
+          await db.setKeepRule(1, OfflineKeepRule.all, 3);
+          if (existingMetadata) {
+            await db.upsertChapterMetadata(
+              id: 9,
+              mangaId: 1,
+              name: 'new',
+              chapterIndex: 2,
+              isRead: false,
+              lastPageRead: 0,
+              isBookmarked: false,
+              serverIsDownloaded: false,
+              pageCount: 0,
+              updatedAt: DateTime(2026),
+            );
+          }
+          await log.appendAdopt(
+            AdoptChapterEntry(
+              chapterId: 9,
+              mangaId: 1,
+              serverId: 'srv',
+              name: 'new',
+              chapterIndex: 2,
+              chapterNumber: 3,
+              pageCount: 0,
+              bytes: 0,
+              isRead: false,
+              status: status,
+            ),
+          );
+          await replay();
+          expect(
+            (await db.chapterById(9))!.deviceState,
+            OfflineDeviceState.error,
+          );
+          expect(await db.downloadedPageCount(9), 0);
+          expect(await store.stagedBytes(1, 9), 0);
+        },
+      );
+    }
+  }
+  test('permission adoption cannot restore a deleted generation', () async {
+    await db.setKeepRule(1, OfflineKeepRule.all, 3);
+    await db.bumpChapterGeneration(5);
+    await db.setChapterDeviceState(5, OfflineDeviceState.none);
+    await log.appendAdopt(
+      const AdoptChapterEntry(
+        chapterId: 5,
+        mangaId: 1,
+        serverId: 'srv',
+        name: 'old',
+        chapterIndex: 0,
+        chapterNumber: 1,
+        pageCount: 0,
+        bytes: 0,
+        isRead: false,
+        status: 'permissionDenied',
+      ),
+    );
+    await replay();
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.none);
+  });
+
+  test('completed catch-up staging adopts an existing metadata row', () async {
+    await db.setKeepRule(1, OfflineKeepRule.all, 3);
+    await db.setChapterDeviceState(5, OfflineDeviceState.none);
+    await stage(1, 5, [0, 1], [0, 1]);
+    await log.appendAdopt(
+      const AdoptChapterEntry(
+        chapterId: 5,
+        mangaId: 1,
+        serverId: 'srv',
+        name: 'caught up',
+        chapterIndex: 0,
+        chapterNumber: 1,
+        pageCount: 2,
+        bytes: 20,
+        isRead: false,
+      ),
+    );
+    await replay();
+    expect(
+      (await db.chapterById(5))!.deviceState,
+      OfflineDeviceState.downloaded,
+    );
+    expect(await db.downloadedPageCount(5), 2);
+  });
+
+  test('auth failure replay keeps an unfinished chapter resumable', () async {
+    await log.appendChapter(
+      chapterId: 5,
+      status: 'authFailed',
+      pages: 2,
+      bytes: 0,
+    );
+    await replay();
+    expect(
+      (await db.chapterById(5))!.deviceState,
+      isNot(OfflineDeviceState.error),
+    );
+    expect(
+      (await db.chapterById(5))!.deviceState,
+      isIn([OfflineDeviceState.queued, OfflineDeviceState.downloading]),
+    );
+  });
+
   test('catch-up files with no row are adopted and committed', () async {
     await db.setKeepRule(1, OfflineKeepRule.all, 3);
     await stage(1, 9, [0, 1], [0, 1]);
@@ -435,29 +545,30 @@ void main() {
           chapterId: 5,
           status: 'error',
         );
-        expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
+        expect(
+          (await db.chapterById(5))!.deviceState,
+          OfflineDeviceState.error,
+        );
       },
     );
 
-    test(
-      'a genuinely stale error event (older generation) does not touch a '
-      'freshly re-queued chapter',
-      () async {
-        await db.setChapterDeviceState(5, OfflineDeviceState.queued);
-        await db.bumpChapterGeneration(5); // now generation 1: re-queued
-        await applyBackgroundTerminalState(
-          db: db,
-          chapterId: 5,
-          status: 'error',
-          eventGeneration: 0, // event from before the re-queue
-        );
-        expect(
-          (await db.chapterById(5))!.deviceState,
-          OfflineDeviceState.queued,
-          reason: 'a deleted/re-queued generation event must not touch the new one',
-        );
-      },
-    );
+    test('a genuinely stale error event (older generation) does not touch a '
+        'freshly re-queued chapter', () async {
+      await db.setChapterDeviceState(5, OfflineDeviceState.queued);
+      await db.bumpChapterGeneration(5); // now generation 1: re-queued
+      await applyBackgroundTerminalState(
+        db: db,
+        chapterId: 5,
+        status: 'error',
+        eventGeneration: 0, // event from before the re-queue
+      );
+      expect(
+        (await db.chapterById(5))!.deviceState,
+        OfflineDeviceState.queued,
+        reason:
+            'a deleted/re-queued generation event must not touch the new one',
+      );
+    });
 
     test(
       'a success never arrives this way — only a commit publishes',

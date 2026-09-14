@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../library/data/default_category.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../../library/domain/duplicate_entry_mapper.dart';
 import '../../../../library/domain/duplicate_matcher.dart';
@@ -28,6 +29,7 @@ import 'migrate_duplicate.dart';
 ///
 /// Assignment is client-side (the server does not auto-categorize on add, per
 /// Suwayomi-WebUI). Returns without adding if the picker is cancelled.
+
 Future<void> addMangaToLibraryWithCategory(
   WidgetRef ref,
   BuildContext context,
@@ -58,12 +60,14 @@ Future<void> addMangaToLibraryWithCategory(
   }
   if (!context.mounted) return;
 
-  final pref = container.read(libraryDefaultCategoryProvider) ??
+  final pref =
+      container.read(libraryDefaultCategoryProvider) ??
       DBKeys.libraryDefaultCategory.initial as int;
+  final defaultId = await container.read(defaultCategoryIdProvider.future);
+  if (defaultId == null) throw StateError('Default category unavailable');
   final categories =
       (await container.read(categoryControllerProvider.future) ?? const [])
-          // Default/uncategorized (id 0) is not a real assignable target.
-          .where((c) => c.id != 0)
+          .where((c) => c.id != defaultId)
           .toList();
 
   final match = categories.where((c) => c.id == pref).toList();
@@ -131,10 +135,12 @@ Future<bool> _passesDuplicateGate(
   if (hitIds.isEmpty) return true;
 
   final trackerNames = container.read(libraryTrackerNamesProvider);
-  final migrate = migrateDuplicate ??
+  final migrate =
+      migrateDuplicate ??
       (MangaDto from, MangaDto to) =>
           migrateDuplicateIntoCandidate(ref, context, from: from, to: to);
-  final open = openEntry ??
+  final open =
+      openEntry ??
       (BuildContext ctx, MangaDto target) =>
           MangaRoute(mangaId: target.id).push(ctx);
 

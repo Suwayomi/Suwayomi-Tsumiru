@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/background/queued_download_runner.dart';
@@ -14,6 +15,7 @@ import 'package:tsumiru/src/features/offline/data/chapter_manifest.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_page_store_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 OfflineChapter serverChapter(int id) => OfflineChapter(
   id: id,
@@ -42,10 +44,13 @@ void main() {
   late IoOfflinePageStore store;
   late BackgroundCompletionLog log;
   late CatchupLedger ledger;
+  late CatchupLedger persisted;
   late List<QueuedChapterSpec> queue;
   late List<int> downloads;
   late bool stopped;
   late bool capReached;
+  late bool serverDownloaded;
+  late Future<bool> Function(int) enqueue;
   late Future<QueuedAttempt> Function(QueuedChapterSpec) attempt;
 
   Future<QueuedAttempt> stage(QueuedChapterSpec chapter) async {
@@ -72,9 +77,12 @@ void main() {
       store: store,
       log: log,
       fetchChapters: (_) async => [
-        for (final chapter in queue) serverChapter(chapter.chapterId),
+        for (final chapter in queue)
+          serverChapter(
+            chapter.chapterId,
+          ).copyWith(serverIsDownloaded: serverDownloaded),
       ],
-      enqueueServer: (_) async => throw StateError('Already downloaded'),
+      enqueueServer: enqueue,
       download: (row, chapter) async {
         expect(row.id, chapter.chapterId);
         downloads.add(chapter.chapterId);
@@ -82,7 +90,10 @@ void main() {
       },
       shouldStop: (_) async => stopped,
       capBlocked: () async => capReached,
-      persist: (value) async => ledger = value,
+      persist: (value) async {
+        ledger = value;
+        persisted = value;
+      },
       allowance: 10,
     );
     ledger = result.ledger;
@@ -94,11 +105,90 @@ void main() {
     store = IoOfflinePageStore(OfflinePaths(tmp.path));
     log = BackgroundCompletionLog(File('${tmp.path}/completion.jsonl'));
     ledger = const CatchupLedger();
+    persisted = ledger;
     queue = [const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 0)];
     downloads = [];
     stopped = false;
     capReached = false;
+    serverDownloaded = true;
+    enqueue = (_) async => throw StateError('Already downloaded');
     attempt = stage;
+  });
+
+  test('accepted fifth server request persists before yielding', () async {
+    serverDownloaded = false;
+    ledger = const CatchupLedger(queuedServerRetries: {'1:0': 4});
+    enqueue = (_) async {
+      stopped = true;
+      return true;
+    };
+    expect((await run()).interrupted, isTrue);
+    expect(ledger.queuedServerRetries, {'1:0': 5});
+    expect(persisted.queuedServerRetries, {'1:0': 5});
+    stopped = false;
+    enqueue = (_) async => fail('Exhausted request repeated');
+    await run();
+    expect(
+      (await log.parse()).whereType<ChapterEntry>().single.status,
+      'error',
+    );
+  });
+
+  test('foreground server baseline leaves one accepted request', () async {
+    serverDownloaded = false;
+    queue = [
+      const QueuedChapterSpec(
+        chapterId: 1,
+        mangaId: 1,
+        generation: 0,
+        serverFetchAttempts: 4,
+      ),
+    ];
+    var accepted = 0;
+    enqueue = (_) async {
+      accepted++;
+      return true;
+    };
+    await run();
+    await run();
+    expect(accepted, 1);
+    expect(ledger.queuedServerRetries, {'1:0': 5});
+    expect(
+      (await log.parse()).whereType<ChapterEntry>().single.status,
+      'error',
+    );
+  });
+
+  test(
+    'permission denial is terminal without spending retries on later wakes',
+    () async {
+      attempt = (_) async => throw const AccountPermissionDenied(
+        Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      );
+      final result = await run();
+      expect(result.interrupted, isTrue);
+      expect(ledger.queuedDownloadRetries, isEmpty);
+      expect(ledger.queuedServerRetries, isEmpty);
+      expect(
+        (await log.parse()).whereType<ChapterEntry>().single.status,
+        'permissionDenied',
+      );
+      attempt = stage;
+      await run();
+      expect(downloads, [1]);
+    },
+  );
+
+  test('cancellation discards delayed permission errors', () async {
+    attempt = (_) async {
+      stopped = true;
+      throw const AccountPermissionDenied(
+        Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      );
+    };
+    expect((await run()).interrupted, isTrue);
+    expect(await log.parse(), isEmpty);
+    expect(ledger.queuedDownloadRetries, isEmpty);
   });
 
   test(
@@ -253,10 +343,79 @@ void main() {
     },
   );
 
-  test('cancellation after the callback consumes no retry', () async {
+  test('completed fifth hard failure persists before yielding', () async {
+    ledger = const CatchupLedger(queuedDownloadRetries: {'1:0': 4});
     attempt = (_) async {
       stopped = true;
       return (bytes: 0, transient: false);
+    };
+    expect((await run()).interrupted, isTrue);
+    expect(ledger.queuedDownloadRetries, {'1:0': 5});
+    expect(persisted.queuedDownloadRetries, {'1:0': 5});
+    expect(await log.parse(), isEmpty);
+    stopped = false;
+    await run();
+    expect(downloads, [1]);
+    expect(
+      (await log.parse()).whereType<ChapterEntry>().single.status,
+      'error',
+    );
+  });
+
+  test(
+    'completed bytes after yield await later ownership before terminal',
+    () async {
+      attempt = (chapter) async {
+        final result = await stage(chapter);
+        stopped = true;
+        return result;
+      };
+      expect((await run()).interrupted, isTrue);
+      expect(await log.parse(), isEmpty);
+      expect(ledger.queuedDownloadRetries, isEmpty);
+      stopped = false;
+      await run();
+      expect(downloads, [1]);
+      expect(
+        (await log.parse()).whereType<ChapterEntry>().single.status,
+        'downloaded',
+      );
+    },
+  );
+
+  test('matching keep budgets follow a chapter into the queue', () async {
+    serverDownloaded = false;
+    ledger = const CatchupLedger(
+      chapterGenerations: {1: 0},
+      serverFetchRetries: {1: 4},
+      downloadRetries: {1: 4},
+    );
+    enqueue = (_) async => true;
+    await run();
+    expect(ledger.queuedServerRetries, {'1:0': 5});
+    serverDownloaded = true;
+    attempt = (_) async => (bytes: 0, transient: false);
+    await run();
+    expect(ledger.queuedDownloadRetries, {'1:0': 5});
+  });
+
+  test('older keep budgets do not spend a new queue generation', () async {
+    ledger = const CatchupLedger(
+      chapterGenerations: {1: 0},
+      serverFetchRetries: {1: 5},
+      downloadRetries: {1: 5},
+    );
+    queue = [const QueuedChapterSpec(chapterId: 1, mangaId: 1, generation: 1)];
+    attempt = (_) async => (bytes: 0, transient: false);
+    await run();
+    expect(ledger.queuedDownloadRetries, {'1:1': 1});
+    expect(await log.parse(), isEmpty);
+  });
+
+  test('cancellation after the callback consumes no retry', () async {
+    attempt = (_) async {
+      stopped = true;
+      return (bytes: 0, transient: true);
     };
     expect((await run()).interrupted, isTrue);
     expect(downloads, [1]);

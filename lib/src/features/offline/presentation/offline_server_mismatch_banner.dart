@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/misc/toast/toast.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 
@@ -70,7 +71,15 @@ class OfflineServerMismatchBanner extends ConsumerWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    await clearOfflineCatalog(ref);
-    ref.invalidate(offlineServerMismatchProvider);
+    try {
+      await clearOfflineCatalog(ref);
+      if (context.mounted) ref.invalidate(offlineServerMismatchProvider);
+    } catch (_) {
+      if (context.mounted) {
+        ref
+            .read(toastProvider)
+            ?.showError(context.l10n.offlineCatalogClearFailed);
+      }
+    }
   }
 }

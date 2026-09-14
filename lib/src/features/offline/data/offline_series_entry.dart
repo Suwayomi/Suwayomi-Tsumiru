@@ -16,10 +16,12 @@ class OfflineSeriesEntry {
     required this.downloaded,
     required this.inFlight,
     required this.bytes,
+    this.failed = 0,
   });
 
   final OfflineManga manga;
   final int downloaded;
   final int inFlight;
   final int bytes;
+  final int failed;
 }

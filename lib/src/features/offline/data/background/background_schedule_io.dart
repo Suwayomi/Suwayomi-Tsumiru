@@ -5,6 +5,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../../../notifications/data/background/notification_background_entry.dart';
 import '../../../notifications/data/notification_state_store.dart';
+import '../account_storage_paths.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
 import 'catchup_work_spec.dart';
@@ -15,9 +16,10 @@ Future<String> _baseDir() async =>
 Future<T> withBackgroundScheduleLock<T>(
   Future<T> Function() action, {
   String? baseDir,
+  String lockName = '.bg_schedule',
 }) async {
   final lock = BackgroundDownloadLock(
-    File('${baseDir ?? await _baseDir()}/.bg_schedule'),
+    File('${offlineControlRoot(baseDir ?? await _baseDir())}/$lockName'),
   );
   for (var i = 0; i < 600; i++) {
     if (await lock.acquire('schedule')) {
@@ -44,16 +46,22 @@ Future<void> reconcileBackgroundSchedule() =>
           config != null &&
           state.matchesIdentity(config);
       var queue = false;
-      if (valid && !state.paused) {
+      if (valid &&
+          !state.paused &&
+          !state.downloadPermissionPaused(spec.serverId)) {
         final entries = await BackgroundCompletionLog(
-          File('${await _baseDir()}/.bg_completion.log'),
+          File('${spec.storagePath(await _baseDir())}/.bg_completion.log'),
         ).parse();
         queue = spec.queuedChapters.any(
           (chapter) => !queuedChapterTerminal(entries, chapter),
         );
       }
       final catchup =
-          valid && !state.paused && state.enabled && spec.manga.isNotEmpty;
+          valid &&
+          !state.paused &&
+          !state.downloadPermissionPaused(spec.serverId) &&
+          state.enabled &&
+          spec.manga.isNotEmpty;
       final notices = config?.anyEnabled ?? false;
       if (!queue && !catchup && !notices) {
         await Workmanager().cancelByUniqueName(kNewChapterPeriodicName);
@@ -93,5 +101,7 @@ bool queuedChapterTerminal(List<LogEntry> entries, QueuedChapterSpec chapter) {
     }
   }
   return generation == chapter.generation &&
-      (status == 'downloaded' || status == 'error');
+      (status == 'downloaded' ||
+          status == 'error' ||
+          status == 'permissionDenied');
 }

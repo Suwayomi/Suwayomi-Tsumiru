@@ -10,10 +10,13 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
+import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/theme/brand.dart';
 import '../../../widgets/custom_circular_progress_indicator.dart';
+import '../../account/data/account_providers.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../offline/data/offline_download_providers.dart';
 import '../data/downloads/downloads_repository.dart';
 import '../data/manga_book/manga_book_repository.dart';
@@ -39,12 +42,17 @@ class DownloadStatusIcon extends HookConsumerWidget {
     WidgetRef ref,
     ValueSetter<bool> setIsLoading,
   ) async {
+    if (!ref.context.mounted) return;
+    final current = ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    if (!current()) return;
     try {
       setIsLoading(true);
       await updateData();
-      setIsLoading(false);
-    } catch (e) {
-      //
+    } catch (_) {
+    } finally {
+      if (ref.context.mounted && current()) setIsLoading(false);
     }
   }
 
@@ -57,12 +65,18 @@ class DownloadStatusIcon extends HookConsumerWidget {
   }) async {
     try {
       (await AsyncValue.guard(() async {
+        final current = ref
+            .read(authCredentialsStoreProvider.notifier)
+            .captureSession();
         final repo = ref.read(downloadsRepositoryProvider);
         if (isRemove || isError) {
           await repo.removeChapterFromDownloadQueue(chapter.id);
+          if (!current()) return;
         }
         if (isAdd || isError) {
           await repo.addChaptersBatchToDownloadQueue([chapter.id]);
+          if (!ref.context.mounted || !current()) return;
+          await updateData();
         }
       })).showToastOnError(toast);
     } catch (e) {
@@ -72,18 +86,30 @@ class DownloadStatusIcon extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final isLoading = useState(false);
 
     final toast = ref.watch(toastProvider);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapter.id));
-    useEffect(() {
-      if (downloadUpdate?.state == DownloadState.FINISHED) {
-        Future.microtask(
-          () => newUpdatePair(ref, (value) => isLoading.value = value),
-        );
-      }
-      return;
-    }, [downloadUpdate?.state]);
+    ref.listen(downloadUpdatesProvider, (_, next) {
+      final finished =
+          next.value?.updates.any(
+            (update) =>
+                update.type == DownloadUpdateType.FINISHED &&
+                update.download.chapter.id == chapter.id,
+          ) ??
+          false;
+      if (!finished) return;
+      final current = ref
+          .read(authCredentialsStoreProvider.notifier)
+          .captureSession();
+      Future.microtask(() async {
+        if (!ref.context.mounted || !current()) return;
+        await newUpdatePair(ref, (value) => isLoading.value = value);
+      });
+    });
 
     if (isLoading.value) {
       return Padding(
@@ -94,7 +120,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
       if (downloadUpdate != null) {
         if (downloadUpdate.state == DownloadState.ERROR) {
           return IconButton(
-            onPressed: () => toggleChapterToQueue(toast, ref, isError: true),
+            tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
+            onPressed: !canDownload
+                ? null
+                : () => toggleChapterToQueue(toast, ref, isError: true),
             icon: const Icon(Icons.replay_rounded),
           );
         } else if (downloadUpdate.state == DownloadState.QUEUED) {
@@ -103,7 +132,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
           // animating until its turn came. A determinate ring doesn't animate
           // at all, so a chapter paused partway keeps showing how far it got.
           return IconButton(
-            onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
+            tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
+            onPressed: !canDownload
+                ? null
+                : () => toggleChapterToQueue(toast, ref, isRemove: true),
             icon: downloadUpdate.progress > 0
                 ? MiniCircularProgressIndicator(
                     value: downloadUpdate.progress,
@@ -113,7 +145,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
           );
         } else {
           return IconButton(
-            onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
+            tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
+            onPressed: !canDownload
+                ? null
+                : () => toggleChapterToQueue(toast, ref, isRemove: true),
             icon: MiniCircularProgressIndicator(
               value: downloadUpdate.progress == 0
                   ? null
@@ -132,8 +167,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
               // this icon (the chapter row it belongs to can disappear once
               // the delete resolves). `ref.read` throws once that happens; a
               // container obtained now stays valid regardless.
-              final containerRead =
-                  ProviderScope.containerOf(context, listen: false).read;
+              final containerRead = ProviderScope.containerOf(
+                context,
+                listen: false,
+              ).read;
               final deleteIds = expandIdsAcrossScanlators(
                 ref,
                 mangaId: chapter.mangaId,
@@ -159,9 +196,12 @@ class DownloadStatusIcon extends HookConsumerWidget {
               Icons.cloud_download_outlined,
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: () {
-              toggleChapterToQueue(toast, ref, isAdd: true);
-            },
+            tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
+            onPressed: !canDownload
+                ? null
+                : () {
+                    toggleChapterToQueue(toast, ref, isAdd: true);
+                  },
           );
         }
       }

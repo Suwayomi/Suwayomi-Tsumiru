@@ -6,12 +6,14 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../account/data/account_permission.dart';
 import '../../../notifications/data/notification_state_store.dart';
 import '../chapter_manifest.dart';
 import '../offline_database.dart';
@@ -35,7 +37,6 @@ const _runBudget = Duration(minutes: 7);
 /// Attempts a single chapter gets across runs before its obligation is dropped.
 /// Without this the ledger never converges: a chapter the server cannot serve
 /// stays pending and is retried on every scheduled wake, forever.
-const _maxChapterAttempts = 5;
 
 /// Download the ledger's obligations inside the WorkManager task. Returns
 /// false only on transient failure (scheduler retries).
@@ -102,7 +103,9 @@ Future<bool> runCatchupDownloads({
   }
 
   final support = await getApplicationSupportDirectory();
-  final paths = OfflinePaths('${support.path}${Platform.pathSeparator}offline');
+  final paths = OfflinePaths(
+    spec.storagePath('${support.path}${Platform.pathSeparator}offline'),
+  );
   final store = IoOfflinePageStore(paths);
   final log = BackgroundCompletionLog(
     File('${paths.baseDir}/.bg_completion.log'),
@@ -139,9 +142,11 @@ Future<bool> runCatchupDownloads({
         await catchupStore.reload();
         final latest = catchupStore.readSpec();
         if (catchupStore.paused ||
+            catchupStore.downloadPermissionPaused(spec!.serverId) ||
             !catchupStore.matchesIdentity(config) ||
             latest == null ||
-            latest.serverId != spec!.serverId) {
+            latest.serverId != spec.serverId ||
+            latest.accountScoped != spec.accountScoped) {
           cancelled = true;
         }
         if (!cancelled && latest!.wifiOnly) {
@@ -161,11 +166,26 @@ Future<bool> runCatchupDownloads({
 
   Future<void> checkControls() => controlCheck ??= inspectControls()
       .whenComplete(() => controlCheck = null);
+  Future<bool> recordDenial() async {
+    if (cancelled) return false;
+    return catchupStore.recordDownloadPermission(
+      spec!.serverId,
+      allowed: false,
+      expectedRevision: catchupStore.downloadPermissionRevision(spec.serverId),
+      isCurrent: () =>
+          !cancelled &&
+          catchupStore.matchesIdentity(config) &&
+          catchupStore.catalogServerId == spec!.serverId,
+      baseDir: paths.baseDir,
+    );
+  }
+
   try {
     await catchupStore.reload();
     spec = catchupStore.readSpec();
     if (spec == null ||
         catchupStore.paused ||
+        catchupStore.downloadPermissionPaused(spec.serverId) ||
         !catchupStore.matchesIdentity(config)) {
       return true;
     }
@@ -276,6 +296,12 @@ Future<bool> runCatchupDownloads({
       ),
       shouldStop: (chapter) async {
         await checkControls();
+        await catchupStore.reload();
+        if (!catchupStore.matchesIdentity(config) ||
+            catchupStore.paused ||
+            catchupStore.downloadPermissionPaused(spec!.serverId)) {
+          cancelled = true;
+        }
         final current = catchupStore.readSpec();
         if (!(current?.queuedChapters.any(
               (c) =>
@@ -288,8 +314,19 @@ Future<bool> runCatchupDownloads({
         }
         return cancelled;
       },
+      onPermissionDenied: () async {
+        await recordDenial();
+      },
       capBlocked: capBlocked,
-      persist: (next) => catchupStore.writeLedger(spec!.serverId, next),
+      persist: (next) async {
+        await catchupStore.reload();
+        if (catchupStore.catalogServerId != spec!.serverId) {
+          cancelled = true;
+          return;
+        }
+        await catchupStore.writeLedger(spec.serverId, next);
+        if (!catchupStore.matchesIdentity(config)) cancelled = true;
+      },
     );
     ledger = queued.ledger;
     downloaded = queued.completed;
@@ -352,6 +389,51 @@ Future<bool> runCatchupDownloads({
       final retries = {...ledger.serverFetchRetries};
       final dlRetries = {...ledger.downloadRetries};
       final pending = {...ledger.pendingDownloads};
+      final generations = {...ledger.chapterGenerations};
+      Future<bool> persistProgress() async {
+        await catchupStore.reload();
+        if (catchupStore.catalogServerId != spec!.serverId) {
+          return false;
+        }
+        ledger = ledger.copyWith(
+          chapterGenerations: generations,
+          pendingDownloads: pending,
+          pendingServerFetch: serverFetch,
+          serverFetchRetries: retries,
+          downloadRetries: dlRetries,
+        );
+        await catchupStore.writeLedger(spec.serverId, ledger);
+        return catchupStore.matchesIdentity(config);
+      }
+
+      for (final row in chapters.rows) {
+        final generation = mangaSpec.generationOf(row.id);
+        if ((generations[row.id] ?? 0) != generation) {
+          pending.remove(row.id);
+          serverFetch.remove(row.id);
+          retries.remove(row.id);
+          dlRetries.remove(row.id);
+          generations.remove(row.id);
+        }
+        final key = '${row.id}:$generation';
+        final serverSpent = math.max(
+          retries[row.id] ?? 0,
+          math.max(
+            ledger.queuedServerRetries[key] ?? 0,
+            mangaSpec.serverFetchAttempts[row.id] ?? 0,
+          ),
+        );
+        final deviceSpent = math.max(
+          dlRetries[row.id] ?? 0,
+          ledger.queuedDownloadRetries[key] ?? 0,
+        );
+        if (serverSpent > 0 || deviceSpent > 0) {
+          generations[row.id] = generation;
+          pending[row.id] = mangaId;
+        }
+        if (serverSpent > 0) retries[row.id] = serverSpent;
+        if (deviceSpent > 0) dlRetries[row.id] = deviceSpent;
+      }
 
       // A chapter that has spent its attempt budget on either hop is already a
       // permanent dead end this run onward (both hops below `continue` once
@@ -365,17 +447,51 @@ Future<bool> runCatchupDownloads({
       for (final r in chapters.rows) {
         final serverFetchSpent = retries[r.id] ?? 0;
         final downloadSpent = dlRetries[r.id] ?? 0;
-        if (serverFetchSpent < _maxChapterAttempts &&
-            downloadSpent < _maxChapterAttempts) {
+        if ((r.serverIsDownloaded ||
+                serverFetchSpent < catchupMaxChapterAttempts) &&
+            downloadSpent < catchupMaxChapterAttempts) {
           continue;
         }
         exhausted.add(r.id);
+        final completed =
+            mangaSpec.onDeviceChapterIds.contains(r.id) ||
+            mangaSpec.failedChapterIds.contains(r.id) ||
+            (await _loggedOrCommitted(logEntries, store, mangaId, {
+              r.id,
+            })).contains(r.id);
+        if (!completed) {
+          await catchupStore.reload();
+          if (cancelled || !catchupStore.matchesIdentity(config)) return true;
+          final generation = mangaSpec.generationOf(r.id);
+          final failure = AdoptChapterEntry(
+            chapterId: r.id,
+            mangaId: mangaId,
+            serverId: spec.serverId,
+            name: r.name,
+            chapterIndex: r.chapterIndex,
+            chapterNumber: r.chapterNumber ?? -1,
+            pageCount: r.pageCount,
+            bytes: 0,
+            isRead: r.isRead,
+            status: 'error',
+            generation: generation,
+          );
+          await log.appendAdopt(failure);
+          await log.appendChapter(
+            chapterId: r.id,
+            status: 'error',
+            pages: 0,
+            bytes: 0,
+            generation: generation,
+          );
+        }
+
         recordDiagnostic(
           '[${DateTime.now().toIso8601String()}] offline-catchup: '
           'giving-up-on-chapter mangaId=$mangaId chapterId=${r.id} '
           'name="${r.name}" index=${r.chapterIndex} '
-          'serverFetchAttempts=$serverFetchSpent/$_maxChapterAttempts '
-          'downloadAttempts=$downloadSpent/$_maxChapterAttempts '
+          'serverFetchAttempts=$serverFetchSpent/$catchupMaxChapterAttempts '
+          'downloadAttempts=$downloadSpent/$catchupMaxChapterAttempts '
           'serverIsDownloaded=${r.serverIsDownloaded} '
           '— excluded from this manga\'s keep-rule slots from now on\n',
         );
@@ -400,6 +516,10 @@ Future<bool> runCatchupDownloads({
       };
 
       for (final chapterId in desired.difference(present)) {
+        pending[chapterId] = mangaId;
+        generations[chapterId] = mangaSpec.generationOf(chapterId);
+      }
+      for (final chapterId in desired.difference(present)) {
         if (downloaded >= _maxChaptersPerRun) break;
         if (DateTime.now().isAfter(deadline)) break;
         if (await capBlocked()) {
@@ -422,82 +542,102 @@ Future<bool> runCatchupDownloads({
         // Counters outlive the obligation they gave up on: `desired` is rebuilt
         // from the spec each run, so a cleared counter just starts the attempts
         // over. Success clears them; so does the chapter leaving the window.
-        if (!row.serverIsDownloaded) {
-          final spent = retries[chapterId] ?? 0;
-          if (spent >= _maxChapterAttempts) {
-            // Stop asking, but keep the obligation: it is what tells the ledger
-            // which manga this chapter belongs to, so the window cleanup below
-            // can drop the counter with it once the chapter is no longer
-            // wanted. Skipping costs nothing — the gate is ahead of any I/O.
-            serverFetch.remove(chapterId);
-            continue;
-          }
-          // Two-hop: ask the server to fetch it from the source first. A failed
-          // ask is the server not being there, which costs nothing.
-          final ok = await _enqueueServerDownload(
-            target,
-            record,
-            broker,
-            chapterId,
-          );
-          // A trail of every attempt, not just the final give-up — so a run
-          // that never reaches the cap is still visible, and a failed
-          // enqueue request (server unreachable) is distinguishable from one
-          // that succeeded but the source never actually produced the
-          // chapter (serverIsDownloaded staying false on a later run).
-          recordDiagnostic(
-            '[${DateTime.now().toIso8601String()}] offline-catchup: '
-            'asking-server-to-fetch mangaId=$mangaId chapterId=$chapterId '
-            'name="${row.name}" index=${row.chapterIndex} '
-            'enqueueOk=$ok attempt=${spent + 1}/$_maxChapterAttempts\n',
-          );
-          if (ok) {
-            serverFetch[chapterId] = mangaId;
-            retries[chapterId] = spent + 1;
-          }
-          continue;
-        }
-
-        // On the server now, so this is a fresh job with its own budget however
-        // many runs the fetch above took.
-        serverFetch.remove(chapterId);
-        final dlSpent = dlRetries[chapterId] ?? 0;
-        if (dlSpent >= _maxChapterAttempts) continue;
-
-        // Re-check connectivity before each chapter's page downloads — the
-        // one-time gate at run start can't catch a WiFi drop mid-run.
-        if (spec.wifiOnly) {
-          final net = await Connectivity().checkConnectivity();
-          if (!net.contains(ConnectivityResult.wifi) &&
-              !net.contains(ConnectivityResult.ethernet)) {
+        try {
+          if (!row.serverIsDownloaded) {
+            final spent = retries[chapterId] ?? 0;
+            if (spent >= catchupMaxChapterAttempts) {
+              serverFetch.remove(chapterId);
+              continue;
+            }
+            final ok = await _enqueueServerDownload(
+              target,
+              record,
+              broker,
+              chapterId,
+            );
             recordDiagnostic(
               '[${DateTime.now().toIso8601String()}] offline-catchup: '
-              'run-paused reason=wifi-lost mid-run\n',
+              'asking-server-to-fetch mangaId=$mangaId chapterId=$chapterId '
+              'name="${row.name}" index=${row.chapterIndex} '
+              'enqueueOk=$ok attempt=${spent + 1}/$catchupMaxChapterAttempts\n',
             );
-            break outer;
+            if (ok) {
+              serverFetch[chapterId] = mangaId;
+              retries[chapterId] = spent + 1;
+              if (!await persistProgress()) return true;
+            }
+            continue;
           }
-        }
 
-        final attempt = await trackedDownload(
-          row: row,
-          mangaId: mangaId,
-          generation: mangaSpec.generationOf(chapterId),
-        );
-        if (cancelled) break outer;
-        if (attempt.bytes > 0) {
-          downloaded++;
-          runBytes += attempt.bytes;
-          pending.remove(chapterId);
           serverFetch.remove(chapterId);
-          retries.remove(chapterId);
-          dlRetries.remove(chapterId);
-          recordDiagnostic(
-            '[${DateTime.now().toIso8601String()}] offline-catchup: '
-            'downloaded-chapter mangaId=$mangaId chapterId=$chapterId '
-            'bytes=${attempt.bytes}\n',
+          final dlSpent = dlRetries[chapterId] ?? 0;
+          if (dlSpent >= catchupMaxChapterAttempts) continue;
+
+          if (spec.wifiOnly) {
+            final net = await Connectivity().checkConnectivity();
+            if (!net.contains(ConnectivityResult.wifi) &&
+                !net.contains(ConnectivityResult.ethernet)) {
+              recordDiagnostic(
+                '[${DateTime.now().toIso8601String()}] offline-catchup: '
+                'run-paused reason=wifi-lost mid-run\n',
+              );
+              break outer;
+            }
+          }
+
+          final attempt = await trackedDownload(
+            row: row,
+            mangaId: mangaId,
+            generation: mangaSpec.generationOf(chapterId),
           );
-        } else if (!attempt.transient) {
-          dlRetries[chapterId] = dlSpent + 1;
+          if (attempt.bytes > 0) {
+            downloaded++;
+            runBytes += attempt.bytes;
+            pending.remove(chapterId);
+            serverFetch.remove(chapterId);
+            retries.remove(chapterId);
+            dlRetries.remove(chapterId);
+            generations.remove(chapterId);
+            recordDiagnostic(
+              '[${DateTime.now().toIso8601String()}] offline-catchup: '
+              'downloaded-chapter mangaId=$mangaId chapterId=$chapterId '
+              'bytes=${attempt.bytes}\n',
+            );
+          } else if (!attempt.transient) {
+            dlRetries[chapterId] = dlSpent + 1;
+          }
+          if (!await persistProgress()) return true;
+          if (cancelled) break outer;
+        } on AccountPermissionDenied {
+          if (!await recordDenial() ||
+              cancelled ||
+              !catchupStore.matchesIdentity(config)) {
+            return true;
+          }
+          await log.appendAdopt(
+            AdoptChapterEntry(
+              chapterId: row.id,
+              mangaId: mangaId,
+              serverId: spec.serverId,
+              name: row.name,
+              chapterIndex: row.chapterIndex,
+              chapterNumber: row.chapterNumber ?? -1,
+              pageCount: row.pageCount,
+              bytes: 0,
+              isRead: row.isRead,
+              status: 'permissionDenied',
+              generation: mangaSpec.generationOf(chapterId),
+            ),
+          );
+          await log.appendChapter(
+            chapterId: chapterId,
+            status: 'permissionDenied',
+            pages: 0,
+            bytes: 0,
+            generation: mangaSpec.generationOf(chapterId),
+          );
+          await persistProgress();
+          return true;
         }
       }
 
@@ -539,9 +679,11 @@ Future<bool> runCatchupDownloads({
         serverFetch.remove(c);
         retries.remove(c);
         dlRetries.remove(c);
+        generations.remove(c);
       }
 
       ledger = ledger.copyWith(
+        chapterGenerations: generations,
         pendingDownloads: pending,
         pendingServerFetch: serverFetch,
         serverFetchRetries: retries,
@@ -552,12 +694,15 @@ Future<bool> runCatchupDownloads({
         // this run actually looked at.
         backfilledMangaIds: {...ledger.backfilledMangaIds, mangaId},
       );
-      await catchupStore.writeLedger(spec.serverId, ledger);
+      if (!await persistProgress()) return true;
     }
     recordDiagnostic(
       '[${DateTime.now().toIso8601String()}] offline-catchup: '
       'run-finished downloaded=$downloaded bytes=$runBytes\n',
     );
+    return true;
+  } on AccountPermissionDenied {
+    await recordDenial();
     return true;
   } finally {
     controlTimer?.cancel();
@@ -580,6 +725,7 @@ CatchupLedger _dropManga(CatchupLedger ledger, int mangaId) {
       if (!gone.contains(e.key)) e.key: e.value,
   };
   return ledger.copyWith(
+    chapterGenerations: without(ledger.chapterGenerations),
     pendingDownloads: without(ledger.pendingDownloads),
     pendingServerFetch: without(ledger.pendingServerFetch),
     // The rule is gone, so the attempts spent under it mean nothing — leaving
@@ -609,11 +755,25 @@ Future<Set<int>> _loggedOrCommitted(
   Set<int> candidates,
 ) async {
   final present = <int>{};
+  final generations = <int, int>{};
   for (final e in logEntries) {
-    if (e is AdoptChapterEntry && e.mangaId == mangaId) {
+    if (e is DeletedEntry && e.generation >= (generations[e.chapterId] ?? 0)) {
+      generations[e.chapterId] = e.generation;
+      present.remove(e.chapterId);
+    }
+    if (e is AdoptChapterEntry &&
+        e.mangaId == mangaId &&
+        e.generation >= (generations[e.chapterId] ?? 0)) {
       present.add(e.chapterId);
     }
-    if (e is ChapterEntry && e.status == 'downloaded') present.add(e.chapterId);
+    if (e is ChapterEntry &&
+        (e.status == 'downloaded' ||
+            e.status == 'permissionDenied' ||
+            e.status == 'error') &&
+        e.generation >= (generations[e.chapterId] ?? 0)) {
+      generations[e.chapterId] = e.generation;
+      present.add(e.chapterId);
+    }
   }
   for (final chapterId in candidates) {
     if (present.contains(chapterId)) continue;
@@ -659,10 +819,9 @@ Future<_MangaChapters?> _fetchMangaChapters(
       (target.isCancelled?.call() ?? false)) {
     return null;
   }
-  if (result is! Map<String, Object?>) return _MangaChapters(const []);
-  final nodes =
-      ((result['chapters'] as Map<String, Object?>?)?['nodes'] as List? ??
-      const []);
+  if (result is! Map<String, Object?>) return null;
+  final nodes = (result['chapters'] as Map<String, Object?>?)?['nodes'];
+  if (nodes is! List) return null;
   final now = DateTime.now();
   return _MangaChapters([
     for (final n in nodes.cast<Map<String, Object?>>())
@@ -698,6 +857,13 @@ Future<bool> _enqueueServerDownload(
   TokenBroker broker,
   int chapterId,
 ) async {
+  if (!await verifyBackgroundDownloadAccess(
+    target: target,
+    record: record,
+    broker: broker,
+  )) {
+    return false;
+  }
   const query =
       'mutation EnqueueDownloads(\$input: EnqueueChapterDownloadsInput!){ enqueueChapterDownloads(input: \$input){ __typename } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
@@ -724,7 +890,9 @@ Future<bool> _enqueueServerDownload(
     final newAccess = await broker.resolveAfter401(record().accessToken ?? '');
     if (newAccess != null) result = await post(newAccess);
   }
-  return result is Map<String, Object?>;
+  return !(target.isCancelled?.call() ?? false) &&
+      result is Map<String, Object?> &&
+      result['enqueueChapterDownloads'] is Map;
 }
 
 /// Download one chapter into staging, returning the bytes staged (0 when it
@@ -808,11 +976,15 @@ Future<ChapterAttempt> _downloadOneChapter({
     isCancelled: isCancelled ?? () => false,
     onPageStored: (_, _, _) async {},
   );
-  if (outcome.cancelled || (isCancelled?.call() ?? false)) {
+  if (outcome.cancelled) {
     return (bytes: 0, transient: true);
   }
+  if (outcome.error is AccountPermissionDenied) throw outcome.error!;
   if (!outcome.succeeded) {
     return (bytes: 0, transient: outcome.offline || outcome.authFailed);
+  }
+  if (isCancelled?.call() ?? false) {
+    return (bytes: 0, transient: true);
   }
 
   // Measured off staging rather than this run's writes: a resumed chapter

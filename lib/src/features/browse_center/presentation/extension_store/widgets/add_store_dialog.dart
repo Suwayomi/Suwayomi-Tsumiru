@@ -8,8 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../account/data/account_providers.dart';
 import '../../../data/extension_store_repository/extension_store_repository.dart';
 
 /// Mirrors Komikku's ExtensionStoreCreateDialog. Duplicate check is an exact
@@ -29,7 +32,11 @@ class AddStoreDialog extends HookConsumerWidget {
 
     final trimmed = url.value.trim();
     final isDuplicate = existingUrls.contains(trimmed);
-    final canSubmit = trimmed.isNotEmpty && !isDuplicate && !submitting.value;
+    final canManage = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.MANAGE_EXTENSION_STORES);
+    final canSubmit =
+        canManage && trimmed.isNotEmpty && !isDuplicate && !submitting.value;
 
     Future<void> submit() async {
       submitting.value = true;
@@ -45,10 +52,13 @@ class AddStoreDialog extends HookConsumerWidget {
         if (!context.mounted) return;
         // The dialog stays open on failure — a raw server exception can carry
         // HTML/stack noise, so keep only the first line, clamped.
-        final firstLine = e.toString().split('\n').first;
+        final firstLine = isPermissionDenied(e)
+            ? context.l10n.accountPermissionDenied
+            : e.toString().split('\n').first;
         submitting.value = false;
-        serverError.value =
-            firstLine.length > 200 ? firstLine.substring(0, 200) : firstLine;
+        serverError.value = firstLine.length > 200
+            ? firstLine.substring(0, 200)
+            : firstLine;
       }
     }
 

@@ -18,6 +18,10 @@ import '../../../global_providers/global_providers.dart';
 // auth.graphql.dart, so we import the schema directly.
 import '../../../graphql/__generated__/schema.graphql.dart'
     show Input$LoginInput, Input$RefreshTokenInput;
+import '../../account/data/account_notice.dart';
+import '../../account/data/account_session_repository.dart';
+import '../../account/domain/account_binding.dart';
+import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
     show authProbeAuthorized, basicAuthConfirms;
 import 'auth_credentials_store.dart';
@@ -131,20 +135,11 @@ class RefreshTransientFailure extends RefreshOutcome {
   final Object error;
 }
 
-/// Process-wide single-flight slot for UI Login refresh.
-///
-/// Held as a TOP-LEVEL static — not a notifier field — so it survives
-/// provider invalidation (Codex round-3 finding: if a Riverpod
-/// invalidate recreates [AuthCoordinator] mid-refresh, an instance
-/// field would silently allow a second concurrent refresh). The
-/// trade-off: tests that exercise the static must reset it via
-/// `debugResetAuthCoordinatorSingleFlight()` in `setUp`.
-Completer<RefreshOutcome>? _refreshInFlight;
+Expando<Completer<RefreshOutcome>> _refreshInFlight = Expando();
 
-/// Test hook to clear the file-static single-flight slot between tests.
 @visibleForTesting
 void debugResetAuthCoordinatorSingleFlight() {
-  _refreshInFlight = null;
+  _refreshInFlight = Expando();
 }
 
 /// Extracts an HTTP status code from a graphql_flutter [LinkException],
@@ -209,6 +204,10 @@ class AuthCoordinator extends _$AuthCoordinator {
     ) {
       final state = next.value;
       if (state == null) return;
+      if (!ref.read(authCredentialsStoreProvider.notifier).sessionAdmitted) {
+        _cancelProactiveRefresh();
+        return;
+      }
       if (state.uiAccessToken == null || state.uiAccessTokenExpiresAt == null) {
         _cancelProactiveRefresh();
         return;
@@ -391,40 +390,83 @@ class AuthCoordinator extends _$AuthCoordinator {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     await store.withIdentityChange(() async {
       final epoch = store.serverEpoch;
+      final address = ref.read(currentServerAddressProvider);
       final tokens = await verifyUiCredentials(
         gqlClient: gqlClient,
         username: username,
         password: password,
       );
-      await store.saveUiLoginTokens(
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+      await adoptUiLoginTokens(
+        gqlClient: gqlClient,
+        tokens: tokens,
         forEpoch: epoch,
+        address: address,
+        username: username,
+        password: password,
       );
-      await store.savePassword(password, forEpoch: epoch);
-      ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
   }
 
-  /// Calls the `refreshToken` mutation. Returns a typed [RefreshOutcome].
-  /// Process-wide single-flight is handled via the FILE-STATIC
-  /// `_refreshInFlight` Completer declared above this class (Codex
-  /// round-3 finding: instance-field placement breaks if the notifier
-  /// is invalidated mid-refresh).
-  ///
-  /// On `success`: updates the store's access token.
-  /// On `authFailure`: clears tokens and sets `needsReauth = true`.
-  /// On `transientFailure`: leaves state untouched; caller logs/retries.
-  ///
-  /// Concurrent callers share one in-flight refresh.
+  Future<void> adoptUiLoginTokens({
+    required GraphQLClient gqlClient,
+    required UiLoginTokens tokens,
+    required int forEpoch,
+    required String address,
+    required String username,
+    String? password,
+    AccountBinding? expectedBinding,
+  }) async {
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    await store.withIdentityChange(() async {
+      final epoch = store.serverEpoch;
+      if (address != ref.read(currentServerAddressProvider)) {
+        throw StateError('Authentication server changed');
+      }
+      final accountClient = GraphQLClient(
+        link: AuthLink(
+          getToken: () => 'Bearer ${tokens.accessToken}',
+        ).concat(gqlClient.link),
+        cache: GraphQLCache(),
+        defaultPolicies: DefaultPolicies(
+          query: Policies(fetch: FetchPolicy.noCache),
+        ),
+      );
+      final binding = await AccountSessionRepository(
+        accountClient,
+      ).resolve(address: address, loginUsername: username);
+      if (epoch != store.serverEpoch ||
+          address != ref.read(currentServerAddressProvider)) {
+        throw StateError('Authentication session changed');
+      }
+      if (expectedBinding != null &&
+          (binding.userId != expectedBinding.userId ||
+              binding.catalogId != expectedBinding.catalogId ||
+              binding.address != expectedBinding.address)) {
+        throw StateError('Authentication account changed');
+      }
+      await store.saveUiLoginTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        binding: binding,
+        forEpoch: epoch,
+      );
+      if (password != null) {
+        await store.savePassword(password, forEpoch: epoch);
+      }
+      await ref.read(accountNoticeProvider.notifier).set(null);
+      ref.read(needsReauthProvider.notifier).set(false);
+    }, expectedEpoch: forEpoch);
+  }
+
   Future<RefreshOutcome> refreshUiAccessToken({
     required GraphQLClient gqlClient,
   }) async {
-    final inFlight = _refreshInFlight;
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    final inFlight = _refreshInFlight[store];
     if (inFlight != null) return inFlight.future;
 
     final completer = Completer<RefreshOutcome>();
-    _refreshInFlight = completer;
+    _refreshInFlight[store] = completer;
     try {
       final outcome = await _refreshUiAccessTokenImpl(gqlClient);
       completer.complete(outcome);
@@ -439,7 +481,9 @@ class AuthCoordinator extends _$AuthCoordinator {
       completer.complete(outcome);
       return outcome;
     } finally {
-      _refreshInFlight = null;
+      if (identical(_refreshInFlight[store], completer)) {
+        _refreshInFlight[store] = null;
+      }
     }
   }
 
@@ -449,7 +493,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     // A switch bumping the epoch mid-refresh discards the write below.
     final startEpoch = store.serverEpoch;
-    if (store.identityChanging) {
+    if (store.identityChanging || !store.sessionAdmitted) {
       return RefreshOutcome.transientFailure(
         StateError('Credentials are changing'),
       );
@@ -470,10 +514,6 @@ class AuthCoordinator extends _$AuthCoordinator {
     }
     final tokens = store.uiLoginTokens();
     if (tokens == null) {
-      // No tokens to refresh = nothing more we can do. This is treated
-      // as auth failure (the user must log in again) rather than
-      // transient — there's no path forward without re-auth.
-      ref.read(needsReauthProvider.notifier).set(true);
       return const RefreshOutcome.authFailure();
     }
 

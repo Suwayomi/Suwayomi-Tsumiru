@@ -6,11 +6,39 @@
 
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../constants/enum.dart';
+import '../../features/auth/data/auth_credentials_store.dart';
 
 import 'cover_cache_manager_stub.dart'
     if (dart.library.io) 'cover_cache_manager_io.dart';
 
 part 'cover_cache.g.dart';
+
+final _imageCacheSessions = Expando<String>();
+
+String accountImageCacheKey(
+  String url, {
+  required AuthType? authType,
+  required AuthCredentialsStore store,
+  required AuthCredentialsState? credentials,
+}) {
+  if (authType != AuthType.uiLogin) return url;
+  final uri = Uri.tryParse(url);
+  if (uri != null && uri.queryParameters.containsKey('token')) {
+    final query = Map<String, dynamic>.from(uri.queryParametersAll)
+      ..remove('token');
+    url = uri.replace(queryParameters: query).toString();
+    if (query.isEmpty) url = url.replaceFirst('?', '');
+  }
+  final binding = credentials?.accountBinding;
+  if (!store.sessionChanging && binding != null) {
+    return 'tsumiru-image:account:${Uri.encodeComponent(binding.catalogId)}/$url';
+  }
+  final session = _imageCacheSessions[store] ??= const Uuid().v4();
+  return 'tsumiru-image:session:$session:${store.sessionEpoch}/$url';
+}
 
 /// The durable cover/icon cache. keepAlive: one instance per app — cache
 /// managers own an open index and a file dir; churning them leaks both.

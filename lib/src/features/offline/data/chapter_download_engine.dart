@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import '../../account/data/account_permission.dart';
 import 'offline_page_store.dart';
 
 /// Thrown by a [PageFetcher] when the server rejects the request with 401.
@@ -163,7 +164,9 @@ class ChapterDownloadEngine {
           case _PageCancelled():
             return; // cancel landed mid-fetch; the loop's guard also stops us
           case _PageError(:final error):
-            fatalError ??= error;
+            if (fatalError == null || error is AccountPermissionDenied) {
+              fatalError = error;
+            }
         }
       }
     }
@@ -206,6 +209,9 @@ class ChapterDownloadEngine {
           bytes.ext,
         );
         return _PageOk(relPath: written.relPath, bytes: written.bytes);
+      } on AccountPermissionDenied catch (e) {
+        if (isCancelled()) return const _PageCancelled();
+        return _PageError(e);
       } on PageOfflineException catch (e) {
         if (isCancelled()) return const _PageCancelled();
         // Device went offline / Wi-Fi-only blocked it — stop this chapter and

@@ -10,10 +10,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../features/offline/data/offline_download_providers.dart';
 import '../../../../features/offline/data/offline_repository.dart';
+import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/selection_action_bar.dart';
+import '../../../account/data/account_providers.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -39,6 +41,9 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     refresh([bool triggerAfterOption = true]) async {
       selectedChapters.value = {};
       if (triggerAfterOption) await afterOptionSelected();
@@ -55,8 +60,10 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           icon: const Icon(Icons.close_rounded),
           onPressed: () => refresh(false),
         ),
-        Text('${selectedChapters.value.length}',
-            style: context.textTheme.titleMedium),
+        Text(
+          '${selectedChapters.value.length}',
+          style: context.textTheme.titleMedium,
+        ),
       ],
       actions: [
         IconButton(
@@ -65,8 +72,8 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           onPressed: chapterList == null
               ? null
               : () => selectedChapters.value = {
-                    for (final c in chapterList!) c.id: c,
-                  },
+                  for (final c in chapterList!) c.id: c,
+                },
         ),
         MultiChaptersActionIcon(
           iconData: Icons.done_all_rounded,
@@ -82,58 +89,66 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           refresh: refresh,
         ),
         IconButton(
-          tooltip: context.l10n.keepOffline,
+          tooltip: canDownload
+              ? context.l10n.keepOffline
+              : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.save_alt_rounded),
-          onPressed: () async {
-            // Download FIRST, clear selection AFTER: clearing selection disposes
-            // this bar, which would invalidate `ref` mid-loop and silently drop
-            // the remaining downloads.
-            final ids = selectedChapterList;
-            if (ids.length > kBulkDownloadConfirmThreshold &&
-                !await confirmBulkDownload(context,
-                    summary: '${ids.length} chapters', toDevice: true)) {
-              return;
-            }
-            // Per-chapter guard: one failure (offline, a chapter the server
-            // hasn't downloaded) must not silently abandon the rest.
-            var failures = 0;
-            for (final id in ids) {
-              try {
-                await saveChapterToDevice(ref, id);
-              } catch (_) {
-                failures++;
-              }
-            }
-            if (failures > 0 && context.mounted) {
-              ref
-                  .read(toastProvider)
-                  ?.showError(context.l10n.errorSomethingWentWrong);
-            }
-            await refresh(true);
-          },
+          onPressed: canDownload
+              ? () async {
+                  // Clearing selection disposes this bar and its ref.
+                  final ids = selectedChapterList;
+                  if (ids.length > kBulkDownloadConfirmThreshold &&
+                      !await confirmBulkDownload(
+                        context,
+                        summary: '${ids.length} chapters',
+                        toDevice: true,
+                      )) {
+                    return;
+                  }
+                  var failures = 0;
+                  for (final id in ids) {
+                    try {
+                      await saveChapterToDevice(ref, id);
+                    } catch (_) {
+                      failures++;
+                    }
+                  }
+                  if (failures > 0 && context.mounted) {
+                    ref
+                        .read(toastProvider)
+                        ?.showError(context.l10n.errorSomethingWentWrong);
+                  }
+                  await refresh(true);
+                }
+              : null,
         ),
         IconButton(
-          tooltip: context.l10n.downloads,
+          tooltip: canDownload
+              ? context.l10n.downloads
+              : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.cloud_download_outlined),
-          onPressed: () async {
-            final ids = selectedChapterList;
-            if (ids.length > kBulkDownloadConfirmThreshold &&
-                !await confirmBulkDownload(context,
-                    summary: '${ids.length} chapters', toDevice: false)) {
-              return;
-            }
-            final result = await AsyncValue.guard(
-              () => ref
-                  .read(downloadsRepositoryProvider)
-                  .addChaptersBatchToDownloadQueue(ids),
-            );
-            if (context.mounted) {
-              result.showToastOnError(ref.read(toastProvider));
-            }
-            // Downloading doesn't change the source chapter list — refresh from
-            // the server's stored chapters, no source re-scrape.
-            await refresh(false);
-          },
+          onPressed: canDownload
+              ? () async {
+                  final ids = selectedChapterList;
+                  if (ids.length > kBulkDownloadConfirmThreshold &&
+                      !await confirmBulkDownload(
+                        context,
+                        summary: '${ids.length} chapters',
+                        toDevice: false,
+                      )) {
+                    return;
+                  }
+                  final result = await AsyncValue.guard(
+                    () => ref
+                        .read(downloadsRepositoryProvider)
+                        .addChaptersBatchToDownloadQueue(ids),
+                  );
+                  if (context.mounted) {
+                    result.showToastOnError(ref.read(toastProvider));
+                  }
+                  await refresh(false);
+                }
+              : null,
         ),
         IconButton(
           tooltip: context.l10n.delete,
@@ -144,8 +159,10 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
             // selection clears — and this widget unmounts — once the delete
             // resolves). `ref.read` throws once that happens; a container
             // obtained now stays valid regardless.
-            final containerRead =
-                ProviderScope.containerOf(context, listen: false).read;
+            final containerRead = ProviderScope.containerOf(
+              context,
+              listen: false,
+            ).read;
             final repo = ref.read(offlineRepositoryProvider);
             // Computed up front, before the confirmation dialog's own await:
             // it only depends on the already-selected chapters, nothing the
@@ -153,9 +170,9 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
             // wait behind an await that could outlive the widget.
             // Delete expands to every scanlator duplicate, grouped per manga.
             final deleteIds = <int>[
-              for (final entry
-                  in {for (final c in selectedChapterDtos) c.mangaId: true}
-                      .keys)
+              for (final entry in {
+                for (final c in selectedChapterDtos) c.mangaId: true,
+              }.keys)
                 ...expandIdsAcrossScanlators(
                   ref,
                   mangaId: entry,
@@ -165,23 +182,28 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   ],
                 ),
             ];
-            final onDevice =
-                await repo.deviceDownloadedCount(selectedChapterList);
+            final onDevice = await repo.deviceDownloadedCount(
+              selectedChapterList,
+            );
             if (onDevice > 0) {
               if (!context.mounted) return;
-              final ok = await showDialog<bool>(
+              final ok =
+                  await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: Text(ctx.l10n.delete),
-                      content:
-                          Text(ctx.l10n.offlineBulkDeleteWarning(onDevice)),
+                      content: Text(
+                        ctx.l10n.offlineBulkDeleteWarning(onDevice),
+                      ),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(ctx.l10n.cancel)),
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(ctx.l10n.cancel),
+                        ),
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(ctx.l10n.delete)),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(ctx.l10n.delete),
+                        ),
                       ],
                     ),
                   ) ??

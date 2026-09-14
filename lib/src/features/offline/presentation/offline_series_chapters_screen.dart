@@ -7,10 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/server_image.dart';
+import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import 'offline_settings_format.dart';
@@ -39,29 +41,34 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chaptersAsync =
-        ref.watch(offlineChaptersForMangaProvider(mangaId));
+    final chaptersAsync = ref.watch(offlineChaptersForMangaProvider(mangaId));
     final chapters = chaptersAsync.value ?? const [];
 
     // Partition chapters into three buckets.
-    final active = chapters
-        .where((c) =>
-            c.deviceState == OfflineDeviceState.queued ||
-            c.deviceState == OfflineDeviceState.downloading)
-        .toList()
-      ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
+    final active =
+        chapters
+            .where(
+              (c) =>
+                  c.deviceState == OfflineDeviceState.queued ||
+                  c.deviceState == OfflineDeviceState.downloading,
+            )
+            .toList()
+          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
 
-    final downloaded = chapters
-        .where((c) => c.deviceState == OfflineDeviceState.downloaded)
-        .toList()
-      ..sort((a, b) => b.chapterIndex.compareTo(a.chapterIndex));
+    final downloaded =
+        chapters
+            .where((c) => c.deviceState == OfflineDeviceState.downloaded)
+            .toList()
+          ..sort((a, b) => b.chapterIndex.compareTo(a.chapterIndex));
 
-    final failed = chapters
-        .where((c) => c.deviceState == OfflineDeviceState.error)
-        .toList()
-      ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
+    final failed =
+        chapters
+            .where((c) => c.deviceState == OfflineDeviceState.error)
+            .toList()
+          ..sort((a, b) => a.chapterIndex.compareTo(b.chapterIndex));
 
-    final hasAny = active.isNotEmpty || downloaded.isNotEmpty || failed.isNotEmpty;
+    final hasAny =
+        active.isNotEmpty || downloaded.isNotEmpty || failed.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -108,27 +115,20 @@ class OfflineSeriesChaptersScreen extends ConsumerWidget {
                 // ── Active (queued / downloading) ─────────────────────────
                 if (active.isNotEmpty) ...[
                   _SectionHeader(context.l10n.offlineChaptersActiveSection),
-                  for (final ch in active)
-                    _ActiveChapterTile(chapter: ch),
+                  for (final ch in active) _ActiveChapterTile(chapter: ch),
                 ],
 
                 // ── Downloaded ────────────────────────────────────────────
                 if (downloaded.isNotEmpty) ...[
-                  _SectionHeader(
-                    context.l10n.offlineChaptersDownloadedSection,
-                  ),
+                  _SectionHeader(context.l10n.offlineChaptersDownloadedSection),
                   for (final ch in downloaded)
-                    _DownloadedChapterTile(
-                      chapter: ch,
-                      mangaId: mangaId,
-                    ),
+                    _DownloadedChapterTile(chapter: ch, mangaId: mangaId),
                 ],
 
                 // ── Failed ────────────────────────────────────────────────
                 if (failed.isNotEmpty) ...[
                   _SectionHeader(context.l10n.offlineChaptersErrorSection),
-                  for (final ch in failed)
-                    _FailedChapterTile(chapter: ch),
+                  for (final ch in failed) _FailedChapterTile(chapter: ch),
                 ],
               ],
             ),
@@ -176,8 +176,7 @@ class _ActiveChapterTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDownloading = chapter.deviceState == OfflineDeviceState.downloading;
     // Live progress fraction — null while waiting for first page.
-    final progress =
-        ref.watch(offlineChapterProgressProvider(chapter.id));
+    final progress = ref.watch(offlineChapterProgressProvider(chapter.id));
 
     Widget leading;
     if (isDownloading) {
@@ -206,17 +205,13 @@ class _ActiveChapterTile extends ConsumerWidget {
 
     final subtitle = isDownloading
         ? progress != null && progress > 0
-            ? '${(progress * 100).round()}%'
-            : context.l10n.offlineDownloadAction
+              ? '${(progress * 100).round()}%'
+              : context.l10n.offlineDownloadAction
         : context.l10n.offlineChaptersQueued;
 
     return ListTile(
       leading: leading,
-      title: Text(
-        chapter.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle),
       // No onTap — the chapter isn't readable until it commits.
     );
@@ -228,10 +223,7 @@ class _ActiveChapterTile extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DownloadedChapterTile extends ConsumerWidget {
-  const _DownloadedChapterTile({
-    required this.chapter,
-    required this.mangaId,
-  });
+  const _DownloadedChapterTile({required this.chapter, required this.mangaId});
 
   final OfflineChapter chapter;
   final int mangaId;
@@ -288,20 +280,22 @@ class _FailedChapterTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     return ListTile(
       leading: Icon(
         Icons.error_outline_rounded,
         color: context.theme.colorScheme.error,
       ),
-      title: Text(
-        chapter.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(chapter.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: canDownload ? null : Text(context.l10n.accountPermissionDenied),
       trailing: TextButton.icon(
         icon: const Icon(Icons.replay_rounded, size: 18),
         label: Text(context.l10n.offlineChapterRetry),
-        onPressed: () => saveChapterToDevice(ref, chapter.id),
+        onPressed: canDownload
+            ? () => saveChapterToDevice(ref, chapter.id)
+            : null,
       ),
     );
   }

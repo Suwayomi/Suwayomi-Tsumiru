@@ -12,7 +12,9 @@ import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
+import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../account/data/account_permission.dart';
 import '../../domain/extension/extension_model.dart';
 import './graphql/__generated__/query.graphql.dart';
 import './graphql/__generated__/store_query.graphql.dart';
@@ -23,57 +25,67 @@ part 'extension_repository.g.dart';
 class ExtensionRepository {
   final GraphQLClient client;
 
-  ExtensionRepository(this.client);
+  ExtensionRepository(this.client, {required this.permissions});
+
+  final AccountPermissionGuard permissions;
 
   Future<void> installExtensionFile(
     BuildContext context, {
     PlatformFile? file,
   }) async {
+    permissions.require(Enum$UserPermission.INSTALL_EXTERNAL_EXTENSIONS);
     if ((file?.name).isBlank) {
       throw context.l10n.errorFilePick;
     }
     if (!(file!.name.endsWith('.apk'))) {
       throw context.l10n.errorFilePickUnknownExtension(".apk");
     }
+    final upload = kIsWeb
+        ? http.MultipartFile.fromBytes(
+            'extensionFile',
+            await file.readAsBytes(),
+            filename: file.name,
+          )
+        : await http.MultipartFile.fromPath('extensionFile', file.path!);
+    permissions.require(Enum$UserPermission.INSTALL_EXTERNAL_EXTENSIONS);
     await client
         .mutate$InstallExternalExtension(
           Options$Mutation$InstallExternalExtension(
             variables: Variables$Mutation$InstallExternalExtension(
-              // Web picks carry bytes and a blob URL rather than a real path,
-              // so fromPath can't open them.
-              extensionFile: kIsWeb
-                  ? http.MultipartFile.fromBytes(
-                      "extensionFile", await file.readAsBytes(),
-                      filename: file.name)
-                  : await http.MultipartFile.fromPath(
-                      "extensionFile", file.path!),
+              extensionFile: upload,
             ),
           ),
         )
         .getData((data) => null);
   }
 
-  Future<void> installExtension(String pkgName) => client
-      .mutate$UpdateExtension(
-        Options$Mutation$UpdateExtension(
-          variables: Variables$Mutation$UpdateExtension(
-            id: pkgName,
-            install: true,
+  Future<void> installExtension(String pkgName) => permissions.run(
+    Enum$UserPermission.INSTALL_EXTENSIONS,
+    () => client
+        .mutate$UpdateExtension(
+          Options$Mutation$UpdateExtension(
+            variables: Variables$Mutation$UpdateExtension(
+              id: pkgName,
+              install: true,
+            ),
           ),
-        ),
-      )
-      .getData((data) {});
+        )
+        .getData((data) {}),
+  );
 
-  Future<void> uninstallExtension(String pkgName) => client
-      .mutate$UpdateExtension(
-        Options$Mutation$UpdateExtension(
-          variables: Variables$Mutation$UpdateExtension(
-            id: pkgName,
-            uninstall: true,
+  Future<void> uninstallExtension(String pkgName) => permissions.run(
+    Enum$UserPermission.UNINSTALL_EXTENSIONS,
+    () => client
+        .mutate$UpdateExtension(
+          Options$Mutation$UpdateExtension(
+            variables: Variables$Mutation$UpdateExtension(
+              id: pkgName,
+              uninstall: true,
+            ),
           ),
-        ),
-      )
-      .getData((data) {});
+        )
+        .getData((data) {}),
+  );
 
   Future<void> updateExtension(String pkgName) => client
       .mutate$UpdateExtension(
@@ -101,12 +113,15 @@ class ExtensionRepository {
       .then((value) => value ?? 0);
 
   Future<List<Extension>?> getExtensionListStream() =>
-      client.mutate$FetchExtensionListStore().getData((data) => data
-          .fetchExtensions?.extensions
-          .map(extensionFromStoreDto)
-          .toList());
+      client.mutate$FetchExtensionListStore().getData(
+        (data) => data.fetchExtensions?.extensions
+            .map(extensionFromStoreDto)
+            .toList(),
+      );
 }
 
 @riverpod
-ExtensionRepository extensionRepository(Ref ref) =>
-    ExtensionRepository(ref.watch(graphQlClientProvider));
+ExtensionRepository extensionRepository(Ref ref) => ExtensionRepository(
+  ref.watch(graphQlClientProvider),
+  permissions: ref.watch(accountPermissionGuardProvider),
+);

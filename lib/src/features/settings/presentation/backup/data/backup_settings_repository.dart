@@ -10,32 +10,47 @@ import 'package:http/http.dart' show MultipartFile;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../global_providers/global_providers.dart';
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../account/data/account_permission.dart';
 import '../../../domain/settings/settings.dart';
 import './graphql/__generated__/query.graphql.dart';
 
 part 'backup_settings_repository.g.dart';
 
 class BackupSettingsRepository {
-  const BackupSettingsRepository(this.ferryClient);
+  const BackupSettingsRepository(this.ferryClient, {required this.permissions});
+
+  final AccountPermissionGuard permissions;
 
   final GraphQLClient ferryClient;
 
   Future<String?> restoreBackup(MultipartFile file) => ferryClient
-      .mutate$RestoreBackup(Options$Mutation$RestoreBackup(
-          variables: Variables$Mutation$RestoreBackup(backup: file)))
+      .mutate$RestoreBackup(
+        Options$Mutation$RestoreBackup(
+          variables: Variables$Mutation$RestoreBackup(backup: file),
+        ),
+      )
       .getData((data) => data.restoreBackup.id);
 
   Future<Set<String>?> validateBackup(MultipartFile file) => ferryClient
-      .query$ValidateBackup(Options$Query$ValidateBackup(
-          variables: Variables$Query$ValidateBackup(backup: file)))
-      .getData((data) => data.validateBackup.missingSources
-          .map((value) => value.name)
-          .toSet());
+      .query$ValidateBackup(
+        Options$Query$ValidateBackup(
+          variables: Variables$Query$ValidateBackup(backup: file),
+        ),
+      )
+      .getData(
+        (data) => data.validateBackup.missingSources
+            .map((value) => value.name)
+            .toSet(),
+      );
 
   Future<RestoreStatusDto?> getRestoreStatus(String restoreId) => ferryClient
-      .query$RestoreStatus(Options$Query$RestoreStatus(
-          variables: Variables$Query$RestoreStatus(restoreId: restoreId)))
+      .query$RestoreStatus(
+        Options$Query$RestoreStatus(
+          variables: Variables$Query$RestoreStatus(restoreId: restoreId),
+        ),
+      )
       .getData((data) => data.restoreStatus);
 
   Future<String?> createBackup({
@@ -44,56 +59,77 @@ class BackupSettingsRepository {
     required bool includeHistory,
     required bool includeTracking,
     required bool includeClientData,
-  }) =>
-      ferryClient
-          .mutate$CreateBackup(Options$Mutation$CreateBackup(
-              variables: Variables$Mutation$CreateBackup(
-                  includeCategories: includeCategories,
-                  includeChapters: includeChapters,
-                  includeHistory: includeHistory,
-                  includeTracking: includeTracking,
-                  includeClientData: includeClientData)))
-          .getData((data) => data.createBackup.url);
-
-  Future<SettingsDto?> updateBackupLocation(String? backupPath) => ferryClient
-      .mutate$UpdateBackupPath(
-        Options$Mutation$UpdateBackupPath(
-          variables: Variables$Mutation$UpdateBackupPath(
-            backupPath: backupPath.ifBlank(),
+  }) => ferryClient
+      .mutate$CreateBackup(
+        Options$Mutation$CreateBackup(
+          variables: Variables$Mutation$CreateBackup(
+            includeCategories: includeCategories,
+            includeChapters: includeChapters,
+            includeHistory: includeHistory,
+            includeTracking: includeTracking,
+            includeClientData: includeClientData,
           ),
         ),
       )
-      .getData((data) => data.setSettings.settings);
+      .getData((data) => data.createBackup.url);
 
-  Future<SettingsDto?> updateBackupTime(TimeOfDay backupTime) => ferryClient
-      .mutate$UpdateBackupTime(
-        Options$Mutation$UpdateBackupTime(
-          variables: Variables$Mutation$UpdateBackupTime(
-            backupTime: backupTime.hhmm,
-          ),
-        ),
-      )
-      .getData((data) => data.setSettings.settings);
-
-  Future<SettingsDto?> updateBackupInterval(int backupInterval) => ferryClient
-      .mutate$UpdateBackupInterval(
-        Options$Mutation$UpdateBackupInterval(
-          variables: Variables$Mutation$UpdateBackupInterval(
-            backupInterval: backupInterval,
-          ),
-        ),
-      )
-      .getData((data) => data.setSettings.settings);
-
-  Future<SettingsDto?> updateBackupTTL(int backupTTL) => ferryClient
-      .mutate$UpdateBackupTTL(Options$Mutation$UpdateBackupTTL(
-        variables: Variables$Mutation$UpdateBackupTTL(backupTTL: backupTTL),
-      ))
-      .getData(
-        (data) => data.setSettings.settings,
+  Future<SettingsDto?> updateBackupLocation(String? backupPath) =>
+      permissions.run(
+        Enum$UserPermission.MANAGE_SETTINGS,
+        () => ferryClient
+            .mutate$UpdateBackupPath(
+              Options$Mutation$UpdateBackupPath(
+                variables: Variables$Mutation$UpdateBackupPath(
+                  backupPath: backupPath.ifBlank(),
+                ),
+              ),
+            )
+            .getData((data) => data.setSettings.settings),
       );
+
+  Future<SettingsDto?> updateBackupTime(TimeOfDay backupTime) =>
+      permissions.run(
+        Enum$UserPermission.MANAGE_SETTINGS,
+        () => ferryClient
+            .mutate$UpdateBackupTime(
+              Options$Mutation$UpdateBackupTime(
+                variables: Variables$Mutation$UpdateBackupTime(
+                  backupTime: backupTime.hhmm,
+                ),
+              ),
+            )
+            .getData((data) => data.setSettings.settings),
+      );
+
+  Future<SettingsDto?> updateBackupInterval(int backupInterval) =>
+      permissions.run(
+        Enum$UserPermission.MANAGE_SETTINGS,
+        () => ferryClient
+            .mutate$UpdateBackupInterval(
+              Options$Mutation$UpdateBackupInterval(
+                variables: Variables$Mutation$UpdateBackupInterval(
+                  backupInterval: backupInterval,
+                ),
+              ),
+            )
+            .getData((data) => data.setSettings.settings),
+      );
+
+  Future<SettingsDto?> updateBackupTTL(int backupTTL) => permissions.run(
+    Enum$UserPermission.MANAGE_SETTINGS,
+    () => ferryClient
+        .mutate$UpdateBackupTTL(
+          Options$Mutation$UpdateBackupTTL(
+            variables: Variables$Mutation$UpdateBackupTTL(backupTTL: backupTTL),
+          ),
+        )
+        .getData((data) => data.setSettings.settings),
+  );
 }
 
 @riverpod
 BackupSettingsRepository backupSettingsRepository(Ref ref) =>
-    BackupSettingsRepository(ref.watch(graphQlClientProvider));
+    BackupSettingsRepository(
+      ref.watch(graphQlClientProvider),
+      permissions: ref.watch(accountPermissionGuardProvider),
+    );

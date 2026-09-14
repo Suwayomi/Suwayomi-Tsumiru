@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
@@ -80,6 +81,94 @@ ProviderContainer _container(_InMemorySecureStorage storage) =>
     );
 
 void main() {
+  const binding = AccountBinding(
+    address: 'https://server:443',
+    userId: 2,
+    username: 'Reader',
+    catalogId: 'catalog-reader',
+  );
+  test(
+    'verified binding survives access and pair refresh and restart',
+    () async {
+      final storage = _InMemorySecureStorage();
+      final container = _container(storage);
+      addTearDown(container.dispose);
+      final store = container.read(authCredentialsStoreProvider.notifier);
+      await store.saveUiLoginTokens(
+        accessToken: 'A',
+        refreshToken: 'R',
+        binding: binding,
+      );
+      await store.updateUiLoginAccessToken('A2', forEpoch: store.serverEpoch);
+      expect(
+        await store.refreshUiLoginTokens(
+          accessToken: 'A3',
+          refreshToken: 'R2',
+          originalRefreshToken: 'R',
+          forEpoch: store.serverEpoch,
+        ),
+        isTrue,
+      );
+      final restored = _container(storage);
+      addTearDown(restored.dispose);
+      final credentials = await restored.read(
+        authCredentialsStoreProvider.future,
+      );
+      expect(credentials.accountBinding?.catalogId, 'catalog-reader');
+      expect(credentials.accountBinding?.userId, 2);
+      expect(credentials.uiAccessToken, 'A3');
+      expect(credentials.uiRefreshToken, 'R2');
+    },
+  );
+  test(
+    'unverified replacement cannot retain previous account ownership',
+    () async {
+      final storage = _InMemorySecureStorage();
+      final container = _container(storage);
+      addTearDown(container.dispose);
+      final store = container.read(authCredentialsStoreProvider.notifier);
+      await store.saveUiLoginTokens(
+        accessToken: 'A',
+        refreshToken: 'R',
+        binding: binding,
+      );
+      await store.saveUiLoginTokens(accessToken: 'B', refreshToken: 'RB');
+      expect(
+        container
+            .read(authCredentialsStoreProvider)
+            .requireValue
+            .accountBinding,
+        isNull,
+      );
+      final restored = _container(storage);
+      addTearDown(restored.dispose);
+      expect(
+        (await restored.read(
+          authCredentialsStoreProvider.future,
+        )).accountBinding,
+        isNull,
+      );
+    },
+  );
+  test('interrupted pair write fails closed on restart', () async {
+    final storage = _InMemorySecureStorage({
+      'auth.ui.accessToken': 'B',
+      'auth.ui.refreshToken': 'R',
+      'auth.ui.accountBinding': binding.encode(
+        accessToken: 'A',
+        refreshToken: 'R',
+      ),
+    });
+    final container = _container(storage);
+    addTearDown(container.dispose);
+    expect(
+      (await container.read(
+        authCredentialsStoreProvider.future,
+      )).accountBinding,
+      isNull,
+    );
+  });
+
   test('session observers close admission before credentials change', () async {
     final c = _container(_InMemorySecureStorage());
     addTearDown(c.dispose);

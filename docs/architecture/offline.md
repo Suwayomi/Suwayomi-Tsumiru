@@ -4,7 +4,7 @@ Save chapters to the device and read them with **no server connection**, with au
 
 ## On-device catalog
 
-`data/offline_database.dart` — a Drift / SQLite database (`OfflineDatabase`, schemaVersion 7) at `<appSupport>/offline/catalog.sqlite`. Tables:
+`data/offline_database.dart` — a Drift / SQLite database (`OfflineDatabase`, schemaVersion 17). Legacy storage is at `<appSupport>/offline/catalog.sqlite`; verified UI Login catalogues use `<appSupport>/offline/accounts/<catalogueId>/catalog.sqlite`. Tables:
 
 - `OfflineMangas` — `id` (server manga id) PK; `title`, `thumbnailUrl`, `thumbnailRelPath`, `keepRule` (`OfflineKeepRule`, default `off`), `keepUnreadCount` (default 3).
 - `OfflineChapters` — `id` (server chapter id) PK, indexed by `mangaId`; `deviceState` (`OfflineDeviceState`, default `none`), `pageCount`, `bytes`, `pinned`, `downloadedAt`, `serverIsDownloaded`, read state, and three independent "not yet pushed" flags — `progressDirty` (position), `readStateDirty` (isRead), `bookmarkDirty` (isBookmarked). Each field syncs under its own flag so a position-only write can never push a stale isRead (the ch-99 un-read loop) and a read/bookmark change set elsewhere still lands locally while another is pending.
@@ -54,7 +54,7 @@ Download and admission ownership use separate SQLite databases with held immedia
 
 ## On device tab (downloads + management, one surface)
 
-`presentation/offline_files_view.dart` (the **Downloads → On device** tab) is the single place to see and manage on-device downloads. It lists every series with an offline footprint — files present OR an active keep-rule — via `offlineSeriesProvider` over `OfflineDatabase.watchOfflineSeries()`, one Drift join whose `having` keeps rows where `downloaded>0 OR inFlight>0 OR keepRule != off` (so a rule with **nothing downloaded yet** and **hand-saved files with no rule** both appear). Each row shows what's downloaded + its rule; a per-row sliders button (`Icons.tune_rounded`) opens the rule sheet, and long-press multi-selects for bulk actions. Actions live in `offline_download_providers.dart`:
+`presentation/offline_files_view.dart` (the **Downloads → On device** tab) is the single place to see and manage on-device downloads. It lists every series with an offline footprint — saved, pending or failed chapters, or an active keep-rule — via `offlineSeriesProvider` over `OfflineDatabase.watchOfflineSeries()`, one Drift join whose `having` keeps rows where `downloaded>0 OR inFlight>0 OR failed>0 OR keepRule != off` (so a rule with **nothing downloaded yet** and **hand-saved files with no rule** both appear). Each row shows saved, downloading and failed counts with its rule; a manual series whose only chapter failed remains visible for retry. A per-row sliders button (`Icons.tune_rounded`) opens the rule sheet, and long-press multi-selects for bulk actions. Actions live in `offline_download_providers.dart`:
 
 - `changeKeepRule` — set a new rule + reconcile (confirms when the new rule grows the footprint for any selected series).
 - `detachKeepRule` — **stop keeping but keep the files**: cancels in-flight chapters, then pins the downloaded set and clears the rule **in one transaction** (so the instant the rule is `off`, every catalog-downloaded chapter is already pinned and can't be evicted by this or a concurrent reconcile), then reconciles. Unfinished chapters are dropped.
@@ -74,13 +74,13 @@ Fallback timing: a request that *hangs* (dead keep-alive socket in airplane mode
 
 Covers are rendered by `ServerImage` from HTTP cache, not stored in the offline file tree. They route (by URL, `isCoverImagePath`) to a dedicated cache manager (`lib/src/widgets/cover_cache/`) rooted in application support — durable across reboots and OS cache cleanup, 5000 entries, 90-day idle eviction — instead of the default manager's 200-file temp-dir cache shared with reader pages (which is why offline covers used to be mostly broken tiles). `OfflineCoverWarmer` tops up any missing library covers on each online library load, so a series never scrolled past still has art offline.
 
-## Server-switch guard
+## Server and account ownership
 
-The catalog belongs to one server identity at a time. On first connection, Tsumiru creates a UUID in Suwayomi's server-wide global metadata under `tsumiru_server_instance_id`; later connections read that value through `serverInstanceIdProvider`. `offlineCatalogServerId` stores the UUID after a successful metadata sync. The configured scheme, host, and port are only a route: changing them does not change server identity.
+`offlineActiveProvider` admits writes only for the verified active catalogue. The configured host and port are a route, not an identity: LAN/remote failover preserves ownership, while a new unverified address cannot start offline writers. The last verified address/identity pair permits an offline cold start. Legacy storage remains readable without being reassigned to an unverified account.
 
-The last verified address-to-UUID pair is cached locally so a cold start without network access can still open an already-verified catalog. A new address must connect and return the server UUID before offline writes or download workers start. `offlineActiveProvider` disables metadata sync, progress writes, reconciliation, and both download workers until identity is verified and matches. A legacy unstamped catalog remains readable offline but is not modified until verification succeeds.
+UI Login binds the verified account and catalogue ID to its credentials. `offline_bootstrap_io.dart`, `account_storage_paths.dart` and `account_storage_migration_io.dart` open a separate directory for that catalogue; owner and completion markers prevent another account from claiming it. Switching accounts drains storage operations, replaces the database/page-store providers and worker configuration together, and keeps the previous catalogue inactive. Server downloads remain shared server files; device files, library metadata, read state and keep rules follow the active account.
 
-A mismatch with catalog data shows a persistent warning in Library and Offline settings. Dismiss parks the old catalog without exposing or modifying it. Clear stops the foreground worker and main-isolate pump, removes their queued work, wipes every catalog table plus page/cover files, and resets the identity. An empty catalog adopts the active identity without prompting.
+Account settings can remove a retained inactive catalogue. Removal clears its data while retaining the cleared marker and ownership lock files, so later login cannot import the old legacy root again or create a second lock beside one still in use. Identity changes, catalogue removal and download workers use the same ownership protocol. See `offline_runtime_storage.dart`, `account_catalogue_repository_io.dart` and `account_storage_migration_io.dart`.
 
 ## UI entry points
 
@@ -91,7 +91,7 @@ A mismatch with catalog data shows a persistent warning in Library and Offline s
 ## Gotchas
 
 - **Android service starts can be refused.** The scheduled worker continues published queue obligations without starting a foreground service, subject to Android scheduling and current constraints.
-- **`_pumping` is a process-wide static.** If the coordinator provider rebuilds mid-drain (a concurrency change, or a token refresh rotating the GraphQL client → repo dependency), the new instance is blocked until the old drain finishes or the app restarts. Pause still reaches the old drain via the persisted flag (captured prefs, read live per chapter); cancelling an in-flight chapter across a rebuild does not. A chapter mid-download when the engine itself rebuilds fails its next page fetch, is marked `error`, and self-heals via the launch requeue.
+- **`_pumping` is process-wide.** A replacement coordinator cannot drain concurrently with an existing one. Persisted pause and captured session checks also stop an active attempt before subsequent pages or commit. Authentication/network holds resume without resetting a chapter's retry budget; terminal failures require explicit retry.
 - **Wi-Fi-only** is checked by both workers during a run; losing the permitted connection cancels the current transfer and leaves partial files resumable.
 - **Deleting files is best-effort.** A locked or unwritable directory can outlive the delete that cleared its row, which is why recovery checks the committed manifest's generation instead of trusting a complete directory.
 - **Migration copies, then commits, then drops the source.** A bare rename would destroy the source before the target's catalog write landed, and a crash in that window leaves a complete directory under a `none` row — which recovery would rightly delete as a user delete, taking the only copy.
@@ -110,3 +110,26 @@ Both background workers hold one SQLite write transaction for download/log owner
 Endpoint and credential changes revoke a persisted authorization epoch before taking ownership. Saved service orders and scheduled worker configurations carry that epoch. A successful verification of the current endpoint can authorize the new epoch; an old captured configuration stays invalid even if the address and catalog UUID are unchanged. Each background run also checks the live server UUID before fetching chapter data. Foreground refresh admission stays closed throughout credential transitions, and serialized credential writes drain before a new login is saved.
 
 Android service timeout writes a durable timeout record while ownership is held, after active writes stop. Replay restores the budget explanation without changing chapter state. Visible launch or resume still grants a recovery attempt; a historical timeout does not consume it.
+
+Offline category schema version 17 stores `isDefaultCategory` separately from
+`autoAdd`. Upgrading older catalogues marks ID 0 as the special category; automatic
+assignment preferences are refreshed by the next category sync. Account category
+mirrors retain nonzero default IDs for offline tab counts.
+
+## Permission and retry ownership
+
+`offline_download_permission.dart` separates a download-permission pause from the user's pause setting. Foreground access must be settled and current; background workers verify account capability and the download grant before each chapter/page-list or server enqueue. Missing or malformed responses hold work. GraphQL errors take precedence over partial data, and a known permission denial wins over concurrent authentication or network failures.
+
+`CatchupStateStore` saves a catalogue-specific permission record with a denial revision under the dedicated `.bg_permission` lock. Workers may record denial but cannot clear it. A foreground restoration can clear the pause only if its captured revision still matches, so a slow successful check cannot overwrite a newer denial. Denial preserves completed files and marks the owned unfinished attempt failed. Account changes and newer chapter generations reject late results.
+
+Authentication failures, network failures and unavailable permission checks leave unfinished work resumable. HTTP client connection errors use the same offline hold as socket errors and timeouts. The Android service stops on an auth hold and uses restart backoff without reporting a network outage. Permission failures and exhausted retry budgets are terminal; restoring permission does not silently retry failed chapters. Explicit retry resets the selected chapter's attempts.
+
+`background_completion_log.dart` replays successful catch-up adoption into an absent or metadata-only generation-zero row before file recovery. Failed adoptions carry `error` or `permissionDenied` plus metadata, so a chapter can appear in the failed list without invented files. Existing completed copies, deletion markers and newer generations take precedence. Moving a downloaded chapter to another source also increments the cleared source generation.
+
+`offline_chapter_catchup.dart` adopts worker obligations before foreground reconciliation. Matching-generation server-fetch counts transfer using the larger of the worker and catalogue counts; obligations with missing chapter metadata stay in the ledger until metadata arrives. Permission holds and unavailable ownership leave the ledger intact. Backfill records pending chapters before attempting them, including work beyond one run's allowance, so auth/network holds cannot disappear behind a completed backfill marker.
+
+Foreground-service messages carry the originating catalogue ID, authorization epoch and attempt ID. `background_download_controller.dart` rejects unowned or mismatched events before dispatch and rechecks identity when queued mutations execute and after asynchronous work. Chapter generation remains a separate check against deletion or retry of the same chapter.
+
+Retry ledgers are stored per catalogue. Identity changes reload preferences after acquiring the outgoing catalogue’s ownership lock before preserving its ledger. A worker that still owns that lock saves accepted attempts before honouring an authorization change; it then stops issuing requests. Server and device retry budgets transfer between queued downloads, keep rules and foreground reconciliation using matching chapter generations and the larger recorded count.
+
+Adoption publishes the refreshed work specification before clearing the transferred ledger. Failed or skipped publication leaves the ledger available for another adoption. Manual save checks the original chapter generation before pinning or resetting retries, and starts only the resulting queued generation. Eviction rechecks generation, pin and keep-rule state before deleting files. Foreground startup notices a changed denial revision even if the visible account grant remains unchanged.

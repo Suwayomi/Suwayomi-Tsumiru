@@ -12,12 +12,14 @@ import '../../../utils/platform/is_android_native.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../widgets/section_title.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../notifications/controller/notification_settings_providers.dart';
 import '../../notifications/controller/notifications_controller.dart';
 import '../data/background/catchup_settings.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 import '../data/offline_settings_providers.dart';
+import 'inactive_account_catalogue_tiles.dart';
 import 'offline_server_mismatch_banner.dart';
 import 'offline_settings_format.dart';
 
@@ -27,6 +29,7 @@ import 'offline_settings_format.dart';
 List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
   if (!ref.watch(offlineEnabledProvider)) {
     return [
+      const InactiveAccountCatalogueTiles(),
       Padding(
         padding: const EdgeInsets.all(16),
         child: Text(context.l10n.offlineNotAvailable),
@@ -34,6 +37,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ];
   }
   return [
+    const InactiveAccountCatalogueTiles(),
     const OfflineServerMismatchBanner(showAfterDismissal: true),
     SectionTitle(title: context.l10n.offlineStorageSection),
     ListTile(
@@ -45,6 +49,9 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ListTile(
       title: Text(context.l10n.offlineRemoveAllDownloads),
       onTap: () async {
+        final current = ref
+            .read(authCredentialsStoreProvider.notifier)
+            .captureSession();
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -61,19 +68,13 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
             ],
           ),
         );
-        if (confirmed != true) return;
-        if (!context.mounted) return;
-        final db = ref.read(offlineDatabaseProvider);
+        if (confirmed != true || !context.mounted || !current()) return;
         try {
-          for (final m in await db.libraryManga()) {
-            for (final ch in await db.downloadedChaptersForManga(m.id)) {
-              try {
-                await deleteChapterFromDevice(ref, ch.id);
-              } catch (_) {}
-            }
-          }
+          await removeAllDownloadsFromDevice(ref);
         } finally {
-          ref.invalidate(offlineUsageBytesProvider);
+          if (context.mounted && current()) {
+            ref.invalidate(offlineUsageBytesProvider);
+          }
         }
       },
     ),
@@ -146,7 +147,8 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     SettingsPropTile(
       title: context.l10n.offlineConcurrencyLabel,
       subtitle: context.l10n.offlineConcurrencyValue(
-          ref.watch(offlineDownloadConcurrencyProvider) ?? 2),
+        ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
+      ),
       type: SettingsPropType.numberSlider(
         min: 1,
         max: 8,
@@ -170,8 +172,9 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ),
     SettingsPropTile(
       title: context.l10n.offlineStorageCapLimit,
-      subtitle: context.l10n
-          .offlineMegabytes(ref.watch(offlineStorageCapMbProvider) ?? 2000),
+      subtitle: context.l10n.offlineMegabytes(
+        ref.watch(offlineStorageCapMbProvider) ?? 2000,
+      ),
       type: SettingsPropType.numberSlider(
         min: 100,
         max: 50000,
@@ -194,8 +197,9 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     ),
     SettingsPropTile(
       title: context.l10n.offlineKeepDaysLabel,
-      subtitle:
-          context.l10n.offlineDays(ref.watch(offlineKeepDaysProvider) ?? 30),
+      subtitle: context.l10n.offlineDays(
+        ref.watch(offlineKeepDaysProvider) ?? 30,
+      ),
       type: SettingsPropType.numberSlider(
         min: 1,
         max: 365,

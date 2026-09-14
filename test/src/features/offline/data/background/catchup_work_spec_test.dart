@@ -20,6 +20,40 @@ void main() {
     return CatchupStateStore(await SharedPreferences.getInstance());
   }
 
+  test('server attempt snapshots round-trip and default to zero', () {
+    const queued = QueuedChapterSpec(
+      chapterId: 5,
+      mangaId: 1,
+      generation: 2,
+      serverFetchAttempts: 4,
+    );
+    expect(QueuedChapterSpec.fromJson(queued.toJson()).serverFetchAttempts, 4);
+    expect(
+      QueuedChapterSpec.fromJson({
+        'chapterId': 5,
+        'mangaId': 1,
+        'generation': 2,
+      }).serverFetchAttempts,
+      0,
+    );
+    const manga = CatchupMangaSpec(
+      mangaId: 1,
+      keepRule: OfflineKeepRule.all,
+      keepUnreadCount: 3,
+      onDeviceChapterIds: {},
+      pinnedChapterIds: {},
+      chapterGenerations: {5: 2},
+      serverFetchAttempts: {5: 4},
+    );
+    final restored = CatchupMangaSpec.fromJson(manga.toJson());
+    expect(restored.serverFetchAttempts, {5: 4});
+    expect(restored.generationOf(5), 2);
+    expect(
+      CatchupMangaSpec.fromJson({'mangaId': 1}).serverFetchAttempts,
+      isEmpty,
+    );
+  });
+
   test(
     'failed chapter ids round-trip and legacy manga specs default empty',
     () {
@@ -68,6 +102,7 @@ void main() {
     final spec = CatchupWorkSpec.fromJson({'serverId': 'srv-1'});
     final ledger = CatchupLedger.fromJson({});
     expect(spec.queuedChapters, isEmpty);
+    expect(ledger.chapterGenerations, isEmpty);
     expect(ledger.queuedServerRetries, isEmpty);
     expect(ledger.queuedDownloadRetries, isEmpty);
   });
@@ -151,6 +186,7 @@ void main() {
         pendingDownloads: {10: 1, 11: 1},
         pendingServerFetch: {12: 2},
         serverFetchRetries: {12: 3},
+        chapterGenerations: {10: 1, 12: 2},
       ),
     );
 
@@ -160,6 +196,9 @@ void main() {
     expect(same.pendingDownloads, {10: 1, 11: 1});
     expect(same.pendingServerFetch, {12: 2});
     expect(same.serverFetchRetries, {12: 3});
+    expect(same.chapterGenerations, {10: 1, 12: 2});
+    expect(same.copyWith().chapterGenerations, same.chapterGenerations);
+    expect(same.copyWith(chapterGenerations: {}).chapterGenerations, isEmpty);
 
     // A server switch must start from scratch, never replay another server's
     // ledger against colliding integer ids.

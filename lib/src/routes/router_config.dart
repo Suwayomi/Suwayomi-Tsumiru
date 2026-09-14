@@ -7,6 +7,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../constants/db_keys.dart';
 import '../constants/enum.dart';
 import '../features/about/presentation/about/about_screen.dart';
+import '../features/account/presentation/account_screen.dart';
+import '../features/account/presentation/manage_users_screen.dart';
 import '../features/browse_center/domain/source/source_model.dart';
 import '../features/browse_center/presentation/browse/browse_screen.dart';
 import '../features/browse_center/presentation/extension/extension_screen.dart';
@@ -68,8 +70,9 @@ part 'sub_routes/updates_routes.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-final _quickOpenNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'Quick Open');
+final _quickOpenNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'Quick Open',
+);
 
 final _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 final _browseNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'browse');
@@ -110,6 +113,7 @@ abstract class Routes {
   static const offlineSettings = 'offline';
   static const notificationsSettings = 'notifications';
   static const connection = 'connection';
+  static const account = 'account';
   static const trackingSettings = 'tracking';
   static const hotkeysSettings = 'hotkeys';
 
@@ -133,7 +137,7 @@ abstract class Routes {
 
 @riverpod
 GoRouter routerConfig(Ref ref) {
-  return GoRouter(
+  final router = GoRouter(
     routes: $appRoutes,
     debugLogDiagnostics: true,
     initialLocation: const LibraryRoute(categoryId: 0).location,
@@ -151,6 +155,8 @@ GoRouter routerConfig(Ref ref) {
       return null;
     },
   );
+  ref.onDispose(router.dispose);
+  return router;
 }
 
 @TypedShellRoute<QuickSearchRoute>(
@@ -159,10 +165,7 @@ GoRouter routerConfig(Ref ref) {
       branches: [
         TypedStatefulShellBranch<LibraryBranch>(
           routes: [
-            TypedGoRoute<LibraryRoute>(
-              path: Routes.library,
-              routes: [],
-            ),
+            TypedGoRoute<LibraryRoute>(path: Routes.library, routes: []),
           ],
         ),
         TypedStatefulShellBranch<UpdatesBranch>(
@@ -199,9 +202,7 @@ GoRouter routerConfig(Ref ref) {
                 ),
                 TypedStatefulShellBranch<BrowseMigrateBranch>(
                   routes: [
-                    TypedGoRoute<BrowseMigrateRoute>(
-                      path: Routes.migrate,
-                    ),
+                    TypedGoRoute<BrowseMigrateRoute>(path: Routes.migrate),
                   ],
                 ),
               ],
@@ -218,6 +219,10 @@ GoRouter routerConfig(Ref ref) {
               routes: [
                 TypedGoRoute<AboutRoute>(path: Routes.about),
                 TypedGoRoute<ConnectionRoute>(path: Routes.connection),
+                TypedGoRoute<AccountRoute>(
+                  path: Routes.account,
+                  routes: [TypedGoRoute<ManageUsersRoute>(path: 'users')],
+                ),
                 TypedGoRoute<HistoryRoute>(path: Routes.history),
                 TypedGoRoute<SettingsRoute>(
                   path: Routes.settings,
@@ -226,35 +231,46 @@ GoRouter routerConfig(Ref ref) {
                       path: Routes.librarySettings,
                       routes: [
                         TypedGoRoute<EditCategoriesRoute>(
-                            path: Routes.editCategories)
+                          path: Routes.editCategories,
+                        ),
                       ],
                     ),
                     TypedGoRoute<ServerSettingsRoute>(
-                        path: Routes.serverSettings),
+                      path: Routes.serverSettings,
+                    ),
                     TypedGoRoute<ReaderSettingsRoute>(
-                        path: Routes.readerSettings),
+                      path: Routes.readerSettings,
+                    ),
                     TypedGoRoute<AppearanceSettingsRoute>(
-                        path: Routes.appearanceSettings),
+                      path: Routes.appearanceSettings,
+                    ),
                     TypedGoRoute<GeneralSettingsRoute>(
-                        path: Routes.generalSettings),
+                      path: Routes.generalSettings,
+                    ),
                     TypedGoRoute<BrowseSettingsRoute>(
                       path: Routes.browseSettings,
                       routes: [
                         TypedGoRoute<ExtensionStoreRoute>(
-                            path: Routes.extensionStoreSettings),
+                          path: Routes.extensionStoreSettings,
+                        ),
                       ],
                     ),
                     TypedGoRoute<BackupRoute>(path: Routes.backup),
                     TypedGoRoute<DownloadsSettingsRoute>(
-                        path: Routes.downloadsSettings),
+                      path: Routes.downloadsSettings,
+                    ),
                     TypedGoRoute<OfflineSettingsRoute>(
-                        path: Routes.offlineSettings),
+                      path: Routes.offlineSettings,
+                    ),
                     TypedGoRoute<NotificationsSettingsRoute>(
-                        path: Routes.notificationsSettings),
+                      path: Routes.notificationsSettings,
+                    ),
                     TypedGoRoute<TrackingSettingsRoute>(
-                        path: Routes.trackingSettings),
+                      path: Routes.trackingSettings,
+                    ),
                     TypedGoRoute<HotkeysSettingsRoute>(
-                        path: Routes.hotkeysSettings),
+                      path: Routes.hotkeysSettings,
+                    ),
                   ],
                 ),
               ],
@@ -274,11 +290,13 @@ GoRouter routerConfig(Ref ref) {
     TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),
     TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
     TypedGoRoute<MigrationGlobalSearchRoute>(
-        path: Routes.migrationGlobalSearch),
+      path: Routes.migrationGlobalSearch,
+    ),
     TypedGoRoute<MigrationBulkConfigRoute>(path: Routes.migrationBulkConfig),
     TypedGoRoute<MigrationBulkRunRoute>(path: Routes.migrationBulkRun),
     TypedGoRoute<MigrationSourcePickerRoute>(
-        path: Routes.migrationSourcePicker),
+      path: Routes.migrationSourcePicker,
+    ),
     TypedGoRoute<MigrationSourceMangaRoute>(path: Routes.migrationSourceManga),
   ],
 )
@@ -292,19 +310,16 @@ class QuickSearchRoute extends ShellRouteData {
   Widget builder(context, state, navigator) =>
       AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
-          systemNavigationBarColor: Theme.of(context)
-              .colorScheme
-              .surface
-              .withValues(alpha: 0.60),
+          systemNavigationBarColor: Theme.of(
+            context,
+          ).colorScheme.surface.withValues(alpha: 0.60),
           systemNavigationBarIconBrightness:
               Theme.of(context).brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
+              ? Brightness.light
+              : Brightness.dark,
           systemNavigationBarDividerColor: Colors.transparent,
         ),
-        child: GlobalShortcutHost(
-          child: SearchStackScreen(child: navigator),
-        ),
+        child: GlobalShortcutHost(child: SearchStackScreen(child: navigator)),
       );
 }
 

@@ -19,6 +19,10 @@ import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../../account/data/account_actions.dart';
+import '../../../../../account/data/account_providers.dart';
+import '../../../../../account/domain/account_access.dart';
+import '../../../../../account/presentation/account_code_dialog.dart';
 import '../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../client/server_port_tile/server_port_tile.dart';
 import '../client/server_url_tile/server_url_tile.dart';
@@ -47,6 +51,27 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     final testing = useState(false);
     final testResult = useState<String?>(null);
     final testResultIsError = useState(false);
+    final showAccountCodes =
+        authType == AuthType.uiLogin &&
+        (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
+            ref.watch(settledAccountAccessProvider).capability !=
+                AccountCapability.unsupported);
+
+    Future<void> openCodeDialog(AccountCodeMode mode) async {
+      final redeem = ref.read(accountActionsProvider).redeemCode;
+      var completed = false;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AccountCodeDialog(
+          mode: mode,
+          onSubmit: ({required code, username, required password}) async {
+            await redeem(code: code, username: username, password: password);
+            completed = true;
+          },
+        ),
+      );
+      if (completed && context.mounted) Navigator.pop(context);
+    }
 
     Future<bool> confirmInsecureIfNeeded(String resolvedUrl) async {
       if (!resolvedUrl.startsWith('http://')) return true;
@@ -103,7 +128,8 @@ class LoginCredentialsPopup extends HookConsumerWidget {
               serverBaseUrl: resolvedUrl,
               username: username.text,
               password: password.text,
-              makeGqlClient: () => ref.read(unauthenticatedGraphQlClientProvider),
+              makeGqlClient: () =>
+                  ref.read(unauthenticatedGraphQlClientProvider),
             );
         if (!context.mounted) return;
         if (result is TestConnectionSuccess) {
@@ -164,6 +190,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
     }
 
     return AlertDialog(
+      scrollable: true,
       title: Text(context.l10n.credentials),
       content: Form(
         key: formKey,
@@ -209,6 +236,23 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                 ),
               ),
             ],
+            if (showAccountCodes)
+              Wrap(
+                children: [
+                  TextButton(
+                    onPressed: testing.value
+                        ? null
+                        : () => openCodeDialog(AccountCodeMode.registration),
+                    child: Text(context.l10n.accountRegistrationTitle),
+                  ),
+                  TextButton(
+                    onPressed: testing.value
+                        ? null
+                        : () => openCodeDialog(AccountCodeMode.recovery),
+                    child: Text(context.l10n.accountRecoveryTitle),
+                  ),
+                ],
+              ),
             if (testResult.value != null) ...[
               const Gap(8),
               ConstrainedBox(

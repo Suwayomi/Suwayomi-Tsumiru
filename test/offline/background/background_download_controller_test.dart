@@ -9,7 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_controller.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_work_order.dart';
+import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/background/download_task_handler.dart';
 import 'package:tsumiru/src/features/offline/data/background/foreground_service_gateway.dart';
 import 'package:tsumiru/src/features/offline/data/background/work_order_admission.dart';
@@ -21,6 +25,7 @@ import 'package:tsumiru/src/features/offline/data/offline_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_settings_providers.dart';
+import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 import '../../helpers/offline_test_db.dart';
@@ -124,9 +129,12 @@ void main() {
   late Future<void> Function() publishQueue;
   late Timer Function(Duration, void Function()) makeTimer;
   late List<bool> silentNotices;
+  late bool android;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      'offlineCatalogServerId': 'catalog-A',
+    });
     prefs = await SharedPreferences.getInstance();
     db = testOfflineDatabase();
     final tmp = await Directory.systemTemp.createTemp('download-start-test');
@@ -138,11 +146,12 @@ void main() {
     publishQueue = () async {};
     makeTimer = Timer.new;
     network = [ConnectivityResult.wifi];
+    android = true;
     final controllerProvider = Provider<BackgroundDownloadController>(
       (ref) => BackgroundDownloadController(
         ref,
         gateway: service,
-        isAndroid: () => true,
+        isAndroid: () => android,
         identityAllowed: () => true,
         publishQueue: () => publishQueue(),
         timer: (duration, callback) => makeTimer(duration, callback),
@@ -189,6 +198,41 @@ void main() {
     await db.close();
   });
 
+  test('endpoint handover retains exhausted chapter attempts', () async {
+    android = false;
+    final state = CatchupStateStore(prefs);
+    await state.writeLedger(
+      'catalog-A',
+      const CatchupLedger(
+        queuedServerRetries: {'5:0': 5},
+        queuedDownloadRetries: {'5:0': 5},
+      ),
+    );
+    await controller.changeIdentity(() async {}, preserveSession: true);
+    expect(state.readLedger('catalog-A').queuedServerRetries, {'5:0': 5});
+    expect(state.readLedger('catalog-A').queuedDownloadRetries, {'5:0': 5});
+  });
+
+  void seedAttempt({
+    String attempt = 'attempt-A',
+    String catalog = 'catalog-A',
+  }) {
+    service.values[kWorkOrderKey] = jsonEncode(
+      BackgroundWorkOrder(
+        attemptId: attempt,
+        catalogServerId: catalog,
+        chapterIds: [5],
+        mangaIdByChapter: {5: 1},
+        serverBase: 'http://server',
+        port: null,
+        addPort: false,
+        wifiOnly: true,
+        auth: const BackgroundTokenRecord(gen: 0, authType: 'none'),
+        baseDir: container.read(offlinePathsProvider).baseDir,
+      ).toJson(),
+    );
+  }
+
   void refuse() {
     service.onStart = () async => ServiceRequestFailure(
       error: PlatformException(
@@ -227,6 +271,215 @@ void main() {
         )
         .fire();
   }
+
+  test('old same-account attempt cannot park or restart a chapter', () async {
+    service.running = true;
+    seedAttempt(attempt: 'attempt-B');
+    controller.register();
+    await pumpEventQueue();
+    for (final kind in ['parked', 'chapterStart']) {
+      service.callback!({
+        'kind': kind,
+        'chapterId': 5,
+        'gen': 0,
+        'total': 3,
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+      });
+    }
+    await pumpEventQueue();
+    expect(container.read(serverUnreachableProvider), isFalse);
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+  });
+
+  test(
+    'queued completion rejects a replaced attempt after awaiting storage',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      pageStore.onManifest = () async {
+        if (!entered.isCompleted) entered.complete();
+        await release.future;
+        return null;
+      };
+      service.running = true;
+      seedAttempt();
+      controller.register();
+      await pumpEventQueue();
+      final event = {
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'gen': 0,
+        'status': 'downloaded',
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+      };
+      service.callback!(event);
+      await entered.future;
+      service.callback!({...event, 'status': 'error'});
+      seedAttempt(attempt: 'attempt-B');
+      await controller.ensureServiceRunning();
+      release.complete();
+      await pumpEventQueue();
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+    },
+  );
+
+  test('chapter start requires pending state and exact generation', () async {
+    service.running = true;
+    seedAttempt();
+    controller.register();
+    await pumpEventQueue();
+    for (final state in [
+      OfflineDeviceState.error,
+      OfflineDeviceState.downloaded,
+      OfflineDeviceState.queued,
+    ]) {
+      await db.setChapterDeviceState(5, state);
+      service.callback!({
+        'kind': 'chapterStart',
+        'chapterId': 5,
+        'gen': state == OfflineDeviceState.queued ? 1 : 0,
+        'total': 3,
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+      });
+      await pumpEventQueue();
+      expect((await db.chapterById(5))!.deviceState, state);
+    }
+  });
+
+  test('missed permission denial is terminal before service restart', () async {
+    final log = BackgroundCompletionLog(
+      File(
+        '${container.read(offlinePathsProvider).baseDir}/.bg_completion.log',
+      ),
+    );
+    await log.appendChapter(
+      chapterId: 5,
+      status: 'permissionDenied',
+      pages: 0,
+      bytes: 0,
+      generation: 0,
+    );
+    await controller.replayAtLaunch();
+    await controller.ensureServiceRunning(force: true);
+    expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
+    expect(service.starts, 0);
+  });
+
+  test(
+    'auth failure parks restart without reporting a network outage',
+    () async {
+      final timers = useManualTimers();
+      service.running = true;
+      seedAttempt();
+      controller.register();
+      await controller.ensureServiceRunning();
+      service.callback!({
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'status': 'authFailed',
+        'gen': 0,
+      });
+      await pumpEventQueue();
+      service.running = false;
+      await controller.ensureServiceRunning();
+      await controller.ensureServiceRunning();
+      expect(service.starts, 0);
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+      expect(notices.where((reason) => reason == 'connection'), isEmpty);
+      expect(
+        timers.where(
+          (timer) =>
+              timer.isActive && timer.duration > const Duration(seconds: 1),
+        ),
+        isNotEmpty,
+      );
+    },
+  );
+
+  test(
+    'old catalog events cannot fail the same chapter in a new catalog',
+    () async {
+      service.running = true;
+      seedAttempt();
+      controller.register();
+      await pumpEventQueue();
+      await pumpEventQueue();
+      await prefs.setString('offlineCatalogServerId', 'catalog-B');
+      service.callback!({
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'gen': 0,
+        'status': 'error',
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+      });
+      service.callback!({
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'gen': 0,
+        'status': 'error',
+      });
+      await pumpEventQueue();
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+      seedAttempt(attempt: 'attempt-B', catalog: 'catalog-B');
+      await controller.ensureServiceRunning();
+      service.callback!({
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'gen': 0,
+        'status': 'error',
+        'catalogServerId': 'catalog-B',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-B',
+      });
+      await pumpEventQueue();
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.error);
+    },
+  );
+
+  test(
+    'an admitted event waiting behind a mutation is rejected after identity changes',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      pageStore.onManifest = () async {
+        if (!entered.isCompleted) entered.complete();
+        await release.future;
+        return null;
+      };
+      service.running = true;
+      seedAttempt();
+      controller.register();
+      await pumpEventQueue();
+      await pumpEventQueue();
+      final event = {
+        'kind': 'chapterDone',
+        'chapterId': 5,
+        'gen': 0,
+        'status': 'downloaded',
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
+      };
+      service.callback!(event);
+      await entered.future;
+      service.callback!({...event, 'status': 'error'});
+      await prefs.setString('offlineCatalogServerId', 'catalog-B');
+      release.complete();
+      await pumpEventQueue();
+      expect((await db.chapterById(5))!.deviceState, OfflineDeviceState.queued);
+    },
+  );
 
   test(
     'chapter metadata changes do not republish queue or repeatedly cancel a cleared stall',
@@ -481,8 +734,7 @@ void main() {
       expect(service.running, isFalse);
       final startsBeforeChange = service.starts;
 
-      final expectedStarts =
-          startsBeforeChange + (state == 'queued' ? 1 : 0);
+      final expectedStarts = startsBeforeChange + (state == 'queued' ? 1 : 0);
       container.read(offlineWifiOnlyProvider.notifier).update(false);
       await pumpUntil(() => service.starts >= expectedStarts);
 
@@ -643,9 +895,17 @@ void main() {
 
   test('forced handoff survives control during native running query', () async {
     final timers = useManualTimers();
+    seedAttempt();
     controller.register();
     await pumpEventQueue();
-    service.callback!({'kind': 'parked', 'chapterId': 5, 'mangaId': 1});
+    service.callback!({
+      'catalogServerId': 'catalog-A',
+      'identityEpoch': 0,
+      'attemptId': 'attempt-A',
+      'kind': 'parked',
+      'chapterId': 5,
+      'mangaId': 1,
+    });
     await pumpEventQueue();
     final parkTimer = timers.singleWhere(
       (timer) =>
@@ -798,8 +1058,13 @@ void main() {
         return null;
       };
       service.running = true;
+      seedAttempt();
       controller.register();
+      await pumpEventQueue();
       service.callback!({
+        'catalogServerId': 'catalog-A',
+        'identityEpoch': 0,
+        'attemptId': 'attempt-A',
         'kind': 'chapterDone',
         'chapterId': 5,
         'status': 'downloaded',

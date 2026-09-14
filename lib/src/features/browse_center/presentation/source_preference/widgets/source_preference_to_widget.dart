@@ -18,9 +18,11 @@ class SourcePreferenceToWidget extends StatelessWidget {
     super.key,
     required this.sourcePreference,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final SourcePreference sourcePreference;
+  final bool enabled;
   final ValueChanged<SourcePreferenceChange> onChanged;
 
   @override
@@ -39,10 +41,14 @@ class SourcePreferenceToWidget extends StatelessWidget {
           title: Text(title),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
-          onChanged: (value) => onChanged(SourcePreferenceChange(
-            checkBoxState: value,
-            position: kPositionPlaceholder,
-          )),
+          onChanged: enabled
+              ? (value) => onChanged(
+                  SourcePreferenceChange(
+                    checkBoxState: value,
+                    position: kPositionPlaceholder,
+                  ),
+                )
+              : null,
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       SwitchPreferenceCompat(
@@ -57,10 +63,14 @@ class SourcePreferenceToWidget extends StatelessWidget {
           title: Text(title),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
-          onChanged: (value) => onChanged(SourcePreferenceChange(
-            switchState: value,
-            position: kPositionPlaceholder,
-          )),
+          onChanged: enabled
+              ? (value) => onChanged(
+                  SourcePreferenceChange(
+                    switchState: value,
+                    position: kPositionPlaceholder,
+                  ),
+                )
+              : null,
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       ListPreference(
@@ -75,22 +85,27 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: currentValue.isNotBlank ? Text(currentValue!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => RadioListPopup<String>(
-              title: title ?? "",
-              optionList: entryValues.toList(),
-              value: currentValue ?? defaultValue ?? "",
-              onChange: (value) {
-                onChanged(SourcePreferenceChange(
-                  listState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              getOptionTitle: (entry) => entries[entryValues.indexOf(entry)],
-            ),
-          ),
+          onTap: enabled
+              ? () => showDialog(
+                  context: context,
+                  builder: (context) => RadioListPopup<String>(
+                    title: title ?? "",
+                    optionList: entryValues.toList(),
+                    value: currentValue ?? defaultValue ?? "",
+                    onChange: (value) {
+                      onChanged(
+                        SourcePreferenceChange(
+                          listState: value,
+                          position: kPositionPlaceholder,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    getOptionTitle: (entry) =>
+                        entries[entryValues.indexOf(entry)],
+                  ),
+                )
+              : null,
         ),
       MultiSelectListPreference(
         key: String key,
@@ -105,22 +120,28 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => MultiSelectPopup<String>(
-              title: title ?? "",
-              optionList: entryValues.toList(),
-              values: currentValue?.toList() ?? defaultValue?.toList() ?? [],
-              onChange: (value) {
-                onChanged(SourcePreferenceChange(
-                  multiSelectState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              getOptionTitle: (entry) => entries[entryValues.indexOf(entry)],
-            ),
-          ),
+          onTap: enabled
+              ? () => showDialog(
+                  context: context,
+                  builder: (context) => MultiSelectPopup<String>(
+                    title: title ?? "",
+                    optionList: entryValues.toList(),
+                    values:
+                        currentValue?.toList() ?? defaultValue?.toList() ?? [],
+                    onChange: (value) {
+                      onChanged(
+                        SourcePreferenceChange(
+                          multiSelectState: value,
+                          position: kPositionPlaceholder,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    getOptionTitle: (entry) =>
+                        entries[entryValues.indexOf(entry)],
+                  ),
+                )
+              : null,
         ),
       EditTextPreference(
         key: String key,
@@ -135,24 +156,29 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => TextFieldPopup(
-              title: dialogTitle ?? title ?? "",
-              subtitle: dialogMessage ?? summary ?? "",
-              onChange: (value) async {
-                onChanged(SourcePreferenceChange(
-                  editTextState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              initialValue: currentValue ?? defaultValue,
-            ),
-          ),
+          onTap: enabled
+              ? () => showDialog(
+                  context: context,
+                  builder: (context) => TextFieldPopup(
+                    title: dialogTitle ?? title ?? "",
+                    subtitle: dialogMessage ?? summary ?? "",
+                    onChange: (value) async {
+                      onChanged(
+                        SourcePreferenceChange(
+                          editTextState: value,
+                          position: kPositionPlaceholder,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    initialValue: currentValue ?? defaultValue,
+                  ),
+                )
+              : null,
         ),
       SourcePreference() => throw UnimplementedError(
-          'Unhandled preference type: ${prop.runtimeType}'),
+        'Unhandled preference type: ${prop.runtimeType}',
+      ),
     };
   }
 }

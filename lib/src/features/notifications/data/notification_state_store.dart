@@ -339,6 +339,12 @@ class NotificationStateStore {
   Future<void> setLastExtensionUpdateCount(int c) =>
       _prefs.setInt('notif_ext_count', c);
 
+  Future<void> clearSession() async {
+    await _prefs.remove(_configKey);
+    await _prefs.remove(_tokenKey);
+    await clearState();
+  }
+
   /// Reset detection state (server switch / disable) without touching config.
   Future<void> clearState() async {
     await _prefs.remove(_cursorKey);

@@ -9,13 +9,16 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
+import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/logger/logger.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
 import 'chapter_commit.dart';
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
+import 'offline_runtime_storage.dart';
 import 'offline_server_identity.dart';
 import 'offline_server_identity_repository.dart';
 import 'offline_sync.dart';
@@ -145,24 +148,20 @@ class OfflineRepository {
   Future<int> totalDownloadedBytes() => db.totalDownloadedBytes();
 }
 
-// These are overridden at app startup with the
-// runtime database + base dir resolved via path_provider on native platforms.
-// They are NOT read on web (offline is disabled there), so the throwing default
-// is never hit in that configuration.
 @riverpod
-OfflineDatabase offlineDatabase(Ref ref) => throw UnimplementedError(
-  'offlineDatabaseProvider must be overridden at startup',
-);
+OfflineDatabase offlineDatabase(Ref ref) =>
+    ref.watch(offlineRuntimeStorageProvider)?.db ??
+    (throw StateError('Offline storage is unavailable'));
 
 @riverpod
-OfflinePaths offlinePaths(Ref ref) => throw UnimplementedError(
-  'offlinePathsProvider must be overridden at startup',
-);
+OfflinePaths offlinePaths(Ref ref) =>
+    ref.watch(offlineRuntimeStorageProvider)?.paths ??
+    (throw StateError('Offline storage is unavailable'));
 
 @riverpod
-OfflinePageStore offlinePageStore(Ref ref) => throw UnimplementedError(
-  'offlinePageStoreProvider must be overridden at startup',
-);
+OfflinePageStore offlinePageStore(Ref ref) =>
+    ref.watch(offlineRuntimeStorageProvider)?.store ??
+    (throw StateError('Offline storage is unavailable'));
 
 @riverpod
 OfflineRepository offlineRepository(Ref ref) => OfflineRepository(
@@ -232,14 +231,16 @@ Future<List<String>?> repairDownloadedChapterPages({
   return [for (final p in committed) paths.absolute(p.relPath)];
 });
 
-/// Whether on-device offline storage is available. Defaults to false and is
-/// overridden to true at startup when the catalog opened (native platforms).
-/// Lets callers no-op cleanly on web / when init failed.
 @riverpod
-bool offlineEnabled(Ref ref) => false;
+bool offlineEnabled(Ref ref) =>
+    ref.watch(offlineRuntimeStorageProvider) != null;
 
 @riverpod
 bool offlineActive(Ref ref) {
+  ref.watch(authCredentialsStoreProvider);
+  if (!ref.read(authCredentialsStoreProvider.notifier).sessionAdmitted) {
+    return false;
+  }
   if (!ref.watch(offlineEnabledProvider)) return false;
   final stamp = ref
       .watch(sharedPreferencesProvider)
@@ -252,6 +253,15 @@ bool offlineActive(Ref ref) {
     currentServer: current,
   );
 }
+
+final offlineServerAccessProvider = Provider<bool>((ref) {
+  if (!ref.watch(offlineActiveProvider)) return false;
+  if (ref.watch(authTypeKeyProvider) != AuthType.uiLogin) return true;
+  final binding = ref.watch(authCredentialsStoreProvider).value?.accountBinding;
+  if (binding == null) return false;
+  final verified = ref.watch(verifiedServerInstanceIdProvider);
+  return !verified.isLoading && verified.asData?.value == binding.catalogId;
+});
 
 class OfflineServerMismatch {
   const OfflineServerMismatch({
@@ -341,18 +351,25 @@ Future<bool> offlineCatalogAvailable(Ref ref) async {
 /// without caring about platform.
 @riverpod
 OfflineSync? offlineSync(Ref ref) {
-  if (!ref.watch(offlineActiveProvider)) return null;
+  if (!ref.watch(offlineServerAccessProvider)) return null;
+  final current = watchAuthSession(ref);
   final identity = ref.watch(serverInstanceIdProvider).value;
   if (identity == null) return null;
   final preferences = ref.watch(sharedPreferencesProvider);
+  final mangaRepository = ref.watch(mangaBookRepositoryProvider);
   return OfflineSync(
     ref.watch(offlineDatabaseProvider),
+    taskTracker: ref.read(offlineRuntimeStorageProvider.notifier).track,
+    isCurrentSession: current,
     // Single-manga count refetch for settling corrections whose acks raced an
     // aggregate fetch (see OfflineSync.refetchManga). Same DI precedent as the
     // push loop reading the repository directly.
-    refetchManga: (mangaId) =>
-        ref.read(mangaBookRepositoryProvider).getManga(mangaId: mangaId),
+    refetchManga: (mangaId) async {
+      if (!current()) return null;
+      return mangaRepository.getManga(mangaId: mangaId);
+    },
     onSynced: () async {
+      if (!current()) return;
       if (preferences.getString(DBKeys.offlineCatalogServerId.name) == null) {
         await preferences.setString(
           DBKeys.offlineCatalogServerId.name,

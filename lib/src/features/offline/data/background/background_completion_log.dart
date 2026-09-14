@@ -59,11 +59,15 @@ class AdoptChapterEntry extends LogEntry {
     required this.pageCount,
     required this.bytes,
     required this.isRead,
+    this.status,
+    this.generation = 0,
   });
   final int chapterId, mangaId, chapterIndex, pageCount, bytes;
   final String serverId, name;
   final double chapterNumber;
   final bool isRead;
+  final String? status;
+  final int generation;
 }
 
 /// Append-only JSONL record of background-download progress — the durable
@@ -121,6 +125,8 @@ class BackgroundCompletionLog {
     'pages': e.pageCount,
     'bytes': e.bytes,
     'read': e.isRead,
+    if (e.status != null) 's': e.status,
+    'g': e.generation,
   });
 
   Future<List<LogEntry>> parse() async {
@@ -167,6 +173,8 @@ class BackgroundCompletionLog {
               pageCount: (j['pages'] as num?)?.toInt() ?? 0,
               bytes: (j['bytes'] as num?)?.toInt() ?? 0,
               isRead: j['read'] as bool? ?? false,
+              status: j['s'] as String?,
+              generation: j['g'] as int? ?? 0,
             ),
           );
       }
@@ -190,11 +198,13 @@ Future<void> applyBackgroundTerminalState({
   required String status,
   int eventGeneration = 0,
 }) async {
-  if (status != 'error' && status != 'authFailed') return;
+  if (status != 'error' && status != 'permissionDenied') {
+    return;
+  }
   await db.transaction(() async {
     final c = await db.chapterById(chapterId);
     if (c == null || c.deviceState == OfflineDeviceState.none) return;
-    if (eventGeneration < c.downloadGeneration) return; // stale generation
+    if (eventGeneration != c.downloadGeneration) return; // stale generation
     // Accepts `queued` as well as `downloading`: the worker's `chapterStart`
     // event (which flips queued -> downloading) is dispatched via
     // `unawaited()` on the main isolate, same as this terminal event — there
@@ -259,9 +269,21 @@ Future<void> _adoptCatchupChapters({
     if (e is AdoptChapterEntry) adoptions[e.chapterId] = e;
   }
   for (final a in adoptions.values) {
-    // A row that already exists took its own path (including a `none` row from
-    // a foreground delete, which recovery honours by deleting the files).
-    if (await db.chapterById(a.chapterId) != null) continue;
+    final existing = await db.chapterById(a.chapterId);
+    final failed = a.status == 'permissionDenied' || a.status == 'error';
+    if (a.generation != 0) continue;
+    if (entries.whereType<DeletedEntry>().any(
+      (e) => e.chapterId == a.chapterId && e.generation >= a.generation,
+    )) {
+      continue;
+    }
+    if (existing != null &&
+        !(existing.mangaId == a.mangaId &&
+            existing.deviceState == OfflineDeviceState.none &&
+            existing.downloadGeneration == 0 &&
+            a.generation == 0)) {
+      continue;
+    }
     final manga = await (db.select(
       db.offlineMangas,
     )..where((t) => t.id.equals(a.mangaId))).getSingleOrNull();
@@ -273,11 +295,23 @@ Future<void> _adoptCatchupChapters({
     if (!accepted) {
       // Refusals clean up here, under replay's ownership — a refused download
       // has no row, so eviction can't see it and it would sit on disk forever.
-      await store.deleteChapter(a.mangaId, a.chapterId);
+      if (!failed) await store.deleteChapter(a.mangaId, a.chapterId);
       continue;
     }
     await db.transaction(() async {
-      if (await db.chapterById(a.chapterId) != null) return;
+      final current = await db.chapterById(a.chapterId);
+      if (current != null) {
+        if (current.mangaId == a.mangaId &&
+            current.deviceState == OfflineDeviceState.none &&
+            current.downloadGeneration == 0 &&
+            a.generation == 0) {
+          await db.setChapterDeviceState(
+            a.chapterId,
+            failed ? OfflineDeviceState.error : OfflineDeviceState.downloading,
+          );
+        }
+        return;
+      }
       await db.upsertChapterMetadata(
         id: a.chapterId,
         mangaId: a.mangaId,
@@ -286,7 +320,7 @@ Future<void> _adoptCatchupChapters({
         isRead: a.isRead,
         lastPageRead: 0,
         isBookmarked: false,
-        serverIsDownloaded: true,
+        serverIsDownloaded: !failed,
         pageCount: a.pageCount,
         updatedAt: DateTime.now(),
         chapterNumber: a.chapterNumber < 0 ? null : a.chapterNumber,
@@ -296,7 +330,7 @@ Future<void> _adoptCatchupChapters({
       // incomplete, the row stays resumable instead of being thrown away.
       await db.setChapterDeviceState(
         a.chapterId,
-        OfflineDeviceState.downloading,
+        failed ? OfflineDeviceState.error : OfflineDeviceState.downloading,
       );
     });
   }

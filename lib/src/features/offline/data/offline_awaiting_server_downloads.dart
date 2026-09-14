@@ -8,11 +8,20 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
 import '../../../global_providers/global_providers.dart';
+import 'account_storage_paths.dart';
 
 /// Sendable read signature shared by `Ref.read`, `WidgetRef.read`, and
 /// `ProviderContainer.read` — lets the functions below stay agnostic of which
 /// kind of reader the caller has.
 typedef OfflineRead = T Function<T>(ProviderListenable<T> provider);
+
+String offlinePreferenceKey(OfflineRead read, DBKeys key) {
+  final preferences = read(sharedPreferencesProvider);
+  final catalog = preferences.getString(DBKeys.offlineCatalogServerId.name);
+  return preferences.getBool(offlineAccountScopedKey) == true && catalog != null
+      ? '${key.name}/$catalog'
+      : key.name;
+}
 
 /// Manga whose reconcile had to ask the SERVER to download chapters first —
 /// their device pull can only happen after those finish.
@@ -34,6 +43,6 @@ final Set<int> awaitingServerDownloads = {};
 /// before the next drain doesn't lose the obligation.
 Future<void> persistAwaitingServerDownloads(OfflineRead read) =>
     read(sharedPreferencesProvider).setStringList(
-      DBKeys.offlineCatchUpAwaitingPull.name,
+      offlinePreferenceKey(read, DBKeys.offlineCatchUpAwaitingPull),
       [for (final id in awaitingServerDownloads) '$id'],
     );

@@ -5,8 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 
 /// Rolling-buffer sizes offered for the "keep next N unread" rule.
@@ -26,34 +29,57 @@ Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
     // the space it is given, and the "Updating library" strip is a sibling of
     // the page content, so it shrinks that space from under it.
     isScrollControlled: true,
-    builder: (sheetContext) => SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final n in kOfflineBufferSizes)
-              ListTile(
-                leading: const Icon(Icons.bookmark_add_outlined),
-                title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
-                onTap: () => Navigator.pop(
-                    sheetContext, (rule: OfflineKeepRule.nUnread, count: n)),
-              ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAllUnread),
-              onTap: () => Navigator.pop(
-                  sheetContext, (rule: OfflineKeepRule.allUnread, count: 3)),
+    builder: (sheetContext) => Consumer(
+      builder: (context, sheetRef, _) {
+        final canDownload = sheetRef
+            .watch(settledAccountAccessProvider)
+            .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!canDownload)
+                  ListTile(
+                    subtitle: Text(context.l10n.accountPermissionDenied),
+                  ),
+                for (final n in kOfflineBufferSizes)
+                  ListTile(
+                    leading: const Icon(Icons.bookmark_add_outlined),
+                    title: Text(sheetContext.l10n.keepOfflineNextUnread(n)),
+                    onTap: canDownload
+                        ? () => Navigator.pop(sheetContext, (
+                            rule: OfflineKeepRule.nUnread,
+                            count: n,
+                          ))
+                        : null,
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.menu_book_outlined),
+                  title: Text(sheetContext.l10n.keepOfflineAllUnread),
+                  onTap: canDownload
+                      ? () => Navigator.pop(sheetContext, (
+                          rule: OfflineKeepRule.allUnread,
+                          count: 3,
+                        ))
+                      : null,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.library_books_outlined),
+                  title: Text(sheetContext.l10n.keepOfflineAll),
+                  onTap: canDownload
+                      ? () => Navigator.pop(sheetContext, (
+                          rule: OfflineKeepRule.all,
+                          count: 3,
+                        ))
+                      : null,
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.library_books_outlined),
-              title: Text(sheetContext.l10n.keepOfflineAll),
-              onTap: () => Navigator.pop(
-                  sheetContext, (rule: OfflineKeepRule.all, count: 3)),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     ),
   );
 }

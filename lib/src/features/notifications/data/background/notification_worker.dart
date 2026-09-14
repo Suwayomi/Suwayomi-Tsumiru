@@ -76,6 +76,24 @@ Future<bool> runNewChapterCheck() async {
     endpoint: config.endpoint,
     record: token,
     broker: _brokerFor(config.endpoint, token),
+    isCancelled: () =>
+        config.catalogServerId != null && !catchupStore.matchesIdentity(config),
+    admitDownload: () async {
+      await catchupStore.reload();
+      return catchupStore.matchesIdentity(config) &&
+          !catchupStore.paused &&
+          !catchupStore.downloadPermissionPaused(config.catalogServerId!);
+    },
+    onDownloadPermissionDenied: () async {
+      final catalogId = config.catalogServerId;
+      if (catalogId == null) return;
+      await catchupStore.recordDownloadPermission(
+        catalogId,
+        allowed: false,
+        expectedRevision: catchupStore.downloadPermissionRevision(catalogId),
+        isCurrent: () => catchupStore.matchesIdentity(config),
+      );
+    },
   );
 
   final network = await Connectivity().checkConnectivity();
@@ -102,11 +120,15 @@ Future<bool> runNewChapterCheck() async {
   // detection in the background and prefers to fetch files in the foreground.
   if (catchupStore.enabled &&
       !catchupStore.paused &&
+      config.catalogServerId != null &&
+      !catchupStore.downloadPermissionPaused(config.catalogServerId!) &&
       catchupStore.matchesIdentity(config) &&
       (!(catchupStore.readSpec()?.wifiOnly ?? true) || unmetered)) {
     ok = await _runDownloadResolution(catchupStore, config, client) && ok;
   }
   if (!catchupStore.paused &&
+      config.catalogServerId != null &&
+      !catchupStore.downloadPermissionPaused(config.catalogServerId!) &&
       ((catchupStore.enabled && catchupStore.downloadEnabled) ||
           (catchupStore.readSpec()?.queuedChapters.isNotEmpty ?? false))) {
     ok =
@@ -298,15 +320,25 @@ Future<bool> _runDownloadResolution(
   NotificationBackgroundClient client,
 ) async {
   final support = await getApplicationSupportDirectory();
-  final lock = BackgroundDownloadLock(File('${support.path}/offline/.bg_lock'));
+  final initialSpec = catchupStore.readSpec();
+  if (initialSpec == null) return true;
+  final storagePath = initialSpec.storagePath('${support.path}/offline');
+  final lock = BackgroundDownloadLock(File('$storagePath/.bg_lock'));
   if (!await lock.acquire('resolve')) return true;
   try {
     await catchupStore.reload();
-    if (catchupStore.paused || !catchupStore.matchesIdentity(config)) {
+    if (catchupStore.paused ||
+        !catchupStore.matchesIdentity(config) ||
+        catchupStore.downloadPermissionPaused(config.catalogServerId!)) {
       return true;
     }
+    if (!await client.verifyDownloadAccess()) return true;
     final spec = catchupStore.readSpec();
-    if (spec == null || spec.manga.isEmpty) return true;
+    if (spec == null ||
+        spec.manga.isEmpty ||
+        spec.storagePath('${support.path}/offline') != storagePath) {
+      return true;
+    }
     // The worker must not outlive its world: after a server switch the spec is
     // dead until the foreground rewrites it.
     if (spec.serverId != catchupStore.catalogServerId) return true;
@@ -486,10 +518,39 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
       !p.matchesConfig(config)) {
     return;
   }
+  final catchupStore = await CatchupStateStore.open();
+  if (actionId == kNotifActionDownload &&
+      !catchupStore.matchesIdentity(config)) {
+    return;
+  }
+  if (actionId == kNotifActionDownload &&
+      config.catalogServerId != null &&
+      catchupStore.downloadPermissionPaused(config.catalogServerId!)) {
+    return;
+  }
   final client = NotificationBackgroundClient(
     endpoint: config.endpoint,
     record: token,
     broker: _brokerFor(config.endpoint, token),
+    isCancelled: () =>
+        actionId == kNotifActionDownload &&
+        !catchupStore.matchesIdentity(config),
+    admitDownload: () async {
+      await catchupStore.reload();
+      return catchupStore.matchesIdentity(config) &&
+          !catchupStore.paused &&
+          !catchupStore.downloadPermissionPaused(config.catalogServerId!);
+    },
+    onDownloadPermissionDenied: () async {
+      final catalogId = config.catalogServerId;
+      if (catalogId == null) return;
+      await catchupStore.recordDownloadPermission(
+        catalogId,
+        allowed: false,
+        expectedRevision: catchupStore.downloadPermissionRevision(catalogId),
+        isCurrent: () => catchupStore.matchesIdentity(config),
+      );
+    },
   );
   if (actionId == kNotifActionMarkRead) {
     await client.markRead(p.chapterIds);

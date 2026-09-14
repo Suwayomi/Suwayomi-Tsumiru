@@ -33,6 +33,7 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 import '../../../../helpers/fake_page_store.dart';
+import '../../../../helpers/legacy_account_access.dart';
 import '../../../../helpers/offline_test_db.dart';
 
 GraphQLClient _dummyClient() =>
@@ -41,7 +42,12 @@ GraphQLClient _dummyClient() =>
 /// Records every enqueue call; throws instead when [shouldFail] is set, to
 /// exercise the "only register on success" branch.
 class _SpyDownloadsRepository extends DownloadsRepository {
-  _SpyDownloadsRepository() : super(_dummyClient(), _dummyClient());
+  _SpyDownloadsRepository()
+    : super(
+        _dummyClient(),
+        _dummyClient(),
+        permissions: legacyAccountPermissions,
+      );
 
   final List<int> enqueued = [];
   bool shouldFail = false;
@@ -149,13 +155,17 @@ void main() {
       await seedMangaNeedingServerDownload(1);
       final ref = await harness(tester);
 
-      await reconcileMangaWidget(ref, 1);
+      await tester.runAsync(() => reconcileMangaWidget(ref, 1));
 
       expect(downloadsRepo.enqueued, [101]);
-      expect(awaitingServerDownloads, contains(1),
-          reason: 'without this, the progressive pull-on-server-drain '
-              'mechanism never learns manga 1 owes a device pull, and it '
-              'would sit waiting for the next full-library sync instead');
+      expect(
+        awaitingServerDownloads,
+        contains(1),
+        reason:
+            'without this, the progressive pull-on-server-drain '
+            'mechanism never learns manga 1 owes a device pull, and it '
+            'would sit waiting for the next full-library sync instead',
+      );
     },
   );
 
@@ -166,23 +176,27 @@ void main() {
       downloadsRepo.shouldFail = true;
       final ref = await harness(tester);
 
-      await reconcileMangaWidget(ref, 2);
+      await tester.runAsync(() => expectLater(reconcileMangaWidget(ref, 2), throwsException));
+      expect((await db.chapterById(201))!.serverFetchAttempts, 0);
 
-      expect(awaitingServerDownloads, isNot(contains(2)),
-          reason: 'a failed enqueue produced no server queue activity, so '
-              'no drain edge would ever retry it -- registering it anyway '
-              'would leave a phantom obligation nothing can complete');
+      expect(
+        awaitingServerDownloads,
+        isNot(contains(2)),
+        reason:
+            'a failed enqueue produced no server queue activity, so '
+            'no drain edge would ever retry it -- registering it anyway '
+            'would leave a phantom obligation nothing can complete',
+      );
     },
   );
 
-  test(
-    'reconcileManga (Ref entry point) registers on success, same as the '
-    'WidgetRef variant',
-    () async {
-      await seedMangaNeedingServerDownload(3);
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(overrides: [
+  test('reconcileManga (Ref entry point) registers on success, same as the '
+      'WidgetRef variant', () async {
+    await seedMangaNeedingServerDownload(3);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         offlineActiveProvider.overrideWithValue(true),
         offlineDatabaseProvider.overrideWithValue(db),
@@ -208,27 +222,23 @@ void main() {
             fetchBytes: (_) async => throw UnimplementedError(),
           ),
         ),
-      ]);
-      addTearDown(container.dispose);
-      // reconcileManga takes a plain Ref (a NotifierProvider/Provider
-      // callback's ref), not a WidgetRef -- capture one via a throwaway
-      // provider instead of trying to cast a WidgetRef to it.
-      final ref = container.read(Provider<Ref>((ref) => ref));
+      ],
+    );
+    addTearDown(container.dispose);
+    final ref = container.read(Provider<Ref>((ref) => ref));
 
-      await reconcileManga(ref, 3);
+    await reconcileManga(ref, 3);
 
-      expect(awaitingServerDownloads, contains(3));
-    },
-  );
+    expect(awaitingServerDownloads, contains(3));
+  });
 
-  test(
-    'reconcileMangaContainer (ProviderContainer entry point) registers on '
-    'success, same as the WidgetRef variant',
-    () async {
-      await seedMangaNeedingServerDownload(4);
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(overrides: [
+  test('reconcileMangaContainer (ProviderContainer entry point) registers on '
+      'success, same as the WidgetRef variant', () async {
+    await seedMangaNeedingServerDownload(4);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         offlineActiveProvider.overrideWithValue(true),
         offlineDatabaseProvider.overrideWithValue(db),
@@ -254,12 +264,12 @@ void main() {
             fetchBytes: (_) async => throw UnimplementedError(),
           ),
         ),
-      ]);
-      addTearDown(container.dispose);
+      ],
+    );
+    addTearDown(container.dispose);
 
-      await reconcileMangaContainer(container, 4);
+    await reconcileMangaContainer(container, 4);
 
-      expect(awaitingServerDownloads, contains(4));
-    },
-  );
+    expect(awaitingServerDownloads, contains(4));
+  });
 }

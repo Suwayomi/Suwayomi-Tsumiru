@@ -43,35 +43,46 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
 
   Future<void> warmLibraryCovers(List<MangaDto> mangas) async {
     if (kIsWeb) return;
+    final auth = ref.read(authCredentialsStoreProvider.notifier);
+    final epoch = auth.sessionEpoch;
+    bool current() =>
+        ref.mounted && !auth.sessionChanging && auth.sessionEpoch == epoch;
+    if (!current()) return;
     final baseUrl = ref.read(serverUrlProvider);
     final port = ref.read(serverPortProvider);
     final addPort = ref.read(serverPortToggleProvider).ifNull();
     final manager = ref.read(coverCacheManagerProvider);
 
-    final pending = <String>[];
+    final authType = ref.read(authTypeKeyProvider);
+    final credentials = ref.read(authCredentialsStoreProvider).value;
+    final pending = <({String url, String cacheKey})>[];
     for (final manga in mangas) {
       final thumb = manga.thumbnailUrl;
       if (thumb.isBlank) continue;
-      final cacheKey = serverFileUrl(
+      final url = serverFileUrl(
         path: thumb!,
         baseUrl: baseUrl,
         port: port,
         addPort: addPort,
         appendApiToUrl: false,
       );
-      if (cacheKey.isEmpty || _inFlight.contains(cacheKey)) continue;
-      pending.add(cacheKey);
+      if (url.isEmpty) continue;
+      final cacheKey = accountImageCacheKey(
+        url,
+        authType: authType,
+        store: auth,
+        credentials: credentials,
+      );
+      if (_inFlight.contains(cacheKey)) continue;
+      pending.add((url: url, cacheKey: cacheKey));
     }
 
-    Future<void> warmOne(String cacheKey) async {
-      if (!_inFlight.add(cacheKey)) return;
+    Future<void> warmOne(({String url, String cacheKey}) request) async {
+      final cacheKey = request.cacheKey;
+      if (!current() || !_inFlight.add(cacheKey)) return;
       try {
         final cached = await manager.getFileFromCache(cacheKey);
-        if (cached != null) return;
-        // Auth is read PER DOWNLOAD, not snapshotted for the run: a big
-        // first-time warm outlives ui_login token rotation, and a stale
-        // snapshot would 401 the whole tail of the library. This notifier is
-        // keepAlive, so late ref reads are safe.
+        if (!current() || cached != null) return;
         final authType = ref.read(authTypeKeyProvider);
         final basicToken = ref.read(credentialsProvider).value;
         final creds = ref.read(authCredentialsStoreProvider).value;
@@ -90,7 +101,7 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
           );
         }
         final fetchUrl = appendUiLoginToken(
-          cacheKey,
+          request.url,
           authType == AuthType.uiLogin ? creds?.uiAccessToken : null,
         );
         await manager.downloadFile(
@@ -108,6 +119,7 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
     // Bounded fan-out so a first-time warm of a large library doesn't hammer
     // the server or saturate the connection.
     for (var i = 0; i < pending.length; i += _concurrency) {
+      if (!current()) return;
       final batch = pending.skip(i).take(_concurrency);
       await Future.wait(batch.map(warmOne));
     }

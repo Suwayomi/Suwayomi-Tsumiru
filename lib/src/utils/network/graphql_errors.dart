@@ -7,6 +7,46 @@ import 'package:http/http.dart' as http;
 
 import 'gateway_status.dart';
 
+bool isPermissionDenied(Object error) {
+  bool forbidden(String message) {
+    final firstLine = message.split('\n').first.trim();
+    return firstLine.replaceFirst(
+          RegExp(r'^Exception while fetching data \([^)]*\)\s*:\s*'),
+          '',
+        ) ==
+        'Forbidden';
+  }
+
+  if (error is OperationException) {
+    return error.graphqlErrors.any((entry) => forbidden(entry.message));
+  }
+  final message = error.toString().trim();
+  return message.isNotEmpty && message.split(', ').every(forbidden);
+}
+
+bool isAuthenticationRequired(Object error) {
+  if (error is OperationException) {
+    if (error.graphqlErrors.any(
+      (entry) =>
+          entry.extensions?['http'] is Map &&
+              (entry.extensions!['http'] as Map)['status'] == 401 ||
+          entry.message.toLowerCase().contains('unauthor'),
+    )) {
+      return true;
+    }
+    final link = error.linkException;
+    return link != null && isAuthenticationRequired(link);
+  }
+  if (error is HttpLinkServerException) {
+    return error.response.statusCode == 401;
+  }
+  if (error is ResponseFormatException) {
+    final original = error.originalException;
+    return original != null && isAuthenticationRequired(original);
+  }
+  return error is ServerNotJsonException && error.statusCode == 401;
+}
+
 /// The server answered with a body that isn't JSON — a proxy/gateway error
 /// page, an HTML 500, etc. Carries the status so the UI can say "server error"
 /// instead of a raw "Unexpected character (at offset 0)".

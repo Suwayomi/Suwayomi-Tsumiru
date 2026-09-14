@@ -12,10 +12,10 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../account/data/account_notice.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
 import '../data/auth_state.dart';
-
 
 /// Layout-neutral host that surfaces a re-auth `MaterialBanner` via
 /// `ScaffoldMessenger` when the session has expired. Returns its child
@@ -43,7 +43,10 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
     WidgetsBinding.instance.addObserver(_authObserver);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (ref.read(needsReauthProvider)) _showBanner();
+      if (ref.read(needsReauthProvider) ||
+          ref.read(accountNoticeProvider) != null) {
+        _showBanner();
+      }
     });
   }
 
@@ -71,10 +74,15 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   MaterialBanner _buildBanner() {
     // Fall back to the stored default (as the GraphQL clients do) so a
     // not-yet-hydrated pref reads as its real value, not null.
-    final authType =
-        ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
+    final authType = ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial;
     return MaterialBanner(
-      content: Text(context.l10n.authSessionExpired),
+      content: Text(switch (ref.read(accountNoticeProvider)) {
+        AccountNoticeKind.passwordUnconfirmed =>
+          context.l10n.accountPasswordUnconfirmed,
+        AccountNoticeKind.passwordSignInRequired =>
+          context.l10n.accountPasswordSignInRequired,
+        null => context.l10n.authSessionExpired,
+      }),
       leading: const Icon(Icons.warning_amber_rounded),
       actions: [
         TextButton(
@@ -110,11 +118,15 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
   @override
   Widget build(BuildContext context) {
     ref.listen<bool>(needsReauthProvider, (prev, next) {
-      if (next) {
+      if (next || ref.read(accountNoticeProvider) != null) {
         _showBanner();
       } else {
         _clearBanner();
       }
+    });
+    ref.listen<AccountNoticeKind?>(accountNoticeProvider, (previous, next) {
+      _clearBanner();
+      if (next != null || ref.read(needsReauthProvider)) _showBanner();
     });
     return widget.child;
   }

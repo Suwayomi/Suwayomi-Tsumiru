@@ -7,8 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../account/data/account_providers.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 
@@ -17,25 +19,34 @@ class DownloadsFab extends ConsumerWidget {
   final DownloaderState status;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final toast = ref.watch(toastProvider);
     if (status == DownloaderState.STOPPED) {
       return FloatingActionButton.extended(
-        onPressed: () async {
-          (await AsyncValue.guard(
-                  ref.read(downloadsRepositoryProvider).startDownloads))
-              .showToastOnError(toast);
-        },
+        onPressed: canDownload
+            ? () async {
+                (await AsyncValue.guard(
+                  ref.read(downloadsRepositoryProvider).startDownloads,
+                )).showToastOnError(toast);
+              }
+            : null,
+        tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.resume),
         isExtended: context.isTablet,
         icon: const Icon(Icons.play_arrow_rounded),
       );
     } else {
       return FloatingActionButton.extended(
-        onPressed: () async {
-          (await AsyncValue.guard(
-                  ref.read(downloadsRepositoryProvider).stopDownloads))
-              .showToastOnError(toast);
-        },
+        onPressed: canDownload
+            ? () async {
+                (await AsyncValue.guard(
+                  ref.read(downloadsRepositoryProvider).stopDownloads,
+                )).showToastOnError(toast);
+              }
+            : null,
+        tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
         label: Text(context.l10n.pause),
         isExtended: context.isTablet,
         icon: const Icon(Icons.pause_rounded),

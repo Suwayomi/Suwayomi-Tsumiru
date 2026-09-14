@@ -7,9 +7,11 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/network/graphql_errors.dart';
 import '../../../../widgets/server_unreachable_view.dart';
+import '../../../account/data/account_providers.dart';
 import '../../controller/server_controller.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
@@ -21,12 +23,13 @@ class ServerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canManage = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.MANAGE_SETTINGS);
     final serverSettings = ref.watch(settingsProvider);
     onRefresh() => ref.refresh(settingsProvider.future);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.server),
-      ),
+      appBar: AppBar(title: Text(context.l10n.server)),
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
@@ -39,8 +42,9 @@ class ServerScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
                   context.l10n.serverOwnSettingsCaption,
-                  style: context.textTheme.bodySmall
-                      ?.copyWith(color: Colors.grey),
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
                 ),
               ),
               if (serverSettings.isLoading && !serverSettings.hasValue)
@@ -52,22 +56,28 @@ class ServerScreen extends ConsumerWidget {
               // A connection failure gets the "can't reach server" view with a
               // path to Connection settings, instead of a blank page.
               if (serverSettings.hasError && !serverSettings.hasValue)
-                Builder(builder: (context) {
-                  final error = serverSettings.error!;
-                  final unwrapped = error is OperationMessageException
-                      ? error.exception
-                      : error;
-                  if (isConnectionError(unwrapped)) {
+                Builder(
+                  builder: (context) {
+                    final error = serverSettings.error!;
+                    final unwrapped = error is OperationMessageException
+                        ? error.exception
+                        : error;
+                    if (isConnectionError(unwrapped)) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: ServerUnreachableView(onRetry: onRefresh),
+                      );
+                    }
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: ServerUnreachableView(onRetry: onRefresh),
+                      padding: const EdgeInsets.all(24),
+                      child: Center(child: Text(error.toString())),
                     );
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(child: Text(error.toString())),
-                  );
-                }),
+                  },
+                ),
+              if (!canManage)
+                ListTile(
+                  subtitle: Text(context.l10n.manageSettingsPermissionRequired),
+                ),
               if (serverSettings.value != null) ...[
                 ServerBindingSection(serverBindingDto: serverSettings.value!),
                 SocksProxySection(socksProxyDto: serverSettings.value!),

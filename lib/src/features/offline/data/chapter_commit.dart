@@ -164,7 +164,10 @@ Future<void> recoverChaptersOnDisk({
         // A pending delete, not an interrupted download — adopting it below
         // would flip it back to `downloaded` and the reconcile pass would
         // never evict it.
-        if (row.deviceState == OfflineDeviceState.orphaned) return;
+        if (row.deviceState == OfflineDeviceState.orphaned ||
+            row.deviceState == OfflineDeviceState.error) {
+          return;
+        }
 
         // The only surviving copy after a kill mid-replacement — restore it
         // before treating this chapter as having no final directory.

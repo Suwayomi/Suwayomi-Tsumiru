@@ -33,7 +33,9 @@ import 'utils/theme/app_theme_builder.dart';
 import 'widgets/desktop/desktop_window_scaffold.dart';
 
 class Sorayomi extends HookConsumerWidget {
-  const Sorayomi({super.key});
+  const Sorayomi({super.key, this.sessionChanging = false});
+
+  final bool sessionChanging;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,8 +111,23 @@ class Sorayomi extends HookConsumerWidget {
         builder: (context, child) {
           final toastWrapped = FToastBuilder()(context, child);
           return DesktopWindowScaffold(
-            child: ReauthBannerHost(
-              child: _IncognitoNotificationBridge(child: toastWrapped),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Offstage(
+                  offstage: sessionChanging,
+                  child: TickerMode(
+                    enabled: !sessionChanging,
+                    child: ReauthBannerHost(
+                      child: _IncognitoNotificationBridge(child: toastWrapped),
+                    ),
+                  ),
+                ),
+                if (sessionChanging)
+                  const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
             ),
           );
         },
@@ -134,6 +151,32 @@ class Sorayomi extends HookConsumerWidget {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: appLocale,
         routerConfig: routes,
+      ),
+    );
+  }
+}
+
+class AccountSessionLoading extends ConsumerWidget {
+  const AccountSessionLoading({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(appThemeModeProvider) ?? ThemeMode.system;
+    final brightness = switch (mode) {
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.light => Brightness.light,
+      ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+    };
+    return Theme(
+      data: buildAppTheme(
+        theme: ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight,
+        brightness: brightness,
+        customSeed: Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
+        amoled: ref.watch(isTrueBlackProvider).ifNull(),
+      ),
+      child: const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Material(child: Center(child: CircularProgressIndicator())),
       ),
     );
   }

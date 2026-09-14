@@ -70,8 +70,8 @@ query CurrentAccount {
   }
 }
 
-query Accounts($first: Int!, $after: Cursor) {
-  users(first: $first, after: $after, order: [{by: ID, byType: ASC}]) {
+query Accounts($first: Int!, $after: Cursor, $filter: UserFilterInput) {
+  users(first: $first, after: $after, filter: $filter, order: [{by: ID, byType: ASC}]) {
     nodes {
       ...AccountDto
     }

@@ -4,7 +4,6 @@
 // auth sub-form.
 
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +11,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -34,6 +35,47 @@ http.Client _gatedServerClient() => MockClient.streaming((request, body) async {
 });
 
 void main() {
+  testWidgets('interrupted probe resumes and exposes UI account forms', (
+    tester,
+  ) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      'onboarding.step': 1,
+      'onboarding.pendingProbe': '192.168.0.10',
+    });
+    final preferences = await SharedPreferences.getInstance();
+    await tester.binding.setSurfaceSize(const Size(1080, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          onboardingHttpClientProvider.overrideWithValue(_gatedServerClient),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const OnboardingScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('This server needs a login'), findsOneWidget);
+    expect(preferences.getString('onboarding.pendingProbe'), '');
+    final menu = tester.widget<DropdownMenu<AuthType>>(
+      find.byType(DropdownMenu<AuthType>),
+    );
+    menu.onSelected!(AuthType.uiLogin);
+    await tester.pumpAndSettle();
+    expect(find.text('Create account'), findsOneWidget);
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<AccountCodeDialog>(find.byType(AccountCodeDialog)).mode,
+      AccountCodeMode.registration,
+    );
+  });
+
   testWidgets('Test connection on a gated server reveals the auth sub-form', (
     tester,
   ) async {

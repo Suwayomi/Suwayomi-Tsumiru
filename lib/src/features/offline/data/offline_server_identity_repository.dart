@@ -4,16 +4,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:async';
-
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../constants/db_keys.dart';
+import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
+import '../../account/data/account_repository.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'background/catchup_work_spec.dart';
@@ -81,98 +82,89 @@ String currentServerAddress(Ref ref) => serverAddress(
   addPort: ref.watch(serverPortToggleProvider).ifNull(),
 );
 
+final verifiedServerInstanceIdProvider = FutureProvider<String>((ref) async {
+  final preferences = ref.watch(sharedPreferencesProvider);
+  final address = ref.watch(currentServerAddressProvider);
+  final authType = ref.watch(authTypeKeyProvider);
+  final repository = ref.watch(offlineServerIdentityRepositoryProvider);
+  final credentials = await ref.watch(authCredentialsStoreProvider.future);
+  final store = ref.read(authCredentialsStoreProvider.notifier);
+  final sessionEpoch = store.sessionEpoch;
+  final controls = CatchupStateStore(preferences);
+  final identityEpoch = controls.identityEpoch;
+  final current = store.captureSession();
+  bool valid() =>
+      ref.mounted &&
+      current() &&
+      !controls.identityChanging &&
+      controls.identityEpoch == identityEpoch &&
+      ref.read(currentServerAddressProvider) == address;
+  if (!valid()) throw StateError('Authentication session changed');
+  final binding = credentials.accountBinding;
+  if (authType == AuthType.uiLogin && binding == null) {
+    throw StateError('Account identity has not been verified');
+  }
+  try {
+    if (authType == AuthType.uiLogin && binding!.userId != null) {
+      final user = await AccountRepository(repository.client).current();
+      if (!valid() || user?.id != binding.userId) {
+        throw StateError('The server returned a different account');
+      }
+    }
+    final id = await repository.resolve();
+    if (!valid()) {
+      throw StateError('Server identity changed during verification');
+    }
+    if (authType == AuthType.uiLogin && id != binding!.catalogId) {
+      throw StateError('The server returned a different catalogue');
+    }
+    final committed = await store.commitForSession(sessionEpoch, () async {
+      if (!valid()) {
+        throw StateError('Server identity changed during verification');
+      }
+      await preferences.setString(DBKeys.offlineLastServerId.name, id);
+      await preferences.setString(
+        DBKeys.offlineLastServerAddress.name,
+        address,
+      );
+      await controls.setIdentityAuthorized(true);
+    });
+    if (!committed) throw StateError('Authentication session changed');
+    return id;
+  } catch (_) {
+    if (valid()) {
+      await store.commitForSession(sessionEpoch, () async {
+        if (valid()) await controls.setIdentityAuthorized(false);
+      });
+    }
+    rethrow;
+  }
+});
+
 @riverpod
 Future<String> serverInstanceId(Ref ref) async {
   final preferences = ref.watch(sharedPreferencesProvider);
   final address = ref.watch(currentServerAddressProvider);
+  final authType = ref.watch(authTypeKeyProvider);
+  final verified = ref.watch(verifiedServerInstanceIdProvider);
+  if (authType == AuthType.uiLogin) {
+    final credentials = await ref.watch(authCredentialsStoreProvider.future);
+    if (credentials.sessionChanging || credentials.accountBinding == null) {
+      throw StateError('Account identity has not been verified');
+    }
+    return credentials.accountBinding!.catalogId;
+  }
+  if (!verified.isLoading && verified.asData != null) {
+    return verified.requireValue;
+  }
   final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
   final cachedAddress = preferences.getString(
     DBKeys.offlineLastServerAddress.name,
   );
-
-  // Offline-first: if we already know this address's id, return it immediately
-  // (no network wait, so the offline library opens instantly) and verify against
-  // the server in the background — a genuine switch is still caught a moment
-  // later, without blocking offline reads on a live round-trip.
   if (cachedId != null && cachedId.isNotEmpty && cachedAddress == address) {
-    unawaited(_verifyServerInstanceId(ref, preferences, address, cachedId));
     return cachedId;
   }
-
-  // First time on this address: resolve online and cache it.
-  return _resolveAndCacheServerInstanceId(ref, preferences, address);
-}
-
-Future<void> _verifyServerInstanceId(
-  Ref ref,
-  SharedPreferences preferences,
-  String address,
-  String cachedId,
-) async {
-  final controls = CatchupStateStore(preferences);
-  final epoch = controls.identityEpoch;
-  try {
-    final live = await ref
-        .read(offlineServerIdentityRepositoryProvider)
-        .resolve();
-    if (!ref.mounted ||
-        controls.identityChanging ||
-        controls.identityEpoch != epoch ||
-        ref.read(currentServerAddressProvider) != address) {
-      return;
-    }
-    final wasAuthorized = controls.identityAuthorized;
-    await controls.setIdentityAuthorized(true);
-    if (live == cachedId) {
-      if (!wasAuthorized) ref.invalidateSelf();
-      return;
-    }
-    // The address now points at a different server — record its id and
-    // re-evaluate so the mismatch guard/banner picks up the switch.
-    await preferences.setString(DBKeys.offlineLastServerId.name, live);
-    await preferences.setString(DBKeys.offlineLastServerAddress.name, address);
-    ref.invalidateSelf();
-  } catch (_) {
-    // Unreachable / server error → keep trusting the cached id (a token lapse
-    // or a 500 on the same address is not evidence of a server switch).
-  }
-}
-
-Future<String> _resolveAndCacheServerInstanceId(
-  Ref ref,
-  SharedPreferences preferences,
-  String address,
-) async {
-  final controls = CatchupStateStore(preferences);
-  final epoch = controls.identityEpoch;
-  try {
-    final id = await ref
-        .read(offlineServerIdentityRepositoryProvider)
-        .resolve();
-    if (!ref.mounted ||
-        controls.identityChanging ||
-        controls.identityEpoch != epoch ||
-        ref.read(currentServerAddressProvider) != address) {
-      throw StateError('Server identity changed during verification');
-    }
-    await controls.setIdentityAuthorized(true);
-    await preferences.setString(DBKeys.offlineLastServerId.name, id);
-    await preferences.setString(DBKeys.offlineLastServerAddress.name, address);
-    return id;
-  } catch (error) {
-    final cachedAddress = preferences.getString(
-      DBKeys.offlineLastServerAddress.name,
-    );
-    final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
-    final fallback = cachedServerIdForFailure(
-      error: error,
-      currentAddress: address,
-      cachedAddress: cachedAddress,
-      cachedId: cachedId,
-    );
-    if (fallback != null) return fallback;
-    rethrow;
-  }
+  return ref.watch(verifiedServerInstanceIdProvider.future);
 }
 
 String? cachedServerIdForFailure({

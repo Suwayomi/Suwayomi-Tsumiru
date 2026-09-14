@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import '../../../account/data/account_permission.dart';
 import '../offline_database.dart';
 import '../offline_page_store.dart';
 import '../offline_page_store_io.dart';
@@ -74,6 +77,7 @@ Future<QueuedRunResult> runQueuedDownloads({
   required Future<bool> Function(QueuedChapterSpec chapter) shouldStop,
   required Future<bool> Function() capBlocked,
   required Future<void> Function(CatchupLedger ledger) persist,
+  Future<void> Function()? onPermissionDenied,
   int allowance = 10,
 }) async {
   var current = ledger;
@@ -113,91 +117,121 @@ Future<QueuedRunResult> runQueuedDownloads({
   }
 
   for (final chapter in queue) {
-    if (!seen.add(chapter.key)) continue;
-    if (await shouldStop(chapter)) {
-      return (ledger: current, completed: completed, interrupted: true);
-    }
-    final prior = queuedTerminal(entries, chapter);
-    if (prior?.status == 'error') continue;
-    if (await queuedFilesComplete(store, chapter)) {
-      if (prior?.status != 'downloaded') {
-        await terminal(
-          chapter,
-          'downloaded',
-          bytes: await store.stagedBytes(chapter.mangaId, chapter.chapterId),
+    try {
+      if (!seen.add(chapter.key)) continue;
+      if (await shouldStop(chapter)) {
+        return (ledger: current, completed: completed, interrupted: true);
+      }
+      final prior = queuedTerminal(entries, chapter);
+      if (prior?.status == 'error' || prior?.status == 'permissionDenied') {
+        continue;
+      }
+      if (await queuedFilesComplete(store, chapter)) {
+        if (prior?.status != 'downloaded') {
+          await terminal(
+            chapter,
+            'downloaded',
+            bytes: await store.stagedBytes(chapter.mangaId, chapter.chapterId),
+          );
+        }
+        continue;
+      }
+      if (completed >= allowance) break;
+      if (await capBlocked()) {
+        final partial = await store.readManifest(
+          chapter.mangaId,
+          chapter.chapterId,
         );
+        if (partial?.generation != chapter.generation ||
+            await store.stagedBytes(chapter.mangaId, chapter.chapterId) == 0) {
+          continue;
+        }
       }
-      continue;
-    }
-    if (completed >= allowance) break;
-    if (await capBlocked()) {
-      final partial = await store.readManifest(
-        chapter.mangaId,
-        chapter.chapterId,
-      );
-      if (partial?.generation != chapter.generation ||
-          await store.stagedBytes(chapter.mangaId, chapter.chapterId) == 0) {
-        continue;
-      }
-    }
-    var rows = chaptersByManga[chapter.mangaId];
-    if (rows == null) {
-      rows = await fetchChapters(chapter.mangaId);
+      var rows = chaptersByManga[chapter.mangaId];
       if (rows == null) {
-        return (ledger: current, completed: completed, interrupted: true);
-      }
-      chaptersByManga[chapter.mangaId] = rows;
-    }
-    if (await shouldStop(chapter)) {
-      return (ledger: current, completed: completed, interrupted: true);
-    }
-    final row = rows.where((row) => row.id == chapter.chapterId).firstOrNull;
-    final serverSpent = current.queuedServerRetries[chapter.key] ?? 0;
-    final deviceSpent = current.queuedDownloadRetries[chapter.key] ?? 0;
-    if (row != null && !row.serverIsDownloaded) {
-      if (serverSpent >= 5) {
-        await terminal(chapter, 'error');
-        continue;
-      }
-      if (!await enqueueServer(chapter.chapterId)) {
-        return (ledger: current, completed: completed, interrupted: true);
+        rows = await fetchChapters(chapter.mangaId);
+        if (rows == null) {
+          return (ledger: current, completed: completed, interrupted: true);
+        }
+        chaptersByManga[chapter.mangaId] = rows;
       }
       if (await shouldStop(chapter)) {
         return (ledger: current, completed: completed, interrupted: true);
       }
-      current = current.copyWith(
-        queuedServerRetries: {
-          ...current.queuedServerRetries,
-          chapter.key: serverSpent + 1,
-        },
+      final row = rows.where((row) => row.id == chapter.chapterId).firstOrNull;
+      final matchingGeneration =
+          (current.chapterGenerations[chapter.chapterId] ?? 0) ==
+          chapter.generation;
+      final serverSpent = max(
+        chapter.serverFetchAttempts,
+        max(
+          current.queuedServerRetries[chapter.key] ?? 0,
+          matchingGeneration
+              ? current.serverFetchRetries[chapter.chapterId] ?? 0
+              : 0,
+        ),
       );
-      await persist(current);
-      continue;
-    }
-    if (deviceSpent >= 5) {
-      await terminal(chapter, 'error');
-      continue;
-    }
-    final attempt = row == null
-        ? (bytes: 0, transient: false)
-        : await download(row, chapter);
-    if (await shouldStop(chapter)) {
-      return (ledger: current, completed: completed, interrupted: true);
-    }
-    if (attempt.bytes > 0 && await queuedFilesComplete(store, chapter)) {
-      await terminal(chapter, 'downloaded', bytes: attempt.bytes);
-      completed++;
-    } else if (attempt.transient) {
-      return (ledger: current, completed: completed, interrupted: true);
-    } else {
-      current = current.copyWith(
-        queuedDownloadRetries: {
-          ...current.queuedDownloadRetries,
-          chapter.key: deviceSpent + 1,
-        },
+      final deviceSpent = max(
+        current.queuedDownloadRetries[chapter.key] ?? 0,
+        matchingGeneration
+            ? current.downloadRetries[chapter.chapterId] ?? 0
+            : 0,
       );
-      await persist(current);
-      if (deviceSpent + 1 >= 5) await terminal(chapter, 'error');
+      if (row != null && !row.serverIsDownloaded) {
+        if (serverSpent >= 5) {
+          await terminal(chapter, 'error');
+          continue;
+        }
+        if (!await enqueueServer(chapter.chapterId)) {
+          return (ledger: current, completed: completed, interrupted: true);
+        }
+        current = current.copyWith(
+          queuedServerRetries: {
+            ...current.queuedServerRetries,
+            chapter.key: serverSpent + 1,
+          },
+        );
+        await persist(current);
+        if (await shouldStop(chapter)) {
+          return (ledger: current, completed: completed, interrupted: true);
+        }
+        continue;
+      }
+      if (deviceSpent >= 5) {
+        await terminal(chapter, 'error');
+        continue;
+      }
+      final attempt = row == null
+          ? (bytes: 0, transient: false)
+          : await download(row, chapter);
+      final complete =
+          attempt.bytes > 0 && await queuedFilesComplete(store, chapter);
+      if (!complete && !attempt.transient) {
+        current = current.copyWith(
+          queuedDownloadRetries: {
+            ...current.queuedDownloadRetries,
+            chapter.key: deviceSpent + 1,
+          },
+        );
+        await persist(current);
+      }
+      if (await shouldStop(chapter)) {
+        return (ledger: current, completed: completed, interrupted: true);
+      }
+      if (complete) {
+        await terminal(chapter, 'downloaded', bytes: attempt.bytes);
+        completed++;
+      } else if (attempt.transient) {
+        return (ledger: current, completed: completed, interrupted: true);
+      } else if (deviceSpent + 1 >= 5) {
+        await terminal(chapter, 'error');
+      }
+    } on AccountPermissionDenied {
+      if (!await shouldStop(chapter)) {
+        await terminal(chapter, 'permissionDenied');
+        await onPermissionDenied?.call();
+      }
+      return (ledger: current, completed: completed, interrupted: true);
     }
   }
   await persist(current);

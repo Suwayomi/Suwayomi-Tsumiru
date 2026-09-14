@@ -7,8 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
-
+import '../../../utils/network/graphql_errors.dart';
+import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
@@ -25,6 +27,9 @@ class OfflineSaveButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canDownload = ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     if (!ref.watch(offlineEnabledProvider)) {
       return const SizedBox.shrink();
     }
@@ -44,15 +49,19 @@ class OfflineSaveButton extends ConsumerWidget {
         onPressed: () => deleteChapterFromDevice(ref, chapterId),
       ),
       OfflineDeviceState.error => IconButton(
-        tooltip: 'Save failed — retry',
+        tooltip: canDownload
+            ? 'Save failed — retry'
+            : context.l10n.accountPermissionDenied,
         icon: Icon(Icons.error_outline_rounded, color: cs.error),
-        onPressed: () => _save(context, ref),
+        onPressed: canDownload ? () => _save(context, ref) : null,
       ),
       OfflineDeviceState.none || OfflineDeviceState.orphaned => IconButton(
-        tooltip: 'Save to device',
+        tooltip: canDownload
+            ? 'Save to device'
+            : context.l10n.accountPermissionDenied,
         // Muted = a "get it" button (vs the solid-indigo "on device" badge).
         icon: Icon(Icons.save_alt_rounded, color: cs.onSurfaceVariant),
-        onPressed: () => _save(context, ref),
+        onPressed: canDownload ? () => _save(context, ref) : null,
       ),
     };
   }
@@ -64,7 +73,13 @@ class OfflineSaveButton extends ConsumerWidget {
       if (context.mounted) {
         // Raw exception text is a multi-line socket dump when offline.
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
+          SnackBar(
+            content: Text(
+              isPermissionDenied(e)
+                  ? context.l10n.accountPermissionDenied
+                  : context.l10n.errorSomethingWentWrong,
+            ),
+          ),
         );
       }
     }

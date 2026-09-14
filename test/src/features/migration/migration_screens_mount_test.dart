@@ -27,15 +27,19 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  final client = GraphQLClient(link: HttpLink('http://localhost'), cache: GraphQLCache());
+  final client = GraphQLClient(
+    link: HttpLink('http://localhost'),
+    cache: GraphQLCache(),
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         graphQlClientProvider.overrideWithValue(client),
         libraryMangaListProvider.overrideWith((ref) async => <MangaDto>[]),
-        searchableSourcesProvider
-            .overrideWithValue(const AsyncValue.data(<SourceDto>[])),
+        searchableSourcesProvider.overrideWithValue(
+          const AsyncValue.data(<SourceDto>[]),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -55,19 +59,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('migration list screen mounts without crashing', (tester) async {
-    await pumpScreen(
-      tester,
-      const MigrationBulkRunScreen(
-        data: MigrationBulkRunData(
-          mangaIds: [],
-          targetSourceIds: [],
-          options: MigrationOption(),
+  testWidgets(
+    'unverified migration list offers retry without migration actions',
+    (tester) async {
+      await pumpScreen(
+        tester,
+        const MigrationBulkRunScreen(
+          data: MigrationBulkRunData(
+            mangaIds: [],
+            targetSourceIds: [],
+            options: MigrationOption(),
+          ),
         ),
-      ),
-    );
-    expect(tester.takeException(), isNull);
-  });
+      );
+      expect(tester.takeException(), isNull);
+      final context = tester.element(find.byType(MigrationBulkRunScreen));
+      final l10n = AppLocalizations.of(context)!;
+      expect(find.text(l10n.migrationIdentityUnavailable), findsOneWidget);
+      expect(find.text(l10n.retry), findsOneWidget);
+      expect(find.byTooltip(l10n.migrationActionCopy), findsNothing);
+      expect(find.byTooltip(l10n.migrationActionMigrate), findsNothing);
+    },
+  );
 
   testWidgets('source picker screen mounts without crashing', (tester) async {
     await pumpScreen(tester, const MigrationSourcePickerScreen());

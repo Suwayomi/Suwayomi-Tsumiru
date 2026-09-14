@@ -11,20 +11,43 @@ import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 
 Future<Toast> _pumpToastHost(WidgetTester tester) async {
   late BuildContext hostContext;
-  await tester.pumpWidget(MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Builder(builder: (context) {
-      hostContext = context;
-      return const SizedBox.shrink();
-    }),
-  ));
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) {
+          hostContext = context;
+          return const SizedBox.shrink();
+        },
+      ),
+    ),
+  );
   return Toast(hostContext);
 }
 
 void main() {
-  testWidgets('an error with nothing left to say still tells the user',
-      (tester) async {
+  testWidgets('permission denial explains the account restriction', (
+    tester,
+  ) async {
+    final toast = await _pumpToastHost(tester);
+    toast.showError(
+      'Exception while fetching data (/download) : Forbidden\r\n'
+      'server.ForbiddenException: Forbidden',
+    );
+    await tester.pump();
+    expect(
+      find.text('Your account does not have permission for this action.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('ForbiddenException'), findsNothing);
+    toast.close();
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('an error with nothing left to say still tells the user', (
+    tester,
+  ) async {
     final toast = await _pumpToastHost(tester);
 
     toast.showError('   ');
@@ -42,8 +65,10 @@ void main() {
     toast.showError("Extension can't be updated to the same version");
     await tester.pump();
 
-    expect(find.text("Extension can't be updated to the same version"),
-        findsOneWidget);
+    expect(
+      find.text("Extension can't be updated to the same version"),
+      findsOneWidget,
+    );
 
     toast.close();
     await tester.pump(const Duration(seconds: 5));

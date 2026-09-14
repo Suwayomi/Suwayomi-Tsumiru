@@ -77,6 +77,33 @@ void main() {
     updatedAt: DateTime(2026),
   );
 
+  for (final location in ['final', 'staging', 'superseded']) {
+    test('recovery preserves terminal error and $location pages', () async {
+      await seedChapter(1, 7);
+      await db.setChapterDeviceState(1, OfflineDeviceState.error);
+      await db.incrementServerFetchAttempts(1);
+      if (location == 'staging') {
+        store.seedStaged(1, {0: 5, 1: 5}, indices: [0, 1]);
+      } else {
+        store.seedCommitted(1, {0: 5, 1: 5});
+        if (location == 'superseded') store.setAside(1);
+      }
+      await recoverChaptersOnDisk(db: db, store: store);
+      final row = (await db.chapterById(1))!;
+      expect(row.deviceState, OfflineDeviceState.error);
+      expect(row.serverFetchAttempts, 1);
+      expect(await db.downloadedPageCount(1), 0);
+      expect(store.committed[1], location == 'final' ? {0: 5, 1: 5} : null);
+      expect(store.staged[1], location == 'staging' ? {0: 5, 1: 5} : null);
+      expect(
+        store.superseded[1],
+        location == 'superseded' ? {0: 5, 1: 5} : null,
+      );
+      expect(store.deletedChapters, isEmpty);
+      expect(store.written, isEmpty);
+    });
+  }
+
   test(
     'launch adopts a chapter whose commit landed but was never recorded',
     () async {

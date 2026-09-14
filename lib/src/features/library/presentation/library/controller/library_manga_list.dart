@@ -12,6 +12,7 @@ import '../../../../../features/offline/data/offline_cover_warmer.dart';
 import '../../../../../features/offline/data/offline_read_fallback.dart';
 import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
+import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../data/category_repository.dart';
 
@@ -19,6 +20,9 @@ part 'library_manga_list.g.dart';
 
 @riverpod
 Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
+  final sessionCurrent = watchAuthSession(ref);
+  bool current() => ref.mounted && sessionCurrent();
+  if (!current()) return null;
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   // Captured before the await; touching ref after the async gap throws if this
@@ -50,11 +54,12 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
     onReachability: (reachable) {
       Future(() {
         try {
-          reachability.set(!reachable);
+          if (current()) reachability.set(!reachable);
         } catch (_) {}
       });
     },
   );
+  if (!current()) return null;
   if (list != null && fromServer) {
     if (sync != null) {
       for (final manga in list) {

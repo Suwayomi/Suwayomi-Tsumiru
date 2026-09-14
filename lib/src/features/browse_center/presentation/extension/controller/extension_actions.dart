@@ -8,7 +8,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/extension_repository/extension_repository.dart';
 import '../../source/controller/source_controller.dart';
 import 'extension_controller.dart';
@@ -29,31 +31,39 @@ class ExtensionActions {
 
   ExtensionRepository get _repository => _ref.read(extensionRepositoryProvider);
 
-  /// [languageCode] is enabled in the source language filter, so the sources the
-  /// new extension brings aren't filtered straight back out of the Sources tab.
   Future<void> install(String pkgName, {String? languageCode}) =>
-      _refreshAfter(() => _install(pkgName, languageCode));
+      _refreshAfter((current) => _install(pkgName, languageCode, current));
 
-  /// The server has no reinstall mutation, so this is uninstall then install.
   Future<void> reinstall(String pkgName, {String? languageCode}) =>
-      _refreshAfter(() async {
-        await _repository.uninstallExtension(pkgName);
-        await _install(pkgName, languageCode);
+      _refreshAfter((current) async {
+        final repository = _repository;
+        repository.permissions.require(Enum$UserPermission.INSTALL_EXTENSIONS);
+        repository.permissions.require(
+          Enum$UserPermission.UNINSTALL_EXTENSIONS,
+        );
+        await repository.uninstallExtension(pkgName);
+        if (!current()) return;
+        await _install(pkgName, languageCode, current);
       });
 
   Future<void> installFile(BuildContext context, {PlatformFile? file}) =>
       _refreshAfter(
-        () => _repository.installExtensionFile(context, file: file),
+        (_) => _repository.installExtensionFile(context, file: file),
       );
 
   Future<void> update(String pkgName) =>
-      _refreshAfter(() => _repository.updateExtension(pkgName));
+      _refreshAfter((_) => _repository.updateExtension(pkgName));
 
   Future<void> uninstall(String pkgName) =>
-      _refreshAfter(() => _repository.uninstallExtension(pkgName));
+      _refreshAfter((_) => _repository.uninstallExtension(pkgName));
 
-  Future<void> _install(String pkgName, String? languageCode) async {
+  Future<void> _install(
+    String pkgName,
+    String? languageCode,
+    bool Function() current,
+  ) async {
     await _repository.installExtension(pkgName);
+    if (!current()) return;
     if (languageCode.isNotBlank) _enableSourceLanguage(languageCode!);
   }
 
@@ -68,8 +78,16 @@ class ExtensionActions {
     }
   }
 
-  Future<void> _refreshAfter(Future<void> Function() mutate) async {
-    await mutate();
+  Future<void> _refreshAfter(
+    Future<void> Function(bool Function()) mutate,
+  ) async {
+    final session = _ref
+        .read(authCredentialsStoreProvider.notifier)
+        .captureSession();
+    bool current() => _ref.mounted && session();
+    if (!current()) return;
+    await mutate(current);
+    if (!current()) return;
     _ref.invalidate(sourceListProvider);
     return _ref.refresh(extensionProvider.future);
   }

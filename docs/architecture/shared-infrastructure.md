@@ -23,7 +23,7 @@
 ## Utils
 
 - **Context extensions** (`utils/extensions/custom_extensions/context_extensions.dart`): `context.l10n`, `isDesktop` (≥1200), `isTablet` (≥600), `showNavbar` (>800), `theme`/`textTheme`/`colorScheme`/`isDarkMode`, `responsiveValue<T>(...)`, `pushBottomSheet`, `showFullScreenDialog`, `location` (current GoRouter path).
-- **`cache_manager_extensions.dart`:** `CacheManager.getServerFile(ref, url)` — mirrors `ServerImage` auth (ui_login token as `?token=`, cacheKey = untokened `baseApi`).
+- **`cache_manager_extensions.dart`:** `CacheManager.getServerFile(ref, url)` — delegates to `serverImageRequest` for the fetch URL, account cache key, and auth headers.
 - **`async_value_extensions.dart`:** `showUiWhenData(context, builder, ...)` (shimmer / `Emoticons` error / builder), `valueOrToast`, `copyWithData`.
 - **String/int/bool extensions:** `isBlank`/`isNotBlank`, `query(...)`, `parseTimestamp`; `liesBetween`, `getValueOnNullOrNegative`, `compact`; `bool?.ifNull([alt=false])` (used everywhere instead of `?? false`).
 - **`app_utils.dart`:** `wrapOn(wrapper, child)`, `guard<T>(future, toast)`.
@@ -31,7 +31,7 @@
 
 ## Shared widgets
 
-- **`ServerImage`** (`widgets/server_image.dart`): auth-aware `CachedNetworkImage`. Dispatches by `authTypeKeyProvider`; `simple_login` cookie watched reactively (`.select`), `ui_login` token via `ref.read` (non-reactive, to avoid webtoon rebuild storms), `cacheKey = baseApi` (untokened). Error widget evicts cache + speculatively refreshes the token + remounts. `ServerImageWithCpi` adds a progress ring.
+- **`ServerImage`** (`widgets/server_image.dart`): auth-aware `CachedNetworkImage`. Dispatches by `authTypeKeyProvider`; `simple_login` cookie watched reactively (`.select`), `ui_login` token via `ref.read` (non-reactive, to avoid webtoon rebuild storms), `accountImageCacheKey` separates verified accounts while preserving keys across token refresh and restart. Unverified/changing accounts receive ephemeral session keys; legacy auth modes retain URL keys. Error reload evicts only the captured account key. `ServerImageWithCpi` adds a progress ring.
 - **`MangaCoverGridTile` / `MangaBadgesRow` / `MangaBadge`** (`widgets/manga_cover/`): cover tiles with `showTitle`/`showBadges`/`showCountBadges`; badges read `downloadedBadgeProvider` / `unreadBadgeProvider`. `languageBadge` is commented out.
 - **Async buttons** (`widgets/async_buttons/`): six variants, all `useState(false)` loading → disable + spinner.
 - **`Emoticons`** (error state), **`CenterSorayomiShimmerIndicator`** (loading), **popup widgets** (Radio/MultiSelect/Slider/TextField popups), **`SettingsPropTile`** (generic settings row).
@@ -42,7 +42,7 @@
 - **Enums are stored by index** (`SharedPreferenceEnumClientMixin`) — reordering cases silently corrupts stored prefs (`ReaderMode`, `ReaderNavigationLayout`, `MangaSort`, `ChapterSort`, `DisplayMode`).
 - **`DBKeys` key = enum case `.name`** — renaming is a breaking migration.
 - **`ServerImage` uses `ref.read` for the ui token** (not `watch`) — deliberate, to avoid scroll-yanking rebuild storms on the ~4-min token rotation.
-- **`cacheKey = baseApi` (untokened), fetch URL = tokened** — keep this split for any new auth mode or token rotation busts the cache.
+- **Fetch URL and cache key are separate.** UI-login keys contain the account catalog ID and untokened URL; request URLs contain the token. Prefetch, rendering, crop reads, and reader share/gallery actions must use the same account key.
 - **`languageBadge` is fully commented out** (the `DBKeys.languageBadge` key exists but no live provider reads it).
 - **Launcher assets still use `sorayomi*` names** in `assets.gen.dart` (on-disk file names not yet renamed).
 - **`AuthType` has four values** — any `switch` on it must handle all four.

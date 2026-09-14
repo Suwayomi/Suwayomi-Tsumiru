@@ -70,5 +70,6 @@ Future<void> performSignIn(
     case AuthType.none:
       return;
   }
+  ref.read(authTypeKeyProvider.notifier).update(authType);
   ref.read(needsReauthProvider.notifier).set(false);
 });

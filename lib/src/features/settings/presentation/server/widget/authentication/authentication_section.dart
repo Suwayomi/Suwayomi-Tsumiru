@@ -3,11 +3,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
-import '../../../../../../features/auth/data/auth_state.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/section_title.dart';
-import '../../../../../offline/data/background/background_download_controller_shim.dart';
+import '../../../../../account/data/account_actions.dart';
 import '../credential_popup/credentials_popup.dart';
 import '../credential_popup/login_credentials_popup.dart';
 import 'auth_type/auth_type_tile.dart';
@@ -53,6 +52,10 @@ class AuthenticationSection extends ConsumerWidget {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             onTap: () async {
+              final signOut = ref.read(accountActionsProvider).signOut;
+              final current = ref
+                  .read(authCredentialsStoreProvider.notifier)
+                  .captureSession();
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (dialogCtx) => AlertDialog(
@@ -74,22 +77,8 @@ class AuthenticationSection extends ConsumerWidget {
                   ],
                 ),
               );
-              if (confirmed != true) return;
-              await ref
-                  .read(backgroundDownloadControllerProvider)
-                  .changeIdentity(() async {
-                    final store = ref.read(
-                      authCredentialsStoreProvider.notifier,
-                    );
-                    await store.clearUiLoginTokens();
-                    await store.clearSimpleLoginCookie();
-                    await store.clearPassword();
-                    await store.clearBasicCredentials();
-                    ref
-                        .read(authTypeKeyProvider.notifier)
-                        .update(AuthType.none);
-                    ref.read(needsReauthProvider.notifier).set(false);
-                  });
+              if (confirmed != true || !context.mounted || !current()) return;
+              await signOut();
             },
           ),
         ],
