@@ -1143,6 +1143,7 @@ Future<void> _removeMangaFromLibraryAndPurgeOwned(
       await _deleteChapterFromDeviceContainer(container, c.id);
     }
   }
+  await writeCatchupWorkSpec(container.read);
 }
 
 /// The offline download orchestrator, wired with real network dependencies:
@@ -1420,6 +1421,7 @@ Future<void> _removeKeepRuleAndDeleteOwned(WidgetRef ref, int mangaId) async {
       await deleteChapterFromDevice(ref, c.id);
     }
   }
+  await writeCatchupWorkSpec(ref.read);
 }
 
 /// Change the keep-rule for [mangaId] and reconcile (download/evict to match).
