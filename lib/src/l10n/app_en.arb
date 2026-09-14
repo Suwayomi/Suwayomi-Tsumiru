@@ -3705,7 +3705,7 @@
   "accountPreviousPage": "Previous page",
   "accountRole": "Role",
   "accountBuiltInReadOnly": "The built-in administrator’s role and permissions cannot be changed.",
-  "accountNoUserRemoval": "This server does not support removing users.",
+  "accountNoUserRemoval": "User deletion is not currently supported on this server.",
   "accountCodeShownOnce": "Copy this code before closing. It will not be shown again.",
   "accountCodeExpires": "Expires {date}",
   "@accountCodeExpires": {"placeholders": {"date": {"type": "String"}}},

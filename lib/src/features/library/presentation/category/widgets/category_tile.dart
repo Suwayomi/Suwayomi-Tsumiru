@@ -140,9 +140,7 @@ class CategoryTile extends HookConsumerWidget {
                               final result = await ref
                                   .read(categoryControllerProvider.notifier)
                                   .deleteCategory(category.id);
-                              // Deliberately the TILE's context: the dialog
-                              // unmounts with the pop, and this resolves
-                              // long after on the failure paths.
+                              // Use the tile context because the dialog has already closed.
                               if (result is AsyncError && context.mounted) {
                                 final error = result.error;
                                 final cause = error is OperationMessageException

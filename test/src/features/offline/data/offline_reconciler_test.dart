@@ -296,13 +296,7 @@ void main() {
   test(
     'RC5-cold: cold-start cap hole — first pass queues only a bounded subset',
     () async {
-      // Bug: when avgBytes == 0 (no downloaded chapters yet), the estimate was
-      // always 0, so projectedBytes never grew and the cap guard was a no-op,
-      // causing EVERY chapter to be queued on the first pass.
-      //
-      // Fix: fall back to pageCount * _estimatedBytesPerPage (5 pages * 256 KB =
-      // 1.28 MB per chapter).  With a 600 KB cap, at most 0 chapters fit (the
-      // first candidate already exceeds the cap), so toDownload must be empty.
+      // With no downloaded chapters, the page-count estimate exceeds the cap.
       const kBytesPerPage = 256 * 1024; // must match _estimatedBytesPerPage
       const pageCount = 5; // per chapter
       const estimatedChapterBytes = pageCount * kBytesPerPage; // 1.28 MB
@@ -346,7 +340,6 @@ void main() {
       ).reconcileManga(1);
 
       // With a 600 KB cap and each chapter estimated at ~1.28 MB, none fit.
-      // Pre-fix this was 5 (all queued). The fix must make it 0.
       expect(
         r1.toDownload.length,
         lessThan(5),
@@ -376,8 +369,6 @@ void main() {
   test(
     'RC5: reconcile converges — second pass yields empty toDownload and toEvict',
     () async {
-      // Setup: storage cap of 50 bytes. Seed 6 chapters each 10 bytes = 60 bytes
-      // total downloaded, already over cap. Rule is "all" (all desired).
       const cap = SafetyNetConfig(
         timeEvictEnabled: false,
         keepDays: 30,
@@ -392,7 +383,6 @@ void main() {
       );
       await db.setKeepRule(1, OfflineKeepRule.all, 0);
 
-      // Seed 6 chapters as already-downloaded (60 bytes total > 50 cap).
       for (var i = 1; i <= 6; i++) {
         await seedChapter(
           i,
@@ -418,8 +408,6 @@ void main() {
         now: DateTime(2026, 3, 1),
       ).reconcileManga(1);
 
-      // First pass must evict to bring under cap — don't assert specifics here,
-      // just verify something happened (sanity).
       expect(
         evicted1,
         isNotEmpty,

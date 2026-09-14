@@ -63,9 +63,7 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                           if (defaultId != null && category.id != defaultId)
                             AsyncCheckboxListTile(
                               onChanged: (value) async {
-                                // Capture the toast before the await so the
-                                // error path can report even if the dialog is
-                                // gone by the time the request returns.
+                                // The dialog may close before the request finishes.
                                 final toast = ref.read(toastProvider);
                                 final repo = ref.read(
                                   mangaBookRepositoryProvider,
@@ -81,20 +79,11 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                           category.id,
                                         );
                                 } catch (e) {
-                                  // Surface the failure and rethrow so the
-                                  // checkbox reverts to its true (unchanged)
-                                  // state instead of showing a save that never
-                                  // landed.
+                                  // Rethrowing lets the checkbox restore its previous value.
                                   toast?.showError(e.toString());
                                   rethrow;
                                 }
-                                // Success: reflect it in this dialog and across
-                                // the library's category tabs (all filter one
-                                // libraryMangaListProvider). Skipped on failure
-                                // so a no-op toggle doesn't refetch the library.
-                                // If the dialog was dismissed mid-request the
-                                // caller refreshes on close, so bail rather than
-                                // touch a deactivated ref.
+                                // The caller refreshes on close if the dialog was dismissed.
                                 if (!context.mounted) return;
                                 ref.read(provider.notifier).refresh();
                                 ref.invalidate(categoryControllerProvider);

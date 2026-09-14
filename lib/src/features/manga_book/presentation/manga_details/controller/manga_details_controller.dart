@@ -200,9 +200,7 @@ class MangaChapterList extends _$MangaChapterList {
         db: offlineDb,
         offlineEnabled: offlineDb != null,
         offlineFirst: viewOffline,
-        // An explicit refresh can run a full source scrape, which routinely
-        // outlives the offline cap; the user asked and is watching, so give
-        // it a real window instead of silently serving stale catalog rows.
+        // A source scrape can exceed the normal offline timeout.
         fetchTimeout: const Duration(seconds: 60),
         mangaId: mangaId,
       ),

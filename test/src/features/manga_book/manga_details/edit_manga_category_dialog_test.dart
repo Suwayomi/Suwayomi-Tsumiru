@@ -129,10 +129,7 @@ void main() {
       await tester.tap(find.text('Pornhwa'));
       await tester.pumpAndSettle();
 
-      // The change persisted through the repo (the mutation actually ran)...
       expect(repo.added, contains(2));
-      // ...and the library's single source list was invalidated + rebuilt, so
-      // the manga will show under the new category tab (the reported bug).
       expect(libraryBuilds, 2);
     },
   );

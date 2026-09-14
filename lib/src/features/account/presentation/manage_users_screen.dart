@@ -99,7 +99,34 @@ class ManageUsersScreen extends HookConsumerWidget {
                                   Enum$UserRole.$unknown => context.l10n.accountRoleUnknown,
                                 }).join(', ')} · ${context.l10n.accountPermissionsSummary(accountPermissionLabels(context).keys.where(AccountAccess(capability: AccountCapability.supported, user: user).allows).length, accountPermissionLabels(context).length)}',
                               ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.tune_rounded),
+                                  IconButton(
+                                    tooltip: context.l10n.delete,
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                    ),
+                                    onPressed: () => showDialog<void>(
+                                      context: context,
+                                      builder: (dialogContext) => AlertDialog(
+                                        title: Text(context.l10n.delete),
+                                        content: Text(
+                                          context.l10n.accountNoUserRemoval,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(dialogContext),
+                                            child: Text(context.l10n.ok),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               onTap: () async {
                                 await showDialog<void>(
                                   context: context,
@@ -112,32 +139,32 @@ class ManageUsersScreen extends HookConsumerWidget {
                             ),
                           if (data.nodes.isEmpty)
                             ListTile(title: Text(context.l10n.accountNoUsers)),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              TextButton(
-                                onPressed: cursors.value.length > 1
-                                    ? () => cursors.value = cursors.value
-                                          .sublist(0, cursors.value.length - 1)
-                                    : null,
-                                child: Text(context.l10n.accountPreviousPage),
-                              ),
-                              TextButton(
-                                onPressed:
-                                    data.pageInfo.hasNextPage &&
-                                        data.pageInfo.endCursor != null
-                                    ? () => cursors.value = [
-                                        ...cursors.value,
-                                        data.pageInfo.endCursor,
-                                      ]
-                                    : null,
-                                child: Text(context.l10n.next),
-                              ),
-                            ],
-                          ),
-                          ListTile(
-                            subtitle: Text(context.l10n.accountNoUserRemoval),
-                          ),
+                          if (cursors.value.length > 1 ||
+                              (data.pageInfo.hasNextPage &&
+                                  data.pageInfo.endCursor != null))
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                if (cursors.value.length > 1)
+                                  TextButton(
+                                    onPressed: () => cursors.value = cursors
+                                        .value
+                                        .sublist(0, cursors.value.length - 1),
+                                    child: Text(
+                                      context.l10n.accountPreviousPage,
+                                    ),
+                                  ),
+                                if (data.pageInfo.hasNextPage &&
+                                    data.pageInfo.endCursor != null)
+                                  TextButton(
+                                    onPressed: () => cursors.value = [
+                                      ...cursors.value,
+                                      data.pageInfo.endCursor,
+                                    ],
+                                    child: Text(context.l10n.next),
+                                  ),
+                              ],
+                            ),
                         ],
                       ),
                     ),

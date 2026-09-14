@@ -81,7 +81,9 @@ void main() {
           'totalCount': 26,
           'pageInfo': {
             '__typename': 'PageInfo',
-            'hasNextPage': request.variables['after'] == null,
+            'hasNextPage':
+                request.variables['after'] == null &&
+                request.variables['filter'] == null,
             'hasPreviousPage': request.variables['after'] != null,
             'startCursor': '1',
             'endCursor': '25',
@@ -98,9 +100,24 @@ void main() {
           .map((t) => t.data)
           .join(' | '),
     );
+    const unsupported =
+        'User deletion is not currently supported on this server.';
+    expect(find.text(unsupported), findsNothing);
+    final requestsBeforeDelete = link.requests.length;
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text(unsupported), findsOneWidget);
+    expect(find.byType(EditAccountDialog), findsNothing);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text(unsupported), findsNothing);
+    expect(find.text('first-reader'), findsOneWidget);
+    expect(link.requests.length, requestsBeforeDelete);
+    expect(find.text('Previous page'), findsNothing);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text('second-reader'), findsOneWidget);
+    expect(find.text('Next'), findsNothing);
     expect(link.requests.last.variables['after'], 25);
     await tester.tap(find.text('Previous page'));
     await tester.pumpAndSettle();
@@ -109,6 +126,8 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
     expect(find.text('search-match'), findsOneWidget);
+    expect(find.text('Previous page'), findsNothing);
+    expect(find.text('Next'), findsNothing);
     expect(link.requests.last.variables['after'], isNull);
     expect(link.requests.last.variables['filter'], {
       'username': {'includesInsensitive': 'search'},
