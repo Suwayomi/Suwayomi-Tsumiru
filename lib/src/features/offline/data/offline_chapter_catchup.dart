@@ -378,8 +378,9 @@ Future<bool> _syncAndReconcile(
         container,
         mangaId,
         newlyReadChapterIds: newlyRead,
-      ))
+      )) {
         allSynced = false;
+      }
     } catch (e) {
       // Never reconcile on a failed fetch — evictions must not run against a
       // list the server didn't actually give us.

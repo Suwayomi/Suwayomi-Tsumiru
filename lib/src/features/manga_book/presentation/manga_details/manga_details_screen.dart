@@ -539,6 +539,21 @@ class MultiSelectPopupButton extends StatelessWidget {
           },
           child: Text(context.l10n.selectInBetween),
         ),
+        PopupMenuItem(
+          onTap: () {
+            final chapterList = [...?filteredChapterList.value];
+            final selectedIds = selectedChapters.value.keys.toSet();
+            final anchorIndex =
+                chapterList.indexWhere((c) => selectedIds.contains(c.id));
+            if (anchorIndex < 0) return;
+            selectedChapters.value = {
+              ...selectedChapters.value,
+              for (int i = anchorIndex + 1; i < chapterList.length; i++)
+                chapterList[i].id: chapterList[i],
+            };
+          },
+          child: Text(context.l10n.selectBelow),
+        ),
       ],
     );
   }

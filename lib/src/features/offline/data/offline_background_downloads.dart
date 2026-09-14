@@ -121,11 +121,36 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
   );
 }
 
+/// Settle on-disk chapter files against the catalog at launch, BEFORE the launch
+/// reconcile and catch-up run. Android reaches this through the background
+/// worker's launch replay (ordered ahead of reconcile in `main`); every other
+/// platform has no replay at all, so without this a chapter whose commit landed
+/// but whose catalog write didn't would be seen as missing and downloaded all
+/// over again, and files left by a crashed delete would never be swept.
+///
+/// Split out of [initOfflineDownloads] so the launch path can order recovery
+/// ahead of the reconcile pass (which must see post-recovery device state),
+/// mirroring Android's replay-before-reconcile ordering. Depends only on the
+/// database and page store — no coordinator — so it is safe to run this early,
+/// before the download pump.
+Future<void> recoverDiskAtLaunch(ProviderContainer container) async {
+  if (!container.read(offlineActiveProvider)) return;
+  // On Android the foreground-service worker's replay owns recovery.
+  if (isAndroidNative) return;
+  await recoverChaptersOnDisk(
+    db: container.read(offlineDatabaseProvider),
+    store: container.read(offlinePageStoreProvider),
+  );
+}
+
 /// Resume offline downloads at launch. Chapters left `downloading` by a previous
 /// run (the in-memory loop doesn't survive a process death) are stranded; the
 /// pump resumes them one at a time, re-fetching only pages not already on disk.
 /// Chapters previously marked `error` get one fresh attempt — most past errors
 /// were the stale-token 401s the run-time-auth engine now avoids.
+///
+/// Disk recovery is NOT done here — it runs earlier via [recoverDiskAtLaunch],
+/// which the launch path invokes before the reconcile pass. This is pump-only.
 Future<void> initOfflineDownloads(ProviderContainer container) async {
   if (!container.read(offlineActiveProvider)) return;
   // On Android the foreground-service worker owns downloads (see the corruption
@@ -134,16 +159,6 @@ Future<void> initOfflineDownloads(ProviderContainer container) async {
   if (isAndroidNative) return;
   final coord = container.read(offlineDownloadCoordinatorProvider);
   if (coord == null) return;
-  final db = container.read(offlineDatabaseProvider);
-  // Settle disk against the catalog BEFORE anything resumes. Android reaches
-  // this through the worker's launch replay; every other platform has no
-  // replay at all, so without this a chapter whose commit landed but whose
-  // catalog write didn't would be downloaded all over again, and files left by
-  // a crashed delete would never be swept.
-  await recoverChaptersOnDisk(
-    db: db,
-    store: container.read(offlinePageStoreProvider),
-  );
   // `error` is terminal: this used to promote every errored chapter on each
   // launch, retrying forever. The user retries from the save button.
   await coord.pumpDownloads();
