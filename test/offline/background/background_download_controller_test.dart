@@ -171,6 +171,7 @@ void main() {
               notices.add(reason);
               silentNotices.add(silent);
             },
+            reconcileSchedule: () async {},
           ),
         ),
         offlineDatabaseProvider.overrideWithValue(db),

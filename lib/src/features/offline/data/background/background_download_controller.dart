@@ -67,6 +67,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     bool Function()? identityAllowed,
     DateTime Function()? now,
     Timer Function(Duration, void Function())? timer,
+    Future<void> Function()? reconcileSchedule,
   }) : _gateway = gateway ?? ForegroundServiceGateway(),
        _isAndroid = isAndroid ?? (() => Platform.isAndroid),
        _connectivity = connectivity ?? Connectivity().checkConnectivity,
@@ -76,7 +77,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
        _publishQueueOverride = publishQueue,
        _identityAllowedOverride = identityAllowed,
        _now = now ?? DateTime.now,
-       _timer = timer ?? Timer.new;
+       _timer = timer ?? Timer.new,
+       _reconcileSchedule = reconcileSchedule ?? reconcileBackgroundSchedule;
 
   final ForegroundServiceGateway _gateway;
   final bool Function() _isAndroid;
@@ -95,6 +97,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
             _ref.read(sharedPreferencesProvider),
           ).identityAuthorized);
   final Timer Function(Duration, void Function()) _timer;
+  final Future<void> Function() _reconcileSchedule;
   int _recoveryEpoch = 0;
   Future<void> _identityTail = Future.value();
   Future<void> _mutationTail = Future.value();
@@ -527,7 +530,7 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     } finally {
       try {
         await state.setIdentityChanging(false);
-        await reconcileBackgroundSchedule();
+        await _reconcileSchedule();
       } finally {
         _suppressRestarts = false;
         finished.complete();
