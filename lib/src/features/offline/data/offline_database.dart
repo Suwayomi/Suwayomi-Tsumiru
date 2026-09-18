@@ -1212,6 +1212,26 @@ class OfflineDatabase extends _$OfflineDatabase {
     await delete(offlineMangas).go();
   });
 
+  /// Restores the server-supplied [inLibraryAt] timestamp for manga whose
+  /// local row was incorrectly stamped '0' by a previous partial library
+  /// fetch. Only rows that currently carry the '0' sentinel are touched; rows
+  /// with a real timestamp (or NULL, meaning "synced before the column
+  /// existed") are left unchanged.
+  ///
+  /// Must be called with values from the COMPLETE library fetch before
+  /// [markNotInLibrary] so that genuinely-present manga are never stamped.
+  Future<void> restoreLibraryTimestamps(
+    Map<int, String> inLibraryAtById,
+  ) => batch((b) {
+    for (final entry in inLibraryAtById.entries) {
+      b.update(
+        offlineMangas,
+        OfflineMangasCompanion(inLibraryAt: Value(entry.value)),
+        where: (t) => t.id.equals(entry.key) & t.inLibraryAt.equals('0'),
+      );
+    }
+  });
+
   /// Stamps '0' (explicitly removed) on every catalog manga NOT in
   /// [libraryIds] — the mark half of pruning removed-from-library manga.
   /// [purgeRemovedLibraryManga] then deletes the ones with nothing
