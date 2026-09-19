@@ -6,12 +6,26 @@
 
 import 'package:drift/drift.dart';
 
+import '../../../utils/crash/diagnostics.dart';
 import '../../../utils/logger/logger.dart';
 import 'offline_types.dart';
 
 export 'offline_types.dart';
 
 part 'offline_database.g.dart';
+
+/// Sentinel written to [OfflineMangas.inLibraryAt] to mean "explicitly
+/// removed from the library" — distinct from NULL ("synced before the column
+/// existed", still counts as present) and from a real server timestamp.
+///
+/// Deliberately NOT '0': the server itself can and does report a genuine
+/// `inLibraryAt` of literal "0" for manga that predate it tracking that
+/// field (still very much in-library) — using '0' as this sentinel made that
+/// indistinguishable from an actual removal, permanently hiding such manga
+/// from [OfflineDatabase.libraryManga] no matter how many times the library
+/// synced. A real epoch timestamp is never negative, so '-1' cannot collide
+/// with anything the server sends.
+const kLibraryRemovedSentinel = '-1';
 
 /// Library manga mirrored for offline browsing. Keyed by the server's stable
 /// manga id.
@@ -439,6 +453,17 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineChapters.serverFetchAttempts,
         );
       }
+      // No backfill for the '0' -> kLibraryRemovedSentinel sentinel change:
+      // a blanket rewrite can't tell a genuine past removal apart from a
+      // genuine server-sent literal "0" any better than the old code could,
+      // so it would just move the same ambiguity onto a fresh column value —
+      // and a mass rewrite creates a window where purgeNonLibraryManga can
+      // delete a real library manga's row before the next sync confirms
+      // membership. Left alone, an old '0' row already reads as "present"
+      // under the new filter (`!= kLibraryRemovedSentinel`), and if it was a
+      // genuine removal, the very next complete-library sync's
+      // markNotInLibrary re-stamps it to the new sentinel unconditionally —
+      // no repair pass required either way.
     },
   );
 
@@ -1193,10 +1218,13 @@ class OfflineDatabase extends _$OfflineDatabase {
 
   Future<List<OfflineManga>> libraryManga() =>
       (select(offlineMangas)
-            // '0' means explicitly removed (see markNotInLibrary) — those rows
-            // survive only for their downloads and must not resurface here.
+            // kLibraryRemovedSentinel means explicitly removed (see
+            // markNotInLibrary) — those rows survive only for their downloads
+            // and must not resurface here.
             ..where(
-              (t) => t.inLibraryAt.equals('0').not() | t.inLibraryAt.isNull(),
+              (t) =>
+                  t.inLibraryAt.equals(kLibraryRemovedSentinel).not() |
+                  t.inLibraryAt.isNull(),
             )
             ..orderBy([(t) => OrderingTerm(expression: t.title)]))
           .get();
@@ -1213,28 +1241,78 @@ class OfflineDatabase extends _$OfflineDatabase {
   });
 
   /// Restores the server-supplied [inLibraryAt] timestamp for manga whose
-  /// local row was incorrectly stamped '0' by a previous partial library
-  /// fetch. Only rows that currently carry the '0' sentinel are touched; rows
-  /// with a real timestamp (or NULL, meaning "synced before the column
-  /// existed") are left unchanged.
+  /// local row was incorrectly stamped [kLibraryRemovedSentinel] by a
+  /// previous partial library fetch. Only rows that currently carry the
+  /// sentinel are touched; rows with a real timestamp (or NULL, meaning
+  /// "synced before the column existed") are left unchanged.
+  ///
+  /// Since the sentinel is '-1' (never a real server value — see
+  /// [kLibraryRemovedSentinel]), every row this touches gets genuinely
+  /// restored, INCLUDING manga whose server value is literally "0" (manga
+  /// that predate the server tracking this field) — those used to collide
+  /// with the old '0' sentinel and could never be repaired.
   ///
   /// Must be called with values from the COMPLETE library fetch before
   /// [markNotInLibrary] so that genuinely-present manga are never stamped.
   Future<void> restoreLibraryTimestamps(
     Map<int, String> inLibraryAtById,
-  ) => batch((b) {
-    for (final entry in inLibraryAtById.entries) {
-      b.update(
-        offlineMangas,
-        OfflineMangasCompanion(inLibraryAt: Value(entry.value)),
-        where: (t) => t.id.equals(entry.key) & t.inLibraryAt.equals('0'),
-      );
+  ) async {
+    if (inLibraryAtById.isNotEmpty) {
+      final ids = inLibraryAtById.keys.toSet();
+      final sentinelRows =
+          await (select(offlineMangas)..where(
+                (t) =>
+                    t.id.isIn(ids) &
+                    t.inLibraryAt.equals(kLibraryRemovedSentinel),
+              ))
+              .get();
+      if (sentinelRows.isNotEmpty) {
+        final restored = <int>[];
+        // Only possible if the server itself somehow sent our own sentinel
+        // value — never expected in practice, but worth a distinct name if
+        // it ever happens rather than silently behaving like a restore.
+        final serverSentSentinel = <int>[];
+        for (final row in sentinelRows) {
+          final serverValue = inLibraryAtById[row.id];
+          if (serverValue == kLibraryRemovedSentinel) {
+            serverSentSentinel.add(row.id);
+          } else {
+            restored.add(row.id);
+          }
+        }
+        if (restored.isNotEmpty) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-sync: '
+            'restore-library-timestamp mangaIds(${restored.length})='
+            '[${restored.join(',')}]\n',
+          );
+        }
+        if (serverSentSentinel.isNotEmpty) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-sync: '
+            'server-sent-removal-sentinel '
+            'mangaIds(${serverSentSentinel.length})='
+            '[${serverSentSentinel.join(',')}]\n',
+          );
+        }
+      }
     }
-  });
+    await batch((b) {
+      for (final entry in inLibraryAtById.entries) {
+        b.update(
+          offlineMangas,
+          OfflineMangasCompanion(inLibraryAt: Value(entry.value)),
+          where: (t) =>
+              t.id.equals(entry.key) &
+              t.inLibraryAt.equals(kLibraryRemovedSentinel),
+        );
+      }
+    });
+  }
 
-  /// Stamps '0' (explicitly removed) on every catalog manga NOT in
-  /// [libraryIds] — the mark half of pruning removed-from-library manga.
-  /// [purgeRemovedLibraryManga] then deletes the ones with nothing
+  /// Stamps [kLibraryRemovedSentinel] (explicitly removed) on every catalog
+  /// manga NOT in [libraryIds] — the mark half of pruning removed-from-library
+  /// manga. [purgeRemovedLibraryManga] then deletes the ones with nothing
   /// downloaded. Distinct from NULL, which means "synced before the column
   /// existed" and must keep counting as a library entry.
   ///
@@ -1242,15 +1320,83 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// ([getAllLibraryMangas], which paginates to exhaustion and returns null on
   /// any partial/failed page): an absent manga is then genuinely removed, so a
   /// kept series left server-side is correctly pruned rather than protected.
-  Future<int> markNotInLibrary(Set<int> libraryIds) =>
-      (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds))).write(
-        const OfflineMangasCompanion(inLibraryAt: Value('0')),
+  Future<int> markNotInLibrary(Set<int> libraryIds) async {
+    // Diagnose, by PRIOR state, every row about to transition to the
+    // removed sentinel — a large or unexpected batch here (especially
+    // realToRemoved) is the first sign of a wrongly-scoped/truncated fetch
+    // treating present manga as removed, well before it shows up as a stuck
+    // offline-library gap days later. `alreadyRemoved` rows are a no-op
+    // (nothing changes) so they're counted but not re-logged individually.
+    final candidates = await (select(
+      offlineMangas,
+    )..where((t) => t.id.isNotIn(libraryIds))).get();
+    final nullToRemoved = <int>[];
+    final realToRemoved = <int>[];
+    var alreadyRemoved = 0;
+    for (final row in candidates) {
+      final v = row.inLibraryAt;
+      if (v == null) {
+        nullToRemoved.add(row.id);
+      } else if (v == kLibraryRemovedSentinel) {
+        alreadyRemoved++;
+      } else {
+        realToRemoved.add(row.id);
+      }
+    }
+    if (nullToRemoved.isNotEmpty || realToRemoved.isNotEmpty) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-sync: '
+        'mark-not-in-library libraryCount=${libraryIds.length} '
+        'nullToRemoved(${nullToRemoved.length})=[${nullToRemoved.join(',')}] '
+        'realToRemoved(${realToRemoved.length})=[${realToRemoved.join(',')}] '
+        'alreadyRemoved=$alreadyRemoved\n',
       );
+    }
+    return (update(
+      offlineMangas,
+    )..where((t) => t.id.isNotIn(libraryIds))).write(
+      const OfflineMangasCompanion(inLibraryAt: Value(kLibraryRemovedSentinel)),
+    );
+  }
 
-  /// Deletes explicitly-removed manga with nothing downloaded. Scoped to the
-  /// '0' mark so it can run concurrently with the per-manga metadata upserts
-  /// of the same sync pass without racing legacy NULL rows they haven't
-  /// stamped yet.
+  /// One-shot diagnostic snapshot of the whole catalog's [OfflineMangas.
+  /// inLibraryAt] state — total rows, how many carry a real server
+  /// timestamp (including a literal "0" — a legitimate server value, not the
+  /// sentinel, tracked separately as [zero]), how many are legacy NULL
+  /// (synced before the column existed), and how many carry
+  /// [kLibraryRemovedSentinel]. Logged as the before/after baseline around a
+  /// prune pass so the transition counts in [markNotInLibrary] /
+  /// [restoreLibraryTimestamps] can be read against a known total instead of
+  /// in isolation.
+  Future<void> logLibraryStampCounters(String label) async {
+    final rows = await select(offlineMangas).get();
+    var real = 0;
+    var nullCount = 0;
+    var zero = 0;
+    var removed = 0;
+    for (final row in rows) {
+      final v = row.inLibraryAt;
+      if (v == null) {
+        nullCount++;
+      } else if (v == kLibraryRemovedSentinel) {
+        removed++;
+      } else if (v == '0') {
+        zero++;
+      } else {
+        real++;
+      }
+    }
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-sync: '
+      'library-stamp-counters($label) total=${rows.length} real=$real '
+      'null=$nullCount zero=$zero removed=$removed\n',
+    );
+  }
+
+  /// Deletes explicitly-removed manga with nothing downloaded. Scoped to
+  /// [kLibraryRemovedSentinel] so it can run concurrently with the per-manga
+  /// metadata upserts of the same sync pass without racing legacy NULL rows
+  /// they haven't stamped yet.
   Future<int> purgeRemovedLibraryManga() => transaction(() async {
     final withDeviceContent = selectOnly(offlineChapters)
       ..addColumns([offlineChapters.mangaId])
@@ -1261,12 +1407,49 @@ class OfflineDatabase extends _$OfflineDatabase {
         await (selectOnly(offlineMangas)
               ..addColumns([offlineMangas.id])
               ..where(
-                offlineMangas.inLibraryAt.equals('0') &
+                offlineMangas.inLibraryAt.equals(kLibraryRemovedSentinel) &
                     offlineMangas.id.isNotInQuery(withDeviceContent),
               ))
             .map((r) => r.read(offlineMangas.id)!)
             .get();
+
+    // Manga stamped removed that SURVIVE this purge only because they still
+    // have device content — the "stuck" case: hidden from libraryManga() yet
+    // never deleted, so a wrongly-removed-stamped manga with a keep-rule
+    // lingers invisible indefinitely instead of either resurfacing
+    // (restoreLibraryTimestamps) or disappearing. Logged every pass it
+    // persists, so it's traceable to when it first got stuck.
+    final withDeviceContentAgain = selectOnly(offlineChapters)
+      ..addColumns([offlineChapters.mangaId])
+      ..where(
+        offlineChapters.deviceState.equalsValue(OfflineDeviceState.none).not(),
+      );
+    final stranded =
+        await (selectOnly(offlineMangas)
+              ..addColumns([offlineMangas.id])
+              ..where(
+                offlineMangas.inLibraryAt.equals(kLibraryRemovedSentinel) &
+                    offlineMangas.id.isInQuery(withDeviceContentAgain),
+              ))
+            .map((r) => r.read(offlineMangas.id)!)
+            .get();
+    if (stranded.isNotEmpty) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-sync: '
+        'stranded-removed-stamp-with-downloads '
+        'mangaIds=[${stranded.join(',')}] — hidden from the offline library '
+        '(inLibraryAt=$kLibraryRemovedSentinel) but kept on device because '
+        'they still have downloaded content; if a manga lingers here across '
+        'syncs, the last complete library fetch did not carry that id at '
+        'all (see restore-library-timestamp lines above)\n',
+      );
+    }
+
     if (doomed.isEmpty) return 0;
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-sync: '
+      'purge-removed-library-manga mangaIds=[${doomed.join(',')}]\n',
+    );
     // Rows being deleted have no device content, so their chapter and
     // category rows are metadata-only — sweep them too or the catalog
     // grows forever.
@@ -1288,7 +1471,8 @@ class OfflineDatabase extends _$OfflineDatabase {
       );
     return (delete(offlineMangas)..where(
           (t) =>
-              (t.inLibraryAt.isNull() | t.inLibraryAt.equals('0')) &
+              (t.inLibraryAt.isNull() |
+                  t.inLibraryAt.equals(kLibraryRemovedSentinel)) &
               t.id.isNotInQuery(withDeviceContent),
         ))
         .go();

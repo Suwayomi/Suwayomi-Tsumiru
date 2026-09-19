@@ -5,6 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:convert';
+
+import '../../../utils/crash/diagnostics.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/manga_model.dart';
@@ -85,7 +87,17 @@ class OfflineSync {
         unreadCount: manga.unreadCount,
         downloadCount: manga.downloadCount,
         bookmarkCount: manga.bookmarkCount,
-        inLibraryAt: manga.inLibraryAt,
+        // manga.inLibraryAt is a raw server field, populated whenever the
+        // server has ever tracked the manga — it does NOT imply current
+        // membership. A caller can sync a target that isn't in the library
+        // (e.g. OfflineMigrationService.migrate() syncing a metadata-merge
+        // target); trusting the raw value there would let it read back as
+        // "present" from libraryManga(). Force the sentinel whenever the
+        // server says it isn't in the library, regardless of what
+        // inLibraryAt itself contains.
+        inLibraryAt: manga.inLibrary
+            ? manga.inLibraryAt
+            : kLibraryRemovedSentinel,
         latestFetchedAt: manga.latestFetchedChapter?.fetchedAt,
         latestUploadedAt: manga.latestUploadedChapter?.uploadDate,
         lastReadAt: manga.lastReadChapter?.lastReadAt,
@@ -240,21 +252,46 @@ class OfflineSync {
   /// whole catalog.
   ///
   /// [serverLibrary] MUST be the COMPLETE library, not a page of it: this
-  /// stamps '0' on (and [purgeRemovedLibraryManga] then deletes) every off-rule
-  /// series absent from it, so a truncated list silently strands and deletes
-  /// real library manga. Its only caller feeds it `getAllLibraryMangas`, which
-  /// now paginates to exhaustion and returns null (never a short list) on any
-  /// partial/failed fetch — so a null there means this never runs at all.
+  /// stamps [kLibraryRemovedSentinel] on (and [purgeRemovedLibraryManga] then
+  /// deletes) every off-rule series absent from it, so a truncated list
+  /// silently strands and deletes real library manga. Its only caller feeds
+  /// it `getAllLibraryMangas`, which now paginates to exhaustion and returns
+  /// null (never a short list) on any partial/failed fetch — so a null there
+  /// means this never runs at all.
   Future<void> pruneRemovedLibraryManga(List<MangaDto> serverLibrary) =>
       _track(() => _pruneRemovedLibraryManga(serverLibrary));
 
   Future<void> _pruneRemovedLibraryManga(List<MangaDto> serverLibrary) async {
     if (!_current || serverLibrary.isEmpty) return;
+    // Classify what THIS complete server fetch reports before touching
+    // anything — total/real/zero/empty over the server's own inLibraryAt
+    // values, independent of whatever the local catalog currently holds.
+    var serverReal = 0;
+    var serverZero = 0;
+    var serverEmpty = 0;
+    for (final m in serverLibrary) {
+      final v = m.inLibraryAt;
+      if (v == '0') {
+        serverZero++;
+      } else if (v.isEmpty) {
+        serverEmpty++;
+      } else {
+        serverReal++;
+      }
+    }
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-sync: '
+      'prune-server-scan total=${serverLibrary.length} real=$serverReal '
+      'zero=$serverZero empty=$serverEmpty\n',
+    );
+    await _db.logLibraryStampCounters('before');
     // Repair stale removed-sentinel stamps on manga that are still in the
     // library: a previous truncated fetch may have marked them as removed.
     // The real server timestamp is available from the complete fetch, so we
     // restore it exactly (not just clear to null) before stamping the
-    // genuinely absent.
+    // genuinely absent. Also fixes manga whose real server value happens to
+    // be literal "0" — kLibraryRemovedSentinel is '-1', not '0', so it no
+    // longer collides with that.
     await _db.restoreLibraryTimestamps({
       for (final m in serverLibrary) m.id: m.inLibraryAt,
     });
@@ -262,6 +299,8 @@ class OfflineSync {
     await _db.markNotInLibrary({for (final m in serverLibrary) m.id});
     if (!_current) return;
     await _db.purgeRemovedLibraryManga();
+    if (!_current) return;
+    await _db.logLibraryStampCounters('after');
     if (_current) await onSynced?.call();
   }
 

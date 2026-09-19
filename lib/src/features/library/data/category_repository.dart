@@ -149,9 +149,10 @@ class CategoryRepository {
   // Paginated to exhaustion. This fetch drives BOTH the offline metadata sync
   // (per-manga upsert) and the prune (markNotInLibrary + purgeRemovedLibrary):
   // a single truncated page would leave every series past it unsynced — its
-  // inLibraryAt frozen — AND, for off-rule series, stamp it '0' ("removed") and
-  // delete it. The server paginates the `mangas` list (the notification feed
-  // pages the sibling `chapters` query the same way), and the old single-shot
+  // inLibraryAt frozen — AND, for off-rule series, stamp the removed sentinel
+  // (kLibraryRemovedSentinel) and delete it. The server paginates the
+  // `mangas` list (the notification feed pages the sibling `chapters` query
+  // the same way), and the old single-shot
   // call kept only the first page while silently discarding pageInfo/totalCount.
   // A partial or failed page therefore yields null — treated by the caller as a
   // failed fetch (no sync, no prune, offline fallback) — never a short list.
