@@ -133,12 +133,28 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
   return read.take(slots - 1).map((c) => c.id).toSet();
 }
 
+/// Why [applySafetyNets] evicted a given chapter — the first bucket that
+/// claimed it, in the same precedence order the function evaluates them.
+enum EvictReason {
+  /// Not wanted by the manga's keep-rule (outside the nUnread window, or the
+  /// rule is `off`/`allUnread` and excludes it) and not pinned/protected.
+  notDesired,
+
+  /// Non-pinned and older than the configured `keepDays` time net.
+  timeNet,
+
+  /// Non-pinned and evicted oldest-first to bring retained bytes under the
+  /// configured storage cap.
+  storageCap,
+}
+
 /// Decide evictions over the currently-downloaded set, honoring precedence:
 /// pinned > safety-nets > rule. Pinned chapters are never evicted.
 /// [protected] chapters (read this session) dodge the rule eviction only —
 /// the time and storage nets still apply, since those exist for space
 /// pressure, not the rolling unread window.
-({Set<int> evict, bool overCapWarning}) applySafetyNets({
+({Set<int> evict, Map<int, EvictReason> reasons, bool overCapWarning})
+    applySafetyNets({
   required List<OfflineChapter> downloaded,
   required Set<int> desired,
   required SafetyNetConfig nets,
@@ -146,11 +162,16 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
   Set<int> protected = const {},
 }) {
   final evict = <int>{};
+  // First reason a chapter is added to `evict` wins — a chapter can match
+  // more than one bucket (e.g. both outside the rule window AND over the
+  // time net), but only the first one actually explains why it left.
+  final reasons = <int, EvictReason>{};
 
   // 1) Not wanted by any rule and not pinned.
   for (final c in downloaded) {
     if (!c.pinned && !desired.contains(c.id) && !protected.contains(c.id)) {
       evict.add(c.id);
+      reasons[c.id] = EvictReason.notDesired;
     }
   }
 
@@ -162,6 +183,7 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
           dt != null &&
           now.difference(dt).inDays > nets.keepDays) {
         evict.add(c.id);
+        reasons.putIfAbsent(c.id, () => EvictReason.timeNet);
       }
     }
   }
@@ -186,6 +208,7 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
     while (retainedBytes > nets.storageCapBytes && i < candidates.length) {
       retainedBytes -= candidates[i].bytes;
       evict.add(candidates[i].id);
+      reasons.putIfAbsent(candidates[i].id, () => EvictReason.storageCap);
       i++;
     }
     if (retainedBytes > nets.storageCapBytes) {
@@ -193,5 +216,5 @@ Set<int> readChaptersInDeleteWindow(List<OfflineChapter> chapters, int slots) {
     }
   }
 
-  return (evict: evict, overCapWarning: overCapWarning);
+  return (evict: evict, reasons: reasons, overCapWarning: overCapWarning);
 }

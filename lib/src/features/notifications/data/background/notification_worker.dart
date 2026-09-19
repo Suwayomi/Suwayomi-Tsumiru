@@ -281,6 +281,7 @@ Future<bool> runNewChapters(
   }
 
   // 3. Detect.
+  final allowedMangaIds = config.allowedMangaIds(mangaCategories);
   final result = detectNewChapters(
     candidates: [
       for (final n in all)
@@ -292,7 +293,7 @@ Future<bool> runNewChapters(
         ),
     ],
     watermark: watermark,
-    allowedMangaIds: config.allowedMangaIds(mangaCategories),
+    allowedMangaIds: allowedMangaIds,
   );
 
   // The notify list this pass will actually surface, per manga. Paired with the
@@ -309,6 +310,39 @@ Future<bool> runNewChapters(
     'candidates=${all.length} groups=${result.groups.length} '
     'notify=[$notifyList]\n',
   );
+
+  // Per-candidate exclusion breakdown: every server candidate that did NOT
+  // make it into a notify group, and why — mirrors the download side's
+  // `droppedOutOfScope` line. `zeroFetchedAt` is called out across ALL
+  // candidates (notified or not): the server's fetchedAt is the sole "is this
+  // new" signal, so a chapter arriving with fetchedAt=0 never advances the
+  // watermark and is a data-quality symptom worth flagging on its own even
+  // when it still got notified this pass.
+  final notifiedIds = {
+    for (final g in result.groups) for (final c in g.chapters) c.id,
+  };
+  final alreadyNotified = <int>[];
+  final outOfCategoryScope = <int>[];
+  final zeroFetchedAt = <int>[];
+  for (final n in all) {
+    if (n.fetchedAt == 0) zeroFetchedAt.add(n.id);
+    if (notifiedIds.contains(n.id)) continue;
+    if (watermark.recent.containsKey(n.id)) {
+      alreadyNotified.add(n.id);
+    } else if (allowedMangaIds != null && !allowedMangaIds.contains(n.mangaId)) {
+      outOfCategoryScope.add(n.id);
+    }
+  }
+  if (alreadyNotified.isNotEmpty ||
+      outOfCategoryScope.isNotEmpty ||
+      zeroFetchedAt.isNotEmpty) {
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] offline-notify: excluded '
+      'alreadyNotified=[${alreadyNotified.join(',')}] '
+      'outOfCategoryScope=[${outOfCategoryScope.join(',')}] '
+      'zeroFetchedAt=[${zeroFetchedAt.join(',')}]\n',
+    );
+  }
 
   if (result.groups.isEmpty) {
     await _withNotificationOwner(
@@ -422,7 +456,7 @@ Future<bool> _runDownloadResolution(
     // by the category filter, not this one) may have just surfaced them. A
     // non-empty list for a series you expect kept means the spec — a foreground
     // snapshot built from libraryManga() — is stale or dropped that manga while
-    // it still carries a rule (e.g. inLibraryAt='0' desync). This is the exact
+    // it still carries a rule (e.g. a removed-sentinel desync). This is the exact
     // signature of "notified but never downloaded".
     final droppedOutOfScope = <int, int>{
       for (final n in all)

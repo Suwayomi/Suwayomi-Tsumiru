@@ -131,8 +131,15 @@ class OfflineReconciler {
       },
     );
 
-    // Merge orphaned ids into the evict set.
+    // Merge orphaned ids into the evict set. `evictReasons` tracks WHY each
+    // chapter left — orphaned/RC7 additions below always win over whatever
+    // (if anything) applySafetyNets already attributed, since they are
+    // stronger, unconditional reasons.
     final toEvict = {...ev.evict, ...orphanedIds};
+    final evictReasons = <int, String>{
+      for (final entry in ev.reasons.entries) entry.key: entry.value.name,
+      for (final id in orphanedIds) id: 'orphaned',
+    };
 
     // RC7: Sync-read eviction — for chapters that transitioned from unread to
     // read during this sync (e.g. read in WebUI), apply the local
@@ -157,6 +164,7 @@ class OfflineReconciler {
             !sessionProtected.contains(c.id) &&
             !readProtected.contains(c.id)) {
           toEvict.add(c.id);
+          evictReasons[c.id] = 'sync-read';
         }
       }
     }
@@ -280,6 +288,23 @@ class OfflineReconciler {
       );
     }
 
+    if (toEvict.isNotEmpty) {
+      // Group by reason so a big time-net/storage-cap sweep is one line, not
+      // one per chapter — but every evicted id is still named, so "why did
+      // chapter X leave the device" is always answerable from this log.
+      final byReason = <String, List<int>>{};
+      for (final id in toEvict) {
+        (byReason[evictReasons[id] ?? 'unknown'] ??= []).add(id);
+      }
+      final byReasonStr = byReason.entries
+          .map((e) => '${e.key}=[${e.value.join(',')}]')
+          .join(' ');
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-reconcile: '
+        'evict mangaId=$mangaId keepRule=${manga.keepRule.name} '
+        'keepN=${manga.keepUnreadCount} $byReasonStr\n',
+      );
+    }
     for (final id in toEvict) {
       await onEvict(id);
     }
