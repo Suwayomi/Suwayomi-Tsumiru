@@ -184,7 +184,21 @@ Future<bool> _runWorkerObligations(OfflineRead read) async {
     final lock = alreadyOwned
         ? null
         : BackgroundDownloadLock(File('${paths.baseDir}/.bg_lock'));
-    if (lock != null && !await lock.acquire('handoff')) return false;
+    // The worker holds this while it downloads, and a single no-wait attempt
+    // made a foreground save fail whenever it landed mid-chapter — reported,
+    // wrongly, as an account permission problem. Ask the worker to yield and
+    // give it a few seconds, the way the controller's own ownership path does.
+    if (lock != null) {
+      var acquired = await lock.acquire('handoff');
+      if (!acquired) await lock.requestYield();
+      for (var i = 0; !acquired && i < 50; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        if (!current()) return false;
+        acquired = await lock.acquire('handoff');
+        if (!acquired) await lock.requestYield();
+      }
+      if (!acquired) return false;
+    }
     try {
       // Re-open INSIDE the lock: open() reloads the prefs cache, so the read
       // below cannot predate a worker write that slipped in before acquire.

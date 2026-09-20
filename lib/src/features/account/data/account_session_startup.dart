@@ -238,7 +238,7 @@ class AccountSessionStartup {
   Future<void> _resume() async {
     if (!_current ||
         !container.read(offlineActiveProvider) ||
-        !downloadPermissionAllowed(container.read)) {
+        !await resolvedDownloadPermissionAllowed(container.read)) {
       return;
     }
     if (isAndroidNative) {
@@ -249,12 +249,19 @@ class AccountSessionStartup {
                 .read(backgroundDownloadControllerProvider)
                 .replayAtLaunch(),
           );
-      if (!_current || !downloadPermissionAllowed(container.read)) return;
+      if (!_current ||
+          !await resolvedDownloadPermissionAllowed(container.read)) {
+        return;
+      }
     }
     await reconcileAllAtLaunch(container);
-    if (!_current || !downloadPermissionAllowed(container.read)) return;
+    if (!_current || !await resolvedDownloadPermissionAllowed(container.read)) {
+      return;
+    }
     await runKeepRuleCatchUp(container);
-    if (!_current || !downloadPermissionAllowed(container.read)) return;
+    if (!_current || !await resolvedDownloadPermissionAllowed(container.read)) {
+      return;
+    }
     if (isAndroidNative) {
       await container
           .read(backgroundDownloadControllerProvider)

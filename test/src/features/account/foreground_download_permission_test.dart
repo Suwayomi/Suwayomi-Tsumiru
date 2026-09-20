@@ -146,6 +146,34 @@ void main() {
     },
   );
 
+  test('a stale settled snapshot cannot fail a verified download', () async {
+    final repository = FakeAccountRepository(user: _user(true));
+    final container = ProviderContainer(
+      retry: (_, _) => null,
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        authTypeKeyProvider.overrideWithValue(AuthType.uiLogin),
+        authCredentialsStoreProvider.overrideWith(_Credentials.new),
+        accountRepositoryProvider.overrideWithValue(repository),
+        // What the real provider reports while any refresh is in flight —
+        // and downloads keep one in flight almost constantly. Verification
+        // must judge on the access it just fetched, or a save fails at
+        // random with "Account permissions could not be verified".
+        settledAccountAccessProvider.overrideWithValue(
+          AccountAccess(capability: AccountCapability.unknown),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(authCredentialsStoreProvider.future);
+    container.read(authCredentialsStoreProvider.notifier).activateSession();
+    await verifyDownloadPermission(container.read);
+    expect(
+      CatchupStateStore(preferences).downloadPermissionPaused('A'),
+      isFalse,
+    );
+  });
+
   test(
     'precisely unsupported account capability permits legacy downloading',
     () async {

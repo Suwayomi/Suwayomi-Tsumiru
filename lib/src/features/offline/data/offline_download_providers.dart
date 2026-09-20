@@ -306,9 +306,15 @@ Future<void> saveChapterToDevice(WidgetRef ref, int chapterId) {
         ).addChaptersBatchToDownloadQueue([chapterId]);
         if (!current()) return;
       }
-      if (!await adoptWorkerObligations(read)) {
-        throw const AccountPermissionUnavailable();
-      }
+      // Best effort. Adoption pulls whatever the background worker still owes
+      // into the foreground, which needs the storage lock — and the worker
+      // holds that for as long as it is downloading, releasing it only when
+      // its session drains. Failing the save on that made a manual save fail
+      // precisely while downloads were running, reported as a permission
+      // problem. The save does not depend on it: the chapter is queued in the
+      // catalogue either way, and the worker keeps what it already owed.
+      // Permission is enforced above, by verifyDownloadPermission.
+      await adoptWorkerObligations(read);
       final queuedGeneration = await db.transaction(() async {
         final latest = await db.chapterById(chapterId);
         if (!current() ||
