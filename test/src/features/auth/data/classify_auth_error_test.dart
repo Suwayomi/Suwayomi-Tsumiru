@@ -61,6 +61,13 @@ void main() {
       expect(result.kind, TestConnectionFailureKind.invalidCredentials);
     });
 
+    test('unverified browser session is not labelled a wrong password', () {
+      expect(
+        classifyAuthError(const SimpleLoginSessionFailure()).kind,
+        TestConnectionFailureKind.browserSession,
+      );
+    });
+
     test('SimpleLoginShapeFailure → unexpectedShape (with detail)', () {
       final result = classifyAuthError(SimpleLoginShapeFailure('odd body'));
       expect(result.kind, TestConnectionFailureKind.unexpectedShape);

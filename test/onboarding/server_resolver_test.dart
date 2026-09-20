@@ -518,6 +518,19 @@ void main() {
   });
 
   group('authProbeAuthorized — verifies a credential against @RequireAuth', () {
+    for (final response in [
+      http.Response('<html>Sign in</html>', 200),
+      http.Response('', 303),
+      http.Response('server failed', 500),
+      http.Response('{"data":{"downloadStatus":null}}', 200),
+      http.Response('{"data":{"downloadStatus":{"__typename":"DownloadStatus"}},"errors":[{"message":"failed"}]}', 200),
+    ]) {
+      test('rejects ${response.statusCode}: ${response.body}', () async {
+        final client = MockClient((_) async => response);
+        expect(await authProbeAuthorized('http://h:4567', client: client), isFalse);
+      });
+    }
+
     test('a credential the @RequireAuth gate rejects → not authorised',
         () async {
       // Server honours ONLY the bearer (models ui_login): a cookie gets

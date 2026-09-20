@@ -1320,6 +1320,7 @@
   "authTestConnectionFailedNetwork": "Couldn't reach server. Check URL and connectivity.",
   "authTestConnectionFailedAuth": "Login failed. Check username and password.",
   "authTestConnectionFailedMode": "Server may not be in the selected auth mode. Check the server's authMode setting.",
+  "authBrowserSessionUnverified": "The server did not confirm your browser session. Check the authentication mode and connection. For Simple Login, serve Tsumiru from the same site as your server.",
   "authTestConnectionFailedShape": "Server didn't respond as expected. Is your URL pointing at the Suwayomi API?",
   "authTestConnectionFailedTls": "TLS handshake failed. Common causes: 1) Server is plain HTTP — switch your URL to http://. 2) Public hostname behind a reverse proxy — turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
   "authSessionExpired": "Session expired — sign in again.",

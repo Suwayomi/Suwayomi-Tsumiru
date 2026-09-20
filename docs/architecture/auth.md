@@ -33,6 +33,31 @@ Pluggable authentication for all traffic (queries, mutations, subscriptions, ima
 
 `AuthType` is stored in SharedPreferences (`DBKeys.authType`); username in SharedPreferences (`DBKeys.authUsername`). **Credentials go to `flutter_secure_storage`**: `auth.password`, `auth.simple.cookie`, `auth.ui.accessToken`, `auth.ui.refreshToken`, `auth.ui.accountBinding`, `auth.basic.credentials`.
 
+## Browser Simple Login
+
+The browser owns the session cookie; Tsumiru stores a marker rather than the
+cookie value. A successful login page response is not sufficient: before
+saving the marker, the client requires the protected `downloadStatus` query
+to return its expected data without GraphQL errors. Login and verification
+use the same HTTP transport as ordinary server queries.
+
+Server HTTP requests and the web image cache include browser credentials.
+The image cache enables this only for the configured server origin; unrelated
+image URLs retain the default credential policy. Native cookie handling is
+unchanged.
+
+Same-origin deployments work with the browser's default cookie rules. A web
+app and server using the same scheme and hostname on different ports are
+also supported. Javalin's default `SameSite=Lax` cookie does not accompany
+cross-site API requests, such as a public Tsumiru website connecting to a LAN
+IP. Supporting that deployment requires server-side cookie and HTTPS changes
+and remains subject to browser third-party-cookie restrictions. Hosting the
+app and API behind the same origin avoids those dependencies.
+
+A failed session probe reports that the session could not be verified. It
+does not assume that the password is wrong or that the browser blocked a
+cookie; an unexpected response or a connection failure can also cause it.
+
 ## Token lifecycle (ui_login)
 
 - `uiAccessTokenExpiresAt` derived from JWT `exp` on every set; **not persisted** (recomputed on `build()`).

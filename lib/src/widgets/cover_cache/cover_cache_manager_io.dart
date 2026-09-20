@@ -21,7 +21,7 @@ import 'package:path_provider/path_provider.dart';
 /// Covers are small and long-lived, so they get their own store: files under
 /// application-support (durable, app-private) with a cap sized to a large
 /// library instead of a page ring buffer.
-CacheManager createCoverCacheManager() => _CoverCacheManager(
+CacheManager createCoverCacheManager({String? serverOrigin}) => _CoverCacheManager(
       Config(
         'tsumiruCovers',
         stalePeriod: const Duration(days: 90),

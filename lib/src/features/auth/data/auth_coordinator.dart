@@ -25,6 +25,7 @@ import '../../account/domain/account_binding.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
     show authProbeAuthorized, basicAuthConfirms;
+import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'auth_credentials_store.dart';
 import 'auth_state.dart';
@@ -57,6 +58,7 @@ enum TestConnectionFailureKind {
   wrongAuthMode,
   unexpectedShape,
   insecureTransport,
+  browserSession,
 }
 
 /// Maps a thrown error to a typed [TestConnectionFailure]. Used by both
@@ -76,6 +78,11 @@ TestConnectionFailure classifyAuthError(Object e) {
   if (e is SimpleLoginAuthFailure) {
     return const TestConnectionFailure(
       TestConnectionFailureKind.invalidCredentials,
+    );
+  }
+  if (e is SimpleLoginSessionFailure) {
+    return const TestConnectionFailure(
+      TestConnectionFailureKind.browserSession,
     );
   }
   if (e is SimpleLoginShapeFailure) {
@@ -327,13 +334,23 @@ class AuthCoordinator extends _$AuthCoordinator {
     required String username,
     required String password,
   }) async {
-    final client = SimpleLoginClient();
-    return await client.login(
-      serverBaseUrl: serverBaseUrl,
-      username: username,
-      password: password,
-      extraHeaders: ref.read(customHttpHeadersProvider).value,
+    final client = SimpleLoginClient(
+      timeout: Duration(
+        milliseconds:
+            ref.read(serverRequestTimeoutProvider) ??
+            DBKeys.serverRequestTimeout.initial as int,
+      ),
     );
+    try {
+      return await client.login(
+        serverBaseUrl: serverBaseUrl,
+        username: username,
+        password: password,
+        extraHeaders: ref.read(customHttpHeadersProvider).value,
+      );
+    } finally {
+      client.close();
+    }
   }
 
   /// Verifies UI Login credentials by firing the `login` mutation.

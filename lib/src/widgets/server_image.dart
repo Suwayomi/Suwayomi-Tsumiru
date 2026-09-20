@@ -8,7 +8,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -330,7 +329,7 @@ class ServerImage extends HookConsumerWidget {
     // must not share the page ring buffer's 200-object cap.
     final cacheManager = isCoverImagePath(imageUrl)
         ? ref.watch(coverCacheManagerProvider)
-        : DefaultCacheManager();
+        : ref.watch(serverPageCacheManagerProvider);
 
     // Covers re-decode from disk within a few frames after any cache clear
     // (tab switch under pressure, background trim). Delaying the shimmer
@@ -406,6 +405,7 @@ class ServerImage extends HookConsumerWidget {
         CroppedImageProvider(
           fetchUrl: fetchUrl,
           cacheKey: cacheKey,
+          cacheManager: cacheManager,
           headers: httpHeaders,
           targetWidth: cacheWidth,
           targetHeight: cacheHeight,
@@ -579,7 +579,7 @@ ImageProvider serverPageImageProvider(
     cacheKey: request.cacheKey,
     cacheManager: isCoverImagePath(imageUrl)
         ? ref.read(coverCacheManagerProvider)
-        : DefaultCacheManager(),
+        : ref.read(serverPageCacheManagerProvider),
     headers: request.headers,
     imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
   );

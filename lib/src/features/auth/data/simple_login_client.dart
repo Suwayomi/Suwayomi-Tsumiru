@@ -6,6 +6,8 @@
 
 import 'package:http/http.dart' as http;
 
+import '../../onboarding/data/server_resolver.dart' show authProbeAuthorized;
+
 import 'simple_login_session_client_io.dart'
     if (dart.library.js_interop) 'simple_login_session_client_web.dart';
 
@@ -31,13 +33,24 @@ class SimpleLoginShapeFailure implements Exception {
   String toString() => 'SimpleLoginShapeFailure: $message';
 }
 
+class SimpleLoginSessionFailure extends SimpleLoginShapeFailure {
+  const SimpleLoginSessionFailure()
+    : super('The server did not confirm the browser session');
+}
+
 /// Talks to Suwayomi-Server's `simple_login` auth mode.
 class SimpleLoginClient {
-  SimpleLoginClient({http.Client? httpClient, bool? browserSession})
-    : _http = httpClient ?? makeSimpleLoginClient(),
-      _browserSession = browserSession ?? browserManagesSession;
+  SimpleLoginClient({
+    http.Client? httpClient,
+    bool? browserSession,
+    this.timeout = const Duration(seconds: 30),
+  }) : _http = httpClient ?? makeSimpleLoginClient(timeout),
+       _browserSession = browserSession ?? browserManagesSession;
 
   final http.Client _http;
+  final Duration timeout;
+
+  void close() => _http.close();
 
   /// True where the browser owns the cookie jar. Injectable so both paths are
   /// testable off the browser.
@@ -72,13 +85,11 @@ class SimpleLoginClient {
         request.headers[entry.key] = entry.value;
       }
     }
-    final response = await http.Response.fromStream(await _http.send(request));
+    final response = await http.Response.fromStream(
+      await _http.send(request),
+    ).timeout(timeout);
 
     if (_browserSession) {
-      // The browser followed the 303 itself and kept the cookie, so neither
-      // the redirect status nor `Set-Cookie` is visible here. What IS visible
-      // is where it landed: rejected credentials re-render the login form,
-      // success lands on the app.
       if (_looksLikeLoginForm(response.body)) {
         throw const SimpleLoginAuthFailure();
       }
@@ -86,6 +97,14 @@ class SimpleLoginClient {
         throw SimpleLoginShapeFailure(
           'unexpected status ${response.statusCode}',
         );
+      }
+      if (!await authProbeAuthorized(
+        serverBaseUrl,
+        client: _http,
+        timeout: timeout,
+        extraHeaders: extraHeaders,
+      )) {
+        throw const SimpleLoginSessionFailure();
       }
       return kBrowserManagedSimpleSession;
     }

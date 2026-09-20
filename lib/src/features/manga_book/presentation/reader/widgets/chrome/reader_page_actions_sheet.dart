@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
@@ -87,7 +88,8 @@ Future<void> showReaderPageActionsSheet({
     for (final index in pageActionIndexes)
       index: serverImageRequest(ref, pages[index]),
   };
-  final manager = cacheManager ?? DefaultCacheManager();
+  final CacheManager manager =
+      cacheManager ?? ref.read(serverPageCacheManagerProvider);
 
   Future<File> resolvePageFile(int index) async {
     if (!current()) throw StateError('Account session changed');

@@ -28,7 +28,13 @@ Future<HttpServer> _basicAuthServer(String expected) async {
       return;
     }
     request.response.headers.contentType = ContentType.json;
-    request.response.write(jsonEncode({'data': {}}));
+    request.response.write(
+      jsonEncode({
+        'data': {
+          'downloadStatus': {'__typename': 'DownloadStatus'},
+        },
+      }),
+    );
     await request.response.close();
   });
   return server;

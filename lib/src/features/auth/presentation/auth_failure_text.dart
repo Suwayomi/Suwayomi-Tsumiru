@@ -14,6 +14,8 @@ import '../data/auth_coordinator.dart';
 /// the Suwayomi API?" on one screen and as a rejected password on another.
 String authFailureText(BuildContext context, TestConnectionFailureKind kind) =>
     switch (kind) {
+      TestConnectionFailureKind.browserSession =>
+        context.l10n.authBrowserSessionUnverified,
       TestConnectionFailureKind.network =>
         context.l10n.authTestConnectionFailedNetwork,
       TestConnectionFailureKind.tls => context.l10n.authTestConnectionFailedTls,

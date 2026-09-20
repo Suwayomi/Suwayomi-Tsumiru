@@ -29,6 +29,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
     required this.fetchUrl,
     required this.cacheKey,
     this.headers,
+    this.cacheManager,
     this.localPath,
     this.threshold = 20,
     this.scale = 1.0,
@@ -44,6 +45,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   /// the byte fetch hits the same [DefaultCacheManager] entry.
   final String cacheKey;
   final Map<String, String>? headers;
+  final CacheManager? cacheManager;
 
   /// Offline page: bytes come straight off disk, no network.
   final String? localPath;
@@ -91,7 +93,7 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
 
   Future<Uint8List> _fetchBytes() async {
     if (localPath != null) return File(localPath!).readAsBytes();
-    final file = await DefaultCacheManager().getSingleFile(
+    final file = await (cacheManager ?? DefaultCacheManager()).getSingleFile(
       fetchUrl,
       key: cacheKey,
       headers: headers ?? const <String, String>{},

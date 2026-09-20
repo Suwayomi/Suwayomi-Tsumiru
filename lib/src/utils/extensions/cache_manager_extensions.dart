@@ -6,9 +6,11 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../widgets/cover_cache/cover_cache.dart';
 import '../../widgets/server_image.dart';
 
 extension CacheManagerExtension on CacheManager {
@@ -26,7 +28,8 @@ extension CacheManagerExtension on CacheManager {
     if (request.fetchUrl.isEmpty) {
       throw ArgumentError.value(url, 'url', 'No server path to fetch');
     }
-    return getSingleFile(
+    final manager = kIsWeb ? ref.read(serverPageCacheManagerProvider) : this;
+    return manager.getSingleFile(
       request.fetchUrl,
       key: request.cacheKey,
       headers: request.headers,

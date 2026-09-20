@@ -5,7 +5,45 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:http/browser_client.dart';
+import 'package:http/http.dart' as http;
 
-/// Web build: the browser's HTTP cache does this job, so covers share the
-/// default manager instead of a filesystem-backed store.
-CacheManager createCoverCacheManager() => DefaultCacheManager();
+CacheManager createCoverCacheManager({String? serverOrigin}) =>
+    _BrowserImageCacheManager(_ServerImageClient(serverOrigin));
+
+class _ServerImageClient extends http.BaseClient {
+  _ServerImageClient(this.serverOrigin);
+
+  final String? serverOrigin;
+  final _server = BrowserClient()..withCredentials = true;
+  final _external = BrowserClient();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      (request.url.origin == serverOrigin ? _server : _external).send(request);
+
+  @override
+  void close() {
+    _server.close();
+    _external.close();
+    super.close();
+  }
+}
+
+class _BrowserImageCacheManager extends CacheManager {
+  _BrowserImageCacheManager(this.client)
+    : super(
+        Config(
+          'tsumiruWebImages',
+          fileService: HttpFileService(httpClient: client),
+        ),
+      );
+
+  final http.Client client;
+
+  @override
+  Future<void> dispose() async {
+    client.close();
+    await super.dispose();
+  }
+}

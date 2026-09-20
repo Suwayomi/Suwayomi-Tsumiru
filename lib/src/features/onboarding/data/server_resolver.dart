@@ -747,7 +747,7 @@ enum VerifiedAuthMode { simpleLogin, uiLogin }
 /// cookie is then ignored. So a successful simple-login is NOT proof the server
 /// is in simple_login mode. We must push the obtained credential through a real
 /// protected query and let the server's own `getUserFromContext` be the judge:
-/// authorised (data, no "unauthorized") → the credential is the right kind.
+/// authorised (expected data without errors) → the credential is the right kind.
 ///
 /// Pass EXACTLY one of [cookie] / [bearer] / [basic]. [basic] is the raw
 /// `username:password` pair (base64-encoded here into a `Basic` header) — used
@@ -784,9 +784,15 @@ Future<bool> authProbeAuthorized(
     }
     final streamed = await client.send(request).timeout(timeout);
     final body = await streamed.stream.bytesToString().timeout(timeout);
-    if (streamed.statusCode == 401 || streamed.statusCode == 403) return false;
-    // Authorised iff the body does not carry an "unauthorized" GraphQL error.
-    return !_bodyIndicatesUnauthorised(body);
+    if (streamed.statusCode != 200) return false;
+    final decoded = _tryDecode(body);
+    if (decoded == null) return false;
+    final errors = decoded['errors'];
+    if (errors != null && (errors is! List || errors.isNotEmpty)) return false;
+    final data = decoded['data'];
+    if (data is! Map) return false;
+    final status = data['downloadStatus'];
+    return status is Map && status['__typename'] == 'DownloadStatus';
   } catch (_) {
     return false;
   }

@@ -6,7 +6,9 @@
 
 import 'package:http/http.dart' as http;
 
-/// Off the browser we hold the session cookie ourselves.
+import '../../../utils/network/timeout_http_client.dart';
+
 const browserManagesSession = false;
 
-http.Client makeSimpleLoginClient() => http.Client();
+http.Client makeSimpleLoginClient(Duration timeout) =>
+    TimeoutHttpClient(timeout);

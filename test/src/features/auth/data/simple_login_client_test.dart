@@ -7,14 +7,18 @@ import 'package:tsumiru/src/features/auth/data/simple_login_client.dart';
 
 void main() {
   group('SimpleLoginClient in a browser', () {
-    // A browser follows the 303 itself and never exposes `Set-Cookie`, so the
-    // landing page is the only signal. This is how Suwayomi's own WebUI signs
-    // in: the server's form sets the session cookie and the browser keeps it.
     test(
-      'a landing page that is not the form means the session is set',
+      'login follows redirects and verifies protected data before succeeding',
       () async {
         bool? followRedirects;
         final mock = MockClient((request) async {
+          if (request.url.path == '/api/graphql') {
+            expect(request.headers['Cookie'], isNull);
+            return http.Response(
+              '{"data":{"downloadStatus":{"__typename":"DownloadStatus"}}}',
+              200,
+            );
+          }
           followRedirects = request.followRedirects;
           return http.Response('<html><div id="app"></div></html>', 200);
         });
@@ -28,6 +32,59 @@ void main() {
         expect(followRedirects, isTrue);
       },
     );
+
+    for (final body in [
+      '<html><div id="app"></div></html>',
+      '{"data":null,"errors":[{"message":"Unauthorized"}]}',
+      '{"data":{"downloadStatus":null}}',
+      '{"data":{"aboutServer":{"name":"Suwayomi"}}}',
+    ]) {
+      test('does not accept an unverified session: $body', () async {
+        final mock = MockClient(
+          (request) async => http.Response(
+            request.url.path == '/api/graphql'
+                ? body
+                : '<html><div id="app"></div></html>',
+            200,
+          ),
+        );
+        await expectLater(
+          SimpleLoginClient(
+            httpClient: mock,
+            browserSession: true,
+          ).login(serverBaseUrl: 'http://s', username: 'u', password: 'p'),
+          throwsA(isA<SimpleLoginShapeFailure>()),
+        );
+      });
+    }
+
+    test('verification uses the server subpath and proxy headers', () async {
+      final paths = <String>[];
+      final client = MockClient((request) async {
+        paths.add(request.url.path);
+        expect(request.headers['X-Proxy-Token'], 'proxy-token');
+        expect(request.headers['Authorization'], isNull);
+        expect(request.headers['Cookie'], isNull);
+        if (request.url.path == '/manga/api/graphql') {
+          return http.Response(
+            '{"data":{"downloadStatus":{"__typename":"DownloadStatus"}}}',
+            200,
+          );
+        }
+        return http.Response('<html>App</html>', 200);
+      });
+      await SimpleLoginClient(httpClient: client, browserSession: true).login(
+        serverBaseUrl: 'http://s/manga',
+        username: 'u',
+        password: 'p',
+        extraHeaders: {
+          'X-Proxy-Token': 'proxy-token',
+          'Authorization': 'old',
+          'Cookie': 'old',
+        },
+      );
+      expect(paths, ['/manga/login.html', '/manga/api/graphql']);
+    });
 
     test('a re-rendered login form still means bad credentials', () async {
       final mock = MockClient(
