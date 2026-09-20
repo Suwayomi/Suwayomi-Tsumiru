@@ -61,10 +61,14 @@ class InlineAuthSection extends HookConsumerWidget {
     final message = useState<String?>(null);
     final isError = useState(false);
 
+    // The server ROOT, not the API base: sign-in and the auth probe append
+    // their own paths (`/login.html`, `api/graphql`), so an `/api/v1` here
+    // posts Simple Login to `/api/v1/login.html` and 404s.
     String resolvedBaseUrl() => Endpoints.baseApi(
       baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
       port: ref.read(serverPortProvider),
       addPort: ref.read(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
     );
 
     // Validate the entered credentials WITHOUT committing them.

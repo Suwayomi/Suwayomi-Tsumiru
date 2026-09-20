@@ -103,10 +103,12 @@ class LoginCredentialsPopup extends HookConsumerWidget {
 
     String resolveBaseUrl() {
       final baseUrl = ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
+      // The server ROOT — see the same note in inline_auth_section.
       return Endpoints.baseApi(
         baseUrl: baseUrl,
         port: ref.read(serverPortProvider),
         addPort: ref.read(serverPortToggleProvider).ifNull(),
+        appendApiToUrl: false,
       );
     }
 
