@@ -15,14 +15,19 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../constants/endpoints.dart';
+import '../../../../../../../constants/enum.dart';
 import '../../../../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../../../auth/data/custom_headers_store.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
+import '../../../../../../offline/data/offline_server_identity_repository.dart';
+import '../../../../../../onboarding/data/server_resolver.dart';
 import '../../credential_popup/credentials_popup.dart';
+import '../../credential_popup/login_credentials_popup.dart';
 import 'server_search_button.dart';
 
 part 'server_url_tile.g.dart';
@@ -168,11 +173,7 @@ Future<bool> serverUrlIsReachable(String url, {http.Client? client}) async {
 StreamSubscription<List<ConnectivityResult>> listenToConnectivity(
   Stream<List<ConnectivityResult>> changes,
   void Function() onChange,
-) => changes.listen(
-  (_) => onChange(),
-  onError: (_) {},
-  cancelOnError: false,
-);
+) => changes.listen((_) => onChange(), onError: (_) {}, cancelOnError: false);
 
 /// Keeps [serverUrlProvider] pointed at the preferred endpoint. It runs at
 /// startup and each interface change, so moving between Wi-Fi and mobile data
@@ -281,11 +282,54 @@ class ServerUrlTile extends ConsumerWidget {
         value: serverUrl,
         onChanged: (value) async {
           await ref.read(serverExternalUrlProvider.notifier).update(value);
+          if (context.mounted) await promptSignInIfRejected(context, ref);
           return;
         },
       ),
     );
   }
+}
+
+/// A new address usually means a different server, and the credentials on file
+/// are for the old one. Without this the save lands you on an unauthorized
+/// Library and leaves you to find your own way back here to sign in.
+///
+/// Only prompts when the new address actually rejects what we already hold, so
+/// switching between a LAN and a remote address for the SAME server is silent.
+Future<void> promptSignInIfRejected(BuildContext context, WidgetRef ref) async {
+  final authType = ref.read(authTypeKeyProvider);
+  if (authType == null || authType == AuthType.none) return;
+  final address = ref.read(currentServerAddressProvider);
+  if (address.isEmpty) return;
+  final credentials = ref.read(authCredentialsStoreProvider).value;
+  final client = http.Client();
+  final bool authorized;
+  try {
+    authorized = await authProbeAuthorized(
+      address,
+      client: client,
+      cookie: credentials?.simpleLoginCookie,
+      bearer: credentials?.uiAccessToken,
+      basic: null,
+      extraHeaders: ref.read(customHttpHeadersProvider).value,
+    );
+  } finally {
+    client.close();
+  }
+  if (authorized || !context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    builder: (context) => switch (authType) {
+      AuthType.basic => const CredentialsPopup(),
+      AuthType.simpleLogin => const LoginCredentialsPopup(
+        authType: AuthType.simpleLogin,
+      ),
+      AuthType.uiLogin => const LoginCredentialsPopup(
+        authType: AuthType.uiLogin,
+      ),
+      AuthType.none => const SizedBox.shrink(),
+    },
+  );
 }
 
 class ServerLanUrlTile extends ConsumerWidget {
