@@ -50,10 +50,13 @@ class MultiChaptersActionIcon extends ConsumerWidget {
         // successful mark-read, unmounting the widget while these fire-and-forget
         // follow-ups are still pending). `ref.read` throws once that happens;
         // a container obtained now stays valid regardless.
-        final containerRead = ProviderScope.containerOf(context, listen: false).read;
+        final containerRead = ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read;
         final ids = [for (final c in chapters) c.id];
-        // Read/unread expands to every scanlator duplicate; other patches
-        // stay per-copy.
+        // Read/unread expands across confidently matched releases; unrelated
+        // patches stay scoped to the selected rows.
         final expandedByManga = <int, List<int>>{
           if (change.isRead != null)
             for (final mangaId in {for (final c in chapters) c.mangaId})
@@ -85,11 +88,15 @@ class MultiChaptersActionIcon extends ConsumerWidget {
             resetPosition: change.lastPageRead == 0,
           );
           if (!ok && context.mounted && !ref.read(offlineActiveProvider)) {
-            ref.read(toastProvider)?.showError(context.l10n.errorSomethingWentWrong);
+            ref
+                .read(toastProvider)
+                ?.showError(context.l10n.errorSomethingWentWrong);
           }
         } else {
           final result = await AsyncValue.guard(
-            () => ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
+            () => ref
+                .read(mangaBookRepositoryProvider)
+                .modifyBulkChapters(
                   ChapterBatch(ids: idsForWrite, patch: change),
                 ),
           );
@@ -113,18 +120,25 @@ class MultiChaptersActionIcon extends ConsumerWidget {
         }
         if (ok && change.isRead == true) {
           for (final mangaId in {for (final c in chapters) c.mangaId}) {
-            unawaited(maybeTrackProgressOnReadFetch(
-              containerRead,
-              mangaId: mangaId,
-              isRead: true,
-              manual: true,
-            ));
+            unawaited(
+              maybeTrackProgressOnReadFetch(
+                containerRead,
+                mangaId: mangaId,
+                isRead: true,
+                manual: true,
+              ),
+            );
           }
           // Expanded set: hidden duplicates get delete-on-manual-read too.
           for (final entry in expandedByManga.entries) {
             for (final id in entry.value) {
-              unawaited(maybeDeleteOnManualServer(containerRead,
-                  mangaId: entry.key, chapterId: id));
+              unawaited(
+                maybeDeleteOnManualServer(
+                  containerRead,
+                  mangaId: entry.key,
+                  chapterId: id,
+                ),
+              );
             }
           }
         }

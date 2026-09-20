@@ -169,9 +169,14 @@ void main() {
     await tester.pumpAndSettle();
     final choices = tester
         .widgetList<ListTile>(find.byType(ListTile))
-        .where((tile) => tile.leading is Icon);
-    expect(choices, hasLength(5));
-    expect(choices.every((tile) => tile.onTap == null), true);
+        .where((tile) => tile.leading is Icon)
+        .toList();
+    // Five keep options, then "Stop keeping" and "Remove from device".
+    expect(choices, hasLength(7));
+    // Keeping chapters needs the download permission; stopping a rule and
+    // freeing device space do not, so those two stay tappable.
+    expect(choices.take(5).every((tile) => tile.onTap == null), true);
+    expect(choices.skip(5).every((tile) => tile.onTap != null), true);
   });
 
   for (final state in [

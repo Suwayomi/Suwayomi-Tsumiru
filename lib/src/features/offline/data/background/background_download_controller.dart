@@ -103,6 +103,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   Future<void> _identityTail = Future.value();
   Future<void> _mutationTail = Future.value();
   DateTime? _lastRecovery;
+  AppLifecycleState? _lastLifecycle;
+  // Latched when the app actually goes to the background (paused/hidden/
+  // detached). Flutter synthesises hidden → inactive → resumed on a genuine
+  // return, so by the time `resumed` arrives the previous state is always
+  // `inactive` and can't be used to tell a real background return from a
+  // notification-shade peek (inactive → resumed, never reaching hidden/paused).
+  // This latch can: the shade never trips it.
+  bool _wentBackground = false;
   bool? _retryBlocked;
   bool _disposed = false;
   String? _notifiedStall;
@@ -287,6 +295,8 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     _workerEventCallback ??= _onWorkerEvent;
     _gateway.addCallback(_workerEventCallback!);
     _bindStorage();
+    // Container-level: a provider-level listen makes this controller depend on
+    // the server address, which reads this controller while switching.
     _identitySubscription ??= _ref.container.listen(serverInstanceIdProvider, (
       _,
       next,
@@ -836,12 +846,30 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isAndroid()) return;
+    final previous = _lastLifecycle;
+    _lastLifecycle = state;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      // A genuine background trip. The FGS already owns the queue, so do NOTHING
+      // else here — just latch that we left so the matching resume replays.
+      _wentBackground = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
-      // Catch drift up from the durable log for live UI. No ownership change —
-      // the worker still owns the queue.
+      // Replay only after a real background trip (latched above) or the very
+      // first resume at launch. Can't key off `previous`: Flutter synthesises
+      // hidden → inactive → resumed on a genuine return, so `previous` is
+      // always `inactive` here and would also match the notification-shade peek
+      // (inactive → resumed, which never reaches hidden/paused). Replaying on
+      // the shade would re-send an add op for every pending chapter to the FGS,
+      // interrupting in-progress downloads. The latch separates the two cleanly.
+      final wasBackground = _wentBackground || previous == null;
+      _wentBackground = false;
+      if (!wasBackground) return;
       unawaited(replayOnResume());
     }
-    // paused/hidden/detached: NOTHING — the FGS already owns the queue.
+    // inactive: nothing.
   }
 
   /// Replay the completion log into drift (live-UI catch-up on resume).
@@ -1273,6 +1301,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         if (ch == null ||
             ch.deviceState == OfflineDeviceState.none ||
             (data['gen'] as int? ?? 0) != ch.downloadGeneration) {
+          recordDiagnostic(
+            '[${_now().toIso8601String()}] offline-fgs: chapter-dropped '
+            'chapterId=$chapterId reason=stale-or-deleted '
+            'deviceState=${ch?.deviceState.name ?? 'missing'}\n',
+          );
           return;
         }
         final result = await commitStagedChapter(
@@ -1288,6 +1321,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
         if (!_eventCurrent(data)) return;
         if (result == ChapterCommitResult.committed) {
           _sessionDownloaded++;
+          recordDiagnostic(
+            '[${_now().toIso8601String()}] offline-fgs: downloaded-chapter '
+            'mangaId=${ch.mangaId} chapterId=$chapterId\n',
+          );
           // A chapter landed, so the server is demonstrably fine — unless a
           // later chapter parked while this one was committing.
           if (_parkEpoch == epoch) _clearPark();
@@ -1321,13 +1358,31 @@ class BackgroundDownloadController with WidgetsBindingObserver {
                 OfflineDeviceState.error,
               );
               _sessionFailed++;
+              recordDiagnostic(
+                '[${_now().toIso8601String()}] offline-fgs: commit-failed '
+                'mangaId=${ch.mangaId} chapterId=$chapterId '
+                'result=${result.name} attempts=$attempts/$_maxCommitFailures '
+                '— marked error\n',
+              );
             } else {
               await _db.setChapterDeviceState(
                 chapterId,
                 OfflineDeviceState.queued,
                 bytes: 0,
               );
+              recordDiagnostic(
+                '[${_now().toIso8601String()}] offline-fgs: commit-incomplete '
+                'mangaId=${ch.mangaId} chapterId=$chapterId '
+                'result=${result.name} attempts=$attempts/$_maxCommitFailures '
+                '— requeued\n',
+              );
             }
+          } else if (result == ChapterCommitResult.refused) {
+            recordDiagnostic(
+              '[${_now().toIso8601String()}] offline-fgs: commit-refused '
+              'mangaId=${ch.mangaId} chapterId=$chapterId '
+              '— deleted or re-queued under a new generation\n',
+            );
           }
         }
       } else {
@@ -1338,6 +1393,10 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           eventGeneration: data['gen'] as int? ?? 0,
         );
         if (status == 'error') _sessionFailed++;
+        recordDiagnostic(
+          '[${_now().toIso8601String()}] offline-fgs: chapter-terminal '
+          'mangaId=${data['mangaId']} chapterId=$chapterId status=$status\n',
+        );
       }
     }
   }
@@ -1405,6 +1464,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           rethrow;
         }
         _activeAttemptId = attemptId;
+        recordDiagnostic(
+          '[${_now().toIso8601String()}] offline-fgs: work-order-dispatched '
+          'count=${pending.length} '
+          'chapterIds=[${[for (final c in pending) c.id].join(',')}]\n',
+        );
         return attemptId;
       });
     } finally {

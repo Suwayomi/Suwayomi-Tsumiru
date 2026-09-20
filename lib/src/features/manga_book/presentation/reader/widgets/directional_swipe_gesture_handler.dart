@@ -29,6 +29,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     required this.currentIndex,
     required this.chapterPages,
     required this.mangaId,
+    this.readerScanlatorGroup = '',
     required this.prevNextChapterPair,
     required this.onNextPage,
     required this.onPreviousPage,
@@ -37,6 +38,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
 
   final Widget child;
   final VoidCallback onTap;
+
   /// Null when nothing consumes a long press — [GestureDetector] then skips
   /// the recognizer entirely rather than claiming the gesture for a no-op.
   final void Function(LongPressStartDetails)? onLongPressStart;
@@ -47,6 +49,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   final int currentIndex;
   final ChapterPagesDto chapterPages;
   final int mangaId;
+  final String readerScanlatorGroup;
   final ({ChapterDto? first, ChapterDto? second})? prevNextChapterPair;
   final VoidCallback onNextPage;
   final VoidCallback onPreviousPage;
@@ -108,26 +111,28 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
-        SingleTouchPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<
-            SingleTouchPanGestureRecognizer>(
-          () => SingleTouchPanGestureRecognizer(
-            debugOwner: this,
-            isZoomedIn: isZoomedIn,
-          ),
-          (recognizer) {
-            recognizer.isZoomedIn = isZoomedIn;
-            recognizer.onEnd = (details) {
-              final swipeDirection =
-                  LastPageSwipeUtils.detectSwipeDirection(details);
-              if (swipeDirection != null) {
-                _handleBoundarySwipe(
-                  context: context,
-                  direction: swipeDirection,
-                );
-              }
-            };
-          },
-        ),
+        SingleTouchPanGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              SingleTouchPanGestureRecognizer
+            >(
+              () => SingleTouchPanGestureRecognizer(
+                debugOwner: this,
+                isZoomedIn: isZoomedIn,
+              ),
+              (recognizer) {
+                recognizer.isZoomedIn = isZoomedIn;
+                recognizer.onEnd = (details) {
+                  final swipeDirection =
+                      LastPageSwipeUtils.detectSwipeDirection(details);
+                  if (swipeDirection != null) {
+                    _handleBoundarySwipe(
+                      context: context,
+                      direction: swipeDirection,
+                    );
+                  }
+                };
+              },
+            ),
       },
       child: _wrapWithTapAndLongPress(child),
     );
@@ -142,40 +147,42 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
       gestures: <Type, GestureRecognizerFactory>{
         SingleTouchHorizontalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<
-                SingleTouchHorizontalDragGestureRecognizer>(
-          () => SingleTouchHorizontalDragGestureRecognizer(
-            debugOwner: this,
-            isZoomedIn: isZoomedIn,
-          ),
-          (recognizer) {
-            recognizer.isZoomedIn = isZoomedIn;
-            recognizer.onEnd = (details) {
-              _handleSwipeGesture(
-                context: context,
-                details: details,
-                allowedAxis: Axis.vertical,
-              );
-            };
-          },
-        ),
+              SingleTouchHorizontalDragGestureRecognizer
+            >(
+              () => SingleTouchHorizontalDragGestureRecognizer(
+                debugOwner: this,
+                isZoomedIn: isZoomedIn,
+              ),
+              (recognizer) {
+                recognizer.isZoomedIn = isZoomedIn;
+                recognizer.onEnd = (details) {
+                  _handleSwipeGesture(
+                    context: context,
+                    details: details,
+                    allowedAxis: Axis.vertical,
+                  );
+                };
+              },
+            ),
         SingleTouchVerticalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<
-                SingleTouchVerticalDragGestureRecognizer>(
-          () => SingleTouchVerticalDragGestureRecognizer(
-            debugOwner: this,
-            isZoomedIn: isZoomedIn,
-          ),
-          (recognizer) {
-            recognizer.isZoomedIn = isZoomedIn;
-            recognizer.onEnd = (details) {
-              _handleSwipeGesture(
-                context: context,
-                details: details,
-                allowedAxis: Axis.horizontal,
-              );
-            };
-          },
-        ),
+              SingleTouchVerticalDragGestureRecognizer
+            >(
+              () => SingleTouchVerticalDragGestureRecognizer(
+                debugOwner: this,
+                isZoomedIn: isZoomedIn,
+              ),
+              (recognizer) {
+                recognizer.isZoomedIn = isZoomedIn;
+                recognizer.onEnd = (details) {
+                  _handleSwipeGesture(
+                    context: context,
+                    details: details,
+                    allowedAxis: Axis.horizontal,
+                  );
+                };
+              },
+            ),
       },
       child: _wrapWithTapAndLongPress(child),
     );
@@ -198,9 +205,11 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
       chapterPages: chapterPages,
     );
 
-    final isAtLastPage = pagePosition == PagePosition.lastPage ||
+    final isAtLastPage =
+        pagePosition == PagePosition.lastPage ||
         pagePosition == PagePosition.singlePage;
-    final isAtFirstPage = pagePosition == PagePosition.firstPage ||
+    final isAtFirstPage =
+        pagePosition == PagePosition.firstPage ||
         pagePosition == PagePosition.singlePage;
 
     final navigationAction = _determineNavigationAction(
@@ -223,8 +232,9 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   }) {
     if (!lastPageSwipeEnabled) return NavigationAction.pageNavigation;
 
-    final expectedDirection =
-        LastPageSwipeUtils.getExpectedSwipeDirection(resolvedReaderMode);
+    final expectedDirection = LastPageSwipeUtils.getExpectedSwipeDirection(
+      resolvedReaderMode,
+    );
 
     if (direction == expectedDirection) {
       if (isAtLastPage) {
@@ -285,6 +295,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
           mangaId: mangaId,
           chapterId: prevNextChapterPair!.first!.id,
           transVertical: scrollDirection == Axis.vertical,
+          readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context);
       } catch (e) {
         onNextPage();
@@ -303,6 +314,7 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
           toPrev: true,
           transVertical: scrollDirection == Axis.vertical,
           openAtEnd: true,
+          readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context);
       } catch (e) {
         onPreviousPage();
@@ -357,9 +369,11 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
       chapterPages: chapterPages,
     );
 
-    final isAtLastPage = pagePosition == PagePosition.lastPage ||
+    final isAtLastPage =
+        pagePosition == PagePosition.lastPage ||
         pagePosition == PagePosition.singlePage;
-    final isAtFirstPage = pagePosition == PagePosition.firstPage ||
+    final isAtFirstPage =
+        pagePosition == PagePosition.firstPage ||
         pagePosition == PagePosition.singlePage;
 
     final navigationAction = _determineNavigationAction(

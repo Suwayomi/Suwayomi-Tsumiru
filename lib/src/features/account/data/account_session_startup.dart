@@ -182,12 +182,19 @@ class AccountSessionStartup {
     }
     if (!_current || !container.read(offlineActiveProvider)) return;
     final runtime = container.read(offlineRuntimeStorageProvider.notifier);
+    // Settle disk FIRST: launch reconcile and the catch-up must see
+    // post-recovery device state, or overnight background downloads read as
+    // missing and get re-fetched. Android reaches this through the worker's
+    // replay; desktop/other has no replay, so it recovers here directly.
     if (isAndroidNative) {
       await runtime.track(
         () => container
             .read(backgroundDownloadControllerProvider)
             .replayAtLaunch(),
       );
+      if (!_current) return;
+    } else {
+      await runtime.track(() => recoverDiskAtLaunch(container));
       if (!_current) return;
     }
     await pushPendingProgress(container);

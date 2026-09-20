@@ -103,7 +103,18 @@ class OfflineReconciler {
         .where((c) => c.deviceState == OfflineDeviceState.downloaded)
         .toList();
 
+    // The download-ahead set: what the keep-rule wants pulled to device.
     final desired = desiredChapterIds(
+      chapters,
+      manga.keepRule,
+      manga.keepUnreadCount,
+    );
+
+    // The retention set: what may STAY on device. Broader than `desired` for
+    // nUnread — the window bounds new downloads only, it must not delete unread
+    // chapters already on disk (see retainedChapterIds). Drives eviction; the
+    // download loop below still uses `desired`.
+    final retained = retainedChapterIds(
       chapters,
       manga.keepRule,
       manga.keepUnreadCount,
@@ -111,7 +122,7 @@ class OfflineReconciler {
 
     final ev = applySafetyNets(
       downloaded: downloaded,
-      desired: desired,
+      desired: retained,
       nets: nets,
       now: now,
       protected: {
@@ -241,6 +252,32 @@ class OfflineReconciler {
       }
 
       toDownload.add(id);
+    }
+
+    // Trace the reconcile decision: what the server-synced list + keep rule
+    // wanted, and how each desired chapter was routed against local state —
+    // pulled to the device (server already has it), asked of the server (it
+    // does not), or neither (already on device / errored). Only emitted when
+    // there is something to act on, so a steady-state library stays quiet.
+    if (toDownload.isNotEmpty || toServerDownload.isNotEmpty) {
+      var alreadyOnDevice = 0;
+      var errored = 0;
+      for (final id in desired) {
+        final st = byId[id]?.deviceState;
+        if (st == OfflineDeviceState.downloaded) {
+          alreadyOnDevice++;
+        } else if (st == OfflineDeviceState.error) {
+          errored++;
+        }
+      }
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-reconcile: '
+        'plan mangaId=$mangaId keepRule=${manga.keepRule.name} '
+        'keepN=${manga.keepUnreadCount} desired=${desired.length} '
+        'toDownload=[${toDownload.join(',')}] '
+        'toServerDownload=[${toServerDownload.join(',')}] '
+        'alreadyOnDevice=$alreadyOnDevice errored=$errored\n',
+      );
     }
 
     for (final id in toEvict) {

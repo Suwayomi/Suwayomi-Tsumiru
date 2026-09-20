@@ -1,10 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":dependencyDashboard"],
-  "enabledManagers": ["fvm", "pub", "github-actions", "gradle", "cocoapods", "custom.regex"],
+  "enabledManagers": ["fvm", "pub", "github-actions", "gradle", "gradle-wrapper", "cocoapods", "custom.regex"],
   "ignoreDeps": ["dev.flutter.flutter-plugin-loader"],
   "constraints": {
-    "flutter": "3.47.2"
+    "flutter": "3.47.4"
   },
   "rangeStrategy": "update-lockfile",
   "prConcurrentLimit": 5,
@@ -45,6 +45,11 @@
       "matchManagers": ["pub"],
       "matchPackageNames": ["freezed", "freezed_annotation"],
       "groupName": "freezed"
+    },
+    {
+      "description": "The Android Gradle plugin sets a minimum Gradle version, so the wrapper moves with it",
+      "matchDepNames": ["com.android.application", "gradle"],
+      "groupName": "android-gradle"
     }
   ],
   "customManagers": [

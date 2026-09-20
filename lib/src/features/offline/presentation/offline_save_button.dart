@@ -39,9 +39,13 @@ class OfflineSaveButton extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
 
     return switch (state) {
-      OfflineDeviceState.queued => const _QueuedIndicator(),
-      OfflineDeviceState.downloading => _DownloadingIndicator(
+      OfflineDeviceState.queued => _CancelOnTap(
         chapterId: chapterId,
+        child: const _QueuedIndicator(),
+      ),
+      OfflineDeviceState.downloading => _CancelOnTap(
+        chapterId: chapterId,
+        child: _DownloadingIndicator(chapterId: chapterId),
       ),
       OfflineDeviceState.downloaded => IconButton(
         tooltip: 'Remove from device',
@@ -84,6 +88,23 @@ class OfflineSaveButton extends ConsumerWidget {
       }
     }
   }
+}
+
+class _CancelOnTap extends ConsumerWidget {
+  const _CancelOnTap({required this.chapterId, required this.child});
+
+  final int chapterId;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Tooltip(
+    message: context.l10n.cancel,
+    child: InkResponse(
+      radius: 20,
+      onTap: () => deleteChapterFromDevice(ref, chapterId),
+      child: child,
+    ),
+  );
 }
 
 /// A chapter waiting its turn in the queue. Deliberately static: this is the

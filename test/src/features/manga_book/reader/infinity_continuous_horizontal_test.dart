@@ -49,10 +49,8 @@ class _FakeMangaWithId extends MangaWithId {
   Future<MangaDto?> build({required int mangaId}) async => manga;
 }
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 class _FakeTrackerRepository extends TrackerRepository {
   _FakeTrackerRepository() : super(_dummyClient());
@@ -69,8 +67,9 @@ class _QuietRepo extends Fake implements MangaBookRepository {
 }
 
 List<String> _localPages(int count, String tag) {
-  final dir =
-      Directory.systemTemp.createTempSync('tsumiru-scrollback-horiz-$tag-');
+  final dir = Directory.systemTemp.createTempSync(
+    'tsumiru-scrollback-horiz-$tag-',
+  );
   addTearDown(() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
@@ -82,30 +81,26 @@ List<String> _localPages(int count, String tag) {
 }
 
 MangaDto _horizontalContinuousManga(ReaderMode mode) => Fragment$MangaDto(
-      id: 1,
-      title: 'Test Horizontal Continuous',
-      bookmarkCount: 0,
-      chapters: Fragment$MangaDto$chapters(totalCount: 2),
-      downloadCount: 0,
-      genre: const [],
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: [
-        Fragment$MangaDto$meta(
-          key: MangaMetaKeys.readerMode.key,
-          value: mode.name,
-        ),
-      ],
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: 2,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: '/manga/1',
-    );
+  id: 1,
+  title: 'Test Horizontal Continuous',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 2),
+  downloadCount: 0,
+  genre: const [],
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: [
+    Fragment$MangaDto$meta(key: MangaMetaKeys.readerMode.key, value: mode.name),
+  ],
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: 2,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: '/manga/1',
+);
 
 ChapterDto _chapter({required int id, required int sourceOrder}) =>
     Fragment$ChapterDto(
@@ -127,9 +122,9 @@ ChapterDto _chapter({required int id, required int sourceOrder}) =>
     );
 
 ChapterPagesDto _pages(int id, int count) => ChapterPagesDto(
-      chapter: ChapterPagesChapterDto(id: id, pageCount: count),
-      pages: _localPages(count, 'c$id'),
-    );
+  chapter: ChapterPagesChapterDto(id: id, pageCount: count),
+  pages: _localPages(count, 'c$id'),
+);
 
 /// Pumps the reader open on chapter 2 page 0 (chapter 1 is its previous), in
 /// [mode] (continuousHorizontalLTR/RTL).
@@ -154,15 +149,22 @@ Future<void> _pumpReaderOnChapter2(
         sharedPreferencesProvider.overrideWithValue(prefs),
         mangaBookRepositoryProvider.overrideWithValue(_QuietRepo()),
         mangaWithIdProvider(mangaId: 1).overrideWith(
-            () => _FakeMangaWithId(_horizontalContinuousManga(mode))),
+          () => _FakeMangaWithId(_horizontalContinuousManga(mode)),
+        ),
         chapterProvider(chapterId: 1).overrideWith((ref) => ch1),
         chapterProvider(chapterId: 2).overrideWith((ref) => ch2),
         chapterPagesProvider(chapterId: 1).overrideWith((ref) => prevPages()),
         chapterPagesProvider(chapterId: 2).overrideWith((ref) => _pages(2, 3)),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2)
-            .overrideWithValue((first: null, second: ch1)),
-        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
-            .overrideWithValue((first: ch2, second: null)),
+        getNextAndPreviousChaptersProvider(
+          mangaId: 1,
+          chapterId: 2,
+          readerScanlatorGroup: '',
+        ).overrideWithValue((first: null, second: ch1)),
+        getNextAndPreviousChaptersProvider(
+          mangaId: 1,
+          chapterId: 1,
+          readerScanlatorGroup: '',
+        ).overrideWithValue((first: ch2, second: null)),
         trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
       ],
       child: MaterialApp(
@@ -199,8 +201,9 @@ void main() {
     MultiChapterContinuousReaderMode.edgeAttemptCooldown = Duration.zero;
   });
   tearDown(() {
-    MultiChapterContinuousReaderMode.edgeAttemptCooldown =
-        const Duration(seconds: 4);
+    MultiChapterContinuousReaderMode.edgeAttemptCooldown = const Duration(
+      seconds: 4,
+    );
   });
 
   for (final mode in [
@@ -208,50 +211,58 @@ void main() {
     ReaderMode.continuousHorizontalRTL,
   ]) {
     testWidgets(
-        '$mode: mounts as a real horizontal continuous strip (never the '
-        'paged pager)', (tester) async {
-      await _pumpReaderOnChapter2(
-        tester,
-        mode: mode,
-        prevPages: () async => _pages(1, 3),
-      );
+      '$mode: mounts as a real horizontal continuous strip (never the '
+      'paged pager)',
+      (tester) async {
+        await _pumpReaderOnChapter2(
+          tester,
+          mode: mode,
+          prevPages: () async => _pages(1, 3),
+        );
 
-      final widget = tester.widget<MultiChapterContinuousReaderMode>(
-        find.byType(MultiChapterContinuousReaderMode),
-      );
-      expect(widget.scrollDirection, Axis.horizontal);
-      expect(widget.reverse, mode == ReaderMode.continuousHorizontalRTL);
-      expect(tester.takeException(), isNull);
-    });
+        final widget = tester.widget<MultiChapterContinuousReaderMode>(
+          find.byType(MultiChapterContinuousReaderMode),
+        );
+        expect(widget.scrollDirection, Axis.horizontal);
+        expect(widget.reverse, mode == ReaderMode.continuousHorizontalRTL);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets(
-        '$mode: resume at page 0, a drag at the clamp loads the previous '
-        'chapter', (tester) async {
-      var prevFetches = 0;
-      await _pumpReaderOnChapter2(
-        tester,
-        mode: mode,
-        prevPages: () async {
-          prevFetches++;
-          // Real delay: an unheld autoDispose fetch would get disposed
-          // mid-flight and never complete.
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-          return _pages(1, 3);
-        },
-      );
+      '$mode: resume at page 0, a drag at the clamp loads the previous '
+      'chapter',
+      (tester) async {
+        var prevFetches = 0;
+        await _pumpReaderOnChapter2(
+          tester,
+          mode: mode,
+          prevPages: () async {
+            prevFetches++;
+            // Real delay: an unheld autoDispose fetch would get disposed
+            // mid-flight and never complete.
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            return _pages(1, 3);
+          },
+        );
 
-      await _dragTowardPreviousChapter(
-        tester,
-        reverse: mode == ReaderMode.continuousHorizontalRTL,
-      );
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
+        await _dragTowardPreviousChapter(
+          tester,
+          reverse: mode == ReaderMode.continuousHorizontalRTL,
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pumpAndSettle();
 
-      expect(prevFetches, greaterThanOrEqualTo(1),
-          reason: 'edge drag on the horizontal strip never asked for the '
+        expect(
+          prevFetches,
+          greaterThanOrEqualTo(1),
+          reason:
+              'edge drag on the horizontal strip never asked for the '
               'previous chapter — the boundary trigger only works on the '
-              'vertical axis');
-      expect(tester.takeException(), isNull);
-    });
+              'vertical axis',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 }

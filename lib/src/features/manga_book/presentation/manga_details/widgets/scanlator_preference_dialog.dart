@@ -15,7 +15,7 @@ import '../controller/scanlator_dedup.dart';
 
 /// Set-once ranking dialog for issue #141's preferred-scanlator-groups
 /// feature: checked groups (in drag order) become the preference; unchecked
-/// groups fall back to source order at dedup time.
+/// groups are hidden from the chapter list and remain reader fallbacks.
 class ScanlatorPreferenceDialog extends HookConsumerWidget {
   const ScanlatorPreferenceDialog({super.key, required this.mangaId});
   final int mangaId;
@@ -23,8 +23,7 @@ class ScanlatorPreferenceDialog extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final derived = ref.watch(mangaScanlatorListProvider(mangaId: mangaId));
-    final saved =
-        ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
+    final saved = ref.watch(mangaPreferredScanlatorsProvider(mangaId: mangaId));
     // Union: a ranked group whose chapters vanished from the source must stay
     // visible so it can be unranked.
     final allGroups = {...derived, ...saved};
@@ -36,8 +35,7 @@ class ScanlatorPreferenceDialog extends HookConsumerWidget {
     final unranked = [
       for (final g in allGroups)
         if (!ranked.value.contains(g)) g,
-    ]..sort(
-        (a, b) => label(a).toLowerCase().compareTo(label(b).toLowerCase()));
+    ]..sort((a, b) => label(a).toLowerCase().compareTo(label(b).toLowerCase()));
 
     return AlertDialog(
       title: Text(context.l10n.preferredScanlationGroups),
@@ -93,15 +91,16 @@ class ScanlatorPreferenceDialog extends HookConsumerWidget {
             var ok = false;
             try {
               ok = await ref
-                  .read(mangaPreferredScanlatorsProvider(mangaId: mangaId)
-                      .notifier)
+                  .read(
+                    mangaPreferredScanlatorsProvider(mangaId: mangaId).notifier,
+                  )
                   .setPreference(ranked.value);
             } catch (_) {}
             if (!context.mounted) return;
             if (!ok) {
-              ref.read(toastProvider)?.showError(
-                    context.l10n.errorSomethingWentWrong,
-                  );
+              ref
+                  .read(toastProvider)
+                  ?.showError(context.l10n.errorSomethingWentWrong);
               return;
             }
             Navigator.of(context).pop();

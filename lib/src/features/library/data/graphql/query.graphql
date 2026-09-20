@@ -57,8 +57,13 @@ mutation DeleteCategoryMeta($input: DeleteCategoryMetaInput!) {
   }
 }
 
-query GetCategoryMangas($filter: MangaFilterInput) {
-  mangas(filter: $filter) {
+query GetCategoryMangas($filter: MangaFilterInput, $first: Int, $after: Cursor) {
+  mangas(
+    filter: $filter
+    order: [{ by: ID, byType: ASC }]
+    first: $first
+    after: $after
+  ) {
     nodes {
       ...MangaDto
       __typename

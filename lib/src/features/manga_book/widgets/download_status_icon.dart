@@ -56,7 +56,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
     }
   }
 
-  Future toggleChapterToQueue(
+  Future<bool> toggleChapterToQueue(
     Toast? toast,
     WidgetRef ref, {
     bool isAdd = false,
@@ -64,10 +64,10 @@ class DownloadStatusIcon extends HookConsumerWidget {
     bool isError = false,
   }) async {
     try {
-      (await AsyncValue.guard(() async {
-        final current = ref
-            .read(authCredentialsStoreProvider.notifier)
-            .captureSession();
+      final current = ref
+          .read(authCredentialsStoreProvider.notifier)
+          .captureSession();
+      final result = await AsyncValue.guard(() async {
         final repo = ref.read(downloadsRepositoryProvider);
         if (isRemove || isError) {
           await repo.removeChapterFromDownloadQueue(chapter.id);
@@ -78,9 +78,11 @@ class DownloadStatusIcon extends HookConsumerWidget {
           if (!ref.context.mounted || !current()) return;
           await updateData();
         }
-      })).showToastOnError(toast);
+      });
+      result.showToastOnError(toast);
+      return !result.hasError;
     } catch (e) {
-      //
+      return false;
     }
   }
 
@@ -90,6 +92,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
     final isLoading = useState(false);
+    final isEnqueuing = useState(false);
 
     final toast = ref.watch(toastProvider);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapter.id));
@@ -110,6 +113,14 @@ class DownloadStatusIcon extends HookConsumerWidget {
         await newUpdatePair(ref, (value) => isLoading.value = value);
       });
     });
+    useEffect(() {
+      if (downloadUpdate != null) {
+        Future.microtask(() {
+          if (context.mounted) isEnqueuing.value = false;
+        });
+      }
+      return;
+    }, [downloadUpdate != null]);
 
     if (isLoading.value) {
       return Padding(
@@ -183,13 +194,19 @@ class DownloadStatusIcon extends HookConsumerWidget {
               );
               result.showToastOnError(toast);
               if (!result.hasError) {
-                // Same expanded set (device ⊆ server).
+                // Same selected set (device ⊆ server).
                 await cascadeServerDeleteToDevice(containerRead, deleteIds);
               }
               await newUpdatePair(ref, (value) => isLoading.value = value);
             },
           );
         } else {
+          if (isEnqueuing.value) {
+            return IconButton(
+              onPressed: null,
+              icon: MiniCircularProgressIndicator(color: context.iconColor),
+            );
+          }
           return IconButton(
             // Muted outline = a "get it on the server" button.
             icon: Icon(
@@ -199,8 +216,14 @@ class DownloadStatusIcon extends HookConsumerWidget {
             tooltip: canDownload ? null : context.l10n.accountPermissionDenied,
             onPressed: !canDownload
                 ? null
-                : () {
-                    toggleChapterToQueue(toast, ref, isAdd: true);
+                : () async {
+                    isEnqueuing.value = true;
+                    // Held until the queue feed reports the chapter, but not forever
+                    // if the feed is down or the server skips it.
+                    if (await toggleChapterToQueue(toast, ref, isAdd: true)) {
+                      await Future.delayed(const Duration(seconds: 10));
+                    }
+                    if (context.mounted) isEnqueuing.value = false;
                   },
           );
         }

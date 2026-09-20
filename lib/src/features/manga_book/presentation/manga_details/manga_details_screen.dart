@@ -43,8 +43,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
     final chapterListProvider = mangaChapterListProvider(mangaId: mangaId);
-    final chapterListFilteredProvider =
-        mangaChapterListWithFilterProvider(mangaId: mangaId);
+    final chapterListFilteredProvider = mangaChapterListWithFilterProvider(
+      mangaId: mangaId,
+    );
 
     final manga = ref.watch(mangaProvider);
     final filteredChapterList = ref.watch(chapterListFilteredProvider);
@@ -82,9 +83,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
     }, [mangaProvider, providerContainer]);
 
     final chapterListRefresh = useCallback(
-        ([bool onlineFetch = false]) async =>
-            await ref.read(chapterListProvider.notifier).refresh(onlineFetch),
-        [chapterListProvider]);
+      ([bool onlineFetch = false]) async =>
+          await ref.read(chapterListProvider.notifier).refresh(onlineFetch),
+      [chapterListProvider],
+    );
 
     final refresh = useCallback(([onlineFetch = false]) async {
       // This can be invoked as a bulk chapter action's `afterOptionSelected`,
@@ -92,10 +94,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
       // may already be gone by then, and every ref use below assumes it isn't.
       if (!context.mounted) return;
       if (onlineFetch) {
-        ref.read(toastProvider)?.show(
-              context.l10n.updating,
-              withMicrotask: true,
-            );
+        ref
+            .read(toastProvider)
+            ?.show(context.l10n.updating, withMicrotask: true);
       }
       await mangaRefresh(onlineFetch);
       // mangaRefresh can no-op on disposal partway through without throwing
@@ -109,18 +110,18 @@ class MangaDetailsScreen extends HookConsumerWidget {
         // result. Reading the captured `manga` (stale) or the provider right
         // after invalidation (still loading) would announce "Updated" even when
         // the fetch ultimately failed.
-        final result =
-            await AsyncValue.guard(() => ref.read(mangaProvider.future));
+        final result = await AsyncValue.guard(
+          () => ref.read(mangaProvider.future),
+        );
         if (!context.mounted) return;
         if (result.hasError) {
-          ref.read(toastProvider)?.showError(
-                context.l10n.errorSomethingWentWrong,
-              );
+          ref
+              .read(toastProvider)
+              ?.showError(context.l10n.errorSomethingWentWrong);
         } else {
-          ref.read(toastProvider)?.show(
-                context.l10n.updateCompleted,
-                withMicrotask: true,
-              );
+          ref
+              .read(toastProvider)
+              ?.show(context.l10n.updateCompleted, withMicrotask: true);
         }
       }
     }, [context, mangaRefresh, chapterListRefresh]);
@@ -185,23 +186,20 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   actions: [
                     IconButton(
                       onPressed: () {
-                        final chapterList = [
-                          ...?filteredChapterList.value
-                        ];
-                        selectedChapters.value =
-                            ({for (ChapterDto i in chapterList) i.id: i});
+                        final chapterList = [...?filteredChapterList.value];
+                        selectedChapters.value = ({
+                          for (ChapterDto i in chapterList) i.id: i,
+                        });
                       },
                       icon: const Icon(Icons.select_all_rounded),
                     ),
                     IconButton(
                       onPressed: () {
-                        final chapterList = [
-                          ...?filteredChapterList.value
-                        ];
+                        final chapterList = [...?filteredChapterList.value];
                         selectedChapters.value = ({
                           for (ChapterDto i in chapterList)
                             if (!selectedChapters.value.containsKey(i.id))
-                              i.id: i
+                              i.id: i,
                         });
                       },
                       icon: const Icon(Icons.flip_to_back_rounded),
@@ -224,8 +222,11 @@ class MangaDetailsScreen extends HookConsumerWidget {
                         leading: Navigator.of(context).canPop()
                             ? const BackButton()
                             : null,
-                        backgroundColor:
-                            Color.lerp(Colors.transparent, surface, t),
+                        backgroundColor: Color.lerp(
+                          Colors.transparent,
+                          surface,
+                          t,
+                        ),
                         elevation: 0,
                         scrolledUnderElevation: 0,
                         // Scrim under the icons while the bar is transparent
@@ -238,8 +239,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black
-                                          .withValues(alpha: 0.45 * (1 - t)),
+                                      Colors.black.withValues(
+                                        alpha: 0.45 * (1 - t),
+                                      ),
                                       Colors.transparent,
                                     ],
                                   ),
@@ -278,15 +280,16 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 if (data?.realUrl != null)
                                   PopupMenuItem(
                                     onTap: () => openInBrowser(data!.realUrl!),
-                                    child:
-                                        Text(context.l10n.openSourceInBrowser),
+                                    child: Text(
+                                      context.l10n.openSourceInBrowser,
+                                    ),
                                   ),
                                 PopupMenuItem(
                                   onTap: openOnServer,
                                   child: Text(context.l10n.openOnServer),
                                 ),
                               ],
-                            )
+                            ),
                           ],
                           // Local-source files already live on the server, so
                           // "Download to server" is meaningless there — same
@@ -334,21 +337,21 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                       mangaId: mangaId,
                                       mangaTitle: data?.title,
                                     ).push(context),
-                                    child:
-                                        Text(context.l10n.seeRecommendations),
+                                    child: Text(
+                                      context.l10n.seeRecommendations,
+                                    ),
                                   ),
                                 PopupMenuItem(
-                                  onTap: () => Future.microtask(
-                                    () {
-                                      if (!context.mounted) return null;
-                                      return showDialog(
-                                        context: context,
-                                        builder: (context) =>
-                                            EditMangaCategoryDialog(
-                                                mangaId: mangaId),
-                                      );
-                                    },
-                                  ),
+                                  onTap: () => Future.microtask(() {
+                                    if (!context.mounted) return null;
+                                    return showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          EditMangaCategoryDialog(
+                                            mangaId: mangaId,
+                                          ),
+                                    );
+                                  }),
                                   child: Text(context.l10n.editCategory),
                                 ),
                                 PopupMenuItem(
@@ -363,15 +366,16 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 if (data?.realUrl != null)
                                   PopupMenuItem(
                                     onTap: () => openInBrowser(data!.realUrl!),
-                                    child:
-                                        Text(context.l10n.openSourceInBrowser),
+                                    child: Text(
+                                      context.l10n.openSourceInBrowser,
+                                    ),
                                   ),
                                 PopupMenuItem(
                                   onTap: openOnServer,
                                   child: Text(context.l10n.openOnServer),
                                 ),
                               ],
-                            )
+                            ),
                         ],
                       );
                     },
@@ -387,86 +391,85 @@ class MangaDetailsScreen extends HookConsumerWidget {
           ),
           floatingActionButton:
               firstUnreadChapter != null && selectedChapters.value.isEmpty
-                  ? BrandFab(
-                      label: Text(
-                        data?.lastReadChapter?.hasReadingProgress == true
-                            ? context.l10n.resume
-                            : context.l10n.start,
-                      ),
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      onPressed: () {
-                        ReaderRoute(
-                          mangaId: firstUnreadChapter.mangaId,
-                          chapterId: firstUnreadChapter.id,
-                          showReaderLayoutAnimation: true,
-                        ).push(context);
-                      },
-                    )
-                  : null,
+              ? BrandFab(
+                  label: Text(
+                    data?.lastReadChapter?.hasReadingProgress == true
+                        ? context.l10n.resume
+                        : context.l10n.start,
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  onPressed: () {
+                    ReaderRoute(
+                      mangaId: firstUnreadChapter.mangaId,
+                      chapterId: firstUnreadChapter.id,
+                      showReaderLayoutAnimation: true,
+                    ).push(context);
+                  },
+                )
+              : null,
           // Banner above the content, not over it: the hero owns the whole top
           // of this screen and a floating banner cuts the cover in half.
           body: Column(
             children: [
               ServerUnreachableBanner(onRetry: refresh),
               Expanded(
-                  child: Stack(
-            children: [
-              NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  if (n.metrics.axis == Axis.vertical) {
-                    scrollPx.value = n.metrics.pixels;
-                  }
-                  return false;
-                },
-                child: data != null
-                    ? context.isTablet
-                        ? BigScreenMangaDetails(
-                            chapterList: filteredChapterList,
-                            manga: data,
-                            mangaId: mangaId,
-                            onRefresh: refresh,
-                            onDescriptionRefresh: mangaRefresh,
-                            onListRefresh: chapterListRefresh,
-                            selectedChapters: selectedChapters,
-                          )
-                        : SmallScreenMangaDetails(
-                            chapterList: filteredChapterList,
-                            manga: data,
-                            mangaId: mangaId,
-                            onRefresh: refresh,
-                            onDescriptionRefresh: mangaRefresh,
-                            onListRefresh: chapterListRefresh,
-                            selectedChapters: selectedChapters,
-                          )
-                    : Emoticons(
-                        title: context.l10n.noMangaFound,
-                        button: TextButton(
-                          onPressed: refresh,
-                          child: Text(context.l10n.refresh),
+                child: Stack(
+                  children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n.metrics.axis == Axis.vertical) {
+                          scrollPx.value = n.metrics.pixels;
+                        }
+                        return false;
+                      },
+                      child: data != null
+                          ? context.isTablet
+                                ? BigScreenMangaDetails(
+                                    chapterList: filteredChapterList,
+                                    manga: data,
+                                    mangaId: mangaId,
+                                    onRefresh: refresh,
+                                    onDescriptionRefresh: mangaRefresh,
+                                    onListRefresh: chapterListRefresh,
+                                    selectedChapters: selectedChapters,
+                                  )
+                                : SmallScreenMangaDetails(
+                                    chapterList: filteredChapterList,
+                                    manga: data,
+                                    mangaId: mangaId,
+                                    onRefresh: refresh,
+                                    onDescriptionRefresh: mangaRefresh,
+                                    onListRefresh: chapterListRefresh,
+                                    selectedChapters: selectedChapters,
+                                  )
+                          : Emoticons(
+                              title: context.l10n.noMangaFound,
+                              button: TextButton(
+                                onPressed: refresh,
+                                child: Text(context.l10n.refresh),
+                              ),
+                            ),
+                    ),
+                    if (selectedChapters.value.isNotEmpty)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: MultiChaptersActionsBottomAppBar(
+                          afterOptionSelected: chapterListRefresh,
+                          selectedChapters: selectedChapters,
+                          chapterList: filteredChapterList.value,
                         ),
                       ),
-              ),
-              if (selectedChapters.value.isNotEmpty)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: MultiChaptersActionsBottomAppBar(
-                    afterOptionSelected: chapterListRefresh,
-                    selectedChapters: selectedChapters,
-                    chapterList: filteredChapterList.value,
-                  ),
+                  ],
                 ),
-            ],
-                  )),
+              ),
             ],
           ),
         ),
         refresh: refresh,
         wrapper: (body) => Scaffold(
-          appBar: AppBar(
-            title: Text(context.l10n.manga),
-          ),
+          appBar: AppBar(title: Text(context.l10n.manga)),
           body: body,
         ),
       ),
@@ -487,24 +490,21 @@ class MultiSelectPopupButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton(
-      shape: RoundedRectangleBorder(
-        borderRadius: KBorderRadius.r16.radius,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
       icon: const Icon(Icons.more_vert_rounded),
       itemBuilder: (context) => [
         PopupMenuItem(
           onTap: () {
-            List<ChapterDto> chapterList = [
-              ...?filteredChapterList.value
-            ];
+            List<ChapterDto> chapterList = [...?filteredChapterList.value];
             final lastId = selectedChapters.value.keys.last;
-            final lastIndex =
-                chapterList.lastIndexWhere((chapter) => chapter.id == lastId);
+            final lastIndex = chapterList.lastIndexWhere(
+              (chapter) => chapter.id == lastId,
+            );
             final maxIndex = min(chapterList.length, lastIndex + 10);
             selectedChapters.value = ({
               ...selectedChapters.value,
               for (int i = lastIndex + 1; i < maxIndex; i++)
-                chapterList[i].id: chapterList[i]
+                chapterList[i].id: chapterList[i],
             });
           },
           child: Text(context.l10n.selectNext10),
@@ -515,7 +515,7 @@ class MultiSelectPopupButton extends StatelessWidget {
 
             selectedChapters.value = ({
               for (ChapterDto i in chapterList)
-                if (!i.isRead.ifNull()) i.id: i
+                if (!i.isRead.ifNull()) i.id: i,
             });
           },
           child: Text(context.l10n.selectUnread),
@@ -523,21 +523,40 @@ class MultiSelectPopupButton extends StatelessWidget {
         PopupMenuItem(
           onTap: () {
             final chapterList = [...?filteredChapterList.value];
-            final selectedChapterIds =
-                selectedChapters.value.keys.toList(growable: false);
+            final selectedChapterIds = selectedChapters.value.keys.toList(
+              growable: false,
+            );
             final firstSelectedIndex = chapterList.indexWhere(
-                (chapter) => chapter.id == selectedChapterIds.firstOrNull);
+              (chapter) => chapter.id == selectedChapterIds.firstOrNull,
+            );
             final lastSelectedIndex = chapterList.indexWhere(
-                (chapter) => chapter.id == selectedChapterIds.lastOrNull);
+              (chapter) => chapter.id == selectedChapterIds.lastOrNull,
+            );
             final firstIndex = min(firstSelectedIndex, lastSelectedIndex);
             final lastIndex = max(firstSelectedIndex, lastSelectedIndex);
 
             selectedChapters.value = ({
               for (int i = firstIndex; i <= lastIndex; i++)
-                chapterList[i].id: chapterList[i]
+                chapterList[i].id: chapterList[i],
             });
           },
           child: Text(context.l10n.selectInBetween),
+        ),
+        PopupMenuItem(
+          onTap: () {
+            final chapterList = [...?filteredChapterList.value];
+            final selectedIds = selectedChapters.value.keys.toSet();
+            final anchorIndex = chapterList.indexWhere(
+              (c) => selectedIds.contains(c.id),
+            );
+            if (anchorIndex < 0) return;
+            selectedChapters.value = {
+              ...selectedChapters.value,
+              for (int i = anchorIndex + 1; i < chapterList.length; i++)
+                chapterList[i].id: chapterList[i],
+            };
+          },
+          child: Text(context.l10n.selectBelow),
         ),
       ],
     );

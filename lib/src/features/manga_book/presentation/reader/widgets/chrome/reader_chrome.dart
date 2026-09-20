@@ -59,6 +59,7 @@ class ReaderChrome extends HookConsumerWidget {
     required this.manga,
     required this.chapter,
     required this.chapterPages,
+    this.readerScanlatorGroup = '',
     required this.currentIndex,
     required this.totalPageCount,
     required this.visibility,
@@ -79,6 +80,7 @@ class ReaderChrome extends HookConsumerWidget {
   final MangaDto manga;
   final ChapterDto chapter;
   final ChapterPagesDto chapterPages;
+  final String readerScanlatorGroup;
   final int currentIndex;
 
   /// For infinity-scroll mode; null means use [chapterPages.chapter.pageCount].
@@ -136,8 +138,9 @@ class ReaderChrome extends HookConsumerWidget {
       statusBarIconBrightness: darkIcons ? Brightness.dark : Brightness.light,
       statusBarBrightness: darkIcons ? Brightness.light : Brightness.dark,
       systemNavigationBarContrastEnforced: false,
-      systemNavigationBarIconBrightness:
-          darkIcons ? Brightness.dark : Brightness.light,
+      systemNavigationBarIconBrightness: darkIcons
+          ? Brightness.dark
+          : Brightness.light,
     );
 
     // ── C1: OS system-bar sync — driven from controller status, not raw bool ──
@@ -156,7 +159,8 @@ class ReaderChrome extends HookConsumerWidget {
     // do not conflict because reader_screen sets on mount (once) while this
     // listener updates only on animation-status transitions.
     // Fullscreen OFF keeps the OS bars up even while the chrome is hidden.
-    final fullscreen = ref.watch(readerFullscreenProvider) ??
+    final fullscreen =
+        ref.watch(readerFullscreenProvider) ??
         DBKeys.readerFullscreen.initial as bool;
     useEffect(() {
       void onStatus(AnimationStatus status) {
@@ -235,10 +239,12 @@ class ReaderChrome extends HookConsumerWidget {
     // When [forceHorizontalSeekbar] is true, the vertical side seekbar is hidden
     // and the horizontal bottom seekbar serves all modes (including webtoon).
     final extents = ref.watch(chromeExtentsProvider);
-    final forceHorizontal =
-        ref.watch(forceHorizontalSeekbarProvider).ifNull(false);
-    final leftHanded =
-        ref.watch(leftHandedVerticalSeekbarProvider).ifNull(false);
+    final forceHorizontal = ref
+        .watch(forceHorizontalSeekbarProvider)
+        .ifNull(false);
+    final leftHanded = ref
+        .watch(leftHandedVerticalSeekbarProvider)
+        .ifNull(false);
     // "Show page number": a subtle "n / m" pill near the bottom, always
     // mounted (outside the animated bars) so it stays visible while reading.
     final showPageNumber = ref.watch(showPageNumberProvider).ifNull(true);
@@ -326,9 +332,7 @@ class ReaderChrome extends HookConsumerWidget {
                           topInset: size.height,
                           bottomInset: current.bottomInset,
                         );
-                        ref
-                            .read(chromeExtentsProvider.notifier)
-                            .update(next);
+                        ref.read(chromeExtentsProvider.notifier).update(next);
                       },
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -416,6 +420,7 @@ class ReaderChrome extends HookConsumerWidget {
                       end: Offset.zero,
                     ).animate(slide),
                     child: ReaderBottomControls(
+                      readerScanlatorGroup: readerScanlatorGroup,
                       chapter: chapter,
                       chapterPages: chapterPages,
                       currentIndex: currentIndex,

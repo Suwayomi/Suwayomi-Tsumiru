@@ -161,7 +161,10 @@ void main() {
           await drain;
           expect(second.puts, 0);
           expect(second.batches, 0);
-          if (operation == 'progress') expect(first.batches, 0);
+          // Completing a chapter that has hidden scanlator copies writes all of
+          // them in ONE batch on the session that started the read, so the
+          // batch belongs to A and never re-runs against B.
+          if (operation == 'progress') expect(first.batches, 1);
           for (final id in [1, 2]) {
             final row = (await b.chapterById(id))!;
             expect(row.isRead, isFalse);

@@ -374,44 +374,27 @@ Future<AsyncValue<void>> recordReadingProgress(
   final offline = ref.read(offlineActiveProvider);
   final db = offline ? ref.read(offlineDatabaseProvider) : null;
   final repository = ref.read(mangaBookRepositoryProvider);
-  final siblings = isRead
-      ? (expandIdsAcrossScanlators(
+  final completionChapterIds = isRead
+      ? expandIdsAcrossScanlators(
           ref,
           mangaId: mangaId,
           chapterIds: [chapterId],
-        )..remove(chapterId))
-      : <int>[];
-  return ref.read(offlineRuntimeStorageProvider.notifier).track(() async {
-    final result = await recordReadingProgressWithDependencies(
-      offlineEnabled: offline,
-      offlineDatabase: db,
-      repository: repository,
-      chapterId: chapterId,
-      lastPageRead: lastPageRead,
-      isRead: isRead,
-      isCurrentSession: current,
-    );
-    if (!current()) return const AsyncValue.data(null);
-    if (!result.hasError && siblings.isNotEmpty) {
-      final siblingsOk = await recordReadStateWithDependencies(
-        offlineEnabled: offline,
-        offlineDatabase: db,
-        repository: repository,
-        chapterIds: siblings,
-        isRead: true,
-        resetPosition: true,
-        isCurrentSession: current,
+        )
+      : null;
+  return ref
+      .read(offlineRuntimeStorageProvider.notifier)
+      .track(
+        () => recordReadingProgressWithDependencies(
+          offlineEnabled: offline,
+          offlineDatabase: db,
+          repository: repository,
+          chapterId: chapterId,
+          lastPageRead: lastPageRead,
+          isRead: isRead,
+          completionChapterIds: completionChapterIds,
+          isCurrentSession: current,
+        ),
       );
-      if (!current()) return const AsyncValue.data(null);
-      if (!siblingsOk && !offline) {
-        return AsyncValue.error(
-          Exception('marking duplicate copies read failed'),
-          StackTrace.current,
-        );
-      }
-    }
-    return result;
-  });
 }
 
 /// Returns the server-push outcome so callers aren't blind to a failed write.
@@ -424,10 +407,36 @@ Future<AsyncValue<void>> recordReadingProgressWithDependencies({
   required int chapterId,
   required int lastPageRead,
   required bool isRead,
+  List<int>? completionChapterIds,
   bool Function()? isCurrentSession,
 }) async {
   bool current() => isCurrentSession?.call() ?? true;
   if (!current()) return const AsyncValue.data(null);
+  // Completing a chapter also marks its hidden scanlator duplicates read, or
+  // they'd corrupt counts and resume on other clients — one batch write, so a
+  // partial failure can't leave the copies disagreeing.
+  if (isRead &&
+      completionChapterIds != null &&
+      completionChapterIds.length > 1) {
+    final result = await _recordReadStateResultWithDependencies(
+      offlineEnabled: offlineEnabled,
+      offlineDatabase: offlineDatabase,
+      repository: repository,
+      chapterIds: completionChapterIds,
+      isRead: true,
+      resetPosition: true,
+      manual: false,
+      isCurrentSession: isCurrentSession,
+    );
+    if (!current()) return const AsyncValue.data(null);
+    if (result.hasError && offlineEnabled && offlineDatabase != null) {
+      final e = result.error!;
+      final cause = e is OperationMessageException ? e.exception : e;
+      if (isConnectionError(cause)) return const AsyncValue.data(null);
+    }
+    return result;
+  }
+
   // Reading forward never un-reads: partial writes record position only (isRead
   // omitted); only completion marks read. Mark-unread is a separate path.
   final bool? markRead = isRead ? true : null;
@@ -522,25 +531,48 @@ Future<bool> recordReadStateWithDependencies({
   bool resetPosition = false,
   bool Function()? isCurrentSession,
 }) async {
+  final result = await _recordReadStateResultWithDependencies(
+    offlineEnabled: offlineEnabled,
+    offlineDatabase: offlineDatabase,
+    repository: repository,
+    chapterIds: chapterIds,
+    isRead: isRead,
+    resetPosition: resetPosition,
+    manual: true,
+    isCurrentSession: isCurrentSession,
+  );
+  return !result.hasError;
+}
+
+Future<AsyncValue<void>> _recordReadStateResultWithDependencies({
+  required bool offlineEnabled,
+  required OfflineDatabase? offlineDatabase,
+  required MangaBookRepository repository,
+  required List<int> chapterIds,
+  required bool isRead,
+  required bool resetPosition,
+  required bool manual,
+  bool Function()? isCurrentSession,
+}) async {
   bool current() => isCurrentSession?.call() ?? true;
-  if (!current()) return false;
+  if (!current()) return const AsyncValue.data(null);
   final db = offlineDatabase;
   if (offlineEnabled && db != null) {
     for (final id in chapterIds) {
-      if (!current()) return false;
+      if (!current()) return const AsyncValue.data(null);
       if (resetPosition) {
         await db.setChapterProgress(
           id,
           lastPageRead: 0,
           isRead: isRead,
-          manual: true,
+          manual: manual,
         );
       } else {
         await db.setChapterReadState(id, isRead);
       }
     }
   }
-  if (!current()) return false;
+  if (!current()) return const AsyncValue.data(null);
   final result = await AsyncValue.guard(
     () => repository.modifyBulkChapters(
       ChapterBatch(
@@ -551,18 +583,18 @@ Future<bool> recordReadStateWithDependencies({
       ),
     ),
   );
-  if (!current()) return false;
+  if (!current()) return const AsyncValue.data(null);
   if (offlineEnabled && db != null && !result.hasError) {
     for (final id in chapterIds) {
-      if (!current()) return false;
+      if (!current()) return const AsyncValue.data(null);
       await db.clearReadStateDirtyIfUnchanged(id, isRead: isRead);
-      if (!current()) return false;
+      if (!current()) return const AsyncValue.data(null);
       if (resetPosition) {
         await db.clearProgressDirtyIfUnchanged(id, lastPageRead: 0);
       }
     }
   }
-  return !result.hasError;
+  return result;
 }
 
 /// Widget entry point for [recordReadStateWithDependencies] — resolves the
@@ -627,11 +659,11 @@ Future<int?> whileReadingDeleteTarget(
     chapters ??= await read(listProvider.future);
     if (chapters == null) return null;
 
-    // Pinned to the chapter actually being read: without it dedup can keep a
-    // different group's copy of that number and drop this id from the list.
-    final deduped = preferred.isEmpty || showAll
+    // Keep the chapter actually being read even if its scanlator is hidden by
+    // the preferred-scanlator filter.
+    final visible = preferred.isEmpty || showAll
         ? chapters
-        : applyPreferredScanlators(
+        : filterPreferredScanlators(
             chapters,
             preferred,
             keepChapterId: readChapterId,
@@ -639,7 +671,7 @@ Future<int?> whileReadingDeleteTarget(
 
     // Tie-broken by id: List.sort is unstable, so duplicate source orders would
     // otherwise let the Nth-back target move between reads.
-    final inReadingOrder = [...deduped]
+    final inReadingOrder = [...visible]
       ..sort((a, b) {
         final byOrder = a.sourceOrder.compareTo(b.sourceOrder);
         return byOrder != 0 ? byOrder : a.id.compareTo(b.id);
@@ -794,6 +826,44 @@ Future<void> _resolveReadDeletes(
         if (target != null) {
           pending.enqueue((mangaId: mangaId, chapterId: target, server: false));
         }
+      }
+
+      // Reconcile immediately at each chapter boundary so the next chapter
+      // starts downloading and the keep-last-read window advances.
+      // Uses deleteWhileReading+1 to buffer one extra chapter at the boundary
+      // for easy back-and-forth; reader exit cleans up to the normal value.
+      final manager = read(offlineDownloadManagerProvider);
+      final coordinator = read(offlineDownloadCoordinatorProvider);
+      if (manager != null && coordinator != null && current()) {
+        await reconcileMangaCore(
+          db: read(offlineDatabaseProvider),
+          repo: read(offlineRepositoryProvider),
+          manager: manager,
+          coordinator: coordinator,
+          nets: read(safetyNetConfigProvider),
+          mangaId: mangaId,
+          sessionProtected: read(sessionReadChaptersProvider),
+          deleteWhileReadingSlots: s.deleteWhileReading + 1,
+          downloadProtectionWindow:
+              read(localDownloadProtectionWindowProvider) ?? false,
+          enqueueServerDownload: (ids) async {
+            await read(
+              downloadsRepositoryProvider,
+            ).addChaptersBatchToDownloadQueue(ids);
+            awaitingServerDownloads.add(mangaId);
+            await persistAwaitingServerDownloads(read);
+          },
+          withOwnership: read(
+            backgroundDownloadControllerProvider,
+          ).withOwnership,
+          removeFromWorker: (id, gen) async {
+            final ctrl = read(backgroundDownloadControllerProvider);
+            await ctrl.onRemoved(id);
+            await ctrl.recordChapterDeleted(id, gen);
+          },
+        );
+        if (!current()) return;
+        await read(downloadStarterProvider)();
       }
     }
 
@@ -1289,6 +1359,8 @@ Future<void> _removeMangaFromLibraryAndPurgeOwned(
       await _deleteChapterFromDeviceContainer(container, c.id);
     }
   }
+  if (!current()) return;
+  await writeCatchupWorkSpec(container.read);
 }
 
 /// The offline download orchestrator, wired with real network dependencies:
@@ -1645,6 +1717,8 @@ Future<void> _removeKeepRuleAndDeleteOwned(
       await _deleteChapterFromDeviceRead(container.read, c.id);
     }
   }
+  if (!current()) return;
+  await writeCatchupWorkSpec(container.read);
 }
 
 /// Change the keep-rule for [mangaId] and reconcile (download/evict to match).

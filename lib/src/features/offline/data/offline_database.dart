@@ -1217,6 +1217,11 @@ class OfflineDatabase extends _$OfflineDatabase {
   /// [purgeRemovedLibraryManga] then deletes the ones with nothing
   /// downloaded. Distinct from NULL, which means "synced before the column
   /// existed" and must keep counting as a library entry.
+  ///
+  /// [libraryIds] must come from the COMPLETE library fetch
+  /// ([getAllLibraryMangas], which paginates to exhaustion and returns null on
+  /// any partial/failed page): an absent manga is then genuinely removed, so a
+  /// kept series left server-side is correctly pruned rather than protected.
   Future<int> markNotInLibrary(Set<int> libraryIds) =>
       (update(offlineMangas)..where((t) => t.id.isNotIn(libraryIds))).write(
         const OfflineMangasCompanion(inLibraryAt: Value('0')),

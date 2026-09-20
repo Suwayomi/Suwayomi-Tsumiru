@@ -12,15 +12,14 @@ import 'package:tsumiru/src/features/offline/data/offline_download_providers.dar
 
 import '../../../helpers/offline_test_db.dart';
 
-GraphQLClient _dummyClient() => GraphQLClient(
-      link: HttpLink('http://localhost:0'),
-      cache: GraphQLCache(),
-    );
+GraphQLClient _dummyClient() =>
+    GraphQLClient(link: HttpLink('http://localhost:0'), cache: GraphQLCache());
 
 /// Captures the patch sent to the server so we can assert what reading writes.
 class _CapturingRepo extends MangaBookRepository {
   _CapturingRepo() : super(_dummyClient());
   ChapterChange? lastPatch;
+  ChapterBatch? lastBatch;
 
   @override
   Future<void> putChapter({
@@ -28,6 +27,11 @@ class _CapturingRepo extends MangaBookRepository {
     required ChapterChange patch,
   }) async {
     lastPatch = patch;
+  }
+
+  @override
+  Future<void> modifyBulkChapters(ChapterBatch batch) async {
+    lastBatch = batch;
   }
 }
 
@@ -45,9 +49,13 @@ void main() {
       );
 
       final json = repo.lastPatch!.toJson();
-      expect(json.containsKey('isRead'), isFalse,
-          reason: 'a partial read must not send isRead at all — the server '
-              'keeps whatever it had, so a stale client cannot un-read it');
+      expect(
+        json.containsKey('isRead'),
+        isFalse,
+        reason:
+            'a partial read must not send isRead at all — the server '
+            'keeps whatever it had, so a stale client cannot un-read it',
+      );
       expect(json['lastPageRead'], 38);
     });
 
@@ -66,37 +74,88 @@ void main() {
       expect(json['isRead'], true);
     });
 
-    test('offline: a partial read does NOT flip a read chapter to unread',
-        () async {
-      final db = testOfflineDatabase();
-      addTearDown(db.close);
-      await db.upsertChapterMetadata(
-        id: 11,
-        mangaId: 1,
-        name: 'c11',
-        chapterIndex: 11,
-        isRead: true, // already finished (e.g. on another device)
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 40,
-        updatedAt: DateTime(2026),
-      );
+    test(
+      'reader completion marks every confidently matched release read',
+      () async {
+        final db = testOfflineDatabase();
+        addTearDown(db.close);
+        for (final id in [11, 12]) {
+          await db.upsertChapterMetadata(
+            id: id,
+            mangaId: 1,
+            name: 'Chapter 1',
+            chapterIndex: id,
+            isRead: false,
+            lastPageRead: 9,
+            isBookmarked: false,
+            serverIsDownloaded: true,
+            pageCount: 10,
+            updatedAt: DateTime(2026),
+          );
+        }
+        final repo = _CapturingRepo();
 
-      await recordReadingProgressWithDependencies(
-        offlineEnabled: true,
-        offlineDatabase: db,
-        repository: _CapturingRepo(),
-        chapterId: 11,
-        lastPageRead: 38,
-        isRead: false,
-      );
+        await recordReadingProgressWithDependencies(
+          offlineEnabled: true,
+          offlineDatabase: db,
+          repository: repo,
+          chapterId: 11,
+          lastPageRead: 0,
+          isRead: true,
+          completionChapterIds: [11, 12],
+        );
 
-      final row = await db.chapterById(11);
-      expect(row!.isRead, isTrue,
-          reason: 'the local cache must keep the chapter read; only position '
-              'updates on a partial read');
-      expect(row.lastPageRead, 38);
-    });
+        expect(repo.lastBatch!.ids, [11, 12]);
+        expect(repo.lastBatch!.patch.isRead, isTrue);
+        expect(repo.lastBatch!.patch.lastPageRead, 0);
+        for (final id in [11, 12]) {
+          final row = (await db.chapterById(id))!;
+          expect(row.isRead, isTrue);
+          expect(row.lastPageRead, 0);
+          expect(row.readStateManual, isFalse);
+          expect(row.readStateDirty, isFalse);
+          expect(row.progressDirty, isFalse);
+        }
+      },
+    );
+
+    test(
+      'offline: a partial read does NOT flip a read chapter to unread',
+      () async {
+        final db = testOfflineDatabase();
+        addTearDown(db.close);
+        await db.upsertChapterMetadata(
+          id: 11,
+          mangaId: 1,
+          name: 'c11',
+          chapterIndex: 11,
+          isRead: true, // already finished (e.g. on another device)
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 40,
+          updatedAt: DateTime(2026),
+        );
+
+        await recordReadingProgressWithDependencies(
+          offlineEnabled: true,
+          offlineDatabase: db,
+          repository: _CapturingRepo(),
+          chapterId: 11,
+          lastPageRead: 38,
+          isRead: false,
+        );
+
+        final row = await db.chapterById(11);
+        expect(
+          row!.isRead,
+          isTrue,
+          reason:
+              'the local cache must keep the chapter read; only position '
+              'updates on a partial read',
+        );
+        expect(row.lastPageRead, 38);
+      },
+    );
   });
 }

@@ -27,6 +27,8 @@ import '../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../migration/domain/migration_models.dart';
+import '../../../offline/data/offline_chapter_catchup.dart';
+import '../../../offline/data/offline_database.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_repository.dart';
 import '../../../offline/data/offline_runtime_storage.dart';
@@ -163,6 +165,8 @@ class CategoryMangaList extends HookConsumerWidget {
     }
 
     return mangaList.showUiWhenData(
+      // Own loading state per tab, so the offline escape hatch needs to
+      // live here too, not only on the library-level gates.
       loadingWidget: const OfflineViewLoading(),
       offlineEscapeHatch: true,
       context,
@@ -185,8 +189,14 @@ class CategoryMangaList extends HookConsumerWidget {
         );
 
         final list = RefreshIndicator(
-          // LibraryScreen refreshes again when the server update finishes.
+          // Pull = "check this category for new chapters, and pull down the
+          // latest" (Mihon/Komikku parity). The source-check runs server-side
+          // and the progress banner reflects it, so the spinner only waits on
+          // the immediate re-read, not the whole update. The standing rule in
+          // LibraryScreen re-reads again when the update finishes.
           onRefresh: () async {
+            // A pull means "try the server again" — drop the offline pin.
+            // Only a user gesture clears it; the mount effect must not.
             ref.read(viewOfflineNowProvider.notifier).set(false);
             ref.read(serverUnreachableProvider.notifier).set(false);
             ref.read(updateOptimisticProvider.notifier).arm();
@@ -202,6 +212,8 @@ class CategoryMangaList extends HookConsumerWidget {
           child: grid,
         );
 
+        // While selecting, swallow the system back to exit selection first, and
+        // show a contextual action bar over the grid.
         return PopScope(
           canPop: !selecting,
           onPopInvokedWithResult: (didPop, _) {
@@ -229,8 +241,92 @@ class CategoryMangaList extends HookConsumerWidget {
                                 .read(authCredentialsStoreProvider.notifier)
                                 .captureSession();
                             final ids = selection.value.toList();
+                            // Captured before any await — context is guaranteed mounted here.
+                            // After the dialog awaits below it may no longer be.
+                            final container = ProviderScope.containerOf(
+                              context,
+                              listen: false,
+                            );
+                            // Let the user choose how much to keep (next-N / all-unread
+                            // / all) instead of silently downloading every chapter —
+                            // picking "all" across a read library can queue thousands.
+                            // The picker also surfaces "stop keeping" and "remove from
+                            // device" so bulk offline management is possible from the
+                            // library without opening each series individually.
                             final picked = await pickOfflineKeepRule(context);
                             if (picked == null) return;
+
+                            if (picked.remove) {
+                              // "Remove from device" — confirm before deleting, always
+                              // (even for a single series, since deletion is irreversible
+                              // without a re-download).
+                              if (!context.mounted) return;
+                              final ok =
+                                  await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: ctx.theme.colorScheme.error,
+                                      ),
+                                      title: Text(
+                                        ctx.l10n.manageDownloadsStopDelete,
+                                      ),
+                                      content: Text(
+                                        ctx.l10n.manageDownloadsDeleteConfirm(
+                                          ids.length,
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: Text(ctx.l10n.cancel),
+                                        ),
+                                        FilledButton(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                ctx.theme.colorScheme.error,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          child: Text(ctx.l10n.delete),
+                                        ),
+                                      ],
+                                    ),
+                                  ) ??
+                                  false;
+                              if (!ok || !current()) return;
+                              selection.value = const {};
+                              for (final id in ids) {
+                                if (!current()) return;
+                                await removeKeepRuleAndDelete(ref, id);
+                              }
+                              return;
+                            }
+
+                            if (picked.rule == OfflineKeepRule.off) {
+                              // "Stop keeping offline" — off rule, no deletion. Route
+                              // through the shared changeKeepRule helper (same as the
+                              // Offline files screen) instead of a bare setKeepRule: it
+                              // reconciles under ownership and rewrites the background
+                              // work spec, so the overnight worker stops treating these
+                              // series as kept. A bare setKeepRule leaves the spec stale
+                              // and the worker keeps downloading their chapters.
+                              if (!current()) return;
+                              selection.value = const {};
+                              for (final id in ids) {
+                                if (!current()) return;
+                                await changeKeepRule(
+                                  ref,
+                                  id,
+                                  OfflineKeepRule.off,
+                                  5,
+                                );
+                              }
+                              return;
+                            }
+
                             if (ids.length > 1 &&
                                 context.mounted &&
                                 !await confirmBulkDownload(
@@ -242,39 +338,52 @@ class CategoryMangaList extends HookConsumerWidget {
                             }
                             if (!context.mounted || !current()) return;
                             selection.value = const {};
-                            if (!context.mounted || !current()) return;
                             ref
                                 .read(accountPermissionGuardProvider)
                                 .require(Enum$UserPermission.DOWNLOAD_CHAPTERS);
                             final db = ref.read(offlineDatabaseProvider);
+                            final sync = ref.read(offlineSyncProvider);
                             final runtime = ref.read(
                               offlineRuntimeStorageProvider.notifier,
                             );
-                            for (final id in ids) {
-                              if (!context.mounted || !current()) return;
-                              ref
-                                  .read(accountPermissionGuardProvider)
-                                  .require(
-                                    Enum$UserPermission.DOWNLOAD_CHAPTERS,
-                                  );
-                              await runtime.track(
-                                () => db.setKeepRule(
-                                  id,
+                            // setKeepRule is a pure UPDATE: with no offlineMangas row it
+                            // silently touches nothing, so the rule never persists and
+                            // the reconciler later early-exits on the missing row. A
+                            // library row is only mirrored lazily (unawaited, and only
+                            // when the list came from the server), so it can be absent
+                            // here. Mirror it now from the DTO we already hold, then set
+                            // the rule against a row that is guaranteed to exist.
+                            final selected = items
+                                .where((m) => ids.contains(m.id))
+                                .toList();
+                            for (final manga in selected) {
+                              if (!current()) return;
+                              await runtime.track(() async {
+                                await sync?.syncManga(
+                                  manga,
+                                  fetchedAtGen: sync.syncGeneration,
+                                );
+                                await db.setKeepRule(
+                                  manga.id,
                                   picked.rule,
                                   picked.count,
-                                ),
-                              );
-                              if (!context.mounted || !current()) return;
-                              // Start once after the whole selection is queued.
-                              await reconcileMangaWidget(
-                                ref,
-                                id,
-                                startDownload: false,
-                              );
+                                );
+                              });
                             }
-                            if (!context.mounted || !current()) return;
-                            await ref.read(downloadStarterProvider)(
-                              userInitiated: true,
+                            if (!current()) return;
+                            // Always fetch fresh chapter state before reconciling — the
+                            // stored serverIsDownloaded mirror the reconciler routes on
+                            // goes stale, which otherwise sends chapters to a device-only
+                            // download (bypassing the server) or to a server re-enqueue
+                            // that never pulls to the device. syncAndReconcileMangaSet
+                            // re-syncs, reconciles, registers the second-hop pull, and
+                            // starts the download in the background.
+                            unawaited(
+                              syncAndReconcileMangaSet(
+                                container,
+                                ids.toSet(),
+                                userInitiated: true,
+                              ),
                             );
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -332,6 +441,8 @@ class CategoryMangaList extends HookConsumerWidget {
                           .toList();
                       if (selected.isEmpty) return;
                       selection.value = const {};
+                      // One series → the per-series toggle dialog; many → the
+                      // bulk tri-state dialog.
                       await showDialog<void>(
                         context: context,
                         builder: (context) => selected.length == 1

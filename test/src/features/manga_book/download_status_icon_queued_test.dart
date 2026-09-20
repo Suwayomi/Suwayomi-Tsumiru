@@ -178,6 +178,9 @@ void main() {
         await tester.pump();
         if (immediate) {
           await tester.tap(find.byIcon(Icons.cloud_download_outlined));
+          // The button shows a spinner until the queue feed reports the
+          // chapter, capped at 10 seconds; this test never feeds it.
+          await tester.pump(const Duration(seconds: 10));
         } else {
           feed.add(_event(DownloadUpdateType.QUEUED));
           await tester.pump();

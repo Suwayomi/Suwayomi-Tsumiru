@@ -18,6 +18,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../../manga_details/controller/scanlator_dedup.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
 import '../reader_wrapper.dart';
@@ -72,7 +73,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
     final centerMargin = settings.centerMarginType;
     final isLandscape = context.width > context.height;
     final isHorizontal = scrollDirection == Axis.horizontal;
-    final wantDouble = isHorizontal &&
+    final wantDouble =
+        isHorizontal &&
         (pageLayout == PageLayout.doublePages ||
             (pageLayout == PageLayout.automatic && isLandscape) ||
             trueDual);
@@ -121,8 +123,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
       openAtEnd: openAtEnd,
     );
     final rawToDisplay = window.chapterRawToDisplay(chapter.id, initialRaw);
-    final initialDisplay =
-        rawToDisplay >= 0 ? rawToDisplay : window.firstDisplayOf(chapter.id);
+    final initialDisplay = rawToDisplay >= 0
+        ? rawToDisplay
+        : window.firstDisplayOf(chapter.id);
     // Seed the tracked page from the initial spread's furthest page so the
     // viewport's mount emit (which reports that page) doesn't rewind the
     // seekbar or double-fire onPageChanged.
@@ -137,7 +140,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
         for (final page in {
           currentPage - 1,
           currentPage + 1,
-          currentPage + 2
+          currentPage + 2,
         }) {
           if (page >= 0 && page < chapterPages.pages.length) {
             cacheManager.getServerFile(ref, chapterPages.pages[page]);
@@ -155,8 +158,10 @@ class SinglePageReaderMode extends HookConsumerWidget {
       });
     }
 
-    final (pageFit, pageSize) =
-        settings.imageScaleType.pagedFit(context.width, context.height);
+    final (pageFit, pageSize) = settings.imageScaleType.pagedFit(
+      context.width,
+      context.height,
+    );
     final reversePair = invertDouble != reverse;
     final spreadPageIndexes = _spreadPageIndexes(
       mapping,
@@ -167,6 +172,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
         effectiveReaderMode ?? _singlePageReaderMode(scrollDirection, reverse);
 
     return ReaderWrapper(
+      readerScanlatorGroup: scanlatorGroupOf(chapter),
       scrollDirection: scrollDirection,
       chapter: chapter,
       manga: manga,
@@ -193,7 +199,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
         pageFit: pageFit,
         pageSize: pageSize,
         pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
-        mouseScrollSpeed: ref.watch(readerMouseScrollSpeedKeyProvider) ??
+        mouseScrollSpeed:
+            ref.watch(readerMouseScrollSpeedKeyProvider) ??
             DBKeys.readerMouseScrollSpeed.initial,
         centerMargin: centerMargin,
         rotateWide: settings.rotateWidePages,

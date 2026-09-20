@@ -16,13 +16,19 @@ import '../data/offline_database.dart';
 const kOfflineBufferSizes = [5, 10, 25];
 
 /// Bottom sheet that lets the user choose an offline keep-rule (how much of a
-/// series to hold on the device). Returns the chosen rule + count, or null if
-/// dismissed. Shared by the per-series sheet, the library multi-select Offline
-/// action, and the download-subscriptions management page so they stay in sync.
-Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
+/// series to hold on the device). Returns the chosen rule + count + whether
+/// local files should also be deleted, or null if dismissed.
+///
+/// `remove: true` is only set for the "Remove from device" option — callers
+/// must also delete local chapters when this flag is set. All other options
+/// set `remove: false` and only adjust the keep-rule.
+///
+/// The keep options need the account's download permission; stopping a rule
+/// and freeing device space do not, so they stay available to every account.
+Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
   BuildContext context,
 ) {
-  return showModalBottomSheet<({OfflineKeepRule rule, int count})>(
+  return showModalBottomSheet<({OfflineKeepRule rule, int count, bool remove})>(
     context: context,
     showDragHandle: true,
     // Scroll-controlled and scrollable: a default sheet is capped at 9/16 of
@@ -52,6 +58,7 @@ Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
                         ? () => Navigator.pop(sheetContext, (
                             rule: OfflineKeepRule.nUnread,
                             count: n,
+                            remove: false,
                           ))
                         : null,
                   ),
@@ -62,6 +69,7 @@ Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
                       ? () => Navigator.pop(sheetContext, (
                           rule: OfflineKeepRule.allUnread,
                           count: 3,
+                          remove: false,
                         ))
                       : null,
                 ),
@@ -72,8 +80,36 @@ Future<({OfflineKeepRule rule, int count})?> pickOfflineKeepRule(
                       ? () => Navigator.pop(sheetContext, (
                           rule: OfflineKeepRule.all,
                           count: 3,
+                          remove: false,
                         ))
                       : null,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.bookmark_remove_outlined),
+                  title: Text(sheetContext.l10n.manageDownloadsStopKeep),
+                  onTap: () => Navigator.pop(sheetContext, (
+                    rule: OfflineKeepRule.off,
+                    count: 0,
+                    remove: false,
+                  )),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline_rounded,
+                    color: sheetContext.theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    sheetContext.l10n.manageDownloadsStopDelete,
+                    style: TextStyle(
+                      color: sheetContext.theme.colorScheme.error,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(sheetContext, (
+                    rule: OfflineKeepRule.off,
+                    count: 0,
+                    remove: true,
+                  )),
                 ),
               ],
             ),

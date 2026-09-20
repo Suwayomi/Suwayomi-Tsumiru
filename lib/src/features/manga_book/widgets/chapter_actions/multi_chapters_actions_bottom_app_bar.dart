@@ -93,9 +93,12 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
               ? context.l10n.keepOffline
               : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.save_alt_rounded),
-          onPressed: canDownload
-              ? () async {
-                  // Clearing selection disposes this bar and its ref.
+          onPressed: !canDownload
+              ? null
+              : () async {
+                  // Download FIRST, clear selection AFTER: clearing selection disposes
+                  // this bar, which would invalidate `ref` mid-loop and silently drop
+                  // the remaining downloads.
                   final ids = selectedChapterList;
                   if (ids.length > kBulkDownloadConfirmThreshold &&
                       !await confirmBulkDownload(
@@ -105,6 +108,8 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                       )) {
                     return;
                   }
+                  // Per-chapter guard: one failure (offline, a chapter the server
+                  // hasn't downloaded) must not silently abandon the rest.
                   var failures = 0;
                   for (final id in ids) {
                     try {
@@ -119,16 +124,16 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                         ?.showError(context.l10n.errorSomethingWentWrong);
                   }
                   await refresh(true);
-                }
-              : null,
+                },
         ),
         IconButton(
           tooltip: canDownload
               ? context.l10n.downloads
               : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.cloud_download_outlined),
-          onPressed: canDownload
-              ? () async {
+          onPressed: !canDownload
+              ? null
+              : () async {
                   final ids = selectedChapterList;
                   if (ids.length > kBulkDownloadConfirmThreshold &&
                       !await confirmBulkDownload(
@@ -146,9 +151,10 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   if (context.mounted) {
                     result.showToastOnError(ref.read(toastProvider));
                   }
+                  // Downloading doesn't change the source chapter list — refresh from
+                  // the server's stored chapters, no source re-scrape.
                   await refresh(false);
-                }
-              : null,
+                },
         ),
         IconButton(
           tooltip: context.l10n.delete,
@@ -163,12 +169,15 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
               context,
               listen: false,
             ).read;
-            final repo = ref.read(offlineRepositoryProvider);
+            // Web has no device database, so reading it would throw.
+            final repo = ref.read(offlineActiveProvider)
+                ? ref.read(offlineRepositoryProvider)
+                : null;
             // Computed up front, before the confirmation dialog's own await:
             // it only depends on the already-selected chapters, nothing the
             // dialog reveals, so there is no reason for this `ref` use to
             // wait behind an await that could outlive the widget.
-            // Delete expands to every scanlator duplicate, grouped per manga.
+            // Delete includes confidently matched releases, grouped per manga.
             final deleteIds = <int>[
               for (final entry in {
                 for (final c in selectedChapterDtos) c.mangaId: true,
@@ -182,34 +191,35 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   ],
                 ),
             ];
-            final onDevice = await repo.deviceDownloadedCount(
-              selectedChapterList,
-            );
-            if (onDevice > 0) {
-              if (!context.mounted) return;
-              final ok =
-                  await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(ctx.l10n.delete),
-                      content: Text(
-                        ctx.l10n.offlineBulkDeleteWarning(onDevice),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(ctx.l10n.cancel),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: Text(ctx.l10n.delete),
-                        ),
-                      ],
+            final onDevice =
+                await repo?.deviceDownloadedCount(selectedChapterList) ?? 0;
+            if (!context.mounted) return;
+            final ok =
+                await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(ctx.l10n.delete),
+                    content: Text(
+                      [
+                        ctx.l10n.deleteChaptersConfirm,
+                        if (onDevice > 0)
+                          ctx.l10n.offlineBulkDeleteWarning(onDevice),
+                      ].join('\n\n'),
                     ),
-                  ) ??
-                  false;
-              if (!ok) return;
-            }
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text(ctx.l10n.cancel),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: Text(ctx.l10n.delete),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false;
+            if (!ok) return;
             final result = await AsyncValue.guard(
               () => ref
                   .read(mangaBookRepositoryProvider)
