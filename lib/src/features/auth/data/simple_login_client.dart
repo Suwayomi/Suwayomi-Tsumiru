@@ -60,7 +60,11 @@ class SimpleLoginClient {
       ..bodyFields = {'user': username, 'pass': password}
       ..headers['Content-Type'] =
           'application/x-www-form-urlencoded; charset=utf-8'
-      ..followRedirects = false;
+      // Native keeps the redirect unfollowed so `Set-Cookie` is readable
+      // (#425). In a browser that same flag becomes fetch `redirect: 'error'`,
+      // which fails the request the moment the 303 arrives — and there is
+      // nothing to read there anyway, so let the browser follow it.
+      ..followRedirects = _browserSession;
     if (extraHeaders != null && extraHeaders.isNotEmpty) {
       for (final entry in extraHeaders.entries) {
         final lower = entry.key.toLowerCase();

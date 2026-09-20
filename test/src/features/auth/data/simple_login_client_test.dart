@@ -13,15 +13,19 @@ void main() {
     test(
       'a landing page that is not the form means the session is set',
       () async {
-        final mock = MockClient(
-          (request) async =>
-              http.Response('<html><div id="app"></div></html>', 200),
-        );
+        bool? followRedirects;
+        final mock = MockClient((request) async {
+          followRedirects = request.followRedirects;
+          return http.Response('<html><div id="app"></div></html>', 200);
+        });
         final cookie = await SimpleLoginClient(
           httpClient: mock,
           browserSession: true,
         ).login(serverBaseUrl: 'http://s', username: 'u', password: 'p');
         expect(cookie, kBrowserManagedSimpleSession);
+        // `followRedirects: false` becomes fetch `redirect: 'error'` in a
+        // browser, which fails the request as soon as the 303 arrives.
+        expect(followRedirects, isTrue);
       },
     );
 
