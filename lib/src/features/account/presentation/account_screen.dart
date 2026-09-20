@@ -10,6 +10,7 @@ import '../../../utils/misc/app_utils.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../widgets/popup_widgets/pop_button.dart';
 import '../../auth/data/auth_session_status.dart';
+import '../../settings/presentation/connection/prompt_sign_in.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/account_actions.dart';
 import '../data/account_providers.dart';
@@ -59,6 +60,7 @@ class AccountScreen extends HookConsumerWidget {
       busy.value = true;
       try {
         await AppUtils.guard(actions.signOut, toast);
+        stayOnConnectionAfterIdentityChange();
       } finally {
         if (context.mounted) busy.value = false;
       }

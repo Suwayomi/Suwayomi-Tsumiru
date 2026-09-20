@@ -135,6 +135,18 @@ abstract class Routes {
   static const migrationSourceManga = '/migration/source-manga';
 }
 
+/// Where to land after an identity change (sign-out, a new server address, a
+/// new auth mode). Swapping the session rebuilds the router at its initial
+/// location, which is the Library — unauthorized, with no way back to sign-in
+/// but the user's own navigation. The rebuilt router consumes this instead.
+///
+/// Deliberately outside the container: the container is what gets replaced.
+String? _pendingRouteAfterIdentityChange;
+
+void routeAfterIdentityChange(String location) {
+  _pendingRouteAfterIdentityChange = location;
+}
+
 @riverpod
 GoRouter routerConfig(Ref ref) {
   final router = GoRouter(
@@ -151,6 +163,11 @@ GoRouter routerConfig(Ref ref) {
       if (!complete && !atOnboarding) return const OnboardingRoute().location;
       if (complete && atOnboarding) {
         return const LibraryRoute(categoryId: 0).location;
+      }
+      final pending = _pendingRouteAfterIdentityChange;
+      if (pending != null) {
+        _pendingRouteAfterIdentityChange = null;
+        if (state.matchedLocation != pending) return pending;
       }
       return null;
     },

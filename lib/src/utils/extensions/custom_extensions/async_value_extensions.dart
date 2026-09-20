@@ -77,6 +77,12 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         final message = isPermissionDenied(unwrapped)
             ? context.l10n.accountPermissionDenied
             : error.toString().trim();
+        // An auth failure is one the user can only fix in Connection, so give
+        // them the way there. Without it "Unauthorized" is a dead end with a
+        // Refresh button that can only fail again.
+        final authFailure =
+            isPermissionDenied(unwrapped) ||
+            message.toLowerCase().contains('unauthor');
         return AppUtils.wrapOn(
           wrapper,
           Emoticons(
@@ -84,7 +90,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
                 ? context.l10n.errorSomethingWentWrong
                 : message,
             // An empty button still reserves spacing in Emoticons.
-            button: (refresh == null && !offlineEscapeHatch)
+            button: (refresh == null && !offlineEscapeHatch && !authFailure)
                 ? null
                 : Column(
                     mainAxisSize: MainAxisSize.min,
@@ -94,6 +100,12 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
                         TextButton(
                           onPressed: refresh,
                           child: Text(context.l10n.refresh),
+                        ),
+                      if (authFailure)
+                        TextButton(
+                          onPressed: () =>
+                              const ConnectionRoute().push(context),
+                          child: Text(context.l10n.connection),
                         ),
                       if (offlineEscapeHatch) const ViewOfflineButton(),
                     ],

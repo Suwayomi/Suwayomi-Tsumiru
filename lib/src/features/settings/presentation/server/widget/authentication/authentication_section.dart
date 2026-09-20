@@ -7,6 +7,7 @@ import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_actions.dart';
+import '../../../connection/prompt_sign_in.dart';
 import '../credential_popup/credentials_popup.dart';
 import '../credential_popup/login_credentials_popup.dart';
 import 'auth_type/auth_type_tile.dart';
@@ -79,6 +80,7 @@ class AuthenticationSection extends ConsumerWidget {
               );
               if (confirmed != true || !context.mounted || !current()) return;
               await signOut();
+              stayOnConnectionAfterIdentityChange();
             },
           ),
         ],

@@ -12,6 +12,7 @@ import '../../../../../../../global_providers/global_providers.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
+import '../../../../connection/prompt_sign_in.dart';
 
 class AuthTypeTile extends ConsumerWidget {
   const AuthTypeTile({super.key});
@@ -33,6 +34,7 @@ class AuthTypeTile extends ConsumerWidget {
           value: authType ?? AuthType.none,
           onChange: (enumValue) async {
             if (enumValue != ref.read(authTypeKeyProvider)) {
+              stayOnConnectionAfterIdentityChange();
               await ref
                   .read(backgroundDownloadControllerProvider)
                   .changeIdentity(() async {

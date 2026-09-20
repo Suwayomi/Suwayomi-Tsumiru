@@ -28,6 +28,7 @@ import '../../../offline/data/background/background_download_controller_shim.dar
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
+import 'prompt_sign_in.dart';
 
 /// Connection-screen authentication, state-aware:
 ///   * No auth configured  -> just the auth-mode picker.
@@ -182,6 +183,7 @@ class InlineAuthSection extends HookConsumerWidget {
 
     Future<void> onAuthModeChanged(AuthType? next) async {
       if (next == null || next == authType) return;
+      stayOnConnectionAfterIdentityChange();
       await ref.read(backgroundDownloadControllerProvider).changeIdentity(
         () async {
           if (next == AuthType.none) {
