@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async'; // Completer + Timer — required by single-flight + proactive refresh
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart'; // debugPrint
 import 'package:graphql/client.dart';
@@ -24,8 +25,10 @@ import '../../account/domain/account_binding.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
     show authProbeAuthorized, basicAuthConfirms;
+import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'auth_credentials_store.dart';
 import 'auth_state.dart';
+import 'basic_credentials_rejected.dart';
 import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
 import 'simple_login_client.dart';
@@ -65,6 +68,11 @@ enum TestConnectionFailureKind {
 /// like "connection" that would otherwise collapse them into a generic
 /// network failure.
 TestConnectionFailure classifyAuthError(Object e) {
+  if (e is BasicCredentialsRejected) {
+    return const TestConnectionFailure(
+      TestConnectionFailureKind.invalidCredentials,
+    );
+  }
   if (e is SimpleLoginAuthFailure) {
     return const TestConnectionFailure(
       TestConnectionFailureKind.invalidCredentials,
@@ -357,6 +365,43 @@ class AuthCoordinator extends _$AuthCoordinator {
   }
 
   // ---------- Persisting login paths ----------
+
+  /// Verifies Basic credentials against the server AND persists them.
+  ///
+  /// basic_auth has no login round-trip, so this probes with the header the
+  /// app would go on to send. Without it a typo was stored happily and the
+  /// user was shown as signed in while every request came back 401.
+  Future<void> loginBasic({
+    required String serverBaseUrl,
+    required String username,
+    required String password,
+  }) async {
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    await store.withIdentityChange(() async {
+      final epoch = store.serverEpoch;
+      final client = http.Client();
+      final bool authorized;
+      try {
+        authorized = await authProbeAuthorized(
+          serverBaseUrl,
+          client: client,
+          basic: '$username:$password',
+          extraHeaders: ref.read(customHttpHeadersProvider).value,
+        );
+      } finally {
+        client.close();
+      }
+      if (!authorized) throw const BasicCredentialsRejected();
+      await ref
+          .read(credentialsProvider.notifier)
+          .set(
+            'Basic ${base64.encode(utf8.encode('$username:$password'))}',
+            forEpoch: epoch,
+          );
+      await store.savePassword(password, forEpoch: epoch);
+      ref.read(needsReauthProvider.notifier).set(false);
+    }, expectedEpoch: store.serverEpoch);
+  }
 
   /// Performs Simple Login AND persists the resulting cookie + password.
   /// Equivalent to `verifySimpleCredentials` + a store write. Used by

@@ -4,20 +4,25 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../../constants/db_keys.dart';
+import '../../../../../../constants/endpoints.dart';
+import '../../../../../../constants/enum.dart';
+import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../../../features/auth/data/basic_auth_migration.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
+import '../../../../../../features/auth/presentation/auth_failure_text.dart';
+import '../../../../../../features/auth/presentation/sign_in_action.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
-import '../../../../../offline/data/background/background_download_controller_shim.dart';
+import '../client/server_port_tile/server_port_tile.dart';
+import '../client/server_url_tile/server_url_tile.dart';
 
 part 'credentials_popup.g.dart';
 
@@ -62,28 +67,37 @@ final formKey = GlobalKey<FormState>();
 class CredentialsPopup extends HookConsumerWidget {
   const CredentialsPopup({super.key});
 
-  String _basicAuth({required String userName, required String password}) =>
-      'Basic ${base64.encode(utf8.encode('$userName:$password'))}';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final username = useTextEditingController();
     final password = useTextEditingController();
+    final saving = useState(false);
+    final error = useState<String?>(null);
     Future<void> doSave() async {
-      if ((formKey.currentState?.validate()).ifNull()) {
-        await ref.read(backgroundDownloadControllerProvider).changeIdentity(
-          () async {
-            await ref
-                .read(credentialsProvider.notifier)
-                .set(
-                  _basicAuth(userName: username.text, password: password.text),
-                  forEpoch: ref
-                      .read(authCredentialsStoreProvider.notifier)
-                      .serverEpoch,
-                );
-          },
+      if (!(formKey.currentState?.validate()).ifNull()) return;
+      saving.value = true;
+      error.value = null;
+      try {
+        // Verified before it is stored. Saving blind reported a successful
+        // sign-in for a mistyped password and then 401'd every request.
+        await performSignIn(
+          ref,
+          authType: AuthType.basic,
+          serverBaseUrl: Endpoints.baseApi(
+            baseUrl: ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+            port: ref.read(serverPortProvider),
+            addPort: ref.read(serverPortToggleProvider).ifNull(),
+            appendApiToUrl: false,
+          ),
+          username: username.text,
+          password: password.text,
         );
         if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (!context.mounted) return;
+        error.value = authFailureText(context, classifyAuthError(e).kind);
+      } finally {
+        if (context.mounted) saving.value = false;
       }
     }
 
@@ -117,12 +131,22 @@ class CredentialsPopup extends HookConsumerWidget {
                 border: const OutlineInputBorder(),
               ),
             ),
+            if (error.value != null) ...[
+              const Gap(8),
+              Text(
+                error.value!,
+                style: TextStyle(color: context.theme.colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),
       actions: [
         const PopButton(),
-        ElevatedButton(onPressed: doSave, child: Text(context.l10n.save)),
+        ElevatedButton(
+          onPressed: saving.value ? null : doSave,
+          child: Text(context.l10n.save),
+        ),
       ],
     );
   }

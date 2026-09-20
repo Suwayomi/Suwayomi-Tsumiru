@@ -77,12 +77,25 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         final message = isPermissionDenied(unwrapped)
             ? context.l10n.accountPermissionDenied
             : error.toString().trim();
-        // An auth failure is one the user can only fix in Connection, so give
-        // them the way there. Without it "Unauthorized" is a dead end with a
-        // Refresh button that can only fail again.
-        final authFailure =
-            isPermissionDenied(unwrapped) ||
-            message.toLowerCase().contains('unauthor');
+        // The server rejected our credentials. Refresh alone can only fail the
+        // same way, so send the user where signing in actually happens — the
+        // same treatment a server we can't reach already gets.
+        final lower = message.toLowerCase();
+        if (isPermissionDenied(unwrapped) ||
+            lower.contains('unauthor') ||
+            lower.contains('http 401') ||
+            lower.contains('http 403')) {
+          return AppUtils.wrapOn(
+            wrapper,
+            ServerUnauthorizedView(
+              message: showGenericError || message.isBlank
+                  ? context.l10n.serverSignedOutSubtitle
+                  : message,
+              onRetry: refresh,
+              offlineEscape: offlineEscapeHatch,
+            ),
+          );
+        }
         return AppUtils.wrapOn(
           wrapper,
           Emoticons(
@@ -90,7 +103,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
                 ? context.l10n.errorSomethingWentWrong
                 : message,
             // An empty button still reserves spacing in Emoticons.
-            button: (refresh == null && !offlineEscapeHatch && !authFailure)
+            button: (refresh == null && !offlineEscapeHatch)
                 ? null
                 : Column(
                     mainAxisSize: MainAxisSize.min,
@@ -100,12 +113,6 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
                         TextButton(
                           onPressed: refresh,
                           child: Text(context.l10n.refresh),
-                        ),
-                      if (authFailure)
-                        TextButton(
-                          onPressed: () =>
-                              const ConnectionRoute().push(context),
-                          child: Text(context.l10n.connection),
                         ),
                       if (offlineEscapeHatch) const ViewOfflineButton(),
                     ],

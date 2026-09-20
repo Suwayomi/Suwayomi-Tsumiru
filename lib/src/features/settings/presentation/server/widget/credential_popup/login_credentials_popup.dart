@@ -15,6 +15,7 @@ import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
+import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
@@ -139,7 +140,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
           testResultIsError.value = false;
         } else if (result is TestConnectionFailure) {
           testResultIsError.value = true;
-          testResult.value = _failureMessage(context, result.kind);
+          testResult.value = authFailureText(context, result.kind);
         }
       } finally {
         if (context.mounted) testing.value = false;
@@ -185,7 +186,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         testResultIsError.value = true;
-        testResult.value = _failureMessage(context, classifyAuthError(e).kind);
+        testResult.value = authFailureText(context, classifyAuthError(e).kind);
       } finally {
         if (context.mounted) testing.value = false;
       }
@@ -316,20 +317,4 @@ bool isLocalAddress(String url) {
   if (a == 192 && b == 168) return true; // 192.168.0.0/16
   if (a == 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
   return false;
-}
-
-String _failureMessage(BuildContext context, TestConnectionFailureKind kind) {
-  return switch (kind) {
-    TestConnectionFailureKind.network =>
-      context.l10n.authTestConnectionFailedNetwork,
-    TestConnectionFailureKind.tls => context.l10n.authTestConnectionFailedTls,
-    TestConnectionFailureKind.invalidCredentials =>
-      context.l10n.authTestConnectionFailedAuth,
-    TestConnectionFailureKind.wrongAuthMode =>
-      context.l10n.authTestConnectionFailedMode,
-    TestConnectionFailureKind.unexpectedShape =>
-      context.l10n.authTestConnectionFailedShape,
-    TestConnectionFailureKind.insecureTransport =>
-      context.l10n.authInsecureTransportWarning,
-  };
 }

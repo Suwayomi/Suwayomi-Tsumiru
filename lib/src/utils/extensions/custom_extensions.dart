@@ -16,9 +16,9 @@ import 'package:intl/intl.dart';
 
 import '../../abstracts/locale_enum.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../routes/router_config.dart';
 import '../../widgets/custom_circular_progress_indicator.dart';
 import '../../widgets/emoticons.dart';
+import '../../widgets/server_unauthorized_view.dart';
 import '../../widgets/server_unreachable_view.dart';
 import '../callbacks.dart';
 import '../logger/logger.dart';

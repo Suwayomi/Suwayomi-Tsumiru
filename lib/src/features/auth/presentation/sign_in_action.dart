@@ -4,14 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:convert';
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
-import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_coordinator.dart';
 import '../data/auth_credentials_store.dart';
@@ -40,8 +37,6 @@ Future<void> performSignIn(
 }) => ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
   ref.read(authUsernameProvider.notifier).update(username);
   final store = ref.read(authCredentialsStoreProvider.notifier);
-  // Guards every write below against a server switch racing this sign-in.
-  final epoch = store.serverEpoch;
   if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
   if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
   if (authType != AuthType.basic) await store.clearBasicCredentials();
@@ -49,12 +44,14 @@ Future<void> performSignIn(
   final coordinator = ref.read(authCoordinatorProvider.notifier);
   switch (authType) {
     case AuthType.basic:
-      await ref
-          .read(credentialsProvider.notifier)
-          .set(
-            'Basic ${base64.encode(utf8.encode('$username:$password'))}',
-            forEpoch: epoch,
-          );
+      // Verifies before persisting, like the other two modes: basic_auth has
+      // no login round-trip, so storing blind reported a successful sign-in
+      // for credentials the server refuses.
+      await coordinator.loginBasic(
+        serverBaseUrl: serverBaseUrl,
+        username: username,
+        password: password,
+      );
     case AuthType.simpleLogin:
       await coordinator.loginSimple(
         serverBaseUrl: serverBaseUrl,

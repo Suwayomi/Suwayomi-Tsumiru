@@ -24,6 +24,7 @@ import '../../../account/data/account_providers.dart';
 import '../../../account/domain/account_access.dart';
 import '../../../account/presentation/account_code_dialog.dart';
 import '../../../auth/data/auth_session_status.dart';
+import '../../../auth/presentation/auth_failure_text.dart';
 import '../../../offline/data/background/background_download_controller_shim.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
@@ -98,12 +99,12 @@ class InlineAuthSection extends HookConsumerWidget {
           message.value = context.l10n.authTestConnectionSuccess;
         } else if (result is TestConnectionFailure) {
           isError.value = true;
-          message.value = _failureText(context, result.kind);
+          message.value = authFailureText(context, result.kind);
         }
       } catch (e) {
         if (!context.mounted) return;
         isError.value = true;
-        message.value = _failureText(context, classifyAuthError(e).kind);
+        message.value = authFailureText(context, classifyAuthError(e).kind);
       } finally {
         if (context.mounted) testing.value = false;
       }
@@ -134,7 +135,7 @@ class InlineAuthSection extends HookConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         isError.value = true;
-        message.value = _failureText(context, classifyAuthError(e).kind);
+        message.value = authFailureText(context, classifyAuthError(e).kind);
       } finally {
         if (context.mounted) busy.value = false;
       }
@@ -191,10 +192,12 @@ class InlineAuthSection extends HookConsumerWidget {
             await store.clearUiLoginTokens();
             await store.clearSimpleLoginCookie();
             await store.clearBasicCredentials();
-            ref.read(needsReauthProvider.notifier).set(false);
-          } else {
-            ref.read(needsReauthProvider.notifier).set(true);
           }
+          // No "Session expired" banner here. Nothing expired: the user just
+          // picked a different mode and is standing on the sign-in fields, so
+          // the banner only flashed across the top and then went away. A real
+          // expiry still raises it from the request paths that meet the 401.
+          ref.read(needsReauthProvider.notifier).set(false);
           ref.read(authTypeKeyProvider.notifier).update(next);
         },
       );
@@ -362,18 +365,3 @@ class InlineAuthSection extends HookConsumerWidget {
     );
   }
 }
-
-String _failureText(BuildContext context, TestConnectionFailureKind kind) =>
-    switch (kind) {
-      TestConnectionFailureKind.network =>
-        context.l10n.authTestConnectionFailedNetwork,
-      TestConnectionFailureKind.tls => context.l10n.authTestConnectionFailedTls,
-      TestConnectionFailureKind.invalidCredentials =>
-        context.l10n.authTestConnectionFailedAuth,
-      TestConnectionFailureKind.wrongAuthMode =>
-        context.l10n.authTestConnectionFailedMode,
-      TestConnectionFailureKind.unexpectedShape =>
-        context.l10n.authTestConnectionFailedShape,
-      TestConnectionFailureKind.insecureTransport =>
-        context.l10n.authInsecureTransportWarning,
-    };

@@ -2760,6 +2760,14 @@
   "serverPort": "Server Port",
   "serverPortHintText": "Server port",
   "serverSettingsSubtitle": "Configure the Suwayomi server itself.",
+  "serverSignedOutTitle": "Signed out",
+  "@serverSignedOutTitle": {
+    "description": "Title shown when the server rejects the app's credentials."
+  },
+  "serverSignedOutSubtitle": "Your server didn't accept these credentials. Sign in again in connection settings.",
+  "@serverSignedOutSubtitle": {
+    "description": "Subtitle shown when the server rejects the app's credentials."
+  },
   "serverUnreachableTitle": "Can't reach your server",
   "@serverUnreachableTitle": {
     "description": "Shown when the app cannot connect to the Suwayomi server"

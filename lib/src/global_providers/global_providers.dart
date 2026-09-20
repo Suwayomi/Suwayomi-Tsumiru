@@ -97,7 +97,9 @@ Link _sessionLink(bool Function() isCurrentSession) => Link.function((
 GraphQLClient graphQlClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
-  final credentials = ref.watch(credentialsProvider).value;
+  // Watched so a credential change still rebuilds the client and drops cached
+  // results; the value itself is read per request, below.
+  ref.watch(credentialsProvider);
 
   // Timeout settings
   final timeoutMs =
@@ -155,9 +157,22 @@ GraphQLClient graphQlClient(Ref ref) {
 
   // Auto retry is handled by TimeoutHttpClient retries instead of RetryLink
 
-  // Basic authentication link (unchanged).
-  if (authType == AuthType.basic && credentials.isNotBlank) {
-    final AuthLink authLink = AuthLink(getToken: () => credentials);
+  // Basic authentication link.
+  //
+  // Reads the credential per request rather than capturing whatever the
+  // snapshot held when the client was built: secure storage resolves
+  // asynchronously, so a client built during that gap carried no
+  // Authorization header and every early request came back 401 — briefly on a
+  // good launch, and until something happened to rebuild the client after a
+  // fresh sign-in. The ui/simple links already await their credentials the
+  // same way.
+  if (authType == AuthType.basic) {
+    final AuthLink authLink = AuthLink(
+      getToken: () async {
+        final stored = await ref.read(credentialsProvider.future);
+        return stored.isNotBlank ? stored : null;
+      },
+    );
     link = authLink.concat(link);
   }
 
