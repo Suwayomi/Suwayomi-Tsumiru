@@ -6,6 +6,11 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 
+/// Forces the copy fallback: a rename that behaves as if the destination
+/// sat on another device.
+Future<void> _noRename(FileSystemEntity source, String destination) async =>
+    throw const FileSystemException('cross-device');
+
 void main() {
   late Directory root;
   setUp(() {
@@ -55,16 +60,21 @@ void main() {
   });
 
   test(
-    'matching legacy data is copied with source and locks preserved',
+    'matching legacy data moves with the catalogue and locks preserved',
     () async {
       legacy();
       final original = File(
         p.join(root.path, 'catalog.sqlite'),
       ).readAsBytesSync();
+      var copied = 0;
       final target = await prepareAccountStorage(
         offlineRoot: root.path,
         instanceId: 'a',
         legacyInstanceId: 'a',
+        copyFile: (source, destination) async {
+          copied++;
+          await source.copy(destination.path);
+        },
       );
       expect(
         File(p.join(target, '1/8.part/.manifest')).readAsStringSync(),
@@ -75,17 +85,25 @@ void main() {
         isTrue,
       );
       for (final name in [
-        'catalog.sqlite',
         'covers/1.jpg',
         '1/7/001.jpg',
         '1/8.part/001.jpg',
         '1/8.part/.manifest',
       ]) {
+        expect(File(p.join(target, name)).readAsStringSync(), name);
+        // Moved, so the chapter bytes were never read or rewritten.
         expect(
-          File(p.join(target, name)).readAsBytesSync(),
-          File(p.join(root.path, name)).readAsBytesSync(),
+          FileSystemEntity.typeSync(p.join(root.path, name)),
+          FileSystemEntityType.notFound,
+          reason: name,
         );
       }
+      // Only the catalogue is copied; it has to outlive an interrupted move.
+      expect(copied, 1);
+      expect(
+        File(p.join(target, 'catalog.sqlite')).readAsBytesSync(),
+        original,
+      );
       expect(
         File(p.join(root.path, 'catalog.sqlite')).readAsBytesSync(),
         original,
@@ -102,6 +120,34 @@ void main() {
       }
     },
   );
+
+  test('a half-moved catalogue finishes without losing either side', () async {
+    legacy();
+    // What an interrupted migration leaves behind: some of the tree already at
+    // the destination, the rest still at the root.
+    final target = Directory(accountStoragePath(root.path, 'a'))
+      ..createSync(recursive: true);
+    final moved = File(p.join(target.path, 'covers/1.jpg'))
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync('covers/1.jpg');
+    Directory(p.join(root.path, 'covers')).deleteSync(recursive: true);
+
+    final result = await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+
+    expect(result, target.path);
+    expect(moved.readAsStringSync(), 'covers/1.jpg');
+    for (final name in ['1/7/001.jpg', '1/8.part/.manifest']) {
+      expect(File(p.join(result, name)).readAsStringSync(), name);
+    }
+    expect(
+      await accountStorageComplete(offlineRoot: root.path, instanceId: 'a'),
+      isTrue,
+    );
+  });
 
   test('unstamped and other-account legacy data are never adopted', () async {
     legacy();
@@ -127,6 +173,7 @@ void main() {
         offlineRoot: root.path,
         instanceId: 'a',
         legacyInstanceId: 'a',
+        renameEntity: _noRename,
         copyFile: (source, destination) async {
           if (++copies == 2) throw const FileSystemException('interrupted');
           await source.copy(destination.path);
@@ -212,6 +259,7 @@ void main() {
         offlineRoot: root.path,
         instanceId: 'a',
         legacyInstanceId: 'a',
+        renameEntity: _noRename,
         copyFile: (source, destination) async {
           final bytes = await source.readAsBytes();
           bytes[0] ^= 1;
@@ -250,6 +298,7 @@ void main() {
         offlineRoot: root.path,
         instanceId: 'a',
         legacyInstanceId: 'a',
+        renameEntity: _noRename,
         copyFile: (source, destination) async {
           if (++copies == 2) throw const FileSystemException('interrupted');
           await source.copy(destination.path);

@@ -140,7 +140,10 @@ void main() {
         isTrue,
       );
       expect(await File(p.join(root.path, 'catalog.sqlite')).exists(), isTrue);
-      expect(await File(p.join(pages.path, '0.jpg')).exists(), isTrue);
+      // Pages are moved into the account, not duplicated, so removing the
+      // account's downloads removes them for real. Only the catalogue is
+      // copied, because an interrupted move has to be able to resume.
+      expect(await File(p.join(pages.path, '0.jpg')).exists(), isFalse);
     },
   );
 

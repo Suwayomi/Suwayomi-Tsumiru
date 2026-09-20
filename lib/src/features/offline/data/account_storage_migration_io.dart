@@ -8,6 +8,8 @@ import 'account_storage_paths.dart';
 const accountStorageMarker = '.account-complete';
 const accountStorageClearedMarker = '.account-cleared';
 typedef AccountFileCopy = Future<void> Function(File source, File destination);
+typedef AccountEntityRename =
+    Future<void> Function(FileSystemEntity source, String destination);
 
 Future<bool> accountStorageComplete({
   required String offlineRoot,
@@ -47,6 +49,7 @@ Future<String> prepareAccountStorage({
   String? legacyInstanceId,
   String? accountOwner,
   AccountFileCopy? copyFile,
+  AccountEntityRename? renameEntity,
 }) async {
   final target = Directory(accountStoragePath(offlineRoot, instanceId));
   await _checkAncestors(target.path, offlineRoot);
@@ -139,10 +142,11 @@ Future<String> prepareAccountStorage({
           entity.path,
         );
       }
-      await _copyDirectory(
+      await _moveDirectory(
         entity,
         Directory(p.join(target.path, name)),
         copyFile,
+        renameEntity,
         offlineRoot,
       );
     }
@@ -185,6 +189,17 @@ Future<void> _checkAncestors(String path, String root) async {
   }
 }
 
+Future<void> _checkLegacyTree(Directory directory) async {
+  await for (final entity in directory.list(
+    recursive: true,
+    followLinks: false,
+  )) {
+    if (entity is! Directory && entity is! File) {
+      throw FileSystemException('Legacy storage contains a link', entity.path);
+    }
+  }
+}
+
 Future<void> _checkTree(Directory directory) async {
   await for (final entity in directory.list(
     recursive: true,
@@ -196,13 +211,24 @@ Future<void> _checkTree(Directory directory) async {
   }
 }
 
-Future<void> _copyDirectory(
+/// Both paths live under the same offline root, so a rename is a metadata
+/// change and the chapter bytes never move. Copying an 11 GB catalogue and
+/// verifying it byte by byte took over an hour and blocked the app behind a
+/// splash screen. The copy below stays for the case a rename can't serve:
+/// a destination that already holds a partial migration, or a root split
+/// across devices.
+Future<void> _moveDirectory(
   Directory source,
   Directory destination,
   AccountFileCopy? copyFile,
+  AccountEntityRename? renameEntity,
   String offlineRoot,
 ) async {
   await _checkAncestors(destination.path, offlineRoot);
+  // A rename adopts the subtree wholesale, so it has to be vetted first. The
+  // per-entry walk below only sees what it copies.
+  await _checkLegacyTree(source);
+  if (await _renamed(source, destination.path, renameEntity)) return;
   await destination.create(recursive: true);
   await for (final entity in source.list(followLinks: false)) {
     final name = p.basename(entity.path);
@@ -211,10 +237,60 @@ Future<void> _copyDirectory(
     }
     final target = p.join(destination.path, name);
     if (entity is Directory) {
-      await _copyDirectory(entity, Directory(target), copyFile, offlineRoot);
+      await _moveDirectory(
+        entity,
+        Directory(target),
+        copyFile,
+        renameEntity,
+        offlineRoot,
+      );
     } else {
-      await _copyVerified(entity as File, File(target), copyFile);
+      await _moveFile(entity as File, File(target), copyFile, renameEntity);
     }
+  }
+}
+
+Future<void> _moveFile(
+  File source,
+  File destination,
+  AccountFileCopy? copyFile,
+  AccountEntityRename? renameEntity,
+) async {
+  final type = await FileSystemEntity.type(
+    destination.path,
+    followLinks: false,
+  );
+  if (type != FileSystemEntityType.notFound &&
+      type != FileSystemEntityType.file) {
+    throw FileSystemException('Invalid account storage file', destination.path);
+  }
+  if (type == FileSystemEntityType.notFound &&
+      await _renamed(source, destination.path, renameEntity)) {
+    return;
+  }
+  await _copyVerified(source, destination, copyFile);
+}
+
+/// True when [source] now lives at [destination]. A rename onto an occupied
+/// path, or across devices, fails and the caller copies instead.
+Future<bool> _renamed(
+  FileSystemEntity source,
+  String destination,
+  AccountEntityRename? renameEntity,
+) async {
+  if (await FileSystemEntity.type(destination, followLinks: false) !=
+      FileSystemEntityType.notFound) {
+    return false;
+  }
+  try {
+    if (renameEntity != null) {
+      await renameEntity(source, destination);
+    } else {
+      await source.rename(destination);
+    }
+    return true;
+  } on FileSystemException {
+    return false;
   }
 }
 
