@@ -21,7 +21,8 @@ import 'package:path_provider/path_provider.dart';
 /// Covers are small and long-lived, so they get their own store: files under
 /// application-support (durable, app-private) with a cap sized to a large
 /// library instead of a page ring buffer.
-CacheManager createCoverCacheManager({String? serverOrigin}) => _CoverCacheManager(
+CacheManager createCoverCacheManager({String? serverOrigin}) =>
+    _CoverCacheManager(
       Config(
         'tsumiruCovers',
         stalePeriod: const Duration(days: 90),
@@ -66,15 +67,17 @@ class _CoverCacheManager extends CacheManager {
 /// Same layout as the package's IOFileSystem, but rooted in
 /// application-support instead of the OS temp dir.
 class _AppSupportFileSystem implements FileSystem {
-  _AppSupportFileSystem(this._cacheKey) : _fileDir = _createDirectory(_cacheKey);
+  _AppSupportFileSystem(this._cacheKey)
+    : _fileDir = _createDirectory(_cacheKey);
 
   final Future<Directory> _fileDir;
   final String _cacheKey;
 
   static Future<Directory> _createDirectory(String key) async {
     final baseDir = await getApplicationSupportDirectory();
-    final directory =
-        const LocalFileSystem().directory(p.join(baseDir.path, key));
+    final directory = const LocalFileSystem().directory(
+      p.join(baseDir.path, key),
+    );
     await directory.create(recursive: true);
     return directory;
   }

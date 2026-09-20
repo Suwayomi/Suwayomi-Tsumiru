@@ -90,6 +90,7 @@ class SimpleLoginClient {
     ).timeout(timeout);
 
     if (_browserSession) {
+      // Fetch forbids reading Set-Cookie; a protected request must verify the session.
       if (_looksLikeLoginForm(response.body)) {
         throw const SimpleLoginAuthFailure();
       }

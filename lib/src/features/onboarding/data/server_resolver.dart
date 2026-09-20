@@ -64,30 +64,30 @@ class ProbeResult {
 
   /// Nothing answered at this candidate (socket error / timeout / no body).
   const ProbeResult.notReached(this.url)
-      : confirmed = false,
-        reached = false,
-        basicGated = false,
-        authMode = null,
-        serverName = null,
-        serverVersion = null;
+    : confirmed = false,
+      reached = false,
+      basicGated = false,
+      authMode = null,
+      serverName = null,
+      serverVersion = null;
 
   /// The host answered but it was not a confirmable Suwayomi GraphQL body.
   const ProbeResult.reachedUnconfirmed(this.url)
-      : confirmed = false,
-        reached = true,
-        basicGated = false,
-        authMode = null,
-        serverName = null,
-        serverVersion = null;
+    : confirmed = false,
+      reached = true,
+      basicGated = false,
+      authMode = null,
+      serverName = null,
+      serverVersion = null;
 
   /// The transport is behind HTTP Basic auth — opaque, cannot confirm.
   const ProbeResult.basicGatedResult(this.url)
-      : confirmed = false,
-        reached = true,
-        basicGated = true,
-        authMode = null,
-        serverName = null,
-        serverVersion = null;
+    : confirmed = false,
+      reached = true,
+      basicGated = true,
+      authMode = null,
+      serverName = null,
+      serverVersion = null;
 
   final String url;
 
@@ -531,7 +531,10 @@ Future<ProbeResult> probeServer(
   }
 
   final classified = classifyProbeBody(
-      url: baseUrl, aboutBody: aboutBody, authBody: authBody ?? '');
+    url: baseUrl,
+    aboutBody: aboutBody,
+    authBody: authBody ?? '',
+  );
   if (classified != null) {
     if (authBody == null && classified.confirmed) {
       // B unreadable: we can't prove the server is open, and reading it as
@@ -612,13 +615,14 @@ Future<ResolvedServer> resolveServer(
     );
   }
 
-  final doProbe = probe ??
+  final doProbe =
+      probe ??
       (url) => probeServer(
-            url,
-            client: client,
-            timeout: perCandidateTimeout,
-            extraHeaders: extraHeaders,
-          );
+        url,
+        client: client,
+        timeout: perCandidateTimeout,
+        extraHeaders: extraHeaders,
+      );
 
   ProbeResult? bestBasicGated;
   ProbeResult? bestReached;
@@ -677,8 +681,9 @@ String displayAddress(String baseUrl) {
 /// Whether a failed resolve should suggest "try its https address" — true only
 /// when NO https candidate was tried (the user pinned an explicit `http://`).
 /// A bare host already includes an https candidate, so we don't nag.
-bool shouldSuggestHttps(String rawInput) => !connectionCandidates(rawInput)
-    .any((c) => c.toLowerCase().startsWith('https://'));
+bool shouldSuggestHttps(String rawInput) => !connectionCandidates(
+  rawInput,
+).any((c) => c.toLowerCase().startsWith('https://'));
 
 /// Best-effort scheme-bearing form of [rawInput] for the "use this address
 /// anyway" escape — guarantees a scheme so we never persist raw schemeless
@@ -864,8 +869,12 @@ Future<VerifiedAuthMode?> verifyAuthMode({
   }
   if (cookie != null &&
       cookie.isNotEmpty &&
-      await authProbeAuthorized(baseUrl,
-          client: client, cookie: cookie, timeout: timeout)) {
+      await authProbeAuthorized(
+        baseUrl,
+        client: client,
+        cookie: cookie,
+        timeout: timeout,
+      )) {
     return VerifiedAuthMode.simpleLogin;
   }
 
@@ -879,8 +888,12 @@ Future<VerifiedAuthMode?> verifyAuthMode({
   }
   if (bearer != null &&
       bearer.isNotEmpty &&
-      await authProbeAuthorized(baseUrl,
-          client: client, bearer: bearer, timeout: timeout)) {
+      await authProbeAuthorized(
+        baseUrl,
+        client: client,
+        bearer: bearer,
+        timeout: timeout,
+      )) {
     return VerifiedAuthMode.uiLogin;
   }
 

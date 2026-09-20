@@ -324,9 +324,8 @@ class ServerImage extends HookConsumerWidget {
       authType == AuthType.uiLogin ? uiAccessTokenSnapshot : null,
     );
 
-    // Covers/icons go to the durable cover store; pages stay on the default
-    // temp-dir manager. Offline library covers render from this cache, so it
-    // must not share the page ring buffer's 200-object cap.
+    // Native covers use durable storage separate from the page cache.
+    // Web covers and pages share the credential-aware memory cache.
     final cacheManager = isCoverImagePath(imageUrl)
         ? ref.watch(coverCacheManagerProvider)
         : ref.watch(serverPageCacheManagerProvider);

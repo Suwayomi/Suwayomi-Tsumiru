@@ -19,8 +19,15 @@ class _ServerImageClient extends http.BaseClient {
   final _external = BrowserClient();
 
   @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) =>
-      (request.url.origin == serverOrigin ? _server : _external).send(request);
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    final uri = request.url;
+    final isServer =
+        serverOrigin != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty &&
+        uri.origin == serverOrigin;
+    return (isServer ? _server : _external).send(request);
+  }
 
   @override
   void close() {

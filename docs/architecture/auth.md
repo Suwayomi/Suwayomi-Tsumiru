@@ -43,8 +43,12 @@ use the same HTTP transport as ordinary server queries.
 
 Server HTTP requests and the web image cache include browser credentials.
 The image cache enables this only for the configured server origin; unrelated
-image URLs retain the default credential policy. Native cookie handling is
-unchanged.
+image URLs retain the default credential policy. Web pages and covers share
+an in-memory cache. Changing the
+active endpoint disposes that manager and creates a new memory cache with the
+new credential origin; the matching cache name does not share a persistent
+store. The browser's own HTTP cache remains separate. Native cookie handling
+and durable cover storage are unchanged.
 
 Same-origin deployments work with the browser's default cookie rules. A web
 app and server using the same scheme and hostname on different ports are

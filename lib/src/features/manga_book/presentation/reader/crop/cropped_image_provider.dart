@@ -72,8 +72,9 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
   ) {
     return OneFrameImageStreamCompleter(
       key._load(decode),
-      informationCollector: () =>
-          <DiagnosticsNode>[ErrorDescription('Crop source: ${key.cacheKey}')],
+      informationCollector: () => <DiagnosticsNode>[
+        ErrorDescription('Crop source: ${key.cacheKey}'),
+      ],
     );
   }
 
@@ -146,13 +147,13 @@ class CroppedImageProvider extends ImageProvider<CroppedImageProvider> {
 
   @override
   int get hashCode => Object.hash(
-        cacheKey,
-        localPath,
-        threshold,
-        scale,
-        targetWidth,
-        targetHeight,
-      );
+    cacheKey,
+    localPath,
+    threshold,
+    scale,
+    targetWidth,
+    targetHeight,
+  );
 
   @override
   String toString() => 'CroppedImageProvider($cacheKey, t:$threshold)';
