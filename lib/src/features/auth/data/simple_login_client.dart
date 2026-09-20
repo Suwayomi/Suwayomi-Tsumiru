@@ -6,6 +6,14 @@
 
 import 'package:http/http.dart' as http;
 
+import 'simple_login_session_client_io.dart'
+    if (dart.library.js_interop) 'simple_login_session_client_web.dart';
+
+/// Stored in place of a cookie value when the browser owns the session, so
+/// "are we signed in" stays a simple non-empty check while nothing tries to
+/// set a `Cookie` header that browsers forbid anyway.
+const kBrowserManagedSimpleSession = 'browser-managed-session';
+
 /// Thrown when `POST /login.html` returns HTTP 200 (Suwayomi's way of
 /// signalling invalid credentials — it re-renders the login HTML).
 class SimpleLoginAuthFailure implements Exception {
@@ -25,10 +33,15 @@ class SimpleLoginShapeFailure implements Exception {
 
 /// Talks to Suwayomi-Server's `simple_login` auth mode.
 class SimpleLoginClient {
-  SimpleLoginClient({http.Client? httpClient})
-      : _http = httpClient ?? http.Client();
+  SimpleLoginClient({http.Client? httpClient, bool? browserSession})
+    : _http = httpClient ?? makeSimpleLoginClient(),
+      _browserSession = browserSession ?? browserManagesSession;
 
   final http.Client _http;
+
+  /// True where the browser owns the cookie jar. Injectable so both paths are
+  /// testable off the browser.
+  final bool _browserSession;
 
   /// POSTs username + password to `<serverBaseUrl>/login.html` and returns
   /// the value of the `Set-Cookie` header (typically
@@ -57,21 +70,40 @@ class SimpleLoginClient {
     }
     final response = await http.Response.fromStream(await _http.send(request));
 
+    if (_browserSession) {
+      // The browser followed the 303 itself and kept the cookie, so neither
+      // the redirect status nor `Set-Cookie` is visible here. What IS visible
+      // is where it landed: rejected credentials re-render the login form,
+      // success lands on the app.
+      if (_looksLikeLoginForm(response.body)) {
+        throw const SimpleLoginAuthFailure();
+      }
+      if (response.statusCode >= 400) {
+        throw SimpleLoginShapeFailure(
+          'unexpected status ${response.statusCode}',
+        );
+      }
+      return kBrowserManagedSimpleSession;
+    }
+
     if (response.statusCode == 200) {
       // Server re-rendered the login page → bad credentials.
       throw const SimpleLoginAuthFailure();
     }
     if (response.statusCode != 303) {
-      throw SimpleLoginShapeFailure(
-          'unexpected status ${response.statusCode}');
+      throw SimpleLoginShapeFailure('unexpected status ${response.statusCode}');
     }
     final setCookie = response.headers['set-cookie'];
     if (setCookie == null || setCookie.isEmpty) {
       throw const SimpleLoginShapeFailure(
-          '303 response had no Set-Cookie header');
+        '303 response had no Set-Cookie header',
+      );
     }
     // `Set-Cookie: JSESSIONID=abc; Path=/; HttpOnly` → keep just
     // "JSESSIONID=abc" for the outgoing Cookie header on later requests.
     return setCookie.split(';').first.trim();
   }
+
+  static bool _looksLikeLoginForm(String body) =>
+      body.contains('name="user"') && body.contains('name="pass"');
 }

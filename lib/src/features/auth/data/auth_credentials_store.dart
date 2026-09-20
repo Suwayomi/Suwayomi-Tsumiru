@@ -14,6 +14,7 @@ import '../../settings/presentation/server/widget/credential_popup/credentials_p
 import 'auth_session_transition.dart';
 import 'jwt_utils.dart';
 import 'secure_credentials_provider.dart';
+import 'simple_login_client.dart';
 
 part 'auth_credentials_store.g.dart';
 
@@ -76,8 +77,13 @@ class AuthCredentialsState {
 
   /// Convenience: `{'Cookie': '<cookie>'}` or `null`. Used by
   /// `SuwayomiAuthLink.getHeaders` and `server_image`.
+  ///
+  /// Null when the browser owns the session: it attaches the cookie itself,
+  /// and a `Cookie` header set from page code is dropped either way.
   Map<String, String>? get simpleLoginCookieHeader =>
-      (simpleLoginCookie == null || simpleLoginCookie!.isEmpty)
+      (simpleLoginCookie == null ||
+          simpleLoginCookie!.isEmpty ||
+          simpleLoginCookie == kBrowserManagedSimpleSession)
       ? null
       : {'Cookie': simpleLoginCookie!};
 
