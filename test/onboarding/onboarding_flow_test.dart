@@ -44,7 +44,7 @@ void main() {
     expect(find.text("You're all set"), findsNothing);
   });
 
-  testWidgets('verified UI login resumes the finish step after hydration', (
+  testWidgets('stored UI credentials do not skip the saved server step', (
     tester,
   ) async {
     FlutterSecureStorage.setMockInitialValues({
@@ -73,7 +73,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text("You're all set"), findsOneWidget);
+    expect(find.text("You're all set"), findsNothing);
+    expect(find.text('Connect your server'), findsOneWidget);
   });
 
   testWidgets(

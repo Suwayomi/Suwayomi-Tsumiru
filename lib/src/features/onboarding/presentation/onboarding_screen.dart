@@ -25,7 +25,6 @@ import '../../account/data/account_actions.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
 import '../../account/presentation/account_code_dialog.dart';
-import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
@@ -35,6 +34,7 @@ import '../../settings/presentation/server/widget/client/server_url_tile/server_
 import '../data/onboarding_complete.dart';
 import '../data/server_discovery.dart';
 import '../data/server_resolver.dart';
+import 'onboarding_sign_in.dart';
 
 /// First-time onboarding wizard: pick a theme, connect a Suwayomi server, done.
 /// Shown by the router until [OnboardingComplete] is set true. Matches the
@@ -46,15 +46,10 @@ class OnboardingScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final credentials = ref.watch(authCredentialsStoreProvider).value;
+    final preferences = ref.watch(sharedPreferencesProvider);
     final resume =
         ref.watch(onboardingCompleteProvider) != true &&
-        ref.watch(authTypeKeyProvider) == AuthType.uiLogin &&
-        credentials?.accountBinding != null &&
-        credentials?.sessionChanging == false &&
-        credentials?.uiAccessToken?.isNotEmpty == true &&
-        credentials?.uiRefreshToken?.isNotEmpty == true;
-    final preferences = ref.watch(sharedPreferencesProvider);
+        preferences.getInt('onboarding.step') == 2;
     final step = useState(
       resume ? 2 : (preferences.getInt('onboarding.step') ?? 0).clamp(0, 1),
     );
@@ -140,6 +135,10 @@ class OnboardingScreen extends HookConsumerWidget {
                         0 => const _ThemeStep(),
                         1 => _ServerStep(
                           onVerifiedChanged: (v) => serverVerified.value = v,
+                          onSignedIn: () {
+                            serverVerified.value = true;
+                            step.value = 2;
+                          },
                         ),
                         _ => const _FinishStep(),
                       },
@@ -319,8 +318,12 @@ final onboardingHttpClientProvider = Provider<http.Client Function()>(
 );
 
 class _ServerStep extends HookConsumerWidget {
-  const _ServerStep({required this.onVerifiedChanged});
+  const _ServerStep({
+    required this.onVerifiedChanged,
+    required this.onSignedIn,
+  });
   final ValueChanged<bool> onVerifiedChanged;
+  final VoidCallback onSignedIn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -382,13 +385,16 @@ class _ServerStep extends HookConsumerWidget {
         builder: (_) => AccountCodeDialog(
           mode: mode,
           onSubmit: ({required code, username, required password}) async {
-            await redeem(code: code, username: username, password: password);
-            if (!context.mounted) return;
-            state.value = _TestState.connected;
-            onVerifiedChanged(true);
+            await finishOnboardingSignIn(
+              ref,
+              () => redeem(code: code, username: username, password: password),
+            );
           },
         ),
       );
+      if (context.mounted && preferences.getInt('onboarding.step') == 2) {
+        onSignedIn();
+      }
     }
 
     // Validate + commit the entered credentials against [base] using
@@ -428,19 +434,20 @@ class _ServerStep extends HookConsumerWidget {
         }
       }
       try {
-        await performSignIn(
+        await finishOnboardingSignIn(
           ref,
-          authType: authChoice.value,
-          serverBaseUrl: base,
-          username: user,
-          password: pass,
+          () => performSignIn(
+            ref,
+            authType: authChoice.value,
+            serverBaseUrl: base,
+            username: user,
+            password: pass,
+          ),
         );
       } catch (_) {
         return false;
       }
-      if (context.mounted) {
-        ref.read(authTypeKeyProvider.notifier).update(authChoice.value);
-      }
+      if (context.mounted) onSignedIn();
       return true;
     }
 
@@ -489,14 +496,11 @@ class _ServerStep extends HookConsumerWidget {
         final hasCreds =
             userController.text.trim().isNotEmpty &&
             passController.text.isNotEmpty;
-        if (hasCreds && await validateCredentials(url, client)) {
-          state.value = _TestState.connected;
-          onVerifiedChanged(true);
-        } else {
-          if (hasCreds) credsRejected.value = true;
-          state.value = _TestState.needsLogin;
-          onVerifiedChanged(false);
-        }
+        if (hasCreds && await validateCredentials(url, client)) return;
+        if (!context.mounted) return;
+        if (hasCreds) credsRejected.value = true;
+        state.value = _TestState.needsLogin;
+        onVerifiedChanged(false);
       } finally {
         client.close();
       }
@@ -564,13 +568,12 @@ class _ServerStep extends HookConsumerWidget {
                   passController.text.isNotEmpty;
               if (hasCreds &&
                   await validateCredentials(result.baseUrl, client)) {
-                state.value = _TestState.connected;
-                onVerifiedChanged(true);
-              } else {
-                if (hasCreds) credsRejected.value = true;
-                state.value = _TestState.needsLogin;
-                onVerifiedChanged(false);
+                return;
               }
+              if (!context.mounted) return;
+              if (hasCreds) credsRejected.value = true;
+              state.value = _TestState.needsLogin;
+              onVerifiedChanged(false);
             }
         }
       } catch (e) {
@@ -643,15 +646,10 @@ class _ServerStep extends HookConsumerWidget {
       } finally {
         client.close();
       }
-      if (!context.mounted) return;
-      if (ok) {
-        state.value = _TestState.connected;
-        onVerifiedChanged(true);
-      } else {
-        credsRejected.value = true;
-        state.value = _TestState.needsLogin;
-        onVerifiedChanged(false);
-      }
+      if (ok || !context.mounted) return;
+      credsRejected.value = true;
+      state.value = _TestState.needsLogin;
+      onVerifiedChanged(false);
     }
 
     final busy =
