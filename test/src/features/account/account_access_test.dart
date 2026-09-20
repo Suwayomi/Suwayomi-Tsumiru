@@ -134,6 +134,15 @@ void main() {
         message: 'Cannot query field "user" on type "Query".',
         extensions: {'code': 'GRAPHQL_VALIDATION_FAILED'},
       ),
+      // What a pre-accounts Suwayomi actually sends: the validation message
+      // with empty extensions. Demanding a classification here denied every
+      // permission and broke UI Login sign-in against those servers.
+      const GraphQLError(
+        message:
+            "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined",
+        extensions: {},
+      ),
+      const GraphQLError(message: 'Cannot query field "user" on type "Query".'),
     ]) {
       expect(
         classifyAccountResponse(response(errors: [error])),
@@ -146,11 +155,6 @@ void main() {
       [const GraphQLError(message: 'Unauthorized')],
       [
         const GraphQLError(
-          message: 'Cannot query field "user" on type "Query".',
-        ),
-      ],
-      [
-        const GraphQLError(
           message: 'Cannot query field "username" on type "UserType".',
           extensions: {'code': 'GRAPHQL_VALIDATION_FAILED'},
         ),
@@ -160,6 +164,14 @@ void main() {
         const GraphQLError(
           message: 'Cannot query field "user" on type "Query". Database failed',
           extensions: {'code': 'GRAPHQL_VALIDATION_FAILED'},
+        ),
+      ],
+      // A classification that contradicts "field undefined" still rules it out.
+      [
+        const GraphQLError(
+          message:
+              "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined",
+          extensions: {'classification': 'DataFetchingException'},
         ),
       ],
     ]) {

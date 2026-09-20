@@ -52,13 +52,22 @@ AccountCapability classifyAccountResponse(
 }
 
 bool _missingUserField(GraphQLError error) {
-  final extensions = error.extensions;
-  if (extensions?['classification'] != 'ValidationError' &&
-      extensions?['code'] != 'GRAPHQL_VALIDATION_FAILED') {
+  if (error.message != 'Cannot query field "user" on type "Query".' &&
+      error.message != "Cannot query field 'user' on type 'Query'." &&
+      error.message !=
+          "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined") {
     return false;
   }
-  return error.message == 'Cannot query field "user" on type "Query".' ||
-      error.message == "Cannot query field 'user' on type 'Query'." ||
-      error.message ==
-          "Validation error (FieldUndefined@[user]) : Field 'user' in type 'Query' is undefined";
+  // Suwayomi sends these with EMPTY extensions, so their absence says nothing;
+  // only a classification that contradicts a validation error rules it out.
+  // Requiring them classified every pre-accounts server as `unknown`, which
+  // fails UI Login sign-in outright and denies every permission-gated control.
+  final extensions = error.extensions;
+  final classification = extensions?['classification'];
+  final code = extensions?['code'];
+  if (classification != null && classification != 'ValidationError') {
+    return false;
+  }
+  if (code != null && code != 'GRAPHQL_VALIDATION_FAILED') return false;
+  return true;
 }
