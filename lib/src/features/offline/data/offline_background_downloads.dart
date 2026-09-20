@@ -18,6 +18,7 @@ import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../manga_book/data/manga_book/manga_book_repository.dart';
+import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'chapter_commit.dart';
@@ -78,6 +79,12 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
           ),
         ),
         cache: GraphQLCache(),
+        queryRequestTimeout: Duration(
+          milliseconds:
+              (ref.read(serverRequestTimeoutProvider) ??
+                  DBKeys.serverRequestTimeout.initial as int) +
+              2000,
+        ),
       );
       final outcome = await ref
           .read(authCoordinatorProvider.notifier)

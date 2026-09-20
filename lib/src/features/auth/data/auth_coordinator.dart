@@ -475,6 +475,7 @@ class AuthCoordinator extends _$AuthCoordinator {
         defaultPolicies: DefaultPolicies(
           query: Policies(fetch: FetchPolicy.noCache),
         ),
+        queryRequestTimeout: gqlClient.queryManager.requestTimeout,
       );
       final binding = await AccountSessionRepository(
         accountClient,
@@ -483,10 +484,12 @@ class AuthCoordinator extends _$AuthCoordinator {
           address != ref.read(currentServerAddressProvider)) {
         throw StateError('Authentication session changed');
       }
+      // userId + catalogId pin the account to a server instance. The address
+      // is only how we reached it, and the endpoint resolver rewrites it on a
+      // Wi-Fi/mobile switch, so comparing it rejects the same account.
       if (expectedBinding != null &&
           (binding.userId != expectedBinding.userId ||
-              binding.catalogId != expectedBinding.catalogId ||
-              binding.address != expectedBinding.address)) {
+              binding.catalogId != expectedBinding.catalogId)) {
         throw StateError('Authentication account changed');
       }
       await store.saveUiLoginTokens(

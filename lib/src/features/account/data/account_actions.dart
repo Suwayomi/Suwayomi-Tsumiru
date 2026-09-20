@@ -168,6 +168,7 @@ class AccountActions {
           getToken: () => 'Bearer $accessToken',
         ).concat(client.link),
         cache: GraphQLCache(),
+        queryRequestTimeout: client.queryManager.requestTimeout,
       );
       if (builtIn) {
         final user = await AccountRepository(rotationClient).current();

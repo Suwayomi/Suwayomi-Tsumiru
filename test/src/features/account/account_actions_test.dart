@@ -45,6 +45,8 @@ class _Server extends Link {
   bool changedPassword = false;
   int? confirmationUserId;
   String? confirmationCatalogId;
+  Duration? delay;
+  Set<String> delayedOperations = const {};
   String catalogId = 'canonical-root';
   final refreshedAccess = _jwt(2);
   final newAccess = _jwt(3);
@@ -156,6 +158,10 @@ class _Server extends Link {
       },
       _ => throw StateError('Unexpected operation: $operation'),
     };
+    if (delay != null &&
+        (delayedOperations.isEmpty || delayedOperations.contains(operation))) {
+      await Future<void>.delayed(delay!);
+    }
     yield Response(
       response: {},
       data: {'__typename': mutation ? 'Mutation' : 'Query', ...payload},
@@ -169,7 +175,12 @@ void main() {
   late _Server server;
   late String oldAccess;
 
-  Future<void> setup({bool expired = false, int userId = 2}) async {
+  Future<void> setup({
+    bool expired = false,
+    int userId = 2,
+    String storedAddress = 'http://server',
+    Duration? requestTimeout,
+  }) async {
     oldAccess = _jwt(expired ? -1 : 1);
     FlutterSecureStorage.setMockInitialValues({
       'auth.password': 'old-password',
@@ -178,7 +189,7 @@ void main() {
       'auth.ui.accessToken': oldAccess,
       'auth.ui.refreshToken': 'old-refresh',
       'auth.ui.accountBinding': AccountBinding(
-        address: 'http://server',
+        address: storedAddress,
         userId: userId,
         username: 'Canonical',
         catalogId: 'canonical-root',
@@ -197,7 +208,11 @@ void main() {
         ),
         currentServerAddressProvider.overrideWithValue('http://server'),
         unauthenticatedGraphQlClientProvider.overrideWithValue(
-          GraphQLClient(link: server, cache: GraphQLCache()),
+          GraphQLClient(
+            link: server,
+            cache: GraphQLCache(),
+            queryRequestTimeout: requestTimeout,
+          ),
         ),
       ],
     );
@@ -588,6 +603,42 @@ void main() {
       expectRawAndBoundHeaders();
     },
   );
+
+  test('a password change survives an endpoint switch', () async {
+    // The endpoint resolver rewrites the server URL on a Wi-Fi/mobile switch,
+    // so the stored binding holds the address login used, not the current one.
+    await setup(storedAddress: 'http://lan-server');
+    await container
+        .read(accountActionsProvider)
+        .changePassword(
+          currentPassword: 'old-password',
+          newPassword: 'new-password',
+        );
+    final state = container.read(authCredentialsStoreProvider).requireValue;
+    expect(state.password, 'new-password');
+    expect(state.accountBinding?.username, 'Canonical');
+    expect(state.accountBinding?.address, 'http://server');
+  });
+
+  test('account verification honours the configured request timeout', () async {
+    // The verification client is built from the parent's link, so it must
+    // carry the parent's timeout. Left to graphql's own default it would wait
+    // five seconds and this slow response would pass unnoticed.
+    await setup(requestTimeout: const Duration(milliseconds: 50));
+    // Only the post-rotation verification is slow, so the parent client's own
+    // requests still succeed and the failure can only come from the child.
+    server.delayedOperations = const {'AccountCapability', 'CurrentAccount'};
+    server.delay = const Duration(milliseconds: 400);
+    await expectLater(
+      container
+          .read(accountActionsProvider)
+          .changePassword(
+            currentPassword: 'old-password',
+            newPassword: 'new-password',
+          ),
+      throwsA(isA<Object>()),
+    );
+  });
 
   test('explicit password rejection retains old credentials', () async {
     await setup();
