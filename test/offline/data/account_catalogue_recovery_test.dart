@@ -23,7 +23,7 @@ void main() {
     for (final path in [source, target]) {
       final db = sqlite3.open(path);
       db.execute(
-        'CREATE TABLE offline_chapters (id INTEGER PRIMARY KEY, manga_id INTEGER NOT NULL, name TEXT NOT NULL, is_read INTEGER NOT NULL, last_page_read INTEGER NOT NULL, is_bookmarked INTEGER NOT NULL, progress_dirty INTEGER NOT NULL DEFAULT 0, read_state_dirty INTEGER NOT NULL DEFAULT 0, bookmark_dirty INTEGER NOT NULL DEFAULT 0, read_state_manual INTEGER NOT NULL DEFAULT 0, synced_is_read INTEGER NOT NULL DEFAULT 0)',
+        'CREATE TABLE offline_chapters (id INTEGER PRIMARY KEY, manga_id INTEGER NOT NULL, name TEXT NOT NULL, is_read INTEGER NOT NULL, last_page_read INTEGER NOT NULL, is_bookmarked INTEGER NOT NULL, progress_dirty INTEGER NOT NULL DEFAULT 0, read_state_dirty INTEGER NOT NULL DEFAULT 0, bookmark_dirty INTEGER NOT NULL DEFAULT 0, read_state_manual INTEGER NOT NULL DEFAULT 0, synced_is_read INTEGER NOT NULL DEFAULT 0, last_read_at TEXT)',
       );
       db.execute(
         "INSERT INTO offline_chapters (id,manga_id,name,is_read,last_page_read,is_bookmarked) VALUES (7,1,'Chapter 7',0,2,0)",
@@ -32,6 +32,53 @@ void main() {
     }
   });
   tearDown(() => root.deleteSync(recursive: true));
+
+  for (final pending in [false, true]) {
+    test(
+      'legacy recovery preserves timestamps and pending flags ($pending)',
+      () async {
+        final old = sqlite3.open(source);
+        old.execute(
+          "UPDATE offline_chapters SET last_page_read=8, last_read_at='1700000000', progress_dirty=?",
+          [pending ? 1 : 0],
+        );
+        old.close();
+        final current = sqlite3.open(target);
+        current.execute(
+          "UPDATE offline_chapters SET last_read_at='1800000000'",
+        );
+        current.close();
+
+        await reconcileAccountCatalogues(source, target, choices: {7: true});
+        await reconcileAccountCatalogues(source, target);
+
+        final recovered = sqlite3.open(target);
+        final row = recovered.select('SELECT * FROM offline_chapters').single;
+        expect(row['last_page_read'], 8);
+        expect(row['progress_dirty'], pending ? 1 : 0);
+        expect(row['read_state_dirty'], 0);
+        expect(row['bookmark_dirty'], 0);
+        expect(row['last_read_at'], '1700000000');
+        recovered.close();
+      },
+    );
+  }
+
+  test('recovering a bookmark does not enqueue a reading update', () async {
+    final old = sqlite3.open(source);
+    old.execute(
+      "UPDATE offline_chapters SET is_bookmarked=1, bookmark_dirty=1, last_read_at='1700000000'",
+    );
+    old.close();
+    await reconcileAccountCatalogues(source, target, choices: {7: true});
+    final recovered = sqlite3.open(target);
+    final row = recovered.select('SELECT * FROM offline_chapters').single;
+    expect(row['progress_dirty'], 0);
+    expect(row['read_state_dirty'], 0);
+    expect(row['bookmark_dirty'], 1);
+    expect(row['last_read_at'], '1700000000');
+    recovered.close();
+  });
 
   test('changed progress invalidates a saved recovery choice', () async {
     final original = sqlite3.open(source);

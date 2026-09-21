@@ -165,11 +165,13 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
             }
             if (choices[id] == true) {
               final updates = <String, Object?>{
-                for (final field in [..._readingFields, ..._pendingFields])
+                // Recovery copies an edit; it must not manufacture a new read.
+                for (final field in [
+                  ..._readingFields,
+                  ..._pendingFields,
+                  'last_read_at',
+                ])
                   if (columns.contains(field)) field: row[field],
-                if (columns.contains('progress_dirty')) 'progress_dirty': 1,
-                if (columns.contains('read_state_dirty')) 'read_state_dirty': 1,
-                if (columns.contains('bookmark_dirty')) 'bookmark_dirty': 1,
               };
               current.execute(
                 'UPDATE ${_quoted(name)} SET ${updates.keys.map((k) => '${_quoted(k)}=?').join(',')} WHERE $where',

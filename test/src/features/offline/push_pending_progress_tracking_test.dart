@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
@@ -15,9 +16,11 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
+import 'package:tsumiru/src/features/offline/data/account_catalogue_recovery_io.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_download_providers.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
+import 'package:tsumiru/src/features/offline/data/offline_sync.dart';
 import 'package:tsumiru/src/features/tracking/controller/manga_track_records_controller.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -150,6 +153,7 @@ ChapterDto _serverChapter({
   required int id,
   required bool isRead,
   required int lastPageRead,
+  String lastReadAt = '0',
 }) => ChapterDto(
   chapterNumber: id.toDouble(),
   fetchedAt: '0',
@@ -158,7 +162,7 @@ ChapterDto _serverChapter({
   isDownloaded: true,
   isRead: isRead,
   lastPageRead: lastPageRead,
-  lastReadAt: '0',
+  lastReadAt: lastReadAt,
   mangaId: 1,
   name: 'c$id',
   pageCount: 10,
@@ -248,12 +252,13 @@ _build({
   bool toggleOn = true,
   bool manualToggleOn = false,
   MangaBookRepository? repository,
+  OfflineDatabase? database,
   _SessionStore? session,
   Future<List<Fragment$TrackRecordDto>> Function()? recordsLookup,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
-  final db = testOfflineDatabase();
+  final db = database ?? testOfflineDatabase();
   final fakeTracker = _FakeTrackerRepository();
   final fakeMangaBook = repository ?? _FakeMangaBookRepository();
 
@@ -289,6 +294,84 @@ _build({
 // ---------------------------------------------------------------------------
 
 void main() {
+  for (final pending in [false, true]) {
+    test(
+      'recovered progress only reaches the server when pending ($pending)',
+      () async {
+        final root = Directory.systemTemp.createTempSync('recovered-progress-');
+        addTearDown(() => root.deleteSync(recursive: true));
+        final sourcePath = '${root.path}/source.sqlite';
+        final targetPath = '${root.path}/target.sqlite';
+        for (final path in [sourcePath, targetPath]) {
+          final catalog = testOfflineDatabaseFile(path);
+          await _seed(catalog, 7, mangaId: 1);
+          await catalog.upsertChapterMetadata(
+            id: 7,
+            mangaId: 1,
+            name: 'c7',
+            chapterIndex: 7,
+            isRead: false,
+            lastPageRead: path == sourcePath ? 8 : 2,
+            isBookmarked: false,
+            serverIsDownloaded: true,
+            pageCount: 10,
+            updatedAt: DateTime(2026),
+            lastReadAt: '1700000000',
+          );
+          if (pending && path == sourcePath) {
+            await catalog.setChapterProgress(7, lastPageRead: 8);
+          }
+          await catalog.close();
+        }
+        await reconcileAccountCatalogues(
+          sourcePath,
+          targetPath,
+          choices: {7: true},
+        );
+        await reconcileAccountCatalogues(sourcePath, targetPath);
+
+        final repo = _ServerStateRepository(
+          _serverChapter(
+            id: 7,
+            isRead: false,
+            lastPageRead: 2,
+            lastReadAt: '1800000000',
+          ),
+        );
+        final (:container, :db, :tracker) = await _build(
+          mangaIds: [1],
+          repository: repo,
+          database: testOfflineDatabaseFile(targetPath),
+        );
+        addTearDown(() async {
+          container.dispose();
+          await db.close();
+        });
+        await pushPendingProgress(container);
+        await pushPendingProgress(container);
+        expect(repo.patches.length, pending ? 1 : 0);
+        if (pending) {
+          expect(repo.patches.single.lastPageRead, 8);
+          expect(repo.patches.single.isRead, isNull);
+          expect(repo.patches.single.isBookmarked, isNull);
+        }
+        expect(await db.dirtyChapters(), isEmpty);
+        expect(tracker.trackProgressCalls, isEmpty);
+
+        await OfflineSync(db).syncChapters([
+          _serverChapter(
+            id: 7,
+            isRead: true,
+            lastPageRead: 9,
+            lastReadAt: '1900000000',
+          ),
+        ]);
+        expect((await db.chapterById(7))!.lastReadAt, '1900000000');
+        expect((await db.chapterById(7))!.lastPageRead, 9);
+      },
+    );
+  }
+
   test(
     'account replacement leaves delayed progress dirty and skips mutation',
     () async {
