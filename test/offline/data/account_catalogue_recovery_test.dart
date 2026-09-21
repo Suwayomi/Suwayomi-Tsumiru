@@ -80,6 +80,71 @@ void main() {
     recovered.close();
   });
 
+  for (final field in [
+    'last_read_at',
+    'progress_dirty',
+    'read_state_dirty',
+    'bookmark_dirty',
+    'read_state_manual',
+  ]) {
+    test('matching pages do not hide a different $field', () async {
+      final old = sqlite3.open(source);
+      old.execute('UPDATE offline_chapters SET $field=?', [
+        field == 'last_read_at' ? '1900000000' : 1,
+      ]);
+      old.close();
+      await expectLater(
+        reconcileAccountCatalogues(source, target),
+        throwsA(isA<AccountStorageProgressConflict>()),
+      );
+      await reconcileAccountCatalogues(source, target, choices: {7: true});
+      await reconcileAccountCatalogues(source, target);
+      final recovered = sqlite3.open(target);
+      expect(
+        recovered.select('SELECT $field FROM offline_chapters').single[field],
+        field == 'last_read_at' ? '1900000000' : 1,
+      );
+      recovered.close();
+    });
+  }
+
+  test('a newer reading timestamp invalidates a saved recovery choice', () async {
+    final old = sqlite3.open(source);
+    old.execute(
+      "UPDATE offline_chapters SET last_page_read=8,last_read_at='1700000000',progress_dirty=1",
+    );
+    old.close();
+    await reconcileAccountCatalogues(source, target, choices: {7: false});
+    final reread = sqlite3.open(source);
+    reread.execute("UPDATE offline_chapters SET last_read_at='1900000000'");
+    reread.close();
+    await expectLater(
+      reconcileAccountCatalogues(source, target),
+      throwsA(isA<AccountStorageProgressConflict>()),
+    );
+  });
+
+  test('retry after a chosen edit syncs does not queue it again', () async {
+    final old = sqlite3.open(source);
+    old.execute(
+      "UPDATE offline_chapters SET last_page_read=8,last_read_at='1700000000',progress_dirty=1",
+    );
+    old.close();
+    await reconcileAccountCatalogues(source, target, choices: {7: true});
+    final synced = sqlite3.open(target);
+    synced.execute('UPDATE offline_chapters SET progress_dirty=0');
+    synced.close();
+    await reconcileAccountCatalogues(source, target);
+    final recovered = sqlite3.open(target);
+    expect(
+      recovered
+          .select('SELECT progress_dirty FROM offline_chapters')
+          .single['progress_dirty'],
+      0,
+    );
+    recovered.close();
+  });
+
   test('changed progress invalidates a saved recovery choice', () async {
     final original = sqlite3.open(source);
     original.execute('UPDATE offline_chapters SET last_page_read=112');

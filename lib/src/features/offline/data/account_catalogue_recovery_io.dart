@@ -29,9 +29,23 @@ const _pendingFields = [
 ];
 
 String _reading(Map<String, Object?> row) => jsonEncode({
-  for (final field in _readingFields)
+  for (final field in [..._readingFields, ..._pendingFields, 'last_read_at'])
     if (row.containsKey(field)) field: row[field],
 });
+
+bool _matchesResolvedState(String saved, Map<String, Object?> current) {
+  final resolved = jsonDecode(saved) as Map<String, dynamic>;
+  final state = {...current};
+  // A successful sync clears pending flags without invalidating the choice.
+  for (final field in [
+    'progress_dirty',
+    'read_state_dirty',
+    'bookmark_dirty',
+  ]) {
+    if (resolved[field] == 1 && state[field] == 0) state[field] = 1;
+  }
+  return _reading(state) == saved;
+}
 
 void _backup(Database database, String path, {String? backupPath}) {
   final backup = File(backupPath ?? '$path.recovery-backup');
@@ -141,7 +155,10 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
             );
             if (saved.isNotEmpty &&
                 saved.single['original_state'] == originalState &&
-                saved.single['resolved_state'] == currentState) {
+                _matchesResolvedState(
+                  saved.single['resolved_state'] as String,
+                  existing,
+                )) {
               continue;
             }
             if (!choices.containsKey(id)) {
