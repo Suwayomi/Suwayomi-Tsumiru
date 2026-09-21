@@ -107,6 +107,14 @@ Future<String?> claimRootAccountStorage({
       throw FileSystemException('Invalid root catalogue', path);
     }
   }
+  await for (final entity in Directory(offlineRoot).list(followLinks: false)) {
+    final name = p.basename(entity.path);
+    if (name != 'covers' && !RegExp(r'^[0-9]+$').hasMatch(name)) continue;
+    if (entity is! Directory) {
+      throw FileSystemException('Invalid root storage directory', entity.path);
+    }
+    await _checkTree(entity);
+  }
   final expectedOwner = accountOwner ?? 'legacy';
   for (final name in [
     rootAccountStorageMarker,
@@ -196,6 +204,33 @@ Future<String> prepareAccountStorage({
   AccountEntityRename? renameEntity,
   AccountStorageRecovery? recovery,
 }) async {
+  final worker = _AccountFileWorker(recovery);
+  try {
+    return await _prepareAccountStorage(
+      offlineRoot: offlineRoot,
+      instanceId: instanceId,
+      legacyInstanceId: legacyInstanceId,
+      accountOwner: accountOwner,
+      copyFile: copyFile,
+      renameEntity: renameEntity,
+      recovery: recovery,
+      worker: worker,
+    );
+  } finally {
+    await worker.close();
+  }
+}
+
+Future<String> _prepareAccountStorage({
+  required String offlineRoot,
+  required String instanceId,
+  required _AccountFileWorker worker,
+  String? legacyInstanceId,
+  String? accountOwner,
+  AccountFileCopy? copyFile,
+  AccountEntityRename? renameEntity,
+  AccountStorageRecovery? recovery,
+}) async {
   final claimed = await rootAccountStorageId(offlineRoot);
   if (claimed == instanceId) {
     return (await claimRootAccountStorage(
@@ -241,6 +276,7 @@ Future<String> prepareAccountStorage({
       claimed == null &&
       !cleared &&
       await File(p.join(offlineRoot, 'catalog.sqlite')).exists();
+  await _checkTree(target, recovery);
   if (complete && !cleanup) {
     for (final name in [
       'catalog.sqlite',
@@ -256,7 +292,6 @@ Future<String> prepareAccountStorage({
     }
     return target.path;
   }
-  await _checkTree(target, recovery);
   final sourceDb = File(p.join(offlineRoot, 'catalog.sqlite'));
   final sourceType = await FileSystemEntity.type(
     sourceDb.path,
@@ -304,9 +339,49 @@ Future<String> prepareAccountStorage({
       );
     }
     final destinationDb = File(p.join(target.path, 'catalog.sqlite'));
+    if (await destinationDb.exists() &&
+        !_catalogueIsValid(destinationDb.path) &&
+        await worker.run(sourceDb.path, destinationDb.path, 'prefix')) {
+      // A valid catalogue or a nonmatching file may contain account changes.
+      // Only an incomplete byte-for-byte copy can be replaced from the source.
+      for (final suffix in ['-wal', '-shm', '-journal']) {
+        final sidecar = File('${destinationDb.path}$suffix');
+        if (await sidecar.exists() && await sidecar.length() != 0) {
+          throw FileSystemException(
+            'Partial catalogue has recovery data',
+            sidecar.path,
+          );
+        }
+      }
+      final pending = File('${destinationDb.path}.copying');
+      await _copyVerified(sourceDb, pending, copyFile, recovery, worker);
+      if (!_catalogueIsValid(pending.path)) {
+        throw FileSystemException(
+          'Legacy catalogue failed integrity check',
+          sourceDb.path,
+        );
+      }
+      final backup = File('${destinationDb.path}.truncated-backup');
+      final backupType = await FileSystemEntity.type(
+        backup.path,
+        followLinks: false,
+      );
+      if (backupType == FileSystemEntityType.notFound) {
+        await destinationDb.rename(backup.path);
+      } else if (backupType == FileSystemEntityType.file) {
+        await worker.run(destinationDb.path, backup.path, 'verify');
+      } else {
+        throw FileSystemException(
+          'Invalid truncated catalogue backup',
+          backup.path,
+        );
+      }
+      recovery?.check();
+      await pending.rename(destinationDb.path);
+    }
     if (!await destinationDb.exists()) {
       final pending = File('${destinationDb.path}.copying');
-      await _copyVerified(sourceDb, pending, copyFile, recovery);
+      await _copyVerified(sourceDb, pending, copyFile, recovery, worker);
       await pending.rename(destinationDb.path);
     }
     await reconcileAccountCatalogues(
@@ -333,6 +408,7 @@ Future<String> prepareAccountStorage({
         renameEntity,
         offlineRoot,
         recovery,
+        worker,
       );
     }
     final database = sqlite3.open(
@@ -432,6 +508,7 @@ Future<void> _moveDirectory(
   AccountEntityRename? renameEntity,
   String offlineRoot,
   AccountStorageRecovery? recovery,
+  _AccountFileWorker worker,
 ) async {
   recovery?.check();
   await _checkAncestors(destination.path, offlineRoot);
@@ -457,6 +534,7 @@ Future<void> _moveDirectory(
         renameEntity,
         offlineRoot,
         recovery,
+        worker,
       );
     } else {
       recovery?.check();
@@ -466,6 +544,7 @@ Future<void> _moveDirectory(
         copyFile,
         renameEntity,
         recovery,
+        worker,
       );
       recovery?.completed();
     }
@@ -478,6 +557,7 @@ Future<void> _moveFile(
   AccountFileCopy? copyFile,
   AccountEntityRename? renameEntity,
   AccountStorageRecovery? recovery,
+  _AccountFileWorker worker,
 ) async {
   final type = await FileSystemEntity.type(
     destination.path,
@@ -492,13 +572,20 @@ Future<void> _moveFile(
     return;
   }
   if (type == FileSystemEntityType.file) {
-    await _fileTask(source.path, destination.path, false, recovery);
+    if (await worker.run(source.path, destination.path, 'prefix')) {
+      final pending = File('${destination.path}.copying');
+      await _copyVerified(source, pending, copyFile, recovery, worker);
+      recovery?.check();
+      await pending.rename(destination.path);
+    } else {
+      await worker.run(source.path, destination.path, 'verify');
+    }
     recovery?.check();
     await source.delete();
     return;
   }
   final pending = File('${destination.path}.copying');
-  await _copyVerified(source, pending, copyFile, recovery);
+  await _copyVerified(source, pending, copyFile, recovery, worker);
   await pending.rename(destination.path);
   recovery?.check();
   await source.delete();
@@ -532,6 +619,7 @@ Future<void> _copyVerified(
   File destination,
   AccountFileCopy? copyFile,
   AccountStorageRecovery? recovery,
+  _AccountFileWorker worker,
 ) async {
   final type = await FileSystemEntity.type(
     destination.path,
@@ -545,100 +633,176 @@ Future<void> _copyVerified(
     await copyFile(source, destination);
     recovery?.check();
   }
-  await _fileTask(source.path, destination.path, copyFile == null, recovery);
+  await worker.run(
+    source.path,
+    destination.path,
+    copyFile == null ? 'copy' : 'verify',
+  );
 }
 
-Future<void> _fileTask(
-  String source,
-  String destination,
-  bool copy,
-  AccountStorageRecovery? recovery,
-) async {
-  recovery?.check();
-  final result = Completer<void>();
-  final messages = ReceivePort();
-  SendPort? control;
-  final subscription = messages.listen((message) {
-    if (message is SendPort) {
-      control = message;
-    } else if (!result.isCompleted) {
-      if (message is List && message.isEmpty) {
-        result.complete();
-      } else if (message is List && message.length == 2) {
-        result.completeError(
-          message[0] as Object,
-          message[1] is StackTrace
-              ? message[1] as StackTrace
-              : StackTrace.fromString('${message[1]}'),
-        );
-      } else {
-        result.completeError(StateError('Account file recovery stopped'));
-      }
-    }
-  });
-  Timer? cancellation;
+bool _catalogueIsValid(String path) {
+  if (File(path).lengthSync() == 0) return false;
+  Database? database;
   try {
-    final worker = Isolate.spawn(
-      _fileWorker,
-      (source, destination, copy, messages.sendPort),
-      onExit: messages.sendPort,
-      onError: messages.sendPort,
-    );
-    if (recovery != null) {
-      cancellation = Timer.periodic(const Duration(milliseconds: 20), (_) {
-        if (!recovery.isCurrent()) control?.send(null);
-      });
-    }
-    await Future.wait<void>([
-      worker.then((_) {}),
-      result.future,
-    ], eagerError: true);
-    recovery?.check();
+    database = sqlite3.open(path, mode: OpenMode.readOnly);
+    final rows = database.select('PRAGMA quick_check');
+    return rows.length == 1 && rows.single.values.single == 'ok';
+  } on SqliteException {
+    return false;
   } finally {
-    cancellation?.cancel();
-    await subscription.cancel();
-    messages.close();
+    database?.close();
   }
 }
 
-Future<void> _fileWorker((String, String, bool, SendPort) request) async {
-  final (source, destination, copy, result) = request;
+/// Requests are sequential, so one worker serves the whole migration.
+class _AccountFileWorker {
+  _AccountFileWorker(this.recovery);
+
+  final AccountStorageRecovery? recovery;
+  final ReceivePort _messages = ReceivePort();
+  final Completer<SendPort> _ready = Completer<SendPort>();
+  StreamSubscription<dynamic>? _subscription;
+  Isolate? _isolate;
+  Completer<bool>? _result;
+
+  Object? _failure;
+  StackTrace? _failureStack;
+
+  Future<bool> run(String source, String destination, String operation) async {
+    recovery?.check();
+    if (_subscription == null) {
+      _subscription = _messages.listen((message) {
+        if (message is SendPort) {
+          _ready.complete(message);
+        } else if (message is bool) {
+          _result?.complete(message);
+        } else {
+          final error = message is List
+              ? message[0] as Object
+              : StateError('Account file recovery stopped');
+          final stack = message is List && message.length > 1
+              ? message[1] is StackTrace
+                    ? message[1] as StackTrace
+                    : StackTrace.fromString('${message[1]}')
+              : StackTrace.current;
+          _failure = error;
+          _failureStack = stack;
+          if (!_ready.isCompleted) _ready.completeError(error, stack);
+          if (_result != null && !_result!.isCompleted) {
+            _result!.completeError(error, stack);
+          }
+        }
+      });
+      await Future.wait<void>([
+        Isolate.spawn(
+          _fileWorker,
+          _messages.sendPort,
+          onExit: _messages.sendPort,
+          onError: _messages.sendPort,
+        ).then((isolate) => _isolate = isolate),
+        _ready.future.then((_) {}),
+      ], eagerError: true);
+    }
+    if (_failure != null) Error.throwWithStackTrace(_failure!, _failureStack!);
+    recovery?.check();
+    final control = await _ready.future;
+    _result = Completer<bool>();
+    control.send((source, destination, operation));
+    final cancellation = recovery == null
+        ? null
+        : Timer.periodic(const Duration(milliseconds: 20), (_) {
+            if (!recovery!.isCurrent()) control.send(null);
+          });
+    try {
+      final result = await _result!.future;
+      recovery?.check();
+      return result;
+    } finally {
+      cancellation?.cancel();
+      _result = null;
+    }
+  }
+
+  Future<void> close() async {
+    _isolate?.kill(priority: Isolate.immediate);
+    await _subscription?.cancel();
+    _messages.close();
+  }
+}
+
+void _fileWorker(SendPort result) {
   final commands = ReceivePort();
   var cancelled = false;
-  final subscription = commands.listen((_) => cancelled = true);
-  result.send(commands.sendPort);
   void check() {
     if (cancelled) throw StateError('Account storage recovery cancelled');
   }
 
-  try {
-    if (copy) {
-      final input = await File(source).open();
-      try {
-        final output = await File(destination).open(mode: FileMode.write);
-        try {
-          while (true) {
-            check();
-            final bytes = await input.read(65536);
-            if (bytes.isEmpty) break;
-            await output.writeFrom(bytes);
-          }
-          await output.flush();
-        } finally {
-          await output.close();
-        }
-      } finally {
-        await input.close();
-      }
+  commands.listen((message) async {
+    if (message == null) {
+      cancelled = true;
+      return;
     }
-    check();
-    await _verifyFileCopy(source, destination, check);
-    result.send(<Object>[]);
-  } catch (error, stack) {
-    result.send([error, stack]);
+    final (source, destination, operation) =
+        message as (String, String, String);
+    try {
+      check();
+      if (operation == 'prefix') {
+        result.send(await _isTruncatedCopy(source, destination, check));
+        return;
+      }
+      if (operation == 'copy') {
+        final input = await File(source).open();
+        try {
+          final output = await File(destination).open(mode: FileMode.write);
+          try {
+            while (true) {
+              check();
+              final bytes = await input.read(65536);
+              if (bytes.isEmpty) break;
+              await output.writeFrom(bytes);
+            }
+            await output.flush();
+          } finally {
+            await output.close();
+          }
+        } finally {
+          await input.close();
+        }
+      }
+      check();
+      await _verifyFileCopy(source, destination, check);
+      result.send(true);
+    } catch (error, stack) {
+      result.send([error, stack]);
+    }
+  });
+  result.send(commands.sendPort);
+}
+
+Future<bool> _isTruncatedCopy(
+  String source,
+  String destination,
+  void Function() check,
+) async {
+  final input = await File(source).open();
+  try {
+    final output = await File(destination).open();
+    try {
+      if (await output.length() >= await input.length()) return false;
+      while (true) {
+        check();
+        final after = await output.read(65536);
+        if (after.isEmpty) return true;
+        final before = await input.read(after.length);
+        for (var i = 0; i < after.length; i++) {
+          if (i >= before.length || before[i] != after[i]) return false;
+        }
+      }
+    } finally {
+      await output.close();
+    }
   } finally {
-    await subscription.cancel();
-    commands.close();
+    await input.close();
   }
 }
 

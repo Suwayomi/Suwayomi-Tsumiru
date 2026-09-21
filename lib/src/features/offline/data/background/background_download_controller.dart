@@ -541,6 +541,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     final root = '${(await getApplicationSupportDirectory()).path}/offline';
     final preferences = _ref.read(sharedPreferencesProvider);
     final catalog = preferences.getString(DBKeys.offlineCatalogServerId.name);
+    if (preferences.getBool(offlineNonAccountScopedKey) == true) {
+      return nonAccountStoragePath(root);
+    }
     return preferences.getBool(offlineAccountScopedKey) == true &&
             catalog != null
         ? accountStoragePath(root, catalog)

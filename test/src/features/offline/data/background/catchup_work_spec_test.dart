@@ -9,11 +9,28 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
 import 'package:tsumiru/src/features/offline/data/offline_types.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('non-account worker storage survives spec persistence', () {
+    final spec = CatchupWorkSpec.fromJson({
+      'serverId': 'basic-server',
+      'nonAccountScoped': true,
+    });
+    final restored = CatchupWorkSpec.fromJson(spec.toJson());
+    expect(restored.storagePath('/offline'), '/offline/non-account');
+    expect(offlineControlRoot(restored.storagePath('/offline')), '/offline');
+    expect(
+      CatchupWorkSpec.fromJson({'serverId': 'legacy'}).storagePath('/offline'),
+      '/offline',
+    );
+    expect(offlineControlRoot('/offline/accounts/non-account'), '/offline');
+    expect(isNonAccountStoragePath('/offline/accounts/non-account'), isFalse);
+  });
 
   Future<CatchupStateStore> store() async {
     SharedPreferences.setMockInitialValues(const {});

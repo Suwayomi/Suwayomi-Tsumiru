@@ -215,6 +215,40 @@ void main() {
     );
   });
 
+  test('a newly discovered conflict does not discard earlier choices', () async {
+    final old = sqlite3.open(source);
+    old.execute('UPDATE offline_chapters SET last_page_read=8');
+    old.execute(
+      "INSERT INTO offline_chapters (id,manga_id,name,is_read,last_page_read,is_bookmarked) VALUES (8,1,'Chapter 8',0,9,0)",
+    );
+    old.close();
+    final current = sqlite3.open(target);
+    current.execute(
+      "INSERT INTO offline_chapters (id,manga_id,name,is_read,last_page_read,is_bookmarked) VALUES (8,1,'Chapter 8',0,1,0)",
+    );
+    current.close();
+    await expectLater(
+      reconcileAccountCatalogues(source, target, choices: {7: true}),
+      throwsA(
+        isA<AccountStorageProgressConflict>().having(
+          (e) => e.conflicts.map((c) => c.chapterId).toList(),
+          'remaining conflicts',
+          [8],
+        ),
+      ),
+    );
+    await reconcileAccountCatalogues(source, target, choices: {8: false});
+    final recovered = sqlite3.open(target);
+    expect(
+      recovered
+          .select('SELECT last_page_read FROM offline_chapters ORDER BY id')
+          .map((r) => r['last_page_read'])
+          .toList(),
+      [8, 1],
+    );
+    recovered.close();
+  });
+
   test('changed progress invalidates a saved recovery choice', () async {
     final original = sqlite3.open(source);
     original.execute('UPDATE offline_chapters SET last_page_read=112');

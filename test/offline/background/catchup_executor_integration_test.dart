@@ -279,6 +279,23 @@ void main() {
     );
   }
 
+  test('moving to non-account storage cancels an old-root worker', () async {
+    serverChapterCount = 1;
+    holdPage = true;
+    await enableOverlap(queuedCount: 0);
+    final running = run();
+    await pageRequested.future.timeout(const Duration(seconds: 5));
+    await state.writeSpec(
+      CatchupWorkSpec.fromJson({
+        ...state.readSpec()!.toJson(),
+        'nonAccountScoped': true,
+      }),
+    );
+    expect(await running.timeout(const Duration(seconds: 5)), isTrue);
+    releasePage.complete();
+    expect((await log.parse()).whereType<ChapterEntry>(), isEmpty);
+  });
+
   test(
     'late denial after account switch leaves old catalog state untouched',
     () async {

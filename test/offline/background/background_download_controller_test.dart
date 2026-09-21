@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_controller.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
@@ -235,6 +236,20 @@ void main() {
     container.dispose();
     await db.close();
   });
+
+  test(
+    'unavailable non-account storage uses its saved background path',
+    () async {
+      offlineEnabled = false;
+      await prefs.setBool(offlineNonAccountScopedKey, true);
+      String? ownedRoot;
+      await controller.changeIdentity(() async {
+        ownedRoot = controller.ownedStorageRoot;
+      });
+      expect(ownedRoot, endsWith('/offline/non-account'));
+      expect(pathReads, 0);
+    },
+  );
 
   test('Android registration waits for available offline storage', () async {
     offlineEnabled = false;

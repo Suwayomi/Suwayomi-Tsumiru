@@ -24,6 +24,53 @@ class _Support extends PathProviderPlatform {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('unclaimed Basic and no-auth downloads remain at root', () async {
+    final support = await Directory.systemTemp.createTemp('unclaimed-root-');
+    addTearDown(() => support.delete(recursive: true));
+    PathProviderPlatform.instance = _Support(support.path);
+    final original = (await initOfflineStorage())!;
+    await original.db.upsertMangaMetadata(
+      id: 1,
+      title: 'Saved',
+      updatedAt: DateTime(2026),
+    );
+    final page = File(p.join(original.paths.baseDir, '1', '7', '000.jpg'));
+    await page.parent.create(recursive: true);
+    await page.writeAsBytes([1, 2, 3]);
+    await original.db.close();
+    final reopened = (await initOfflineStorage(
+      legacyInstanceId: 'basic-server',
+    ))!;
+    expect(reopened.paths.baseDir, p.join(support.path, 'offline'));
+    expect((await reopened.db.mangaById(1))?.title, 'Saved');
+    expect(await page.readAsBytes(), [1, 2, 3]);
+    await reopened.db.close();
+  });
+
+  for (final nested in [false, true]) {
+    test(
+      'non-account storage refuses ${nested ? 'nested' : 'directory'} symlinks',
+      () async {
+        final support = await Directory.systemTemp.createTemp('no-auth-link-');
+        addTearDown(() => support.delete(recursive: true));
+        PathProviderPlatform.instance = _Support(support.path);
+        final root = Directory(p.join(support.path, 'offline'));
+        await root.create();
+        await File(p.join(root.path, '.account-root-id')).writeAsString('A');
+        final outside = Directory(p.join(support.path, 'outside'));
+        await outside.create();
+        final base = p.join(root.path, 'non-account');
+        if (nested) await Directory(base).create();
+        await Link(nested ? p.join(base, '1') : base).create(outside.path);
+        await expectLater(
+          initOfflineStorage(),
+          throwsA(isA<FileSystemException>()),
+        );
+        expect(await outside.list().isEmpty, isTrue);
+      },
+    );
+  }
+
   for (final atRoot in [true, false]) {
     test(
       'legacy UI Login owner upgrades to user 1 (${atRoot ? 'root' : 'scoped'})',
@@ -88,7 +135,7 @@ void main() {
       },
     );
   }
-  test('a busy worker defers recovery without holding startup', () async {
+  test('a busy worker can release storage without starting recovery', () async {
     final support = await Directory.systemTemp.createTemp('busy-storage-');
     PathProviderPlatform.instance = _Support(support.path);
     final lock = BackgroundDownloadLock(
@@ -96,11 +143,15 @@ void main() {
     );
     expect(await lock.acquire('test-worker'), isTrue);
     addTearDown(lock.release);
-    await expectLater(
-      initOfflineStorage(accountId: 'A').timeout(const Duration(seconds: 2)),
-      throwsA(isA<AccountStorageRecoveryRequired>()),
+    final opening = initOfflineStorage(accountId: 'A');
+    final release = Future<void>.delayed(
+      const Duration(milliseconds: 300),
+      lock.release,
     );
-    expect(await lock.yieldRequested(), isTrue);
+    final storage = await opening.timeout(const Duration(seconds: 3));
+    await release;
+    expect(storage, isNotNull);
+    await storage!.db.close();
   });
   test(
     'partial recovery merges real catalogues and reopens with preserved reset',
@@ -250,7 +301,30 @@ void main() {
         initOfflineStorage(accountId: 'A', accountOwner: '3'),
         throwsStateError,
       );
-      expect(await initOfflineStorage(), isNull);
+      final noAuth = (await initOfflineStorage())!;
+      final noAuthPath = noAuth.paths.baseDir;
+      expect(noAuthPath, p.join(original, 'non-account'));
+      expect(await noAuth.db.mangaById(1), isNull);
+      expect(
+        await File(p.join(noAuthPath, '1', '7', '000.jpg')).exists(),
+        isFalse,
+      );
+      await noAuth.db.upsertMangaMetadata(
+        id: 2,
+        title: 'Basic download',
+        updatedAt: DateTime(2026),
+      );
+      final basicPage = File(p.join(noAuthPath, '2', '8', '000.jpg'));
+      await basicPage.parent.create(recursive: true);
+      await basicPage.writeAsBytes([4, 5, 6]);
+      await noAuth.db.close();
+      final reopened = (await initOfflineStorage())!;
+      expect(reopened.paths.baseDir, noAuthPath);
+      expect((await reopened.db.mangaById(2))?.title, 'Basic download');
+      expect(await basicPage.readAsBytes(), [4, 5, 6]);
+      expect(await page.readAsBytes(), [1, 2, 3]);
+      expect(await reopened.db.mangaById(1), isNull);
+      await reopened.db.close();
     },
   );
 

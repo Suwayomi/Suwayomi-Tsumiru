@@ -91,9 +91,13 @@ Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
         await store.writeSpec(
           CatchupWorkSpec(
             serverId: serverId,
+            nonAccountScoped: isNonAccountStoragePath(
+              read(offlinePathsProvider).baseDir,
+            ),
             accountScoped:
+                !isNonAccountStoragePath(read(offlinePathsProvider).baseDir) &&
                 offlineControlRoot(read(offlinePathsProvider).baseDir) !=
-                read(offlinePathsProvider).baseDir,
+                    read(offlinePathsProvider).baseDir,
             wifiOnly: read(offlineWifiOnlyProvider) ?? true,
             storageCapEnabled: nets.storageCapEnabled,
             storageCapBytes: nets.storageCapBytes,

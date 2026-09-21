@@ -91,9 +91,9 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
           ))
             manga['id'] as int: manga['title'] as String,
       };
+      final conflicts = <AccountProgressConflict>[];
       current.execute('BEGIN IMMEDIATE');
       try {
-        final conflicts = <AccountProgressConflict>[];
         for (final table in tables) {
           final name = table['name'] as String;
           final targetColumns = current.select(
@@ -223,14 +223,14 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
             );
           }
         }
-        if (conflicts.isNotEmpty) {
-          throw AccountStorageProgressConflict(conflicts);
-        }
         _check(current, target);
         current.execute('COMMIT');
       } catch (_) {
         current.execute('ROLLBACK');
         rethrow;
+      }
+      if (conflicts.isNotEmpty) {
+        throw AccountStorageProgressConflict(conflicts);
       }
     } finally {
       current.close();

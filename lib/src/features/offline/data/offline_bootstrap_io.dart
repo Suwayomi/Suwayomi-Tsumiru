@@ -36,7 +36,8 @@ openOfflineStorage({
   try {
     var baseDir = root;
     if (accountId == null && await rootAccountStorageId(root) != null) {
-      return null;
+      baseDir = nonAccountStoragePath(root);
+      await _checkNonAccountStorage(Directory(baseDir));
     }
     if (accountId != null) {
       final target = accountStoragePath(root, accountId);
@@ -60,10 +61,6 @@ openOfflineStorage({
           File(p.join(directory, '.bg_lock')),
         );
         var acquired = await lock.acquire('account-storage');
-        if (!acquired && recovery == null) {
-          await lock.requestYield();
-          throw AccountStorageRecoveryRequired();
-        }
         for (var attempt = 0; !acquired && attempt < 300; attempt++) {
           recovery?.check();
           await lock.requestYield();
@@ -145,10 +142,30 @@ openOfflineStorage({
 }
 
 Future<bool> accountStorageWasCleared(OfflinePaths paths) async {
+  if (isNonAccountStoragePath(paths.baseDir)) return false;
   final root = offlineControlRoot(paths.baseDir);
   final id = root == paths.baseDir
       ? await rootAccountStorageId(root)
       : p.basename(paths.baseDir);
   return id != null &&
       await accountStorageCleared(offlineRoot: root, instanceId: id);
+}
+
+Future<void> _checkNonAccountStorage(Directory directory) async {
+  final type = await FileSystemEntity.type(directory.path, followLinks: false);
+  if (type == FileSystemEntityType.notFound) return;
+  if (type != FileSystemEntityType.directory) {
+    throw FileSystemException(
+      'Invalid offline storage directory',
+      directory.path,
+    );
+  }
+  await for (final entry in directory.list(
+    recursive: true,
+    followLinks: false,
+  )) {
+    if (entry is! File && entry is! Directory) {
+      throw FileSystemException('Invalid offline storage entry', entry.path);
+    }
+  }
 }

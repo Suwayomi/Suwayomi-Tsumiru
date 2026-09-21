@@ -146,7 +146,8 @@ Future<bool> runCatchupDownloads({
             !catchupStore.matchesIdentity(config) ||
             latest == null ||
             latest.serverId != spec.serverId ||
-            latest.accountScoped != spec.accountScoped) {
+            latest.accountScoped != spec.accountScoped ||
+            latest.nonAccountScoped != spec.nonAccountScoped) {
           cancelled = true;
         }
         if (!cancelled && latest!.wifiOnly) {

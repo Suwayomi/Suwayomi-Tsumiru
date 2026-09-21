@@ -1,6 +1,14 @@
 import 'package:path/path.dart' as p;
 
 const offlineAccountScopedKey = 'offline_catalog_account_scoped';
+const offlineNonAccountScopedKey = 'offline_catalog_non_account_scoped';
+
+String nonAccountStoragePath(String offlineRoot) =>
+    p.join(offlineRoot, 'non-account');
+
+bool isNonAccountStoragePath(String storagePath) =>
+    p.basename(storagePath) == 'non-account' &&
+    p.basename(p.dirname(storagePath)) != 'accounts';
 
 String accountStoragePath(String offlineRoot, String instanceId) {
   final match = RegExp(
@@ -14,6 +22,7 @@ String accountStoragePath(String offlineRoot, String instanceId) {
 
 String offlineControlRoot(String storagePath) {
   final parent = p.dirname(storagePath);
+  if (isNonAccountStoragePath(storagePath)) return parent;
   if (p.basename(parent) != 'accounts') return storagePath;
   final root = p.dirname(parent);
   return p.normalize(accountStoragePath(root, p.basename(storagePath))) ==

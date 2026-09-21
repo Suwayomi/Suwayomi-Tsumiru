@@ -23,6 +23,7 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_transition.dart';
 import 'package:tsumiru/src/features/offline/data/account_catalogue_repository_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_recovery_state.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/offline_awaiting_server_downloads.dart';
@@ -95,6 +96,7 @@ class _Fixture {
   int retained = 0;
   Completer<void>? recoveryStarted;
   Completer<void>? recoveryRelease;
+  Object? recoveryError;
 
   ProviderContainer create() => ProviderContainer(
     retry: (_, _) => null,
@@ -111,6 +113,7 @@ class _Fixture {
           recoveryStarted!.complete();
           await recoveryRelease!.future;
           recovery.check();
+          if (recoveryError != null) throw recoveryError!;
         }
         return initOfflineStorage(
           accountId: accountId,
@@ -317,6 +320,81 @@ void main() {
     timeout: const Timeout(Duration(minutes: 2)),
   );
 
+  testWidgets('overlapping restore preserves recovery conflicts', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final fixture = await _Fixture.open(legacy: true, partial: true);
+      fixture.recoveryStarted = Completer<void>();
+      fixture.recoveryRelease = Completer<void>();
+      const conflict = AccountProgressConflict(
+        chapterId: 7,
+        name: 'Chapter 7',
+        originalPage: 8,
+        currentPage: 2,
+        originalRead: false,
+        currentRead: false,
+        originalBookmarked: false,
+        currentBookmarked: false,
+      );
+      fixture.recoveryError = AccountStorageProgressConflict([conflict]);
+      final session = fixture.active.read(accountSessionStorageProvider);
+      final recovery = session.recover();
+      await fixture.recoveryStarted!.future;
+      final restore = session.restore();
+      fixture.recoveryRelease!.complete();
+      await Future.wait([recovery, restore]);
+      final status = fixture.active.read(accountStorageRecoveryProvider);
+      expect(status?.phase, AccountStorageRecoveryPhase.failed);
+      expect(status?.conflicts, [conflict]);
+      expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
+      await fixture.close();
+      fixture.active.dispose();
+    });
+  });
+
+  testWidgets('failed login during recovery leaves a retryable failure', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final fixture = await _Fixture.open(legacy: true, partial: true);
+      fixture.recoveryStarted = Completer<void>();
+      fixture.recoveryRelease = Completer<void>();
+      final session = fixture.active.read(accountSessionStorageProvider);
+      final recovery = session.recover();
+      await fixture.recoveryStarted!.future;
+      final credentials = fixture.active.read(
+        authCredentialsStoreProvider.notifier,
+      );
+      await expectLater(
+        credentials.withIdentityChange<void>(() async {
+          throw StateError('login rejected');
+        }),
+        throwsStateError,
+      );
+      fixture.recoveryRelease!.complete();
+      await recovery;
+      expect(
+        fixture.active.read(accountStorageRecoveryProvider)?.phase,
+        AccountStorageRecoveryPhase.failed,
+      );
+      credentials.activateSession();
+      fixture.recoveryStarted = null;
+      await session.recover();
+      expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
+      expect(
+        (await fixture.active
+                .read(offlineRuntimeStorageProvider)!
+                .db
+                .mangaById(1))
+            ?.title,
+        'Legacy',
+      );
+      await fixture.close();
+      fixture.active.dispose();
+    });
+  });
+
   testWidgets(
     'sign-out cancels pending recovery without reopening its catalogue',
     (tester) async {
@@ -403,8 +481,11 @@ void main() {
               .update(AuthType.none);
         });
         await _settleHost(tester);
-        expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
+        final nonAccount = fixture.active.read(offlineRuntimeStorageProvider)!;
+        expect(nonAccount.paths.baseDir, nonAccountStoragePath(root));
+        expect(await nonAccount.db.mangaById(1), isNull);
         expect(fixture.preferences.getBool(offlineAccountScopedKey), isFalse);
+        expect(fixture.preferences.getBool(offlineNonAccountScopedKey), isTrue);
         final repository = NativeAccountCatalogueRepository(
           root,
           fixture.preferences,

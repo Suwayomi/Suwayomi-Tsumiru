@@ -286,6 +286,139 @@ void main() {
     },
   );
 
+  test(
+    'recovery replaces a truncated final page with its complete source',
+    () async {
+      legacy();
+      final target = accountStoragePath(root.path, 'a');
+      final existing = File(p.join(target, '1/7/001.jpg'))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('1/7/');
+      await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      );
+      expect(existing.readAsStringSync(), '1/7/001.jpg');
+    },
+  );
+
+  test('recovery replaces an invalid truncated final catalogue', () async {
+    legacy();
+    final source = File(p.join(root.path, 'catalog.sqlite')).readAsBytesSync();
+    final target = accountStoragePath(root.path, 'a');
+    final existing = File(p.join(target, 'catalog.sqlite'))
+      ..parent.createSync(recursive: true)
+      ..writeAsBytesSync(source.sublist(0, 1024));
+    await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+    final db = sqlite3.open(existing.path);
+    try {
+      expect(db.select('SELECT id FROM chapters').single['id'], 7);
+    } finally {
+      db.close();
+    }
+    expect(
+      File('${existing.path}.truncated-backup').readAsBytesSync(),
+      source.sublist(0, 1024),
+    );
+  });
+
+  test('recovery replaces an empty final catalogue', () async {
+    legacy();
+    final target = accountStoragePath(root.path, 'a');
+    final existing = File(p.join(target, 'catalog.sqlite'))
+      ..parent.createSync(recursive: true)
+      ..writeAsBytesSync([]);
+    await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+    final db = sqlite3.open(existing.path);
+    try {
+      expect(db.select('SELECT id FROM chapters').single['id'], 7);
+    } finally {
+      db.close();
+    }
+  });
+
+  test(
+    'recovery preserves a corrupt catalogue that differs from the source',
+    () async {
+      legacy();
+      final target = accountStoragePath(root.path, 'a');
+      final existing = File(p.join(target, 'catalog.sqlite'))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('different database bytes');
+      await expectLater(
+        prepareAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'a',
+          legacyInstanceId: 'a',
+        ),
+        throwsA(isA<SqliteException>()),
+      );
+      expect(existing.readAsStringSync(), 'different database bytes');
+      expect(File(p.join(root.path, 'catalog.sqlite')).existsSync(), isTrue);
+    },
+  );
+
+  test('copy fallback completes a directory containing many pages', () async {
+    legacy();
+    for (var i = 2; i <= 300; i++) {
+      File(p.join(root.path, '1/7/$i.jpg')).writeAsStringSync('page $i');
+    }
+    final target = await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+      renameEntity: _noRename,
+    );
+    for (var i = 2; i <= 300; i++) {
+      expect(File(p.join(target, '1/7/$i.jpg')).readAsStringSync(), 'page $i');
+    }
+  });
+
+  test('claimed root rejects a page symlink on reopen', () async {
+    legacy();
+    await claimRootAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+    final page = File(p.join(root.path, '1/7/001.jpg'));
+    page.deleteSync();
+    Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+    await expectLater(
+      claimRootAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+  });
+
+  test('completed account rejects a page symlink on reopen', () async {
+    legacy();
+    final target = await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+    final page = File(p.join(target, '1/7/001.jpg'));
+    page.deleteSync();
+    Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+    await expectLater(
+      prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
+      throwsA(isA<FileSystemException>()),
+    );
+  });
+
   test('recovery does not overwrite a different existing page', () async {
     legacy();
     final target = Directory(accountStoragePath(root.path, 'a'))

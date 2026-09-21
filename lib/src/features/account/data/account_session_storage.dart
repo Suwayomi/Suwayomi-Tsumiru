@@ -47,6 +47,7 @@ class AccountSessionStorage implements AuthSessionTransition {
   AccountSessionStorage(this._ref);
   final Ref _ref;
   Future<void>? _recoveryFlight;
+  Object? _recoveryOwner;
 
   Future<void> recover({Map<int, bool> progressChoices = const {}}) {
     if (_recoveryFlight != null) return _recoveryFlight!;
@@ -56,6 +57,8 @@ class AccountSessionStorage implements AuthSessionTransition {
     final current = _ref
         .read(authCredentialsStoreProvider.notifier)
         .captureSession();
+    final owner = _owner();
+    _recoveryOwner = owner;
     final status = _ref.read(accountStorageRecoveryProvider.notifier);
     final work = Future<void>(() async {
       if (!_ref.mounted || !current()) return;
@@ -82,7 +85,7 @@ class AccountSessionStorage implements AuthSessionTransition {
         }
       } catch (error, stack) {
         debugPrint('Offline storage recovery failed: $error\n$stack');
-        if (_ref.mounted && current()) {
+        if (_ref.mounted && (current() || _owner() == owner)) {
           status.update(
             AccountStorageRecoveryState(
               AccountStorageRecoveryPhase.failed,
@@ -95,7 +98,10 @@ class AccountSessionStorage implements AuthSessionTransition {
       }
     });
     _recoveryFlight = work;
-    return work.whenComplete(() => _recoveryFlight = null);
+    return work.whenComplete(() {
+      _recoveryFlight = null;
+      _recoveryOwner = null;
+    });
   }
 
   @override
@@ -151,7 +157,10 @@ class AccountSessionStorage implements AuthSessionTransition {
     AccountStorageRecovery? recovery,
   }) async {
     if (recovery == null) {
-      await _recoveryFlight;
+      final flight = _recoveryFlight;
+      final recoveringOwner = _recoveryOwner;
+      await flight;
+      if (flight != null && _owner() == recoveringOwner) return;
       _ref.read(accountStorageRecoveryProvider.notifier).update(null);
     }
     final preferences = _ref.read(sharedPreferencesProvider);
@@ -165,7 +174,9 @@ class AccountSessionStorage implements AuthSessionTransition {
     final legacyOwner = preferences.getString(
       DBKeys.offlineCatalogServerId.name,
     );
-    final wasScoped = preferences.getBool(offlineAccountScopedKey) == true;
+    final wasScoped =
+        preferences.getBool(offlineAccountScopedKey) == true ||
+        preferences.getBool(offlineNonAccountScopedKey) == true;
     await _ref
         .read(offlineRuntimeStorageProvider.notifier)
         .replace(
@@ -264,8 +275,13 @@ class AccountSessionStorage implements AuthSessionTransition {
             await preferences.setBool(
               offlineAccountScopedKey,
               storage != null &&
+                  !isNonAccountStoragePath(storage.paths.baseDir) &&
                   offlineControlRoot(storage.paths.baseDir) !=
                       storage.paths.baseDir,
+            );
+            await preferences.setBool(
+              offlineNonAccountScopedKey,
+              storage != null && isNonAccountStoragePath(storage.paths.baseDir),
             );
             _ref.read(accountStorageRecoveryProvider.notifier).update(null);
             return storage;

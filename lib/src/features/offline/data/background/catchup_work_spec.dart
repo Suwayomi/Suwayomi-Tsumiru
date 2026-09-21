@@ -128,6 +128,7 @@ class CatchupWorkSpec {
   const CatchupWorkSpec({
     required this.serverId,
     this.accountScoped = false,
+    this.nonAccountScoped = false,
     required this.wifiOnly,
     required this.storageCapEnabled,
     required this.storageCapBytes,
@@ -138,9 +139,13 @@ class CatchupWorkSpec {
 
   final String serverId;
   final bool accountScoped;
+  final bool nonAccountScoped;
 
-  String storagePath(String offlineRoot) =>
-      accountScoped ? accountStoragePath(offlineRoot, serverId) : offlineRoot;
+  String storagePath(String offlineRoot) => nonAccountScoped
+      ? nonAccountStoragePath(offlineRoot)
+      : accountScoped
+      ? accountStoragePath(offlineRoot, serverId)
+      : offlineRoot;
   final bool wifiOnly;
   final bool storageCapEnabled;
   final int storageCapBytes;
@@ -155,6 +160,7 @@ class CatchupWorkSpec {
   Map<String, Object?> toJson() => {
     'serverId': serverId,
     'accountScoped': accountScoped,
+    'nonAccountScoped': nonAccountScoped,
     'wifiOnly': wifiOnly,
     'storageCapEnabled': storageCapEnabled,
     'storageCapBytes': storageCapBytes,
@@ -166,6 +172,7 @@ class CatchupWorkSpec {
   factory CatchupWorkSpec.fromJson(Map<String, Object?> j) => CatchupWorkSpec(
     serverId: j['serverId'] as String,
     accountScoped: j['accountScoped'] as bool? ?? false,
+    nonAccountScoped: j['nonAccountScoped'] as bool? ?? false,
     wifiOnly: (j['wifiOnly'] as bool?) ?? true,
     storageCapEnabled: (j['storageCapEnabled'] as bool?) ?? false,
     storageCapBytes: (j['storageCapBytes'] as num?)?.toInt() ?? 0,
