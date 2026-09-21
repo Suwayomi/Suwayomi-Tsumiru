@@ -4,7 +4,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/data/account_administration.dart';
-import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
 import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
@@ -127,10 +126,11 @@ void main() {
       expect(await scope.read(accountCodesProvider.future), isEmpty);
       scope.read(serverUnreachableProvider.notifier).set(true);
       await scope.read(accountAccessProvider.future);
-      await expectLater(
-        scope.read(accountRepositoryProvider).users(first: 25),
-        throwsA(isA<AccountPermissionDenied>()),
-      );
+      expect(scope.read(settledAccountAccessProvider).canManageUsers, isTrue);
+      scope.read(serverUnreachableProvider.notifier).set(false);
+      expect(scope.read(settledAccountAccessProvider).canManageUsers, isTrue);
+      await scope.read(accountAccessProvider.future);
+      expect(scope.read(settledAccountAccessProvider).canManageUsers, isTrue);
     },
   );
 
@@ -253,7 +253,7 @@ void main() {
   });
 
   test(
-    'refreshing grants exposes unknown until the next query completes',
+    'refreshing grants keeps the last answer until the next query completes',
     () async {
       TestWidgetsFlutterBinding.ensureInitialized();
       SharedPreferences.setMockInitialValues({});
@@ -275,10 +275,7 @@ void main() {
       await scope.read(accountAccessProvider.future);
       expect(scope.read(settledAccountAccessProvider).canEditRoles, isTrue);
       scope.invalidate(accountAccessProvider);
-      expect(
-        scope.read(settledAccountAccessProvider).capability,
-        AccountCapability.unknown,
-      );
+      expect(scope.read(settledAccountAccessProvider).canEditRoles, isTrue);
       await scope.read(accountAccessProvider.future);
       expect(scope.read(settledAccountAccessProvider).canEditRoles, isTrue);
     },

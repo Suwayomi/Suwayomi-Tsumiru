@@ -104,15 +104,43 @@ final settledAccountAccessProvider = Provider<AccountAccess>((ref) {
       ref.read(authCredentialsStoreProvider).value?.accountBinding == null) {
     return AccountAccess(capability: AccountCapability.unknown);
   }
-  final access = ref.watch(accountAccessProvider);
-  if (access.isLoading ||
-      access.hasError ||
-      ref.watch(authCredentialsStoreProvider).value?.sessionChanging == true) {
+  final credentials = ref.watch(authCredentialsStoreProvider).value;
+  if (credentials?.sessionChanging == true) {
     return AccountAccess(capability: AccountCapability.unknown);
   }
-  return access.asData?.value ??
+  final binding = credentials!.accountBinding!;
+  final key = '${binding.catalogId}/${binding.userId}';
+  final cache = ref.read(_settledAccessCacheProvider);
+  final access = ref.watch(accountAccessProvider);
+  final fresh = access.hasError ? null : access.asData?.value;
+  if (fresh != null && fresh.capability != AccountCapability.unknown) {
+    cache.remember(key, fresh);
+    return fresh;
+  }
+  // A re-check in flight, an unreachable server or a failed probe says nothing
+  // new about the grants, so keep the last settled answer for this binding.
+  // Dropping to unknown here made every reachability flip flash
+  // permission-denied UI (the Downloads queue header jumped on a stalled
+  // server). The server still enforces every permission.
+  return cache.recall(key) ??
       AccountAccess(capability: AccountCapability.unknown);
 });
+
+class _SettledAccessCache {
+  String? _key;
+  AccountAccess? _access;
+
+  void remember(String key, AccountAccess access) {
+    _key = key;
+    _access = access;
+  }
+
+  AccountAccess? recall(String key) => _key == key ? _access : null;
+}
+
+final _settledAccessCacheProvider = Provider<_SettledAccessCache>(
+  (ref) => _SettledAccessCache(),
+);
 
 final currentAccountProvider = Provider<Fragment$AccountDto?>((ref) {
   if (ref.watch(authTypeKeyProvider) != AuthType.uiLogin) return null;
