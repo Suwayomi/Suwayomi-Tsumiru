@@ -3739,7 +3739,7 @@
   "offlineRecoveryRunning": "Recovering downloads. You can keep using the app.",
   "offlineRecoveryFailed": "Download recovery stopped. Existing files have been kept. Retry to continue.",
   "offlineRecoveryUnavailable": "Saved chapters are temporarily unavailable while downloads are recovered.",
-  "offlineRecoveryCompleted": "{count} items recovered",
+  "offlineRecoveryCompleted": "{count} images recovered",
   "@offlineRecoveryCompleted": {
     "placeholders": {
       "count": {
