@@ -145,6 +145,76 @@ void main() {
     recovered.close();
   });
 
+  for (final imported in [false, true]) {
+    test(
+      'reconciled rows can sync before recovery retries ($imported)',
+      () async {
+        for (final path in [source, target]) {
+          final db = sqlite3.open(path);
+          db.execute(
+            "UPDATE offline_chapters SET progress_dirty=1,last_read_at='1700000000'",
+          );
+          if (imported && path == target) {
+            db.execute('DELETE FROM offline_chapters');
+          }
+          db.close();
+        }
+        await reconcileAccountCatalogues(source, target);
+        final synced = sqlite3.open(target);
+        synced.execute('UPDATE offline_chapters SET progress_dirty=0');
+        synced.close();
+        await reconcileAccountCatalogues(source, target);
+        final recovered = sqlite3.open(target);
+        expect(
+          recovered
+              .select('SELECT progress_dirty FROM offline_chapters')
+              .single['progress_dirty'],
+          0,
+        );
+        recovered.close();
+      },
+    );
+  }
+
+  test('conflicts carry timestamps and pending fields to the choices', () async {
+    final old = sqlite3.open(source);
+    old.execute(
+      "UPDATE offline_chapters SET last_read_at='1700000000',progress_dirty=1,read_state_dirty=1,read_state_manual=1",
+    );
+    old.close();
+    await expectLater(
+      reconcileAccountCatalogues(source, target),
+      throwsA(
+        isA<AccountStorageProgressConflict>()
+            .having(
+              (e) => e.conflicts.single.originalLastReadAt,
+              'original time',
+              '1700000000',
+            )
+            .having(
+              (e) => e.conflicts.single.currentLastReadAt,
+              'current time',
+              isNull,
+            )
+            .having(
+              (e) => e.conflicts.single.originalPendingFields,
+              'pending fields',
+              ['progress_dirty', 'read_state_dirty'],
+            )
+            .having(
+              (e) => e.conflicts.single.currentPendingFields,
+              'current pending fields',
+              isEmpty,
+            )
+            .having(
+              (e) => e.conflicts.single.originalReadStateManual,
+              'manual read',
+              isTrue,
+            ),
+      ),
+    );
+  });
+
   test('changed progress invalidates a saved recovery choice', () async {
     final original = sqlite3.open(source);
     original.execute('UPDATE offline_chapters SET last_page_read=112');

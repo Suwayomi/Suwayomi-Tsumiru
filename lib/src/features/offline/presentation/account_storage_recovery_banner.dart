@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -108,11 +109,42 @@ class _ProgressChoicesState extends State<_ProgressChoices> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    String details(int page, bool read, bool bookmarked) => [
-      l10n.page(page + 1),
-      read ? l10n.offlineRecoveryRead : l10n.unread,
-      bookmarked ? l10n.bookmarked : l10n.offlineRecoveryNotBookmarked,
-    ].join(' · ');
+    String details(
+      int page,
+      bool read,
+      bool bookmarked,
+      String? lastReadAt,
+      List<String> pending,
+      bool manual,
+    ) {
+      final time = lastReadAt.parseTimestamp;
+      final fields = pending
+          .map(
+            (field) => switch (field) {
+              'progress_dirty' => l10n.offlineRecoveryPagePosition,
+              'read_state_dirty' => l10n.offlineRecoveryReadStatus,
+              'bookmark_dirty' => l10n.offlineRecoveryBookmark,
+              _ => '',
+            },
+          )
+          .where((field) => field.isNotEmpty)
+          .join(', ');
+      return [
+        l10n.page(page + 1),
+        read ? l10n.offlineRecoveryRead : l10n.unread,
+        bookmarked ? l10n.bookmarked : l10n.offlineRecoveryNotBookmarked,
+        l10n.offlineRecoveryLastRead(
+          time == null
+              ? l10n.offlineRecoveryUnknownTime
+              : DateFormat.yMd(l10n.localeName).add_jms().format(time),
+        ),
+        fields.isEmpty
+            ? l10n.offlineRecoveryNoPendingSync
+            : l10n.offlineRecoveryPendingSync(fields),
+        if (manual) l10n.offlineRecoveryManualRead,
+      ].join(' · ');
+    }
+
     return AlertDialog(
       title: Text(l10n.offlineRecoveryReview),
       content: SizedBox(
@@ -170,11 +202,17 @@ class _ProgressChoicesState extends State<_ProgressChoices> {
                               conflict.originalPage,
                               conflict.originalRead,
                               conflict.originalBookmarked,
+                              conflict.originalLastReadAt,
+                              conflict.originalPendingFields,
+                              conflict.originalReadStateManual,
                             )
                           : details(
                               conflict.currentPage,
                               conflict.currentRead,
                               conflict.currentBookmarked,
+                              conflict.currentLastReadAt,
+                              conflict.currentPendingFields,
+                              conflict.currentReadStateManual,
                             ),
                     ),
                     onTap: () =>

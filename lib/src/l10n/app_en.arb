@@ -3754,5 +3754,16 @@
   "offlineRecoveryOriginalAll": "Use original for all",
   "offlineRecoveryCurrentAll": "Use current for all",
   "offlineRecoveryRead": "Read",
-  "offlineRecoveryNotBookmarked": "Not bookmarked"
+  "offlineRecoveryNotBookmarked": "Not bookmarked",
+  "offlineRecoveryLastRead": "Last read: {time}",
+  "@offlineRecoveryLastRead": {"placeholders": {"time": {"type": "String"}}},
+  "offlineRecoveryUnknownTime": "Not recorded",
+  "offlineRecoveryPendingSync": "Pending sync: {fields}",
+  "@offlineRecoveryPendingSync": {"placeholders": {"fields": {"type": "String"}}},
+  "offlineRecoveryNoPendingSync": "No pending changes",
+  "offlineRecoveryPagePosition": "page position",
+  "offlineRecoveryReadStatus": "read status",
+  "offlineRecoveryBookmark": "bookmark",
+  "offlineRecoveryManualRead": "Read status changed manually"
+
 }

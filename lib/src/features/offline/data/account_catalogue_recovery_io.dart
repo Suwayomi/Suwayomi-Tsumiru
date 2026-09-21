@@ -21,12 +21,8 @@ Future<void> reconcileAccountCatalogues(
 String _quoted(String name) => '"${name.replaceAll('"', '""')}"';
 
 const _readingFields = ['is_read', 'last_page_read', 'is_bookmarked'];
-const _pendingFields = [
-  'progress_dirty',
-  'read_state_dirty',
-  'bookmark_dirty',
-  'read_state_manual',
-];
+const _syncFlags = ['progress_dirty', 'read_state_dirty', 'bookmark_dirty'];
+const _pendingFields = [..._syncFlags, 'read_state_manual'];
 
 String _reading(Map<String, Object?> row) => jsonEncode({
   for (final field in [..._readingFields, ..._pendingFields, 'last_read_at'])
@@ -37,11 +33,7 @@ bool _matchesResolvedState(String saved, Map<String, Object?> current) {
   final resolved = jsonDecode(saved) as Map<String, dynamic>;
   final state = {...current};
   // A successful sync clears pending flags without invalidating the choice.
-  for (final field in [
-    'progress_dirty',
-    'read_state_dirty',
-    'bookmark_dirty',
-  ]) {
+  for (final field in _syncFlags) {
     if (resolved[field] == 1 && state[field] == 0) state[field] = 1;
   }
   return _reading(state) == saved;
@@ -141,6 +133,15 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
                 'INSERT INTO ${_quoted(name)} (${columns.map(_quoted).join(',')}) VALUES (${columns.map((_) => '?').join(',')})',
                 columns.map((column) => row[column]).toList(),
               );
+              if (name == 'offline_chapters') {
+                final inserted = current
+                    .select('SELECT * FROM ${_quoted(name)} WHERE $where', key)
+                    .single;
+                current.execute(
+                  'INSERT OR REPLACE INTO _account_recovery_choices VALUES (?,?,?)',
+                  [row['id'], _reading(row), _reading(inserted)],
+                );
+              }
               continue;
             }
             if (name != 'offline_chapters') continue;
@@ -148,7 +149,13 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
             final id = row['id'] as int;
             final originalState = _reading(row);
             final currentState = _reading(existing);
-            if (originalState == currentState) continue;
+            if (originalState == currentState) {
+              current.execute(
+                'INSERT OR REPLACE INTO _account_recovery_choices VALUES (?,?,?)',
+                [id, originalState, currentState],
+              );
+              continue;
+            }
             final saved = current.select(
               'SELECT original_state,resolved_state FROM _account_recovery_choices WHERE chapter_id=?',
               [id],
@@ -176,6 +183,18 @@ void _reconcile(String source, String target, Map<int, bool> choices) {
                   currentRead: existing['is_read'] == 1,
                   originalBookmarked: row['is_bookmarked'] == 1,
                   currentBookmarked: existing['is_bookmarked'] == 1,
+                  originalLastReadAt: row['last_read_at'] as String?,
+                  currentLastReadAt: existing['last_read_at'] as String?,
+                  originalPendingFields: [
+                    for (final field in _syncFlags)
+                      if (row[field] == 1) field,
+                  ],
+                  currentPendingFields: [
+                    for (final field in _syncFlags)
+                      if (existing[field] == 1) field,
+                  ],
+                  originalReadStateManual: row['read_state_manual'] == 1,
+                  currentReadStateManual: existing['read_state_manual'] == 1,
                 ),
               );
               continue;

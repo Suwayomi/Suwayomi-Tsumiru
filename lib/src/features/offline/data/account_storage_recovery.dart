@@ -55,6 +55,12 @@ class AccountProgressConflict {
     required this.currentRead,
     required this.originalBookmarked,
     required this.currentBookmarked,
+    this.originalLastReadAt,
+    this.currentLastReadAt,
+    this.originalPendingFields = const [],
+    this.currentPendingFields = const [],
+    this.originalReadStateManual = false,
+    this.currentReadStateManual = false,
   });
 
   final int chapterId;
@@ -65,4 +71,10 @@ class AccountProgressConflict {
   final bool currentRead;
   final bool originalBookmarked;
   final bool currentBookmarked;
+  final String? originalLastReadAt;
+  final String? currentLastReadAt;
+  final List<String> originalPendingFields;
+  final List<String> currentPendingFields;
+  final bool originalReadStateManual;
+  final bool currentReadStateManual;
 }

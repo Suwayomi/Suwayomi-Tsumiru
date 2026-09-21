@@ -59,6 +59,9 @@ void main() {
                   currentRead: false,
                   originalBookmarked: false,
                   currentBookmarked: true,
+                  originalLastReadAt: '1700000000',
+                  originalPendingFields: ['progress_dirty', 'read_state_dirty'],
+                  originalReadStateManual: true,
                 ),
               ],
             ),
@@ -78,6 +81,17 @@ void main() {
       final save = find.widgetWithText(TextButton, 'Save');
       expect(tester.widget<TextButton>(save).onPressed, isNull);
       expect(find.textContaining('Page: 113'), findsOneWidget);
+      expect(find.textContaining('Last read: Not recorded'), findsOneWidget);
+      expect(find.textContaining('2023'), findsOneWidget);
+      expect(
+        find.textContaining('Pending sync: page position, read status'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('No pending changes'), findsOneWidget);
+      expect(
+        find.textContaining('Read status changed manually'),
+        findsOneWidget,
+      );
       expect(find.textContaining('Page: 1 · Unread'), findsOneWidget);
       await tester.tap(find.text('Use current'));
       await tester.pump();
