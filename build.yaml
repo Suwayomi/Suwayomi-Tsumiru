@@ -20,7 +20,6 @@ targets:
           outputDirectory: __generated__
           clients:
             - graphql
-            - graphql_flutter
           scalars:
             ISODateTime:
               type: DateTime

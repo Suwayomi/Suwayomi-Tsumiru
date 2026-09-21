@@ -10,7 +10,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -52,12 +51,6 @@ void main() {
       routes: [GoRoute(path: '/', builder: (_, _) => const SizedBox.shrink())],
     );
 
-    // The real client is Hive-backed and set up in main.dart before runApp.
-    final client = GraphQLClient(
-      link: HttpLink('http://localhost'),
-      cache: GraphQLCache(),
-    );
-
     // Android so the notification-gated startup code (skipped on web) runs
     // too; reset before flutter_test's end-of-test invariant check either way.
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -67,7 +60,6 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
             routerConfigProvider.overrideWith((ref) => router),
-            graphQlClientHolderProvider.overrideWithValue(ValueNotifier(client)),
           ],
           child: const Sorayomi(),
         ),

@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/data/backup_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/backup/widgets/backup_and_restore/widgets/create_backup_dialog.dart';

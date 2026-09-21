@@ -7,7 +7,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 

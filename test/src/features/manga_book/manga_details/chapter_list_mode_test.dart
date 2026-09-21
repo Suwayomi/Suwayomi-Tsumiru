@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';

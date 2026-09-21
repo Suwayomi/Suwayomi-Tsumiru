@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:tsumiru/src/features/account/data/account_actions.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
 import 'package:tsumiru/src/features/account/presentation/account_password_dialog.dart';

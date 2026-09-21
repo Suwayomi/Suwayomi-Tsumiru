@@ -11,7 +11,7 @@
 // dead Ref — which killed launch download-resume and every desktop pump.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';

@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';

@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_state.dart';

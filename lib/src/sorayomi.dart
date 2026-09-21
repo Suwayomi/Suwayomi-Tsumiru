@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'constants/app_theme.dart';
@@ -104,12 +103,9 @@ class Sorayomi extends HookConsumerWidget {
     final appTheme = ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight;
     final customSeed = ref.watch(customThemeColorProvider);
     final isTrueBlack = ref.watch(isTrueBlackProvider).ifNull();
-    final client = ref.watch(graphQlClientHolderProvider);
     // Idempotent, so re-applying on every rebuild is harmless.
     applyForcePortrait(ref.watch(forcePortraitProvider).ifNull());
-    return GraphQLProvider(
-      client: client,
-      child: MaterialApp.router(
+    return MaterialApp.router(
         builder: (context, child) {
           final toastWrapped = FToastBuilder()(context, child);
           return DesktopWindowScaffold(
@@ -153,7 +149,6 @@ class Sorayomi extends HookConsumerWidget {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: appLocale,
         routerConfig: routes,
-      ),
     );
   }
 }

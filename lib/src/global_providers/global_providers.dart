@@ -8,7 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:queue/queue.dart';
@@ -387,19 +387,6 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   );
 }
 
-// Named "holder" so its generated provider can't collide with
-// graphQlClientProvider: riverpod_generator 4 strips a trailing "Notifier"
-// from provider names, which made the old graphQlClientNotifier fold into
-// the same name as the client provider above.
-@riverpod
-ValueNotifier<GraphQLClient> graphQlClientHolder(Ref ref) {
-  final notifier = ValueNotifier(ref.watch(graphQlClientProvider));
-  ref.onDispose(notifier.dispose);
-
-  notifier.addListener(ref.notifyListeners);
-
-  return notifier;
-}
 
 @riverpod
 class AuthTypeKey extends _$AuthTypeKey
