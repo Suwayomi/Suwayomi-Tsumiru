@@ -42,6 +42,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final library = ref.watch(libraryMangaListProvider);
     final runner = useState<BulkMigrationRunner?>(null);
     final unavailable = useState(false);
+    final startupError = useState<String?>(null);
     final retry = useState(0);
     final authState = ref.watch(authCredentialsStoreProvider);
     final origin = useMemoized(() {
@@ -95,35 +96,54 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
         return null;
       }
       unavailable.value = false;
+      startupError.value = null;
       runner.value = r;
-      final repo = ref.read(mangaBookRepositoryProvider);
-      Future(() async {
-        for (final e in entries) {
+      var disposed = false;
+      Future<void>(() async {
+        try {
+          if (disposed || r.isCancelled) return;
+          final repo = ref.read(mangaBookRepositoryProvider);
+          for (final e in entries) {
+            if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
+            final latest = await _latestChapter(repo, e.fromMangaId);
+            if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
+            e.fromLatestChapter = latest;
+          }
           if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-          final latest = await _latestChapter(repo, e.fromMangaId);
+          r.notify();
+          await r.search();
+          await r.preflight();
+          for (final e in r.entries) {
+            final toId = e.toMangaId;
+            if (toId == null) continue;
+            if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
+            List<dynamic>? chapters;
+            try {
+              chapters = await repo.getChapterList(toId);
+            } catch (_) {
+              continue;
+            }
+            if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
+            e.toChapterCount = chapters?.length ?? 0;
+            e.toLatestChapter = _latestOf(chapters);
+          }
           if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-          e.fromLatestChapter = latest;
+          r.notify();
+        } catch (error) {
+          if (!disposed && !r.isCancelled) {
+            startupError.value = '$error';
+          }
         }
-        if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-        r.notify();
-        await r.search();
-        await r.preflight();
-        for (final e in r.entries) {
-          final toId = e.toMangaId;
-          if (toId == null) continue;
-          if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-          final chapters = await repo.getChapterList(toId);
-          if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-          e.toChapterCount = chapters?.length ?? 0;
-          e.toLatestChapter = _latestOf(chapters);
-        }
-        if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
-        r.notify();
       });
-      return r.cancel;
+      return () {
+        disposed = true;
+        r.cancel();
+      };
     }, [library, retry.value, sameSession, authState.value?.sessionEpoch]);
 
-    final r = sameSession && !unavailable.value ? runner.value : null;
+    final r = sameSession && !unavailable.value && startupError.value == null
+        ? runner.value
+        : null;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -191,6 +211,19 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                   } catch (_) {}
                   if (!context.mounted) return;
                   ref.invalidate(libraryMangaListProvider);
+                  retry.value++;
+                },
+                child: Text(l10n.retry),
+              ),
+            )
+          : startupError.value != null
+          ? Emoticons(
+              title: startupError.value,
+              button: TextButton(
+                onPressed: () {
+                  runner.value?.cancel();
+                  runner.value = null;
+                  startupError.value = null;
                   retry.value++;
                 },
                 child: Text(l10n.retry),
@@ -408,8 +441,13 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
   }
 }
 
-Future<double?> _latestChapter(MangaBookRepository repo, int mangaId) async =>
-    _latestOf(await repo.getChapterList(mangaId));
+Future<double?> _latestChapter(MangaBookRepository repo, int mangaId) async {
+  try {
+    return _latestOf(await repo.getStoredChapterList(mangaId));
+  } catch (_) {
+    return null;
+  }
+}
 
 double? _latestOf(List<dynamic>? chapters) {
   if (chapters == null || chapters.isEmpty) return null;

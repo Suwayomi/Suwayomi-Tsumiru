@@ -212,7 +212,9 @@ Future<void> migrateOfflineLocalState(
           },
           fetchChapters: (id) {
             if (!current()) throw const CancelledException();
-            return mangaRepo.getChapterList(id);
+            return id == fromMangaId
+                ? mangaRepo.getStoredChapterList(id)
+                : mangaRepo.getChapterList(id);
           },
           reconcileTarget: (id) async {
             if (!current() || !downloadPermissionAllowed(container.read)) {
@@ -254,7 +256,8 @@ Future<void> migrateOfflineLocalState(
     }
     if (options.migrateDownloads) {
       try {
-        final source = await mangaRepo.getChapterList(fromMangaId) ?? const [];
+        final source =
+            await mangaRepo.getStoredChapterList(fromMangaId) ?? const [];
         if (!current()) return;
         final target = await mangaRepo.getChapterList(toMangaId) ?? const [];
         if (!current()) return;

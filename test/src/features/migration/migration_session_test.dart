@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -52,10 +58,26 @@ class _Chapters extends MangaBookRepository {
   final response = Completer<List<ChapterDto>?>();
   final calls = <int>[];
   @override
-  Future<List<ChapterDto>?> getChapterList(int mangaId) {
+  Future<List<ChapterDto>?> getStoredChapterList(int mangaId) {
     calls.add(mangaId);
     entered.complete();
     return response.future;
+  }
+}
+
+class _DeadDownloadSource extends _Chapters {
+  final refreshed = <int>[];
+  @override
+  Future<List<ChapterDto>?> getStoredChapterList(int mangaId) async {
+    calls.add(mangaId);
+    return [ch(id: 10, number: 1, isDownloaded: true)];
+  }
+
+  @override
+  Future<List<ChapterDto>?> getChapterList(int mangaId) async {
+    refreshed.add(mangaId);
+    if (mangaId == 1) throw StateError('Missing source');
+    return [ch(id: 20, number: 1)];
   }
 }
 
@@ -69,6 +91,40 @@ class _Downloads extends Fake implements DownloadsRepository {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'download migration reads the dead source from stored chapters',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        CatchupStateStore.identityAuthorizedKey: true,
+      });
+      final chapters = _DeadDownloadSource();
+      final downloads = _Downloads();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
+          authCredentialsStoreProvider.overrideWith(_Session.new),
+          authTypeKeyProvider.overrideWith(_UiLogin.new),
+          mangaBookRepositoryProvider.overrideWithValue(chapters),
+          downloadsRepositoryProvider.overrideWithValue(downloads),
+          offlineActiveProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authCredentialsStoreProvider.future);
+      await migrateOfflineLocalState(
+        container,
+        1,
+        2,
+        const MigrationOption(migrateDownloads: true),
+      );
+      expect(chapters.calls, [1]);
+      expect(chapters.refreshed, [2]);
+      expect(downloads.queued, [20]);
+    },
+  );
 
   test(
     'account replacement stops download migration and runtime drain waits',
