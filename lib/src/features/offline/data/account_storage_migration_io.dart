@@ -17,6 +17,26 @@ import 'account_storage_recovery.dart';
 
 const rootAccountStorageMarker = '.account-root-id';
 
+Future<void> _checkAccountOwner(File owner, String expectedOwner) async {
+  final previous = await owner.readAsString();
+  if (previous == expectedOwner) return;
+  // Suwayomi's account migration assigns legacy data and metadata to user 1.
+  if (previous != 'legacy' || expectedOwner != '1') {
+    throw StateError('Catalogue belongs to a different account');
+  }
+  final pending = File('${owner.path}.pending');
+  final type = await FileSystemEntity.type(pending.path, followLinks: false);
+  if (type != FileSystemEntityType.notFound &&
+      type != FileSystemEntityType.file) {
+    throw FileSystemException(
+      'Invalid account owner staging file',
+      pending.path,
+    );
+  }
+  await pending.writeAsString(expectedOwner, flush: true);
+  await pending.rename(owner.path);
+}
+
 Future<String?> rootAccountStorageId(String offlineRoot) async {
   await _checkAncestors(offlineRoot, offlineRoot);
   final file = File(p.join(offlineRoot, rootAccountStorageMarker));
@@ -88,10 +108,6 @@ Future<String?> claimRootAccountStorage({
     }
   }
   final expectedOwner = accountOwner ?? 'legacy';
-  if (ownerType == FileSystemEntityType.file &&
-      await owner.readAsString() != expectedOwner) {
-    throw StateError('Catalogue belongs to a different account');
-  }
   for (final name in [
     rootAccountStorageMarker,
     accountStorageMarker,
@@ -107,6 +123,9 @@ Future<String?> claimRootAccountStorage({
         await file.readAsString() != instanceId) {
       throw StateError('Root catalogue belongs to a different account');
     }
+  }
+  if (ownerType == FileSystemEntityType.file) {
+    await _checkAccountOwner(owner, expectedOwner);
   }
   for (final entry in {
     '.account-owner': expectedOwner,
@@ -201,9 +220,7 @@ Future<String> prepareAccountStorage({
       throw FileSystemException('Invalid catalogue owner', owner.path);
     }
     if (await owner.exists()) {
-      if (await owner.readAsString() != accountOwner) {
-        throw StateError('Catalogue belongs to a different account');
-      }
+      await _checkAccountOwner(owner, accountOwner);
     } else {
       if (await accountStorageComplete(
         offlineRoot: offlineRoot,

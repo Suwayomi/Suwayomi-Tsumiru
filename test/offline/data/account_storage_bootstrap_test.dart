@@ -24,6 +24,70 @@ class _Support extends PathProviderPlatform {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final atRoot in [true, false]) {
+    test(
+      'legacy UI Login owner upgrades to user 1 (${atRoot ? 'root' : 'scoped'})',
+      () async {
+        final support = await Directory.systemTemp.createTemp('legacy-owner-');
+        addTearDown(() => support.delete(recursive: true));
+        PathProviderPlatform.instance = _Support(support.path);
+        if (atRoot) {
+          final original = (await initOfflineStorage())!;
+          await original.db.upsertMangaMetadata(
+            id: 1,
+            title: 'Saved manga',
+            updatedAt: DateTime(2026),
+          );
+          await original.db.close();
+        }
+        final old = (await initOfflineStorage(
+          accountId: 'A',
+          legacyInstanceId: atRoot ? 'A' : null,
+          accountOwner: 'legacy',
+        ))!;
+        await old.db.upsertMangaMetadata(
+          id: 1,
+          title: 'Saved manga',
+          updatedAt: DateTime(2026),
+        );
+        final path = old.paths.baseDir;
+        final page = File(p.join(path, '1', '7', '000.jpg'));
+        await page.parent.create(recursive: true);
+        await page.writeAsBytes([1, 2, 3]);
+        await old.db.close();
+        final owner = File(p.join(path, '.account-owner'));
+        expect(await owner.readAsString(), 'legacy');
+        await expectLater(
+          initOfflineStorage(accountId: 'A', accountOwner: '2'),
+          throwsStateError,
+        );
+        expect(await owner.readAsString(), 'legacy');
+        final upgraded = (await initOfflineStorage(
+          accountId: 'A',
+          accountOwner: '1',
+        ))!;
+        expect(upgraded.paths.baseDir, path);
+        expect(
+          (await upgraded.db.select(upgraded.db.offlineMangas).get())
+              .single
+              .title,
+          'Saved manga',
+        );
+        expect(await owner.readAsString(), '1');
+        expect(await page.readAsBytes(), [1, 2, 3]);
+        await upgraded.db.close();
+        await expectLater(
+          initOfflineStorage(accountId: 'A', accountOwner: 'legacy'),
+          throwsStateError,
+        );
+        await expectLater(
+          initOfflineStorage(accountId: 'A', accountOwner: '2'),
+          throwsStateError,
+        );
+        expect(await owner.readAsString(), '1');
+      },
+    );
+  }
   test('a busy worker defers recovery without holding startup', () async {
     final support = await Directory.systemTemp.createTemp('busy-storage-');
     PathProviderPlatform.instance = _Support(support.path);

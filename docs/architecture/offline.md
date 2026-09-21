@@ -82,6 +82,11 @@ UI Login binds the verified account and catalogue ID to its credentials. `offlin
 
 Account settings can remove a retained inactive catalogue. Removal clears its data while retaining the cleared marker and ownership lock files, so later login cannot import the old legacy root again or create a second lock beside one still in use. Identity changes, catalogue removal and download workers use the same ownership protocol. See `offline_runtime_storage.dart`, `account_catalogue_repository_io.dart` and `account_storage_migration_io.dart`.
 
+When a UI Login server gains account support, Suwayomi assigns its old data and
+catalogue metadata to user 1. For that same catalogue, Tsumiru atomically upgrades
+an existing `legacy` owner marker to `1`, whether storage is at the root or in an
+account folder. Other owner changes and a return from `1` to `legacy` are rejected.
+
 Interrupted migration is deferred until the app is usable. `AccountSessionStorage.recover()` publishes progress and failure state for the shell banner, supports retry, and cancels on identity replacement. Catalogue reconciliation preserves both SQLite snapshots, merges missing records, and asks the user to choose conflicting reading state. Saved choices are reused only while both states still match. Recovery moves files on the same filesystem; fallback copying and duplicate verification run in a cancellable isolate. Originals are removed only after verified retention. Root removal excludes nested account folders and shared controls.
 
 ## UI entry points
