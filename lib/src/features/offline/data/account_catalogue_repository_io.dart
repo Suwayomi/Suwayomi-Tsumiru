@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/db_keys.dart';
 import 'account_catalogue.dart';
 import 'account_storage_migration_io.dart';
-import 'account_storage_paths.dart';
 import 'background/background_download_lock.dart';
 
 Future<AccountCatalogueRepository> createAccountCatalogueRepository(
@@ -48,9 +53,31 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
 
   Future<List<FileSystemEntity>> _tree(String path) async {
     final entries = <FileSystemEntity>[];
-    await for (final entry in Directory(
-      path,
-    ).list(recursive: true, followLinks: false)) {
+    Stream<FileSystemEntity> entriesAt(String directory) async* {
+      await for (final entry in Directory(directory).list(followLinks: false)) {
+        final name = p.basename(entry.path);
+        if (p.equals(path, root) &&
+            p.equals(directory, root) &&
+            name != 'covers' &&
+            !RegExp(r'^[0-9]+$').hasMatch(name) &&
+            !{
+              'catalog.sqlite',
+              'catalog.sqlite-wal',
+              'catalog.sqlite-journal',
+              'catalog.sqlite-shm',
+              accountStorageMarker,
+              accountStorageClearedMarker,
+              '.account-owner',
+              rootAccountStorageMarker,
+            }.contains(name)) {
+          continue;
+        }
+        yield entry;
+        if (entry is Directory) yield* entriesAt(entry.path);
+      }
+    }
+
+    await for (final entry in entriesAt(path)) {
       if (entry is! File && entry is! Directory) {
         throw FileSystemException('Invalid catalogue entry', entry.path);
       }
@@ -68,7 +95,9 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
     if (!await accountStorageComplete(offlineRoot: root, instanceId: id)) {
       throw StateError('Catalogue is incomplete');
     }
-    final file = File(p.join(accountStoragePath(root, id), '.account-owner'));
+    final file = File(
+      p.join(await resolvedAccountStoragePath(root, id), '.account-owner'),
+    );
     if (await FileSystemEntity.type(file.path, followLinks: false) !=
         FileSystemEntityType.file) {
       throw FileSystemException('Invalid catalogue owner', file.path);
@@ -92,17 +121,29 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
   @override
   Future<List<AccountCatalogue>> list({String? activePath}) async {
     final accounts = p.join(root, 'accounts');
-    if (!await _directory(root) || !await _directory(accounts)) return [];
+    if (!await _directory(root)) return [];
+    final rootId = await rootAccountStorageId(root);
+    final candidates = <FileSystemEntity>[
+      if (rootId != null) Directory(root),
+      if (await _directory(accounts))
+        ...await Directory(accounts).list(followLinks: false).toList(),
+    ];
     final result = <AccountCatalogue>[];
-    await for (final directory in Directory(
-      accounts,
-    ).list(followLinks: false)) {
+    for (final directory in candidates) {
       if (directory is! Directory ||
           (activePath != null && p.equals(directory.path, activePath))) {
         continue;
       }
       try {
-        final id = p.basename(directory.path);
+        final id = p.equals(directory.path, root)
+            ? rootId!
+            : p.basename(directory.path);
+        if (!p.equals(
+          directory.path,
+          await resolvedAccountStoragePath(root, id),
+        )) {
+          continue;
+        }
         final owner = await _owner(id);
         final entries = await _tree(directory.path);
         var bytes = 0;
@@ -146,7 +187,7 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
     AccountCatalogue catalogue, {
     required bool Function() canRemove,
   }) async {
-    final target = accountStoragePath(root, catalogue.id);
+    final target = await resolvedAccountStoragePath(root, catalogue.id);
     if (!p.equals(target, catalogue.path) || !canRemove()) {
       throw StateError('Catalogue is active or the session changed');
     }
@@ -164,7 +205,7 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
     }
     final held = <BackgroundDownloadLock>[];
     try {
-      for (final path in [root, target]) {
+      for (final path in {root, target}) {
         final lock = BackgroundDownloadLock(File(p.join(path, '.bg_lock')));
         if (!await lock.acquire('remove-catalogue')) {
           throw StateError('Catalogue is in use');
@@ -180,7 +221,15 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
       await File(
         p.join(target, accountStorageClearedMarker),
       ).writeAsString(catalogue.id, flush: true);
-      final markers = {accountStorageMarker, '.account-owner'};
+      final rootCatalogue = p.equals(target, root);
+      final markers = {
+        accountStorageMarker,
+        if (!rootCatalogue) '.account-owner',
+      };
+      final retained = {
+        rootAccountStorageMarker,
+        if (rootCatalogue) '.account-owner',
+      };
       final data =
           entries
               .where(
@@ -188,6 +237,7 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
                     p.dirname(entry.path) != target ||
                     (!_locks.contains(p.basename(entry.path)) &&
                         !markers.contains(p.basename(entry.path)) &&
+                        !retained.contains(p.basename(entry.path)) &&
                         p.basename(entry.path) != accountStorageClearedMarker),
               )
               .toList()

@@ -8,12 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/selection_action_bar.dart';
 import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
+import '../data/account_storage_recovery_state.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
@@ -51,6 +53,17 @@ class OfflineFilesView extends HookConsumerWidget {
     final canDownload = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
+    if (ref.watch(accountStorageRecoveryProvider) != null) {
+      return Center(
+        child: Padding(
+          padding: KEdgeInsets.a16.size,
+          child: Text(
+            context.l10n.offlineRecoveryUnavailable,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
     if (!ref.watch(offlineEnabledProvider)) {
       return Center(child: Text(context.l10n.offlineNotAvailable));
     }

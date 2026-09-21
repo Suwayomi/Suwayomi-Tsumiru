@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -31,6 +37,40 @@ void main() {
     repository = NativeAccountCatalogueRepository(root.path, preferences);
   });
   tearDown(() async => root.delete(recursive: true));
+
+  test(
+    'root catalogue listing and removal preserve nested accounts and shared controls',
+    () async {
+      final b = await catalogue('B');
+      await File(p.join(root.path, '.account-root-id')).writeAsString('A');
+      await File(p.join(root.path, '.account-owner')).writeAsString('2');
+      await File(p.join(root.path, accountStorageMarker)).writeAsString('A');
+      await File(p.join(root.path, 'catalog.sqlite')).writeAsBytes([1, 2, 3]);
+      final page = File(p.join(root.path, '1', '7', '000.jpg'));
+      await page.parent.create(recursive: true);
+      await page.writeAsBytes([4, 5]);
+      final control = File(p.join(root.path, 'admission.json'));
+      await control.writeAsString('shared control');
+      final rows = await repository.list(activePath: b.path);
+      expect(rows.map((row) => row.id).toList(), ['A']);
+      expect(rows.single.path, root.path);
+      expect((await repository.list(activePath: root.path)).single.id, 'B');
+      await repository.remove(rows.single, canRemove: () => true);
+      expect(await page.exists(), isFalse);
+      expect(await File(p.join(root.path, 'catalog.sqlite')).exists(), isFalse);
+      expect(await File(p.join(b.path, 'catalog.sqlite')).readAsBytes(), [
+        1,
+        2,
+        3,
+      ]);
+      expect(await control.readAsString(), 'shared control');
+      expect(
+        await File(p.join(root.path, '.account-root-id')).readAsString(),
+        'A',
+      );
+      expect((await repository.list()).single.id, 'B');
+    },
+  );
 
   for (final invalid in ['wrong-id', 'directory', 'symlink']) {
     test('rejects a cleared marker with $invalid', () async {
@@ -109,7 +149,7 @@ void main() {
     'removed legacy downloads stay empty when the account returns',
     () async {
       final legacy = sqlite3.open(p.join(root.path, 'catalog.sqlite'));
-      legacy.execute('CREATE TABLE saved_chapters (id INTEGER)');
+      legacy.execute('CREATE TABLE saved_chapters (id INTEGER PRIMARY KEY)');
       legacy.execute('INSERT INTO saved_chapters VALUES (7)');
       legacy.close();
       final pages = Directory(p.join(root.path, '1', '7'));

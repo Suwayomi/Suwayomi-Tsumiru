@@ -13,8 +13,8 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'account_storage_migration_io.dart';
 import 'account_storage_paths.dart';
+import 'account_storage_recovery.dart';
 import 'background/background_download_lock.dart';
-
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 import 'offline_page_store_io.dart';
@@ -28,12 +28,16 @@ openOfflineStorage({
   String? legacyInstanceId,
   String? ownedRoot,
   String? accountOwner,
+  AccountStorageRecovery? recovery,
 }) async {
   final support = await getApplicationSupportDirectory();
   final root = p.join(support.path, 'offline');
   final locks = <BackgroundDownloadLock>[];
   try {
     var baseDir = root;
+    if (accountId == null && await rootAccountStorageId(root) != null) {
+      return null;
+    }
     if (accountId != null) {
       final target = accountStoragePath(root, accountId);
       await accountStorageComplete(offlineRoot: root, instanceId: accountId);
@@ -56,7 +60,12 @@ openOfflineStorage({
           File(p.join(directory, '.bg_lock')),
         );
         var acquired = await lock.acquire('account-storage');
+        if (!acquired && recovery == null) {
+          await lock.requestYield();
+          throw AccountStorageRecoveryRequired();
+        }
         for (var attempt = 0; !acquired && attempt < 300; attempt++) {
+          recovery?.check();
           await lock.requestYield();
           await Future<void>.delayed(const Duration(milliseconds: 100));
           acquired = await lock.acquire('account-storage');
@@ -66,12 +75,15 @@ openOfflineStorage({
         }
         locks.add(lock);
       }
-      if (legacyInstanceId == accountId &&
+      final claimedRoot = await claimRootAccountStorage(
+        offlineRoot: root,
+        instanceId: accountId,
+        legacyInstanceId: legacyInstanceId,
+        accountOwner: accountOwner,
+      );
+      if (claimedRoot == null &&
+          legacyInstanceId == accountId &&
           !await accountStorageCleared(
-            offlineRoot: root,
-            instanceId: accountId,
-          ) &&
-          !await accountStorageComplete(
             offlineRoot: root,
             instanceId: accountId,
           )) {
@@ -81,6 +93,8 @@ openOfflineStorage({
           followLinks: false,
         );
         if (type == FileSystemEntityType.file) {
+          if (recovery == null) throw AccountStorageRecoveryRequired();
+          recovery.check();
           for (final suffix in ['-wal', '-shm']) {
             final sidecarType = await FileSystemEntity.type(
               '${source.path}$suffix',
@@ -105,12 +119,15 @@ openOfflineStorage({
           }
         }
       }
-      baseDir = await prepareAccountStorage(
-        offlineRoot: root,
-        instanceId: accountId,
-        legacyInstanceId: legacyInstanceId,
-        accountOwner: accountOwner,
-      );
+      baseDir =
+          claimedRoot ??
+          await prepareAccountStorage(
+            offlineRoot: root,
+            instanceId: accountId,
+            legacyInstanceId: legacyInstanceId,
+            accountOwner: accountOwner,
+            recovery: recovery,
+          );
     }
     await Directory(baseDir).create(recursive: true);
     final paths = OfflinePaths(baseDir);
@@ -127,8 +144,11 @@ openOfflineStorage({
   }
 }
 
-Future<bool> accountStorageWasCleared(OfflinePaths paths) =>
-    accountStorageCleared(
-      offlineRoot: p.dirname(p.dirname(paths.baseDir)),
-      instanceId: p.basename(paths.baseDir),
-    );
+Future<bool> accountStorageWasCleared(OfflinePaths paths) async {
+  final root = offlineControlRoot(paths.baseDir);
+  final id = root == paths.baseDir
+      ? await rootAccountStorageId(root)
+      : p.basename(paths.baseDir);
+  return id != null &&
+      await accountStorageCleared(offlineRoot: root, instanceId: id);
+}

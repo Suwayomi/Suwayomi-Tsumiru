@@ -3735,5 +3735,24 @@
   "accountCatalogueRemoveConfirm": "Remove the downloaded chapters and offline library for {account} on {server} from this device? Server data will stay unchanged.",
   "@accountCatalogueRemoveConfirm": {"placeholders": {"account": {"type": "String"}, "server": {"type": "String"}}},
   "accountCatalogueRemoveFailed": "Account downloads could not be removed. They may be in use.",
-  "recommendationsUnavailableWeb": "These recommendations are not available in the web app."
+  "recommendationsUnavailableWeb": "These recommendations are not available in the web app.",
+  "offlineRecoveryRunning": "Recovering downloads. You can keep using the app.",
+  "offlineRecoveryFailed": "Download recovery stopped. Existing files have been kept. Retry to continue.",
+  "offlineRecoveryUnavailable": "Saved chapters are temporarily unavailable while downloads are recovered.",
+  "offlineRecoveryCompleted": "{count} items recovered",
+  "@offlineRecoveryCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineRecoveryConflicts": "Some chapters have different reading progress in the original and current copies. Choose which progress to keep. Both copies are backed up.",
+  "offlineRecoveryReview": "Review progress",
+  "offlineRecoveryOriginal": "Use original",
+  "offlineRecoveryCurrent": "Use current",
+  "offlineRecoveryOriginalAll": "Use original for all",
+  "offlineRecoveryCurrentAll": "Use current for all",
+  "offlineRecoveryRead": "Read",
+  "offlineRecoveryNotBookmarked": "Not bookmarked"
 }

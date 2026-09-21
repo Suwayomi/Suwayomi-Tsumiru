@@ -32,6 +32,7 @@ import 'src/features/auth/data/custom_headers_store.dart';
 import 'src/features/auth/data/secure_credentials_provider.dart';
 import 'src/features/library/data/badge_preference_migration.dart';
 import 'src/features/notifications/data/background/notification_background_entry.dart';
+import 'src/features/offline/data/account_storage_recovery_state.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
 import 'src/features/offline/data/background/catchup_work_spec.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
@@ -316,6 +317,9 @@ Future<void> _startApp() async {
         next.read(customHttpHeadersProvider.future),
       ]);
       await CatchupStateStore(sharedPreferences).setIdentityAuthorized(false);
+      next
+          .read(accountStorageRecoveryProvider.notifier)
+          .update(previous.read(accountStorageRecoveryProvider));
       transferred = oldStorage.take();
       await next
           .read(offlineRuntimeStorageProvider.notifier)

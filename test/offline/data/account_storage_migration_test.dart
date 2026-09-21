@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
 
 /// Forces the copy fallback: a rename that behaves as if the destination
 /// sat on another device.
@@ -37,6 +44,104 @@ void main() {
       file.writeAsStringSync(name);
     }
   }
+
+  test(
+    'cancellation interrupts a large copy and preserves the original',
+    () async {
+      legacy();
+      final source = File(p.join(root.path, '1/7/001.jpg'));
+      final handle = await source.open(mode: FileMode.append);
+      await handle.truncate(256 * 1024 * 1024);
+      await handle.close();
+      final target = accountStoragePath(root.path, 'legacy');
+      final pending = File(p.join(target, '1/7/001.jpg.copying'));
+      var copyingObserved = false;
+      final recovery = AccountStorageRecovery(
+        isCurrent: () {
+          if (pending.existsSync() && pending.lengthSync() > 0) {
+            copyingObserved = true;
+          }
+          return !copyingObserved;
+        },
+        onProgress: (_) {},
+      );
+      await expectLater(
+        prepareAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'legacy',
+          legacyInstanceId: 'legacy',
+          renameEntity: _noRename,
+          recovery: recovery,
+        ),
+        throwsStateError,
+      );
+      expect(copyingObserved, isTrue);
+      expect(await source.length(), 256 * 1024 * 1024);
+      expect(await pending.length(), lessThan(await source.length()));
+      expect(File(p.join(target, '1/7/001.jpg')).existsSync(), isFalse);
+      expect(
+        await accountStorageComplete(
+          offlineRoot: root.path,
+          instanceId: 'legacy',
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'completed migration cleans verified originals without moving the account back',
+    () async {
+      legacy();
+      final target = await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      );
+      final duplicate = File(p.join(root.path, '1/7/001.jpg'));
+      await duplicate.parent.create(recursive: true);
+      await File(p.join(target, '1/7/001.jpg')).copy(duplicate.path);
+      final resumed = await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+        recovery: AccountStorageRecovery(
+          isCurrent: () => true,
+          onProgress: (_) {},
+        ),
+      );
+      expect(resumed, target);
+      expect(await duplicate.exists(), isFalse);
+      expect(await File(p.join(root.path, 'catalog.sqlite')).exists(), isFalse);
+      expect(
+        await File(
+          p.join(target, 'catalog.sqlite.legacy-recovery-backup'),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(p.join(target, 'catalog.sqlite.recovery-backup')).exists(),
+        isTrue,
+      );
+      expect(
+        await File(p.join(target, '1/7/001.jpg')).readAsString(),
+        '1/7/001.jpg',
+      );
+      expect(
+        await File(p.join(root.path, 'accounts/other/secret')).exists(),
+        isTrue,
+      );
+      expect(await File(p.join(root.path, 'admission.json')).exists(), isTrue);
+      expect(
+        await prepareAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'a',
+          legacyInstanceId: 'a',
+        ),
+        target,
+      );
+    },
+  );
 
   test('account paths reject traversal and invalid identifiers', () {
     for (final id in [
@@ -143,6 +248,102 @@ void main() {
     for (final name in ['1/7/001.jpg', '1/8.part/.manifest']) {
       expect(File(p.join(result, name)).readAsStringSync(), name);
     }
+    expect(
+      await accountStorageComplete(offlineRoot: root.path, instanceId: 'a'),
+      isTrue,
+    );
+  });
+
+  test(
+    'resuming a partial migration preserves newer destination catalogue edits',
+    () async {
+      legacy();
+      final target = Directory(accountStoragePath(root.path, 'a'))
+        ..createSync(recursive: true);
+      File(
+        p.join(root.path, 'catalog.sqlite'),
+      ).copySync(p.join(target.path, 'catalog.sqlite'));
+      final newer = sqlite3.open(p.join(target.path, 'catalog.sqlite'));
+      newer.execute('INSERT INTO chapters VALUES (112)');
+      newer.close();
+      await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      );
+      final reopened = sqlite3.open(p.join(target.path, 'catalog.sqlite'));
+      try {
+        expect(
+          reopened
+              .select('SELECT id FROM chapters ORDER BY id')
+              .map((r) => r['id'])
+              .toList(),
+          [7, 112],
+        );
+      } finally {
+        reopened.close();
+      }
+    },
+  );
+
+  test('recovery does not overwrite a different existing page', () async {
+    legacy();
+    final target = Directory(accountStoragePath(root.path, 'a'))
+      ..createSync(recursive: true);
+    final existing = File(p.join(target.path, '1/7/001.jpg'))
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync('newer page');
+    await expectLater(
+      prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(existing.readAsStringSync(), 'newer page');
+    expect(
+      File(p.join(root.path, '1/7/001.jpg')).readAsStringSync(),
+      '1/7/001.jpg',
+    );
+    expect(
+      await accountStorageComplete(offlineRoot: root.path, instanceId: 'a'),
+      isFalse,
+    );
+  });
+
+  test('cancelled recovery leaves both locations resumable', () async {
+    legacy();
+    var current = true;
+    await expectLater(
+      prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+        recovery: AccountStorageRecovery(
+          isCurrent: () => current,
+          onProgress: (_) => current = false,
+        ),
+      ),
+      throwsStateError,
+    );
+    expect(
+      await accountStorageComplete(offlineRoot: root.path, instanceId: 'a'),
+      isFalse,
+    );
+    final target = await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
+    );
+    expect(
+      File(p.join(target, '1/7/001.jpg')).readAsStringSync(),
+      '1/7/001.jpg',
+    );
+    expect(
+      File(p.join(target, 'covers/1.jpg')).readAsStringSync(),
+      'covers/1.jpg',
+    );
     expect(
       await accountStorageComplete(offlineRoot: root.path, instanceId: 'a'),
       isTrue,

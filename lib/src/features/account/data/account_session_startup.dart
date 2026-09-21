@@ -1,3 +1,9 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -11,6 +17,7 @@ import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../migration/controller/bulk_migration_providers.dart';
 import '../../notifications/controller/notifications_controller.dart';
+import '../../offline/data/account_storage_recovery_state.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../offline/data/background/catchup_spec_writer.dart';
 import '../../offline/data/background/catchup_work_spec.dart';
@@ -27,6 +34,7 @@ import '../../settings/presentation/server/widget/client/server_url_tile/server_
 import '../domain/account_access.dart';
 import 'account_bootstrap.dart';
 import 'account_providers.dart';
+import 'account_session_storage.dart';
 
 class AccountSessionStartup {
   AccountSessionStartup(this.container)
@@ -115,6 +123,10 @@ class AccountSessionStartup {
         _restoreUnboundRequested = false;
         if (!_current) return;
         try {
+          if (container.read(accountStorageRecoveryProvider)?.phase ==
+              AccountStorageRecoveryPhase.pending) {
+            unawaited(container.read(accountSessionStorageProvider).recover());
+          }
           final credentials = container
               .read(authCredentialsStoreProvider)
               .value;

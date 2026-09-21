@@ -1,3 +1,10 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,12 +23,16 @@ import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_transition.dart';
 import 'package:tsumiru/src/features/offline/data/account_catalogue_repository_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_recovery_state.dart';
+import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/offline_awaiting_server_downloads.dart';
 import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_runtime_storage.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
+import 'package:tsumiru/src/features/offline/presentation/account_storage_recovery_banner.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 class _Support extends PathProviderPlatform {
   _Support(this.path);
@@ -82,11 +93,33 @@ class _Fixture {
   late ProviderContainer active;
   int restarts = 0;
   int retained = 0;
+  Completer<void>? recoveryStarted;
+  Completer<void>? recoveryRelease;
 
   ProviderContainer create() => ProviderContainer(
     retry: (_, _) => null,
     overrides: [
       sharedPreferencesProvider.overrideWithValue(preferences),
+      accountStorageOpenerProvider.overrideWithValue(({
+        accountId,
+        legacyInstanceId,
+        ownedRoot,
+        accountOwner,
+        recovery,
+      }) async {
+        if (recovery != null && recoveryStarted != null) {
+          recoveryStarted!.complete();
+          await recoveryRelease!.future;
+          recovery.check();
+        }
+        return initOfflineStorage(
+          accountId: accountId,
+          legacyInstanceId: legacyInstanceId,
+          ownedRoot: ownedRoot,
+          accountOwner: accountOwner,
+          recovery: recovery,
+        );
+      }),
       currentServerAddressProvider.overrideWithValue('http://server'),
       offlineServerAccessProvider.overrideWithValue(false),
       authSessionTransitionProvider.overrideWith(
@@ -104,7 +137,10 @@ class _Fixture {
     ],
   );
 
-  static Future<_Fixture> open({bool legacy = false}) async {
+  static Future<_Fixture> open({
+    bool legacy = false,
+    bool partial = false,
+  }) async {
     final root = await Directory.systemTemp.createTemp('session-storage-host-');
     final previous = PathProviderPlatform.instance;
     PathProviderPlatform.instance = _Support(root.path);
@@ -132,6 +168,15 @@ class _Fixture {
       await pages.create(recursive: true);
       await File(p.join(pages.path, '000.jpg')).writeAsBytes([1, 2, 3]);
       await storage.db.close();
+      if (partial) {
+        final destination = File(
+          p.join(storage.paths.baseDir, 'accounts', 'A', 'catalog.sqlite'),
+        );
+        await destination.parent.create(recursive: true);
+        await File(
+          p.join(storage.paths.baseDir, 'catalog.sqlite'),
+        ).copy(destination.path);
+      }
       await fixture.preferences.setString(
         DBKeys.offlineCatalogServerId.name,
         'A',
@@ -205,13 +250,139 @@ Future<void> _settleHost(WidgetTester tester) async {
 
 void main() {
   testWidgets(
+    'recovery lock timeout shows Retry and succeeds after the worker releases',
+    (tester) async {
+      await tester.runAsync(() async {
+        final fixture = await _Fixture.open(legacy: true, partial: true);
+        final support = await PathProviderPlatform.instance
+            .getApplicationSupportPath();
+        final lock = BackgroundDownloadLock(
+          File(p.join(support!, 'offline', '.bg_lock')),
+        );
+        expect(await lock.acquire('blocked-worker'), isTrue);
+        addTearDown(lock.release);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: fixture.active,
+            child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: AccountStorageRecoveryBanner()),
+            ),
+          ),
+        );
+        final elapsed = Stopwatch()..start();
+        await fixture.active
+            .read(accountSessionStorageProvider)
+            .recover()
+            .timeout(const Duration(seconds: 45));
+        expect(
+          elapsed.elapsed,
+          greaterThanOrEqualTo(const Duration(seconds: 30)),
+        );
+        expect(
+          fixture.active.read(accountStorageRecoveryProvider)?.phase,
+          AccountStorageRecoveryPhase.failed,
+        );
+        expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
+        expect(await lock.yieldRequested(), isTrue);
+        await tester.pump();
+        expect(find.text('Retry'), findsOneWidget);
+        await lock.release();
+        await tester.tap(find.text('Retry'));
+        for (
+          var attempt = 0;
+          attempt < 100 &&
+              fixture.active.read(accountStorageRecoveryProvider) != null;
+          attempt++
+        ) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          await tester.pump();
+        }
+        expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
+        final storage = fixture.active.read(offlineRuntimeStorageProvider)!;
+        expect((await storage.db.mangaById(1))?.title, 'Legacy');
+        expect(
+          await File(
+            p.join(storage.paths.baseDir, '1', '7', '000.jpg'),
+          ).readAsBytes(),
+          [1, 2, 3],
+        );
+        expect(find.text('Retry'), findsNothing);
+        await fixture.close();
+        await tester.pumpWidget(const SizedBox());
+        fixture.active.dispose();
+      });
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  testWidgets(
+    'sign-out cancels pending recovery without reopening its catalogue',
+    (tester) async {
+      await tester.runAsync(() async {
+        final fixture = await _Fixture.open(legacy: true, partial: true);
+        fixture.recoveryStarted = Completer<void>();
+        fixture.recoveryRelease = Completer<void>();
+        final recovery = fixture.active
+            .read(accountSessionStorageProvider)
+            .recover();
+        await fixture.recoveryStarted!.future;
+        final credentials = fixture.active.read(
+          authCredentialsStoreProvider.notifier,
+        );
+        final signOut = credentials.withIdentityChange(
+          credentials.clearUiLoginTokens,
+        );
+        fixture.recoveryRelease!.complete();
+        await Future.wait([recovery, signOut]);
+        expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
+        expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
+        expect(fixture.active.read(offlineEnabledProvider), isFalse);
+        await fixture.close();
+        fixture.active.dispose();
+      });
+    },
+  );
+
+  testWidgets('partial upgrade opens the app before recovering its downloads', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final fixture = await _Fixture.open(legacy: true, partial: true);
+      await tester.pumpWidget(fixture.host(GlobalKey<_FormState>()));
+      expect(find.byType(TextField), findsOneWidget);
+      expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
+      expect(
+        fixture.active.read(accountStorageRecoveryProvider)?.phase,
+        AccountStorageRecoveryPhase.pending,
+      );
+      await fixture.active.read(accountSessionStorageProvider).recover();
+      final storage = fixture.active.read(offlineRuntimeStorageProvider)!;
+      expect((await storage.db.mangaById(1))?.title, 'Legacy');
+      expect(
+        await File(
+          p.join(storage.paths.baseDir, '1', '7', '000.jpg'),
+        ).readAsBytes(),
+        [1, 2, 3],
+      );
+      expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
+      expect(fixture.restarts, 0);
+      await fixture.close();
+      await tester.pumpWidget(const SizedBox());
+    });
+  });
+
+  testWidgets(
     'removed legacy files and preferences stay empty after full account restore',
     (tester) async {
       await tester.runAsync(() async {
         final fixture = await _Fixture.open(legacy: true);
         await tester.pumpWidget(fixture.host(GlobalKey<_FormState>()));
         final before = fixture.active.read(offlineRuntimeStorageProvider)!;
-        final root = p.dirname(p.dirname(before.paths.baseDir));
+        final root = offlineControlRoot(before.paths.baseDir);
+        expect(before.paths.baseDir, root);
+        expect(fixture.preferences.getBool(offlineAccountScopedKey), isFalse);
         final watermark = '${DBKeys.offlineCatchUpWatermark.name}/A';
         final awaiting = '${DBKeys.offlineCatchUpAwaitingPull.name}/A';
         expect((await before.db.mangaById(1))!.title, 'Legacy');
@@ -232,10 +403,7 @@ void main() {
               .update(AuthType.none);
         });
         await _settleHost(tester);
-        expect(
-          fixture.active.read(offlineRuntimeStorageProvider)!.paths.baseDir,
-          root,
-        );
+        expect(fixture.active.read(offlineRuntimeStorageProvider), isNull);
         expect(fixture.preferences.getBool(offlineAccountScopedKey), isFalse);
         final repository = NativeAccountCatalogueRepository(
           root,
@@ -260,6 +428,8 @@ void main() {
         });
         await _settleHost(tester);
         final after = fixture.active.read(offlineRuntimeStorageProvider)!;
+        expect(after.paths.baseDir, root);
+        expect(fixture.preferences.getBool(offlineAccountScopedKey), isFalse);
         expect(await after.db.mangaById(1), isNull);
         expect(
           await Directory(p.join(after.paths.baseDir, '1')).exists(),

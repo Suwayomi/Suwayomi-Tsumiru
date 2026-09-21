@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'account_storage_recovery.dart';
+
 import 'offline_database.dart';
 import 'offline_page_store.dart';
 import 'offline_paths.dart';
@@ -16,6 +18,7 @@ openOfflineStorage({
   String? legacyInstanceId,
   String? ownedRoot,
   String? accountOwner,
+  AccountStorageRecovery? recovery,
 }) async => null;
 
 Future<bool> accountStorageWasCleared(OfflinePaths paths) async => false;

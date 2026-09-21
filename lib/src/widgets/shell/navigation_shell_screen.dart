@@ -13,6 +13,8 @@ import 'package:pub_semver/pub_semver.dart';
 import '../../features/about/data/about_repository.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
+import '../../features/offline/data/account_storage_recovery_state.dart';
+import '../../features/offline/presentation/account_storage_recovery_banner.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
 import 'big_screen_navigation_bar.dart';
@@ -22,10 +24,7 @@ import 'update_banner_state.dart';
 import 'update_progress_banner.dart';
 
 class NavigationShellScreen extends HookConsumerWidget {
-  const NavigationShellScreen({
-    super.key,
-    required this.child,
-  });
+  const NavigationShellScreen({super.key, required this.child});
   final StatefulNavigationShell child;
 
   Future<void> checkForUpdate({
@@ -69,18 +68,16 @@ class NavigationShellScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     useEffect(() {
-      Future.microtask(
-        () async {
-          if (!context.mounted) return;
-          await checkForUpdate(
-            title: ref.read(packageInfoProvider).appName,
-            context: context,
-            ref: ref,
-            updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
-            toast: ref.read(toastProvider),
-          );
-        },
-      );
+      Future.microtask(() async {
+        if (!context.mounted) return;
+        await checkForUpdate(
+          title: ref.read(packageInfoProvider).appName,
+          context: context,
+          ref: ref,
+          updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
+          toast: ref.read(toastProvider),
+        );
+      });
       return;
     }, []);
 
@@ -128,7 +125,10 @@ class NavigationShellScreen extends HookConsumerWidget {
     // There, resizeToAvoidBottomInset has already consumed the keyboard inset.
     // Using the outer context passes unconsumed insets down, making nested
     // Scaffolds apply the keyboard padding twice and overflow the layout.
-    final bannerVisible = ref.watch(updateBannerVisibleProvider);
+    final updateBannerVisible = ref.watch(updateBannerVisibleProvider);
+    final bannerVisible =
+        updateBannerVisible ||
+        ref.watch(accountStorageRecoveryProvider) != null;
     final content = bannerVisible
         ? Builder(
             builder: (context) => MediaQuery.removePadding(
@@ -156,6 +156,9 @@ class NavigationShellScreen extends HookConsumerWidget {
                 child: Column(
                   children: [
                     const UpdateProgressBanner(),
+                    AccountStorageRecoveryBanner(
+                      insetTop: !updateBannerVisible,
+                    ),
                     Expanded(child: content),
                     const IncognitoBanner(),
                   ],
@@ -170,6 +173,7 @@ class NavigationShellScreen extends HookConsumerWidget {
         body: Column(
           children: [
             const UpdateProgressBanner(),
+            AccountStorageRecoveryBanner(insetTop: !updateBannerVisible),
             Expanded(child: content),
             const IncognitoBanner(),
           ],
@@ -191,7 +195,8 @@ class NavigationShellScreen extends HookConsumerWidget {
       onBackButtonPressed: () async {
         // Within a branch (a pushed route) or on home → let the default handler
         // pop the route or exit. On any other tab at its root, go home instead.
-        if (child.currentIndex != homeBranch && !GoRouter.of(context).canPop()) {
+        if (child.currentIndex != homeBranch &&
+            !GoRouter.of(context).canPop()) {
           child.goBranch(homeBranch);
           return true; // handled — do not exit
         }
