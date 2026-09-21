@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -288,4 +289,105 @@ void main() {
       await db.close();
     }
   });
+
+  test(
+    'v18 chapterSortMode/chapterSortReverse/uploadDate/fetchedAt are added '
+    'on upgrade from v17 and start null',
+    () async {
+      final dbPath = p.join(tmp.path, 'test.db');
+
+      // Create at the current schema (so both tables exist with every other
+      // column), then force the recorded version back to 17 — the exact
+      // state a real v17 install is in before this upgrade.
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+        await db.upsertChapterMetadata(
+          id: 10,
+          mangaId: 1,
+          name: 'c',
+          chapterIndex: 1,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 1,
+          updatedAt: DateTime(2026),
+        );
+        await db.customStatement('PRAGMA user_version = 17');
+        await db.close();
+      }
+
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        final m = await (db.select(db.offlineMangas)
+              ..where((t) => t.id.equals(1)))
+            .getSingle();
+        expect(m.chapterSortMode, null);
+        expect(m.chapterSortReverse, null);
+        final c = await (db.select(db.offlineChapters)
+              ..where((t) => t.id.equals(10)))
+            .getSingle();
+        expect(c.uploadDate, null);
+        expect(c.fetchedAt, null);
+
+        // The columns are genuinely usable, not just present-but-inert.
+        await db.upsertMangaMetadata(
+          id: 1,
+          title: 'M',
+          updatedAt: DateTime(2026),
+          chapterSortMode: ChapterSortAxis.uploadedAt,
+          chapterSortReverse: true,
+        );
+        await db.upsertChapterMetadata(
+          id: 10,
+          mangaId: 1,
+          name: 'c',
+          chapterIndex: 1,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 1,
+          updatedAt: DateTime(2026),
+          uploadDate: '1700000000000',
+          fetchedAt: '1700000001000',
+        );
+        final m2 = await (db.select(db.offlineMangas)
+              ..where((t) => t.id.equals(1)))
+            .getSingle();
+        expect(m2.chapterSortMode, ChapterSortAxis.uploadedAt);
+        expect(m2.chapterSortReverse, isTrue);
+        final c2 = await (db.select(db.offlineChapters)
+              ..where((t) => t.id.equals(10)))
+            .getSingle();
+        expect(c2.uploadDate, '1700000000000');
+        expect(c2.fetchedAt, '1700000001000');
+        await db.close();
+      }
+    },
+  );
+
+  test(
+    'v18 migration does not explode on a device that never created '
+    'offline_mangas/offline_chapters (mirrors the _hasTable guard already '
+    'used elsewhere in this migration)',
+    () async {
+      final db = OfflineDatabase(
+        NativeDatabase.memory(
+          setup: (rawDb) {
+            rawDb.execute(
+              'CREATE TABLE offline_categories (id INTEGER PRIMARY KEY, '
+              'name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, '
+              'is_hidden INTEGER NOT NULL DEFAULT 0)',
+            );
+            rawDb.execute('PRAGMA user_version = 16');
+          },
+        ),
+      );
+      addTearDown(db.close);
+      // Touch the db to force the migration to run; must not throw.
+      expect(await db.allOfflineCategories(), isEmpty);
+    },
+  );
 }

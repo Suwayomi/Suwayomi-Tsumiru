@@ -94,6 +94,14 @@ abstract class MangaMeta with _$MangaMeta {
       fromJson: MangaMeta.fromJsonToStringList,
     )
     List<String>? preferredScanlators,
+    // Tsumiru-only chapter sort mode with no WebUI equivalent — see
+    // webui_chapter_sort_meta.dart, which handles webUI_sortBy/webUI_reverse
+    // separately (deliberately NOT part of this typed meta class).
+    @JsonKey(
+      name: "flutter_chapterSortIsAlphabetical",
+      fromJson: MangaMeta.fromJsonToBool,
+    )
+    bool? chapterSortAlphabetical,
   }) = _MangaMeta;
 
   static bool? fromJsonToBool(dynamic val) => val != null && val is String
@@ -135,6 +143,10 @@ enum MangaMetaKeys {
   rating("flutter_rating"),
   tags("flutter_tags"),
   preferredScanlators("flutter_preferredScanlators"),
+  // Tsumiru-only chapter sort mode with no WebUI equivalent — see
+  // webui_chapter_sort_meta.dart, which deliberately does NOT route the
+  // webUI_sortBy/webUI_reverse keys through this enum (foreign namespace).
+  chapterSortAlphabetical("flutter_chapterSortIsAlphabetical"),
   ;
 
   const MangaMetaKeys(this.key);

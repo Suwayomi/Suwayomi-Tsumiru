@@ -9,11 +9,17 @@ import 'reconcile_types.dart';
 
 /// Chapter ids that should be on-device for one manga, given its keep-rule.
 /// Always includes pinned chapters (manual saves are sticky, rule-independent).
+///
+/// [sortAxis] is the manga's own webUI_sortBy meta (null when unset, or when
+/// the manga is set to Tsumiru's own `alphabetical` mode, which has no
+/// chapter-progression meaning) — see ChapterSortAxis. Null falls back to the
+/// pre-existing chapterNumber-else-chapterIndex ranking below.
 Set<int> desiredChapterIds(
   List<OfflineChapter> chapters,
   OfflineKeepRule rule,
-  int keepUnreadCount,
-) {
+  int keepUnreadCount, {
+  ChapterSortAxis? sortAxis,
+}) {
   final pinned = {
     for (final c in chapters)
       if (c.pinned) c.id,
@@ -54,10 +60,28 @@ Set<int> desiredChapterIds(
     // reading position and starve the window). Such chapters can still be
     // pinned, and if already on-device+unread they survive via retainedChapterIds.
     OfflineKeepRule.nUnread => () {
-      final byNumber = chapters.any((c) => (c.chapterNumber ?? 0) > 0);
-      bool ranked(OfflineChapter c) => !byNumber || (c.chapterNumber ?? 0) > 0;
-      double readOrder(OfflineChapter c) =>
-          byNumber ? c.chapterNumber! : c.chapterIndex.toDouble();
+      // sortAxis == null covers both "no webUI_sortBy meta" and "manga is set
+      // to alphabetical" — both fall back to exactly the byNumber/chapterIndex
+      // logic below, unchanged from before per-manga axes existed.
+      final byNumber = sortAxis == null
+          ? chapters.any((c) => (c.chapterNumber ?? 0) > 0)
+          : sortAxis == ChapterSortAxis.chapterNumber;
+      int? epoch(String? v) => v == null ? null : int.tryParse(v);
+
+      bool ranked(OfflineChapter c) => switch (sortAxis) {
+        null => !byNumber || (c.chapterNumber ?? 0) > 0,
+        ChapterSortAxis.source => true, // chapterIndex is always present
+        ChapterSortAxis.chapterNumber => (c.chapterNumber ?? 0) > 0,
+        ChapterSortAxis.uploadedAt => (epoch(c.uploadDate) ?? 0) > 0,
+        ChapterSortAxis.fetchedAt => (epoch(c.fetchedAt) ?? 0) > 0,
+      };
+      double readOrder(OfflineChapter c) => switch (sortAxis) {
+        null => byNumber ? c.chapterNumber! : c.chapterIndex.toDouble(),
+        ChapterSortAxis.source => c.chapterIndex.toDouble(),
+        ChapterSortAxis.chapterNumber => c.chapterNumber!,
+        ChapterSortAxis.uploadedAt => epoch(c.uploadDate)!.toDouble(),
+        ChapterSortAxis.fetchedAt => epoch(c.fetchedAt)!.toDouble(),
+      };
 
       final floor = chapters
           .where((c) => c.isRead && ranked(c))
@@ -98,9 +122,15 @@ Set<int> desiredChapterIds(
 Set<int> retainedChapterIds(
   List<OfflineChapter> chapters,
   OfflineKeepRule rule,
-  int keepUnreadCount,
-) {
-  final desired = desiredChapterIds(chapters, rule, keepUnreadCount);
+  int keepUnreadCount, {
+  ChapterSortAxis? sortAxis,
+}) {
+  final desired = desiredChapterIds(
+    chapters,
+    rule,
+    keepUnreadCount,
+    sortAxis: sortAxis,
+  );
   if (rule != OfflineKeepRule.nUnread) return desired;
   return {
     ...desired,

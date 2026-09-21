@@ -65,6 +65,15 @@ class OfflineMangas extends Table {
   TextColumn get metaJson => text().nullable()();
   IntColumn get totalChapters => integer().withDefault(const Constant(0))();
 
+  // Pre-extracted from the raw meta above (also present in metaJson) so the
+  // keep-window reconcile pass — which reads this row directly, not a
+  // reconstructed MangaDto — doesn't need to JSON-decode on every pass, and
+  // so the background CatchupMangaSpec (a frozen snapshot, no DB access) can
+  // carry it too. Null means no webUI_sortBy/webUI_reverse meta on this
+  // manga — see ChapterSortAxis and webui_chapter_sort_meta.dart.
+  TextColumn get chapterSortMode => textEnum<ChapterSortAxis>().nullable()();
+  BoolColumn get chapterSortReverse => boolean().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -93,6 +102,12 @@ class OfflineChapters extends Table {
   // scanlator duplicates (#141). Null until the row's next down-sync.
   RealColumn get chapterNumber => real().nullable()();
   TextColumn get scanlator => text().nullable()();
+  // Server timestamps (epoch millis as a string, same convention as
+  // lastReadAt/OfflineMangas.latestUploadedAt), synced so the keep-window can
+  // rank by a manga's own chosen sort axis (see ChapterSortAxis). Null until
+  // the row's next down-sync.
+  TextColumn get uploadDate => text().nullable()();
+  TextColumn get fetchedAt => text().nullable()();
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
   IntColumn get lastPageRead => integer().withDefault(const Constant(0))();
   BoolColumn get isBookmarked => boolean().withDefault(const Constant(false))();
@@ -233,7 +248,7 @@ class OfflineDatabase extends _$OfflineDatabase {
   OfflineDatabase(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -464,6 +479,25 @@ class OfflineDatabase extends _$OfflineDatabase {
       // genuine removal, the very next complete-library sync's
       // markNotInLibrary re-stamps it to the new sentinel unconditionally —
       // no repair pass required either way.
+
+      // Guarded by _hasTable: a device that never created these tables (or a
+      // test fixture isolating an unrelated migration) must not fail here.
+      if (from < 18 && await _hasTable(offlineMangas)) {
+        await _addColumnIfMissing(
+          m,
+          offlineMangas,
+          offlineMangas.chapterSortMode,
+        );
+        await _addColumnIfMissing(
+          m,
+          offlineMangas,
+          offlineMangas.chapterSortReverse,
+        );
+      }
+      if (from < 18 && await _hasTable(offlineChapters)) {
+        await _addColumnIfMissing(m, offlineChapters, offlineChapters.uploadDate);
+        await _addColumnIfMissing(m, offlineChapters, offlineChapters.fetchedAt);
+      }
     },
   );
 
@@ -535,6 +569,8 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? lastReadAt,
     String? metaJson,
     int totalChapters = 0,
+    ChapterSortAxis? chapterSortMode,
+    bool? chapterSortReverse,
   }) => into(offlineMangas).insertOnConflictUpdate(
     OfflineMangasCompanion(
       id: Value(id),
@@ -563,6 +599,11 @@ class OfflineDatabase extends _$OfflineDatabase {
           : Value(lastReadAt),
       metaJson: Value(metaJson),
       totalChapters: Value(totalChapters),
+      // Explicit, never absent: the caller always derives these from the
+      // manga's full current meta list, so a server-side meta deletion must
+      // clear the column here too, not leave a stale value behind.
+      chapterSortMode: Value(chapterSortMode),
+      chapterSortReverse: Value(chapterSortReverse),
     ),
   );
 
@@ -580,6 +621,8 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? lastReadAt,
     double? chapterNumber,
     String? scanlator,
+    String? uploadDate,
+    String? fetchedAt,
     // The server's own value, recorded even when [isRead] carries a preserved
     // local change, so the two can be compared later.
     bool? syncedIsRead,
@@ -598,6 +641,13 @@ class OfflineDatabase extends _$OfflineDatabase {
           ? const Value.absent()
           : Value(chapterNumber),
       scanlator: scanlator == null ? const Value.absent() : Value(scanlator),
+      // '0'/null means "no signal", not "erase" — same convention as lastReadAt.
+      uploadDate: (uploadDate == null || uploadDate == '0')
+          ? const Value.absent()
+          : Value(uploadDate),
+      fetchedAt: (fetchedAt == null || fetchedAt == '0')
+          ? const Value.absent()
+          : Value(fetchedAt),
       isRead: Value(isRead),
       lastPageRead: Value(lastPageRead),
       isBookmarked: Value(isBookmarked),

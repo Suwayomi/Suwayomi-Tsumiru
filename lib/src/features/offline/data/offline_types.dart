@@ -21,3 +21,9 @@ enum OfflineDeviceState {
 
 /// How many of a series' chapters to keep on this device automatically.
 enum OfflineKeepRule { off, nUnread, allUnread, all }
+
+/// Mirrors WebUI's 4 interoperable `webUI_sortBy` values verbatim — names ARE
+/// the wire strings (`.name` round-trips directly to/from server meta, see
+/// webui_chapter_sort_meta.dart). Tsumiru's own `alphabetical` chapter-sort
+/// mode has no WebUI equivalent and is deliberately NOT a member of this enum.
+enum ChapterSortAxis { source, chapterNumber, uploadedAt, fetchedAt }

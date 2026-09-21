@@ -14,8 +14,8 @@ void main() {
   setUp(() => db = testOfflineDatabase());
   tearDown(() => db.close());
 
-  test('opens at schema version 17', () {
-    expect(db.schemaVersion, 17);
+  test('opens at schema version 18', () {
+    expect(db.schemaVersion, 18);
   });
 
   test(

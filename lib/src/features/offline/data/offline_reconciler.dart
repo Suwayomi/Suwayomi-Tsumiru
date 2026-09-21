@@ -108,6 +108,7 @@ class OfflineReconciler {
       chapters,
       manga.keepRule,
       manga.keepUnreadCount,
+      sortAxis: manga.chapterSortMode,
     );
 
     // The retention set: what may STAY on device. Broader than `desired` for
@@ -118,6 +119,7 @@ class OfflineReconciler {
       chapters,
       manga.keepRule,
       manga.keepUnreadCount,
+      sortAxis: manga.chapterSortMode,
     );
 
     final ev = applySafetyNets(

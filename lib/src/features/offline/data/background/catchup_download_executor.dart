@@ -499,6 +499,7 @@ Future<bool> runCatchupDownloads({
         ],
         mangaSpec.keepRule,
         mangaSpec.keepUnreadCount,
+        sortAxis: mangaSpec.chapterSortMode,
       )..addAll(mangaSpec.pinnedChapterIds.intersection(serverIds));
 
       // Present = every truth the executor can see without drift.
@@ -834,7 +835,7 @@ Future<_MangaChapters?> _fetchMangaChapters(
   int mangaId,
 ) async {
   const query =
-      'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber isRead isBookmarked isDownloaded pageCount } } }';
+      'query MangaChapters(\$id: Int!){ chapters(condition:{mangaId: \$id}, order:[{by: SOURCE_ORDER, byType: ASC}]){ nodes { id name sourceOrder chapterNumber uploadDate fetchedAt isRead isBookmarked isDownloaded pageCount } } }';
   Future<Object?> post(String? accessToken) => postBackgroundGraphql(
     target: target,
     record: record(),
@@ -863,6 +864,9 @@ Future<_MangaChapters?> _fetchMangaChapters(
         mangaId: mangaId,
         name: n['name'] as String? ?? '',
         chapterIndex: (n['sourceOrder'] as num?)?.toInt() ?? 0,
+        chapterNumber: (n['chapterNumber'] as num?)?.toDouble(),
+        uploadDate: n['uploadDate'] as String?,
+        fetchedAt: n['fetchedAt'] as String?,
         isRead: n['isRead'] as bool? ?? false,
         lastPageRead: 0,
         isBookmarked: n['isBookmarked'] as bool? ?? false,

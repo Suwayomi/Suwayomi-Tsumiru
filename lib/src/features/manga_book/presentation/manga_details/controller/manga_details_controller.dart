@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
@@ -15,6 +16,7 @@ import '../../../../../features/offline/data/offline_download_providers.dart';
 import '../../../../../features/offline/data/offline_read_fallback.dart';
 import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
+import '../../../../../features/offline/data/webui_chapter_sort_meta.dart';
 import '../../../../../features/settings/presentation/library/widgets/refresh_chapters_from_source_tile/refresh_chapters_from_source_tile.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
@@ -358,6 +360,89 @@ class MangaChapterListMode extends _$MangaChapterListMode {
   }
 }
 
+/// Per-series chapter sort, synced with WebUI's own per-manga `webUI_sortBy`
+/// meta (see webui_chapter_sort_meta.dart) — a real cross-client setting, not
+/// a Tsumiru-only convention. Falls back to the app-wide [MangaChapterSort]
+/// default when the manga carries no such meta.
+@riverpod
+class MangaChapterSortPreference extends _$MangaChapterSortPreference {
+  @override
+  ChapterSort? build({required int mangaId}) {
+    final meta = ref.watch(mangaWithIdProvider(mangaId: mangaId)).value?.meta;
+    if (meta?.firstWhereOrNull((m) => m.key == MangaMetaKeys.chapterSortAlphabetical.key)?.value ==
+        'true') {
+      return ChapterSort.alphabetical;
+    }
+    final axis = chapterSortAxisFromMetaValue(
+      meta?.firstWhereOrNull((m) => m.key == kWebUiSortByMetaKey)?.value,
+    );
+    if (axis != null) return chapterSortFromWebUiAxis(axis);
+    return ref.watch(mangaChapterSortProvider);
+  }
+
+  Future<void> update(ChapterSort sort) async {
+    final repo = ref.read(mangaBookRepositoryProvider);
+    final axis = webUiAxisFromChapterSort(sort);
+    await AsyncValue.guard(() async {
+      if (axis == null) {
+        // alphabetical: local-only (to WebUI) flag, leave webUI_sortBy alone
+        // so a later switch back to a real axis has something to fall to.
+        await repo.patchMangaMeta(
+          mangaId: mangaId,
+          key: MangaMetaKeys.chapterSortAlphabetical.key,
+          value: 'true',
+        );
+      } else {
+        await repo.patchMangaMeta(
+          mangaId: mangaId,
+          key: MangaMetaKeys.chapterSortAlphabetical.key,
+          value: 'false',
+        );
+        await repo.patchMangaMeta(
+          mangaId: mangaId,
+          key: kWebUiSortByMetaKey,
+          value: axis.name,
+        );
+      }
+    });
+    if (!ref.mounted) return;
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    state = sort;
+  }
+}
+
+/// Per-series chapter sort direction, synced with WebUI's own per-manga
+/// `webUI_reverse` meta. Falls back to the app-wide
+/// [MangaChapterSortDirection] default when the manga carries no such meta.
+@riverpod
+class MangaChapterSortDirectionPreference
+    extends _$MangaChapterSortDirectionPreference {
+  @override
+  bool? build({required int mangaId}) {
+    final meta = ref.watch(mangaWithIdProvider(mangaId: mangaId)).value?.meta;
+    final raw = meta
+        ?.firstWhereOrNull((m) => m.key == kWebUiReverseMetaKey)
+        ?.value;
+    return chapterSortReverseFromMetaValue(raw) ??
+        ref.watch(mangaChapterSortDirectionProvider);
+  }
+
+  Future<void> update(bool reverse) async {
+    await AsyncValue.guard(
+      () => ref
+          .read(mangaBookRepositoryProvider)
+          .patchMangaMeta(
+            mangaId: mangaId,
+            key: kWebUiReverseMetaKey,
+            value: chapterSortReverseToMetaValue(reverse),
+          ),
+    );
+    if (!ref.mounted) return;
+    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    state = reverse;
+  }
+}
+
 /// Personal 0-5 star rating for a manga, stored in the per-manga meta store
 /// (no server rating field exists). 0 means unrated.
 @riverpod
@@ -442,9 +527,10 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   );
   final chapterFilterBookmark = ref.watch(mangaChapterFilterBookmarkedProvider);
   final ChapterSort sortedBy =
-      ref.watch(mangaChapterSortProvider) ?? DBKeys.chapterSort.initial;
+      ref.watch(mangaChapterSortPreferenceProvider(mangaId: mangaId)) ??
+      DBKeys.chapterSort.initial;
   final sortedDirection = ref
-      .watch(mangaChapterSortDirectionProvider)
+      .watch(mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId))
       .ifNull(true);
 
   final preferredScanlators = ref.watch(
@@ -547,7 +633,7 @@ AsyncValue<List<ChapterDto>?> mangaChapterListForBulkActions(
 @riverpod
 ChapterDto? firstUnreadInFilteredChapterList(Ref ref, {required int mangaId}) {
   final isAscSorted =
-      ref.watch(mangaChapterSortDirectionProvider) ??
+      ref.watch(mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId)) ??
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
       .watch(mangaChapterListWithFilterProvider(mangaId: mangaId))
@@ -576,7 +662,7 @@ ChapterDto? firstUnreadInFilteredChapterList(Ref ref, {required int mangaId}) {
   String? readerScanlatorGroup,
 }) {
   final isAscSorted =
-      ref.watch(mangaChapterSortDirectionProvider) ??
+      ref.watch(mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId)) ??
       DBKeys.chapterSortDirection.initial;
   final filteredList = ref
       .watch(

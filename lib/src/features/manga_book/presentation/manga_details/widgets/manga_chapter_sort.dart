@@ -12,7 +12,8 @@ import '../../../../../constants/enum.dart';
 import 'manga_chapter_sort_tile.dart';
 
 class MangaChapterSort extends ConsumerWidget {
-  const MangaChapterSort({super.key});
+  const MangaChapterSort({super.key, required this.mangaId});
+  final int mangaId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +21,7 @@ class MangaChapterSort extends ConsumerWidget {
       children: [
         const Divider(height: .5),
         for (ChapterSort chapterSort in ChapterSort.values)
-          MangaChapterSortTile(sortType: chapterSort),
+          MangaChapterSortTile(mangaId: mangaId, sortType: chapterSort),
       ],
     );
   }

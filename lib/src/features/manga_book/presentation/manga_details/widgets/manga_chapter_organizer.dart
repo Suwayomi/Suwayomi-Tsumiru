@@ -32,7 +32,7 @@ class MangaChapterOrganizer extends StatelessWidget {
         body: TabBarView(
           children: [
             MangaChapterFilter(mangaId: mangaId),
-            const MangaChapterSort(),
+            MangaChapterSort(mangaId: mangaId),
             const MangaChapterDisplay(),
           ],
         ),

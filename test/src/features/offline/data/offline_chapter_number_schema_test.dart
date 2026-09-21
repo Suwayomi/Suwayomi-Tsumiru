@@ -79,7 +79,7 @@ void main() {
     });
     tearDown(() => tmp.delete(recursive: true));
 
-    test('adds the columns, preserves rows, lands on version 17', () async {
+    test('adds the columns, preserves rows, lands on version 18', () async {
       final dbPath = p.join(tmp.path, 'test.db');
 
       // Build a genuine v8 file: the chapters table WITHOUT the new columns,
@@ -155,7 +155,7 @@ void main() {
           .customSelect('PRAGMA user_version')
           .getSingle()
           .then((r) => r.read<int>('user_version'));
-      expect(version, 17);
+      expect(version, 18);
       // v14 must create both category tables on an upgrade from before they
       // existed — onCreate only runs for fresh files.
       await db.upsertCategory(1, 'A', 0, isHidden: false);

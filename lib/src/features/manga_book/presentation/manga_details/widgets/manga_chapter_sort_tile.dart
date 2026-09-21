@@ -15,22 +15,33 @@ import '../controller/manga_details_controller.dart';
 class MangaChapterSortTile extends ConsumerWidget {
   const MangaChapterSortTile({
     super.key,
+    required this.mangaId,
     required this.sortType,
   });
+  final int mangaId;
   final ChapterSort sortType;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sortedBy = ref.watch(mangaChapterSortProvider);
-    final sortedDirection = ref.watch(mangaChapterSortDirectionProvider);
+    final sortedBy = ref.watch(
+      mangaChapterSortPreferenceProvider(mangaId: mangaId),
+    );
+    final sortedDirection = ref.watch(
+      mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId),
+    );
     return SortListTile(
       selected: sortType == sortedBy,
       title: Text(sortType.toLocale(context)),
       ascending: sortedDirection.ifNull(true),
       onChanged: (bool? value) => ref
-          .read(mangaChapterSortDirectionProvider.notifier)
+          .read(
+            mangaChapterSortDirectionPreferenceProvider(
+              mangaId: mangaId,
+            ).notifier,
+          )
           .update(!(sortedDirection.ifNull())),
-      onSelected: () =>
-          ref.read(mangaChapterSortProvider.notifier).update(sortType),
+      onSelected: () => ref
+          .read(mangaChapterSortPreferenceProvider(mangaId: mangaId).notifier)
+          .update(sortType),
     );
   }
 }
