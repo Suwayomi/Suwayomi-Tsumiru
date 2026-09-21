@@ -23,19 +23,20 @@ const _catalogue = AccountCatalogue(
 );
 
 class _Repository implements AccountCatalogueRepository {
+  AccountCatalogue row = _catalogue;
   int removals = 0;
   Completer<void>? started;
   Completer<void>? release;
   @override
   Future<List<AccountCatalogue>> list({String? activePath}) async =>
-      removals == 0 ? [_catalogue] : [];
+      removals == 0 ? [row] : [];
   @override
   Future<void> remove(
     AccountCatalogue catalogue, {
     required bool Function() canRemove,
   }) async {
     if (!canRemove()) throw StateError('Catalogue is active');
-    expect(identical(catalogue, _catalogue), isTrue);
+    expect(identical(catalogue, row), isTrue);
     started?.complete();
     await release?.future;
     removals++;
@@ -123,6 +124,48 @@ void main() {
       });
     });
   }
+
+  testWidgets('non-account label and removal tolerate matching account ID', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final repository = _Repository()
+        ..row = const AccountCatalogue(
+          id: 'A',
+          owner: 'non-account',
+          path: '/offline/non-account',
+          bytes: 2048,
+          isNonAccount: true,
+          address: 'https://old.example',
+        );
+      final scope = await container(repository, active: true);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: scope,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const OfflineSettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Downloads without account login'), findsOneWidget);
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          'Downloads without account login on https://old.example',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      expect(repository.removals, 1);
+      await tester.pumpWidget(const SizedBox());
+      scope.dispose();
+    });
+  });
 
   test('active binding is hidden and rejected by removal action', () async {
     final repository = _Repository();

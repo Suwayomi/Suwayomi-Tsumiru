@@ -37,7 +37,6 @@ openOfflineStorage({
     var baseDir = root;
     if (accountId == null && await rootAccountStorageId(root) != null) {
       baseDir = nonAccountStoragePath(root);
-      await _checkNonAccountStorage(Directory(baseDir));
     }
     if (accountId != null) {
       final target = accountStoragePath(root, accountId);
@@ -126,6 +125,9 @@ openOfflineStorage({
             recovery: recovery,
           );
     }
+    if (accountId == null) {
+      await vetOfflineStorage(path: baseDir, offlineRoot: root);
+    }
     await Directory(baseDir).create(recursive: true);
     final paths = OfflinePaths(baseDir);
     final db = OfflineDatabase(
@@ -149,23 +151,4 @@ Future<bool> accountStorageWasCleared(OfflinePaths paths) async {
       : p.basename(paths.baseDir);
   return id != null &&
       await accountStorageCleared(offlineRoot: root, instanceId: id);
-}
-
-Future<void> _checkNonAccountStorage(Directory directory) async {
-  final type = await FileSystemEntity.type(directory.path, followLinks: false);
-  if (type == FileSystemEntityType.notFound) return;
-  if (type != FileSystemEntityType.directory) {
-    throw FileSystemException(
-      'Invalid offline storage directory',
-      directory.path,
-    );
-  }
-  await for (final entry in directory.list(
-    recursive: true,
-    followLinks: false,
-  )) {
-    if (entry is! File && entry is! Directory) {
-      throw FileSystemException('Invalid offline storage entry', entry.path);
-    }
-  }
 }

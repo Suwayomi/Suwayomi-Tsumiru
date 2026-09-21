@@ -12,6 +12,7 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 
@@ -43,6 +44,47 @@ class _FixedRepo extends OfflineServerIdentityRepository {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  test(
+    'non-account offline identity survives an account cached at the same address',
+    () async {
+      const address = 'http://host:4567';
+      SharedPreferences.setMockInitialValues({
+        offlineNonAccountScopedKey: true,
+        offlineNonAccountLastServerIdKey: 'basic-server',
+        offlineNonAccountLastServerAddressKey: address,
+        DBKeys.offlineLastServerId.name: 'login-account',
+        DBKeys.offlineLastServerAddress.name: address,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repo = _HangingRepo();
+      final c = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          currentServerAddressProvider.overrideWithValue(address),
+          offlineServerIdentityRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(() {
+        if (!repo.completer.isCompleted) {
+          repo.completer.complete('basic-server');
+        }
+        c.dispose();
+      });
+      c.listen(serverInstanceIdProvider, (_, _) {});
+      expect(
+        await c
+            .read(serverInstanceIdProvider.future)
+            .timeout(const Duration(seconds: 2)),
+        'basic-server',
+      );
+      await repo.started.future;
+      repo.completer.complete('basic-server');
+      await c.read(verifiedServerInstanceIdProvider.future);
+      expect(prefs.getString(DBKeys.offlineLastServerId.name), 'login-account');
+      expect(prefs.getString(offlineNonAccountLastServerIdKey), 'basic-server');
+    },
+  );
+
   test('serverInstanceId returns the cached id instantly for a known address, '
       'without waiting on the network (offline-first, #145 fix)', () async {
     const address = 'http://host:4567';

@@ -31,6 +31,7 @@ import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/offline_runtime_storage.dart';
 import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
+import 'package:tsumiru/src/features/offline/data/offline_storage_identity.dart';
 import 'package:tsumiru/src/features/offline/presentation/account_storage_recovery_banner.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -97,6 +98,8 @@ class _Fixture {
   Completer<void>? recoveryStarted;
   Completer<void>? recoveryRelease;
   Object? recoveryError;
+  bool serverAccess = false;
+  String nonAccountServerId = 'basic-server';
 
   ProviderContainer create() => ProviderContainer(
     retry: (_, _) => null,
@@ -124,7 +127,7 @@ class _Fixture {
         );
       }),
       currentServerAddressProvider.overrideWithValue('http://server'),
-      offlineServerAccessProvider.overrideWithValue(false),
+      offlineServerAccessProvider.overrideWith((ref) => serverAccess),
       authSessionTransitionProvider.overrideWith(
         (ref) => ref.read(accountSessionStorageProvider),
       ),
@@ -135,7 +138,7 @@ class _Fixture {
                 .value
                 ?.accountBinding
                 ?.catalogId ??
-            '',
+            nonAccountServerId,
       ),
     ],
   );
@@ -252,6 +255,93 @@ Future<void> _settleHost(WidgetTester tester) async {
 }
 
 void main() {
+  for (final mode in [AuthType.none, AuthType.basic]) {
+    testWidgets(
+      '${mode.name} downloads survive login and return without mismatch',
+      (tester) async {
+        await tester.runAsync(() async {
+          final fixture = await _Fixture.open(legacy: true);
+          final credentials = fixture.active.read(
+            authCredentialsStoreProvider.notifier,
+          );
+          Future<void> leaveAccount() async {
+            await credentials.withIdentityChange(() async {
+              await credentials.clearUiLoginTokens();
+              fixture.active.read(authTypeKeyProvider.notifier).update(mode);
+            });
+            credentials.activateSession();
+            await fixture.active.read(serverInstanceIdProvider.future);
+          }
+
+          await leaveAccount();
+          final storage = fixture.active.read(offlineRuntimeStorageProvider)!;
+          fixture.serverAccess = true;
+          fixture.active.invalidate(offlineServerAccessProvider);
+          await fixture.active.read(offlineSyncProvider)!.onSynced!();
+          fixture.serverAccess = false;
+          fixture.active.invalidate(offlineServerAccessProvider);
+          expect(
+            fixture.preferences.getString(offlineNonAccountCatalogServerIdKey),
+            'basic-server',
+          );
+          await storage.db.upsertMangaMetadata(
+            id: 2,
+            title: 'Saved without login',
+            updatedAt: DateTime(2026),
+          );
+          final page = File(p.join(storage.paths.baseDir, '2', '8', '000.jpg'));
+          await page.parent.create(recursive: true);
+          await page.writeAsBytes([7, 8, 9]);
+          await credentials.withIdentityChange(() async {
+            fixture.active
+                .read(authTypeKeyProvider.notifier)
+                .update(AuthType.uiLogin);
+            await credentials.saveUiLoginTokens(
+              accessToken: 'return-A',
+              refreshToken: 'return-refresh-A',
+              binding: _a,
+            );
+          });
+          credentials.activateSession();
+          expect(
+            fixture.preferences.getString(DBKeys.offlineCatalogServerId.name),
+            'A',
+          );
+          expect(
+            fixture.preferences.getString(offlineNonAccountCatalogServerIdKey),
+            'basic-server',
+          );
+          await leaveAccount();
+          expect(
+            await fixture.active.read(offlineServerMismatchProvider.future),
+            isNull,
+          );
+          expect(fixture.active.read(offlineActiveProvider), isTrue);
+          final returned = fixture.active.read(offlineReadDatabaseProvider)!;
+          expect((await returned.mangaById(2))?.title, 'Saved without login');
+          expect(await page.readAsBytes(), [7, 8, 9]);
+          fixture.nonAccountServerId = 'different-server';
+          fixture.active.invalidate(serverInstanceIdProvider);
+          fixture.active.invalidate(offlineServerMismatchProvider);
+          final mismatch = await fixture.active.read(
+            offlineServerMismatchProvider.future,
+          );
+          expect(mismatch?.catalogServer, 'basic-server');
+          expect(
+            fixture.preferences.getString(DBKeys.offlineCatalogServerId.name),
+            'A',
+          );
+          expect(
+            offlineCatalogServerIdKey(fixture.preferences),
+            offlineNonAccountCatalogServerIdKey,
+          );
+          await fixture.close();
+          fixture.active.dispose();
+        });
+      },
+    );
+  }
+
   testWidgets(
     'recovery lock timeout shows Retry and succeeds after the worker releases',
     (tester) async {
@@ -353,7 +443,7 @@ void main() {
     });
   });
 
-  testWidgets('failed login during recovery leaves a retryable failure', (
+  testWidgets('same-account re-login preserves in-flight storage recovery', (
     tester,
   ) async {
     await tester.runAsync(() async {
@@ -366,17 +456,52 @@ void main() {
       final credentials = fixture.active.read(
         authCredentialsStoreProvider.notifier,
       );
-      await expectLater(
-        credentials.withIdentityChange<void>(() async {
-          throw StateError('login rejected');
-        }),
-        throwsStateError,
+      final login = credentials.withIdentityChange(
+        () => credentials.saveUiLoginTokens(
+          accessToken: 'renewed-A',
+          refreshToken: 'renewed-refresh-A',
+          binding: _a,
+        ),
       );
       fixture.recoveryRelease!.complete();
-      await recovery;
+      await Future.wait([recovery, login]);
       expect(
         fixture.active.read(accountStorageRecoveryProvider)?.phase,
-        AccountStorageRecoveryPhase.failed,
+        AccountStorageRecoveryPhase.pending,
+      );
+      credentials.activateSession();
+      fixture.recoveryStarted = null;
+      await session.recover();
+      expect(fixture.active.read(accountStorageRecoveryProvider), isNull);
+      final storage = fixture.active.read(offlineRuntimeStorageProvider)!;
+      expect((await storage.db.mangaById(1))?.title, 'Legacy');
+      await fixture.close();
+      fixture.active.dispose();
+    });
+  });
+
+  testWidgets('failed login leaves cancelled recovery pending for startup', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final fixture = await _Fixture.open(legacy: true, partial: true);
+      fixture.recoveryStarted = Completer<void>();
+      fixture.recoveryRelease = Completer<void>();
+      final session = fixture.active.read(accountSessionStorageProvider);
+      final recovery = session.recover();
+      await fixture.recoveryStarted!.future;
+      final credentials = fixture.active.read(
+        authCredentialsStoreProvider.notifier,
+      );
+      final login = credentials.withIdentityChange<void>(() async {
+        throw StateError('login rejected');
+      });
+      final rejected = expectLater(login, throwsStateError);
+      fixture.recoveryRelease!.complete();
+      await Future.wait([recovery, rejected]);
+      expect(
+        fixture.active.read(accountStorageRecoveryProvider)?.phase,
+        AccountStorageRecoveryPhase.pending,
       );
       credentials.activateSession();
       fixture.recoveryStarted = null;
@@ -491,7 +616,7 @@ void main() {
           fixture.preferences,
         );
         await repository.remove(
-          (await repository.list()).single,
+          (await repository.list(activePath: nonAccount.paths.baseDir)).single,
           canRemove: () => true,
         );
         credentials = fixture.active.read(

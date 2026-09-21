@@ -47,7 +47,7 @@ class AccountSessionStorage implements AuthSessionTransition {
   AccountSessionStorage(this._ref);
   final Ref _ref;
   Future<void>? _recoveryFlight;
-  Object? _recoveryOwner;
+  bool Function()? _recoveryIsCurrent;
 
   Future<void> recover({Map<int, bool> progressChoices = const {}}) {
     if (_recoveryFlight != null) return _recoveryFlight!;
@@ -57,8 +57,7 @@ class AccountSessionStorage implements AuthSessionTransition {
     final current = _ref
         .read(authCredentialsStoreProvider.notifier)
         .captureSession();
-    final owner = _owner();
-    _recoveryOwner = owner;
+    _recoveryIsCurrent = current;
     final status = _ref.read(accountStorageRecoveryProvider.notifier);
     final work = Future<void>(() async {
       if (!_ref.mounted || !current()) return;
@@ -85,13 +84,16 @@ class AccountSessionStorage implements AuthSessionTransition {
         }
       } catch (error, stack) {
         debugPrint('Offline storage recovery failed: $error\n$stack');
-        if (_ref.mounted && (current() || _owner() == owner)) {
+        if (current()) {
           status.update(
             AccountStorageRecoveryState(
               AccountStorageRecoveryPhase.failed,
               conflicts: error is AccountStorageProgressConflict
                   ? error.conflicts
                   : const [],
+              details: error is AccountStorageProgressConflict
+                  ? null
+                  : error.toString(),
             ),
           );
         }
@@ -100,7 +102,7 @@ class AccountSessionStorage implements AuthSessionTransition {
     _recoveryFlight = work;
     return work.whenComplete(() {
       _recoveryFlight = null;
-      _recoveryOwner = null;
+      _recoveryIsCurrent = null;
     });
   }
 
@@ -127,7 +129,14 @@ class AccountSessionStorage implements AuthSessionTransition {
           succeeded = true;
           return result;
         } finally {
-          if (previousOwner != _owner() || (succeeded && current == null)) {
+          final interruptedRecovery =
+              current == null &&
+              (_recoveryFlight != null ||
+                  _ref.read(accountStorageRecoveryProvider)?.phase ==
+                      AccountStorageRecoveryPhase.recovering);
+          if (previousOwner != _owner() ||
+              (succeeded && current == null) ||
+              interruptedRecovery) {
             await restore(ownedRoot: background.ownedStorageRoot);
           }
         }
@@ -158,9 +167,9 @@ class AccountSessionStorage implements AuthSessionTransition {
   }) async {
     if (recovery == null) {
       final flight = _recoveryFlight;
-      final recoveringOwner = _recoveryOwner;
+      final recoveryIsCurrent = _recoveryIsCurrent;
       await flight;
-      if (flight != null && _owner() == recoveringOwner) return;
+      if (flight != null && recoveryIsCurrent?.call() == true) return;
       _ref.read(accountStorageRecoveryProvider.notifier).update(null);
     }
     final preferences = _ref.read(sharedPreferencesProvider);
@@ -218,8 +227,9 @@ class AccountSessionStorage implements AuthSessionTransition {
               _ref
                   .read(accountStorageRecoveryProvider.notifier)
                   .update(
-                    const AccountStorageRecoveryState(
+                    AccountStorageRecoveryState(
                       AccountStorageRecoveryPhase.failed,
+                      details: error.toString(),
                     ),
                   );
               return null;
@@ -274,10 +284,7 @@ class AccountSessionStorage implements AuthSessionTransition {
             }
             await preferences.setBool(
               offlineAccountScopedKey,
-              storage != null &&
-                  !isNonAccountStoragePath(storage.paths.baseDir) &&
-                  offlineControlRoot(storage.paths.baseDir) !=
-                      storage.paths.baseDir,
+              storage != null && isAccountStoragePath(storage.paths.baseDir),
             );
             await preferences.setBool(
               offlineNonAccountScopedKey,

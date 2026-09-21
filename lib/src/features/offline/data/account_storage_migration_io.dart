@@ -94,27 +94,6 @@ Future<String?> claimRootAccountStorage({
   if (claimed != null && ownerType == FileSystemEntityType.notFound) {
     throw StateError('Catalogue owner is unknown');
   }
-  for (final name in [
-    'catalog.sqlite',
-    'catalog.sqlite-wal',
-    'catalog.sqlite-shm',
-    'catalog.sqlite-journal',
-  ]) {
-    final path = p.join(offlineRoot, name);
-    final type = await FileSystemEntity.type(path, followLinks: false);
-    if (type != FileSystemEntityType.notFound &&
-        type != FileSystemEntityType.file) {
-      throw FileSystemException('Invalid root catalogue', path);
-    }
-  }
-  await for (final entity in Directory(offlineRoot).list(followLinks: false)) {
-    final name = p.basename(entity.path);
-    if (name != 'covers' && !RegExp(r'^[0-9]+$').hasMatch(name)) continue;
-    if (entity is! Directory) {
-      throw FileSystemException('Invalid root storage directory', entity.path);
-    }
-    await _checkTree(entity);
-  }
   final expectedOwner = accountOwner ?? 'legacy';
   for (final name in [
     rootAccountStorageMarker,
@@ -135,6 +114,7 @@ Future<String?> claimRootAccountStorage({
   if (ownerType == FileSystemEntityType.file) {
     await _checkAccountOwner(owner, expectedOwner);
   }
+  await vetOfflineStorage(path: offlineRoot, offlineRoot: offlineRoot);
   for (final entry in {
     '.account-owner': expectedOwner,
     rootAccountStorageMarker: instanceId,
@@ -155,6 +135,82 @@ Future<String?> claimRootAccountStorage({
     await pending.rename(file.path);
   }
   return offlineRoot;
+}
+
+const storageVettedMarker = '.storage-vetted';
+const _storageVetVersion = '1';
+
+Future<void> vetOfflineStorage({
+  required String path,
+  required String offlineRoot,
+  bool force = false,
+  bool writeMarker = true,
+  AccountStorageRecovery? recovery,
+}) async {
+  await _checkAncestors(path, offlineRoot);
+  for (final name in [
+    'catalog.sqlite',
+    'catalog.sqlite-wal',
+    'catalog.sqlite-shm',
+    'catalog.sqlite-journal',
+    '.account-owner',
+  ]) {
+    final file = p.join(path, name);
+    final type = await FileSystemEntity.type(file, followLinks: false);
+    if (type != FileSystemEntityType.notFound &&
+        type != FileSystemEntityType.file) {
+      throw FileSystemException('Invalid offline catalogue', file);
+    }
+  }
+  final marker = File(p.join(path, storageVettedMarker));
+  final type = await FileSystemEntity.type(marker.path, followLinks: false);
+  if (type != FileSystemEntityType.notFound &&
+      type != FileSystemEntityType.file) {
+    throw FileSystemException('Invalid storage vet marker', marker.path);
+  }
+  if (!force &&
+      type == FileSystemEntityType.file &&
+      await marker.readAsString() == _storageVetVersion) {
+    return;
+  }
+  final directory = Directory(path);
+  if (await directory.exists()) {
+    if (p.equals(path, offlineRoot)) {
+      await for (final entity in directory.list(followLinks: false)) {
+        final name = p.basename(entity.path);
+        if (name != 'covers' && !RegExp(r'^[0-9]+$').hasMatch(name)) continue;
+        if (entity is! Directory) {
+          throw FileSystemException(
+            'Invalid root storage directory',
+            entity.path,
+          );
+        }
+        await _checkTree(entity, recovery);
+      }
+    } else {
+      await _checkTree(directory, recovery);
+    }
+  }
+  if (writeMarker) {
+    await directory.create(recursive: true);
+    await _writeStorageVetMarker(path, recovery);
+  }
+}
+
+Future<void> _writeStorageVetMarker(
+  String path,
+  AccountStorageRecovery? recovery,
+) async {
+  final marker = File(p.join(path, storageVettedMarker));
+  final pending = File('${marker.path}.pending');
+  final type = await FileSystemEntity.type(pending.path, followLinks: false);
+  if (type != FileSystemEntityType.notFound &&
+      type != FileSystemEntityType.file) {
+    throw FileSystemException('Invalid storage vet staging file', pending.path);
+  }
+  recovery?.check();
+  await pending.writeAsString(_storageVetVersion, flush: true);
+  await pending.rename(marker.path);
 }
 
 const accountStorageMarker = '.account-complete';
@@ -276,22 +332,14 @@ Future<String> _prepareAccountStorage({
       claimed == null &&
       !cleared &&
       await File(p.join(offlineRoot, 'catalog.sqlite')).exists();
-  await _checkTree(target, recovery);
-  if (complete && !cleanup) {
-    for (final name in [
-      'catalog.sqlite',
-      'catalog.sqlite-wal',
-      'catalog.sqlite-shm',
-    ]) {
-      final path = p.join(target.path, name);
-      final type = await FileSystemEntity.type(path, followLinks: false);
-      if (type != FileSystemEntityType.notFound &&
-          type != FileSystemEntityType.file) {
-        throw FileSystemException('Invalid account catalogue', path);
-      }
-    }
-    return target.path;
-  }
+  await vetOfflineStorage(
+    path: target.path,
+    offlineRoot: offlineRoot,
+    force: !complete || cleanup,
+    writeMarker: complete && !cleanup,
+    recovery: recovery,
+  );
+  if (complete && !cleanup) return target.path;
   final sourceDb = File(p.join(offlineRoot, 'catalog.sqlite'));
   final sourceType = await FileSystemEntity.type(
     sourceDb.path,
@@ -319,6 +367,8 @@ Future<String> _prepareAccountStorage({
           '.bg_permission.yield',
           '.account-owner',
           accountStorageClearedMarker,
+          storageVettedMarker,
+          '$storageVettedMarker.pending',
         }.contains(p.basename(entry.path)),
       );
   if (!canResume && hasAccountData) {
@@ -378,11 +428,18 @@ Future<String> _prepareAccountStorage({
       }
       recovery?.check();
       await pending.rename(destinationDb.path);
+      await backup.delete();
     }
     if (!await destinationDb.exists()) {
       final pending = File('${destinationDb.path}.copying');
       await _copyVerified(sourceDb, pending, copyFile, recovery, worker);
       await pending.rename(destinationDb.path);
+    }
+    final backup = File('${destinationDb.path}.truncated-backup');
+    if (await backup.exists() &&
+        _catalogueIsValid(destinationDb.path) &&
+        await worker.run(sourceDb.path, backup.path, 'prefix')) {
+      await backup.delete();
     }
     await reconcileAccountCatalogues(
       sourceDb.path,
@@ -427,6 +484,7 @@ Future<String> _prepareAccountStorage({
       database.close();
     }
   }
+  await _writeStorageVetMarker(target.path, recovery);
   final marker = File(p.join(target.path, accountStorageMarker));
   recovery?.check();
   await marker.writeAsString(instanceId, flush: true);

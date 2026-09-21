@@ -6,13 +6,13 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../constants/db_keys.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../account_storage_paths.dart';
 import '../offline_database.dart';
 import '../offline_download_providers.dart';
 import '../offline_repository.dart';
 import '../offline_settings_providers.dart';
+import '../offline_storage_identity.dart';
 import '../offline_types.dart';
 import 'background_schedule.dart';
 import 'catchup_work_spec.dart';
@@ -36,7 +36,7 @@ Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
         }
         final serverId = read(
           sharedPreferencesProvider,
-        ).getString(DBKeys.offlineCatalogServerId.name);
+        ).getString(offlineCatalogServerIdKey(read(sharedPreferencesProvider)));
         if (serverId == null ||
             CatchupStateStore(
               read(sharedPreferencesProvider),
@@ -94,10 +94,9 @@ Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
             nonAccountScoped: isNonAccountStoragePath(
               read(offlinePathsProvider).baseDir,
             ),
-            accountScoped:
-                !isNonAccountStoragePath(read(offlinePathsProvider).baseDir) &&
-                offlineControlRoot(read(offlinePathsProvider).baseDir) !=
-                    read(offlinePathsProvider).baseDir,
+            accountScoped: isAccountStoragePath(
+              read(offlinePathsProvider).baseDir,
+            ),
             wifiOnly: read(offlineWifiOnlyProvider) ?? true,
             storageCapEnabled: nets.storageCapEnabled,
             storageCapBytes: nets.storageCapBytes,

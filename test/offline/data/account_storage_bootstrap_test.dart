@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
@@ -67,6 +68,40 @@ void main() {
           throwsA(isA<FileSystemException>()),
         );
         expect(await outside.list().isEmpty, isTrue);
+      },
+    );
+  }
+
+  for (final claimed in [false, true]) {
+    test(
+      'non-account ${claimed ? 'scoped' : 'root'} reopen uses vet marker',
+      () async {
+        final support = await Directory.systemTemp.createTemp(
+          'no-auth-vetted-',
+        );
+        addTearDown(() => support.delete(recursive: true));
+        PathProviderPlatform.instance = _Support(support.path);
+        final root = Directory(p.join(support.path, 'offline'));
+        await root.create();
+        if (claimed) {
+          await File(p.join(root.path, '.account-root-id')).writeAsString('A');
+        }
+        final first = (await initOfflineStorage())!;
+        final base = first.paths.baseDir;
+        await first.db.close();
+        final pages = Directory(p.join(base, '1/7'));
+        await pages.create(recursive: true);
+        final link = Link(p.join(pages.path, 'linked'));
+        await link.create(support.path);
+        final reopened = (await initOfflineStorage())!;
+        await reopened.db.close();
+        await File(p.join(base, storageVettedMarker)).delete();
+        await expectLater(
+          initOfflineStorage(),
+          throwsA(
+            isA<FileSystemException>().having((e) => e.path, 'path', link.path),
+          ),
+        );
       },
     );
   }

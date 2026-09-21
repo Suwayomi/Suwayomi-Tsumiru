@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/db_keys.dart';
 import 'account_catalogue.dart';
 import 'account_storage_migration_io.dart';
+import 'account_storage_paths.dart';
 import 'background/background_download_lock.dart';
 
 Future<AccountCatalogueRepository> createAccountCatalogueRepository(
@@ -66,6 +67,7 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
               'catalog.sqlite-journal',
               'catalog.sqlite-shm',
               accountStorageMarker,
+              storageVettedMarker,
               accountStorageClearedMarker,
               '.account-owner',
               rootAccountStorageMarker,
@@ -178,6 +180,47 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
         continue;
       }
     }
+    final nonAccount = nonAccountStoragePath(root);
+    if (activePath == null || !p.equals(nonAccount, activePath)) {
+      try {
+        if (await _directory(nonAccount)) {
+          final entries = await _tree(nonAccount);
+          final files = entries.whereType<File>().where(
+            (file) =>
+                p.dirname(file.path) != nonAccount ||
+                !_locks.contains(p.basename(file.path)),
+          );
+          var bytes = 0;
+          for (final file in files) {
+            bytes += await file.length();
+          }
+          if (files.isNotEmpty) {
+            final id =
+                preferences.getString(offlineNonAccountCatalogServerIdKey) ??
+                'non-account';
+            final verifiedId = preferences.getString(
+              offlineNonAccountLastServerIdKey,
+            );
+            result.add(
+              AccountCatalogue(
+                id: id,
+                owner: 'non-account',
+                path: nonAccount,
+                bytes: bytes,
+                isNonAccount: true,
+                address: verifiedId == id
+                    ? preferences.getString(
+                        offlineNonAccountLastServerAddressKey,
+                      )
+                    : null,
+              ),
+            );
+          }
+        }
+      } on Object {
+        // An invalid store cannot be safely removed.
+      }
+    }
     result.sort((a, b) => a.id.compareTo(b.id));
     return result;
   }
@@ -187,11 +230,20 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
     AccountCatalogue catalogue, {
     required bool Function() canRemove,
   }) async {
-    final target = await resolvedAccountStoragePath(root, catalogue.id);
+    final target = catalogue.isNonAccount
+        ? nonAccountStoragePath(root)
+        : await resolvedAccountStoragePath(root, catalogue.id);
     if (!p.equals(target, catalogue.path) || !canRemove()) {
       throw StateError('Catalogue is active or the session changed');
     }
-    if (await _owner(catalogue.id) != catalogue.owner) {
+    if (!await _directory(root) || !await _directory(target)) {
+      throw StateError('Catalogue directory changed');
+    }
+    if (catalogue.isNonAccount
+        ? (preferences.getString(offlineNonAccountCatalogServerIdKey) ??
+                  'non-account') !=
+              catalogue.id
+        : await _owner(catalogue.id) != catalogue.owner) {
       throw StateError('Catalogue owner changed');
     }
     await _tree(target);
@@ -212,19 +264,31 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
         }
         held.add(lock);
       }
-      if (!canRemove() || await _owner(catalogue.id) != catalogue.owner) {
+      if (!canRemove() ||
+          !await _directory(root) ||
+          !await _directory(target) ||
+          (catalogue.isNonAccount
+              ? (preferences.getString(offlineNonAccountCatalogServerIdKey) ??
+                        'non-account') !=
+                    catalogue.id
+              : await _owner(catalogue.id) != catalogue.owner)) {
         throw StateError('Catalogue is active or the session changed');
       }
       final entries = await _tree(target);
       if (!canRemove()) throw StateError('Authentication session changed');
-      await accountStorageCleared(offlineRoot: root, instanceId: catalogue.id);
-      await File(
-        p.join(target, accountStorageClearedMarker),
-      ).writeAsString(catalogue.id, flush: true);
+      if (!catalogue.isNonAccount) {
+        await accountStorageCleared(
+          offlineRoot: root,
+          instanceId: catalogue.id,
+        );
+        await File(
+          p.join(target, accountStorageClearedMarker),
+        ).writeAsString(catalogue.id, flush: true);
+      }
       final rootCatalogue = p.equals(target, root);
       final markers = {
-        accountStorageMarker,
-        if (!rootCatalogue) '.account-owner',
+        if (!catalogue.isNonAccount) accountStorageMarker,
+        if (!catalogue.isNonAccount && !rootCatalogue) '.account-owner',
       };
       final retained = {
         rootAccountStorageMarker,
@@ -256,17 +320,23 @@ class NativeAccountCatalogueRepository implements AccountCatalogueRepository {
       for (final name in markers) {
         await File(p.join(target, name)).delete();
       }
-      final keys = {
-        'account.catalogue/${catalogue.id}',
-        'account.current/${catalogue.id}',
-        '${DBKeys.offlineCatchUpWatermark.name}/${catalogue.id}',
-        '${DBKeys.offlineCatchUpAwaitingPull.name}/${catalogue.id}',
-        'offlinePhantomCleanupDone/${catalogue.id}',
-        'offline.downloadPermission/${catalogue.id}',
-        'catchup_ledger/${catalogue.id}',
-        if (_metadata('catchup_ledger')['serverId'] == catalogue.id)
-          'catchup_ledger',
-      };
+      final keys = catalogue.isNonAccount
+          ? {
+              offlineNonAccountCatalogServerIdKey,
+              offlineNonAccountLastServerIdKey,
+              offlineNonAccountLastServerAddressKey,
+            }
+          : {
+              'account.catalogue/${catalogue.id}',
+              'account.current/${catalogue.id}',
+              '${DBKeys.offlineCatchUpWatermark.name}/${catalogue.id}',
+              '${DBKeys.offlineCatchUpAwaitingPull.name}/${catalogue.id}',
+              'offlinePhantomCleanupDone/${catalogue.id}',
+              'offline.downloadPermission/${catalogue.id}',
+              'catchup_ledger/${catalogue.id}',
+              if (_metadata('catchup_ledger')['serverId'] == catalogue.id)
+                'catchup_ledger',
+            };
       for (final key in preferences.getKeys().intersection(keys)) {
         if (!await preferences.remove(key)) {
           throw StateError('Could not remove catalogue metadata');

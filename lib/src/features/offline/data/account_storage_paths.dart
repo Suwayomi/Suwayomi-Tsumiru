@@ -2,6 +2,11 @@ import 'package:path/path.dart' as p;
 
 const offlineAccountScopedKey = 'offline_catalog_account_scoped';
 const offlineNonAccountScopedKey = 'offline_catalog_non_account_scoped';
+const offlineNonAccountCatalogServerIdKey =
+    'offline_non_account_catalog_server_id';
+const offlineNonAccountLastServerIdKey = 'offline_non_account_last_server_id';
+const offlineNonAccountLastServerAddressKey =
+    'offline_non_account_last_server_address';
 
 String nonAccountStoragePath(String offlineRoot) =>
     p.join(offlineRoot, 'non-account');
@@ -30,3 +35,7 @@ String offlineControlRoot(String storagePath) {
       ? root
       : storagePath;
 }
+
+bool isAccountStoragePath(String storagePath) =>
+    !isNonAccountStoragePath(storagePath) &&
+    offlineControlRoot(storagePath) != storagePath;

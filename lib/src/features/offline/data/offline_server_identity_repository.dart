@@ -8,7 +8,6 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -20,6 +19,7 @@ import '../../settings/presentation/server/widget/client/server_url_tile/server_
 import 'background/catchup_work_spec.dart';
 import 'graphql/__generated__/server_identity.graphql.dart';
 import 'offline_server_identity.dart';
+import 'offline_storage_identity.dart';
 
 part 'offline_server_identity_repository.g.dart';
 
@@ -122,9 +122,9 @@ final verifiedServerInstanceIdProvider = FutureProvider<String>((ref) async {
       if (!valid()) {
         throw StateError('Server identity changed during verification');
       }
-      await preferences.setString(DBKeys.offlineLastServerId.name, id);
+      await preferences.setString(offlineLastServerIdKey(preferences), id);
       await preferences.setString(
-        DBKeys.offlineLastServerAddress.name,
+        offlineLastServerAddressKey(preferences),
         address,
       );
       await controls.setIdentityAuthorized(true);
@@ -157,9 +157,9 @@ Future<String> serverInstanceId(Ref ref) async {
   if (!verified.isLoading && verified.asData != null) {
     return verified.requireValue;
   }
-  final cachedId = preferences.getString(DBKeys.offlineLastServerId.name);
+  final cachedId = preferences.getString(offlineLastServerIdKey(preferences));
   final cachedAddress = preferences.getString(
-    DBKeys.offlineLastServerAddress.name,
+    offlineLastServerAddressKey(preferences),
   );
   if (cachedId != null && cachedId.isNotEmpty && cachedAddress == address) {
     return cachedId;

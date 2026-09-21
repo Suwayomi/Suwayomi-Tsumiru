@@ -31,6 +31,7 @@ import 'offline_download_permission.dart';
 import 'offline_download_providers.dart';
 import 'offline_repository.dart';
 import 'offline_runtime_storage.dart';
+import 'offline_storage_identity.dart';
 import 'offline_types.dart';
 
 /// Closes the #310 gap: a library update told the SERVER to find new chapters,
@@ -165,7 +166,7 @@ Future<bool> _runWorkerObligations(OfflineRead read) async {
   try {
     final catalogServerId = read(
       sharedPreferencesProvider,
-    ).getString(DBKeys.offlineCatalogServerId.name);
+    ).getString(offlineCatalogServerIdKey(read(sharedPreferencesProvider)));
     if (catalogServerId == null) return true;
     final paths = read(offlinePathsProvider);
     final catchupStore = await CatchupStateStore.open();

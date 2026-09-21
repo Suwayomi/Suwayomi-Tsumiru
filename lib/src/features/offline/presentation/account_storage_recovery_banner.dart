@@ -48,6 +48,7 @@ class AccountStorageRecoveryBanner extends ConsumerWidget {
                         : context.l10n.offlineRecoveryRunning,
                   ),
                 ),
+                if (failed && recovery.details != null) Text(recovery.details!),
                 if (!failed && recovery.completed > 0)
                   Text(
                     context.l10n.offlineRecoveryCompleted(recovery.completed),

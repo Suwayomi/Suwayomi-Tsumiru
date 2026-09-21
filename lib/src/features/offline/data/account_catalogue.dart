@@ -4,10 +4,12 @@ class AccountCatalogue {
     required this.owner,
     required this.path,
     required this.bytes,
+    this.isNonAccount = false,
     this.username,
     this.address,
   });
 
+  final bool isNonAccount;
   final String id;
   final String owner;
   final String path;

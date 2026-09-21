@@ -15,10 +15,12 @@ class AccountStorageRecoveryState {
     this.phase, {
     this.completed = 0,
     this.conflicts = const [],
+    this.details,
   });
 
   final AccountStorageRecoveryPhase phase;
   final int completed;
+  final String? details;
   final List<AccountProgressConflict> conflicts;
 }
 

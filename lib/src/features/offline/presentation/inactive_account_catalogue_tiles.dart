@@ -27,8 +27,10 @@ class InactiveAccountCatalogueTiles extends ConsumerWidget {
         for (final catalogue in rows)
           ListTile(
             title: Text(
-              catalogue.username ??
-                  context.l10n.accountCatalogueOwner(catalogue.owner),
+              catalogue.isNonAccount
+                  ? context.l10n.accountCatalogueWithoutLogin
+                  : catalogue.username ??
+                        context.l10n.accountCatalogueOwner(catalogue.owner),
             ),
             subtitle: Text(
               '${catalogue.address ?? context.l10n.accountCatalogueUnknownServer} · ${formatBytes(catalogue.bytes)}',
@@ -60,8 +62,10 @@ class InactiveAccountCatalogueTiles extends ConsumerWidget {
         title: Text(context.l10n.accountCatalogueRemoveTitle),
         content: Text(
           context.l10n.accountCatalogueRemoveConfirm(
-            catalogue.username ??
-                context.l10n.accountCatalogueOwner(catalogue.owner),
+            catalogue.isNonAccount
+                ? context.l10n.accountCatalogueWithoutLogin
+                : catalogue.username ??
+                      context.l10n.accountCatalogueOwner(catalogue.owner),
             catalogue.address ?? context.l10n.accountCatalogueUnknownServer,
           ),
         ),

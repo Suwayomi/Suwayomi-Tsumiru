@@ -24,6 +24,7 @@ import '../offline_download_providers.dart' show pageImageExt;
 import '../offline_page_store_io.dart';
 import '../offline_paths.dart';
 import '../offline_server_identity.dart';
+import '../offline_storage_identity.dart';
 import 'background_chapter_fetch.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
@@ -350,9 +351,9 @@ class DownloadTaskHandler extends TaskHandler {
         controls.identityEpoch != order.identityEpoch ||
         order.catalogServerId == null ||
         controls.catalogServerId != order.catalogServerId ||
-        prefs.getString(DBKeys.offlineLastServerId.name) !=
+        prefs.getString(offlineLastServerIdKey(prefs)) !=
             order.catalogServerId ||
-        prefs.getString(DBKeys.offlineLastServerAddress.name) !=
+        prefs.getString(offlineLastServerAddressKey(prefs)) !=
             serverAddress(
               baseUrl: order.serverBase,
               port: order.port,

@@ -14,7 +14,6 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -40,6 +39,7 @@ import '../offline_paths.dart';
 import '../offline_repository.dart';
 import '../offline_server_identity_repository.dart';
 import '../offline_settings_providers.dart';
+import '../offline_storage_identity.dart';
 import '../server_reachability.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
@@ -540,7 +540,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     if (_ref.read(offlineEnabledProvider)) return _paths.baseDir;
     final root = '${(await getApplicationSupportDirectory()).path}/offline';
     final preferences = _ref.read(sharedPreferencesProvider);
-    final catalog = preferences.getString(DBKeys.offlineCatalogServerId.name);
+    final catalog = preferences.getString(
+      offlineCatalogServerIdKey(preferences),
+    );
     if (preferences.getBool(offlineNonAccountScopedKey) == true) {
       return nonAccountStoragePath(root);
     }
@@ -920,7 +922,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
       onTimeout: () => _recordTimeout(blockRetry: false),
       catalogServerId: _ref
           .read(sharedPreferencesProvider)
-          .getString(DBKeys.offlineCatalogServerId.name),
+          .getString(
+            offlineCatalogServerIdKey(_ref.read(sharedPreferencesProvider)),
+          ),
     );
   });
 
@@ -1449,7 +1453,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
           ).identityEpoch,
           catalogServerId: _ref
               .read(sharedPreferencesProvider)
-              .getString(DBKeys.offlineCatalogServerId.name),
+              .getString(
+                offlineCatalogServerIdKey(_ref.read(sharedPreferencesProvider)),
+              ),
           serverBase: _ref.read(serverUrlProvider) ?? '',
           port: _ref.read(serverPortProvider),
           addPort: _ref.read(serverPortToggleProvider).ifNull(),

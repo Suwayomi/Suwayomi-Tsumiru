@@ -32,6 +32,34 @@ class _RecordingRecovery extends AccountSessionStorage {
 }
 
 void main() {
+  testWidgets('failed storage validation names its path', (tester) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    const detail =
+        'FileSystemException: Invalid storage entry, path = /offline/accounts/A/12/34/001.jpg';
+    container
+        .read(accountStorageRecoveryProvider.notifier)
+        .update(
+          const AccountStorageRecoveryState(
+            AccountStorageRecoveryPhase.failed,
+            details: detail,
+          ),
+        );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: AccountStorageRecoveryBanner()),
+        ),
+      ),
+    );
+    expect(find.text(detail), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'progress conflict requires a choice and retries with that choice',
     (tester) async {

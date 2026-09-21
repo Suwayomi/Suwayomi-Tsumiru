@@ -12,6 +12,7 @@ import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/notifications/data/background/notification_background_client.dart';
 import 'package:tsumiru/src/features/notifications/data/notification_state_store.dart';
+import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_completion_log.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
@@ -278,6 +279,37 @@ void main() {
       ),
     );
   }
+
+  test('non-account worker uses its own identity and directory', () async {
+    serverChapterCount = 1;
+    await enableOverlap();
+    await state.writeSpec(
+      CatchupWorkSpec.fromJson({
+        ...state.readSpec()!.toJson(),
+        'nonAccountScoped': true,
+      }),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(offlineNonAccountScopedKey, true);
+    await prefs.setString(offlineNonAccountCatalogServerIdKey, 'catalog-uuid');
+    await prefs.setString(offlineNonAccountLastServerIdKey, 'catalog-uuid');
+    await prefs.setString(
+      offlineNonAccountLastServerAddressKey,
+      config.verifiedAddress!,
+    );
+    await prefs.setString('offlineCatalogServerId', 'login-account');
+    await prefs.setString('offlineLastServerId', 'login-account');
+    expect(await run(), isTrue);
+    final ownedLog = BackgroundCompletionLog(
+      File('${tmp.path}/offline/non-account/.bg_completion.log'),
+    );
+    expect(
+      (await ownedLog.parse()).whereType<ChapterEntry>().single.status,
+      'downloaded',
+    );
+    expect(await log.parse(), isEmpty);
+    expect(prefs.getString('offlineCatalogServerId'), 'login-account');
+  });
 
   test('moving to non-account storage cancels an old-root worker', () async {
     serverChapterCount = 1;

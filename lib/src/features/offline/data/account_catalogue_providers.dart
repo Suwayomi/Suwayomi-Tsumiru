@@ -28,7 +28,10 @@ final inactiveAccountCataloguesProvider =
         activePath: storage?.paths.baseDir,
       );
       return catalogues
-          .where((catalogue) => catalogue.id != binding?.catalogId)
+          .where(
+            (catalogue) =>
+                catalogue.isNonAccount || catalogue.id != binding?.catalogId,
+          )
           .toList();
     });
 
@@ -57,7 +60,7 @@ class AccountCatalogueActions {
             .value
             ?.accountBinding;
         final path = ref.read(offlineRuntimeStorageProvider)?.paths.baseDir;
-        return binding?.catalogId != catalogue.id &&
+        return (catalogue.isNonAccount || binding?.catalogId != catalogue.id) &&
             (path == null || !p.equals(path, catalogue.path));
       }
 

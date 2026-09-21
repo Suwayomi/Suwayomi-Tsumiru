@@ -63,6 +63,7 @@ import 'offline_repository.dart';
 import 'offline_runtime_storage.dart';
 import 'offline_series_entry.dart';
 import 'offline_settings_providers.dart';
+import 'offline_storage_identity.dart';
 import 'reconcile_types.dart';
 
 part 'offline_download_providers.g.dart';
@@ -168,7 +169,7 @@ Future<void> clearOfflineCatalog(WidgetRef ref) async {
       },
       clearIdentity: () async {
         final preferences = ref.read(sharedPreferencesProvider);
-        await preferences.remove(DBKeys.offlineCatalogServerId.name);
+        await preferences.remove(offlineCatalogServerIdKey(preferences));
         await preferences.remove(
           DBKeys.offlineServerMismatchDismissedList.name,
         );

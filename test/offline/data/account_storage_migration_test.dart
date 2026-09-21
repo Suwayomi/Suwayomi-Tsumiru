@@ -321,10 +321,61 @@ void main() {
     } finally {
       db.close();
     }
-    expect(
-      File('${existing.path}.truncated-backup').readAsBytesSync(),
-      source.sublist(0, 1024),
+    expect(File('${existing.path}.truncated-backup').existsSync(), isFalse);
+  });
+
+  test(
+    'interrupted catalogue replacement keeps backup until retry succeeds',
+    () async {
+      legacy();
+      final source = File(
+        p.join(root.path, 'catalog.sqlite'),
+      ).readAsBytesSync();
+      final target = accountStoragePath(root.path, 'a');
+      final destination = File(p.join(target, 'catalog.sqlite'))
+        ..parent.createSync(recursive: true)
+        ..writeAsBytesSync(source.sublist(0, 1024));
+      final backup = File('${destination.path}.truncated-backup');
+      await expectLater(
+        prepareAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'a',
+          legacyInstanceId: 'a',
+          recovery: AccountStorageRecovery(
+            isCurrent: () => !backup.existsSync(),
+            onProgress: (_) {},
+          ),
+        ),
+        throwsStateError,
+      );
+      expect(backup.readAsBytesSync(), source.sublist(0, 1024));
+      expect(destination.existsSync(), isFalse);
+      expect(File(p.join(target, storageVettedMarker)).existsSync(), isFalse);
+      expect(File(p.join(target, accountStorageMarker)).existsSync(), isFalse);
+      await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+        legacyInstanceId: 'a',
+      );
+      expect(backup.existsSync(), isFalse);
+      expect(destination.readAsBytesSync(), source);
+    },
+  );
+
+  test('successful retry preserves a divergent corrupt backup', () async {
+    legacy();
+    final target = accountStoragePath(root.path, 'a');
+    final destination = File(p.join(target, 'catalog.sqlite'));
+    destination.parent.createSync(recursive: true);
+    File(p.join(root.path, 'catalog.sqlite')).copySync(destination.path);
+    final backup = File('${destination.path}.truncated-backup')
+      ..writeAsStringSync('divergent recovery bytes');
+    await prepareAccountStorage(
+      offlineRoot: root.path,
+      instanceId: 'a',
+      legacyInstanceId: 'a',
     );
+    expect(backup.readAsStringSync(), 'divergent recovery bytes');
   });
 
   test('recovery replaces an empty final catalogue', () async {
@@ -390,6 +441,7 @@ void main() {
       instanceId: 'a',
       legacyInstanceId: 'a',
     );
+    File(p.join(root.path, storageVettedMarker)).deleteSync();
     final page = File(p.join(root.path, '1/7/001.jpg'));
     page.deleteSync();
     Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
@@ -410,6 +462,7 @@ void main() {
       instanceId: 'a',
       legacyInstanceId: 'a',
     );
+    File(p.join(target, storageVettedMarker)).deleteSync();
     final page = File(p.join(target, '1/7/001.jpg'));
     page.deleteSync();
     Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
@@ -418,6 +471,115 @@ void main() {
       throwsA(isA<FileSystemException>()),
     );
   });
+
+  for (final atRoot in [false, true]) {
+    test(
+      'vetted ${atRoot ? 'root' : 'account'} reopen skips page traversal',
+      () async {
+        legacy();
+        final target = atRoot
+            ? (await claimRootAccountStorage(
+                offlineRoot: root.path,
+                instanceId: 'a',
+                legacyInstanceId: 'a',
+              ))!
+            : await prepareAccountStorage(
+                offlineRoot: root.path,
+                instanceId: 'a',
+                legacyInstanceId: 'a',
+              );
+        expect(
+          File(p.join(target, storageVettedMarker)).readAsStringSync(),
+          '1',
+        );
+        final page = File(p.join(target, '1/7/001.jpg'));
+        page.deleteSync();
+        Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+        expect(
+          await prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
+          target,
+        );
+        File(p.join(target, storageVettedMarker)).writeAsStringSync('0');
+        await expectLater(
+          prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
+          throwsA(
+            isA<FileSystemException>().having((e) => e.path, 'path', page.path),
+          ),
+        );
+      },
+    );
+  }
+
+  test(
+    'vetted reopen still rejects catalogue sidecar and marker links',
+    () async {
+      final target = await prepareAccountStorage(
+        offlineRoot: root.path,
+        instanceId: 'a',
+      );
+      final sidecar = Link(p.join(target, 'catalog.sqlite-journal'));
+      sidecar.createSync(p.join(root.path, 'outside'));
+      await expectLater(
+        prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
+        throwsA(
+          isA<FileSystemException>().having(
+            (e) => e.path,
+            'path',
+            sidecar.path,
+          ),
+        ),
+      );
+      sidecar.deleteSync();
+      final marker = File(p.join(target, storageVettedMarker));
+      marker.deleteSync();
+      Link(marker.path).createSync(p.join(root.path, 'outside'));
+      await expectLater(
+        prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
+        throwsA(
+          isA<FileSystemException>().having((e) => e.path, 'path', marker.path),
+        ),
+      );
+    },
+  );
+
+  test(
+    'incomplete destination is validated despite an existing vet marker',
+    () async {
+      legacy();
+      final target = accountStoragePath(root.path, 'a');
+      Directory(target).createSync(recursive: true);
+      File(p.join(target, storageVettedMarker)).writeAsStringSync('1');
+      final link = Link(p.join(target, 'unsafe'))..createSync(root.path);
+      await expectLater(
+        prepareAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'a',
+          legacyInstanceId: 'a',
+        ),
+        throwsA(
+          isA<FileSystemException>().having((e) => e.path, 'path', link.path),
+        ),
+      );
+      expect(File(p.join(target, accountStorageMarker)).existsSync(), isFalse);
+    },
+  );
+
+  test(
+    'root vetting excludes other accounts and non-account storage',
+    () async {
+      legacy();
+      Link(p.join(root.path, 'accounts/other/link')).createSync(root.path);
+      Link(p.join(root.path, 'non-account')).createSync(root.path);
+      expect(
+        await claimRootAccountStorage(
+          offlineRoot: root.path,
+          instanceId: 'a',
+          legacyInstanceId: 'a',
+        ),
+        root.path,
+      );
+    },
+  );
 
   test('recovery does not overwrite a different existing page', () async {
     legacy();

@@ -21,6 +21,7 @@ import 'offline_paths.dart';
 import 'offline_runtime_storage.dart';
 import 'offline_server_identity.dart';
 import 'offline_server_identity_repository.dart';
+import 'offline_storage_identity.dart';
 import 'offline_sync.dart';
 
 part 'offline_repository.g.dart';
@@ -244,7 +245,9 @@ bool offlineActive(Ref ref) {
   if (!ref.watch(offlineEnabledProvider)) return false;
   final stamp = ref
       .watch(sharedPreferencesProvider)
-      .getString(DBKeys.offlineCatalogServerId.name);
+      .getString(
+        offlineCatalogServerIdKey(ref.read(sharedPreferencesProvider)),
+      );
   final current = ref.watch(serverInstanceIdProvider).value;
   if (current == null) return false;
   return isOfflineCatalogActive(
@@ -282,11 +285,17 @@ Future<OfflineServerMismatch?> offlineServerMismatch(Ref ref) async {
   // Read before the await: touching ref after the async gap throws if this
   // provider was disposed mid-build.
   final catalogDb = ref.watch(offlineDatabaseProvider);
-  final stamp = preferences.getString(DBKeys.offlineCatalogServerId.name);
+  final stampKey = offlineCatalogServerIdKey(preferences);
+  final stamp = preferences.getString(stampKey);
+  final isCurrent = ref
+      .read(authCredentialsStoreProvider.notifier)
+      .captureSession();
   final current = await ref.watch(serverInstanceIdProvider.future);
+  if (!ref.mounted || !isCurrent()) return null;
   if (stamp == null || stamp == current) return null;
   if (!await catalogDb.hasCatalogData()) {
-    await preferences.setString(DBKeys.offlineCatalogServerId.name, current);
+    if (!ref.mounted || !isCurrent()) return null;
+    await preferences.setString(stampKey, current);
     await preferences.remove(DBKeys.offlineServerMismatchDismissedList.name);
     if (ref.mounted) ref.invalidate(offlineActiveProvider);
     return null;
@@ -331,7 +340,9 @@ OfflineDatabase? offlineReadDatabase(Ref ref) {
   if (!ref.watch(offlineEnabledProvider)) return null;
   final stamp = ref
       .watch(sharedPreferencesProvider)
-      .getString(DBKeys.offlineCatalogServerId.name);
+      .getString(
+        offlineCatalogServerIdKey(ref.read(sharedPreferencesProvider)),
+      );
   if (stamp != null && !ref.watch(offlineActiveProvider)) return null;
   return ref.watch(offlineDatabaseProvider);
 }
@@ -357,6 +368,7 @@ OfflineSync? offlineSync(Ref ref) {
   if (identity == null) return null;
   final preferences = ref.watch(sharedPreferencesProvider);
   final mangaRepository = ref.watch(mangaBookRepositoryProvider);
+  final stampKey = offlineCatalogServerIdKey(preferences);
   return OfflineSync(
     ref.watch(offlineDatabaseProvider),
     taskTracker: ref.read(offlineRuntimeStorageProvider.notifier).track,
@@ -370,11 +382,8 @@ OfflineSync? offlineSync(Ref ref) {
     },
     onSynced: () async {
       if (!current()) return;
-      if (preferences.getString(DBKeys.offlineCatalogServerId.name) == null) {
-        await preferences.setString(
-          DBKeys.offlineCatalogServerId.name,
-          identity,
-        );
+      if (preferences.getString(stampKey) == null) {
+        await preferences.setString(stampKey, identity);
         // This closure is captured by OfflineSync and invoked later, from
         // syncManga — this provider can have been disposed/rebuilt by then
         // (e.g. a bulk operation triggering many syncs back to back), and

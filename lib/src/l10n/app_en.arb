@@ -3726,6 +3726,7 @@
   "accountIssueRecoveryCode": "Create recovery code",
   "accountIssueRegistrationCode": "Create registration code",
   "accountPasswordWhitespace": "This server requires a password without leading or trailing spaces.",
+  "accountCatalogueWithoutLogin": "Downloads without account login",
   "accountInactiveCatalogues": "Inactive account downloads",
   "accountCatalogueOwner": "Account {id}",
   "@accountCatalogueOwner": {"placeholders": {"id": {"type": "String"}}},
