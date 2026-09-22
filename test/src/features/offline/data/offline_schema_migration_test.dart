@@ -28,74 +28,89 @@ void main() {
   });
 
   test(
-      'v2 schema persists keep-rule + pinned + downloadedAt across close/reopen',
-      () async {
-    final dbPath = p.join(tmp.path, 'test.db');
+    'v2 schema persists keep-rule + pinned + downloadedAt across close/reopen',
+    () async {
+      final dbPath = p.join(tmp.path, 'test.db');
 
-    // Open, populate, close.
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-      await db.upsertChapterMetadata(
-        id: 10,
-        mangaId: 1,
-        name: 'c',
-        chapterIndex: 1,
-        isRead: false,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 3,
-        updatedAt: DateTime(2026),
-      );
-      await db.setKeepRule(1, OfflineKeepRule.allUnread, 7);
-      await db.setChapterPinned(10, true);
-      await db.setChapterDeviceState(10, OfflineDeviceState.downloaded,
-          bytes: 512, downloadedAt: DateTime(2026, 3, 15));
-      await db.close();
-    }
+      // Open, populate, close.
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        await db.upsertMangaMetadata(
+          id: 1,
+          title: 'M',
+          updatedAt: DateTime(2026),
+        );
+        await db.upsertChapterMetadata(
+          id: 10,
+          mangaId: 1,
+          name: 'c',
+          chapterIndex: 1,
+          isRead: false,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 3,
+          updatedAt: DateTime(2026),
+        );
+        await db.setKeepRule(1, OfflineKeepRule.allUnread, 7);
+        await db.setChapterPinned(10, true);
+        await db.setChapterDeviceState(
+          10,
+          OfflineDeviceState.downloaded,
+          bytes: 512,
+          downloadedAt: DateTime(2026, 3, 15),
+        );
+        await db.close();
+      }
 
-    // Reopen and assert the v2 columns persisted with the values we wrote.
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      final m = await (db.select(db.offlineMangas)
-            ..where((t) => t.id.equals(1)))
-          .getSingle();
-      expect(m.keepRule, OfflineKeepRule.allUnread);
-      expect(m.keepUnreadCount, 7);
+      // Reopen and assert the v2 columns persisted with the values we wrote.
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        final m = await (db.select(
+          db.offlineMangas,
+        )..where((t) => t.id.equals(1))).getSingle();
+        expect(m.keepRule, OfflineKeepRule.allUnread);
+        expect(m.keepUnreadCount, 7);
 
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
-      expect(c.pinned, true);
-      expect(c.downloadedAt, DateTime(2026, 3, 15));
-      await db.close();
-    }
-  });
+        final c = await (db.select(
+          db.offlineChapters,
+        )..where((t) => t.id.equals(10))).getSingle();
+        expect(c.pinned, true);
+        expect(c.downloadedAt, DateTime(2026, 3, 15));
+        await db.close();
+      }
+    },
+  );
 
-  test('migration is idempotent: re-adding existing columns does not crash',
-      () async {
-    final dbPath = p.join(tmp.path, 'test.db');
+  test(
+    'migration is idempotent: re-adding existing columns does not crash',
+    () async {
+      final dbPath = p.join(tmp.path, 'test.db');
 
-    // Create a fresh DB (all current columns present), then force the recorded
-    // schema version back to 1 — exactly the inconsistent state a device left
-    // by an intermediate/dev build can end up in (column present, old version).
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.customStatement('PRAGMA user_version = 1');
-      await db.close();
-    }
+      // Create a fresh DB (all current columns present), then force the recorded
+      // schema version back to 1 — exactly the inconsistent state a device left
+      // by an intermediate/dev build can end up in (column present, old version).
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        await db.customStatement('PRAGMA user_version = 1');
+        await db.close();
+      }
 
-    // Reopen: onUpgrade(from: 1) runs every `from < N` branch and would re-add
-    // already-present columns. The idempotent guard must skip them instead of
-    // throwing "duplicate column" — so the DB opens and is usable.
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-      expect(await db.select(db.offlineChapters).get(), isEmpty);
-      await db.close();
-    }
-  });
+      // Reopen: onUpgrade(from: 1) runs every `from < N` branch and would re-add
+      // already-present columns. The idempotent guard must skip them instead of
+      // throwing "duplicate column" — so the DB opens and is usable.
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        await db.upsertMangaMetadata(
+          id: 1,
+          title: 'M',
+          updatedAt: DateTime(2026),
+        );
+        expect(await db.select(db.offlineChapters).get(), isEmpty);
+        await db.close();
+      }
+    },
+  );
 
   Future<bool> hasIndex(OfflineDatabase db, String name) async {
     final rows = await db
@@ -107,15 +122,16 @@ void main() {
     return rows.isNotEmpty;
   }
 
-  test('v15 creates idx_offline_chapter_device_state on a fresh database',
-      () async {
-    final db = testOfflineDatabaseFile(p.join(tmp.path, 'test.db'));
-    expect(await hasIndex(db, 'idx_offline_chapter_device_state'), isTrue);
-    await db.close();
-  });
-
   test(
-      'v15 creates idx_offline_chapter_device_state when upgrading from an '
+    'v15 creates idx_offline_chapter_device_state on a fresh database',
+    () async {
+      final db = testOfflineDatabaseFile(p.join(tmp.path, 'test.db'));
+      expect(await hasIndex(db, 'idx_offline_chapter_device_state'), isTrue);
+      await db.close();
+    },
+  );
+
+  test('v15 creates idx_offline_chapter_device_state when upgrading from an '
       'older on-disk database', () async {
     final dbPath = p.join(tmp.path, 'test.db');
 
@@ -124,7 +140,11 @@ void main() {
     // existing install upgrading from before this index existed would be in.
     {
       final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
       await db.customStatement('DROP INDEX idx_offline_chapter_device_state');
       await db.customStatement('PRAGMA user_version = 14');
       await db.close();
@@ -140,59 +160,72 @@ void main() {
   });
 
   test(
-      'an upgrade from < 10 does not clobber a synced_is_read value an '
-      'interim build already set (no more duplicate unconditional backfill)',
-      () async {
-    final dbPath = p.join(tmp.path, 'test.db');
+    'an upgrade from < 10 does not clobber a synced_is_read value an '
+    'interim build already set (no more duplicate unconditional backfill)',
+    () async {
+      final dbPath = p.join(tmp.path, 'test.db');
 
-    // Simulates an interim/dev build: the column already physically exists
-    // (created by a prior run at the CURRENT schema) but the recorded version
-    // is forced back below 10 -- the exact inconsistent state the surrounding
-    // migration's own comments call out repeatedly. synced_is_read is set to
-    // something that deliberately does NOT match is_read, standing in for a
-    // real unsettled local correction this device is tracking.
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-      await db.upsertChapterMetadata(
-        id: 10,
-        mangaId: 1,
-        name: 'c',
-        chapterIndex: 1,
-        isRead: true,
-        lastPageRead: 0,
-        isBookmarked: false,
-        serverIsDownloaded: true,
-        pageCount: 1,
-        updatedAt: DateTime(2026),
-      );
-      await db.customStatement(
-        'UPDATE offline_chapters SET synced_is_read = 0 WHERE id = 10',
-      );
-      await db.customStatement('PRAGMA user_version = 9');
-      await db.close();
-    }
+      // Simulates an interim/dev build: the column already physically exists
+      // (created by a prior run at the CURRENT schema) but the recorded version
+      // is forced back below 10 -- the exact inconsistent state the surrounding
+      // migration's own comments call out repeatedly. synced_is_read is set to
+      // something that deliberately does NOT match is_read, standing in for a
+      // real unsettled local correction this device is tracking.
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        await db.upsertMangaMetadata(
+          id: 1,
+          title: 'M',
+          updatedAt: DateTime(2026),
+        );
+        await db.upsertChapterMetadata(
+          id: 10,
+          mangaId: 1,
+          name: 'c',
+          chapterIndex: 1,
+          isRead: true,
+          lastPageRead: 0,
+          isBookmarked: false,
+          serverIsDownloaded: true,
+          pageCount: 1,
+          updatedAt: DateTime(2026),
+        );
+        await db.customStatement(
+          'UPDATE offline_chapters SET synced_is_read = 0 WHERE id = 10',
+        );
+        await db.customStatement('PRAGMA user_version = 9');
+        await db.close();
+      }
 
-    {
-      final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
-      expect(c.isRead, isTrue);
-      expect(c.syncedIsRead, isFalse,
-          reason: 'the from<12 guard already decided to preserve this value '
+      {
+        final db = testOfflineDatabaseFile(dbPath);
+        final c = await (db.select(
+          db.offlineChapters,
+        )..where((t) => t.id.equals(10))).getSingle();
+        expect(c.isRead, isTrue);
+        expect(
+          c.syncedIsRead,
+          isFalse,
+          reason:
+              'the from<12 guard already decided to preserve this value '
               'because the column existed; a later duplicate unconditional '
-              'UPDATE synced_is_read = is_read must not override that');
-      await db.close();
-    }
-  });
+              'UPDATE synced_is_read = is_read must not override that',
+        );
+        await db.close();
+      }
+    },
+  );
 
   test('v16 readStateManual persists across close/reopen', () async {
     final dbPath = p.join(tmp.path, 'test.db');
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
       await db.upsertChapterMetadata(
         id: 10,
         mangaId: 1,
@@ -211,9 +244,9 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
+      final c = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
       expect(c.readStateManual, true);
       await db.close();
     }
@@ -224,7 +257,11 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
       await db.upsertChapterMetadata(
         id: 10,
         mangaId: 1,
@@ -244,14 +281,14 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
+      final c = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
       expect(c.serverFetchAttempts, 2);
       await db.resetServerFetchAttempts(10);
-      final reset = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
+      final reset = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
       expect(reset.serverFetchAttempts, 0);
       await db.close();
     }
@@ -262,7 +299,11 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
       await db.upsertChapterMetadata(
         id: 10,
         mangaId: 1,
@@ -281,113 +322,108 @@ void main() {
 
     {
       final db = testOfflineDatabaseFile(dbPath);
-      final c = await (db.select(db.offlineChapters)
-            ..where((t) => t.id.equals(10)))
-          .getSingle();
+      final c = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
       expect(c.lastReadAt, '1700000000000');
       expect(await db.lastReadAtByManga(), {1: '1700000000000'});
       await db.close();
     }
   });
 
-  test(
-    'v18 chapterSortMode/chapterSortReverse/uploadDate/fetchedAt are added '
-    'on upgrade from v17 and start null',
-    () async {
-      final dbPath = p.join(tmp.path, 'test.db');
+  test('v18 chapterSortMode/uploadDate/fetchedAt are added '
+      'on upgrade from v17 and start null', () async {
+    final dbPath = p.join(tmp.path, 'test.db');
 
-      // Create at the current schema (so both tables exist with every other
-      // column), then force the recorded version back to 17 — the exact
-      // state a real v17 install is in before this upgrade.
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        await db.upsertMangaMetadata(id: 1, title: 'M', updatedAt: DateTime(2026));
-        await db.upsertChapterMetadata(
-          id: 10,
-          mangaId: 1,
-          name: 'c',
-          chapterIndex: 1,
-          isRead: false,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-        );
-        await db.customStatement('PRAGMA user_version = 17');
-        await db.close();
-      }
-
-      {
-        final db = testOfflineDatabaseFile(dbPath);
-        final m = await (db.select(db.offlineMangas)
-              ..where((t) => t.id.equals(1)))
-            .getSingle();
-        expect(m.chapterSortMode, null);
-        expect(m.chapterSortReverse, null);
-        final c = await (db.select(db.offlineChapters)
-              ..where((t) => t.id.equals(10)))
-            .getSingle();
-        expect(c.uploadDate, null);
-        expect(c.fetchedAt, null);
-
-        // The columns are genuinely usable, not just present-but-inert.
-        await db.upsertMangaMetadata(
-          id: 1,
-          title: 'M',
-          updatedAt: DateTime(2026),
-          chapterSortMode: ChapterSortAxis.uploadedAt,
-          chapterSortReverse: true,
-        );
-        await db.upsertChapterMetadata(
-          id: 10,
-          mangaId: 1,
-          name: 'c',
-          chapterIndex: 1,
-          isRead: false,
-          lastPageRead: 0,
-          isBookmarked: false,
-          serverIsDownloaded: true,
-          pageCount: 1,
-          updatedAt: DateTime(2026),
-          uploadDate: '1700000000000',
-          fetchedAt: '1700000001000',
-        );
-        final m2 = await (db.select(db.offlineMangas)
-              ..where((t) => t.id.equals(1)))
-            .getSingle();
-        expect(m2.chapterSortMode, ChapterSortAxis.uploadedAt);
-        expect(m2.chapterSortReverse, isTrue);
-        final c2 = await (db.select(db.offlineChapters)
-              ..where((t) => t.id.equals(10)))
-            .getSingle();
-        expect(c2.uploadDate, '1700000000000');
-        expect(c2.fetchedAt, '1700000001000');
-        await db.close();
-      }
-    },
-  );
-
-  test(
-    'v18 migration does not explode on a device that never created '
-    'offline_mangas/offline_chapters (mirrors the _hasTable guard already '
-    'used elsewhere in this migration)',
-    () async {
-      final db = OfflineDatabase(
-        NativeDatabase.memory(
-          setup: (rawDb) {
-            rawDb.execute(
-              'CREATE TABLE offline_categories (id INTEGER PRIMARY KEY, '
-              'name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, '
-              'is_hidden INTEGER NOT NULL DEFAULT 0)',
-            );
-            rawDb.execute('PRAGMA user_version = 16');
-          },
-        ),
+    // Create at the current schema (so both tables exist with every other
+    // column), then force the recorded version back to 17 — the exact
+    // state a real v17 install is in before this upgrade.
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
       );
-      addTearDown(db.close);
-      // Touch the db to force the migration to run; must not throw.
-      expect(await db.allOfflineCategories(), isEmpty);
-    },
-  );
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+      );
+      await db.customStatement('PRAGMA user_version = 17');
+      await db.close();
+    }
+
+    {
+      final db = testOfflineDatabaseFile(dbPath);
+      final m = await (db.select(
+        db.offlineMangas,
+      )..where((t) => t.id.equals(1))).getSingle();
+      expect(m.chapterSortMode, null);
+      final c = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
+      expect(c.uploadDate, null);
+      expect(c.fetchedAt, null);
+
+      // The columns are genuinely usable, not just present-but-inert.
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+        chapterSortMode: ChapterSortAxis.uploadedAt,
+      );
+      await db.upsertChapterMetadata(
+        id: 10,
+        mangaId: 1,
+        name: 'c',
+        chapterIndex: 1,
+        isRead: false,
+        lastPageRead: 0,
+        isBookmarked: false,
+        serverIsDownloaded: true,
+        pageCount: 1,
+        updatedAt: DateTime(2026),
+        uploadDate: '1700000000000',
+        fetchedAt: '1700000001000',
+      );
+      final m2 = await (db.select(
+        db.offlineMangas,
+      )..where((t) => t.id.equals(1))).getSingle();
+      expect(m2.chapterSortMode, ChapterSortAxis.uploadedAt);
+      final c2 = await (db.select(
+        db.offlineChapters,
+      )..where((t) => t.id.equals(10))).getSingle();
+      expect(c2.uploadDate, '1700000000000');
+      expect(c2.fetchedAt, '1700000001000');
+      await db.close();
+    }
+  });
+
+  test('v18 migration does not explode on a device that never created '
+      'offline_mangas/offline_chapters (mirrors the _hasTable guard already '
+      'used elsewhere in this migration)', () async {
+    final db = OfflineDatabase(
+      NativeDatabase.memory(
+        setup: (rawDb) {
+          rawDb.execute(
+            'CREATE TABLE offline_categories (id INTEGER PRIMARY KEY, '
+            'name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, '
+            'is_hidden INTEGER NOT NULL DEFAULT 0)',
+          );
+          rawDb.execute('PRAGMA user_version = 16');
+        },
+      ),
+    );
+    addTearDown(db.close);
+    // Touch the db to force the migration to run; must not throw.
+    expect(await db.allOfflineCategories(), isEmpty);
+  });
 }

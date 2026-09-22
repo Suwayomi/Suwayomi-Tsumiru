@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../constants/enum.dart';
+import '../../manga_book/domain/manga/manga_model.dart';
 import 'offline_types.dart';
 
 /// WebUI's own per-manga meta keys (Metadata.constants.ts,
@@ -16,8 +17,25 @@ const kWebUiSortByMetaKey = 'webUI_sortBy';
 const kWebUiReverseMetaKey = 'webUI_reverse';
 
 /// Parses a raw `webUI_sortBy` meta value. Unknown, legacy, or absent -> null.
-ChapterSortAxis? chapterSortAxisFromMetaValue(String? raw) =>
-    raw == null ? null : ChapterSortAxis.values.asNameMap()[raw];
+/// Never yields [ChapterSortAxis.alphabetical]: WebUI has no such value, it
+/// lives in Tsumiru's own flag (see [chapterSortAxisFromMeta]).
+ChapterSortAxis? chapterSortAxisFromMetaValue(String? raw) {
+  final axis = raw == null ? null : ChapterSortAxis.values.asNameMap()[raw];
+  return axis == ChapterSortAxis.alphabetical ? null : axis;
+}
+
+/// A manga's effective chapter sort axis from its meta, where [metaValue]
+/// looks a key up in the manga's meta list. Tsumiru's alphabetical flag wins
+/// over `webUI_sortBy`, which it leaves in place for WebUI. Null = no
+/// per-manga override.
+ChapterSortAxis? chapterSortAxisFromMeta(
+  String? Function(String key) metaValue,
+) {
+  if (metaValue(MangaMetaKeys.chapterSortAlphabetical.key) == 'true') {
+    return ChapterSortAxis.alphabetical;
+  }
+  return chapterSortAxisFromMetaValue(metaValue(kWebUiSortByMetaKey));
+}
 
 /// WebUI compares its own `reverse` meta via `value === 'true'` verbatim —
 /// mirror that exactly rather than a looser boolean parse.
@@ -26,22 +44,23 @@ bool? chapterSortReverseFromMetaValue(String? raw) =>
 
 String chapterSortReverseToMetaValue(bool reverse) => reverse.toString();
 
-/// UI-facing enum ([ChapterSort], 5 values incl. `alphabetical`) <-> wire/DB
-/// axis enum ([ChapterSortAxis], the 4 WebUI-interoperable values). Names
-/// deliberately differ for 2 of 4 values (`uploadDate`/`uploadedAt`,
+/// UI-facing enum ([ChapterSort]) <-> wire/DB axis enum ([ChapterSortAxis]).
+/// Names deliberately differ for 2 values (`uploadDate`/`uploadedAt`,
 /// `fetchedDate`/`fetchedAt`) — never use `.name` for this hop, only for the
 /// [ChapterSortAxis] <-> meta-string hop above, where the names truly match.
-ChapterSortAxis? webUiAxisFromChapterSort(ChapterSort sort) => switch (sort) {
-  ChapterSort.source => ChapterSortAxis.source,
-  ChapterSort.chapterNumber => ChapterSortAxis.chapterNumber,
-  ChapterSort.uploadDate => ChapterSortAxis.uploadedAt,
-  ChapterSort.fetchedDate => ChapterSortAxis.fetchedAt,
-  ChapterSort.alphabetical => null,
-};
+ChapterSortAxis chapterSortAxisFromChapterSort(ChapterSort sort) =>
+    switch (sort) {
+      ChapterSort.source => ChapterSortAxis.source,
+      ChapterSort.chapterNumber => ChapterSortAxis.chapterNumber,
+      ChapterSort.uploadDate => ChapterSortAxis.uploadedAt,
+      ChapterSort.fetchedDate => ChapterSortAxis.fetchedAt,
+      ChapterSort.alphabetical => ChapterSortAxis.alphabetical,
+    };
 
-ChapterSort chapterSortFromWebUiAxis(ChapterSortAxis axis) => switch (axis) {
+ChapterSort chapterSortFromAxis(ChapterSortAxis axis) => switch (axis) {
   ChapterSortAxis.source => ChapterSort.source,
   ChapterSortAxis.chapterNumber => ChapterSort.chapterNumber,
   ChapterSortAxis.uploadedAt => ChapterSort.uploadDate,
   ChapterSortAxis.fetchedAt => ChapterSort.fetchedDate,
+  ChapterSortAxis.alphabetical => ChapterSort.alphabetical,
 };

@@ -316,8 +316,8 @@ void main() {
     );
   });
 
-  test('chapterSortMode/chapterSortReverse round-trip through the spec, and '
-      'default to null when absent', () {
+  test('chapterSortMode round-trips through the spec (alphabetical too), '
+      'and defaults to null when absent', () {
     const spec = CatchupMangaSpec(
       mangaId: 1,
       keepRule: OfflineKeepRule.nUnread,
@@ -325,13 +325,29 @@ void main() {
       onDeviceChapterIds: {},
       pinnedChapterIds: {},
       chapterSortMode: ChapterSortAxis.uploadedAt,
-      chapterSortReverse: true,
     );
     final restored = CatchupMangaSpec.fromJson(
       jsonDecode(jsonEncode(spec.toJson())) as Map<String, Object?>,
     );
     expect(restored.chapterSortMode, ChapterSortAxis.uploadedAt);
-    expect(restored.chapterSortReverse, isTrue);
+
+    // The Tsumiru-only axis survives the hop to the background worker too.
+    final alphabetical = CatchupMangaSpec.fromJson(
+      jsonDecode(
+            jsonEncode(
+              const CatchupMangaSpec(
+                mangaId: 1,
+                keepRule: OfflineKeepRule.nUnread,
+                keepUnreadCount: 3,
+                onDeviceChapterIds: {},
+                pinnedChapterIds: {},
+                chapterSortMode: ChapterSortAxis.alphabetical,
+              ).toJson(),
+            ),
+          )
+          as Map<String, Object?>,
+    );
+    expect(alphabetical.chapterSortMode, ChapterSortAxis.alphabetical);
 
     // Legacy/unset spec (written before this field existed, or a manga with
     // no webUI_sortBy meta) must not throw and must default to null, not to
@@ -342,7 +358,6 @@ void main() {
       'keepUnreadCount': 3,
     });
     expect(legacy.chapterSortMode, isNull);
-    expect(legacy.chapterSortReverse, isNull);
   });
 
   test('an unrecognized chapterSortMode string degrades to null, not a '

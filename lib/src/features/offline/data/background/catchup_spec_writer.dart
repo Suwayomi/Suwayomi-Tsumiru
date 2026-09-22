@@ -84,7 +84,6 @@ Future<bool> writeCatchupWorkSpec(CatchupRead read) =>
                   if (c.downloadGeneration != 0) c.id: c.downloadGeneration,
               },
               chapterSortMode: m.chapterSortMode,
-              chapterSortReverse: m.chapterSortReverse,
             ),
           );
         }

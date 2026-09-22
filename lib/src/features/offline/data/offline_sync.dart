@@ -106,18 +106,11 @@ class OfflineSync {
         lastReadAt: manga.lastReadChapter?.lastReadAt,
         metaJson: jsonEncode({for (final e in manga.meta) e.key: e.value}),
         totalChapters: manga.chapters.totalCount,
-        // Pre-extracted from the same meta list above — see
-        // webui_chapter_sort_meta.dart for why these mirror WebUI's own
-        // per-manga chapter-sort meta rather than a Tsumiru-only convention.
-        chapterSortMode: chapterSortAxisFromMetaValue(
-          manga.meta
-              .firstWhereOrNull((m) => m.key == kWebUiSortByMetaKey)
-              ?.value,
-        ),
-        chapterSortReverse: chapterSortReverseFromMetaValue(
-          manga.meta
-              .firstWhereOrNull((m) => m.key == kWebUiReverseMetaKey)
-              ?.value,
+        // Pre-extracted from the same meta list above, with the same
+        // resolution as the chapter list display (alphabetical flag first,
+        // then webUI_sortBy) so downloads follow what the reader shows.
+        chapterSortMode: chapterSortAxisFromMeta(
+          (key) => manga.meta.firstWhereOrNull((m) => m.key == key)?.value,
         ),
       );
       // The counts just written include every read the server knew about

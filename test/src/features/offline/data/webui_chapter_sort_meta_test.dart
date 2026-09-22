@@ -6,6 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/offline/data/offline_types.dart';
 import 'package:tsumiru/src/features/offline/data/webui_chapter_sort_meta.dart';
 
@@ -19,10 +20,15 @@ void main() {
   });
 
   group('chapterSortAxisFromMetaValue', () {
-    test('parses every ChapterSortAxis value by exact wire string', () {
+    test('parses every WebUI axis value by exact wire string', () {
       for (final axis in ChapterSortAxis.values) {
+        if (axis == ChapterSortAxis.alphabetical) continue;
         expect(chapterSortAxisFromMetaValue(axis.name), axis);
       }
+    });
+
+    test('never yields alphabetical: WebUI has no such webUI_sortBy value', () {
+      expect(chapterSortAxisFromMetaValue('alphabetical'), isNull);
     });
 
     test('null (no meta key at all) -> null', () {
@@ -32,6 +38,44 @@ void main() {
     test('unknown/legacy value -> null, never throws', () {
       expect(chapterSortAxisFromMetaValue('not-a-real-axis'), isNull);
       expect(chapterSortAxisFromMetaValue(''), isNull);
+    });
+  });
+
+  group('chapterSortAxisFromMeta', () {
+    String? Function(String) metaOf(Map<String, String> meta) =>
+        (key) => meta[key];
+    final alphabeticalKey = MangaMetaKeys.chapterSortAlphabetical.key;
+
+    test('no sort meta at all -> null (app-wide default applies)', () {
+      expect(chapterSortAxisFromMeta(metaOf({})), isNull);
+    });
+
+    test('webUI_sortBy alone resolves to its axis', () {
+      expect(
+        chapterSortAxisFromMeta(metaOf({kWebUiSortByMetaKey: 'uploadedAt'})),
+        ChapterSortAxis.uploadedAt,
+      );
+    });
+
+    test('the alphabetical flag wins over a webUI_sortBy left in place', () {
+      expect(
+        chapterSortAxisFromMeta(
+          metaOf({
+            alphabeticalKey: 'true',
+            kWebUiSortByMetaKey: 'chapterNumber',
+          }),
+        ),
+        ChapterSortAxis.alphabetical,
+      );
+    });
+
+    test('a legacy "false" flag falls through to webUI_sortBy', () {
+      expect(
+        chapterSortAxisFromMeta(
+          metaOf({alphabeticalKey: 'false', kWebUiSortByMetaKey: 'source'}),
+        ),
+        ChapterSortAxis.source,
+      );
     });
   });
 
@@ -71,60 +115,42 @@ void main() {
   });
 
   group('ChapterSort <-> ChapterSortAxis mapping', () {
-    test('every ChapterSortAxis maps to a ChapterSort and back to itself', () {
-      for (final axis in ChapterSortAxis.values) {
-        final sort = chapterSortFromWebUiAxis(axis);
+    test('every ChapterSort maps to an axis and back to itself', () {
+      for (final sort in ChapterSort.values) {
+        final axis = chapterSortAxisFromChapterSort(sort);
         expect(
-          webUiAxisFromChapterSort(sort),
-          axis,
-          reason: '$axis -> $sort must map back to $axis',
+          chapterSortFromAxis(axis),
+          sort,
+          reason: '$sort -> $axis must map back to $sort',
         );
       }
+      expect(ChapterSort.values.length, ChapterSortAxis.values.length);
     });
 
     test('the two name-mismatched pairs map correctly in both directions', () {
       expect(
-        webUiAxisFromChapterSort(ChapterSort.uploadDate),
+        chapterSortAxisFromChapterSort(ChapterSort.uploadDate),
         ChapterSortAxis.uploadedAt,
       );
       expect(
-        chapterSortFromWebUiAxis(ChapterSortAxis.uploadedAt),
+        chapterSortFromAxis(ChapterSortAxis.uploadedAt),
         ChapterSort.uploadDate,
       );
       expect(
-        webUiAxisFromChapterSort(ChapterSort.fetchedDate),
+        chapterSortAxisFromChapterSort(ChapterSort.fetchedDate),
         ChapterSortAxis.fetchedAt,
       );
       expect(
-        chapterSortFromWebUiAxis(ChapterSortAxis.fetchedAt),
+        chapterSortFromAxis(ChapterSortAxis.fetchedAt),
         ChapterSort.fetchedDate,
       );
     });
 
-    test('the two name-matched pairs map straightforwardly', () {
+    test('alphabetical maps to its own Tsumiru-only axis', () {
       expect(
-        webUiAxisFromChapterSort(ChapterSort.source),
-        ChapterSortAxis.source,
+        chapterSortAxisFromChapterSort(ChapterSort.alphabetical),
+        ChapterSortAxis.alphabetical,
       );
-      expect(
-        webUiAxisFromChapterSort(ChapterSort.chapterNumber),
-        ChapterSortAxis.chapterNumber,
-      );
-    });
-
-    test('alphabetical has no WebUI equivalent', () {
-      expect(webUiAxisFromChapterSort(ChapterSort.alphabetical), isNull);
-    });
-
-    test('every ChapterSort value is handled (compile-time exhaustiveness '
-        'guard: this test itself would fail to compile if a new value were '
-        'added to ChapterSort without updating webUiAxisFromChapterSort)',
-        () {
-      for (final sort in ChapterSort.values) {
-        // Must not throw for any sort value.
-        webUiAxisFromChapterSort(sort);
-      }
-      expect(ChapterSort.values.length, 5);
     });
   });
 }

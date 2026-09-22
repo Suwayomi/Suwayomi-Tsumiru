@@ -69,10 +69,10 @@ class OfflineMangas extends Table {
   // keep-window reconcile pass — which reads this row directly, not a
   // reconstructed MangaDto — doesn't need to JSON-decode on every pass, and
   // so the background CatchupMangaSpec (a frozen snapshot, no DB access) can
-  // carry it too. Null means no webUI_sortBy/webUI_reverse meta on this
-  // manga — see ChapterSortAxis and webui_chapter_sort_meta.dart.
+  // carry it too. Null means no per-manga sort meta on this manga — see
+  // ChapterSortAxis and webui_chapter_sort_meta.dart. The sort direction
+  // (webUI_reverse) is display-only, read from metaJson, so it isn't mirrored.
   TextColumn get chapterSortMode => textEnum<ChapterSortAxis>().nullable()();
-  BoolColumn get chapterSortReverse => boolean().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -488,15 +488,18 @@ class OfflineDatabase extends _$OfflineDatabase {
           offlineMangas,
           offlineMangas.chapterSortMode,
         );
-        await _addColumnIfMissing(
-          m,
-          offlineMangas,
-          offlineMangas.chapterSortReverse,
-        );
       }
       if (from < 18 && await _hasTable(offlineChapters)) {
-        await _addColumnIfMissing(m, offlineChapters, offlineChapters.uploadDate);
-        await _addColumnIfMissing(m, offlineChapters, offlineChapters.fetchedAt);
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.uploadDate,
+        );
+        await _addColumnIfMissing(
+          m,
+          offlineChapters,
+          offlineChapters.fetchedAt,
+        );
       }
     },
   );
@@ -570,7 +573,6 @@ class OfflineDatabase extends _$OfflineDatabase {
     String? metaJson,
     int totalChapters = 0,
     ChapterSortAxis? chapterSortMode,
-    bool? chapterSortReverse,
   }) => into(offlineMangas).insertOnConflictUpdate(
     OfflineMangasCompanion(
       id: Value(id),
@@ -599,11 +601,10 @@ class OfflineDatabase extends _$OfflineDatabase {
           : Value(lastReadAt),
       metaJson: Value(metaJson),
       totalChapters: Value(totalChapters),
-      // Explicit, never absent: the caller always derives these from the
+      // Explicit, never absent: the caller always derives this from the
       // manga's full current meta list, so a server-side meta deletion must
       // clear the column here too, not leave a stale value behind.
       chapterSortMode: Value(chapterSortMode),
-      chapterSortReverse: Value(chapterSortReverse),
     ),
   );
 

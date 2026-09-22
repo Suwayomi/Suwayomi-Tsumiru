@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/sort_list_tile.dart';
 import '../controller/manga_details_controller.dart';
 
@@ -28,6 +29,12 @@ class MangaChapterSortTile extends ConsumerWidget {
     final sortedDirection = ref.watch(
       mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId),
     );
+    // The sort is per-manga server meta: a failed write (e.g. offline) must
+    // say so rather than silently not sticking.
+    void showError(AsyncValue<void> result) {
+      if (context.mounted) result.showToastOnError(ref.read(toastProvider));
+    }
+
     return SortListTile(
       selected: sortType == sortedBy,
       title: Text(sortType.toLocale(context)),
@@ -38,10 +45,12 @@ class MangaChapterSortTile extends ConsumerWidget {
               mangaId: mangaId,
             ).notifier,
           )
-          .update(!(sortedDirection.ifNull())),
+          .update(!(sortedDirection.ifNull()))
+          .then(showError),
       onSelected: () => ref
           .read(mangaChapterSortPreferenceProvider(mangaId: mangaId).notifier)
-          .update(sortType),
+          .update(sortType)
+          .then(showError),
     );
   }
 }
