@@ -1603,6 +1603,8 @@
   "onboardingResolvedNoAuth": "This server is ready — no sign-in needed.",
   "onboardingResolvedNeedsAuth": "This server needs a sign-in. Add your username and password below.",
   "onboardingSearchNetwork": "Search my network",
+  "onboardingCheckingConnection": "Checking connection…",
+  "onboardingSigningIn": "Signing in…",
   "onboardingSearching": "Searching your network…",
   "onboardingNoServerFound": "No server found on your network — enter the address manually.",
   "onboardingNeedsLogin": "This server needs a login",

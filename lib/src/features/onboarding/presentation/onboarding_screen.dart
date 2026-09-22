@@ -56,6 +56,7 @@ class OnboardingScreen extends HookConsumerWidget {
     );
     final serverVerified = useState(resume);
     final nextRequest = useState(0);
+    final activity = useState<String?>(null);
     useEffect(() {
       if (resume) {
         Future.microtask(() {
@@ -115,7 +116,7 @@ class OnboardingScreen extends HookConsumerWidget {
                       Positioned(
                         right: 4,
                         child: TextButton(
-                          onPressed: finish,
+                          onPressed: activity.value == null ? finish : null,
                           child: Text(context.l10n.onboardingSkip),
                         ),
                       ),
@@ -133,8 +134,14 @@ class OnboardingScreen extends HookConsumerWidget {
                         0 => const _ThemeStep(),
                         1 => _ServerStep(
                           nextRequest: nextRequest.value,
+                          onActivityChanged: (value) {
+                            if (context.mounted && step.value == 1) {
+                              activity.value = value;
+                            }
+                          },
                           onVerifiedChanged: (v) => serverVerified.value = v,
                           onSignedIn: () {
+                            activity.value = null;
                             serverVerified.value = true;
                             step.value = 2;
                           },
@@ -145,6 +152,7 @@ class OnboardingScreen extends HookConsumerWidget {
                   ),
                 ),
                 _NavBar(
+                  activity: step.value == 1 ? activity.value : null,
                   showBack: step.value > 0,
                   isLast: isLast,
                   onBack: () => moveTo(step.value - 1),
@@ -222,10 +230,12 @@ class _StepDots extends StatelessWidget {
 class _NavBar extends StatelessWidget {
   const _NavBar({
     required this.showBack,
+    required this.activity,
     required this.isLast,
     required this.onBack,
     required this.onNext,
   });
+  final String? activity;
   final bool showBack;
   final bool isLast;
   final VoidCallback onBack;
@@ -235,26 +245,49 @@ class _NavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final next = BrandButton(
       label: Text(isLast ? context.l10n.finish : context.l10n.next),
-      onPressed: onNext,
+      onPressed: activity == null ? onNext : null,
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
       // Back + Next share one row (Next wider) so the nav takes less vertical
       // space; on the first step there's no Back, so Next fills the row.
-      child: showBack
-          ? Row(
-              children: [
-                Expanded(
-                  child: BrandGlassButton(
-                    label: Text(context.l10n.back),
-                    onPressed: onBack,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (activity != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(flex: 2, child: next),
-              ],
-            )
-          : next,
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Semantics(liveRegion: true, child: Text(activity!)),
+                  ),
+                ],
+              ),
+            ),
+          showBack
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: BrandGlassButton(
+                        label: Text(context.l10n.back),
+                        onPressed: activity == null ? onBack : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: next),
+                  ],
+                )
+              : next,
+        ],
+      ),
     );
   }
 }
@@ -303,6 +336,7 @@ enum _TestState {
   idle,
   searching,
   testing,
+  signingIn,
   connected,
 
   /// Reachable Suwayomi whose API is gated — reveal the auth sub-form.
@@ -324,9 +358,11 @@ final onboardingHttpClientProvider = Provider<http.Client Function()>(
 class _ServerStep extends HookConsumerWidget {
   const _ServerStep({
     required this.nextRequest,
+    required this.onActivityChanged,
     required this.onVerifiedChanged,
     required this.onSignedIn,
   });
+  final ValueChanged<String?> onActivityChanged;
   final int nextRequest;
   final ValueChanged<bool> onVerifiedChanged;
   final VoidCallback onSignedIn;
@@ -533,6 +569,11 @@ class _ServerStep extends HookConsumerWidget {
         onVerifiedChanged(false);
         return;
       }
+      state.value = _TestState.testing;
+      version.value = null;
+      errorDetail.value = null;
+      credsRejected.value = false;
+      onVerifiedChanged(false);
       final sessionIsCurrent = ref
           .read(authCredentialsStoreProvider.notifier)
           .captureSession();
@@ -549,12 +590,6 @@ class _ServerStep extends HookConsumerWidget {
         }
         return;
       }
-
-      state.value = _TestState.testing;
-      version.value = null;
-      errorDetail.value = null;
-      credsRejected.value = false;
-      onVerifiedChanged(false);
 
       final client = ref.read(onboardingHttpClientProvider)();
       try {
@@ -656,7 +691,7 @@ class _ServerStep extends HookConsumerWidget {
         return;
       }
       credsRejected.value = false;
-      state.value = _TestState.testing;
+      state.value = _TestState.signingIn;
       final client = ref.read(onboardingHttpClientProvider)();
       bool ok = false;
       try {
@@ -677,6 +712,7 @@ class _ServerStep extends HookConsumerWidget {
       Future.microtask(() async {
         if (!context.mounted ||
             state.value == _TestState.testing ||
+            state.value == _TestState.signingIn ||
             state.value == _TestState.searching) {
           return;
         }
@@ -694,7 +730,20 @@ class _ServerStep extends HookConsumerWidget {
 
     final busy =
         state.value == _TestState.testing ||
+        state.value == _TestState.signingIn ||
         state.value == _TestState.searching;
+    final activity = switch (state.value) {
+      _TestState.testing => context.l10n.onboardingCheckingConnection,
+      _TestState.signingIn => context.l10n.onboardingSigningIn,
+      _TestState.searching => context.l10n.onboardingSearching,
+      _ => null,
+    };
+    useEffect(() {
+      Future.microtask(() {
+        if (context.mounted) onActivityChanged(activity);
+      });
+      return null;
+    }, [activity]);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,6 +772,7 @@ class _ServerStep extends HookConsumerWidget {
         const SizedBox(height: 20),
         TextField(
           controller: urlController,
+          enabled: !busy,
           keyboardType: TextInputType.url,
           autocorrect: false,
           decoration: InputDecoration(
@@ -766,13 +816,20 @@ class _ServerStep extends HookConsumerWidget {
         FilledButton.tonalIcon(
           onPressed: busy ? null : testConnection,
           icon: state.value == _TestState.testing
-              ? const SizedBox(
+              ? SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: cs.onPrimary,
+                  ),
                 )
               : const Icon(Icons.wifi_tethering_rounded),
-          label: Text(context.l10n.onboardingTestConnection),
+          label: Text(
+            state.value == _TestState.testing
+                ? context.l10n.onboardingCheckingConnection
+                : context.l10n.onboardingTestConnection,
+          ),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
         ),
         const SizedBox(height: 12),
@@ -786,7 +843,8 @@ class _ServerStep extends HookConsumerWidget {
           shouldSuggestHttps(urlController.text.trim()),
         ),
         // Auth sub-form, revealed only when the server needs a login.
-        if (state.value == _TestState.needsLogin) ...[
+        if (state.value == _TestState.needsLogin ||
+            state.value == _TestState.signingIn) ...[
           const SizedBox(height: 12),
           // M3 DropdownMenu (not the legacy DropdownButtonFormField, whose menu
           // anchors the selected item over the field and can open upward over
@@ -826,6 +884,7 @@ class _ServerStep extends HookConsumerWidget {
           const SizedBox(height: 8),
           TextField(
             controller: userController,
+            enabled: !busy,
             autocorrect: false,
             enableSuggestions: false,
             decoration: InputDecoration(
@@ -837,6 +896,7 @@ class _ServerStep extends HookConsumerWidget {
           const SizedBox(height: 8),
           TextField(
             controller: passController,
+            enabled: !busy,
             obscureText: true,
             decoration: InputDecoration(
               labelText: context.l10n.password,
@@ -875,13 +935,20 @@ class _ServerStep extends HookConsumerWidget {
           FilledButton.icon(
             onPressed: busy ? null : signIn,
             icon: busy
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.onPrimary,
+                    ),
                   )
                 : const Icon(Icons.login_rounded),
-            label: Text(context.l10n.onboardingSignIn),
+            label: Text(
+              state.value == _TestState.signingIn
+                  ? context.l10n.onboardingSigningIn
+                  : context.l10n.onboardingSignIn,
+            ),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
             ),
@@ -925,6 +992,7 @@ List<Widget> _buildTestStatus(
   switch (state) {
     case _TestState.idle:
     case _TestState.testing:
+    case _TestState.signingIn:
     case _TestState.searching:
       return const [SizedBox.shrink()];
 

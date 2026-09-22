@@ -3,6 +3,7 @@
 // Widget test for the gated-server flow: Test connection → "needs a login" →
 // auth sub-form.
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -40,18 +41,78 @@ http.Client _gatedServerClient() => MockClient.streaming((request, body) async {
 });
 
 class _SimpleLoginCoordinator extends AuthCoordinator {
+  _SimpleLoginCoordinator({this.pending});
+
+  final Completer<void>? pending;
+
   @override
   Future<String> verifySimpleCredentials({
     required String serverBaseUrl,
     required String username,
     required String password,
   }) async {
+    await pending?.future;
     if (password != 'correct') throw StateError('Rejected');
     return 'verified-session';
   }
 }
 
 void main() {
+  testWidgets('pending connection shows progress until the response arrives', (
+    tester,
+  ) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding.step': 1});
+    final preferences = await SharedPreferences.getInstance();
+    final response = Completer<void>();
+    await tester.binding.setSurfaceSize(const Size(1080, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          onboardingHttpClientProvider.overrideWithValue(
+            () => MockClient.streaming((request, body) async {
+              await response.future;
+              final query =
+                  (jsonDecode(await body.bytesToString()) as Map)['query']
+                      as String;
+              return http.StreamedResponse(
+                Stream.value(
+                  utf8.encode(
+                    query.contains('aboutServer')
+                        ? _aboutOk
+                        : _authUnauthorized,
+                  ),
+                ),
+                200,
+              );
+            }),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const OnboardingScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Server URL'),
+      'https://server.example',
+    );
+    await tester.tap(find.text('Test connection'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.text('Checking connection…'), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    response.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Checking connection…'), findsNothing);
+    expect(find.text('This server needs a login'), findsOneWidget);
+  });
+
   for (final action in ['Test connection', 'Next']) {
     for (final needsLogin in [true, false]) {
       testWidgets(
@@ -204,6 +265,7 @@ void main() {
             'onboarding.pendingProbe': 'http://server',
           });
           final preferences = await SharedPreferences.getInstance();
+          final pendingSignIn = Completer<void>();
           await tester.binding.setSurfaceSize(const Size(1080, 2400));
           addTearDown(() => tester.binding.setSurfaceSize(null));
           final router = GoRouter(
@@ -228,7 +290,7 @@ void main() {
                   _gatedServerClient,
                 ),
                 authCoordinatorProvider.overrideWith(
-                  _SimpleLoginCoordinator.new,
+                  () => _SimpleLoginCoordinator(pending: pendingSignIn),
                 ),
               ],
               child: MaterialApp.router(
@@ -254,7 +316,13 @@ void main() {
             password,
           );
           await tester.tap(find.text(signInAction));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 250));
+          expect(find.text('Signing in…'), findsWidgets);
+          expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
+          pendingSignIn.complete();
           await tester.pumpAndSettle();
+          expect(find.text('Signing in…'), findsNothing);
           if (password == 'correct') {
             expect(find.text('Library'), findsNothing);
             expect(find.text("You're all set"), findsOneWidget);
