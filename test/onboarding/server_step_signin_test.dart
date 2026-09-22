@@ -15,7 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
+import 'package:tsumiru/src/features/account/presentation/account_session_host.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -50,6 +53,88 @@ class _SimpleLoginCoordinator extends AuthCoordinator {
 }
 
 void main() {
+  for (final needsLogin in [true, false]) {
+    testWidgets(
+      'connection result survives the app session restart (login: $needsLogin)',
+      (tester) async {
+        FlutterSecureStorage.setMockInitialValues({});
+        SharedPreferences.setMockInitialValues({'onboarding.step': 1});
+        final preferences = await SharedPreferences.getInstance();
+        await tester.binding.setSurfaceSize(const Size(1080, 2400));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        Future<ProviderContainer> createContainer() async {
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(preferences),
+              onboardingHttpClientProvider.overrideWithValue(
+                () => MockClient.streaming((request, body) async {
+                  final query =
+                      (jsonDecode(await body.bytesToString()) as Map)['query']
+                          as String;
+                  return http.StreamedResponse(
+                    Stream.value(
+                      utf8.encode(
+                        query.contains('aboutServer')
+                            ? _aboutOk
+                            : needsLogin
+                            ? _authUnauthorized
+                            : '{"data":{"downloadStatus":{"state":"STOPPED"}}}',
+                      ),
+                    ),
+                    200,
+                  );
+                }),
+              ),
+            ],
+          );
+          await container.read(authCredentialsStoreProvider.future);
+          return container;
+        }
+
+        var restarts = 0;
+        await tester.pumpWidget(
+          AccountSessionHost(
+            initialContainer: await createContainer(),
+            sessionKey: (c) => c.read(currentServerAddressProvider),
+            restart: (_) async {
+              restarts++;
+              return createContainer();
+            },
+            builder: (changing) => MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Offstage(
+                offstage: changing,
+                child: const OnboardingScreen(),
+              ),
+            ),
+            loading: const SizedBox(),
+            errorBuilder: (error) => Text('$error'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Server URL'),
+          'http://server:4567',
+        );
+        await tester.tap(find.text('Test connection'));
+        await tester.pumpAndSettle();
+        expect(restarts, greaterThan(0));
+        expect(
+          find.text(
+            needsLogin
+                ? 'This server needs a login'
+                : 'Connected — Suwayomi v2.0',
+          ),
+          findsOneWidget,
+        );
+        expect(preferences.getString('onboarding.pendingProbe'), '');
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   for (final password in ['correct', 'wrong']) {
     testWidgets(
       'Simple Login with $password password completes only on success',
@@ -156,6 +241,9 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'onboarding.step': 1,
       'onboarding.pendingProbe': '192.168.0.10',
+      DBKeys.serverExternalUrl.name: 'http://192.168.0.10:4567',
+      DBKeys.serverUrl.name: 'http://192.168.0.10:4567',
+      DBKeys.serverPortToggle.name: false,
     });
     final preferences = await SharedPreferences.getInstance();
     await tester.binding.setSurfaceSize(const Size(1080, 2400));

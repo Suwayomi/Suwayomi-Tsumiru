@@ -25,6 +25,7 @@ import '../../account/data/account_actions.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
 import '../../account/presentation/account_code_dialog.dart';
+import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
@@ -517,13 +518,16 @@ class _ServerStep extends HookConsumerWidget {
         onVerifiedChanged(false);
         return;
       }
+      final sessionIsCurrent = ref
+          .read(authCredentialsStoreProvider.notifier)
+          .captureSession();
       await preferences.setString('onboarding.pendingProbe', input);
       if (!context.mounted) return;
       if (kIsWeb) {
         try {
           await testWeb();
         } finally {
-          if (context.mounted) {
+          if (context.mounted && sessionIsCurrent()) {
             await preferences.setString('onboarding.pendingProbe', '');
           }
         }
@@ -583,7 +587,7 @@ class _ServerStep extends HookConsumerWidget {
         onVerifiedChanged(false);
       } finally {
         client.close();
-        if (context.mounted) {
+        if (context.mounted && sessionIsCurrent()) {
           await preferences.setString('onboarding.pendingProbe', '');
         }
       }
