@@ -119,6 +119,7 @@ class CustomHeadersSection extends HookConsumerWidget {
     if (!compact) return editor;
     return ExpansionTile(
       dense: true,
+      expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
       tilePadding: KEdgeInsets.h16.size,
       shape: const Border(),
       collapsedShape: const Border(),
