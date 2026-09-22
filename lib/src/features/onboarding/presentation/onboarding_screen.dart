@@ -760,7 +760,7 @@ class _ServerStep extends HookConsumerWidget {
         const SizedBox(height: 8),
         // Zero Trust / reverse-proxy headers (e.g. Cloudflare Access) must be
         // set BEFORE probing, or the probe can't reach the server at all.
-        const CustomHeadersSection(),
+        const CustomHeadersSection(compact: true),
         const SizedBox(height: 12),
         // Validate: test the connection.
         FilledButton.tonalIcon(

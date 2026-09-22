@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../constants/app_sizes.dart';
 import '../../../../features/auth/data/custom_headers_store.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/section_title.dart';
@@ -20,14 +21,15 @@ import '../../../../widgets/section_title.dart';
 /// `CF-Access-Client-Id` + `CF-Access-Client-Secret` on every request —
 /// but any reverse-proxy header pair works.
 class CustomHeadersSection extends HookConsumerWidget {
-  const CustomHeadersSection({super.key});
+  const CustomHeadersSection({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Preloaded in main() before the first frame; falls back to empty while
     // the secure-storage read is in flight.
-    final headers =
-        ref.watch(customHttpHeadersProvider).value ?? const {};
+    final headers = ref.watch(customHttpHeadersProvider).value ?? const {};
     final entries = headers.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -53,18 +55,20 @@ class CustomHeadersSection extends HookConsumerWidget {
           .put(result.name, result.value);
     }
 
-    return Column(
+    final editor = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: context.l10n.customHeaders),
+        if (!compact) SectionTitle(title: context.l10n.customHeaders),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
           child: Text(
-            context.l10n.customHeadersDescription,
+            compact
+                ? context.l10n.onboardingCustomHeadersHint
+                : context.l10n.customHeadersDescription,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-        if (entries.isEmpty)
+        if (!compact && entries.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
@@ -111,6 +115,22 @@ class CustomHeadersSection extends HookConsumerWidget {
           ),
         ),
       ],
+    );
+    if (!compact) return editor;
+    return ExpansionTile(
+      dense: true,
+      tilePadding: KEdgeInsets.h16.size,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: Text(
+        entries.isEmpty
+            ? context.l10n.customHeaders
+            : '${context.l10n.customHeaders} · ${entries.length}',
+        style: context.textTheme.titleSmall?.copyWith(
+          color: context.theme.colorScheme.primary,
+        ),
+      ),
+      children: [editor],
     );
   }
 }
