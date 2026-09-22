@@ -15,6 +15,7 @@ import 'package:tsumiru/src/features/offline/data/background/background_download
 import 'package:tsumiru/src/features/offline/data/offline_bootstrap.dart';
 
 import '../../helpers/offline_test_db.dart';
+import '../../helpers/test_link.dart';
 
 class _Support extends PathProviderPlatform {
   _Support(this.path);
@@ -62,7 +63,7 @@ void main() {
         await outside.create();
         final base = p.join(root.path, 'non-account');
         if (nested) await Directory(base).create();
-        await Link(nested ? p.join(base, '1') : base).create(outside.path);
+        await createTestLink(nested ? p.join(base, '1') : base, outside.path);
         await expectLater(
           initOfflineStorage(),
           throwsA(isA<FileSystemException>()),
@@ -89,10 +90,11 @@ void main() {
         final first = (await initOfflineStorage())!;
         final base = first.paths.baseDir;
         await first.db.close();
-        final pages = Directory(p.join(base, '1/7'));
+        // Normalized: the guard reports native separators on Windows.
+        final pages = Directory(p.normalize(p.join(base, '1/7')));
         await pages.create(recursive: true);
         final link = Link(p.join(pages.path, 'linked'));
-        await link.create(support.path);
+        await createTestLink(link.path, support.path);
         final reopened = (await initOfflineStorage())!;
         await reopened.db.close();
         await File(p.join(base, storageVettedMarker)).delete();

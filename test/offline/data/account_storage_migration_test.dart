@@ -13,6 +13,8 @@ import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.d
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_recovery.dart';
 
+import '../../helpers/test_link.dart';
+
 /// Forces the copy fallback: a rename that behaves as if the destination
 /// sat on another device.
 Future<void> _noRename(FileSystemEntity source, String destination) async =>
@@ -444,7 +446,7 @@ void main() {
     File(p.join(root.path, storageVettedMarker)).deleteSync();
     final page = File(p.join(root.path, '1/7/001.jpg'));
     page.deleteSync();
-    Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+    createTestLinkSync(page.path, p.join(root.path, 'accounts/other/secret'));
     await expectLater(
       claimRootAccountStorage(
         offlineRoot: root.path,
@@ -465,7 +467,7 @@ void main() {
     File(p.join(target, storageVettedMarker)).deleteSync();
     final page = File(p.join(target, '1/7/001.jpg'));
     page.deleteSync();
-    Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+    createTestLinkSync(page.path, p.join(root.path, 'accounts/other/secret'));
     await expectLater(
       prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
       throwsA(isA<FileSystemException>()),
@@ -492,9 +494,13 @@ void main() {
           File(p.join(target, storageVettedMarker)).readAsStringSync(),
           '1',
         );
-        final page = File(p.join(target, '1/7/001.jpg'));
+        // Normalized: the guard reports native separators on Windows.
+        final page = File(p.normalize(p.join(target, '1/7/001.jpg')));
         page.deleteSync();
-        Link(page.path).createSync(p.join(root.path, 'accounts/other/secret'));
+        createTestLinkSync(
+          page.path,
+          p.join(root.path, 'accounts/other/secret'),
+        );
         expect(
           await prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
           target,
@@ -518,7 +524,7 @@ void main() {
         instanceId: 'a',
       );
       final sidecar = Link(p.join(target, 'catalog.sqlite-journal'));
-      sidecar.createSync(p.join(root.path, 'outside'));
+      createTestLinkSync(sidecar.path, p.join(root.path, 'outside'));
       await expectLater(
         prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
         throwsA(
@@ -532,7 +538,7 @@ void main() {
       sidecar.deleteSync();
       final marker = File(p.join(target, storageVettedMarker));
       marker.deleteSync();
-      Link(marker.path).createSync(p.join(root.path, 'outside'));
+      createTestLinkSync(marker.path, p.join(root.path, 'outside'));
       await expectLater(
         prepareAccountStorage(offlineRoot: root.path, instanceId: 'a'),
         throwsA(
@@ -549,7 +555,8 @@ void main() {
       final target = accountStoragePath(root.path, 'a');
       Directory(target).createSync(recursive: true);
       File(p.join(target, storageVettedMarker)).writeAsStringSync('1');
-      final link = Link(p.join(target, 'unsafe'))..createSync(root.path);
+      final link = Link(p.join(target, 'unsafe'));
+      createTestLinkSync(link.path, root.path);
       await expectLater(
         prepareAccountStorage(
           offlineRoot: root.path,
@@ -568,8 +575,8 @@ void main() {
     'root vetting excludes other accounts and non-account storage',
     () async {
       legacy();
-      Link(p.join(root.path, 'accounts/other/link')).createSync(root.path);
-      Link(p.join(root.path, 'non-account')).createSync(root.path);
+      createTestLinkSync(p.join(root.path, 'accounts/other/link'), root.path);
+      createTestLinkSync(p.join(root.path, 'non-account'), root.path);
       expect(
         await claimRootAccountStorage(
           offlineRoot: root.path,
@@ -710,9 +717,10 @@ void main() {
 
   test('source and destination symlinks are refused', () async {
     legacy();
-    Link(
+    createTestLinkSync(
       p.join(root.path, 'covers', 'linked'),
-    ).createSync(p.join(root.path, '1'));
+      p.join(root.path, '1'),
+    );
     await expectLater(
       prepareAccountStorage(
         offlineRoot: root.path,
@@ -726,7 +734,7 @@ void main() {
       isFalse,
     );
     final elsewhere = Directory(p.join(root.path, 'elsewhere'))..createSync();
-    Link(accountStoragePath(root.path, 'b')).createSync(elsewhere.path);
+    createTestLinkSync(accountStoragePath(root.path, 'b'), elsewhere.path);
     await expectLater(
       prepareAccountStorage(offlineRoot: root.path, instanceId: 'b'),
       throwsA(isA<FileSystemException>()),

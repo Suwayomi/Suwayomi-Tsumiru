@@ -18,6 +18,8 @@ import 'package:tsumiru/src/features/offline/data/account_storage_migration_io.d
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_download_lock.dart';
 
+import '../../../../helpers/test_link.dart';
+
 void main() {
   late Directory root;
   late SharedPreferences preferences;
@@ -218,7 +220,7 @@ void main() {
         ),
         throwsStateError,
       );
-      await Link(p.join(target.path, 'linked')).create(root.path);
+      await createTestLink(p.join(target.path, 'linked'), root.path);
       expect(await repository.list(), isEmpty);
       await expectLater(
         repository.remove(row, canRemove: () => true),
@@ -262,7 +264,7 @@ void main() {
       if (invalid == 'directory') {
         await Directory(marker).create();
       } else if (invalid == 'symlink') {
-        await Link(marker).create(p.join(root.path, 'missing'));
+        await createTestLink(marker, p.join(root.path, 'missing'));
       } else {
         await File(marker).writeAsString('B');
       }
@@ -403,7 +405,7 @@ void main() {
       }),
     );
     expect((await repository.list()).single.username, 'cached');
-    await Link(p.join(a.path, 'linked')).create(root.path);
+    await createTestLink(p.join(a.path, 'linked'), root.path);
     expect(await repository.list(), isEmpty);
   });
 
@@ -510,7 +512,7 @@ void main() {
         throwsStateError,
       );
       expect(checks, 2);
-      await Link(p.join(a.path, 'linked')).create(root.path);
+      await createTestLink(p.join(a.path, 'linked'), root.path);
       await expectLater(
         repository.remove(target, canRemove: () => true),
         throwsA(isA<FileSystemException>()),
