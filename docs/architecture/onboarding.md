@@ -7,14 +7,16 @@ A three-step first-run wizard — **pick a theme → connect a server → done**
 `presentation/onboarding_screen.dart` — `OnboardingScreen` (`HookConsumerWidget`), three steps:
 
 - **Theme** (`_ThemeStep`): brand logo + `ThemeSelector`. Always completable.
-- **Connect your server** (`_ServerStep`): the real work. Gated — `Next` unlocks only when `serverVerified` is true.
+- **Connect your server** (`_ServerStep`): the real work. `Next` checks an unverified address, submits the displayed login form, or continues once verified.
 - **Finish** (`_FinishStep`): done screen. `finish()` sets `onboardingCompleteProvider` true and routes to the library.
 
 A top-right **Skip** escape (on the theme and server steps) also finishes onboarding.
 
 ### Connecting a server
 
-Two helpers, both on `_ServerStep`:
+The connection actions share `_ServerStep`:
+
+- **Next** runs the connection check when needed, then shows the login form or advances to Finish for an open server. The pending check and advance intent survive session replacement when the address is saved. Errors stay on the server step for correction and retry.
 
 - **Search my network** → `data/server_discovery.dart`: `discoverServerOnLan()` sweeps the device's Wi-Fi /24 subnet on port **4567** (`Socket.connect`, 120 ms timeout, concurrent batches), returning `http://<ip>:4567` for the first responder. Native-only (`dart:io`), called inside a `kIsWeb` guard.
 - **Test connection** → `data/server_resolver.dart`: a pure, fully-injectable resolver.

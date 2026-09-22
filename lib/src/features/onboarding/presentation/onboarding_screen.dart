@@ -55,6 +55,7 @@ class OnboardingScreen extends HookConsumerWidget {
       resume ? 2 : (preferences.getInt('onboarding.step') ?? 0).clamp(0, 1),
     );
     final serverVerified = useState(resume);
+    final nextRequest = useState(0);
     useEffect(() {
       if (resume) {
         Future.microtask(() {
@@ -67,14 +68,10 @@ class OnboardingScreen extends HookConsumerWidget {
     }, [resume]);
 
     Future<void> moveTo(int next) async {
+      nextRequest.value = 0;
       await preferences.setInt('onboarding.step', next.clamp(0, 1));
       if (context.mounted) step.value = next;
     }
-
-    bool stepComplete(int i) => switch (i) {
-      1 => serverVerified.value,
-      _ => true,
-    };
 
     final isLast = step.value == _stepCount - 1;
 
@@ -135,6 +132,7 @@ class OnboardingScreen extends HookConsumerWidget {
                       child: switch (step.value) {
                         0 => const _ThemeStep(),
                         1 => _ServerStep(
+                          nextRequest: nextRequest.value,
                           onVerifiedChanged: (v) => serverVerified.value = v,
                           onSignedIn: () {
                             serverVerified.value = true;
@@ -148,10 +146,17 @@ class OnboardingScreen extends HookConsumerWidget {
                 ),
                 _NavBar(
                   showBack: step.value > 0,
-                  canAdvance: stepComplete(step.value),
                   isLast: isLast,
                   onBack: () => moveTo(step.value - 1),
-                  onNext: () => isLast ? finish() : moveTo(step.value + 1),
+                  onNext: () {
+                    if (step.value == 1 && !serverVerified.value) {
+                      nextRequest.value++;
+                    } else if (isLast) {
+                      finish();
+                    } else {
+                      moveTo(step.value + 1);
+                    }
+                  },
                 ),
               ],
             ),
@@ -217,13 +222,11 @@ class _StepDots extends StatelessWidget {
 class _NavBar extends StatelessWidget {
   const _NavBar({
     required this.showBack,
-    required this.canAdvance,
     required this.isLast,
     required this.onBack,
     required this.onNext,
   });
   final bool showBack;
-  final bool canAdvance;
   final bool isLast;
   final VoidCallback onBack;
   final VoidCallback onNext;
@@ -232,7 +235,7 @@ class _NavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final next = BrandButton(
       label: Text(isLast ? context.l10n.finish : context.l10n.next),
-      onPressed: canAdvance ? onNext : null,
+      onPressed: onNext,
     );
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
@@ -320,9 +323,11 @@ final onboardingHttpClientProvider = Provider<http.Client Function()>(
 
 class _ServerStep extends HookConsumerWidget {
   const _ServerStep({
+    required this.nextRequest,
     required this.onVerifiedChanged,
     required this.onSignedIn,
   });
+  final int nextRequest;
   final ValueChanged<bool> onVerifiedChanged;
   final VoidCallback onSignedIn;
 
@@ -452,6 +457,17 @@ class _ServerStep extends HookConsumerWidget {
       return true;
     }
 
+    Future<void> markConnected() async {
+      state.value = _TestState.connected;
+      onVerifiedChanged(true);
+      if (preferences.getBool('onboarding.advanceAfterProbe') == true) {
+        await preferences.setString('onboarding.pendingProbe', '');
+        await preferences.setBool('onboarding.advanceAfterProbe', false);
+        await preferences.setInt('onboarding.step', 2);
+        if (context.mounted) onSignedIn();
+      }
+    }
+
     // Web can't run the redirect-OFF candidate ladder, so test the typed
     // address (scheme filled in — a scheme-less URL would resolve relative to
     // the page origin) via the about query, then detect auth with the same
@@ -490,8 +506,7 @@ class _ServerStep extends HookConsumerWidget {
           client: client,
           extraHeaders: ref.read(customHttpHeadersProvider).value,
         )) {
-          state.value = _TestState.connected;
-          onVerifiedChanged(true);
+          await markConnected();
           return;
         }
         final hasCreds =
@@ -529,6 +544,7 @@ class _ServerStep extends HookConsumerWidget {
         } finally {
           if (context.mounted && sessionIsCurrent()) {
             await preferences.setString('onboarding.pendingProbe', '');
+            await preferences.setBool('onboarding.advanceAfterProbe', false);
           }
         }
         return;
@@ -564,8 +580,7 @@ class _ServerStep extends HookConsumerWidget {
                 result.outcome == ResolveOutcome.basicGated ||
                 result.authMode == ProbeAuthMode.authRequired;
             if (!needsLogin) {
-              state.value = _TestState.connected;
-              onVerifiedChanged(true);
+              await markConnected();
             } else {
               final hasCreds =
                   userController.text.trim().isNotEmpty &&
@@ -589,6 +604,7 @@ class _ServerStep extends HookConsumerWidget {
         client.close();
         if (context.mounted && sessionIsCurrent()) {
           await preferences.setString('onboarding.pendingProbe', '');
+          await preferences.setBool('onboarding.advanceAfterProbe', false);
         }
       }
     }
@@ -655,6 +671,26 @@ class _ServerStep extends HookConsumerWidget {
       state.value = _TestState.needsLogin;
       onVerifiedChanged(false);
     }
+
+    useEffect(() {
+      if (nextRequest == 0) return null;
+      Future.microtask(() async {
+        if (!context.mounted ||
+            state.value == _TestState.testing ||
+            state.value == _TestState.searching) {
+          return;
+        }
+        if (state.value == _TestState.needsLogin) {
+          await signIn();
+        } else {
+          if (urlController.text.trim().isNotEmpty) {
+            await preferences.setBool('onboarding.advanceAfterProbe', true);
+          }
+          if (context.mounted) await testConnection();
+        }
+      });
+      return null;
+    }, [nextRequest]);
 
     final busy =
         state.value == _TestState.testing ||

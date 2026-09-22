@@ -22,7 +22,6 @@ import 'package:tsumiru/src/features/offline/data/offline_server_identity_reposi
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/utils/theme/brand.dart';
 
 const _aboutOk =
     '{"data":{"aboutServer":{"name":"Suwayomi-Server","version":"2.0"}}}';
@@ -53,185 +52,252 @@ class _SimpleLoginCoordinator extends AuthCoordinator {
 }
 
 void main() {
-  for (final needsLogin in [true, false]) {
-    testWidgets(
-      'connection result survives the app session restart (login: $needsLogin)',
-      (tester) async {
-        FlutterSecureStorage.setMockInitialValues({});
-        SharedPreferences.setMockInitialValues({'onboarding.step': 1});
-        final preferences = await SharedPreferences.getInstance();
-        await tester.binding.setSurfaceSize(const Size(1080, 2400));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        Future<ProviderContainer> createContainer() async {
-          final container = ProviderContainer(
-            overrides: [
-              sharedPreferencesProvider.overrideWithValue(preferences),
-              onboardingHttpClientProvider.overrideWithValue(
-                () => MockClient.streaming((request, body) async {
-                  final query =
-                      (jsonDecode(await body.bytesToString()) as Map)['query']
-                          as String;
-                  return http.StreamedResponse(
-                    Stream.value(
-                      utf8.encode(
-                        query.contains('aboutServer')
-                            ? _aboutOk
-                            : needsLogin
-                            ? _authUnauthorized
-                            : '{"data":{"downloadStatus":{"state":"STOPPED"}}}',
+  for (final action in ['Test connection', 'Next']) {
+    for (final needsLogin in [true, false]) {
+      testWidgets(
+        '$action survives the app session restart (login: $needsLogin)',
+        (tester) async {
+          FlutterSecureStorage.setMockInitialValues({});
+          SharedPreferences.setMockInitialValues({'onboarding.step': 1});
+          final preferences = await SharedPreferences.getInstance();
+          await tester.binding.setSurfaceSize(const Size(1080, 2400));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          Future<ProviderContainer> createContainer() async {
+            final container = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(preferences),
+                onboardingHttpClientProvider.overrideWithValue(
+                  () => MockClient.streaming((request, body) async {
+                    final query =
+                        (jsonDecode(await body.bytesToString()) as Map)['query']
+                            as String;
+                    return http.StreamedResponse(
+                      Stream.value(
+                        utf8.encode(
+                          query.contains('aboutServer')
+                              ? _aboutOk
+                              : needsLogin
+                              ? _authUnauthorized
+                              : '{"data":{"downloadStatus":{"state":"STOPPED"}}}',
+                        ),
                       ),
-                    ),
-                    200,
-                  );
-                }),
-              ),
-            ],
-          );
-          await container.read(authCredentialsStoreProvider.future);
-          return container;
-        }
+                      200,
+                    );
+                  }),
+                ),
+              ],
+            );
+            await container.read(authCredentialsStoreProvider.future);
+            return container;
+          }
 
-        var restarts = 0;
-        await tester.pumpWidget(
-          AccountSessionHost(
-            initialContainer: await createContainer(),
-            sessionKey: (c) => c.read(currentServerAddressProvider),
-            restart: (_) async {
-              restarts++;
-              return createContainer();
-            },
-            builder: (changing) => MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Offstage(
-                offstage: changing,
-                child: const OnboardingScreen(),
+          var restarts = 0;
+          await tester.pumpWidget(
+            AccountSessionHost(
+              initialContainer: await createContainer(),
+              sessionKey: (c) => c.read(currentServerAddressProvider),
+              restart: (_) async {
+                restarts++;
+                return createContainer();
+              },
+              builder: (changing) => MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Offstage(
+                  offstage: changing,
+                  child: const OnboardingScreen(),
+                ),
               ),
+              loading: const SizedBox(),
+              errorBuilder: (error) => Text('$error'),
             ),
-            loading: const SizedBox(),
-            errorBuilder: (error) => Text('$error'),
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Server URL'),
-          'http://server:4567',
-        );
-        await tester.tap(find.text('Test connection'));
-        await tester.pumpAndSettle();
-        expect(restarts, greaterThan(0));
-        expect(
-          find.text(
-            needsLogin
-                ? 'This server needs a login'
-                : 'Connected — Suwayomi v2.0',
-          ),
-          findsOneWidget,
-        );
-        expect(preferences.getString('onboarding.pendingProbe'), '');
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
-  }
-
-  for (final password in ['correct', 'wrong']) {
-    testWidgets(
-      'Simple Login with $password password completes only on success',
-      (tester) async {
-        FlutterSecureStorage.setMockInitialValues({});
-        SharedPreferences.setMockInitialValues({
-          'onboarding.step': 1,
-          'onboarding.pendingProbe': 'http://server',
-        });
-        final preferences = await SharedPreferences.getInstance();
-        await tester.binding.setSurfaceSize(const Size(1080, 2400));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final router = GoRouter(
-          initialLocation: '/onboarding',
-          routes: [
-            GoRoute(
-              path: '/onboarding',
-              builder: (_, _) => const OnboardingScreen(),
-            ),
-            GoRoute(
-              path: '/library/:categoryId',
-              builder: (_, _) => const Scaffold(body: Text('Library')),
-            ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sharedPreferencesProvider.overrideWithValue(preferences),
-              onboardingHttpClientProvider.overrideWithValue(
-                _gatedServerClient,
-              ),
-              authCoordinatorProvider.overrideWith(_SimpleLoginCoordinator.new),
-            ],
-            child: MaterialApp.router(
-              routerConfig: router,
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        tester
-            .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
-            .onSelected!(AuthType.simpleLogin);
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          find.widgetWithText(TextField, 'User Name'),
-          'reader',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Password'),
-          password,
-        );
-        await tester.tap(find.text('Sign in'));
-        await tester.pumpAndSettle();
-        if (password == 'correct') {
-          expect(find.text('Library'), findsNothing);
-          expect(find.text("You're all set"), findsOneWidget);
-          expect(
-            preferences.getBool(DBKeys.onboardingComplete.name),
-            isNot(true),
           );
-          await tester.tap(find.text('Finish'));
           await tester.pumpAndSettle();
-          expect(find.text('Library'), findsOneWidget);
-          expect(preferences.getBool(DBKeys.onboardingComplete.name), isTrue);
-        } else {
-          expect(find.text('Library'), findsNothing);
+          await tester.enterText(
+            find.widgetWithText(TextField, 'Server URL'),
+            'http://server:4567',
+          );
+          await tester.tap(find.text(action));
+          await tester.pumpAndSettle();
+          expect(restarts, greaterThan(0));
           expect(
-            find.textContaining("Those credentials didn't work"),
+            find.text(
+              needsLogin
+                  ? 'This server needs a login'
+                  : action == 'Next'
+                  ? "You're all set"
+                  : 'Connected — Suwayomi v2.0',
+            ),
             findsOneWidget,
           );
-          expect(
-            tester
-                .widget<TextField>(find.widgetWithText(TextField, 'User Name'))
-                .controller!
-                .text,
+          expect(preferences.getString('onboarding.pendingProbe'), '');
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
+
+  testWidgets('Next keeps a failed address and retries it', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding.step': 1});
+    final preferences = await SharedPreferences.getInstance();
+    await tester.binding.setSurfaceSize(const Size(1080, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var reachable = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          onboardingHttpClientProvider.overrideWithValue(
+            () => MockClient.streaming((request, body) async {
+              if (!reachable) throw http.ClientException('Unreachable');
+              final query =
+                  (jsonDecode(await body.bytesToString()) as Map)['query']
+                      as String;
+              return http.StreamedResponse(
+                Stream.value(
+                  utf8.encode(
+                    query.contains('aboutServer')
+                        ? _aboutOk
+                        : _authUnauthorized,
+                  ),
+                ),
+                200,
+              );
+            }),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const OnboardingScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final addressField = find.widgetWithText(TextField, 'Server URL');
+    await tester.enterText(addressField, 'https://server.example');
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't reach a server"), findsOneWidget);
+    expect(
+      tester.widget<TextField>(addressField).controller!.text,
+      'https://server.example',
+    );
+    expect(find.text("You're all set"), findsNothing);
+    reachable = true;
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('This server needs a login'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final signInAction in ['Sign in', 'Next']) {
+    for (final password in ['correct', 'wrong']) {
+      testWidgets(
+        '$signInAction with $password password completes only on success',
+        (tester) async {
+          FlutterSecureStorage.setMockInitialValues({});
+          SharedPreferences.setMockInitialValues({
+            'onboarding.step': 1,
+            'onboarding.pendingProbe': 'http://server',
+          });
+          final preferences = await SharedPreferences.getInstance();
+          await tester.binding.setSurfaceSize(const Size(1080, 2400));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final router = GoRouter(
+            initialLocation: '/onboarding',
+            routes: [
+              GoRoute(
+                path: '/onboarding',
+                builder: (_, _) => const OnboardingScreen(),
+              ),
+              GoRoute(
+                path: '/library/:categoryId',
+                builder: (_, _) => const Scaffold(body: Text('Library')),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(preferences),
+                onboardingHttpClientProvider.overrideWithValue(
+                  _gatedServerClient,
+                ),
+                authCoordinatorProvider.overrideWith(
+                  _SimpleLoginCoordinator.new,
+                ),
+              ],
+              child: MaterialApp.router(
+                routerConfig: router,
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          tester
+              .widget<DropdownMenu<AuthType>>(
+                find.byType(DropdownMenu<AuthType>),
+              )
+              .onSelected!(AuthType.simpleLogin);
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.widgetWithText(TextField, 'User Name'),
             'reader',
           );
-          expect(
-            tester
-                .widget<TextField>(find.widgetWithText(TextField, 'Password'))
-                .controller!
-                .text,
+          await tester.enterText(
+            find.widgetWithText(TextField, 'Password'),
             password,
           );
-          expect(
-            preferences.getBool(DBKeys.onboardingComplete.name),
-            isNot(true),
-          );
-        }
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
+          await tester.tap(find.text(signInAction));
+          await tester.pumpAndSettle();
+          if (password == 'correct') {
+            expect(find.text('Library'), findsNothing);
+            expect(find.text("You're all set"), findsOneWidget);
+            expect(
+              preferences.getBool(DBKeys.onboardingComplete.name),
+              isNot(true),
+            );
+            await tester.tap(find.text('Finish'));
+            await tester.pumpAndSettle();
+            expect(find.text('Library'), findsOneWidget);
+            expect(preferences.getBool(DBKeys.onboardingComplete.name), isTrue);
+          } else {
+            expect(find.text('Library'), findsNothing);
+            expect(
+              find.textContaining("Those credentials didn't work"),
+              findsOneWidget,
+            );
+            expect(
+              tester
+                  .widget<TextField>(
+                    find.widgetWithText(TextField, 'User Name'),
+                  )
+                  .controller!
+                  .text,
+              'reader',
+            );
+            expect(
+              tester
+                  .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+                  .controller!
+                  .text,
+              password,
+            );
+            expect(
+              preferences.getBool(DBKeys.onboardingComplete.name),
+              isNot(true),
+            );
+          }
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
   }
 
   testWidgets('interrupted probe resumes and exposes UI account forms', (
@@ -323,72 +389,73 @@ void main() {
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
   });
 
-  testWidgets('wrong auth type / credentials must NOT report connected — they are '
-      'rejected and Next stays gated', (tester) async {
-    FlutterSecureStorage.setMockInitialValues({});
-    SharedPreferences.setMockInitialValues({});
-    final sp = await SharedPreferences.getInstance();
+  testWidgets(
+    'wrong auth type / credentials must NOT report connected — they are '
+    'rejected and Next cannot finish',
+    (tester) async {
+      FlutterSecureStorage.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
 
-    await tester.binding.setSurfaceSize(const Size(1080, 2400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(1080, 2400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sp),
-          // Gated server: aboutServer answers, but the @RequireAuth probe is
-          // ALWAYS Unauthorized — no credential of any kind authorises it. This
-          // models picking the wrong auth type (e.g. Basic on a ui_login
-          // server, whose public aboutServer answers regardless of creds).
-          onboardingHttpClientProvider.overrideWithValue(_gatedServerClient),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const OnboardingScreen(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sp),
+            // Gated server: aboutServer answers, but the @RequireAuth probe is
+            // ALWAYS Unauthorized — no credential of any kind authorises it. This
+            // models picking the wrong auth type (e.g. Basic on a ui_login
+            // server, whose public aboutServer answers regardless of creds).
+            onboardingHttpClientProvider.overrideWithValue(_gatedServerClient),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const OnboardingScreen(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '192.168.0.10');
-    await tester.tap(find.text('Test connection'));
-    await tester.pumpAndSettle();
-    expect(find.text('This server needs a login'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, '192.168.0.10');
+      await tester.tap(find.text('Test connection'));
+      await tester.pumpAndSettle();
+      expect(find.text('This server needs a login'), findsOneWidget);
 
-    // Enter credentials with the default (Basic) auth type and Sign in.
-    await tester.enterText(
-      find.widgetWithText(TextField, 'User Name'),
-      'whoever',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Password'),
-      'whatever',
-    );
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
+      // Enter credentials with the default (Basic) auth type and Sign in.
+      await tester.enterText(
+        find.widgetWithText(TextField, 'User Name'),
+        'whoever',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Password'),
+        'whatever',
+      );
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
 
-    // The credentials are rejected — NOT a false "Connected".
-    expect(
-      find.text(
-        "Those credentials didn't work. Double-check your "
-        'username, password, and sign-in method.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.textContaining('Connected'), findsNothing);
+      // The credentials are rejected — NOT a false "Connected".
+      expect(
+        find.text(
+          "Those credentials didn't work. Double-check your "
+          'username, password, and sign-in method.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Connected'), findsNothing);
 
-    // Next is still gated (onboarding can't be finished with a broken config).
-    final nextButton = tester.widget<BrandButton>(
-      find.widgetWithText(BrandButton, 'Next'),
-    );
-    expect(
-      nextButton.onPressed,
-      isNull,
-      reason: 'Next must stay disabled when sign-in was rejected',
-    );
-  });
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text("You're all set"), findsNothing);
+      expect(
+        find.textContaining("Those credentials didn't work"),
+        findsOneWidget,
+      );
+    },
+  );
 }

@@ -78,7 +78,7 @@ void main() {
   });
 
   testWidgets(
-    'wizard advances theme→server, gates Next until verified, Back returns',
+    'wizard advances theme→server, validates an empty URL, Back returns',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final sp = await SharedPreferences.getInstance();
@@ -108,6 +108,10 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text("You're all set"), findsNothing);
+      expect(
+        find.text("Enter your server's address, or tap Search my network."),
+        findsOneWidget,
+      );
       expect(find.text('Connect your server'), findsOneWidget);
 
       await tester.tap(find.text('Back'));
