@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,7 +77,10 @@ void main() {
             )
             .timeout(const Duration(seconds: 3));
         final storage = container.read(offlineRuntimeStorageProvider)!;
-        expect(storage.paths.baseDir, endsWith('/accounts/$account'));
+        expect(
+          p.normalize(storage.paths.baseDir),
+          endsWith(p.join('accounts', account)),
+        );
         expect(container.read(offlineDatabaseProvider), same(storage.db));
         expect(
           prefs.getInt('${DBKeys.offlineCatchUpWatermark.name}/$account'),

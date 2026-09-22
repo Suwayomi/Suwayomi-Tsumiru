@@ -794,7 +794,10 @@ void main() {
         final after = fixture.active.read(offlineRuntimeStorageProvider)!;
         expect(fixture.restarts, 1);
         expect(after, isNot(same(before)));
-        expect(after.paths.baseDir, endsWith('/accounts/B'));
+        expect(
+          p.normalize(after.paths.baseDir),
+          endsWith(p.join('accounts', 'B')),
+        );
         expect(await after.db.mangaById(1), isNull);
         await expectLater(before.db.mangaById(1), throwsStateError);
         expect(

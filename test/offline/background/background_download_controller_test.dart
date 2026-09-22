@@ -9,6 +9,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
@@ -31,6 +32,7 @@ import 'package:tsumiru/src/features/offline/data/offline_settings_providers.dar
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:workmanager/workmanager.dart';
 
 import '../../helpers/offline_test_db.dart';
 
@@ -125,6 +127,46 @@ class _ManualTimer implements Timer {
   void cancel() => _active = false;
 }
 
+/// Stands in for the OS scheduler: without it, reconcileBackgroundSchedule
+/// reaches the host's real workmanager plugin — systemd user units on Linux,
+/// none at all on Windows (UnimplementedError).
+class _NoopSchedule extends WorkmanagerPlatform {
+  @override
+  Future<void> registerPeriodicTask(
+    String uniqueName,
+    String taskName, {
+    Duration? frequency,
+    Duration? flexInterval,
+    Map<String, dynamic>? inputData,
+    Duration? initialDelay,
+    Constraints? constraints,
+    ExistingPeriodicWorkPolicy? existingWorkPolicy,
+    BackoffPolicy? backoffPolicy,
+    Duration? backoffPolicyDelay,
+    String? tag,
+    ForegroundServiceConfig? foregroundServiceConfig,
+  }) async {}
+
+  @override
+  Future<void> registerOneOffTask(
+    String uniqueName,
+    String taskName, {
+    String? tag,
+    ExistingWorkPolicy? existingWorkPolicy,
+    Duration? initialDelay,
+    Constraints? constraints,
+    BackoffPolicy? backoffPolicy,
+    Duration? backoffPolicyDelay,
+    OutOfQuotaPolicy? outOfQuotaPolicy,
+    Map<String, dynamic>? inputData,
+    ForegroundServiceConfig? foregroundServiceConfig,
+    bool expedited = false,
+  }) async {}
+
+  @override
+  Future<void> cancelByUniqueName(String uniqueName) async {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late OfflineDatabase db;
@@ -142,8 +184,12 @@ void main() {
   late bool offlineEnabled;
   late int pathReads;
   late StreamController<List<ConnectivityResult>> connectionChanges;
+  late WorkmanagerPlatform previousSchedule;
 
   setUp(() async {
+    Workmanager();
+    previousSchedule = WorkmanagerPlatform.instance;
+    WorkmanagerPlatform.instance = _NoopSchedule();
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({
       'offlineCatalogServerId': 'catalog-A',
@@ -235,6 +281,7 @@ void main() {
     controller.dispose();
     container.dispose();
     await db.close();
+    WorkmanagerPlatform.instance = previousSchedule;
   });
 
   test(
@@ -246,7 +293,10 @@ void main() {
       await controller.changeIdentity(() async {
         ownedRoot = controller.ownedStorageRoot;
       });
-      expect(ownedRoot, endsWith('/offline/non-account'));
+      expect(
+        p.normalize(ownedRoot!),
+        endsWith(p.join('offline', 'non-account')),
+      );
       expect(pathReads, 0);
     },
   );

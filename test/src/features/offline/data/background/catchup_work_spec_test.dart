@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/notifications/domain/new_chapter_detection.dart';
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
@@ -22,7 +23,7 @@ void main() {
       'nonAccountScoped': true,
     });
     final restored = CatchupWorkSpec.fromJson(spec.toJson());
-    expect(restored.storagePath('/offline'), '/offline/non-account');
+    expect(restored.storagePath('/offline'), p.join('/offline', 'non-account'));
     expect(offlineControlRoot(restored.storagePath('/offline')), '/offline');
     expect(
       CatchupWorkSpec.fromJson({'serverId': 'legacy'}).storagePath('/offline'),

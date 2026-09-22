@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:tsumiru/src/features/offline/data/account_storage_paths.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_schedule.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
@@ -55,7 +56,10 @@ void main() {
       manga: [],
     );
     final scoped = CatchupWorkSpec.fromJson(spec('account-a', true).toJson());
-    expect(scoped.storagePath('/offline'), '/offline/accounts/account-a');
+    expect(
+      scoped.storagePath('/offline'),
+      p.join('/offline', 'accounts', 'account-a'),
+    );
     final legacyJson = spec('legacy', false).toJson()..remove('accountScoped');
     expect(
       CatchupWorkSpec.fromJson(legacyJson).storagePath('/offline'),
