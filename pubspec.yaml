@@ -38,7 +38,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_markdown_plus: ^1.0.12
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^11.2.0
   # Masonry / aligned grids for the library's non-uniform + staggered cover
   # styles (SliverGrid can only give every tile one fixed extent).
   flutter_staggered_grid_view: ^0.7.0
@@ -91,16 +91,6 @@ dependencies:
   workmanager: ^0.10.9
   battery_plus: ^7.1.1
   uuid: ^4.6.0
-
-# Pinned until juliansteenbakker/flutter_secure_storage#1104 lands upstream.
-# Our macOS builds are ad-hoc signed, so the plugin's synchronizable keychain
-# queries fail for want of an entitlement and no login survives a restart.
-dependency_overrides:
-  flutter_secure_storage_darwin:
-    git:
-      url: https://github.com/Suwayomi/flutter_secure_storage.git
-      ref: 8d1209c9debd56b176a2efe99c308ba47d2b56e8
-      path: flutter_secure_storage_darwin
 
 dev_dependencies:
   cross_file: ^0.3.5+4
