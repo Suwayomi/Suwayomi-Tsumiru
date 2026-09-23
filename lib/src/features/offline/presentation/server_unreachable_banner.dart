@@ -29,7 +29,33 @@ class ServerUnreachableBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(serverUnreachableProvider)) return const SizedBox.shrink();
+    final unreachable = ref.watch(serverUnreachableProvider);
+    // The "View offline" choice outlives the outage flag: any successful
+    // request anywhere clears serverUnreachable while the catalog stays
+    // pinned. Without its own banner that left no visible way back online.
+    final viewingOffline = ref.watch(viewOfflineNowProvider);
+    if (!unreachable && !viewingOffline) return const SizedBox.shrink();
+
+    // Same contract as the library's refresh gestures: drop both pins, then
+    // genuinely re-ask the server.
+    void goOnline() {
+      ref.read(viewOfflineNowProvider.notifier).set(false);
+      ref.read(serverUnreachableProvider.notifier).set(false);
+      onRetry?.call();
+    }
+
+    if (!unreachable) {
+      return MaterialBanner(
+        content: Text(context.l10n.offlineViewBannerTitle),
+        leading: const Icon(Icons.cloud_off_rounded),
+        actions: [
+          TextButton(
+            onPressed: goOnline,
+            child: Text(context.l10n.offlineViewGoOnline),
+          ),
+        ],
+      );
+    }
 
     return MaterialBanner(
       content: Text(context.l10n.serverUnreachableTitle),
@@ -39,16 +65,7 @@ class ServerUnreachableBanner extends ConsumerWidget {
           onPressed: () => const ConnectionRoute().push(context),
           child: Text(context.l10n.serverUnreachableAction),
         ),
-        TextButton(
-          // Same contract as the library's refresh gestures: drop both pins,
-          // then genuinely re-ask the server.
-          onPressed: () {
-            ref.read(viewOfflineNowProvider.notifier).set(false);
-            ref.read(serverUnreachableProvider.notifier).set(false);
-            onRetry?.call();
-          },
-          child: Text(context.l10n.refresh),
-        ),
+        TextButton(onPressed: goOnline, child: Text(context.l10n.refresh)),
       ],
     );
   }

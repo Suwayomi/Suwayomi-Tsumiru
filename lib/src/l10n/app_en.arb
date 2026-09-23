@@ -2784,6 +2784,14 @@
   "@serverUnreachableAction": {
     "description": "Button that opens the connection settings screen"
   },
+  "offlineViewBannerTitle": "You're viewing offline",
+  "@offlineViewBannerTitle": {
+    "description": "Banner shown while the user chose to view the on-device library instead of waiting for the server"
+  },
+  "offlineViewGoOnline": "Go online",
+  "@offlineViewGoOnline": {
+    "description": "Banner button that leaves the offline view and loads from the server again"
+  },
   "clearCrashLog": "Clear debug log",
   "copyCrashLog": "Copy debug log",
   "copyCrashLogSubtitle": "For bug reports — copies recent errors and reader diagnostics",
