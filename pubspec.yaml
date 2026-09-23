@@ -114,7 +114,7 @@ dev_dependencies:
   flutter_riverpod: ^3.3.2
   flutter_test:
     sdk: flutter
-  freezed: ^3.0.0
+  freezed: ^4.0.1
   # Keep aligned with the go_router runtime major (builder 4.x ↔ go_router 17.x).
   go_router_builder: ^4.0.0
   graphql_codegen: ^3.0.0
