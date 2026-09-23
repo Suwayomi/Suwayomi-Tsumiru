@@ -18,6 +18,8 @@ Apache License 2.0 (Apache-2.0.txt)
 
 Changes: selected translations were converted from PO and Android XML to Flutter
 ARB, with Android string escapes decoded and Tsumiru resource keys substituted.
-Translation wording was retained. Per-string source records and the modified
+Selected printf arguments and simple cardinal plurals were converted to typed
+Flutter placeholders and plural clauses; ICU number signs were expanded to
+explicit count placeholders. Translation wording was retained. Per-string source records and the modified
 catalogs are available in the Suwayomi/Suwayomi-Tsumiru repository under
 scripts/translations/provenance.json and lib/src/l10n/ respectively.

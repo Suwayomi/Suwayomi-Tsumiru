@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["polib==1.2.0"]
+# dependencies = ["polib==1.2.0", "babel==2.18.0"]
 # ///
-"""Import reviewed static translations: uv run scripts/translations/import_upstream.py --help."""
+"""Import reviewed upstream translations: uv run scripts/translations/import_upstream.py --help."""
 import argparse
 import json
 from pathlib import Path
@@ -12,6 +12,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 import polib
+
+from formats import convert, validate_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = Path(__file__).resolve().parent
@@ -60,9 +62,14 @@ def parse_catalog(path, source):
     if source == 'webui':
         return {e.msgid: e.msgstr for e in polib.pofile(str(path))
                 if not e.obsolete and 'fuzzy' not in e.flags and not e.msgid_plural}
-    return {e.attrib['name']: android_text(e.text or '')
-            for e in ET.parse(path).getroot()
-            if e.tag == 'string' and not len(e) and e.attrib.get('translatable') != 'false'}
+    root = ET.parse(path).getroot()
+    values = {e.attrib['name']: android_text(e.text or '')
+              for e in root if e.tag == 'string' and not len(e)
+              and e.attrib.get('translatable') != 'false'}
+    for element in root.findall('plurals'):
+        if all(not len(item) for item in element):
+            values[element.attrib['name']] = {item.attrib['quantity']: android_text(item.text or '') for item in element}
+    return values
 
 
 def safe_static(text):
@@ -78,9 +85,11 @@ def coverage(catalogs, keys):
             for locale in sorted(catalogs) if locale != 'en'}
 
 
-def load_catalog(cache, source, locale, fetch):
+def load_catalog(cache, source, locale, fetch, catalog="strings"):
     repo, revision, pattern = SOURCES[source]
     relative = pattern.format(locale=locale)
+    if catalog == "plurals":
+        relative = relative.replace("strings.xml", "plurals.xml")
     path = cache / source / revision / relative
     if not path.exists():
         if not fetch:
@@ -90,6 +99,22 @@ def load_catalog(cache, source, locale, fetch):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
     return parse_catalog(path, source)
+
+
+def prepare_translation(raw, key, ref, locale, allowances):
+    if raw is None:
+        return None
+    unchanged = raw == ref['english'] or (isinstance(raw, str) and isinstance(ref['english'], str)
+                                         and raw.strip().casefold() == ref['english'].strip().casefold())
+    if unchanged and key not in allowances['invariant'] and key not in allowances['locales'].get(locale, {}):
+        return None
+    try:
+        text = convert(raw, ref, locale)
+    except (ValueError, TypeError):
+        return None
+    if not ref.get('conversion') and not safe_static(text):
+        return None
+    return text
 
 
 def run(cache, fetch, write):
@@ -105,27 +130,45 @@ def run(cache, fetch, write):
         for locale, pair in LOCALES.items():
             upstream[source, locale] = ({} if source == 'komikku_extra' and locale in ('nb', 'nb_NO')
                                         else load_catalog(cache, source, pair[source != 'webui'], fetch))
+    for source in {ref['source'] for entry in mapping.values() for ref in entry['sources'] if ref.get('catalog') == 'plurals'}:
+        for locale in ['en', *LOCALES]:
+            source_locale = 'base' if locale == 'en' else LOCALES[locale][1]
+            upstream[source, locale, 'plurals'] = ({} if source == 'mihon' and locale == 'ta'
+                                                   else load_catalog(cache, source, source_locale, fetch, 'plurals'))
+    allowances = read_json(DATA / 'unchanged.json')
+
+    def source_value(ref, locale):
+        catalog_key = (ref['source'], locale, 'plurals') if ref.get('catalog') == 'plurals' else (ref['source'], locale)
+        return upstream[catalog_key].get(ref['key'])
+
+    def imported_value(key, ref, locale):
+        if locale in mapping[key].get('excluded_locales', {}):
+            return None
+        return prepare_translation(source_value(ref, locale), key, ref, locale, allowances)
+
     for key, entry in mapping.items():
         assert english[key] == entry['english'], f'English changed: {key}'
-        assert safe_static(english[key]), f'Unsupported format: {key}'
         for ref in entry['sources']:
-            assert upstream[ref['source'], 'en'][ref['key']] == ref['english'], f'Source changed: {key}/{ref}'
+            assert source_value(ref, 'en') == ref['english'], f'Source changed: {key}/{ref}'
+            if 'conversion' in ref:
+                validate_spec(english[key], english.get('@' + key, {}), ref)
+            else:
+                assert safe_static(english[key]), f'Unsupported format: {key}'
     provenance_path = DATA / 'provenance.json'
     provenance = read_json(provenance_path) if provenance_path.exists() else {}
     for locale, entries in provenance.items():
         for key, ref in entries.items():
             assert ref in mapping[key]['sources'], f'Unmapped provenance: {locale}/{key}'
-            text = upstream[ref['source'], locale][ref['key']]
-            assert catalogs[locale].get(key) == text, f'Imported text differs: {locale}/{key}'
-            assert safe_static(text) and text.strip().casefold() != ref['english'].strip().casefold()
+            text = imported_value(key, ref, locale)
+            assert text is not None and catalogs[locale].get(key) == text, f'Imported text differs: {locale}/{key}'
     added = 0
     for locale in sorted(LOCALES, key=lambda s: ('_' in s, s)):
         for key, entry in mapping.items():
             if effective(original, locale, key):
                 continue
             for ref in entry['sources']:
-                text = upstream[ref['source'], locale].get(ref['key'])
-                if not safe_static(text) or text.strip().casefold() == ref['english'].strip().casefold():
+                text = imported_value(key, ref, locale)
+                if text is None:
                     continue
                 catalogs[locale][key] = text
                 provenance.setdefault(locale, {})[key] = ref
@@ -140,7 +183,10 @@ def run(cache, fetch, write):
         assert all(catalogs[locale][key] == value for key, value in old.items() if value), f'Existing value changed: {locale}'
     report_path = DATA / 'coverage.json'
     report = read_json(report_path) if report_path.exists() else {'baseline': 'fe452d18', 'total': len(keys), 'before': coverage(original, keys)}
+    report.setdefault('pass_two', {'baseline': 'dc04b2c1', 'before': coverage(original, keys), 'imports_before': sum(report['imported'].values())})
     report['after'] = coverage(catalogs, keys)
+    report['pass_two']['delta'] = {locale: report['after'][locale] - value for locale, value in report['pass_two']['before'].items()}
+    report['pass_two']['new_imports'] = sum(len(entries) for entries in provenance.values()) - report['pass_two']['imports_before']
     report['imported'] = {locale: len(entries) for locale, entries in sorted(provenance.items())}
     report['sources'] = {source: {'repository': repo, 'revision': revision, 'path': pattern} for source, (repo, revision, pattern) in SOURCES.items()}
     if write:

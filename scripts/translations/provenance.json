@@ -1354,6 +1354,333 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "nSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "de": {
@@ -3251,6 +3578,604 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "readerGroupNavigation": {
+      "source": "mihon",
+      "key": "pref_reader_navigation",
+      "english": "Navigation"
+    },
+    "ok": {
+      "source": "mihon",
+      "key": "action_ok",
+      "english": "OK"
+    },
+    "downloads": {
+      "source": "mihon",
+      "key": "pref_category_downloads",
+      "english": "Downloads"
+    },
+    "filter": {
+      "source": "mihon",
+      "key": "action_filter",
+      "english": "Filter"
+    },
+    "includeTracking": {
+      "source": "webui",
+      "key": "Tracking",
+      "english": "Tracking"
+    },
+    "manga": {
+      "source": "webui",
+      "key": "Manga",
+      "english": "Manga"
+    },
+    "pause": {
+      "source": "mihon",
+      "key": "action_pause",
+      "english": "Pause"
+    },
+    "readerTapInvertHorizontal": {
+      "source": "mihon",
+      "key": "tapping_inverted_horizontal",
+      "english": "Horizontal"
+    },
+    "server": {
+      "source": "webui",
+      "key": "Server",
+      "english": "Server"
+    },
+    "sourceTypeFilter": {
+      "source": "mihon",
+      "key": "action_filter",
+      "english": "Filter"
+    },
+    "themeModeSystem": {
+      "source": "mihon",
+      "key": "theme_system",
+      "english": "System"
+    },
+    "offlineDownloadsSection": {
+      "source": "mihon",
+      "key": "pref_category_downloads",
+      "english": "Downloads"
+    },
+    "downloadsServerTab": {
+      "source": "webui",
+      "key": "Server",
+      "english": "Server"
+    },
+    "tracking": {
+      "source": "mihon",
+      "key": "pref_category_tracking",
+      "english": "Tracking"
+    },
+    "trackStatus": {
+      "source": "mihon",
+      "key": "track_status",
+      "english": "Status"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "restored": {
+      "source": "webui",
+      "key": "Backup restored.",
+      "english": "Backup restored."
+    },
+    "extensionInstalled": {
+      "source": "webui",
+      "key": "Extension installed",
+      "english": "Extension installed"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "discord": {
+      "source": "komikku_extra",
+      "key": "connections_discord",
+      "english": "Discord"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nMinutes": {
+      "source": "webui",
+      "key": "{0, plural, one {# minute} other {# minutes}}",
+      "english": "{0, plural, one {# minute} other {# minutes}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSources": {
+      "source": "webui",
+      "key": "{0, plural, one {# Source} other {# Sources}}",
+      "english": "{0, plural, one {# Source} other {# Sources}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "newUpdateAvailable": {
+      "source": "webui",
+      "key": "Update available",
+      "english": "Update available"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noMangaFound": {
+      "source": "webui",
+      "key": "No manga found",
+      "english": "No manga found"
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "nsfwInfo": {
+      "source": "webui",
+      "key": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+      "english": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app."
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "migrationCompleted": {
+      "source": "webui",
+      "key": "Migration complete",
+      "english": "Migration complete"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "searchingForUpdates": {
+      "source": "webui",
+      "key": "Checking for update",
+      "english": "Checking for update"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "es": {
@@ -4768,6 +5693,345 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "readerTapInvertHorizontal": {
+      "source": "mihon",
+      "key": "tapping_inverted_horizontal",
+      "english": "Horizontal"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
     }
   },
   "fil": {
@@ -6505,6 +7769,434 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "discord": {
+      "source": "komikku_extra",
+      "key": "connections_discord",
+      "english": "Discord"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "chapterNumber": {
+      "source": "mihon",
+      "key": "display_mode_chapter",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nMinutes": {
+      "source": "webui",
+      "key": "{0, plural, one {# minute} other {# minutes}}",
+      "english": "{0, plural, one {# minute} other {# minutes}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSources": {
+      "source": "webui",
+      "key": "{0, plural, one {# Source} other {# Sources}}",
+      "english": "{0, plural, one {# Source} other {# Sources}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "defaultCategory": {
+      "source": "webui",
+      "key": "Default category when adding new manga to the library",
+      "english": "Default category when adding new manga to the library"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "fr": {
@@ -8007,6 +9699,306 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "readerGroupNavigation": {
+      "source": "mihon",
+      "key": "pref_reader_navigation",
+      "english": "Navigation"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "migrationCompleted": {
+      "source": "webui",
+      "key": "Migration complete",
+      "english": "Migration complete"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "id": {
@@ -9839,6 +11831,514 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "restored": {
+      "source": "webui",
+      "key": "Backup restored.",
+      "english": "Backup restored."
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nMinutes": {
+      "source": "webui",
+      "key": "{0, plural, one {# minute} other {# minutes}}",
+      "english": "{0, plural, one {# minute} other {# minutes}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSources": {
+      "source": "webui",
+      "key": "{0, plural, one {# Source} other {# Sources}}",
+      "english": "{0, plural, one {# Source} other {# Sources}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "newUpdateAvailable": {
+      "source": "webui",
+      "key": "Update available",
+      "english": "Update available"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noMangaFound": {
+      "source": "webui",
+      "key": "No manga found",
+      "english": "No manga found"
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "nsfwInfo": {
+      "source": "webui",
+      "key": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+      "english": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app."
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "migrationCompleted": {
+      "source": "webui",
+      "key": "Migration complete",
+      "english": "Migration complete"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "searchingForUpdates": {
+      "source": "webui",
+      "key": "Checking for update",
+      "english": "Checking for update"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "it": {
@@ -11296,6 +13796,330 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "ok": {
+      "source": "mihon",
+      "key": "action_ok",
+      "english": "OK"
+    },
+    "downloadsServerTab": {
+      "source": "webui",
+      "key": "Server",
+      "english": "Server"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
     }
   },
   "ja": {
@@ -12523,6 +15347,367 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
     }
   },
   "ko": {
@@ -14510,6 +17695,519 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "restored": {
+      "source": "webui",
+      "key": "Backup restored.",
+      "english": "Backup restored."
+    },
+    "extensionInstalled": {
+      "source": "webui",
+      "key": "Extension installed",
+      "english": "Extension installed"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "discord": {
+      "source": "komikku_extra",
+      "key": "connections_discord",
+      "english": "Discord"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nMinutes": {
+      "source": "webui",
+      "key": "{0, plural, one {# minute} other {# minutes}}",
+      "english": "{0, plural, one {# minute} other {# minutes}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nSources": {
+      "source": "webui",
+      "key": "{0, plural, one {# Source} other {# Sources}}",
+      "english": "{0, plural, one {# Source} other {# Sources}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "n",
+          "type": "num"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "defaultCategory": {
+      "source": "webui",
+      "key": "Default category when adding new manga to the library",
+      "english": "Default category when adding new manga to the library"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "newUpdateAvailable": {
+      "source": "webui",
+      "key": "Update available",
+      "english": "Update available"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noMangaFound": {
+      "source": "webui",
+      "key": "No manga found",
+      "english": "No manga found"
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "nsfwInfo": {
+      "source": "webui",
+      "key": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+      "english": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app."
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "migrationCompleted": {
+      "source": "webui",
+      "key": "Migration complete",
+      "english": "Migration complete"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "searchingForUpdates": {
+      "source": "webui",
+      "key": "Checking for update",
+      "english": "Checking for update"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "nl": {
@@ -16292,6 +19990,449 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "downloads": {
+      "source": "mihon",
+      "key": "pref_category_downloads",
+      "english": "Downloads"
+    },
+    "filter": {
+      "source": "mihon",
+      "key": "action_filter",
+      "english": "Filter"
+    },
+    "sourceTypeFilter": {
+      "source": "mihon",
+      "key": "action_filter",
+      "english": "Filter"
+    },
+    "offlineDownloadsSection": {
+      "source": "mihon",
+      "key": "pref_category_downloads",
+      "english": "Downloads"
+    },
+    "trackStatus": {
+      "source": "mihon",
+      "key": "track_status",
+      "english": "Status"
+    },
+    "trackScore": {
+      "source": "mihon",
+      "key": "score",
+      "english": "Score"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "discord": {
+      "source": "komikku_extra",
+      "key": "connections_discord",
+      "english": "Discord"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "chapterNumber": {
+      "source": "mihon",
+      "key": "display_mode_chapter",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "defaultCategory": {
+      "source": "webui",
+      "key": "Default category when adding new manga to the library",
+      "english": "Default category when adding new manga to the library"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "newUpdateAvailable": {
+      "source": "webui",
+      "key": "Update available",
+      "english": "Update available"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noMangaFound": {
+      "source": "webui",
+      "key": "No manga found",
+      "english": "No manga found"
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "searchingForUpdates": {
+      "source": "webui",
+      "key": "Checking for update",
+      "english": "Checking for update"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "pt": {
@@ -17489,6 +21630,306 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "ok": {
+      "source": "mihon",
+      "key": "action_ok",
+      "english": "OK"
+    },
+    "readerTapInvertHorizontal": {
+      "source": "mihon",
+      "key": "tapping_inverted_horizontal",
+      "english": "Horizontal"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "ru": {
@@ -19001,6 +23442,301 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "ta": {
@@ -20168,6 +24904,226 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "th": {
@@ -21805,6 +26761,314 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "discord": {
+      "source": "komikku_extra",
+      "key": "connections_discord",
+      "english": "Discord"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "chapterNumber": {
+      "source": "mihon",
+      "key": "display_mode_chapter",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "defaultCategory": {
+      "source": "webui",
+      "key": "Default category when adding new manga to the library",
+      "english": "Default category when adding new manga to the library"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "tr": {
@@ -23507,6 +28771,360 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "restored": {
+      "source": "webui",
+      "key": "Backup restored.",
+      "english": "Backup restored."
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "searchingForUpdates": {
+      "source": "webui",
+      "key": "Checking for update",
+      "english": "Checking for update"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
     }
   },
   "uk": {
@@ -24874,6 +30492,261 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "withCompletedStatus": {
+      "source": "webui",
+      "key": "With \"Completed\" status",
+      "english": "With \"Completed\" status"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "vi": {
@@ -26121,6 +31994,362 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "dayCount": {
+      "source": "webui",
+      "key": "{0, plural, one {# day} other {# days}}",
+      "english": "{0, plural, one {# day} other {# days}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "autoScrollSeconds": {
+      "source": "webui",
+      "key": "{0, plural, one {# second} other {# seconds}}",
+      "english": "{0, plural, one {# second} other {# seconds}}",
+      "conversion": {
+        "kind": "icu_plural",
+        "source_argument": "0",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "exact": [
+          1
+        ]
+      }
+    },
+    "flashEveryPages": {
+      "source": "mihon",
+      "key": "pref_pages",
+      "catalog": "plurals",
+      "english": {
+        "one": "1 page",
+        "other": "%1$s pages"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
     }
   },
   "nb_NO": {
@@ -27433,6 +33662,254 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   },
   "pt_BR": {
@@ -28635,6 +35112,306 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "ok": {
+      "source": "mihon",
+      "key": "action_ok",
+      "english": "OK"
+    },
+    "readerTapInvertHorizontal": {
+      "source": "mihon",
+      "key": "tapping_inverted_horizontal",
+      "english": "Horizontal"
+    },
+    "possibleDuplicatesBody": {
+      "source": "mihon",
+      "key": "possible_duplicates_summary",
+      "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "scrollAmountTiny": {
+      "source": "webui",
+      "key": "Tiny",
+      "english": "Tiny"
+    },
+    "scrollAmountSmall": {
+      "source": "webui",
+      "key": "Small",
+      "english": "Small"
+    },
+    "scrollAmountMedium": {
+      "source": "webui",
+      "key": "Medium",
+      "english": "Medium"
+    },
+    "scrollAmountLarge": {
+      "source": "webui",
+      "key": "Large",
+      "english": "Large"
+    },
+    "longStripWidthLimitUnitPixels": {
+      "source": "webui",
+      "key": "px",
+      "english": "px"
+    },
+    "webtoonScaleTypeRatio16to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_16_9",
+      "english": "16:9"
+    },
+    "webtoonScaleTypeRatio20to9": {
+      "source": "komikku_extra",
+      "key": "scale_type_20_9",
+      "english": "20:9"
+    },
+    "webtoonScaleTypeRatio3to2": {
+      "source": "komikku_extra",
+      "key": "scale_type_3_2",
+      "english": "3:2"
+    },
+    "webtoonScaleTypeRatio4to3": {
+      "source": "komikku_extra",
+      "key": "scale_type_4_3",
+      "english": "4:3"
+    },
+    "flashDurationMs": {
+      "source": "mihon",
+      "key": "pref_flash_duration_summary",
+      "english": "%1$s ms",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "ms",
+            "type": "int",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "removeExtensionStoreBody": {
+      "source": "mihon",
+      "key": "extensionStoresScreen.deleteStore.body",
+      "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "name",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "url",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "pageLayoutDoublePages": {
+      "source": "webui",
+      "key": "Double page",
+      "english": "Double page"
+    },
+    "unreadBadgeMode": {
+      "source": "webui",
+      "key": "Unread badges",
+      "english": "Unread badges"
+    },
+    "showUpdateProgressBanner": {
+      "source": "komikku_extra",
+      "key": "pref_show_updating_progress_banner",
+      "english": "Show updating progress banner"
+    },
+    "migrationHideUnmatched": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideUnmatchedTitle",
+      "english": "Hide entries without a match"
+    },
+    "migrationHideWithoutUpdates": {
+      "source": "mihon",
+      "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+      "english": "Hide entries without newer chapters"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "updateProgressManualMarkRead": {
+      "source": "mihon",
+      "key": "pref_auto_update_manga_on_mark_read",
+      "english": "Update progress when marked as read"
     }
   },
   "zh_Hans": {
@@ -28657,6 +35434,21 @@
       "source": "mihon",
       "key": "label_read_chapters",
       "english": "Read"
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
     }
   },
   "zh_Hant": {
@@ -28679,6 +35471,21 @@
       "source": "mihon",
       "key": "label_read_chapters",
       "english": "Read"
+    },
+    "libraryUpdateErrorsCount": {
+      "source": "komikku_extra",
+      "key": "label_library_update_errors",
+      "english": "Library update errors (%d)",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
     }
   },
   "nb": {
@@ -30126,6 +36933,269 @@
       "source": "mihon",
       "key": "webtoon_viewer",
       "english": "Long strip"
+    },
+    "notificationsWifiOnly": {
+      "source": "mihon",
+      "key": "connected_to_wifi",
+      "english": "Only on Wi-Fi"
+    },
+    "installingExtension": {
+      "source": "mihon",
+      "key": "ext_install_service_notif",
+      "english": "Installing extension…"
+    },
+    "whatsNew": {
+      "source": "mihon",
+      "key": "whats_new",
+      "english": "What's new"
+    },
+    "updatingLibrary": {
+      "source": "mihon",
+      "key": "updating_library",
+      "english": "Updating library"
+    },
+    "nsfw18": {
+      "source": "komikku",
+      "key": "ext_nsfw_short",
+      "english": "18+"
+    },
+    "chapterNumber": {
+      "source": "mihon",
+      "key": "display_mode_chapter",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingle": {
+      "source": "mihon",
+      "key": "notification_chapters_single",
+      "english": "Chapter %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "notificationChapterSingleAndMore": {
+      "source": "mihon",
+      "key": "notification_chapters_single_and_more",
+      "english": "Chapter %1$s and %2$d more",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "count",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "notificationChaptersMultiple": {
+      "source": "mihon",
+      "key": "notification_chapters_multiple",
+      "english": "Chapters %1$s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "numbers",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "smartUpdateExpected": {
+      "source": "mihon",
+      "key": "manga_interval_expected_update",
+      "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "predicted",
+            "type": "String",
+            "format": "s"
+          },
+          "2": {
+            "name": "interval",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "httpErrorCheckWebView": {
+      "source": "mihon",
+      "key": "exception_http",
+      "english": "HTTP %d, check website in WebView",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "statusCode",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "page": {
+      "source": "mihon",
+      "key": "chapter_progress",
+      "english": "Page: %1$d",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "number",
+            "type": "int",
+            "format": "d"
+          }
+        }
+      }
+    },
+    "trackRemoveAlsoOnRemote": {
+      "source": "mihon",
+      "key": "track_delete_remote_text",
+      "english": "Also remove from %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "trackerName",
+            "type": "String",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "libraryLastUpdated": {
+      "source": "mihon",
+      "key": "updates_last_update_info",
+      "english": "Library last updated: %s",
+      "conversion": {
+        "kind": "android",
+        "arguments": {
+          "1": {
+            "name": "time",
+            "type": "Object",
+            "format": "s"
+          }
+        }
+      }
+    },
+    "nStores": {
+      "source": "mihon",
+      "key": "num_repos",
+      "catalog": "plurals",
+      "english": {
+        "one": "%d store",
+        "other": "%d stores"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": [
+          1
+        ]
+      }
+    },
+    "invertSplitPagesPlacement": {
+      "source": "mihon",
+      "key": "pref_dual_page_invert",
+      "english": "Invert split page placement"
+    },
+    "mangaSortAlphabetical": {
+      "source": "mihon",
+      "key": "action_sort_alpha",
+      "english": "Alphabetically"
+    },
+    "noCategoriesFound": {
+      "source": "mihon",
+      "key": "information_empty_category",
+      "english": "You have no categories. Tap the plus button to create one for organizing your library."
+    },
+    "noSourcesFound": {
+      "source": "mihon",
+      "key": "source_empty_screen",
+      "english": "No source found"
+    },
+    "notificationRestoreCompleteTitle": {
+      "source": "mihon",
+      "key": "restore_completed",
+      "english": "Restore completed"
+    },
+    "removeFromLibrary": {
+      "source": "mihon",
+      "key": "remove_from_library",
+      "english": "Remove from library"
+    },
+    "offlineStorageUsage": {
+      "source": "mihon",
+      "key": "pref_storage_usage",
+      "english": "Storage usage"
+    },
+    "downloadNextChaptersN": {
+      "source": "mihon",
+      "key": "download_amount",
+      "catalog": "plurals",
+      "english": {
+        "one": "Next chapter",
+        "other": "Next %d chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "n",
+          "type": "int"
+        },
+        "format": "d",
+        "exact": []
+      }
+    },
+    "noOfChapters": {
+      "source": "mihon",
+      "key": "manga_num_chapters",
+      "catalog": "plurals",
+      "english": {
+        "one": "%1$s chapter",
+        "other": "%1$s chapters"
+      },
+      "conversion": {
+        "kind": "android_plural",
+        "target": "interpolation",
+        "argument": {
+          "name": "count",
+          "type": "int"
+        },
+        "format": "s",
+        "exact": []
+      }
     }
   }
 }

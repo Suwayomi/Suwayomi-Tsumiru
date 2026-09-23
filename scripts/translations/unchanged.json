@@ -1,0 +1,78 @@
+{
+  "invariant": {
+    "discord": "Discord service name.",
+    "longStripWidthLimitUnitPixels": "Standard pixel unit symbol.",
+    "nsfw18": "Age-rating numeral and plus sign.",
+    "webtoonScaleTypeRatio16to9": "Numeric aspect ratio.",
+    "webtoonScaleTypeRatio20to9": "Numeric aspect ratio.",
+    "webtoonScaleTypeRatio3to2": "Numeric aspect ratio.",
+    "webtoonScaleTypeRatio4to3": "Numeric aspect ratio.",
+    "flashDurationMs": "Plain numeric duration and standard SI millisecond unit, with typed argument conversion."
+  },
+  "locales": {
+    "de": {
+      "readerGroupDisplay": "Established local UI term or loanword; same spelling as English.",
+      "readerGroupNavigation": "Established local UI term or loanword; same spelling as English.",
+      "client": "Established local UI term or loanword; same spelling as English.",
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "display": "Established local UI term or loanword; same spelling as English.",
+      "downloads": "Established local UI term or loanword; same spelling as English.",
+      "filter": "Established local UI term or loanword; same spelling as English.",
+      "includeTracking": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "pause": "Established local UI term or loanword; same spelling as English.",
+      "readerTapInvertHorizontal": "Established local UI term or loanword; same spelling as English.",
+      "server": "Established local UI term or loanword; same spelling as English.",
+      "sourceTypeFilter": "Established local UI term or loanword; same spelling as English.",
+      "themeModeSystem": "Established local UI term or loanword; same spelling as English.",
+      "offlineDownloadsSection": "Established local UI term or loanword; same spelling as English.",
+      "downloadsServerTab": "Established local UI term or loanword; same spelling as English.",
+      "tracking": "Established local UI term or loanword; same spelling as English.",
+      "trackStatus": "Established local UI term or loanword; same spelling as English.",
+      "trackScore": "Established local UI term or loanword; same spelling as English."
+    },
+    "nl": {
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "downloads": "Established local UI term or loanword; same spelling as English.",
+      "filter": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "server": "Established local UI term or loanword; same spelling as English.",
+      "sourceTypeFilter": "Established local UI term or loanword; same spelling as English.",
+      "offlineDownloadsSection": "Established local UI term or loanword; same spelling as English.",
+      "downloadsServerTab": "Established local UI term or loanword; same spelling as English.",
+      "trackStatus": "Established local UI term or loanword; same spelling as English.",
+      "trackScore": "Established local UI term or loanword; same spelling as English."
+    },
+    "fr": {
+      "readerGroupNavigation": "Established local UI term or loanword; same spelling as English.",
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "trackScore": "Established local UI term or loanword; same spelling as English."
+    },
+    "es": {
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "readerTapInvertHorizontal": "Established local UI term or loanword; same spelling as English."
+    },
+    "it": {
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "server": "Established local UI term or loanword; same spelling as English.",
+      "downloadsServerTab": "Established local UI term or loanword; same spelling as English."
+    },
+    "pt": {
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "downloads": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "readerTapInvertHorizontal": "Established local UI term or loanword; same spelling as English.",
+      "offlineDownloadsSection": "Established local UI term or loanword; same spelling as English."
+    },
+    "pt_BR": {
+      "ok": "Established local UI term or loanword; same spelling as English.",
+      "downloads": "Established local UI term or loanword; same spelling as English.",
+      "manga": "Established local UI term or loanword; same spelling as English.",
+      "readerTapInvertHorizontal": "Established local UI term or loanword; same spelling as English.",
+      "offlineDownloadsSection": "Established local UI term or loanword; same spelling as English."
+    }
+  }
+}

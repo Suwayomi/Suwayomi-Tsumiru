@@ -3661,5 +3661,6 @@
   "libraryUpdateErrors": "库更新错误",
   "retryAll": "全部重试",
   "offlineRecoveryRead": "已读",
-  "@@x_translationNotice": "This file includes translations adapted from upstream PO and Android XML. See assets/licenses/translation-notices.txt for attribution and licenses, and scripts/translations/provenance.json for per-string sources."
+  "@@x_translationNotice": "This file includes translations adapted from upstream PO and Android XML. See assets/licenses/translation-notices.txt for attribution and licenses, and scripts/translations/provenance.json for per-string sources.",
+  "libraryUpdateErrorsCount": "库更新错误 ({count})"
 }

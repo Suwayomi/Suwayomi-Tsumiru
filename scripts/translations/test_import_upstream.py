@@ -17,7 +17,7 @@ class ImportTests(unittest.TestCase):
             self.assertFalse(safe_static(text), text)
         self.assertTrue(safe_static('日本語 100%'))
 
-    def test_android_ignores_plural_markup_and_nontranslatable(self):
+    def test_android_reads_plural_and_ignores_markup_and_nontranslatable(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'strings.xml'
             path.write_text('''<resources>
@@ -26,7 +26,7 @@ class ImportTests(unittest.TestCase):
                 <string name="brand" translatable="false">Name</string>
                 <plurals name="count"><item quantity="other">Items</item></plurals>
             </resources>''')
-            self.assertEqual(parse_catalog(path, 'mihon'), {'good': 'A & B'})
+            self.assertEqual(parse_catalog(path, 'mihon'), {'good': 'A & B', 'count': {'other': 'Items'}})
 
     def test_po_ignores_fuzzy_obsolete_and_plural(self):
         with tempfile.TemporaryDirectory() as folder:

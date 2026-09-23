@@ -6968,5 +6968,938 @@
         "english": "Long strip"
       }
     ]
+  },
+  "possibleDuplicatesBody": {
+    "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway.",
+    "note": "Same duplicate-library-entry dialog, including paragraph break.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "possible_duplicates_summary",
+        "english": "You have entries in your library with a similar name.\n\nSelect an entry to migrate or add anyway."
+      }
+    ]
+  },
+  "notificationsWifiOnly": {
+    "english": "Only on Wi-Fi",
+    "note": "Network restriction toggle.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "connected_to_wifi",
+        "english": "Only on Wi-Fi"
+      }
+    ]
+  },
+  "restored": {
+    "english": "Backup restored!",
+    "note": "Backup restore success; punctuation differs.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Backup restored.",
+        "english": "Backup restored."
+      }
+    ]
+  },
+  "extensionInstalled": {
+    "english": "Extension Installed!",
+    "note": "Extension install success; punctuation differs.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Extension installed",
+        "english": "Extension installed"
+      }
+    ]
+  },
+  "installingExtension": {
+    "english": "Installing Extension",
+    "note": "Extension installation in progress.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ext_install_service_notif",
+        "english": "Installing extension…"
+      }
+    ]
+  },
+  "whatsNew": {
+    "english": "What's New?",
+    "note": "Release notes title; punctuation differs.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "whats_new",
+        "english": "What's new"
+      }
+    ]
+  },
+  "updatingLibrary": {
+    "english": "Updating library…",
+    "note": "Library update in progress; ellipsis differs.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "updating_library",
+        "english": "Updating library"
+      }
+    ]
+  },
+  "withCompletedStatus": {
+    "english": "With Completed status",
+    "note": "Skip completed titles in library updates.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "With \"Completed\" status",
+        "english": "With \"Completed\" status"
+      }
+    ]
+  },
+  "scrollAmountTiny": {
+    "english": "Tiny",
+    "note": "Reader keyboard scroll distance option.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Tiny",
+        "english": "Tiny"
+      }
+    ]
+  },
+  "scrollAmountSmall": {
+    "english": "Small",
+    "note": "Reader keyboard scroll distance option.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Small",
+        "english": "Small"
+      }
+    ]
+  },
+  "scrollAmountMedium": {
+    "english": "Medium",
+    "note": "Reader keyboard scroll distance option.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Medium",
+        "english": "Medium"
+      }
+    ]
+  },
+  "scrollAmountLarge": {
+    "english": "Large",
+    "note": "Reader keyboard scroll distance option.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Large",
+        "english": "Large"
+      }
+    ]
+  },
+  "discord": {
+    "english": "Discord",
+    "note": "Discord service name.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "connections_discord",
+        "english": "Discord"
+      }
+    ]
+  },
+  "longStripWidthLimitUnitPixels": {
+    "english": "px",
+    "note": "Pixel unit abbreviation.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "px",
+        "english": "px"
+      }
+    ]
+  },
+  "nsfw18": {
+    "english": "18+",
+    "note": "Adult-content age badge.",
+    "sources": [
+      {
+        "source": "komikku",
+        "key": "ext_nsfw_short",
+        "english": "18+"
+      }
+    ]
+  },
+  "webtoonScaleTypeRatio16to9": {
+    "english": "16:9",
+    "note": "Aspect ratio.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "scale_type_16_9",
+        "english": "16:9"
+      }
+    ]
+  },
+  "webtoonScaleTypeRatio20to9": {
+    "english": "20:9",
+    "note": "Aspect ratio.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "scale_type_20_9",
+        "english": "20:9"
+      }
+    ]
+  },
+  "webtoonScaleTypeRatio3to2": {
+    "english": "3:2",
+    "note": "Aspect ratio.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "scale_type_3_2",
+        "english": "3:2"
+      }
+    ]
+  },
+  "webtoonScaleTypeRatio4to3": {
+    "english": "4:3",
+    "note": "Aspect ratio.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "scale_type_4_3",
+        "english": "4:3"
+      }
+    ]
+  },
+  "flashDurationMs": {
+    "english": "{ms} ms",
+    "note": "Milliseconds displayed as a plain integer; Android string argument is its decimal representation.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_duration_summary",
+        "english": "%1$s ms",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "ms",
+              "type": "int",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "chapterNumber": {
+    "english": "Chapter {number}",
+    "note": "Chapter label with decimal-capable chapter number string.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "display_mode_chapter",
+        "english": "Chapter %1$s",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "number",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "notificationChapterSingle": {
+    "english": "Chapter {number}",
+    "note": "New chapter notification number.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "notification_chapters_single",
+        "english": "Chapter %1$s",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "number",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "notificationChapterSingleAndMore": {
+    "english": "Chapter {number} and {count} more",
+    "note": "One chapter number and additional chapter count.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "notification_chapters_single_and_more",
+        "english": "Chapter %1$s and %2$d more",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "number",
+              "type": "String",
+              "format": "s"
+            },
+            "2": {
+              "name": "count",
+              "type": "int",
+              "format": "d"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "notificationChaptersMultiple": {
+    "english": "Chapters {numbers}",
+    "note": "List of chapter numbers.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "notification_chapters_multiple",
+        "english": "Chapters %1$s",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "numbers",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "smartUpdateExpected": {
+    "english": "New chapters predicted to be released in around {predicted}, checking around every {interval}.",
+    "note": "Expected release time and library check interval, both already formatted.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "manga_interval_expected_update",
+        "english": "New chapters predicted to be released in around %1$s, checking around every %2$s.",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "predicted",
+              "type": "String",
+              "format": "s"
+            },
+            "2": {
+              "name": "interval",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "removeExtensionStoreBody": {
+    "english": "Do you wish to remove the extension store \"{name}\" ({url})?",
+    "note": "Same extension-store removal confirmation.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.deleteStore.body",
+        "english": "Do you wish to remove the extension store \"%1$s\" (%2$s)?",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "name",
+              "type": "String",
+              "format": "s"
+            },
+            "2": {
+              "name": "url",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "httpErrorCheckWebView": {
+    "english": "HTTP {statusCode}, check website in WebView",
+    "note": "HTTP error code and WebView instruction.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "exception_http",
+        "english": "HTTP %d, check website in WebView",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "statusCode",
+              "type": "int",
+              "format": "d"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "page": {
+    "english": "Page: {number}",
+    "note": "Reader page number.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "chapter_progress",
+        "english": "Page: %1$d",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "number",
+              "type": "int",
+              "format": "d"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "trackRemoveAlsoOnRemote": {
+    "english": "Also remove from {trackerName}",
+    "note": "Also remove tracking on the named remote service.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "track_delete_remote_text",
+        "english": "Also remove from %s",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "trackerName",
+              "type": "String",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "libraryLastUpdated": {
+    "english": "Library last updated: {time}",
+    "note": "Already formatted last-update time; target accepts Object for interpolation.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "updates_last_update_info",
+        "english": "Library last updated: %s",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "time",
+              "type": "Object",
+              "format": "s"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "libraryUpdateErrorsCount": {
+    "english": "Library update errors ({count})",
+    "note": "Library update errors title and error count.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "label_library_update_errors",
+        "english": "Library update errors (%d)",
+        "conversion": {
+          "kind": "android",
+          "arguments": {
+            "1": {
+              "name": "count",
+              "type": "int",
+              "format": "d"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "dayCount": {
+    "english": "{count, plural, =1{1 day} other{{count} days}}",
+    "note": "Same counted unit; preserve locale categories and target explicit =1 using the source branch selected for 1.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "{0, plural, one {# day} other {# days}}",
+        "english": "{0, plural, one {# day} other {# days}}",
+        "conversion": {
+          "kind": "icu_plural",
+          "source_argument": "0",
+          "argument": {
+            "name": "count",
+            "type": "int"
+          },
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "nMinutes": {
+    "english": "{n, plural, =1{1 Minute} other{{n} Minutes}}",
+    "note": "Same counted unit; preserve locale categories and target explicit =1 using the source branch selected for 1.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "{0, plural, one {# minute} other {# minutes}}",
+        "english": "{0, plural, one {# minute} other {# minutes}}",
+        "conversion": {
+          "kind": "icu_plural",
+          "source_argument": "0",
+          "argument": {
+            "name": "n",
+            "type": "num"
+          },
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "nSeconds": {
+    "english": "{n, plural, =1{1 second} other{{n} seconds}}",
+    "note": "Same counted unit; preserve locale categories and target explicit =1 using the source branch selected for 1.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "{0, plural, one {# second} other {# seconds}}",
+        "english": "{0, plural, one {# second} other {# seconds}}",
+        "conversion": {
+          "kind": "icu_plural",
+          "source_argument": "0",
+          "argument": {
+            "name": "n",
+            "type": "num"
+          },
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "autoScrollSeconds": {
+    "english": "{count, plural, =1{1 second} other{{count} seconds}}",
+    "note": "Same counted unit; preserve locale categories and target explicit =1 using the source branch selected for 1.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "{0, plural, one {# second} other {# seconds}}",
+        "english": "{0, plural, one {# second} other {# seconds}}",
+        "conversion": {
+          "kind": "icu_plural",
+          "source_argument": "0",
+          "argument": {
+            "name": "count",
+            "type": "int"
+          },
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "nSources": {
+    "english": "{n, plural, =1{1 Source} other{{n} Sources}}",
+    "note": "Same counted unit; preserve locale categories and target explicit =1 using the source branch selected for 1.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "{0, plural, one {# Source} other {# Sources}}",
+        "english": "{0, plural, one {# Source} other {# Sources}}",
+        "conversion": {
+          "kind": "icu_plural",
+          "source_argument": "0",
+          "argument": {
+            "name": "n",
+            "type": "num"
+          },
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "flashEveryPages": {
+    "english": "{count, plural, =1{1 page} other{{count} pages}}",
+    "note": "Counted unit; reject locale branches that hardcode a number for multiple values in that category.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_pages",
+        "catalog": "plurals",
+        "english": {
+          "one": "1 page",
+          "other": "%1$s pages"
+        },
+        "conversion": {
+          "kind": "android_plural",
+          "argument": {
+            "name": "count",
+            "type": "int"
+          },
+          "format": "s",
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "nStores": {
+    "english": "{count, plural, =1{1 store} other{{count} stores}}",
+    "note": "Counted unit; reject locale branches that hardcode a number for multiple values in that category.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "num_repos",
+        "catalog": "plurals",
+        "english": {
+          "one": "%d store",
+          "other": "%d stores"
+        },
+        "conversion": {
+          "kind": "android_plural",
+          "argument": {
+            "name": "count",
+            "type": "int"
+          },
+          "format": "d",
+          "exact": [
+            1
+          ]
+        }
+      }
+    ]
+  },
+  "appTheme": {
+    "english": "App Theme Mode",
+    "note": "App light/dark/system theme mode.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Theme mode",
+        "english": "Theme mode"
+      }
+    ]
+  },
+  "authType": {
+    "english": "Authentication Type",
+    "note": "Server authentication mode selector.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Authentication Mode",
+        "english": "Authentication Mode"
+      }
+    ]
+  },
+  "invertSplitPagesPlacement": {
+    "english": "Invert split pages placement",
+    "note": "Invert reader split-page order.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_dual_page_invert",
+        "english": "Invert split page placement"
+      }
+    ]
+  },
+  "pageLayoutDoublePages": {
+    "english": "Double pages",
+    "note": "Reader two-page layout.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Double page",
+        "english": "Double page"
+      }
+    ]
+  },
+  "defaultCategory": {
+    "english": "Default category when adding new manga to library",
+    "note": "Default library category for newly added titles.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Default category when adding new manga to the library",
+        "english": "Default category when adding new manga to the library"
+      }
+    ]
+  },
+  "unreadBadgeMode": {
+    "english": "Unread badge",
+    "note": "Unread chapter badges setting.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Unread badges",
+        "english": "Unread badges"
+      }
+    ]
+  },
+  "showUpdateProgressBanner": {
+    "english": "Show update progress banner",
+    "note": "Library-update progress banner setting.",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "pref_show_updating_progress_banner",
+        "english": "Show updating progress banner"
+      }
+    ]
+  },
+  "mangaSortAlphabetical": {
+    "english": "Alphabetical",
+    "note": "Alphabetical library sorting.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_alpha",
+        "english": "Alphabetically"
+      }
+    ]
+  },
+  "newUpdateAvailable": {
+    "english": "New update available",
+    "note": "App update availability notice.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Update available",
+        "english": "Update available"
+      }
+    ]
+  },
+  "noCategoriesFound": {
+    "english": "You don't have any Categories. \n(Tip: Tap the Plus button to create one for organizing your library)",
+    "note": "Empty category list; same plus-button creation instruction.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "information_empty_category",
+        "english": "You have no categories. Tap the plus button to create one for organizing your library."
+      }
+    ]
+  },
+  "noMangaFound": {
+    "english": "No Mangas Found",
+    "note": "Empty manga search results.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "No manga found",
+        "english": "No manga found"
+      }
+    ]
+  },
+  "noSourcesFound": {
+    "english": "No sources found",
+    "note": "Empty source list.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "source_empty_screen",
+        "english": "No source found"
+      }
+    ]
+  },
+  "nsfwInfo": {
+    "english": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW(18+) content within app",
+    "note": "Identical content-warning explanation aside from spacing and punctuation.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app.",
+        "english": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW (18+) content within the app."
+      }
+    ]
+  },
+  "migrationHideUnmatched": {
+    "english": "Hide entries with no match",
+    "note": "Hide migration entries without matching targets.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.hideUnmatchedTitle",
+        "english": "Hide entries without a match"
+      }
+    ]
+  },
+  "migrationHideWithoutUpdates": {
+    "english": "Hide entries without new chapters",
+    "note": "Hide targets lacking newer chapters.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.hideWithoutUpdatesTitle",
+        "english": "Hide entries without newer chapters"
+      }
+    ]
+  },
+  "notificationRestoreCompleteTitle": {
+    "english": "Restore complete",
+    "note": "Backup restoration completed notification.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "restore_completed",
+        "english": "Restore completed"
+      }
+    ]
+  },
+  "migrationCompleted": {
+    "english": "Migration Completed!",
+    "note": "Migration completion notice.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Migration complete",
+        "english": "Migration complete"
+      }
+    ]
+  },
+  "removeFromLibrary": {
+    "english": "Remove from Library?",
+    "note": "Library removal confirmation title.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "remove_from_library",
+        "english": "Remove from library"
+      }
+    ]
+  },
+  "searchingForUpdates": {
+    "english": "Searching for updates",
+    "note": "App update check in progress.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Checking for update",
+        "english": "Checking for update"
+      }
+    ]
+  },
+  "webView": {
+    "english": "Web View",
+    "note": "Embedded browser name.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "WebView",
+        "english": "WebView"
+      }
+    ]
+  },
+  "offlineStorageUsage": {
+    "english": "Storage used",
+    "note": "Local downloads storage usage label.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_storage_usage",
+        "english": "Storage usage"
+      }
+    ]
+  },
+  "updateProgressManualMarkRead": {
+    "english": "Update progress when marking as read",
+    "note": "Tracker progress update for manually marked-read chapters.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_auto_update_manga_on_mark_read",
+        "english": "Update progress when marked as read"
+      }
+    ]
+  },
+  "downloadNextChaptersN": {
+    "english": "Next {n} chapters",
+    "note": "Numeric chapter count; use source locale cardinal forms without changing the typed target argument.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "download_amount",
+        "catalog": "plurals",
+        "english": {
+          "one": "Next chapter",
+          "other": "Next %d chapters"
+        },
+        "conversion": {
+          "kind": "android_plural",
+          "target": "interpolation",
+          "argument": {
+            "name": "n",
+            "type": "int"
+          },
+          "format": "d",
+          "exact": []
+        }
+      }
+    ],
+    "excluded_locales": {
+      "ar": "Upstream zero branch means end of chapters, not a count of zero next chapters."
+    }
+  },
+  "noOfChapters": {
+    "english": "{count} Chapters",
+    "note": "Numeric chapter count; use source locale cardinal forms without changing the typed target argument.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "manga_num_chapters",
+        "catalog": "plurals",
+        "english": {
+          "one": "%1$s chapter",
+          "other": "%1$s chapters"
+        },
+        "conversion": {
+          "kind": "android_plural",
+          "target": "interpolation",
+          "argument": {
+            "name": "count",
+            "type": "int"
+          },
+          "format": "s",
+          "exact": []
+        }
+      }
+    ]
   }
 }
