@@ -39,7 +39,7 @@
     "gan_Hant": 0,
     "id": 512,
     "it": 530,
-    "ja": 647,
+    "ja": 1190,
     "ko": 485,
     "nb": 313,
     "nb_NO": 349,
@@ -194,5 +194,13 @@
         "remaining": 0
       }
     }
+  },
+  "ai_japanese_completion": {
+    "baseline": "ed892159",
+    "locale": "ja",
+    "before": 647,
+    "added": 543,
+    "after": 1190,
+    "remaining": 0
   }
 }

@@ -128,3 +128,14 @@ fallbacks in Traditional Chinese. All three catalogs now cover 1,190 messages.
 `ai_chinese_completion` records these additions separately from upstream imports
 and the German pilot. Existing translations and upstream provenance are unchanged.
 Native-speaker review remains outstanding.
+
+## Japanese completion
+
+Against `ed892159`, this phase adds 543 context-reviewed AI translations, bringing
+Japanese coverage from 647 to 1,190 messages. All existing Japanese values and
+metadata remain unchanged, including the legacy select messages and chapter-count
+zero branch. New text distinguishes tracker links, library entries, server copies,
+device downloads and reading-progress recovery.
+
+`ai_japanese_completion` records this phase separately. Upstream provenance and
+the earlier phase reports are unchanged. Native-speaker review remains outstanding.

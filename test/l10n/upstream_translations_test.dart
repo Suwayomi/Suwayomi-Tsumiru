@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ar.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_de.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations_ja.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ru.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_zh.dart';
 
@@ -181,6 +182,68 @@ void main() {
       expect(traditional.offlineRecoveryLastRead('12:34'), '上次閱讀：12:34');
     },
   );
+
+  test('Japanese completion retains counts without English plural grammar', () {
+    final locale = AppLocalizationsJa();
+    for (final count in counts) {
+      expect(locale.minutesAgo(count), '$count分前');
+      expect(locale.hoursAgo(count), '$count時間前');
+      expect(locale.inNDays(count), '$count日後');
+      expect(locale.migrationSourceSeriesCount(count), '$count作品');
+      expect(
+        locale.migrationTrackerCollisionSummary(count),
+        startsWith('$count作品は'),
+      );
+      expect(
+        locale.duplicatesRemoveConfirm(count),
+        startsWith('ライブラリから$count件を削除しますか？'),
+      );
+      expect(locale.offlineRecoveryCompleted(count), '画像を$count枚復元しました');
+    }
+    expect(locale.nChapters(0), 'なし');
+    expect(locale.nDays('01'), '1日');
+    expect(locale.backupCleanupDescription('0'), 'Never');
+  });
+
+  test('Japanese completion keeps account labels and tracker links distinct', () {
+    final locale = AppLocalizationsJa();
+    expect(locale.accountPermissionsSummary(2, 9), '9項目中2項目を許可');
+    expect(
+      locale.accountCatalogueRemoveConfirm(
+        locale.accountCatalogueOwner('7'),
+        'example.org',
+      ),
+      'example.org の「アカウント 7」に属するダウンロード済みの章とオフラインライブラリを、この端末から削除しますか？サーバーのデータは変更されません。',
+    );
+    expect(
+      locale.accountCatalogueRemoveConfirm(
+        locale.accountCatalogueWithoutLogin,
+        'example.org',
+      ),
+      contains('「未ログイン時のダウンロード」'),
+    );
+    expect(locale.trackRemoveConfirmBody('AniList'), 'AniList との連携を解除します。');
+    expect(locale.offlineRecoveryPendingSync('ブックマーク'), '同期待ち：ブックマーク');
+    for (final syntax in [
+      'tag:seinen',
+      'genre:action',
+      'author:oda',
+      'status:ongoing',
+      'completed',
+      'hiatus',
+      'cancelled',
+      'source:mangadex',
+      'tracked:true',
+      'tracked:anilist',
+      'rating:>=4',
+      'unread:true',
+      'downloaded:true',
+      'tag:"slice of life"',
+      '-tag:dropped',
+    ]) {
+      expect(locale.searchTipsBody, contains(syntax));
+    }
+  });
 
   test('Arabic preserves zero, one, two, few and many forms', () {
     final locale = AppLocalizationsAr();
