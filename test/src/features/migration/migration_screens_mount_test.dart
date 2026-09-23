@@ -8,10 +8,13 @@
 // These exist because a mount-time crash (containerOf called inside a useEffect)
 // shipped past a full suite of fake-based unit tests that never mounted a screen.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
@@ -28,6 +31,7 @@ import 'package:tsumiru/src/features/migration/presentation/screens/migration_bu
 import 'package:tsumiru/src/features/migration/presentation/screens/migration_bulk_run_screen.dart';
 import 'package:tsumiru/src/features/migration/presentation/screens/migration_source_picker_screen.dart';
 import 'package:tsumiru/src/features/offline/data/background/catchup_work_spec.dart';
+import 'package:tsumiru/src/features/offline/data/offline_server_identity_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
@@ -69,7 +73,11 @@ class _UiLogin extends AuthTypeKey {
   AuthType? build() => AuthType.uiLogin;
 }
 
-Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
+Future<void> pumpScreen(
+  WidgetTester tester,
+  Widget screen, {
+  List<Override> overrides = const [],
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final client = GraphQLClient(
@@ -85,6 +93,7 @@ Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
         searchableSourcesProvider.overrideWithValue(
           const AsyncValue.data(<SourceDto>[]),
         ),
+        ...overrides,
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -99,6 +108,92 @@ Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
+  testWidgets('non-login migration waits for server identity and retries', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({
+      CatchupStateStore.identityAuthorizedKey: true,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final client = GraphQLClient(
+      link: HttpLink('http://localhost:0'),
+      cache: GraphQLCache(),
+    );
+    final chapters = _DeadSourceChapters(client, storedFails: false);
+    final firstResolution = Completer<String>();
+    final retryResolution = Completer<String>();
+    var attempts = 0;
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        graphQlClientProvider.overrideWithValue(client),
+        authCredentialsStoreProvider.overrideWith(_MigrationSession.new),
+        authTypeKeyProvider.overrideWithValue(AuthType.none),
+        serverInstanceIdProvider.overrideWith((ref) {
+          attempts++;
+          return attempts == 1
+              ? firstResolution.future
+              : retryResolution.future;
+        }),
+        mangaBookRepositoryProvider.overrideWith((ref) => chapters),
+        libraryMangaListProvider.overrideWith((ref) async => [testManga()]),
+        searchableSourcesProvider.overrideWithValue(
+          const AsyncValue.data(<SourceDto>[]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(authCredentialsStoreProvider.future);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MigrationBulkRunScreen(
+            data: MigrationBulkRunData(
+              mangaIds: [1],
+              targetSourceIds: [],
+              options: MigrationOption(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(MigrationBulkRunScreen)),
+    )!;
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text(l10n.migrationIdentityUnavailable), findsNothing);
+    expect(chapters.storedCalls, isEmpty);
+
+    firstResolution.completeError(StateError('Identity unavailable'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text(l10n.migrationIdentityUnavailable), findsOneWidget);
+    expect(find.text(l10n.retry), findsOneWidget);
+    expect(chapters.storedCalls, isEmpty);
+
+    await tester.tap(find.text(l10n.retry));
+    await tester.pump();
+    expect(attempts, 2);
+    retryResolution.complete('server-id');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text(l10n.migrationIdentityUnavailable), findsNothing);
+    expect(chapters.storedCalls, [1]);
+    expect(find.text(l10n.migrationListNoMatch), findsOneWidget);
+
+    container.invalidate(libraryMangaListProvider);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(chapters.storedCalls, [1]);
+    expect(find.text(l10n.migrationListNoMatch), findsOneWidget);
+  });
+
   for (final scenario in [0, 1, 2]) {
     final storedFails = scenario == 1;
     testWidgets('dead source preparation scenario $scenario', (tester) async {
@@ -188,6 +283,12 @@ void main() {
             options: MigrationOption(),
           ),
         ),
+        overrides: [
+          authTypeKeyProvider.overrideWithValue(AuthType.none),
+          serverInstanceIdProvider.overrideWith(
+            (ref) async => throw StateError('Identity unavailable'),
+          ),
+        ],
       );
       expect(tester.takeException(), isNull);
       final context = tester.element(find.byType(MigrationBulkRunScreen));

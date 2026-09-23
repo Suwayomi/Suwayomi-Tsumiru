@@ -12,6 +12,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/enum.dart';
+import '../../../../global_providers/global_providers.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
@@ -45,6 +47,18 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final startupError = useState<String?>(null);
     final retry = useState(0);
     final authState = ref.watch(authCredentialsStoreProvider);
+    final authType = ref.watch(authTypeKeyProvider);
+    final serverIdentity = authType == AuthType.uiLogin
+        ? null
+        : ref.watch(serverInstanceIdProvider);
+    final identityUnavailable =
+        serverIdentity?.hasError == true ||
+        (serverIdentity?.asData?.value.isEmpty ?? false);
+    final identityReady =
+        serverIdentity == null ||
+        (!serverIdentity.isLoading &&
+            !serverIdentity.hasError &&
+            (serverIdentity.asData?.value.isNotEmpty ?? false));
     final origin = useMemoized(() {
       final store = ref.read(authCredentialsStoreProvider.notifier);
       return (store: store, epoch: store.sessionEpoch);
@@ -61,12 +75,34 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final container = ProviderScope.containerOf(context, listen: false);
 
     useEffect(() {
+      return () {
+        runner.value?.cancel();
+      };
+    }, const []);
+
+    final startupKeys = [
+      library,
+      retry.value,
+      sameSession,
+      authState.value?.sessionEpoch,
+      identityReady,
+      identityUnavailable,
+    ];
+    useEffect(() {
       if (!sameSession) {
         runner.value?.cancel();
         unavailable.value = true;
         return null;
       }
       if (runner.value != null) return null;
+      if (identityUnavailable) {
+        unavailable.value = true;
+        return null;
+      }
+      if (!identityReady) {
+        unavailable.value = false;
+        return null;
+      }
       final mangas = library.value;
       if (mangas == null) return null;
       final byId = {for (final m in mangas) m.id: m};
@@ -98,10 +134,9 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
       unavailable.value = false;
       startupError.value = null;
       runner.value = r;
-      var disposed = false;
       Future<void>(() async {
         try {
-          if (disposed || r.isCancelled) return;
+          if (r.isCancelled) return;
           final repo = ref.read(mangaBookRepositoryProvider);
           for (final e in entries) {
             if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
@@ -130,16 +165,13 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
           if (r.isSessionCurrent?.call() == false || r.isCancelled) return;
           r.notify();
         } catch (error) {
-          if (!disposed && !r.isCancelled) {
+          if (!r.isCancelled) {
             startupError.value = '$error';
           }
         }
       });
-      return () {
-        disposed = true;
-        r.cancel();
-      };
-    }, [library, retry.value, sameSession, authState.value?.sessionEpoch]);
+      return null;
+    }, startupKeys);
 
     final r = sameSession && !unavailable.value && startupError.value == null
         ? runner.value
