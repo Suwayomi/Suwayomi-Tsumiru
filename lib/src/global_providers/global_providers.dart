@@ -375,15 +375,26 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   dynamic initialPayload;
   Map<String, String>? handshakeHeaders;
   if (authType == AuthType.uiLogin) {
+    // This provider rebuilds at launch as async settings load, disposing the
+    // socket it built — often while that socket's connect is still awaiting
+    // the refresh. Its payload no longer matters then, but touching `ref`
+    // would throw, so the callbacks check `ref.mounted` first.
     initialPayload = () => uiLoginSocketPayload(
       isCurrentSession: isCurrentSession,
-      refreshIfDue: () => ref
-          .read(authCoordinatorProvider.notifier)
-          .refreshUiAccessTokenIfDue(
-            gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
-          ),
-      readToken: () async =>
-          (await ref.read(authCredentialsStoreProvider.future)).uiAccessToken,
+      refreshIfDue: () async {
+        if (!ref.mounted) return;
+        await ref
+            .read(authCoordinatorProvider.notifier)
+            .refreshUiAccessTokenIfDue(
+              gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+            );
+      },
+      readToken: () async {
+        if (!ref.mounted) return null;
+        return (await ref.read(
+          authCredentialsStoreProvider.future,
+        )).uiAccessToken;
+      },
     );
   } else if (authType == AuthType.simpleLogin) {
     final cookie = socketCookie;
