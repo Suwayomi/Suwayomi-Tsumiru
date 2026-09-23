@@ -309,6 +309,39 @@ GraphQLClient graphQlClient(Ref ref) {
 // to be watching a subscription, so navigating tore the socket down and the
 // next screen opened a fresh one. Measured against the server: 2 handshakes per
 // 10 min idle, 53 while navigating.
+/// The ui_login `connection_init` payload.
+///
+/// The server resolves the socket's user once, from this payload, and keeps
+/// it for the connection's whole life: an expired access token makes the
+/// socket a visitor, and every @RequireAuth subscription on it
+/// (updateStatusChanged, downloadStatusChanged) then fails "Unauthorized"
+/// until it reconnects. Access tokens last 5 minutes by default and the first
+/// subscription starts at launch, before any HTTP call has refreshed the
+/// stored one — so without [refreshIfDue] a session opened after a pause lost
+/// its live updates (and the library re-read they trigger) entirely.
+///
+/// A failed refresh still sends the current token: blocking the connection
+/// would only trade a visitor socket for none.
+Future<Map<String, dynamic>> uiLoginSocketPayload({
+  required bool Function() isCurrentSession,
+  required Future<void> Function() refreshIfDue,
+  required Future<String?> Function() readToken,
+}) async {
+  if (!isCurrentSession()) {
+    throw StateError('Authentication session changed');
+  }
+  try {
+    await refreshIfDue();
+  } catch (_) {}
+  final token = await readToken();
+  if (!isCurrentSession()) {
+    throw StateError('Authentication session changed');
+  }
+  return (token == null || token.isEmpty)
+      ? <String, dynamic>{}
+      : <String, dynamic>{'Authorization': token};
+}
+
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
@@ -330,10 +363,9 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
 
   // Authenticate the SOCKET itself, not a per-operation Link. A header /
   // context Link (AuthLink / SuwayomiAuthLink) never reaches the WebSocket,
-  // so it leaves the connection unauthenticated and any @requireAuth
-  // subscription (e.g. downloadStatusChanged) fails with "Unauthorized" —
-  // while auth-exempt subscriptions (updateStatusChanged) still work, which
-  // is what made this look downloads-specific.
+  // so it leaves the connection unauthenticated and every @RequireAuth
+  // subscription (downloadStatusChanged, updateStatusChanged) fails with
+  // "Unauthorized".
   //
   // graphql-transport-ws carries auth two ways, matching Suwayomi-Server:
   //   * ui_login  -> connection_init payload `{Authorization: <bare token>}`
@@ -343,19 +375,16 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   dynamic initialPayload;
   Map<String, String>? handshakeHeaders;
   if (authType == AuthType.uiLogin) {
-    initialPayload = () async {
-      if (!isCurrentSession()) {
-        throw StateError('Authentication session changed');
-      }
-      final snapshot = await ref.read(authCredentialsStoreProvider.future);
-      if (!isCurrentSession()) {
-        throw StateError('Authentication session changed');
-      }
-      final token = snapshot.uiAccessToken;
-      return (token == null || token.isEmpty)
-          ? <String, dynamic>{}
-          : <String, dynamic>{'Authorization': token};
-    };
+    initialPayload = () => uiLoginSocketPayload(
+      isCurrentSession: isCurrentSession,
+      refreshIfDue: () => ref
+          .read(authCoordinatorProvider.notifier)
+          .refreshUiAccessTokenIfDue(
+            gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+          ),
+      readToken: () async =>
+          (await ref.read(authCredentialsStoreProvider.future)).uiAccessToken,
+    );
   } else if (authType == AuthType.simpleLogin) {
     final cookie = socketCookie;
     handshakeHeaders = (cookie == null || cookie.isEmpty)
