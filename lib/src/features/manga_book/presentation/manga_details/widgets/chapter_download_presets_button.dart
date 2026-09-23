@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/download_presets_menu.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/chapter/chapter_download_presets.dart';
@@ -71,39 +72,9 @@ class ChapterDownloadPresetsButton extends ConsumerWidget {
     final canDownload = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);
-    return PopupMenuButton<DownloadPreset>(
+    return DownloadPresetsMenu(
       enabled: canDownload,
-      icon: const Icon(Icons.cloud_download_outlined),
-      tooltip: canDownload
-          ? context.l10n.downloadToServer
-          : context.l10n.accountPermissionDenied,
       onSelected: (preset) => _handlePreset(context, ref, preset),
-      itemBuilder: (context) => <PopupMenuEntry<DownloadPreset>>[
-        PopupMenuItem(
-          value: DownloadPreset.nextChapter,
-          child: Text(context.l10n.downloadNextChapter),
-        ),
-        PopupMenuItem(
-          value: DownloadPreset.next5,
-          child: Text(context.l10n.downloadNextChaptersN(5)),
-        ),
-        PopupMenuItem(
-          value: DownloadPreset.next10,
-          child: Text(context.l10n.downloadNextChaptersN(10)),
-        ),
-        PopupMenuItem(
-          value: DownloadPreset.next25,
-          child: Text(context.l10n.downloadNextChaptersN(25)),
-        ),
-        PopupMenuItem(
-          value: DownloadPreset.unread,
-          child: Text(context.l10n.downloadUnreadChapters),
-        ),
-        PopupMenuItem(
-          value: DownloadPreset.all,
-          child: Text(context.l10n.downloadAllChapters),
-        ),
-      ],
     );
   }
 }

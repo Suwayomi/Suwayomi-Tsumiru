@@ -22,6 +22,7 @@ Future<bool> confirmBulkDownload(
   BuildContext context, {
   required String summary,
   required bool toDevice,
+  String? downloadDescription,
 }) async {
   final cs = Theme.of(context).colorScheme;
   return await showDialog<bool>(
@@ -37,11 +38,12 @@ Future<bool> confirmBulkDownload(
                 : 'Download $summary to the server?',
           ),
           content: Text(
-            toDevice
-                ? 'Every chapter of $summary will download to this device and '
-                    'stay in sync as you read. This can use a lot of storage.'
-                : 'Every chapter of $summary will be queued for download on '
-                    'the server.',
+            downloadDescription ??
+                (toDevice
+                    ? 'Every chapter of $summary will download to this device and '
+                          'stay in sync as you read. This can use a lot of storage.'
+                    : 'Every chapter of $summary will be queued for download on '
+                          'the server.'),
           ),
           actions: [
             TextButton(
