@@ -245,17 +245,21 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
       final previous = ref.read(serverUrlProvider);
       // A switch rebuilds every server client and re-fetches the library; a
       // LAN probe failing while Wi-Fi reconnects sends requests to the remote
-      // address, which may not resolve from inside the LAN.
-      recordDiagnostic(
-        '[${DateTime.now().toIso8601String()}] endpoint: trigger=$trigger '
-        'lan=${switch (lanReachable) {
-          null => 'none',
-          true => 'reachable',
-          false => 'unreachable',
-        }} probeMs=${probe.elapsedMilliseconds} '
-        'selected=${selected == external ? 'external' : 'lan'}'
-        '${selected == previous ? '' : ' switched'}\n',
-      );
+      // address, which may not resolve from inside the LAN. Without a LAN
+      // address there's nothing to probe, and every failed read re-runs this:
+      // only a switch is worth a line then.
+      if (lanReachable != null || selected != previous) {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] endpoint: trigger=$trigger '
+          'lan=${switch (lanReachable) {
+            null => 'none',
+            true => 'reachable',
+            false => 'unreachable',
+          }} probeMs=${probe.elapsedMilliseconds} '
+          'selected=${selected == external ? 'external' : 'lan'}'
+          '${selected == previous ? '' : ' switched'}\n',
+        );
+      }
       await ref
           .read(serverUrlProvider.notifier)
           .setActive(selected, isCurrent: current);
