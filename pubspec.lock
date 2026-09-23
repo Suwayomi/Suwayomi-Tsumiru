@@ -321,6 +321,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
+  cupertino_ui:
+    dependency: transitive
+    description:
+      name: cupertino_ui
+      sha256: c23816577a1280cff409e989541767887011f8f1d8c1863a794ed308af46f2a9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   dart_style:
     dependency: transitive
     description:
@@ -1055,6 +1063,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  material_ui:
+    dependency: transitive
+    description:
+      name: material_ui
+      sha256: "134ab2f0843545c4e661e4ba2753fe1bcf0753cb690d5a9ee4870638a40411e9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
   meta:
     dependency: transitive
     description:
@@ -1548,10 +1564,10 @@ packages:
     dependency: "direct main"
     description:
       name: shimmer
-      sha256: "5f88c883a22e9f9f299e5ba0e4f7e6054857224976a5d9f839d4ebdc94a14ac9"
+      sha256: "61ef3b8de6bdb9f16db1bb78d502cb991a12b5223fd2c0b9114d41e782227b55"
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.0"
+    version: "4.0.0"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -1991,4 +2007,4 @@ packages:
     version: "2.2.4"
 sdks:
   dart: ">=3.13.0 <4.0.0"
-  flutter: ">=3.44.0"
+  flutter: ">=3.47.0"

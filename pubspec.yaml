@@ -78,7 +78,7 @@ dependencies:
       ref: "4641e83"
   shared_preferences: ^2.0.15
   sqlite3: ^3.0.0
-  shimmer: ^3.0.0
+  shimmer: ^4.0.0
   unorm_dart: ^0.3.2
   url_launcher: ^6.1.6
   web_socket_channel: ^3.0.0
