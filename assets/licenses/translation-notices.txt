@@ -1,0 +1,23 @@
+Tsumiru includes translations from the following projects and their translation contributors:
+
+Suwayomi WebUI — https://github.com/Suwayomi/Suwayomi-WebUI
+Revision d22e0dfe8a47717b56649f6c90fc2cbaca8399fe
+Source: src/i18n/locales/*.po
+Mozilla Public License 2.0 (MPL-2.0.txt)
+
+Mihon — https://github.com/mihonapp/mihon
+Revision f52d890e7f8a3c418ddab41f41d4b577bce0dc06
+Source: i18n/src/commonMain/moko-resources/*/strings.xml
+Apache License 2.0 (Apache-2.0.txt)
+
+Komikku — https://github.com/komikku-app/komikku
+Revision 936e25bf99af29e059f06c4ad613ab62df9ae53e
+Sources: i18n/src/commonMain/moko-resources/*/strings.xml
+         i18n-kmk/src/commonMain/moko-resources/*/strings.xml
+Apache License 2.0 (Apache-2.0.txt)
+
+Changes: selected translations were converted from PO and Android XML to Flutter
+ARB, with Android string escapes decoded and Tsumiru resource keys substituted.
+Translation wording was retained. Per-string source records and the modified
+catalogs are available in the Suwayomi/Suwayomi-Tsumiru repository under
+scripts/translations/provenance.json and lib/src/l10n/ respectively.

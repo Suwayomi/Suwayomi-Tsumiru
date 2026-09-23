@@ -3656,5 +3656,10 @@
   "@offlineChaptersQueued": {
     "description": "Status label for a chapter waiting in the download queue"
   },
-  "notificationDownloadsPausedBudget": "Android 的后台下载上限已达到。打开 Tsumiru 重试。"
+  "notificationDownloadsPausedBudget": "Android 的后台下载上限已达到。打开 Tsumiru 重试。",
+  "deleteChaptersConfirm": "确定要删除所选章节吗？",
+  "libraryUpdateErrors": "库更新错误",
+  "retryAll": "全部重试",
+  "offlineRecoveryRead": "已读",
+  "@@x_translationNotice": "This file includes translations adapted from upstream PO and Android XML. See assets/licenses/translation-notices.txt for attribution and licenses, and scripts/translations/provenance.json for per-string sources."
 }

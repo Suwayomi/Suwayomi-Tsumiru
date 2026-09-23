@@ -131,6 +131,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/icons/launcher/
+    - assets/licenses/
 
 # flutter_gen removed from the build pipeline: flutter_gen_runner's build.yaml is
 # incompatible with build_runner_core 9.x (Flutter 3.35 / Dart 3.9). Its output,

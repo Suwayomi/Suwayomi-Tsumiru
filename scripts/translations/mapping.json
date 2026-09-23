@@ -1,0 +1,6972 @@
+{
+  "about": {
+    "english": "About",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_about",
+        "english": "About"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_about",
+        "english": "About"
+      },
+      {
+        "source": "webui",
+        "key": "About",
+        "english": "About"
+      }
+    ]
+  },
+  "addCategory": {
+    "english": "Add Category",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_add_category",
+        "english": "Add category"
+      },
+      {
+        "source": "komikku",
+        "key": "action_add_category",
+        "english": "Add category"
+      }
+    ]
+  },
+  "addToLibrary": {
+    "english": "Add to Library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "add_to_library",
+        "english": "Add to library"
+      },
+      {
+        "source": "komikku",
+        "key": "add_to_library",
+        "english": "Add to library"
+      },
+      {
+        "source": "webui",
+        "key": "Add To Library",
+        "english": "Add To Library"
+      }
+    ]
+  },
+  "advanced": {
+    "english": "Advanced",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_advanced",
+        "english": "Advanced"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_advanced",
+        "english": "Advanced"
+      },
+      {
+        "source": "webui",
+        "key": "Advanced",
+        "english": "Advanced"
+      }
+    ]
+  },
+  "animatePageTransitions": {
+    "english": "Animate page transitions",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_page_transitions",
+        "english": "Animate page transitions"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_page_transitions",
+        "english": "Animate page transitions"
+      }
+    ]
+  },
+  "appLanguage": {
+    "english": "App Language",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_app_language",
+        "english": "App language"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_app_language",
+        "english": "App language"
+      }
+    ]
+  },
+  "appearance": {
+    "english": "Appearance",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_appearance",
+        "english": "Appearance"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_appearance",
+        "english": "Appearance"
+      },
+      {
+        "source": "webui",
+        "key": "Appearance",
+        "english": "Appearance"
+      }
+    ]
+  },
+  "authTypeSimpleLogin": {
+    "english": "Simple Login",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Simple Login",
+        "english": "Simple Login"
+      }
+    ]
+  },
+  "authLogout": {
+    "english": "Log out",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Log out",
+        "english": "Log out"
+      },
+      {
+        "source": "mihon",
+        "key": "logout",
+        "english": "Log out"
+      },
+      {
+        "source": "komikku",
+        "key": "logout",
+        "english": "Log out"
+      }
+    ]
+  },
+  "authTypeNone": {
+    "english": "None",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "none",
+        "english": "None"
+      },
+      {
+        "source": "komikku",
+        "key": "none",
+        "english": "None"
+      }
+    ]
+  },
+  "authentication": {
+    "english": "Authentication",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Authentication",
+        "english": "Authentication"
+      }
+    ]
+  },
+  "autoDownload": {
+    "english": "Auto-download",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Auto-download",
+        "english": "Auto-download"
+      },
+      {
+        "source": "mihon",
+        "key": "pref_category_auto_download",
+        "english": "Auto-download"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_auto_download",
+        "english": "Auto-download"
+      }
+    ]
+  },
+  "autoDownloadNewChapters": {
+    "english": "Download new chapters",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Download new chapters",
+        "english": "Download new chapters"
+      },
+      {
+        "source": "mihon",
+        "key": "pref_download_new",
+        "english": "Download new chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_download_new",
+        "english": "Download new chapters"
+      }
+    ]
+  },
+  "autoDownloadCategories": {
+    "english": "Categories",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Categories",
+        "english": "Categories"
+      },
+      {
+        "source": "mihon",
+        "key": "categories",
+        "english": "Categories"
+      },
+      {
+        "source": "komikku",
+        "key": "categories",
+        "english": "Categories"
+      }
+    ]
+  },
+  "centerMarginNone": {
+    "english": "None",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "none",
+        "english": "None"
+      },
+      {
+        "source": "komikku",
+        "key": "none",
+        "english": "None"
+      }
+    ]
+  },
+  "cropBorders": {
+    "english": "Crop borders",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_crop_borders",
+        "english": "Crop borders"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_crop_borders",
+        "english": "Crop borders"
+      }
+    ]
+  },
+  "imageScaleType": {
+    "english": "Scale type",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_image_scale_type",
+        "english": "Scale type"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_image_scale_type",
+        "english": "Scale type"
+      },
+      {
+        "source": "webui",
+        "key": "Scale type",
+        "english": "Scale type"
+      }
+    ]
+  },
+  "imageScaleTypeFitHeight": {
+    "english": "Fit height",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_fit_height",
+        "english": "Fit height"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_fit_height",
+        "english": "Fit height"
+      },
+      {
+        "source": "webui",
+        "key": "Fit height",
+        "english": "Fit height"
+      }
+    ]
+  },
+  "imageScaleTypeFitScreen": {
+    "english": "Fit screen",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_fit_screen",
+        "english": "Fit screen"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_fit_screen",
+        "english": "Fit screen"
+      },
+      {
+        "source": "webui",
+        "key": "Fit screen",
+        "english": "Fit screen"
+      }
+    ]
+  },
+  "imageScaleTypeFitWidth": {
+    "english": "Fit width",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_fit_width",
+        "english": "Fit width"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_fit_width",
+        "english": "Fit width"
+      },
+      {
+        "source": "webui",
+        "key": "Fit width",
+        "english": "Fit width"
+      }
+    ]
+  },
+  "imageScaleTypeOriginalSize": {
+    "english": "Original size",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_original_size",
+        "english": "Original size"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_original_size",
+        "english": "Original size"
+      },
+      {
+        "source": "webui",
+        "key": "Original size",
+        "english": "Original size"
+      }
+    ]
+  },
+  "imageScaleTypeSmartFit": {
+    "english": "Smart fit",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_smart_fit",
+        "english": "Smart fit"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_smart_fit",
+        "english": "Smart fit"
+      }
+    ]
+  },
+  "imageScaleTypeStretch": {
+    "english": "Stretch",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_stretch",
+        "english": "Stretch"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_stretch",
+        "english": "Stretch"
+      }
+    ]
+  },
+  "landscapeZoom": {
+    "english": "Automatically zoom into wide images",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_landscape_zoom",
+        "english": "Automatically zoom into wide images"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_landscape_zoom",
+        "english": "Automatically zoom into wide images"
+      }
+    ]
+  },
+  "navigateToPan": {
+    "english": "Pan wide images",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_navigate_pan",
+        "english": "Pan wide images"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_navigate_pan",
+        "english": "Pan wide images"
+      }
+    ]
+  },
+  "pageLayoutSinglePage": {
+    "english": "Single page",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Single page",
+        "english": "Single page"
+      }
+    ]
+  },
+  "readerForThisSeries": {
+    "english": "For this series",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_for_this_series",
+        "english": "For this series"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_for_this_series",
+        "english": "For this series"
+      }
+    ]
+  },
+  "readerGroupActions": {
+    "english": "Actions",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_reader_actions",
+        "english": "Actions"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_reader_actions",
+        "english": "Actions"
+      }
+    ]
+  },
+  "showTapZonesOverlay": {
+    "english": "Show tap zones overlay",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_show_navigation_mode",
+        "english": "Show tap zones overlay"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_show_navigation_mode",
+        "english": "Show tap zones overlay"
+      },
+      {
+        "source": "webui",
+        "key": "Show tap zones overlay",
+        "english": "Show tap zones overlay"
+      }
+    ]
+  },
+  "showTapZonesOverlaySubtitle": {
+    "english": "Briefly show when reader is opened",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_show_navigation_mode_summary",
+        "english": "Briefly show when reader is opened"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_show_navigation_mode_summary",
+        "english": "Briefly show when reader is opened"
+      }
+    ]
+  },
+  "readerGroupDisplay": {
+    "english": "Display",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_display",
+        "english": "Display"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_display",
+        "english": "Display"
+      },
+      {
+        "source": "webui",
+        "key": "Display",
+        "english": "Display"
+      }
+    ]
+  },
+  "readerGroupNavigation": {
+    "english": "Navigation",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_reader_navigation",
+        "english": "Navigation"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_reader_navigation",
+        "english": "Navigation"
+      }
+    ]
+  },
+  "readerGroupPagerViewer": {
+    "english": "Paged",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pager_viewer",
+        "english": "Paged"
+      },
+      {
+        "source": "komikku",
+        "key": "pager_viewer",
+        "english": "Paged"
+      }
+    ]
+  },
+  "readerGroupReading": {
+    "english": "Reading",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_reading",
+        "english": "Reading"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_reading",
+        "english": "Reading"
+      }
+    ]
+  },
+  "readerSectionPaged": {
+    "english": "Paged",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pager_viewer",
+        "english": "Paged"
+      },
+      {
+        "source": "komikku",
+        "key": "pager_viewer",
+        "english": "Paged"
+      }
+    ]
+  },
+  "readerSectionReadingMode": {
+    "english": "Reading mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_reading_mode",
+        "english": "Reading mode"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_reading_mode",
+        "english": "Reading mode"
+      },
+      {
+        "source": "webui",
+        "key": "Reading mode",
+        "english": "Reading mode"
+      }
+    ]
+  },
+  "readerSectionRotation": {
+    "english": "Rotation",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_type",
+        "english": "Rotation"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_type",
+        "english": "Rotation"
+      }
+    ]
+  },
+  "readerSectionTapInvert": {
+    "english": "Invert tap zones",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_read_with_tapping_inverted",
+        "english": "Invert tap zones"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_read_with_tapping_inverted",
+        "english": "Invert tap zones"
+      },
+      {
+        "source": "webui",
+        "key": "Invert tap zones",
+        "english": "Invert tap zones"
+      }
+    ]
+  },
+  "readerSectionTapZones": {
+    "english": "Tap zones",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_viewer_nav",
+        "english": "Tap zones"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_viewer_nav",
+        "english": "Tap zones"
+      },
+      {
+        "source": "webui",
+        "key": "Tap zones",
+        "english": "Tap zones"
+      }
+    ]
+  },
+  "rotateWidePagesToFit": {
+    "english": "Rotate wide pages to fit",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_page_rotate",
+        "english": "Rotate wide pages to fit"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_page_rotate",
+        "english": "Rotate wide pages to fit"
+      }
+    ]
+  },
+  "splitWidePages": {
+    "english": "Split wide pages",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_dual_page_split",
+        "english": "Split wide pages"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_dual_page_split",
+        "english": "Split wide pages"
+      }
+    ]
+  },
+  "alwaysShowChapterTransition": {
+    "english": "Always show chapter transition",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_always_show_chapter_transition",
+        "english": "Always show chapter transition"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_always_show_chapter_transition",
+        "english": "Always show chapter transition"
+      }
+    ]
+  },
+  "backgroundColorAuto": {
+    "english": "Auto",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "automatic_background",
+        "english": "Auto"
+      },
+      {
+        "source": "komikku",
+        "key": "automatic_background",
+        "english": "Auto"
+      },
+      {
+        "source": "webui",
+        "key": "Auto",
+        "english": "Auto"
+      }
+    ]
+  },
+  "backgroundColorBlack": {
+    "english": "Black",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "black_background",
+        "english": "Black"
+      },
+      {
+        "source": "komikku",
+        "key": "black_background",
+        "english": "Black"
+      },
+      {
+        "source": "webui",
+        "key": "Black",
+        "english": "Black"
+      }
+    ]
+  },
+  "backgroundColorGray": {
+    "english": "Gray",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "gray_background",
+        "english": "Gray"
+      },
+      {
+        "source": "komikku",
+        "key": "gray_background",
+        "english": "Gray"
+      },
+      {
+        "source": "webui",
+        "key": "Gray",
+        "english": "Gray"
+      }
+    ]
+  },
+  "backgroundColorWhite": {
+    "english": "White",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "white_background",
+        "english": "White"
+      },
+      {
+        "source": "komikku",
+        "key": "white_background",
+        "english": "White"
+      },
+      {
+        "source": "webui",
+        "key": "White",
+        "english": "White"
+      }
+    ]
+  },
+  "flashColorBlack": {
+    "english": "Black",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_style_black",
+        "english": "Black"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_style_black",
+        "english": "Black"
+      },
+      {
+        "source": "webui",
+        "key": "Black",
+        "english": "Black"
+      }
+    ]
+  },
+  "flashColorWhite": {
+    "english": "White",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_style_white",
+        "english": "White"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_style_white",
+        "english": "White"
+      },
+      {
+        "source": "webui",
+        "key": "White",
+        "english": "White"
+      }
+    ]
+  },
+  "flashColorWhiteBlack": {
+    "english": "White and Black",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_style_white_black",
+        "english": "White and Black"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_style_white_black",
+        "english": "White and Black"
+      }
+    ]
+  },
+  "flashDuration": {
+    "english": "Flash duration",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_duration",
+        "english": "Flash duration"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_duration",
+        "english": "Flash duration"
+      }
+    ]
+  },
+  "flashEvery": {
+    "english": "Flash every",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_page_interval",
+        "english": "Flash every"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_page_interval",
+        "english": "Flash every"
+      }
+    ]
+  },
+  "flashOnPageChange": {
+    "english": "Flash on page change",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_page",
+        "english": "Flash on page change"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_page",
+        "english": "Flash on page change"
+      }
+    ]
+  },
+  "flashWith": {
+    "english": "Flash with",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_flash_with",
+        "english": "Flash with"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_flash_with",
+        "english": "Flash with"
+      }
+    ]
+  },
+  "readerBackgroundColor": {
+    "english": "Background color",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_reader_theme",
+        "english": "Background color"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_reader_theme",
+        "english": "Background color"
+      },
+      {
+        "source": "webui",
+        "key": "Background color",
+        "english": "Background color"
+      }
+    ]
+  },
+  "readerFullscreen": {
+    "english": "Fullscreen",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_fullscreen",
+        "english": "Fullscreen"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_fullscreen",
+        "english": "Fullscreen"
+      },
+      {
+        "source": "webui",
+        "key": "Fullscreen",
+        "english": "Fullscreen"
+      }
+    ]
+  },
+  "showActionsOnLongTap": {
+    "english": "Show actions on long tap",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_read_with_long_tap",
+        "english": "Show actions on long tap"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_read_with_long_tap",
+        "english": "Show actions on long tap"
+      }
+    ]
+  },
+  "showContentInCutoutArea": {
+    "english": "Show content in cutout area",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_cutout_short",
+        "english": "Show content in cutout area"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_cutout_short",
+        "english": "Show content in cutout area"
+      }
+    ]
+  },
+  "showPageNumber": {
+    "english": "Show page number",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_show_page_number",
+        "english": "Show page number"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_show_page_number",
+        "english": "Show page number"
+      },
+      {
+        "source": "webui",
+        "key": "Show page number",
+        "english": "Show page number"
+      }
+    ]
+  },
+  "automaticallyRefreshMetadata": {
+    "english": "Automatically refresh metadata",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_library_update_refresh_metadata",
+        "english": "Automatically refresh metadata"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_library_update_refresh_metadata",
+        "english": "Automatically refresh metadata"
+      },
+      {
+        "source": "webui",
+        "key": "Automatically refresh metadata",
+        "english": "Automatically refresh metadata"
+      }
+    ]
+  },
+  "automaticallyRefreshMetadataSubtitle": {
+    "english": "Check for new cover and details when updating library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_library_update_refresh_metadata_summary",
+        "english": "Check for new cover and details when updating library"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_library_update_refresh_metadata_summary",
+        "english": "Check for new cover and details when updating library"
+      },
+      {
+        "source": "webui",
+        "key": "Check for new cover and details when updating library",
+        "english": "Check for new cover and details when updating library"
+      }
+    ]
+  },
+  "backupAndRestore": {
+    "english": "Backup and Restore",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_backup",
+        "english": "Backup and restore"
+      },
+      {
+        "source": "komikku",
+        "key": "label_backup",
+        "english": "Backup and restore"
+      }
+    ]
+  },
+  "backupCleanup": {
+    "english": "Backup Cleanup",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Backup cleanup",
+        "english": "Backup cleanup"
+      }
+    ]
+  },
+  "backupInterval": {
+    "english": "Backup Interval",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Backup interval",
+        "english": "Backup interval"
+      }
+    ]
+  },
+  "backupLocation": {
+    "english": "Backup Location",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Backup location",
+        "english": "Backup location"
+      }
+    ]
+  },
+  "backupLocationDescription": {
+    "english": "The path to the directory on the server where automated backups should get saved in",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "The path to the directory on the server where automated backups should get saved in",
+        "english": "The path to the directory on the server where automated backups should get saved in"
+      }
+    ]
+  },
+  "backupTime": {
+    "english": "Backup Time",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Backup time",
+        "english": "Backup time"
+      }
+    ]
+  },
+  "badges": {
+    "english": "Badges",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Badges",
+        "english": "Badges"
+      }
+    ]
+  },
+  "bookmarked": {
+    "english": "Bookmarked",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter_bookmarked",
+        "english": "Bookmarked"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter_bookmarked",
+        "english": "Bookmarked"
+      },
+      {
+        "source": "webui",
+        "key": "Bookmarked",
+        "english": "Bookmarked"
+      }
+    ]
+  },
+  "categoryNumberOfItems": {
+    "english": "Show number of items",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_show_number_of_items",
+        "english": "Show number of items"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_show_number_of_items",
+        "english": "Show number of items"
+      },
+      {
+        "source": "webui",
+        "key": "Show number of items",
+        "english": "Show number of items"
+      }
+    ]
+  },
+  "categoryTabs": {
+    "english": "Show category tabs",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_show_tabs",
+        "english": "Show category tabs"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_show_tabs",
+        "english": "Show category tabs"
+      }
+    ]
+  },
+  "showHiddenCategories": {
+    "english": "Show hidden categories",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_show_hidden_categories",
+        "english": "Show hidden categories"
+      }
+    ]
+  },
+  "smallerTapZones": {
+    "english": "Smaller tap zones",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "pref_viewer_nav_smaller_tap_zone",
+        "english": "Smaller tap zones"
+      }
+    ]
+  },
+  "autoScroll": {
+    "english": "Auto scroll",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Auto scroll",
+        "english": "Auto scroll"
+      }
+    ]
+  },
+  "tabs": {
+    "english": "Tabs",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tabs_header",
+        "english": "Tabs"
+      },
+      {
+        "source": "komikku",
+        "key": "tabs_header",
+        "english": "Tabs"
+      },
+      {
+        "source": "webui",
+        "key": "Tabs",
+        "english": "Tabs"
+      }
+    ]
+  },
+  "continueReadingButton": {
+    "english": "Continue reading button",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_show_continue_reading_button",
+        "english": "Continue reading button"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_show_continue_reading_button",
+        "english": "Continue reading button"
+      }
+    ]
+  },
+  "languageBadge": {
+    "english": "Language",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_language_badge",
+        "english": "Language"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_language_badge",
+        "english": "Language"
+      },
+      {
+        "source": "webui",
+        "key": "Language",
+        "english": "Language"
+      }
+    ]
+  },
+  "sourceBadge": {
+    "english": "Source icon",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_display_source_badge",
+        "english": "Source icon"
+      }
+    ]
+  },
+  "browse": {
+    "english": "Browse",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "browse",
+        "english": "Browse"
+      },
+      {
+        "source": "komikku",
+        "key": "browse",
+        "english": "Browse"
+      },
+      {
+        "source": "webui",
+        "key": "Browse",
+        "english": "Browse"
+      }
+    ]
+  },
+  "buildTime": {
+    "english": "Build time",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Build time",
+        "english": "Build time"
+      }
+    ]
+  },
+  "cancel": {
+    "english": "Cancel",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_cancel",
+        "english": "Cancel"
+      },
+      {
+        "source": "komikku",
+        "key": "action_cancel",
+        "english": "Cancel"
+      },
+      {
+        "source": "webui",
+        "key": "Cancel",
+        "english": "Cancel"
+      }
+    ]
+  },
+  "categories": {
+    "english": "Categories",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "categories",
+        "english": "Categories"
+      },
+      {
+        "source": "komikku",
+        "key": "categories",
+        "english": "Categories"
+      },
+      {
+        "source": "webui",
+        "key": "Categories",
+        "english": "Categories"
+      }
+    ]
+  },
+  "channel": {
+    "english": "Channel",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Channel",
+        "english": "Channel"
+      }
+    ]
+  },
+  "chapterDownloadLimit": {
+    "english": "Chapter download limit",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Chapter download limit",
+        "english": "Chapter download limit"
+      }
+    ]
+  },
+  "chapterDownloadLimitDesc": {
+    "english": "Limit the amount of new chapters that are going to get downloaded.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Limit the amount of new chapters that are going to get downloaded.",
+        "english": "Limit the amount of new chapters that are going to get downloaded."
+      }
+    ]
+  },
+  "chapterDisplayChapterNumber": {
+    "english": "Chapter number",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "show_chapter_number",
+        "english": "Chapter number"
+      },
+      {
+        "source": "komikku",
+        "key": "show_chapter_number",
+        "english": "Chapter number"
+      },
+      {
+        "source": "webui",
+        "key": "Chapter number",
+        "english": "Chapter number"
+      }
+    ]
+  },
+  "chapterDisplaySourceTitle": {
+    "english": "Source title",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "show_title",
+        "english": "Source title"
+      },
+      {
+        "source": "komikku",
+        "key": "show_title",
+        "english": "Source title"
+      },
+      {
+        "source": "webui",
+        "key": "Source title",
+        "english": "Source title"
+      }
+    ]
+  },
+  "chapterSortAlphabetical": {
+    "english": "Alphabetically",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_alpha",
+        "english": "Alphabetically"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_alpha",
+        "english": "Alphabetically"
+      }
+    ]
+  },
+  "chapterSortChapterNumber": {
+    "english": "By Chapter Number",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "sort_by_number",
+        "english": "By chapter number"
+      },
+      {
+        "source": "komikku",
+        "key": "sort_by_number",
+        "english": "By chapter number"
+      },
+      {
+        "source": "webui",
+        "key": "By chapter number",
+        "english": "By chapter number"
+      }
+    ]
+  },
+  "chapterSortSource": {
+    "english": "By Source",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "sort_by_source",
+        "english": "By source"
+      },
+      {
+        "source": "komikku",
+        "key": "sort_by_source",
+        "english": "By source"
+      },
+      {
+        "source": "webui",
+        "key": "By source",
+        "english": "By source"
+      }
+    ]
+  },
+  "chapterSortUploadDate": {
+    "english": "By Upload Date",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "sort_by_upload_date",
+        "english": "By upload date"
+      },
+      {
+        "source": "komikku",
+        "key": "sort_by_upload_date",
+        "english": "By upload date"
+      },
+      {
+        "source": "webui",
+        "key": "By upload date",
+        "english": "By upload date"
+      }
+    ]
+  },
+  "checkForUpdates": {
+    "english": "Check for updates",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "check_for_updates",
+        "english": "Check for updates"
+      },
+      {
+        "source": "komikku",
+        "key": "check_for_updates",
+        "english": "Check for updates"
+      }
+    ]
+  },
+  "clearCache": {
+    "english": "Clear Cache",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Clear cache",
+        "english": "Clear cache"
+      }
+    ]
+  },
+  "client": {
+    "english": "Client",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Client",
+        "english": "Client"
+      }
+    ]
+  },
+  "close": {
+    "english": "Close",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_close",
+        "english": "Close"
+      },
+      {
+        "source": "komikku",
+        "key": "action_close",
+        "english": "Close"
+      },
+      {
+        "source": "webui",
+        "key": "Close",
+        "english": "Close"
+      }
+    ]
+  },
+  "cloudflareBypass": {
+    "english": "Cloudflare Bypass",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Cloudflare bypass",
+        "english": "Cloudflare bypass"
+      }
+    ]
+  },
+  "createBackupTitle": {
+    "english": "Create Backup",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_create_backup",
+        "english": "Create backup"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_create_backup",
+        "english": "Create backup"
+      },
+      {
+        "source": "webui",
+        "key": "Create backup",
+        "english": "Create backup"
+      }
+    ]
+  },
+  "back": {
+    "english": "Back",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_webview_back",
+        "english": "Back"
+      },
+      {
+        "source": "komikku",
+        "key": "action_webview_back",
+        "english": "Back"
+      }
+    ]
+  },
+  "next": {
+    "english": "Next",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "onboarding_action_next",
+        "english": "Next"
+      },
+      {
+        "source": "komikku",
+        "key": "onboarding_action_next",
+        "english": "Next"
+      },
+      {
+        "source": "webui",
+        "key": "Next",
+        "english": "Next"
+      }
+    ]
+  },
+  "onboardingSkip": {
+    "english": "Skip",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "onboarding_action_skip",
+        "english": "Skip"
+      },
+      {
+        "source": "komikku",
+        "key": "onboarding_action_skip",
+        "english": "Skip"
+      }
+    ]
+  },
+  "onboardingAuthModeSimple": {
+    "english": "Simple login",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Simple Login",
+        "english": "Simple Login"
+      }
+    ]
+  },
+  "onboardingAuthModeUi": {
+    "english": "UI login",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "UI Login",
+        "english": "UI Login"
+      }
+    ]
+  },
+  "justNow": {
+    "english": "Just now",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "updates_last_update_info_just_now",
+        "english": "Just now"
+      },
+      {
+        "source": "komikku",
+        "key": "updates_last_update_info_just_now",
+        "english": "Just now"
+      }
+    ]
+  },
+  "defaultCategoryOnAdd": {
+    "english": "Default category",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "default_category",
+        "english": "Default category"
+      },
+      {
+        "source": "komikku",
+        "key": "default_category",
+        "english": "Default category"
+      }
+    ]
+  },
+  "alwaysAsk": {
+    "english": "Always ask",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "default_category_summary",
+        "english": "Always ask"
+      },
+      {
+        "source": "komikku",
+        "key": "default_category_summary",
+        "english": "Always ask"
+      }
+    ]
+  },
+  "setCategories": {
+    "english": "Set categories",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_move_category",
+        "english": "Set categories"
+      },
+      {
+        "source": "komikku",
+        "key": "action_move_category",
+        "english": "Set categories"
+      },
+      {
+        "source": "webui",
+        "key": "Set categories",
+        "english": "Set categories"
+      }
+    ]
+  },
+  "ok": {
+    "english": "OK",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_ok",
+        "english": "OK"
+      },
+      {
+        "source": "komikku",
+        "key": "action_ok",
+        "english": "OK"
+      },
+      {
+        "source": "webui",
+        "key": "Ok",
+        "english": "Ok"
+      }
+    ]
+  },
+  "delete": {
+    "english": "Delete",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_delete",
+        "english": "Delete"
+      },
+      {
+        "source": "komikku",
+        "key": "action_delete",
+        "english": "Delete"
+      },
+      {
+        "source": "webui",
+        "key": "Delete",
+        "english": "Delete"
+      }
+    ]
+  },
+  "deleteChaptersConfirm": {
+    "english": "Are you sure you want to delete the selected chapters?",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "confirm_delete_chapters",
+        "english": "Are you sure you want to delete the selected chapters?"
+      },
+      {
+        "source": "komikku",
+        "key": "confirm_delete_chapters",
+        "english": "Are you sure you want to delete the selected chapters?"
+      }
+    ]
+  },
+  "deleteCategoryTitle": {
+    "english": "Are you sure?",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "are_you_sure",
+        "english": "Are you sure?"
+      },
+      {
+        "source": "komikku",
+        "key": "are_you_sure",
+        "english": "Are you sure?"
+      },
+      {
+        "source": "webui",
+        "key": "Are you sure?",
+        "english": "Are you sure?"
+      }
+    ]
+  },
+  "deleteChapters": {
+    "english": "Delete chapters",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Delete chapters",
+        "english": "Delete chapters"
+      },
+      {
+        "source": "mihon",
+        "key": "pref_category_delete_chapters",
+        "english": "Delete chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_delete_chapters",
+        "english": "Delete chapters"
+      }
+    ]
+  },
+  "deleteChapterAfterManuallyMarkedRead": {
+    "english": "Delete chapter after manually marking it as read",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Delete chapter after manually marking it as read",
+        "english": "Delete chapter after manually marking it as read"
+      }
+    ]
+  },
+  "deleteFinishedChaptersWhileReading": {
+    "english": "Delete finished chapters while reading",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Delete finished chapters while reading",
+        "english": "Delete finished chapters while reading"
+      }
+    ]
+  },
+  "allowDeletingBookmarkedChapters": {
+    "english": "Allow deleting bookmarked chapters",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_remove_bookmarked_chapters",
+        "english": "Allow deleting bookmarked chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_remove_bookmarked_chapters",
+        "english": "Allow deleting bookmarked chapters"
+      },
+      {
+        "source": "webui",
+        "key": "Allow deleting bookmarked chapters",
+        "english": "Allow deleting bookmarked chapters"
+      }
+    ]
+  },
+  "deleteWhileReadingDisabled": {
+    "english": "Disabled",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "disabled",
+        "english": "Disabled"
+      },
+      {
+        "source": "komikku",
+        "key": "disabled",
+        "english": "Disabled"
+      },
+      {
+        "source": "webui",
+        "key": "Disabled",
+        "english": "Disabled"
+      }
+    ]
+  },
+  "deleteWhileReadingLastRead": {
+    "english": "Last read chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "last_read_chapter",
+        "english": "Last read chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "last_read_chapter",
+        "english": "Last read chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Last read chapter",
+        "english": "Last read chapter"
+      }
+    ]
+  },
+  "deleteWhileReadingSecondToLast": {
+    "english": "Second to last read chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "second_to_last",
+        "english": "Second to last read chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "second_to_last",
+        "english": "Second to last read chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Second to last read chapter",
+        "english": "Second to last read chapter"
+      }
+    ]
+  },
+  "deleteWhileReadingThirdToLast": {
+    "english": "Third to last read chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "third_to_last",
+        "english": "Third to last read chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "third_to_last",
+        "english": "Third to last read chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Third to last read chapter",
+        "english": "Third to last read chapter"
+      }
+    ]
+  },
+  "deleteWhileReadingFourthToLast": {
+    "english": "Fourth to last read chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "fourth_to_last",
+        "english": "Fourth to last read chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "fourth_to_last",
+        "english": "Fourth to last read chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Fourth to last read chapter",
+        "english": "Fourth to last read chapter"
+      }
+    ]
+  },
+  "deleteWhileReadingFifthToLast": {
+    "english": "Fifth to last read chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "fifth_to_last",
+        "english": "Fifth to last read chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "fifth_to_last",
+        "english": "Fifth to last read chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Fifth to last read chapter",
+        "english": "Fifth to last read chapter"
+      }
+    ]
+  },
+  "display": {
+    "english": "Display",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display",
+        "english": "Display"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display",
+        "english": "Display"
+      },
+      {
+        "source": "webui",
+        "key": "Display",
+        "english": "Display"
+      }
+    ]
+  },
+  "displayMode": {
+    "english": "Display Mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_mode",
+        "english": "Display mode"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_mode",
+        "english": "Display mode"
+      },
+      {
+        "source": "webui",
+        "key": "Display mode",
+        "english": "Display mode"
+      }
+    ]
+  },
+  "displayModeComfortableGrid": {
+    "english": "Comfortable grid",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_comfortable_grid",
+        "english": "Comfortable grid"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_comfortable_grid",
+        "english": "Comfortable grid"
+      },
+      {
+        "source": "webui",
+        "key": "Comfortable grid",
+        "english": "Comfortable grid"
+      }
+    ]
+  },
+  "displayModeCompactGrid": {
+    "english": "Compact grid",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_grid",
+        "english": "Compact grid"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_grid",
+        "english": "Compact grid"
+      },
+      {
+        "source": "webui",
+        "key": "Compact grid",
+        "english": "Compact grid"
+      }
+    ]
+  },
+  "displayModeCoverOnly": {
+    "english": "Cover-only grid",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_cover_only_grid",
+        "english": "Cover-only grid"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_cover_only_grid",
+        "english": "Cover-only grid"
+      }
+    ]
+  },
+  "displayModeList": {
+    "english": "List",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_display_list",
+        "english": "List"
+      },
+      {
+        "source": "komikku",
+        "key": "action_display_list",
+        "english": "List"
+      },
+      {
+        "source": "webui",
+        "key": "List",
+        "english": "List"
+      }
+    ]
+  },
+  "filterStateExcluded": {
+    "english": "Excluded",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Excluded",
+        "english": "Excluded"
+      }
+    ]
+  },
+  "filterOptionDownloaded": {
+    "english": "Downloaded",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "komikku",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "webui",
+        "key": "Downloaded",
+        "english": "Downloaded"
+      }
+    ]
+  },
+  "filterOptionUnread": {
+    "english": "Unread",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter_unread",
+        "english": "Unread"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter_unread",
+        "english": "Unread"
+      },
+      {
+        "source": "webui",
+        "key": "Unread",
+        "english": "Unread"
+      }
+    ]
+  },
+  "filterOptionRead": {
+    "english": "Read",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_read_chapters",
+        "english": "Read"
+      },
+      {
+        "source": "komikku",
+        "key": "label_read_chapters",
+        "english": "Read"
+      }
+    ]
+  },
+  "filterOptionStarted": {
+    "english": "Started",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_started",
+        "english": "Started"
+      },
+      {
+        "source": "komikku",
+        "key": "label_started",
+        "english": "Started"
+      },
+      {
+        "source": "webui",
+        "key": "Started",
+        "english": "Started"
+      }
+    ]
+  },
+  "filterOptionBookmarked": {
+    "english": "Bookmarked",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter_bookmarked",
+        "english": "Bookmarked"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter_bookmarked",
+        "english": "Bookmarked"
+      },
+      {
+        "source": "webui",
+        "key": "Bookmarked",
+        "english": "Bookmarked"
+      }
+    ]
+  },
+  "filterOptionFinished": {
+    "english": "Finished",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Finished",
+        "english": "Finished"
+      }
+    ]
+  },
+  "filterHeaderLibrary": {
+    "english": "Library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "komikku",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "webui",
+        "key": "Library",
+        "english": "Library"
+      }
+    ]
+  },
+  "filterOptionInLibrary": {
+    "english": "In library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "in_library",
+        "english": "In library"
+      },
+      {
+        "source": "komikku",
+        "key": "in_library",
+        "english": "In library"
+      },
+      {
+        "source": "webui",
+        "key": "In Library",
+        "english": "In Library"
+      }
+    ]
+  },
+  "filterOptionCompleted": {
+    "english": "Completed",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "completed",
+        "english": "Completed"
+      },
+      {
+        "source": "komikku",
+        "key": "completed",
+        "english": "Completed"
+      },
+      {
+        "source": "webui",
+        "key": "Completed",
+        "english": "Completed"
+      }
+    ]
+  },
+  "unreadBadgeModeHidden": {
+    "english": "Hide",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_hide",
+        "english": "Hide"
+      }
+    ]
+  },
+  "groupStyleTabs": {
+    "english": "Tabs",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tabs_header",
+        "english": "Tabs"
+      },
+      {
+        "source": "komikku",
+        "key": "tabs_header",
+        "english": "Tabs"
+      },
+      {
+        "source": "webui",
+        "key": "Tabs",
+        "english": "Tabs"
+      }
+    ]
+  },
+  "downloadAllChapters": {
+    "english": "All",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "all",
+        "english": "All"
+      },
+      {
+        "source": "komikku",
+        "key": "all",
+        "english": "All"
+      },
+      {
+        "source": "webui",
+        "key": "All",
+        "english": "All"
+      }
+    ]
+  },
+  "downloadLocation": {
+    "english": "Download location",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Download location",
+        "english": "Download location"
+      }
+    ]
+  },
+  "downloadLocationHint": {
+    "english": "The path to the directory on the server where downloaded files should get saved in",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "The path to the directory on the server where downloaded files should get saved in",
+        "english": "The path to the directory on the server where downloaded files should get saved in"
+      }
+    ]
+  },
+  "downloaded": {
+    "english": "Downloaded",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "komikku",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "webui",
+        "key": "Downloaded",
+        "english": "Downloaded"
+      }
+    ]
+  },
+  "downloading": {
+    "english": "Downloading",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ext_downloading",
+        "english": "Downloading"
+      },
+      {
+        "source": "komikku",
+        "key": "ext_downloading",
+        "english": "Downloading"
+      },
+      {
+        "source": "webui",
+        "key": "Downloading",
+        "english": "Downloading"
+      }
+    ]
+  },
+  "downloadNextChapter": {
+    "english": "Next chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_next_chapter",
+        "english": "Next chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_next_chapter",
+        "english": "Next chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Next chapter",
+        "english": "Next chapter"
+      }
+    ]
+  },
+  "downloads": {
+    "english": "Downloads",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_downloads",
+        "english": "Downloads"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_downloads",
+        "english": "Downloads"
+      },
+      {
+        "source": "webui",
+        "key": "Downloads",
+        "english": "Downloads"
+      }
+    ]
+  },
+  "downloadUnreadChapters": {
+    "english": "Unread",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "download_unread",
+        "english": "Unread"
+      },
+      {
+        "source": "komikku",
+        "key": "download_unread",
+        "english": "Unread"
+      },
+      {
+        "source": "webui",
+        "key": "Unread",
+        "english": "Unread"
+      }
+    ]
+  },
+  "edit": {
+    "english": "Edit",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_edit",
+        "english": "Edit"
+      },
+      {
+        "source": "komikku",
+        "key": "action_edit",
+        "english": "Edit"
+      },
+      {
+        "source": "webui",
+        "key": "Edit",
+        "english": "Edit"
+      }
+    ]
+  },
+  "editCategory": {
+    "english": "Edit Category",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Edit category",
+        "english": "Edit category"
+      }
+    ]
+  },
+  "incognitoMode": {
+    "english": "Incognito mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_incognito_mode",
+        "english": "Incognito mode"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_incognito_mode",
+        "english": "Incognito mode"
+      }
+    ]
+  },
+  "incognitoModeDescription": {
+    "english": "Pauses reading history",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_incognito_mode_summary",
+        "english": "Pauses reading history"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_incognito_mode_summary",
+        "english": "Pauses reading history"
+      }
+    ]
+  },
+  "enableSocksProxy": {
+    "english": "Use SOCKS Proxy",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Use SOCKS proxy",
+        "english": "Use SOCKS proxy"
+      }
+    ]
+  },
+  "error": {
+    "english": "Error",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "chapter_error",
+        "english": "Error"
+      },
+      {
+        "source": "komikku",
+        "key": "chapter_error",
+        "english": "Error"
+      },
+      {
+        "source": "webui",
+        "key": "Error",
+        "english": "Error"
+      }
+    ]
+  },
+  "excludeEntryWithUnreadChapters": {
+    "english": "Ignore automatic chapter downloads for entries with unread chapters",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Ignore automatic chapter downloads for entries with unread chapters",
+        "english": "Ignore automatic chapter downloads for entries with unread chapters"
+      }
+    ]
+  },
+  "extensions": {
+    "english": "Extensions",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_extensions",
+        "english": "Extensions"
+      },
+      {
+        "source": "komikku",
+        "key": "label_extensions",
+        "english": "Extensions"
+      }
+    ]
+  },
+  "filter": {
+    "english": "Filter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter",
+        "english": "Filter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter",
+        "english": "Filter"
+      },
+      {
+        "source": "webui",
+        "key": "Filter",
+        "english": "Filter"
+      }
+    ]
+  },
+  "finished": {
+    "english": "Finished",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Finished",
+        "english": "Finished"
+      }
+    ]
+  },
+  "flareSolverrRequestTimeout": {
+    "english": "FlareSolverr Request Timeout",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "FlareSolverr request timeout",
+        "english": "FlareSolverr request timeout"
+      }
+    ]
+  },
+  "flareSolverrServerUrl": {
+    "english": "FlareSolverr Server Url",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "FlareSolverr server url",
+        "english": "FlareSolverr server url"
+      }
+    ]
+  },
+  "flareSolverrSessionName": {
+    "english": "FlareSolverr session name",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "FlareSolverr session name",
+        "english": "FlareSolverr session name"
+      }
+    ]
+  },
+  "flareSolverrSessionTTL": {
+    "english": "FlareSolverr session TTL",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "FlareSolverr session TTL",
+        "english": "FlareSolverr session TTL"
+      }
+    ]
+  },
+  "general": {
+    "english": "General",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_general",
+        "english": "General"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_general",
+        "english": "General"
+      },
+      {
+        "source": "webui",
+        "key": "General",
+        "english": "General"
+      }
+    ]
+  },
+  "globalSearch": {
+    "english": "Global Search",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_global_search",
+        "english": "Global search"
+      },
+      {
+        "source": "komikku",
+        "key": "action_global_search",
+        "english": "Global search"
+      },
+      {
+        "source": "webui",
+        "key": "Global Search",
+        "english": "Global Search"
+      }
+    ]
+  },
+  "globalUpdate": {
+    "english": "Global Update",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_library_update",
+        "english": "Global update"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_library_update",
+        "english": "Global update"
+      },
+      {
+        "source": "webui",
+        "key": "Global update",
+        "english": "Global update"
+      }
+    ]
+  },
+  "help": {
+    "english": "Help",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_help",
+        "english": "Help"
+      },
+      {
+        "source": "komikku",
+        "key": "label_help",
+        "english": "Help"
+      }
+    ]
+  },
+  "inLibrary": {
+    "english": "In library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "in_library",
+        "english": "In library"
+      },
+      {
+        "source": "komikku",
+        "key": "in_library",
+        "english": "In library"
+      },
+      {
+        "source": "webui",
+        "key": "In Library",
+        "english": "In Library"
+      }
+    ]
+  },
+  "includeCategories": {
+    "english": "Categories",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Categories",
+        "english": "Categories"
+      },
+      {
+        "source": "mihon",
+        "key": "categories",
+        "english": "Categories"
+      },
+      {
+        "source": "komikku",
+        "key": "categories",
+        "english": "Categories"
+      }
+    ]
+  },
+  "includeChapters": {
+    "english": "Chapters",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Chapters",
+        "english": "Chapters"
+      },
+      {
+        "source": "mihon",
+        "key": "chapters",
+        "english": "Chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "chapters",
+        "english": "Chapters"
+      }
+    ]
+  },
+  "includeHistory": {
+    "english": "History",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "History",
+        "english": "History"
+      },
+      {
+        "source": "mihon",
+        "key": "history",
+        "english": "History"
+      },
+      {
+        "source": "komikku",
+        "key": "history",
+        "english": "History"
+      }
+    ]
+  },
+  "includeTracking": {
+    "english": "Tracking",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Tracking",
+        "english": "Tracking"
+      },
+      {
+        "source": "mihon",
+        "key": "track",
+        "english": "Tracking"
+      },
+      {
+        "source": "komikku",
+        "key": "track",
+        "english": "Tracking"
+      }
+    ]
+  },
+  "includeClientData": {
+    "english": "App settings",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "app_settings",
+        "english": "App settings"
+      },
+      {
+        "source": "komikku",
+        "key": "app_settings",
+        "english": "App settings"
+      }
+    ]
+  },
+  "install": {
+    "english": "Install",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ext_install",
+        "english": "Install"
+      },
+      {
+        "source": "komikku",
+        "key": "ext_install",
+        "english": "Install"
+      },
+      {
+        "source": "webui",
+        "key": "Install",
+        "english": "Install"
+      }
+    ]
+  },
+  "installing": {
+    "english": "Installing",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ext_installing",
+        "english": "Installing"
+      },
+      {
+        "source": "komikku",
+        "key": "ext_installing",
+        "english": "Installing"
+      },
+      {
+        "source": "webui",
+        "key": "Installing",
+        "english": "Installing"
+      }
+    ]
+  },
+  "appThemeTitle": {
+    "english": "Theme",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_theme",
+        "english": "Theme"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_theme",
+        "english": "Theme"
+      },
+      {
+        "source": "webui",
+        "key": "Theme",
+        "english": "Theme"
+      }
+    ]
+  },
+  "appThemeCustom": {
+    "english": "Custom",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Custom",
+        "english": "Custom"
+      }
+    ]
+  },
+  "customFilter": {
+    "english": "Custom filter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "custom_filter",
+        "english": "Custom filter"
+      },
+      {
+        "source": "komikku",
+        "key": "custom_filter",
+        "english": "Custom filter"
+      },
+      {
+        "source": "webui",
+        "key": "Custom filter",
+        "english": "Custom filter"
+      }
+    ]
+  },
+  "customBrightness": {
+    "english": "Custom brightness",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_custom_brightness",
+        "english": "Custom brightness"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_custom_brightness",
+        "english": "Custom brightness"
+      },
+      {
+        "source": "webui",
+        "key": "Custom brightness",
+        "english": "Custom brightness"
+      }
+    ]
+  },
+  "customColorFilter": {
+    "english": "Custom color filter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_custom_color_filter",
+        "english": "Custom color filter"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_custom_color_filter",
+        "english": "Custom color filter"
+      }
+    ]
+  },
+  "colorFilterRed": {
+    "english": "Red",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "color_filter_r_value",
+        "english": "Red"
+      },
+      {
+        "source": "komikku",
+        "key": "color_filter_r_value",
+        "english": "Red"
+      },
+      {
+        "source": "webui",
+        "key": "Red",
+        "english": "Red"
+      }
+    ]
+  },
+  "colorFilterGreen": {
+    "english": "Green",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "color_filter_g_value",
+        "english": "Green"
+      },
+      {
+        "source": "komikku",
+        "key": "color_filter_g_value",
+        "english": "Green"
+      },
+      {
+        "source": "webui",
+        "key": "Green",
+        "english": "Green"
+      }
+    ]
+  },
+  "colorFilterBlue": {
+    "english": "Blue",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "color_filter_b_value",
+        "english": "Blue"
+      },
+      {
+        "source": "komikku",
+        "key": "color_filter_b_value",
+        "english": "Blue"
+      },
+      {
+        "source": "webui",
+        "key": "Blue",
+        "english": "Blue"
+      }
+    ]
+  },
+  "colorFilterAlpha": {
+    "english": "Alpha",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "color_filter_a_value",
+        "english": "Alpha"
+      },
+      {
+        "source": "komikku",
+        "key": "color_filter_a_value",
+        "english": "Alpha"
+      },
+      {
+        "source": "webui",
+        "key": "Alpha",
+        "english": "Alpha"
+      }
+    ]
+  },
+  "colorFilterBlendMode": {
+    "english": "Color filter blend mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_color_filter_mode",
+        "english": "Color filter blend mode"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_color_filter_mode",
+        "english": "Color filter blend mode"
+      },
+      {
+        "source": "webui",
+        "key": "Color filter blend mode",
+        "english": "Color filter blend mode"
+      }
+    ]
+  },
+  "colorFilterModeDefault": {
+    "english": "Default",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "komikku",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "webui",
+        "key": "Default",
+        "english": "Default"
+      }
+    ]
+  },
+  "colorFilterModeMultiply": {
+    "english": "Multiply",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "filter_mode_multiply",
+        "english": "Multiply"
+      },
+      {
+        "source": "komikku",
+        "key": "filter_mode_multiply",
+        "english": "Multiply"
+      },
+      {
+        "source": "webui",
+        "key": "Multiply",
+        "english": "Multiply"
+      }
+    ]
+  },
+  "colorFilterModeScreen": {
+    "english": "Screen",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "filter_mode_screen",
+        "english": "Screen"
+      },
+      {
+        "source": "komikku",
+        "key": "filter_mode_screen",
+        "english": "Screen"
+      },
+      {
+        "source": "webui",
+        "key": "Screen",
+        "english": "Screen"
+      }
+    ]
+  },
+  "colorFilterModeOverlay": {
+    "english": "Overlay",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "filter_mode_overlay",
+        "english": "Overlay"
+      },
+      {
+        "source": "komikku",
+        "key": "filter_mode_overlay",
+        "english": "Overlay"
+      },
+      {
+        "source": "webui",
+        "key": "Overlay",
+        "english": "Overlay"
+      }
+    ]
+  },
+  "colorFilterModeLighten": {
+    "english": "Dodge / Lighten",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "filter_mode_lighten",
+        "english": "Dodge / Lighten"
+      },
+      {
+        "source": "komikku",
+        "key": "filter_mode_lighten",
+        "english": "Dodge / Lighten"
+      }
+    ]
+  },
+  "colorFilterModeDarken": {
+    "english": "Burn / Darken",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "filter_mode_darken",
+        "english": "Burn / Darken"
+      },
+      {
+        "source": "komikku",
+        "key": "filter_mode_darken",
+        "english": "Burn / Darken"
+      }
+    ]
+  },
+  "grayscale": {
+    "english": "Grayscale",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_grayscale",
+        "english": "Grayscale"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_grayscale",
+        "english": "Grayscale"
+      },
+      {
+        "source": "webui",
+        "key": "Grayscale",
+        "english": "Grayscale"
+      }
+    ]
+  },
+  "invertedColors": {
+    "english": "Inverted",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_inverted_colors",
+        "english": "Inverted"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_inverted_colors",
+        "english": "Inverted"
+      }
+    ]
+  },
+  "latest": {
+    "english": "Latest",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "latest",
+        "english": "Latest"
+      },
+      {
+        "source": "komikku",
+        "key": "latest",
+        "english": "Latest"
+      },
+      {
+        "source": "webui",
+        "key": "Latest",
+        "english": "Latest"
+      }
+    ]
+  },
+  "library": {
+    "english": "Library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "komikku",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "webui",
+        "key": "Library",
+        "english": "Library"
+      }
+    ]
+  },
+  "localSourceLocation": {
+    "english": "Local source location",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Local source location",
+        "english": "Local source location"
+      }
+    ]
+  },
+  "localSourceLocationDescription": {
+    "english": "The path to the directory on the server where local source files are saved in",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "The path to the directory on the server where local source files are saved in",
+        "english": "The path to the directory on the server where local source files are saved in"
+      }
+    ]
+  },
+  "manga": {
+    "english": "Manga",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Manga",
+        "english": "Manga"
+      }
+    ]
+  },
+  "mangaSortDateAdded": {
+    "english": "Date Added",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_date_added",
+        "english": "Date added"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_date_added",
+        "english": "Date added"
+      }
+    ]
+  },
+  "mangaSortLastChapterDate": {
+    "english": "Latest Chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_latest_chapter",
+        "english": "Latest chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_latest_chapter",
+        "english": "Latest chapter"
+      }
+    ]
+  },
+  "mangaSortLastRead": {
+    "english": "Last Read",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_last_read",
+        "english": "Last read"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_last_read",
+        "english": "Last read"
+      }
+    ]
+  },
+  "mangaSortLastUpdated": {
+    "english": "Chapter Fetch Date",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_chapter_fetch_date",
+        "english": "Chapter fetch date"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_chapter_fetch_date",
+        "english": "Chapter fetch date"
+      }
+    ]
+  },
+  "mangaSortRandom": {
+    "english": "Random",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_random",
+        "english": "Random"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_random",
+        "english": "Random"
+      },
+      {
+        "source": "webui",
+        "key": "Random",
+        "english": "Random"
+      }
+    ]
+  },
+  "mangaSortTrackerScore": {
+    "english": "Tracker score",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_tracker_score",
+        "english": "Tracker score"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_tracker_score",
+        "english": "Tracker score"
+      }
+    ]
+  },
+  "mangaSortTotalChapters": {
+    "english": "Total Chapters",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_total",
+        "english": "Total chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort_total",
+        "english": "Total chapters"
+      },
+      {
+        "source": "webui",
+        "key": "Total chapters",
+        "english": "Total chapters"
+      }
+    ]
+  },
+  "mangaSortUnread": {
+    "english": "Unread",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "unread",
+        "english": "Unread"
+      },
+      {
+        "source": "komikku",
+        "key": "unread",
+        "english": "Unread"
+      },
+      {
+        "source": "webui",
+        "key": "Unread",
+        "english": "Unread"
+      }
+    ]
+  },
+  "mangaStatusCancelled": {
+    "english": "Cancelled",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "cancelled",
+        "english": "Cancelled"
+      },
+      {
+        "source": "komikku",
+        "key": "cancelled",
+        "english": "Cancelled"
+      },
+      {
+        "source": "webui",
+        "key": "Cancelled",
+        "english": "Cancelled"
+      }
+    ]
+  },
+  "mangaStatusCompleted": {
+    "english": "Completed",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "completed",
+        "english": "Completed"
+      },
+      {
+        "source": "komikku",
+        "key": "completed",
+        "english": "Completed"
+      },
+      {
+        "source": "webui",
+        "key": "Completed",
+        "english": "Completed"
+      }
+    ]
+  },
+  "mangaStatusLicensed": {
+    "english": "Licensed",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "licensed",
+        "english": "Licensed"
+      },
+      {
+        "source": "komikku",
+        "key": "licensed",
+        "english": "Licensed"
+      },
+      {
+        "source": "webui",
+        "key": "Licensed",
+        "english": "Licensed"
+      }
+    ]
+  },
+  "mangaStatusOnHiatus": {
+    "english": "On Hiatus",
+    "note": "Publication status.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "on_hiatus",
+        "english": "On hiatus"
+      }
+    ]
+  },
+  "mangaStatusOngoing": {
+    "english": "Ongoing",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ongoing",
+        "english": "Ongoing"
+      },
+      {
+        "source": "komikku",
+        "key": "ongoing",
+        "english": "Ongoing"
+      },
+      {
+        "source": "webui",
+        "key": "Ongoing",
+        "english": "Ongoing"
+      }
+    ]
+  },
+  "mangaStatusPublishingFinished": {
+    "english": "Publishing Finished",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "publishing_finished",
+        "english": "Publishing finished"
+      },
+      {
+        "source": "komikku",
+        "key": "publishing_finished",
+        "english": "Publishing finished"
+      },
+      {
+        "source": "webui",
+        "key": "Publishing finished",
+        "english": "Publishing finished"
+      }
+    ]
+  },
+  "mangaStatusUnknown": {
+    "english": "Unknown",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "unknown",
+        "english": "Unknown"
+      },
+      {
+        "source": "komikku",
+        "key": "unknown",
+        "english": "Unknown"
+      },
+      {
+        "source": "webui",
+        "key": "Unknown",
+        "english": "Unknown"
+      }
+    ]
+  },
+  "misc": {
+    "english": "Misc",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Misc",
+        "english": "Misc"
+      }
+    ]
+  },
+  "more": {
+    "english": "More",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_more",
+        "english": "More"
+      },
+      {
+        "source": "komikku",
+        "key": "label_more",
+        "english": "More"
+      },
+      {
+        "source": "webui",
+        "key": "More",
+        "english": "More"
+      }
+    ]
+  },
+  "moveToBottom": {
+    "english": "Move to Bottom",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_move_to_bottom",
+        "english": "Move to bottom"
+      },
+      {
+        "source": "komikku",
+        "key": "action_move_to_bottom",
+        "english": "Move to bottom"
+      },
+      {
+        "source": "webui",
+        "key": "Move to bottom",
+        "english": "Move to bottom"
+      }
+    ]
+  },
+  "moveToTop": {
+    "english": "Move to top",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_move_to_top",
+        "english": "Move to top"
+      },
+      {
+        "source": "komikku",
+        "key": "action_move_to_top",
+        "english": "Move to top"
+      },
+      {
+        "source": "webui",
+        "key": "Move to top",
+        "english": "Move to top"
+      }
+    ]
+  },
+  "soon": {
+    "english": "Soon",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "manga_interval_expected_update_soon",
+        "english": "Soon"
+      },
+      {
+        "source": "komikku",
+        "key": "manga_interval_expected_update_soon",
+        "english": "Soon"
+      }
+    ]
+  },
+  "smartUpdate": {
+    "english": "Smart update",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_library_update_smart_update",
+        "english": "Smart update"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_library_update_smart_update",
+        "english": "Smart update"
+      }
+    ]
+  },
+  "noChaptersFound": {
+    "english": "No Chapters found",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "no_chapters_error",
+        "english": "No chapters found"
+      },
+      {
+        "source": "komikku",
+        "key": "no_chapters_error",
+        "english": "No chapters found"
+      },
+      {
+        "source": "webui",
+        "key": "No chapters found",
+        "english": "No chapters found"
+      }
+    ]
+  },
+  "noDownloads": {
+    "english": "No Downloads",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "information_no_downloads",
+        "english": "No downloads"
+      },
+      {
+        "source": "komikku",
+        "key": "information_no_downloads",
+        "english": "No downloads"
+      },
+      {
+        "source": "webui",
+        "key": "No downloads",
+        "english": "No downloads"
+      }
+    ]
+  },
+  "suggestions": {
+    "english": "Suggestions",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "pref_source_related_mangas",
+        "english": "Suggestions"
+      }
+    ]
+  },
+  "noResultFound": {
+    "english": "No results found",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "no_results_found",
+        "english": "No results found"
+      },
+      {
+        "source": "komikku",
+        "key": "no_results_found",
+        "english": "No results found"
+      }
+    ]
+  },
+  "none": {
+    "english": "None",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "none",
+        "english": "None"
+      },
+      {
+        "source": "komikku",
+        "key": "none",
+        "english": "None"
+      }
+    ]
+  },
+  "obsolete": {
+    "english": "Obsolete",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Obsolete",
+        "english": "Obsolete"
+      }
+    ]
+  },
+  "or": {
+    "english": "or",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "or",
+        "english": "or"
+      }
+    ]
+  },
+  "parallelSourceRequest": {
+    "english": "Parallel source requests",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Parallel source requests",
+        "english": "Parallel source requests"
+      }
+    ]
+  },
+  "password": {
+    "english": "Password",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "password",
+        "english": "Password"
+      },
+      {
+        "source": "komikku",
+        "key": "password",
+        "english": "Password"
+      },
+      {
+        "source": "komikku_extra",
+        "key": "pref_webdav_password",
+        "english": "Password"
+      },
+      {
+        "source": "webui",
+        "key": "Password",
+        "english": "Password"
+      }
+    ]
+  },
+  "pause": {
+    "english": "Pause",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_pause",
+        "english": "Pause"
+      },
+      {
+        "source": "komikku",
+        "key": "action_pause",
+        "english": "Pause"
+      }
+    ]
+  },
+  "all": {
+    "english": "All",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "all",
+        "english": "All"
+      },
+      {
+        "source": "komikku",
+        "key": "all",
+        "english": "All"
+      },
+      {
+        "source": "webui",
+        "key": "All",
+        "english": "All"
+      }
+    ]
+  },
+  "hasResults": {
+    "english": "Has results",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "has_results",
+        "english": "Has results"
+      },
+      {
+        "source": "komikku",
+        "key": "has_results",
+        "english": "Has results"
+      },
+      {
+        "source": "webui",
+        "key": "Has results",
+        "english": "Has results"
+      }
+    ]
+  },
+  "pinSource": {
+    "english": "Pin source",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Pin source",
+        "english": "Pin source"
+      }
+    ]
+  },
+  "pinchToZoom": {
+    "english": "Pinch to Zoom",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "pref_pinch_to_zoom",
+        "english": "Pinch to zoom"
+      }
+    ]
+  },
+  "doubleTapToZoom": {
+    "english": "Double tap to zoom",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_double_tap_zoom",
+        "english": "Double tap to zoom"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_double_tap_zoom",
+        "english": "Double tap to zoom"
+      }
+    ]
+  },
+  "disableZoomOut": {
+    "english": "Disable zoom out",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_webtoon_disable_zoom_out",
+        "english": "Disable zoom out"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_webtoon_disable_zoom_out",
+        "english": "Disable zoom out"
+      }
+    ]
+  },
+  "disableZoomIn": {
+    "english": "Disable zoom in",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "pref_paged_disable_zoom_in",
+        "english": "Disable zoom in"
+      }
+    ]
+  },
+  "unpinSource": {
+    "english": "Unpin source",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Unpin source",
+        "english": "Unpin source"
+      }
+    ]
+  },
+  "queued": {
+    "english": "Queued",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Queued",
+        "english": "Queued"
+      }
+    ]
+  },
+  "reader": {
+    "english": "Reader",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_reader",
+        "english": "Reader"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_reader",
+        "english": "Reader"
+      },
+      {
+        "source": "webui",
+        "key": "Reader",
+        "english": "Reader"
+      }
+    ]
+  },
+  "readerMode": {
+    "english": "Reading mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "viewer",
+        "english": "Reading mode"
+      },
+      {
+        "source": "komikku",
+        "key": "viewer",
+        "english": "Reading mode"
+      },
+      {
+        "source": "webui",
+        "key": "Reading mode",
+        "english": "Reading mode"
+      }
+    ]
+  },
+  "readerModeChipDefault": {
+    "english": "Default",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "komikku",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "webui",
+        "key": "Default",
+        "english": "Default"
+      }
+    ]
+  },
+  "readerModeChipLongStripGaps": {
+    "english": "Long strip with gaps",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "vertical_plus_viewer",
+        "english": "Long strip with gaps"
+      },
+      {
+        "source": "komikku",
+        "key": "vertical_plus_viewer",
+        "english": "Long strip with gaps"
+      }
+    ]
+  },
+  "readerModeChipPagedLtr": {
+    "english": "Paged (left to right)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "left_to_right_viewer",
+        "english": "Paged (left to right)"
+      },
+      {
+        "source": "komikku",
+        "key": "left_to_right_viewer",
+        "english": "Paged (left to right)"
+      }
+    ]
+  },
+  "readerModeChipPagedRtl": {
+    "english": "Paged (right to left)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "right_to_left_viewer",
+        "english": "Paged (right to left)"
+      },
+      {
+        "source": "komikku",
+        "key": "right_to_left_viewer",
+        "english": "Paged (right to left)"
+      }
+    ]
+  },
+  "readerModeChipPagedVertical": {
+    "english": "Paged (vertical)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "vertical_viewer",
+        "english": "Paged (vertical)"
+      },
+      {
+        "source": "komikku",
+        "key": "vertical_viewer",
+        "english": "Paged (vertical)"
+      }
+    ]
+  },
+  "readerModeContinuousVertical": {
+    "english": "Long strip with gaps",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "vertical_plus_viewer",
+        "english": "Long strip with gaps"
+      },
+      {
+        "source": "komikku",
+        "key": "vertical_plus_viewer",
+        "english": "Long strip with gaps"
+      }
+    ]
+  },
+  "readerModeDefaultReader": {
+    "english": "Default",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "komikku",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "webui",
+        "key": "Default",
+        "english": "Default"
+      }
+    ]
+  },
+  "readerModeSingleHorizontalLTR": {
+    "english": "Paged (left to right)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "left_to_right_viewer",
+        "english": "Paged (left to right)"
+      },
+      {
+        "source": "komikku",
+        "key": "left_to_right_viewer",
+        "english": "Paged (left to right)"
+      }
+    ]
+  },
+  "readerModeSingleHorizontalRTL": {
+    "english": "Paged (right to left)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "right_to_left_viewer",
+        "english": "Paged (right to left)"
+      },
+      {
+        "source": "komikku",
+        "key": "right_to_left_viewer",
+        "english": "Paged (right to left)"
+      }
+    ]
+  },
+  "readerModeSingleVertical": {
+    "english": "Paged (vertical)",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "vertical_viewer",
+        "english": "Paged (vertical)"
+      },
+      {
+        "source": "komikku",
+        "key": "vertical_viewer",
+        "english": "Paged (vertical)"
+      }
+    ]
+  },
+  "readerNavigationLayout": {
+    "english": "Tap zones",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_viewer_nav",
+        "english": "Tap zones"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_viewer_nav",
+        "english": "Tap zones"
+      },
+      {
+        "source": "webui",
+        "key": "Tap zones",
+        "english": "Tap zones"
+      }
+    ]
+  },
+  "readerNavigationLayoutDefault": {
+    "english": "Default",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "komikku",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "webui",
+        "key": "Default",
+        "english": "Default"
+      }
+    ]
+  },
+  "readerNavigationLayoutDisabled": {
+    "english": "Disabled",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "disabled_nav",
+        "english": "Disabled"
+      },
+      {
+        "source": "komikku",
+        "key": "disabled_nav",
+        "english": "Disabled"
+      },
+      {
+        "source": "webui",
+        "key": "Disabled",
+        "english": "Disabled"
+      }
+    ]
+  },
+  "readerNavigationLayoutEdge": {
+    "english": "Edge",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "edge_nav",
+        "english": "Edge"
+      },
+      {
+        "source": "komikku",
+        "key": "edge_nav",
+        "english": "Edge"
+      },
+      {
+        "source": "webui",
+        "key": "Edge",
+        "english": "Edge"
+      }
+    ]
+  },
+  "readerNavigationLayoutInvert": {
+    "english": "Invert tap zones",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_read_with_tapping_inverted",
+        "english": "Invert tap zones"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_read_with_tapping_inverted",
+        "english": "Invert tap zones"
+      },
+      {
+        "source": "webui",
+        "key": "Invert tap zones",
+        "english": "Invert tap zones"
+      }
+    ]
+  },
+  "readerNavigationLayoutKindlish": {
+    "english": "Kindle-ish",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "kindlish_nav",
+        "english": "Kindle-ish"
+      },
+      {
+        "source": "komikku",
+        "key": "kindlish_nav",
+        "english": "Kindle-ish"
+      }
+    ]
+  },
+  "readerNavigationLayoutLShaped": {
+    "english": "L Shaped",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "l_nav",
+        "english": "L shaped"
+      },
+      {
+        "source": "komikku",
+        "key": "l_nav",
+        "english": "L shaped"
+      }
+    ]
+  },
+  "readerNavigationLayoutRightAndLeft": {
+    "english": "Right And Left",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "right_and_left_nav",
+        "english": "Right and Left"
+      },
+      {
+        "source": "komikku",
+        "key": "right_and_left_nav",
+        "english": "Right and Left"
+      },
+      {
+        "source": "webui",
+        "key": "Right and left",
+        "english": "Right and left"
+      }
+    ]
+  },
+  "readerOrientationDefault": {
+    "english": "Default",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "komikku",
+        "key": "label_default",
+        "english": "Default"
+      },
+      {
+        "source": "webui",
+        "key": "Default",
+        "english": "Default"
+      }
+    ]
+  },
+  "readerOrientationFree": {
+    "english": "Free",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_free",
+        "english": "Free"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_free",
+        "english": "Free"
+      }
+    ]
+  },
+  "readerOrientationLandscape": {
+    "english": "Landscape",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_landscape",
+        "english": "Landscape"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_landscape",
+        "english": "Landscape"
+      }
+    ]
+  },
+  "readerOrientationLockedLandscape": {
+    "english": "Locked landscape",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_force_landscape",
+        "english": "Locked landscape"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_force_landscape",
+        "english": "Locked landscape"
+      }
+    ]
+  },
+  "readerOrientationLockedPortrait": {
+    "english": "Locked portrait",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_force_portrait",
+        "english": "Locked portrait"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_force_portrait",
+        "english": "Locked portrait"
+      }
+    ]
+  },
+  "readerOrientationPortrait": {
+    "english": "Portrait",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_portrait",
+        "english": "Portrait"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_portrait",
+        "english": "Portrait"
+      }
+    ]
+  },
+  "readerOrientationReversePortrait": {
+    "english": "Reverse portrait",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "rotation_reverse_portrait",
+        "english": "Reverse portrait"
+      },
+      {
+        "source": "komikku",
+        "key": "rotation_reverse_portrait",
+        "english": "Reverse portrait"
+      }
+    ]
+  },
+  "readerTapInvertBoth": {
+    "english": "Both",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tapping_inverted_both",
+        "english": "Both"
+      },
+      {
+        "source": "komikku",
+        "key": "tapping_inverted_both",
+        "english": "Both"
+      },
+      {
+        "source": "webui",
+        "key": "Both",
+        "english": "Both"
+      }
+    ]
+  },
+  "readerTapInvertHorizontal": {
+    "english": "Horizontal",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tapping_inverted_horizontal",
+        "english": "Horizontal"
+      },
+      {
+        "source": "komikku",
+        "key": "tapping_inverted_horizontal",
+        "english": "Horizontal"
+      },
+      {
+        "source": "webui",
+        "key": "Horizontal",
+        "english": "Horizontal"
+      }
+    ]
+  },
+  "readerTapInvertNone": {
+    "english": "None",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tapping_inverted_none",
+        "english": "None"
+      },
+      {
+        "source": "komikku",
+        "key": "tapping_inverted_none",
+        "english": "None"
+      },
+      {
+        "source": "webui",
+        "key": "None",
+        "english": "None"
+      }
+    ]
+  },
+  "readerTapInvertVertical": {
+    "english": "Vertical",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "tapping_inverted_vertical",
+        "english": "Vertical"
+      },
+      {
+        "source": "komikku",
+        "key": "tapping_inverted_vertical",
+        "english": "Vertical"
+      },
+      {
+        "source": "webui",
+        "key": "Vertical",
+        "english": "Vertical"
+      }
+    ]
+  },
+  "readerVolumeTap": {
+    "english": "Volume Keys",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_read_with_volume_keys",
+        "english": "Volume keys"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_read_with_volume_keys",
+        "english": "Volume keys"
+      }
+    ]
+  },
+  "readerVolumeTapInvert": {
+    "english": "Invert Volume Keys",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_read_with_volume_keys_inverted",
+        "english": "Invert volume keys"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_read_with_volume_keys_inverted",
+        "english": "Invert volume keys"
+      }
+    ]
+  },
+  "readerKeepScreenOn": {
+    "english": "Keep screen on",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_keep_screen_on",
+        "english": "Keep screen on"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_keep_screen_on",
+        "english": "Keep screen on"
+      },
+      {
+        "source": "webui",
+        "key": "Keep screen on",
+        "english": "Keep screen on"
+      }
+    ]
+  },
+  "refresh": {
+    "english": "Refresh",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_webview_refresh",
+        "english": "Refresh"
+      },
+      {
+        "source": "komikku",
+        "key": "action_webview_refresh",
+        "english": "Refresh"
+      },
+      {
+        "source": "webui",
+        "key": "Refresh",
+        "english": "Refresh"
+      }
+    ]
+  },
+  "migrate": {
+    "english": "Migrate",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_migrate",
+        "english": "Migrate"
+      },
+      {
+        "source": "komikku",
+        "key": "action_migrate",
+        "english": "Migrate"
+      },
+      {
+        "source": "webui",
+        "key": "Migrate",
+        "english": "Migrate"
+      }
+    ]
+  },
+  "migrationFailed": {
+    "english": "Migration Failed",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Migration failed",
+        "english": "Migration failed"
+      }
+    ]
+  },
+  "migrationOptions": {
+    "english": "Migration Options",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Migration options",
+        "english": "Migration options"
+      }
+    ]
+  },
+  "migrationListTitle": {
+    "english": "Migrate",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.migrateActionLabel",
+        "english": "Migrate"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.migrateActionLabel",
+        "english": "Migrate"
+      },
+      {
+        "source": "webui",
+        "key": "Migrate",
+        "english": "Migrate"
+      }
+    ]
+  },
+  "migrationListNoMatch": {
+    "english": "No match found",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "error_no_match",
+        "english": "No match found"
+      },
+      {
+        "source": "komikku",
+        "key": "error_no_match",
+        "english": "No match found"
+      },
+      {
+        "source": "webui",
+        "key": "No match found",
+        "english": "No match found"
+      }
+    ]
+  },
+  "migrationSearchManually": {
+    "english": "Search manually",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.searchManuallyActionLabel",
+        "english": "Search manually"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.searchManuallyActionLabel",
+        "english": "Search manually"
+      }
+    ]
+  },
+  "migrationSkip": {
+    "english": "Skip",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "onboarding_action_skip",
+        "english": "Skip"
+      },
+      {
+        "source": "komikku",
+        "key": "onboarding_action_skip",
+        "english": "Skip"
+      }
+    ]
+  },
+  "migrationMigrateNow": {
+    "english": "Migrate now",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.migrateNowActionLabel",
+        "english": "Migrate now"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.migrateNowActionLabel",
+        "english": "Migrate now"
+      }
+    ]
+  },
+  "migrationCopyNow": {
+    "english": "Copy now",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.copyNowActionLabel",
+        "english": "Copy now"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.copyNowActionLabel",
+        "english": "Copy now"
+      }
+    ]
+  },
+  "migrationSelectNone": {
+    "english": "Select none",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.selectNoneLabel",
+        "english": "Select none"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.selectNoneLabel",
+        "english": "Select none"
+      }
+    ]
+  },
+  "migrationSelectAllSources": {
+    "english": "Select all",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.selectAllLabel",
+        "english": "Select all"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.selectAllLabel",
+        "english": "Select all"
+      },
+      {
+        "source": "webui",
+        "key": "Select all",
+        "english": "Select all"
+      }
+    ]
+  },
+  "migrationContinue": {
+    "english": "Continue",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.continueButtonText",
+        "english": "Continue"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.continueButtonText",
+        "english": "Continue"
+      },
+      {
+        "source": "webui",
+        "key": "Continue",
+        "english": "Continue"
+      }
+    ]
+  },
+  "migrationSearchForSource": {
+    "english": "Search for sources",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_search_for_source",
+        "english": "Search for sources"
+      }
+    ]
+  },
+  "migrationSelectedHeader": {
+    "english": "Selected",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.selectedHeader",
+        "english": "Selected"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.selectedHeader",
+        "english": "Selected"
+      },
+      {
+        "source": "webui",
+        "key": "Selected",
+        "english": "Selected"
+      }
+    ]
+  },
+  "migrationAvailableHeader": {
+    "english": "Available",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.availableHeader",
+        "english": "Available"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.availableHeader",
+        "english": "Available"
+      },
+      {
+        "source": "webui",
+        "key": "Available",
+        "english": "Available"
+      }
+    ]
+  },
+  "migrationDataToMigrateHeader": {
+    "english": "Data to migrate",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationConfigScreen.dataToMigrateHeader",
+        "english": "Data to migrate"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationConfigScreen.dataToMigrateHeader",
+        "english": "Data to migrate"
+      }
+    ]
+  },
+  "migrationObsoleteSource": {
+    "english": "Obsolete",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Obsolete",
+        "english": "Obsolete"
+      }
+    ]
+  },
+  "migrationSelectAll": {
+    "english": "Select all",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_select_all",
+        "english": "Select all"
+      },
+      {
+        "source": "komikku",
+        "key": "action_select_all",
+        "english": "Select all"
+      },
+      {
+        "source": "webui",
+        "key": "Select all",
+        "english": "Select all"
+      }
+    ]
+  },
+  "migrationInvertSelection": {
+    "english": "Invert",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Invert",
+        "english": "Invert"
+      }
+    ]
+  },
+  "migrationGroupDone": {
+    "english": "Done",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Done",
+        "english": "Done"
+      }
+    ]
+  },
+  "migrationRetry": {
+    "english": "Retry",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "komikku",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "webui",
+        "key": "Retry",
+        "english": "Retry"
+      }
+    ]
+  },
+  "migrationActionMigrate": {
+    "english": "Migrate",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.migrateActionLabel",
+        "english": "Migrate"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.migrateActionLabel",
+        "english": "Migrate"
+      },
+      {
+        "source": "webui",
+        "key": "Migrate",
+        "english": "Migrate"
+      }
+    ]
+  },
+  "migrationActionCopy": {
+    "english": "Copy",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "migrationListScreen.copyActionLabel",
+        "english": "Copy"
+      },
+      {
+        "source": "komikku",
+        "key": "migrationListScreen.copyActionLabel",
+        "english": "Copy"
+      },
+      {
+        "source": "webui",
+        "key": "Copy",
+        "english": "Copy"
+      }
+    ]
+  },
+  "libraryUpdateErrors": {
+    "english": "Library update errors",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "option_label_library_update_errors",
+        "english": "Library update errors"
+      }
+    ]
+  },
+  "notificationDownloadsPausedTitle": {
+    "english": "Downloads paused",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "download_notifier_download_paused",
+        "english": "Downloads paused"
+      },
+      {
+        "source": "komikku",
+        "key": "download_notifier_download_paused",
+        "english": "Downloads paused"
+      }
+    ]
+  },
+  "notificationBackupFailedTitle": {
+    "english": "Backup failed",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "creating_backup_error",
+        "english": "Backup failed"
+      },
+      {
+        "source": "komikku",
+        "key": "creating_backup_error",
+        "english": "Backup failed"
+      }
+    ]
+  },
+  "notificationAppUpdateTitle": {
+    "english": "Update available",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Update available",
+        "english": "Update available"
+      }
+    ]
+  },
+  "notificationExtensionUpdateTitle": {
+    "english": "Extension updates",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "channel_ext_updates",
+        "english": "Extension updates"
+      },
+      {
+        "source": "komikku",
+        "key": "channel_ext_updates",
+        "english": "Extension updates"
+      }
+    ]
+  },
+  "notificationIncognitoTitle": {
+    "english": "Incognito mode",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_incognito_mode",
+        "english": "Incognito mode"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_incognito_mode",
+        "english": "Incognito mode"
+      }
+    ]
+  },
+  "notificationActionMarkRead": {
+    "english": "Mark as read",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_mark_as_read",
+        "english": "Mark as read"
+      },
+      {
+        "source": "komikku",
+        "key": "action_mark_as_read",
+        "english": "Mark as read"
+      },
+      {
+        "source": "webui",
+        "key": "Mark as read",
+        "english": "Mark as read"
+      }
+    ]
+  },
+  "notificationActionView": {
+    "english": "View chapters",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_view_chapters",
+        "english": "View chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "action_view_chapters",
+        "english": "View chapters"
+      }
+    ]
+  },
+  "notificationActionDownload": {
+    "english": "Download",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_download",
+        "english": "Download"
+      },
+      {
+        "source": "komikku",
+        "key": "action_download",
+        "english": "Download"
+      },
+      {
+        "source": "webui",
+        "key": "Download",
+        "english": "Download"
+      }
+    ]
+  },
+  "notificationsHideContent": {
+    "english": "Hide notification content",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "hide_notification_content",
+        "english": "Hide notification content"
+      },
+      {
+        "source": "komikku",
+        "key": "hide_notification_content",
+        "english": "Hide notification content"
+      }
+    ]
+  },
+  "noResultsFound": {
+    "english": "No results found",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "no_results_found",
+        "english": "No results found"
+      },
+      {
+        "source": "komikku",
+        "key": "no_results_found",
+        "english": "No results found"
+      }
+    ]
+  },
+  "startMigration": {
+    "english": "Start Migration",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Start migration",
+        "english": "Start migration"
+      }
+    ]
+  },
+  "customMigration": {
+    "english": "Custom",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Custom",
+        "english": "Custom"
+      }
+    ]
+  },
+  "done": {
+    "english": "Done",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Done",
+        "english": "Done"
+      }
+    ]
+  },
+  "webtoonScaleTypeFitScreen": {
+    "english": "Fit screen",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_fit_screen",
+        "english": "Fit screen"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_fit_screen",
+        "english": "Fit screen"
+      },
+      {
+        "source": "webui",
+        "key": "Fit screen",
+        "english": "Fit screen"
+      }
+    ]
+  },
+  "webtoonScaleTypeOriginalSize": {
+    "english": "Original size",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "scale_type_original_size",
+        "english": "Original size"
+      },
+      {
+        "source": "komikku",
+        "key": "scale_type_original_size",
+        "english": "Original size"
+      },
+      {
+        "source": "webui",
+        "key": "Original size",
+        "english": "Original size"
+      }
+    ]
+  },
+  "source": {
+    "english": "Source",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Source",
+        "english": "Source"
+      }
+    ]
+  },
+  "remove": {
+    "english": "Remove",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_remove",
+        "english": "Remove"
+      },
+      {
+        "source": "komikku",
+        "key": "action_remove",
+        "english": "Remove"
+      },
+      {
+        "source": "webui",
+        "key": "Remove",
+        "english": "Remove"
+      }
+    ]
+  },
+  "reset": {
+    "english": "Reset",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_reset",
+        "english": "Reset"
+      },
+      {
+        "source": "komikku",
+        "key": "action_reset",
+        "english": "Reset"
+      },
+      {
+        "source": "webui",
+        "key": "Reset",
+        "english": "Reset"
+      }
+    ]
+  },
+  "restore": {
+    "english": "Restore",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_restore",
+        "english": "Restore"
+      },
+      {
+        "source": "komikku",
+        "key": "action_restore",
+        "english": "Restore"
+      },
+      {
+        "source": "webui",
+        "key": "Restore",
+        "english": "Restore"
+      }
+    ]
+  },
+  "restoreBackupTitle": {
+    "english": "Restore Backup",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_restore_backup",
+        "english": "Restore backup"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_restore_backup",
+        "english": "Restore backup"
+      },
+      {
+        "source": "webui",
+        "key": "Restore Backup",
+        "english": "Restore Backup"
+      }
+    ]
+  },
+  "restoring": {
+    "english": "Restoring backup",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "restoring_backup",
+        "english": "Restoring backup"
+      },
+      {
+        "source": "komikku",
+        "key": "restoring_backup",
+        "english": "Restoring backup"
+      }
+    ]
+  },
+  "resume": {
+    "english": "Resume",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_resume",
+        "english": "Resume"
+      },
+      {
+        "source": "komikku",
+        "key": "action_resume",
+        "english": "Resume"
+      },
+      {
+        "source": "webui",
+        "key": "Resume",
+        "english": "Resume"
+      }
+    ]
+  },
+  "retry": {
+    "english": "Retry",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "komikku",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "webui",
+        "key": "Retry",
+        "english": "Retry"
+      }
+    ]
+  },
+  "retryAll": {
+    "english": "Retry all",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Retry all",
+        "english": "Retry all"
+      }
+    ]
+  },
+  "save": {
+    "english": "Save",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_save",
+        "english": "Save"
+      },
+      {
+        "source": "komikku",
+        "key": "action_save",
+        "english": "Save"
+      },
+      {
+        "source": "webui",
+        "key": "Save",
+        "english": "Save"
+      }
+    ]
+  },
+  "saveAsCBZArchive": {
+    "english": "Save as CBZ archive",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "save_chapter_as_cbz",
+        "english": "Save as CBZ archive"
+      },
+      {
+        "source": "komikku",
+        "key": "save_chapter_as_cbz",
+        "english": "Save as CBZ archive"
+      },
+      {
+        "source": "webui",
+        "key": "Save as CBZ archive",
+        "english": "Save as CBZ archive"
+      }
+    ]
+  },
+  "search": {
+    "english": "Search",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_search",
+        "english": "Search"
+      },
+      {
+        "source": "komikku",
+        "key": "action_search",
+        "english": "Search"
+      },
+      {
+        "source": "webui",
+        "key": "Search",
+        "english": "Search"
+      }
+    ]
+  },
+  "server": {
+    "english": "Server",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Server",
+        "english": "Server"
+      }
+    ]
+  },
+  "serverAddress": {
+    "english": "Server address",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Server address",
+        "english": "Server address"
+      }
+    ]
+  },
+  "serverBindings": {
+    "english": "Server Bindings",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Server bindings",
+        "english": "Server bindings"
+      }
+    ]
+  },
+  "serverVersion": {
+    "english": "Server version",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Server version",
+        "english": "Server version"
+      }
+    ]
+  },
+  "settings": {
+    "english": "Settings",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_settings",
+        "english": "Settings"
+      },
+      {
+        "source": "komikku",
+        "key": "label_settings",
+        "english": "Settings"
+      },
+      {
+        "source": "webui",
+        "key": "Settings",
+        "english": "Settings"
+      }
+    ]
+  },
+  "skipUpdatingEntries": {
+    "english": "Skip updating entries",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Skip updating entries",
+        "english": "Skip updating entries"
+      }
+    ]
+  },
+  "socksHost": {
+    "english": "SOCKS Host",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS host",
+        "english": "SOCKS host"
+      }
+    ]
+  },
+  "socksPassword": {
+    "english": "SOCKS Password",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS password",
+        "english": "SOCKS password"
+      }
+    ]
+  },
+  "socksPort": {
+    "english": "SOCKS Port",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS port",
+        "english": "SOCKS port"
+      }
+    ]
+  },
+  "socksProxy": {
+    "english": "SOCKS Proxy",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS proxy",
+        "english": "SOCKS proxy"
+      }
+    ]
+  },
+  "socksUserName": {
+    "english": "SOCKS UserName",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS username",
+        "english": "SOCKS username"
+      }
+    ]
+  },
+  "socksVersion": {
+    "english": "SOCKS Version",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "SOCKS version",
+        "english": "SOCKS version"
+      }
+    ]
+  },
+  "sort": {
+    "english": "Sort",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort",
+        "english": "Sort"
+      },
+      {
+        "source": "komikku",
+        "key": "action_sort",
+        "english": "Sort"
+      },
+      {
+        "source": "webui",
+        "key": "Sort",
+        "english": "Sort"
+      }
+    ]
+  },
+  "sourceTypeFilter": {
+    "english": "Filter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter",
+        "english": "Filter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter",
+        "english": "Filter"
+      },
+      {
+        "source": "webui",
+        "key": "Filter",
+        "english": "Filter"
+      }
+    ]
+  },
+  "sourceTypeLatest": {
+    "english": "Latest",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "latest",
+        "english": "Latest"
+      },
+      {
+        "source": "komikku",
+        "key": "latest",
+        "english": "Latest"
+      },
+      {
+        "source": "webui",
+        "key": "Latest",
+        "english": "Latest"
+      }
+    ]
+  },
+  "sourceTypePopular": {
+    "english": "Popular",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "popular",
+        "english": "Popular"
+      },
+      {
+        "source": "komikku",
+        "key": "popular",
+        "english": "Popular"
+      },
+      {
+        "source": "webui",
+        "key": "Popular",
+        "english": "Popular"
+      }
+    ]
+  },
+  "sources": {
+    "english": "Sources",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_sources",
+        "english": "Sources"
+      },
+      {
+        "source": "komikku",
+        "key": "label_sources",
+        "english": "Sources"
+      },
+      {
+        "source": "webui",
+        "key": "Sources",
+        "english": "Sources"
+      }
+    ]
+  },
+  "start": {
+    "english": "Start",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_start",
+        "english": "Start"
+      },
+      {
+        "source": "komikku",
+        "key": "action_start",
+        "english": "Start"
+      },
+      {
+        "source": "webui",
+        "key": "Start",
+        "english": "Start"
+      }
+    ]
+  },
+  "started": {
+    "english": "Started",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_started",
+        "english": "Started"
+      },
+      {
+        "source": "komikku",
+        "key": "label_started",
+        "english": "Started"
+      },
+      {
+        "source": "webui",
+        "key": "Started",
+        "english": "Started"
+      }
+    ]
+  },
+  "systemTrayIcon": {
+    "english": "Show icon in system tray",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Show icon in system tray",
+        "english": "Show icon in system tray"
+      }
+    ]
+  },
+  "thatHaventBeenStarted": {
+    "english": "That haven't been started",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "That haven't been started",
+        "english": "That haven't been started"
+      }
+    ]
+  },
+  "themeModeDark": {
+    "english": "Dark",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "theme_dark",
+        "english": "Dark"
+      },
+      {
+        "source": "komikku",
+        "key": "theme_dark",
+        "english": "Dark"
+      },
+      {
+        "source": "webui",
+        "key": "Dark",
+        "english": "Dark"
+      }
+    ]
+  },
+  "themeModeLight": {
+    "english": "Light",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "theme_light",
+        "english": "Light"
+      },
+      {
+        "source": "komikku",
+        "key": "theme_light",
+        "english": "Light"
+      },
+      {
+        "source": "webui",
+        "key": "Light",
+        "english": "Light"
+      }
+    ]
+  },
+  "themeModeSystem": {
+    "english": "System",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "theme_system",
+        "english": "System"
+      },
+      {
+        "source": "komikku",
+        "key": "theme_system",
+        "english": "System"
+      },
+      {
+        "source": "webui",
+        "key": "System",
+        "english": "System"
+      }
+    ]
+  },
+  "today": {
+    "english": "Today",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "relative_time_today",
+        "english": "Today"
+      },
+      {
+        "source": "komikku",
+        "key": "relative_time_today",
+        "english": "Today"
+      },
+      {
+        "source": "webui",
+        "key": "Today",
+        "english": "Today"
+      }
+    ]
+  },
+  "upcoming": {
+    "english": "Upcoming",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_upcoming",
+        "english": "Upcoming"
+      },
+      {
+        "source": "komikku",
+        "key": "label_upcoming",
+        "english": "Upcoming"
+      }
+    ]
+  },
+  "unifiedSearchLibrarySection": {
+    "english": "Library",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "komikku",
+        "key": "label_library",
+        "english": "Library"
+      },
+      {
+        "source": "webui",
+        "key": "Library",
+        "english": "Library"
+      }
+    ]
+  },
+  "uninstall": {
+    "english": "Uninstall",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "ext_uninstall",
+        "english": "Uninstall"
+      },
+      {
+        "source": "komikku",
+        "key": "ext_uninstall",
+        "english": "Uninstall"
+      },
+      {
+        "source": "webui",
+        "key": "Uninstall",
+        "english": "Uninstall"
+      }
+    ]
+  },
+  "uninstalling": {
+    "english": "Uninstalling",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Uninstalling",
+        "english": "Uninstalling"
+      }
+    ]
+  },
+  "unknownAuthor": {
+    "english": "Unknown Author",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "unknown_author",
+        "english": "Unknown author"
+      },
+      {
+        "source": "komikku",
+        "key": "unknown_author",
+        "english": "Unknown author"
+      }
+    ]
+  },
+  "unknownSource": {
+    "english": "Unknown Source",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Unknown source",
+        "english": "Unknown source"
+      }
+    ]
+  },
+  "unread": {
+    "english": "Unread",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "unread",
+        "english": "Unread"
+      },
+      {
+        "source": "komikku",
+        "key": "unread",
+        "english": "Unread"
+      },
+      {
+        "source": "webui",
+        "key": "Unread",
+        "english": "Unread"
+      }
+    ]
+  },
+  "update": {
+    "english": "Update",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_update",
+        "english": "Update"
+      },
+      {
+        "source": "webui",
+        "key": "Update",
+        "english": "Update"
+      }
+    ]
+  },
+  "updateCompleted": {
+    "english": "Update Completed",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "update_completed",
+        "english": "Update completed"
+      }
+    ]
+  },
+  "updates": {
+    "english": "Updates",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_recent_updates",
+        "english": "Updates"
+      },
+      {
+        "source": "komikku",
+        "key": "label_recent_updates",
+        "english": "Updates"
+      },
+      {
+        "source": "webui",
+        "key": "Updates",
+        "english": "Updates"
+      }
+    ]
+  },
+  "updatesGroupingModeDisabled": {
+    "english": "Disabled",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "disabled",
+        "english": "Disabled"
+      },
+      {
+        "source": "komikku",
+        "key": "disabled",
+        "english": "Disabled"
+      },
+      {
+        "source": "webui",
+        "key": "Disabled",
+        "english": "Disabled"
+      }
+    ]
+  },
+  "updating": {
+    "english": "Updating",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "updating",
+        "english": "Updating"
+      },
+      {
+        "source": "webui",
+        "key": "Updating",
+        "english": "Updating"
+      }
+    ]
+  },
+  "withUnreadChapter": {
+    "english": "With unread chapter(s)",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "With unread chapter(s)",
+        "english": "With unread chapter(s)"
+      }
+    ]
+  },
+  "yesterday": {
+    "english": "Yesterday",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Yesterday",
+        "english": "Yesterday"
+      }
+    ]
+  },
+  "recentlyRead": {
+    "english": "Recently Read",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Recently read",
+        "english": "Recently read"
+      }
+    ]
+  },
+  "history": {
+    "english": "History",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "history",
+        "english": "History"
+      },
+      {
+        "source": "komikku",
+        "key": "history",
+        "english": "History"
+      },
+      {
+        "source": "webui",
+        "key": "History",
+        "english": "History"
+      }
+    ]
+  },
+  "offlineDownloadsSection": {
+    "english": "Downloads",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_downloads",
+        "english": "Downloads"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_downloads",
+        "english": "Downloads"
+      },
+      {
+        "source": "webui",
+        "key": "Downloads",
+        "english": "Downloads"
+      }
+    ]
+  },
+  "keepOfflineOff": {
+    "english": "Off",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "off",
+        "english": "Off"
+      },
+      {
+        "source": "komikku",
+        "key": "off",
+        "english": "Off"
+      }
+    ]
+  },
+  "downloadsServerTab": {
+    "english": "Server",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Server",
+        "english": "Server"
+      }
+    ]
+  },
+  "tracking": {
+    "english": "Tracking",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_tracking",
+        "english": "Tracking"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_tracking",
+        "english": "Tracking"
+      },
+      {
+        "source": "webui",
+        "key": "Tracking",
+        "english": "Tracking"
+      }
+    ]
+  },
+  "searchForSources": {
+    "english": "Search for sources",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_search_for_source",
+        "english": "Search for sources"
+      }
+    ]
+  },
+  "copyToClipboard": {
+    "english": "Copy to clipboard",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_copy_to_clipboard",
+        "english": "Copy to clipboard"
+      },
+      {
+        "source": "komikku",
+        "key": "action_copy_to_clipboard",
+        "english": "Copy to clipboard"
+      }
+    ]
+  },
+  "copiedToClipboard": {
+    "english": "Copied to clipboard",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "copied_to_clipboard_plain",
+        "english": "Copied to clipboard"
+      },
+      {
+        "source": "komikku",
+        "key": "copied_to_clipboard_plain",
+        "english": "Copied to clipboard"
+      },
+      {
+        "source": "webui",
+        "key": "Copied to clipboard",
+        "english": "Copied to clipboard"
+      }
+    ]
+  },
+  "updateProgressAfterReading": {
+    "english": "Update progress after reading",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_auto_update_manga_sync",
+        "english": "Update progress after reading"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_auto_update_manga_sync",
+        "english": "Update progress after reading"
+      },
+      {
+        "source": "webui",
+        "key": "Update progress after reading",
+        "english": "Update progress after reading"
+      }
+    ]
+  },
+  "trackers": {
+    "english": "Trackers",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "services",
+        "english": "Trackers"
+      },
+      {
+        "source": "komikku",
+        "key": "services",
+        "english": "Trackers"
+      },
+      {
+        "source": "webui",
+        "key": "Trackers",
+        "english": "Trackers"
+      }
+    ]
+  },
+  "logIn": {
+    "english": "Log in",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Log in",
+        "english": "Log in"
+      }
+    ]
+  },
+  "logOut": {
+    "english": "Log out",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "logout",
+        "english": "Log out"
+      },
+      {
+        "source": "komikku",
+        "key": "logout",
+        "english": "Log out"
+      },
+      {
+        "source": "webui",
+        "key": "Log out",
+        "english": "Log out"
+      }
+    ]
+  },
+  "addTracking": {
+    "english": "Add tracking",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "add_tracking",
+        "english": "Add tracking"
+      },
+      {
+        "source": "komikku",
+        "key": "add_tracking",
+        "english": "Add tracking"
+      },
+      {
+        "source": "webui",
+        "key": "Add tracking",
+        "english": "Add tracking"
+      }
+    ]
+  },
+  "track": {
+    "english": "Track",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_track",
+        "english": "Track"
+      },
+      {
+        "source": "komikku",
+        "key": "action_track",
+        "english": "Track"
+      },
+      {
+        "source": "webui",
+        "key": "Track",
+        "english": "Track"
+      }
+    ]
+  },
+  "trackPrivately": {
+    "english": "Track privately",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_toggle_private_on",
+        "english": "Track privately"
+      },
+      {
+        "source": "komikku",
+        "key": "action_toggle_private_on",
+        "english": "Track privately"
+      },
+      {
+        "source": "webui",
+        "key": "Track privately",
+        "english": "Track privately"
+      }
+    ]
+  },
+  "trackStatus": {
+    "english": "Status",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "track_status",
+        "english": "Status"
+      },
+      {
+        "source": "komikku",
+        "key": "track_status",
+        "english": "Status"
+      },
+      {
+        "source": "webui",
+        "key": "Status",
+        "english": "Status"
+      }
+    ]
+  },
+  "trackScore": {
+    "english": "Score",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "score",
+        "english": "Score"
+      },
+      {
+        "source": "komikku",
+        "key": "score",
+        "english": "Score"
+      },
+      {
+        "source": "webui",
+        "key": "Score",
+        "english": "Score"
+      }
+    ]
+  },
+  "trackStartDate": {
+    "english": "Start date",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "track_started_reading_date",
+        "english": "Start date"
+      },
+      {
+        "source": "komikku",
+        "key": "track_started_reading_date",
+        "english": "Start date"
+      },
+      {
+        "source": "webui",
+        "key": "Start date",
+        "english": "Start date"
+      }
+    ]
+  },
+  "trackFinishDate": {
+    "english": "Finish date",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "track_finished_reading_date",
+        "english": "Finish date"
+      },
+      {
+        "source": "komikku",
+        "key": "track_finished_reading_date",
+        "english": "Finish date"
+      },
+      {
+        "source": "webui",
+        "key": "Finish date",
+        "english": "Finish date"
+      }
+    ]
+  },
+  "trackMarkPrivate": {
+    "english": "Track privately",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_toggle_private_on",
+        "english": "Track privately"
+      },
+      {
+        "source": "komikku",
+        "key": "action_toggle_private_on",
+        "english": "Track privately"
+      },
+      {
+        "source": "webui",
+        "key": "Track privately",
+        "english": "Track privately"
+      }
+    ]
+  },
+  "trackMarkPublic": {
+    "english": "Track publicly",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_toggle_private_off",
+        "english": "Track publicly"
+      },
+      {
+        "source": "komikku",
+        "key": "action_toggle_private_off",
+        "english": "Track publicly"
+      },
+      {
+        "source": "webui",
+        "key": "Track publicly",
+        "english": "Track publicly"
+      }
+    ]
+  },
+  "filterTracked": {
+    "english": "Tracked",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_filter_tracked",
+        "english": "Tracked"
+      },
+      {
+        "source": "komikku",
+        "key": "action_filter_tracked",
+        "english": "Tracked"
+      },
+      {
+        "source": "webui",
+        "key": "Tracked",
+        "english": "Tracked"
+      }
+    ]
+  },
+  "copyImageToClipboard": {
+    "english": "Copy",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "copy",
+        "english": "Copy"
+      },
+      {
+        "source": "komikku",
+        "key": "copy",
+        "english": "Copy"
+      },
+      {
+        "source": "webui",
+        "key": "Copy",
+        "english": "Copy"
+      }
+    ]
+  },
+  "zoomStart": {
+    "english": "Zoom start position",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_zoom_start",
+        "english": "Zoom start position"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_zoom_start",
+        "english": "Zoom start position"
+      }
+    ]
+  },
+  "zoomStartAutomatic": {
+    "english": "Automatic",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "zoom_start_automatic",
+        "english": "Automatic"
+      },
+      {
+        "source": "komikku",
+        "key": "zoom_start_automatic",
+        "english": "Automatic"
+      }
+    ]
+  },
+  "zoomStartCenter": {
+    "english": "Center",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "zoom_start_center",
+        "english": "Center"
+      },
+      {
+        "source": "komikku",
+        "key": "zoom_start_center",
+        "english": "Center"
+      }
+    ]
+  },
+  "zoomStartLeft": {
+    "english": "Left",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "zoom_start_left",
+        "english": "Left"
+      },
+      {
+        "source": "komikku",
+        "key": "zoom_start_left",
+        "english": "Left"
+      },
+      {
+        "source": "webui",
+        "key": "Left",
+        "english": "Left"
+      }
+    ]
+  },
+  "zoomStartRight": {
+    "english": "Right",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "zoom_start_right",
+        "english": "Right"
+      },
+      {
+        "source": "komikku",
+        "key": "zoom_start_right",
+        "english": "Right"
+      },
+      {
+        "source": "webui",
+        "key": "Right",
+        "english": "Right"
+      }
+    ]
+  },
+  "hotkeysReaderSection": {
+    "english": "Reader",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "pref_category_reader",
+        "english": "Reader"
+      },
+      {
+        "source": "komikku",
+        "key": "pref_category_reader",
+        "english": "Reader"
+      },
+      {
+        "source": "webui",
+        "key": "Reader",
+        "english": "Reader"
+      }
+    ]
+  },
+  "hotkeyOpenSearch": {
+    "english": "Search",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_search",
+        "english": "Search"
+      },
+      {
+        "source": "komikku",
+        "key": "action_search",
+        "english": "Search"
+      },
+      {
+        "source": "webui",
+        "key": "Search",
+        "english": "Search"
+      }
+    ]
+  },
+  "hotkeyReaderPrevPage": {
+    "english": "Previous page",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "spen_previous_page",
+        "english": "Previous page"
+      },
+      {
+        "source": "komikku",
+        "key": "spen_previous_page",
+        "english": "Previous page"
+      },
+      {
+        "source": "webui",
+        "key": "Previous page",
+        "english": "Previous page"
+      }
+    ]
+  },
+  "hotkeyReaderNextPage": {
+    "english": "Next page",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "spen_next_page",
+        "english": "Next page"
+      },
+      {
+        "source": "komikku",
+        "key": "spen_next_page",
+        "english": "Next page"
+      },
+      {
+        "source": "webui",
+        "key": "Next page",
+        "english": "Next page"
+      }
+    ]
+  },
+  "hotkeyReaderPrevChapter": {
+    "english": "Previous chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_previous_chapter",
+        "english": "Previous chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_previous_chapter",
+        "english": "Previous chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Previous chapter",
+        "english": "Previous chapter"
+      }
+    ]
+  },
+  "hotkeyReaderNextChapter": {
+    "english": "Next chapter",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_next_chapter",
+        "english": "Next chapter"
+      },
+      {
+        "source": "komikku",
+        "key": "action_next_chapter",
+        "english": "Next chapter"
+      },
+      {
+        "source": "webui",
+        "key": "Next chapter",
+        "english": "Next chapter"
+      }
+    ]
+  },
+  "hotkeyReaderToggleMenu": {
+    "english": "Toggle menu",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Toggle menu",
+        "english": "Toggle menu"
+      }
+    ]
+  },
+  "extensionStores": {
+    "english": "Extension stores",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStores",
+        "english": "Extension stores"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStores",
+        "english": "Extension stores"
+      },
+      {
+        "source": "webui",
+        "key": "Extension stores",
+        "english": "Extension stores"
+      }
+    ]
+  },
+  "addExtensionStore": {
+    "english": "Add extension store",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.addStore.title",
+        "english": "Add extension store"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.addStore.title",
+        "english": "Add extension store"
+      },
+      {
+        "source": "webui",
+        "key": "Add extension store",
+        "english": "Add extension store"
+      }
+    ]
+  },
+  "storeIndexUrl": {
+    "english": "Store index URL",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.addStoreInput.inputLabel",
+        "english": "Store index URL"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.addStoreInput.inputLabel",
+        "english": "Store index URL"
+      }
+    ]
+  },
+  "extensionStoreAlreadyExists": {
+    "english": "This extension store already exists",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.addStore.alreadyExists",
+        "english": "This extension store already exists"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.addStore.alreadyExists",
+        "english": "This extension store already exists"
+      }
+    ]
+  },
+  "processing": {
+    "english": "Processing…",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.addStore.processing",
+        "english": "Processing…"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.addStore.processing",
+        "english": "Processing…"
+      }
+    ]
+  },
+  "removeExtensionStore": {
+    "english": "Remove extension store",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.deleteStore.title",
+        "english": "Remove extension store"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.deleteStore.title",
+        "english": "Remove extension store"
+      }
+    ]
+  },
+  "extensionStoresEmpty": {
+    "english": "You haven't added an extension store yet",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "extensionStoresScreen.emptyLabel",
+        "english": "You haven't added an extension store yet"
+      },
+      {
+        "source": "komikku",
+        "key": "extensionStoresScreen.emptyLabel",
+        "english": "You haven't added an extension store yet"
+      }
+    ]
+  },
+  "add": {
+    "english": "Add",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_add",
+        "english": "Add"
+      },
+      {
+        "source": "komikku",
+        "key": "action_add",
+        "english": "Add"
+      },
+      {
+        "source": "webui",
+        "key": "Add",
+        "english": "Add"
+      }
+    ]
+  },
+  "unknownScanlator": {
+    "english": "Unknown",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "unknown",
+        "english": "Unknown"
+      },
+      {
+        "source": "komikku",
+        "key": "unknown",
+        "english": "Unknown"
+      },
+      {
+        "source": "webui",
+        "key": "Unknown",
+        "english": "Unknown"
+      }
+    ]
+  },
+  "possibleDuplicatesTitle": {
+    "english": "Possible duplicates",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "possible_duplicates_title",
+        "english": "Possible duplicates"
+      },
+      {
+        "source": "komikku",
+        "key": "possible_duplicates_title",
+        "english": "Possible duplicates"
+      }
+    ]
+  },
+  "actionAddAnyway": {
+    "english": "Add anyway",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_add_anyway",
+        "english": "Add anyway"
+      },
+      {
+        "source": "komikku",
+        "key": "action_add_anyway",
+        "english": "Add anyway"
+      }
+    ]
+  },
+  "duplicateAllowAll": {
+    "english": "Allow all",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_allow_all_duplicate_manga",
+        "english": "Allow all"
+      }
+    ]
+  },
+  "duplicateSkipIt": {
+    "english": "Skip it",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_skip_duplicate_manga",
+        "english": "Skip it"
+      }
+    ]
+  },
+  "duplicateSkipAll": {
+    "english": "Skip all",
+    "sources": [
+      {
+        "source": "komikku_extra",
+        "key": "action_skip_all_duplicate_manga",
+        "english": "Skip all"
+      }
+    ]
+  },
+  "actionShowEntry": {
+    "english": "Show entry",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_show_manga",
+        "english": "Show entry"
+      },
+      {
+        "source": "komikku",
+        "key": "action_show_manga",
+        "english": "Show entry"
+      },
+      {
+        "source": "webui",
+        "key": "Show entry",
+        "english": "Show entry"
+      }
+    ]
+  },
+  "duplicatedEntries": {
+    "english": "Duplicated entries",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Duplicated entries",
+        "english": "Duplicated entries"
+      }
+    ]
+  },
+  "duplicatedEntriesSubtitle": {
+    "english": "Show all duplicated entries in your library",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Show all duplicated entries in your library",
+        "english": "Show all duplicated entries in your library"
+      }
+    ]
+  },
+  "checkDescription": {
+    "english": "Check description",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Check description",
+        "english": "Check description"
+      }
+    ]
+  },
+  "offlineChaptersScreenTitle": {
+    "english": "Downloaded chapters",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "downloaded_chapters",
+        "english": "Downloaded chapters"
+      },
+      {
+        "source": "komikku",
+        "key": "downloaded_chapters",
+        "english": "Downloaded chapters"
+      }
+    ]
+  },
+  "offlineChaptersDownloadedSection": {
+    "english": "Downloaded",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "komikku",
+        "key": "label_downloaded",
+        "english": "Downloaded"
+      },
+      {
+        "source": "webui",
+        "key": "Downloaded",
+        "english": "Downloaded"
+      }
+    ]
+  },
+  "offlineChapterRetry": {
+    "english": "Retry",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "komikku",
+        "key": "action_retry",
+        "english": "Retry"
+      },
+      {
+        "source": "webui",
+        "key": "Retry",
+        "english": "Retry"
+      }
+    ]
+  },
+  "offlineChaptersQueued": {
+    "english": "Queued",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Queued",
+        "english": "Queued"
+      }
+    ]
+  },
+  "offlineRecoveryRead": {
+    "english": "Read",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_read_chapters",
+        "english": "Read"
+      },
+      {
+        "source": "komikku",
+        "key": "label_read_chapters",
+        "english": "Read"
+      }
+    ]
+  },
+  "backup": {
+    "english": "Backup & Restore",
+    "note": "Backup and restore section; ampersand is equivalent.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "label_backup",
+        "english": "Backup and restore"
+      }
+    ]
+  },
+  "userName": {
+    "english": "User Name",
+    "note": "Authentication username field.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Username",
+        "english": "Username"
+      }
+    ]
+  },
+  "automaticBackup": {
+    "english": "Automatic Backup",
+    "note": "Server automated backup setting.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Automated backup",
+        "english": "Automated backup"
+      }
+    ]
+  },
+  "cacheCleared": {
+    "english": "Cache Cleared",
+    "note": "Success after clearing server cache.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Cleared the cache",
+        "english": "Cleared the cache"
+      }
+    ]
+  },
+  "smoothAutoScroll": {
+    "english": "Smooth Auto Scroll",
+    "note": "Reader smooth auto-scroll toggle.",
+    "sources": [
+      {
+        "source": "webui",
+        "key": "Smooth auto scrolling",
+        "english": "Smooth auto scrolling"
+      }
+    ]
+  },
+  "chapterSortFetchedDate": {
+    "english": "By Fetched Date",
+    "note": "Sort chapters by fetch date.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "action_sort_chapter_fetch_date",
+        "english": "Chapter fetch date"
+      }
+    ]
+  },
+  "readerGroupWebtoonViewer": {
+    "english": "Long strip",
+    "note": "Reader long-strip mode, not entry-type detection.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      },
+      {
+        "source": "komikku",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      }
+    ]
+  },
+  "readerModeChipLongStrip": {
+    "english": "Long strip",
+    "note": "Reader long-strip mode, not entry-type detection.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      },
+      {
+        "source": "komikku",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      }
+    ]
+  },
+  "readerModeWebtoon": {
+    "english": "Long strip",
+    "note": "Reader long-strip mode, not entry-type detection.",
+    "sources": [
+      {
+        "source": "mihon",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      },
+      {
+        "source": "komikku",
+        "key": "webtoon_viewer",
+        "english": "Long strip"
+      }
+    ]
+  }
+}
