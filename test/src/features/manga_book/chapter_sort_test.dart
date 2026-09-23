@@ -16,11 +16,12 @@ ChapterDto _chapter({
   required String name,
   int sourceOrder = 0,
   String uploadDate = '0',
+  String fetchedAt = '0',
   double chapterNumber = 0,
 }) =>
     Fragment$ChapterDto(
       chapterNumber: chapterNumber,
-      fetchedAt: '0',
+      fetchedAt: fetchedAt,
       id: id,
       isBookmarked: false,
       isDownloaded: false,
@@ -106,9 +107,30 @@ void main() {
     c.read(mangaChapterSortProvider.notifier).update(ChapterSort.chapterNumber);
     c.read(mangaChapterSortDirectionProvider.notifier).update(true);
     expect(_names(c), ['C', 'A', 'B']);
-    // Ties keep source order under either direction (stable-sort semantics).
+    // Descending flips the whole list, ties included (as WebUI does), so the
+    // reading order doesn't depend on the display direction.
     c.read(mangaChapterSortDirectionProvider.notifier).update(false);
-    expect(_names(c), ['C', 'A', 'B']);
+    expect(_names(c), ['B', 'A', 'C']);
+  });
+
+  test('with same-timestamp chapters, the reader\'s next chapter is the same '
+      'in both directions (and matches the ascending keep-window)', () async {
+    // One source refresh stamps a whole batch with the same fetchedAt.
+    final batch = [
+      _chapter(id: 1, name: 'c1', sourceOrder: 1, fetchedAt: '500'),
+      _chapter(id: 2, name: 'c2', sourceOrder: 2, fetchedAt: '500'),
+      _chapter(id: 3, name: 'c3', sourceOrder: 3, fetchedAt: '500'),
+    ];
+    final c = await _container(batch);
+    c.read(mangaChapterSortProvider.notifier).update(ChapterSort.fetchedDate);
+    for (final ascending in [true, false]) {
+      c.read(mangaChapterSortDirectionProvider.notifier).update(ascending);
+      final pair = c.read(
+        getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 2),
+      );
+      expect(pair?.first?.id, 3, reason: 'next, ascending: $ascending');
+      expect(pair?.second?.id, 1, reason: 'previous, ascending: $ascending');
+    }
   });
 
   group('formattedChapterNumber', () {

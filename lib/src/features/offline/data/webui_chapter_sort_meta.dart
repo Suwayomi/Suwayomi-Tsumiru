@@ -37,12 +37,16 @@ ChapterSortAxis? chapterSortAxisFromMeta(
   return chapterSortAxisFromMetaValue(metaValue(kWebUiSortByMetaKey));
 }
 
-/// WebUI compares its own `reverse` meta via `value === 'true'` verbatim —
-/// mirror that exactly rather than a looser boolean parse.
-bool? chapterSortReverseFromMetaValue(String? raw) =>
-    raw == null ? null : raw == 'true';
+/// Tsumiru's sort direction is "ascending"; WebUI's `webUI_reverse` is the
+/// opposite: WebUI sorts ascending, then reverses the whole list when the meta
+/// is `'true'` (its default, newest first). So `'true'` means descending here.
+/// WebUI compares `value === 'true'` verbatim — mirror that exactly rather
+/// than a looser boolean parse.
+bool? chapterSortAscendingFromMetaValue(String? raw) =>
+    raw == null ? null : raw != 'true';
 
-String chapterSortReverseToMetaValue(bool reverse) => reverse.toString();
+String chapterSortAscendingToMetaValue(bool ascending) =>
+    (!ascending).toString();
 
 /// UI-facing enum ([ChapterSort]) <-> wire/DB axis enum ([ChapterSortAxis]).
 /// Names deliberately differ for 2 values (`uploadDate`/`uploadedAt`,

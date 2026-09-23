@@ -79,35 +79,41 @@ void main() {
     });
   });
 
-  group('chapterSortReverseFromMetaValue', () {
-    test('exact WebUI wire format: literally "true"/"false", not a general '
-        'boolean parse', () {
-      expect(chapterSortReverseFromMetaValue('true'), isTrue);
-      expect(chapterSortReverseFromMetaValue('false'), isFalse);
+  group('chapterSortAscendingFromMetaValue', () {
+    test('webUI_reverse "true" means descending in WebUI (sort ascending, '
+        'then reverse), so it is NOT ascending here', () {
+      expect(chapterSortAscendingFromMetaValue('true'), isFalse);
+      expect(chapterSortAscendingFromMetaValue('false'), isTrue);
     });
 
-    test('anything other than the literal string "true" is false, mirroring '
-        "WebUI's own `value === 'true'` comparison", () {
-      expect(chapterSortReverseFromMetaValue('True'), isFalse);
-      expect(chapterSortReverseFromMetaValue('1'), isFalse);
-      expect(chapterSortReverseFromMetaValue('yes'), isFalse);
+    test('anything other than the literal string "true" is ascending, '
+        "mirroring WebUI's own `value === 'true'` comparison", () {
+      expect(chapterSortAscendingFromMetaValue('True'), isTrue);
+      expect(chapterSortAscendingFromMetaValue('1'), isTrue);
+      expect(chapterSortAscendingFromMetaValue('yes'), isTrue);
     });
 
-    test('null (no meta key at all) -> null, distinct from false', () {
-      expect(chapterSortReverseFromMetaValue(null), isNull);
+    test('null (no meta key at all) -> null, distinct from either '
+        'direction', () {
+      expect(chapterSortAscendingFromMetaValue(null), isNull);
     });
   });
 
-  group('chapterSortReverseToMetaValue', () {
-    test('produces exactly "true"/"false", case-sensitive', () {
-      expect(chapterSortReverseToMetaValue(true), 'true');
-      expect(chapterSortReverseToMetaValue(false), 'false');
-    });
+  group('chapterSortAscendingToMetaValue', () {
+    test(
+      'ascending writes webUI_reverse "false", descending writes "true"',
+      () {
+        expect(chapterSortAscendingToMetaValue(true), 'false');
+        expect(chapterSortAscendingToMetaValue(false), 'true');
+      },
+    );
 
-    test('round-trips through chapterSortReverseFromMetaValue', () {
+    test('round-trips through chapterSortAscendingFromMetaValue', () {
       for (final value in [true, false]) {
         expect(
-          chapterSortReverseFromMetaValue(chapterSortReverseToMetaValue(value)),
+          chapterSortAscendingFromMetaValue(
+            chapterSortAscendingToMetaValue(value),
+          ),
           value,
         );
       }

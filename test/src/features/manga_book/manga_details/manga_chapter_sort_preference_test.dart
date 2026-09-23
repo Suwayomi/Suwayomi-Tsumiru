@@ -262,8 +262,9 @@ void main() {
   });
 
   group('MangaChapterSortDirectionPreference — per-manga, not global', () {
-    test('two manga with different webUI_reverse meta resolve independently, '
-        'and a manga with none falls back to the app-wide default', () async {
+    test('two manga with different webUI_reverse meta resolve independently '
+        '(WebUI\'s "true" = descending), and a manga with none falls back to '
+        'the app-wide default', () async {
       final repo = _RecordingRepo();
       final c = await _containerFor(repo, {
         1: {'webUI_reverse': 'true'},
@@ -274,11 +275,12 @@ void main() {
 
       expect(
         c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 1)),
-        isTrue,
+        isFalse,
+        reason: 'webUI_reverse "true" is descending, so not ascending',
       );
       expect(
         c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 2)),
-        isFalse,
+        isTrue,
       );
       expect(
         c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 3)),
@@ -287,37 +289,38 @@ void main() {
       );
     });
 
-    test(
-      'update writes the exact WebUI wire string, not a Dart bool',
-      () async {
-        final repo = _RecordingRepo();
-        final c = await _containerFor(repo, {1: {}});
-        await c
-            .read(
-              mangaChapterSortDirectionPreferenceProvider(mangaId: 1).notifier,
-            )
-            .update(true);
-        expect(repo.patched, contains((1, 'webUI_reverse', 'true')));
-      },
-    );
+    test('update writes the exact WebUI wire string, inverted: ascending is '
+        'webUI_reverse "false", descending is "true"', () async {
+      final repo = _RecordingRepo();
+      final c = await _containerFor(repo, {1: {}});
+      final notifier = c.read(
+        mangaChapterSortDirectionPreferenceProvider(mangaId: 1).notifier,
+      );
+      await notifier.update(true);
+      await notifier.update(false);
+      expect(repo.patched, [
+        (1, 'webUI_reverse', 'false'),
+        (1, 'webUI_reverse', 'true'),
+      ]);
+    });
 
     test('a failed write is returned as an error and does NOT flip the '
         'displayed direction', () async {
       final repo = _RecordingRepo(fail: true);
       final c = await _containerFor(repo, {
-        1: {'webUI_reverse': 'false'},
+        1: {'webUI_reverse': 'false'}, // ascending
       });
       final result = await c
           .read(
             mangaChapterSortDirectionPreferenceProvider(mangaId: 1).notifier,
           )
-          .update(true);
+          .update(false);
 
       expect(result.hasError, isTrue);
       await c.read(mangaWithIdProvider(mangaId: 1).future);
       expect(
         c.read(mangaChapterSortDirectionPreferenceProvider(mangaId: 1)),
-        isFalse,
+        isTrue,
       );
     });
   });

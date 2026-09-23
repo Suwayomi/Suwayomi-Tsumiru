@@ -415,10 +415,11 @@ class MangaChapterSortPreference extends _$MangaChapterSortPreference {
   }
 }
 
-/// Per-series chapter sort direction, synced with WebUI's own per-manga
-/// `webUI_reverse` meta. Falls back to the app-wide
-/// [MangaChapterSortDirection] default when the manga carries no such meta.
-/// Display only: the offline keep-window always advances forward.
+/// Per-series chapter sort direction (true = ascending), synced with WebUI's
+/// own per-manga `webUI_reverse` meta, whose `'true'` means descending. Falls
+/// back to the app-wide [MangaChapterSortDirection] default when the manga
+/// carries no such meta. Display only: the offline keep-window always
+/// advances forward.
 @riverpod
 class MangaChapterSortDirectionPreference
     extends _$MangaChapterSortDirectionPreference {
@@ -428,24 +429,24 @@ class MangaChapterSortDirectionPreference
     final raw = meta
         ?.firstWhereOrNull((m) => m.key == kWebUiReverseMetaKey)
         ?.value;
-    return chapterSortReverseFromMetaValue(raw) ??
+    return chapterSortAscendingFromMetaValue(raw) ??
         ref.watch(mangaChapterSortDirectionProvider);
   }
 
   /// Same failure contract as [MangaChapterSortPreference.update].
-  Future<AsyncValue<void>> update(bool reverse) async {
+  Future<AsyncValue<void>> update(bool ascending) async {
     final result = await AsyncValue.guard(
       () => ref
           .read(mangaBookRepositoryProvider)
           .patchMangaMeta(
             mangaId: mangaId,
             key: kWebUiReverseMetaKey,
-            value: chapterSortReverseToMetaValue(reverse),
+            value: chapterSortAscendingToMetaValue(ascending),
           ),
     );
     if (!ref.mounted) return result;
     ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-    if (!result.hasError) state = reverse;
+    if (!result.hasError) state = ascending;
     return result;
   }
 }
@@ -573,28 +574,25 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
 
   int applyChapterSort(ChapterDto m1, ChapterDto m2) {
     final sortDirToggle = (sortedDirection ? 1 : -1);
-    final result =
-        (switch (sortedBy) {
-          ChapterSort.fetchedDate =>
-            (int.tryParse(m1.fetchedAt) ?? 0).compareTo(
-              int.tryParse(m2.fetchedAt) ?? 0,
-            ),
-          ChapterSort.source => (m1.index).compareTo(m2.index),
-          ChapterSort.uploadDate =>
-            (int.tryParse(m1.uploadDate) ?? 0).compareTo(
-              int.tryParse(m2.uploadDate) ?? 0,
-            ),
-          ChapterSort.chapterNumber => m1.chapterNumber.compareTo(
-            m2.chapterNumber,
-          ),
-          ChapterSort.alphabetical => m1.name.toLowerCase().compareTo(
-            m2.name.toLowerCase(),
-          ),
-        }) *
-        sortDirToggle;
-    // List.sort is unstable; keep ties in source order (matches Komikku,
-    // whose stable sort degrades to source order when numbers don't parse).
-    return result != 0 ? result : m1.index.compareTo(m2.index);
+    final key = switch (sortedBy) {
+      ChapterSort.fetchedDate => (int.tryParse(m1.fetchedAt) ?? 0).compareTo(
+        int.tryParse(m2.fetchedAt) ?? 0,
+      ),
+      ChapterSort.source => (m1.index).compareTo(m2.index),
+      ChapterSort.uploadDate => (int.tryParse(m1.uploadDate) ?? 0).compareTo(
+        int.tryParse(m2.uploadDate) ?? 0,
+      ),
+      ChapterSort.chapterNumber => m1.chapterNumber.compareTo(m2.chapterNumber),
+      ChapterSort.alphabetical => m1.name.toLowerCase().compareTo(
+        m2.name.toLowerCase(),
+      ),
+    };
+    // List.sort is unstable; break ties by source order, and reverse the tie
+    // too when descending — the whole list flips, as WebUI does (stable sort,
+    // then reverse). Reading order then never depends on the display
+    // direction, so the reader's next chapter and the offline keep-window
+    // (always ascending, see reconcile_logic.dart) agree on tied chapters.
+    return (key != 0 ? key : m1.index.compareTo(m2.index)) * sortDirToggle;
   }
 
   return chapterList.copyWithData((data) {
