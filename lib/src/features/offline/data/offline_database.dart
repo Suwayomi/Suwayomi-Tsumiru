@@ -465,7 +465,67 @@ class OfflineDatabase extends _$OfflineDatabase {
       // markNotInLibrary re-stamps it to the new sentinel unconditionally —
       // no repair pass required either way.
     },
+    beforeOpen: (details) async {
+      if (!details.wasCreated) await _addMissingColumns();
+    },
   );
+
+  /// One-off fills a version step ran right after adding its column, replayed
+  /// when [_addMissingColumns] adds that column instead.
+  late final Map<GeneratedColumn, String> _backfillAfterAdd = {
+    offlineCategories.isDefaultCategory:
+        'UPDATE offline_categories SET is_default_category = 1 WHERE id = 0',
+    offlineChapters.syncedIsRead:
+        'UPDATE offline_chapters SET synced_is_read = is_read',
+  };
+
+  /// Adds any declared column missing from an existing table.
+  ///
+  /// The version steps trust the recorded schemaVersion to say which columns
+  /// exist. A device that ran an unmerged build can record a version whose
+  /// step on main was different (two branches both claiming v17), so main's
+  /// real step never runs there. drift maps rows with `SELECT *`, so a missing
+  /// non-nullable column reads as null and every query on that table throws
+  /// "Null check operator used on a null value".
+  ///
+  /// One read-only query per open (under a millisecond), no writes when
+  /// nothing is missing. Only columns that can be added to populated rows (nullable or
+  /// with a default) are healed.
+  Future<void> _addMissingColumns() async {
+    // Every table's columns in one round trip.
+    final columnsByTable = <String, Set<String>>{};
+    for (final row in await customSelect(
+      'SELECT m.name AS tbl, c.name AS col FROM sqlite_master m '
+      "JOIN pragma_table_info(m.name) c WHERE m.type = 'table'",
+    ).get()) {
+      columnsByTable
+          .putIfAbsent(row.read<String>('tbl'), () => {})
+          .add(row.read<String>('col'));
+    }
+    Migrator? migrator;
+    for (final table in allTables) {
+      final existing = columnsByTable[table.actualTableName];
+      // An absent table is onUpgrade's business, not a column to heal.
+      if (existing == null) continue;
+      for (final column in table.$columns) {
+        if (existing.contains(column.name)) continue;
+        if (!column.$nullable && column.defaultValue == null) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-db: '
+            'missing-column-not-healable ${table.actualTableName}.${column.name}\n',
+          );
+          continue;
+        }
+        await (migrator ??= createMigrator()).addColumn(table, column);
+        final backfill = _backfillAfterAdd[column];
+        if (backfill != null) await customStatement(backfill);
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] offline-db: '
+          'healed-missing-column ${table.actualTableName}.${column.name}\n',
+        );
+      }
+    }
+  }
 
   /// A migration step must not explode on a table this database has never
   /// created — schema fixtures and partial upgrades both hit that.
