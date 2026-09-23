@@ -178,7 +178,7 @@ class LocalNotificationService {
     void Function(NotificationResponse)? onTap,
     DidReceiveBackgroundNotificationResponseCallback? onBackgroundTap,
   }) async {
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('ic_stat_tsumiru');
     const settings = InitializationSettings(android: android);
     await _plugin.initialize(
       settings: settings,
