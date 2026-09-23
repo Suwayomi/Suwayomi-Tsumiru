@@ -139,3 +139,22 @@ device downloads and reading-progress recovery.
 
 `ai_japanese_completion` records this phase separately. Upstream provenance and
 the earlier phase reports are unchanged. Native-speaker review remains outstanding.
+
+## Portuguese completion
+
+Against `da400eca`, this phase fills all baseline missing keys: 556 in generic
+Portuguese and 548 in Brazilian Portuguese. New generic wording uses European
+Portuguese; Portugal inherits all 556 additions without duplicate entries. Every
+Brazilian gap receives an explicit value, so new base translations cannot mask
+regional work. Each locale now has 1,190 nonempty effective messages.
+
+`ai_portuguese_completion` separates explicit additions from inherited gains.
+All existing explicit and inherited values, provenance and earlier reports remain
+unchanged. Some pre-existing Portuguese values still contain English; nonempty
+coverage is not a claim that those older translations are complete or correct.
+Native-speaker review remains outstanding.
+
+Eight new count messages include an explicit zero branch because Flutter maps
+`=1` to the locale's `one` category, which includes zero for generic and Brazilian
+Portuguese. Tests cover every new plural at 0, 1, 2 and 21 in all three locales.
+Existing legacy select and plural entries remain unchanged.

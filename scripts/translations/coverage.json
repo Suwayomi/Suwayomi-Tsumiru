@@ -44,9 +44,9 @@
     "nb": 313,
     "nb_NO": 349,
     "nl": 408,
-    "pt": 634,
-    "pt_BR": 642,
-    "pt_PT": 634,
+    "pt": 1190,
+    "pt_BR": 1190,
+    "pt_PT": 1190,
     "ru": 538,
     "ta": 614,
     "th": 367,
@@ -202,5 +202,31 @@
     "added": 543,
     "after": 1190,
     "remaining": 0
+  },
+  "ai_portuguese_completion": {
+    "baseline": "da400eca",
+    "locales": {
+      "pt": {
+        "before": 634,
+        "explicit_added": 556,
+        "inherited_gain": 0,
+        "after": 1190,
+        "remaining": 0
+      },
+      "pt_BR": {
+        "before": 642,
+        "explicit_added": 548,
+        "inherited_gain": 0,
+        "after": 1190,
+        "remaining": 0
+      },
+      "pt_PT": {
+        "before": 634,
+        "explicit_added": 0,
+        "inherited_gain": 556,
+        "after": 1190,
+        "remaining": 0
+      }
+    }
   }
 }

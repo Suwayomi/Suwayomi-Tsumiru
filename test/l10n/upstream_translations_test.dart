@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ar.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_de.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ja.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations_pt.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ru.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_zh.dart';
 
@@ -242,6 +243,121 @@ void main() {
       '-tag:dropped',
     ]) {
       expect(locale.searchTipsBody, contains(syntax));
+    }
+  });
+
+  test('New Portuguese plurals preserve zero in every regional locale', () {
+    for (final locale in [
+      AppLocalizationsPt(),
+      AppLocalizationsPtBr(),
+      AppLocalizationsPtPt(),
+    ]) {
+      for (final count in [0, 1, 2, 21]) {
+        final plural = count != 1;
+        expect(
+          locale.autoScrollSeconds(count),
+          '$count segundo${plural ? 's' : ''}',
+        );
+        expect(
+          locale.minutesAgo(count),
+          'Há $count minuto${plural ? 's' : ''}',
+        );
+        expect(locale.hoursAgo(count), 'Há $count hora${plural ? 's' : ''}');
+        expect(locale.inNDays(count), 'Daqui a $count dia${plural ? 's' : ''}');
+        expect(locale.dayCount(count), '$count dia${plural ? 's' : ''}');
+        expect(
+          locale.migrationSourceSeriesCount(count),
+          '$count série${plural ? 's' : ''}',
+        );
+        expect(
+          locale.migrationTrackerCollisionSummary(count),
+          startsWith('$count série${plural ? 's' : ''} já'),
+        );
+        expect(
+          locale.duplicatesRemoveConfirm(count),
+          startsWith(
+            'Remover $count ${plural ? 'itens' : 'item'} da biblioteca?',
+          ),
+        );
+      }
+      for (final count in [5, 10, 25]) {
+        expect(
+          locale.downloadNextChaptersN(count),
+          'Próximos $count capítulos',
+        );
+      }
+    }
+  });
+
+  test('Portuguese variants keep local download and account wording', () {
+    final base = AppLocalizationsPt();
+    final brazil = AppLocalizationsPtBr();
+    final portugal = AppLocalizationsPtPt();
+    expect(
+      base.backgroundCatchupFetchFiles,
+      'Transferir ficheiros em segundo plano',
+    );
+    expect(
+      portugal.backgroundCatchupFetchFiles,
+      base.backgroundCatchupFetchFiles,
+    );
+    expect(
+      brazil.backgroundCatchupFetchFiles,
+      'Baixar arquivos em segundo plano',
+    );
+    expect(base.accountRoleUser, 'Utilizador');
+    expect(brazil.accountRoleUser, 'Usuário');
+    expect(portugal.accountRoleUser, base.accountRoleUser);
+    expect(
+      base.trackRemoveConfirmBody('AniList'),
+      'Isto remove a associação a AniList.',
+    );
+    expect(
+      brazil.trackRemoveConfirmBody('AniList'),
+      'Isso remove o vínculo com AniList.',
+    );
+    expect(
+      base.accountCatalogueRemoveConfirm(
+        base.accountCatalogueOwner('7'),
+        'example.org',
+      ),
+      'Remover deste dispositivo os capítulos transferidos e a biblioteca offline de «Conta 7» em example.org? Os dados do servidor não serão alterados.',
+    );
+    expect(
+      brazil.accountCatalogueRemoveConfirm(
+        brazil.accountCatalogueWithoutLogin,
+        'example.org',
+      ),
+      'Remover deste dispositivo os capítulos baixados e a biblioteca offline de «Downloads sem login na conta» em example.org? Os dados do servidor não serão alterados.',
+    );
+    expect(
+      base.removeExtensionStoreBody('Example', 'https://example.org'),
+      'Deseja remover a loja de extensões «Example» (https://example.org)?',
+    );
+    for (final locale in [base, brazil, portugal]) {
+      expect(locale.accountPermissionsSummary(2, 9), '2 de 9 permitidas');
+      expect(locale.offlineRecoveryOriginal, 'Usar progresso original');
+      expect(locale.offlineRecoveryCurrent, 'Usar progresso atual');
+      expect(locale.offlineRecoveryCompleted(21), '21 imagens recuperadas');
+      for (final syntax in [
+        'tag:seinen',
+        'genre:action',
+        'author:oda',
+        'status:ongoing',
+        'completed',
+        'hiatus',
+        'cancelled',
+        'source:mangadex',
+        'tracked:true',
+        'tracked:anilist',
+        'rating:>=4',
+        'unread:true',
+        'downloaded:true',
+        'tag:"slice of life"',
+        '-tag:dropped',
+      ]) {
+        expect(locale.searchTipsBody, contains(syntax));
+      }
     }
   });
 
