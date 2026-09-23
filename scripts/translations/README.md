@@ -109,9 +109,22 @@ coverage gains also include inheritance into locales such as `pt_PT`.
 The German pilot adds 701 context-reviewed AI translations against `fcb40fa1`,
 bringing German coverage from 489 to 1,190 messages (100%, none missing).
 All 489 existing German messages and upstream provenance entries are unchanged.
-Other locales retain the coverage shown above. Native-speaker review is still
+At the German pilot commit, other locales retained the coverage shown above.
+Native-speaker review is still
 outstanding; complete coverage does not establish translation quality.
 
 `coverage.json` records this phase separately under `ai_german_pilot`. Its `after`
 field tracks current effective coverage; `pass_two` retains the historical gains
 from the upstream import, rather than counting later translations as imports.
+
+## Chinese completion
+
+Against `63b9052b`, this phase adds 94 AI translations each for Simplified and
+Traditional Chinese, then fills 99 generic Chinese gaps using Simplified wording.
+The generic catalog reuses five existing Simplified messages; every new generic
+key has an explicit translation in both script variants, preventing Simplified
+fallbacks in Traditional Chinese. All three catalogs now cover 1,190 messages.
+
+`ai_chinese_completion` records these additions separately from upstream imports
+and the German pilot. Existing translations and upstream provenance are unchanged.
+Native-speaker review remains outstanding.

@@ -53,9 +53,9 @@
     "tr": 508,
     "uk": 501,
     "vi": 641,
-    "zh": 1091,
-    "zh_Hans": 1096,
-    "zh_Hant": 1096
+    "zh": 1190,
+    "zh_Hans": 1190,
+    "zh_Hant": 1190
   },
   "imported": {
     "ar": 306,
@@ -171,5 +171,28 @@
     "added": 701,
     "after": 1190,
     "remaining": 0
+  },
+  "ai_chinese_completion": {
+    "baseline": "63b9052b",
+    "locales": {
+      "zh": {
+        "before": 1091,
+        "added": 99,
+        "after": 1190,
+        "remaining": 0
+      },
+      "zh_Hans": {
+        "before": 1096,
+        "added": 94,
+        "after": 1190,
+        "remaining": 0
+      },
+      "zh_Hant": {
+        "before": 1096,
+        "added": 94,
+        "after": 1190,
+        "remaining": 0
+      }
+    }
   }
 }

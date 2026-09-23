@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ar.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_de.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_ru.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations_zh.dart';
 
 void main() {
   const counts = [0, 1, 2, 3, 11, 21];
@@ -124,6 +125,62 @@ void main() {
     expect(locale.searchTipsBody, contains('tag:"slice of life"'));
     expect(locale.searchTipsBody, contains('-tag:dropped'));
   });
+
+  test('Chinese completion retains quantities and script-specific wording', () {
+    final simplified = AppLocalizationsZhHans();
+    final traditional = AppLocalizationsZhHant();
+    final generic = AppLocalizationsZh();
+    for (final count in counts) {
+      expect(simplified.offlineRecoveryCompleted(count), '已恢复 $count 张图片');
+      expect(traditional.offlineRecoveryCompleted(count), '已復原 $count 張圖片');
+      expect(
+        generic.offlineRecoveryCompleted(count),
+        simplified.offlineRecoveryCompleted(count),
+      );
+    }
+    expect(simplified.accountPermissionsSummary(2, 9), '已允许 2 项，共 9 项');
+    expect(traditional.accountPermissionsSummary(2, 9), '已允許 2 項，共 9 項');
+    expect(simplified.accountCodeExpires('2026-09-22'), '到期时间：2026-09-22');
+    expect(traditional.accountCodeExpires('2026-09-22'), '到期時間：2026-09-22');
+    expect(traditional.accountSignOut, '登出');
+    expect(simplified.accountSignOut, '退出登录');
+    expect(generic.accountSignOut, simplified.accountSignOut);
+  });
+
+  test(
+    'Chinese account removal keeps account and server arguments distinct',
+    () {
+      final simplified = AppLocalizationsZhHans();
+      final traditional = AppLocalizationsZhHant();
+      expect(
+        simplified.accountCatalogueRemoveConfirm('Alice', 'example.org'),
+        '从此设备移除 example.org 上 Alice 的已下载章节和离线书架？服务器数据将保持不变。',
+      );
+      expect(
+        traditional.accountCatalogueRemoveConfirm('Alice', 'example.org'),
+        '從此裝置移除 example.org 上 Alice 的已下載章節和離線書架？伺服器資料將保持不變。',
+      );
+      expect(
+        simplified.accountCatalogueRemoveConfirm(
+          simplified.accountCatalogueOwner('7'),
+          'example.org',
+        ),
+        '从此设备移除 example.org 上 账户 7 的已下载章节和离线书架？服务器数据将保持不变。',
+      );
+      expect(
+        traditional.accountCatalogueRemoveConfirm(
+          traditional.accountCatalogueWithoutLogin,
+          'example.org',
+        ),
+        '從此裝置移除 example.org 上 未登入帳戶時的下載 的已下載章節和離線書架？伺服器資料將保持不變。',
+      );
+      expect(traditional.offlineRecoveryCurrent, '使用目前進度');
+      expect(traditional.offlineRecoveryOriginal, '使用原始進度');
+      expect(traditional.offlineRecoveryPendingSync('書籤'), '待同步：書籤');
+      expect(simplified.offlineRecoveryPendingSync('书签'), '待同步：书签');
+      expect(traditional.offlineRecoveryLastRead('12:34'), '上次閱讀：12:34');
+    },
+  );
 
   test('Arabic preserves zero, one, two, few and many forms', () {
     final locale = AppLocalizationsAr();
