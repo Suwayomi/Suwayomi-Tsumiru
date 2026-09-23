@@ -123,6 +123,19 @@ abstract class MangaMeta with _$MangaMeta {
       _$MangaMetaFromJson(json);
 }
 
+extension MangaMetaPreferences on MangaMeta {
+  List<String> get effectivePreferredScanlators {
+    final stored = preferredScanlators;
+    if (stored != null) return stored;
+    final legacy = scanlator;
+    // The legacy key's own name doubles as its "no filter" sentinel value.
+    if (legacy == null || legacy == MangaMetaKeys.scanlator.key) {
+      return const [];
+    }
+    return [legacy];
+  }
+}
+
 enum MangaMetaKeys {
   invertTap("flutter_readerNavigationLayoutInvert"),
   readerNavigationLayout("flutter_readerNavigationLayout"),

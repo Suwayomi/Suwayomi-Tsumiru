@@ -272,14 +272,7 @@ class MangaPreferredScanlators extends _$MangaPreferredScanlators {
         .watch(mangaWithIdProvider(mangaId: mangaId))
         .value
         ?.metaData;
-    final stored = meta?.preferredScanlators;
-    if (stored != null) return stored;
-    final legacy = meta?.scanlator;
-    // The legacy key's own name doubles as its "no filter" sentinel value.
-    if (legacy == null || legacy == MangaMetaKeys.scanlator.key) {
-      return const [];
-    }
-    return [legacy];
+    return meta?.effectivePreferredScanlators ?? const [];
   }
 
   /// Returns whether the server writes succeeded, so the dialog can surface

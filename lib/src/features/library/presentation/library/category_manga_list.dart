@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/download_presets_menu.dart';
 import '../../../../widgets/emoticons.dart';
@@ -27,6 +28,7 @@ import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../manga_book/domain/chapter/chapter_download_presets.dart';
 import '../../../manga_book/domain/chapter/chapter_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../manga_book/presentation/manga_details/controller/scanlator_dedup.dart';
 import '../../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../../../migration/domain/migration_models.dart';
 import '../../../offline/data/offline_chapter_catchup.dart';
@@ -46,15 +48,22 @@ import 'widgets/library_manga_grid_view.dart';
 List<int> serverDownloadIds(
   List<ChapterDto>? chapters, {
   DownloadPreset preset = DownloadPreset.all,
-}) => chaptersToQueueForPreset([
-  for (final chapter in chapters ?? const <ChapterDto>[])
-    ChapterDownloadCandidate(
-      id: chapter.id,
-      chapterNumber: chapter.chapterNumber,
-      isRead: chapter.isRead,
-      isDownloaded: chapter.isDownloaded,
-    ),
-], preset);
+  List<String> preferredScanlators = const [],
+}) {
+  final candidates = chapters ?? const <ChapterDto>[];
+  final filtered = preset == DownloadPreset.all
+      ? candidates
+      : filterPreferredScanlators(candidates, preferredScanlators);
+  return chaptersToQueueForPreset([
+    for (final chapter in filtered)
+      ChapterDownloadCandidate(
+        id: chapter.id,
+        chapterNumber: chapter.chapterNumber,
+        isRead: chapter.isRead,
+        isDownloaded: chapter.isDownloaded,
+      ),
+  ], preset);
+}
 
 class CategoryMangaList extends HookConsumerWidget {
   const CategoryMangaList({super.key, required this.categoryId});
@@ -409,6 +418,16 @@ class CategoryMangaList extends HookConsumerWidget {
                                 .read(authCredentialsStoreProvider.notifier)
                                 .captureSession();
                             final ids = selection.value.toList();
+                            final library =
+                                ref.read(libraryMangaListProvider).value ??
+                                items;
+                            final preferences = {
+                              for (final manga in library)
+                                if (ids.contains(manga.id))
+                                  manga.id: manga
+                                      .metaData
+                                      .effectivePreferredScanlators,
+                            };
                             if (ids.length > 1 &&
                                 !await confirmBulkDownload(
                                   context,
@@ -427,32 +446,39 @@ class CategoryMangaList extends HookConsumerWidget {
                             final dl = ref.read(downloadsRepositoryProvider);
                             if (!context.mounted || !current()) return;
                             var queuedAny = false;
-                            for (final id in ids) {
-                              if (!context.mounted || !current()) return;
-                              final chapters = await repo.getChapterList(id);
-                              if (!context.mounted || !current()) return;
-                              final chapterIds = serverDownloadIds(
-                                chapters,
-                                preset: preset,
-                              );
-                              if (chapterIds.isNotEmpty) {
-                                await dl.addChaptersBatchToDownloadQueue(
-                                  chapterIds,
+                            final result = await AsyncValue.guard(() async {
+                              for (final id in ids) {
+                                if (!context.mounted || !current()) return;
+                                final chapters = await repo.getChapterList(id);
+                                if (!context.mounted || !current()) return;
+                                final chapterIds = serverDownloadIds(
+                                  chapters,
+                                  preset: preset,
+                                  preferredScanlators:
+                                      preferences[id] ?? const [],
                                 );
-                                queuedAny = true;
+                                if (chapterIds.isNotEmpty) {
+                                  await dl.addChaptersBatchToDownloadQueue(
+                                    chapterIds,
+                                  );
+                                  queuedAny = true;
+                                }
                               }
+                            });
+                            if (!context.mounted || !current()) return;
+                            if (result.hasError) {
+                              result.showToastOnError(ref.read(toastProvider));
+                              return;
                             }
-                            if (context.mounted && current()) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    queuedAny
-                                        ? 'Downloading ${ids.length} series to server'
-                                        : context.l10n.nothingToDownload,
-                                  ),
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  queuedAny
+                                      ? 'Downloading ${ids.length} series to server'
+                                      : context.l10n.nothingToDownload,
                                 ),
-                              );
-                            }
+                              ),
+                            );
                           },
                     onEditCategories: () async {
                       final selected = items

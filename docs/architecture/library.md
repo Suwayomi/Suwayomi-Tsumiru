@@ -102,6 +102,8 @@ casts at all three call sites.
 
 `groupLibrary()` is a pure function; tested in `test/library/library_grouping_test.dart`.
 
+The library selection bar offers per-series server download presets: Next and Unread honor preferred scanlator groups, while All retains the original coverage across all groups.
+
 ## Organizer tabs
 
 The organizer sheet (`LibraryMangaOrganizer`) has four tabs:

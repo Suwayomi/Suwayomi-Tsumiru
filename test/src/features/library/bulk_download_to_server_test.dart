@@ -62,6 +62,53 @@ void main() {
       });
     }
 
+    test('next and unread use preferred releases, All retains every group', () {
+      final chapters = [
+        for (var number = 1; number <= 7; number++) ...[
+          ch(
+            id: number,
+            number: number.toDouble(),
+            scanlator: 'A',
+            isRead: number == 1,
+            isDownloaded: number == 3,
+          ),
+          ch(id: 100 + number, number: number.toDouble(), scanlator: 'B'),
+        ],
+      ];
+      expect(
+        serverDownloadIds(
+          chapters,
+          preset: DownloadPreset.next5,
+          preferredScanlators: ['A'],
+        ),
+        [2, 4, 5, 6, 7],
+      );
+      expect(
+        serverDownloadIds(
+          chapters,
+          preset: DownloadPreset.unread,
+          preferredScanlators: ['A'],
+        ),
+        [2, 4, 5, 6, 7],
+      );
+      expect(
+        serverDownloadIds(
+          chapters,
+          preset: DownloadPreset.all,
+          preferredScanlators: ['A'],
+        ),
+        unorderedEquals([
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          for (var n = 1; n <= 7; n++) 100 + n,
+        ]),
+      );
+    });
+
     test('unread includes gaps before the reading position', () {
       expect(
         serverDownloadIds([
