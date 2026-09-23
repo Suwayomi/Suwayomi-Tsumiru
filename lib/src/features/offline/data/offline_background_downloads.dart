@@ -151,7 +151,9 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
     onServerUnreachable: () => Future(() {
       if (!isCurrentSession()) return;
       try {
-        ref.read(serverUnreachableProvider.notifier).set(true);
+        ref
+            .read(serverUnreachableProvider.notifier)
+            .set(true, reason: 'download-pump');
       } catch (_) {}
     }),
   );

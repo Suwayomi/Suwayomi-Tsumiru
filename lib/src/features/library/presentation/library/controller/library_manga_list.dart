@@ -54,7 +54,9 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
     onReachability: (reachable) {
       Future(() {
         try {
-          if (current()) reachability.set(!reachable);
+          if (current()) {
+            reachability.set(!reachable, reason: 'library-fetch');
+          }
         } catch (_) {}
       });
     },

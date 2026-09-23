@@ -247,7 +247,12 @@ GraphQLClient graphQlClient(Ref ref) {
           if (response.errors == null || response.errors!.isEmpty) {
             Future(() {
               try {
-                ref.read(serverUnreachableProvider.notifier).set(false);
+                ref
+                    .read(serverUnreachableProvider.notifier)
+                    .set(
+                      false,
+                      reason: 'op=${request.operation.operationName}',
+                    );
               } catch (_) {}
             });
           }
@@ -259,7 +264,14 @@ GraphQLClient graphQlClient(Ref ref) {
           if (isConnectionError(error)) {
             Future(() {
               try {
-                ref.read(serverUnreachableProvider.notifier).set(true);
+                ref
+                    .read(serverUnreachableProvider.notifier)
+                    .set(
+                      true,
+                      reason:
+                          'op=${request.operation.operationName} '
+                          'error=${error.runtimeType}: $error',
+                    );
               } catch (_) {}
             });
           }
@@ -386,7 +398,6 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     cache: GraphQLCache(store: InMemoryStore()),
   );
 }
-
 
 @riverpod
 class AuthTypeKey extends _$AuthTypeKey
