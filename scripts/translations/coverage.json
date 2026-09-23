@@ -31,7 +31,7 @@
   },
   "after": {
     "ar": 543,
-    "de": 489,
+    "de": 1190,
     "es": 542,
     "fil": 386,
     "fr": 537,
@@ -163,5 +163,13 @@
       "zh_Hant": 1
     },
     "new_imports": 757
+  },
+  "ai_german_pilot": {
+    "baseline": "fcb40fa1",
+    "locale": "de",
+    "before": 489,
+    "added": 701,
+    "after": 1190,
+    "remaining": 0
   }
 }

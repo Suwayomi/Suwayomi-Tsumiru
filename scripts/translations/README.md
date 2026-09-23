@@ -103,3 +103,15 @@ coverage gains also include inheritance into locales such as `pt_PT`.
 | zh | 1091 | 1091 | 1091 | 99 |
 | zh_Hans | 1091 | 1095 | 1096 | 94 |
 | zh_Hant | 1091 | 1095 | 1096 | 94 |
+
+## German pilot after upstream imports
+
+The German pilot adds 701 context-reviewed AI translations against `fcb40fa1`,
+bringing German coverage from 489 to 1,190 messages (100%, none missing).
+All 489 existing German messages and upstream provenance entries are unchanged.
+Other locales retain the coverage shown above. Native-speaker review is still
+outstanding; complete coverage does not establish translation quality.
+
+`coverage.json` records this phase separately under `ai_german_pilot`. Its `after`
+field tracks current effective coverage; `pass_two` retains the historical gains
+from the upstream import, rather than counting later translations as imports.

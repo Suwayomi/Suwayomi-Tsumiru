@@ -185,8 +185,8 @@ def run(cache, fetch, write):
     report = read_json(report_path) if report_path.exists() else {'baseline': 'fe452d18', 'total': len(keys), 'before': coverage(original, keys)}
     report.setdefault('pass_two', {'baseline': 'dc04b2c1', 'before': coverage(original, keys), 'imports_before': sum(report['imported'].values())})
     report['after'] = coverage(catalogs, keys)
-    report['pass_two']['delta'] = {locale: report['after'][locale] - value for locale, value in report['pass_two']['before'].items()}
-    report['pass_two']['new_imports'] = sum(len(entries) for entries in provenance.values()) - report['pass_two']['imports_before']
+    report['pass_two'].setdefault('delta', {locale: report['after'][locale] - value for locale, value in report['pass_two']['before'].items()})
+    report['pass_two'].setdefault('new_imports', sum(len(entries) for entries in provenance.values()) - report['pass_two']['imports_before'])
     report['imported'] = {locale: len(entries) for locale, entries in sorted(provenance.items())}
     report['sources'] = {source: {'repository': repo, 'revision': revision, 'path': pattern} for source, (repo, revision, pattern) in SOURCES.items()}
     if write:

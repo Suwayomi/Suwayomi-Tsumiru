@@ -37,6 +37,94 @@ void main() {
     },
   );
 
+  test('German pilot preserves zero meanings and legacy select keys', () {
+    final locale = AppLocalizationsDe();
+    expect(counts.map(locale.nChapters), [
+      'Keine',
+      '1 Kapitel',
+      '2 Kapitel',
+      '3 Kapitel',
+      '11 Kapitel',
+      '21 Kapitel',
+    ]);
+    expect(locale.nDays('01'), '01 Tag');
+    expect(locale.nDays('1'), '1 Tage');
+    expect(locale.nDays('0'), '0 Tage');
+    expect(locale.nDays('21'), '21 Tage');
+    expect(locale.backupCleanupDescription('0'), 'Nie');
+    expect(
+      locale.backupCleanupDescription('01'),
+      'Sicherungen löschen, die älter als 1 Tag sind',
+    );
+    expect(
+      locale.backupCleanupDescription('21'),
+      'Sicherungen löschen, die älter als 21 Tage sind',
+    );
+  });
+
+  test('German pilot dates and migration counts retain their quantities', () {
+    final locale = AppLocalizationsDe();
+    expect(counts.map(locale.daysAgo), [
+      'Vor 0 Tagen',
+      'Vor 1 Tag',
+      'Vor 2 Tagen',
+      'Vor 3 Tagen',
+      'Vor 11 Tagen',
+      'Vor 21 Tagen',
+    ]);
+    expect(locale.inNDays(1), 'In 1 Tag');
+    expect(locale.inNDays(21), 'In 21 Tagen');
+    expect(locale.minutesAgo(1), 'Vor 1 Minute');
+    expect(locale.minutesAgo(21), 'Vor 21 Minuten');
+    expect(locale.hoursAgo(1), 'Vor 1 Stunde');
+    expect(locale.hoursAgo(21), 'Vor 21 Stunden');
+    expect(locale.nHours(1), '1 Stunde');
+    expect(locale.nHours(21), '21 Stunden');
+    expect(locale.nRepo(1), '1 Depot');
+    expect(locale.nRepo(21), '21 Depots');
+    expect(locale.migrationSourceSeriesCount(1), '1 Serie');
+    expect(locale.migrationSourceSeriesCount(21), '21 Serien');
+    expect(
+      locale.migrationTrackerCollisionSummary(1),
+      startsWith('1 Serie hat'),
+    );
+    expect(
+      locale.migrationTrackerCollisionSummary(21),
+      startsWith('21 Serien haben'),
+    );
+    expect(
+      locale.duplicatesRemoveConfirm(1),
+      startsWith('1 Eintrag aus deiner Bibliothek entfernen?'),
+    );
+    expect(
+      locale.duplicatesRemoveConfirm(21),
+      startsWith('21 Einträge aus deiner Bibliothek entfernen?'),
+    );
+  });
+
+  test('German pilot interpolates account and download details', () {
+    final locale = AppLocalizationsDe();
+    expect(
+      locale.accountCatalogueRemoveConfirm('Anna', 'example.org'),
+      'Die heruntergeladenen Kapitel und die Offline-Bibliothek für Anna '
+      'auf example.org von diesem Gerät entfernen? '
+      'Die Daten auf dem Server bleiben unverändert.',
+    );
+    expect(locale.accountPermissionsSummary(2, 9), '2 von 9 erlaubt');
+    expect(locale.downloadPagesProgress(2, 9), '2/9 Seiten');
+    expect(
+      locale.updatingLibraryProgress(25, 1, 4),
+      'Bibliothek wird aktualisiert (25% · 1/4)',
+    );
+    expect(
+      locale.trackRemoveConfirmBody('AniList'),
+      'Die Verknüpfung mit AniList wird entfernt.',
+    );
+    expect(locale.searchTipsBody, contains('status:ongoing'));
+    expect(locale.searchTipsBody, contains('tag:"slice of life"'));
+    expect(locale.searchTipsBody, contains('-tag:dropped'));
+  });
+
   test('Arabic preserves zero, one, two, few and many forms', () {
     final locale = AppLocalizationsAr();
     expect(counts.map(locale.flashEveryPages), [
