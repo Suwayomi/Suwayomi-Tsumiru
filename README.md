@@ -6,75 +6,55 @@
 
 <div align="center">
 
-[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Suwayomi/Suwayomi-Tsumiru?label=download)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest)
 
 </div>
 
-<p align="center">
-A native client for reading manga &amp; manhwa from a
-<a href="https://github.com/Suwayomi/Suwayomi-Server">Suwayomi-Server</a> instance,
-built for long webtoon binges on your phone.
-</p>
+<p align="center">A manga and webtoon reader for your Suwayomi server</p>
 
-> **Tsumiru** *(積みる)* — a play on *tsundoku* (積ん読), the art of letting unread
-> books pile up. For everyone whose backlog grows faster than they can read it.
-
----
+> *Tsumiru* (積みる) comes from *tsundoku* (積ん読), buying books and letting them pile up unread.
 
 ## What it is
 
-Tsumiru is a Flutter client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server),
-the self-hosted manga server. You point it at a server you already run. Tsumiru itself
-is only the reader (the server handles sources and downloads).
+Tsumiru is a reader app for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), the self-hosted manga server. The server finds sources and downloads chapters. Tsumiru connects to it and reads them.
 
-Runs on **Android, Linux, Windows, macOS, and Web**.
+It runs on Android, iOS, Linux, Windows, macOS and the web. Guides and FAQ are at [tsumiru.app](https://tsumiru.app).
 
-## Feature highlights
+## Features
 
-Tsumiru is built for daily reading, especially **webtoons / manhwa**:
-
-- **Offline reading:** download chapters to your device and read them with no connection to your server. Tsumiru keeps an on-device catalog with auto-keep rules and falls back to local copies automatically when the server isn't reachable.
-- **Rebuilt webtoon reader:** multi-chapter continuous scrolling tuned for long manhwa strips, with pinch-to-zoom that keeps working while you scroll.
-- **First-run onboarding:** a guided setup that finds your Suwayomi server on the network and walks you through connecting it.
-- **Incognito mode:** pause reading history while you catch up, plus hideable library categories (Komikku parity).
-- **13 built-in themes:** plus a custom accent colour and an AMOLED black mode.
-- **Native authentication:** `simple_login` and `ui_login`, with credentials kept in your device's secure storage.
-- **Flexible library:** sort by last read, last chapter date, or total chapters; filter by reading status and bookmarks; and queue whole chapter ranges with bulk-download presets.
+- **Offline reading.** Download chapters to your device and read them without a connection. When the server is unreachable, Tsumiru opens the copies on your device.
+- **Webtoon reader.** Chapters scroll into each other, and pinch-to-zoom keeps working mid-scroll.
+- **Guided setup.** The first launch looks for your server on the local network and connects to it.
+- **Incognito mode.** Read without adding to your history. Library categories can be hidden too.
+- **Themes.** 13 built-in themes, a custom accent colour and a pure black mode for OLED screens.
+- **Server login.** Supports the server's `simple_login` and `ui_login` modes and keeps credentials in the device's secure storage.
+- **Library tools.** Sort by last read, latest chapter or chapter count, filter by status and bookmarks, and download chapter ranges in bulk.
 
 ## Download
 
-Grab the latest build for your platform from the
-[**Releases**](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest) page
-(Android APKs — universal + per-ABI — plus Linux, Windows, macOS, and Web).
+Get the latest build from [Releases](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest). The [download page](https://tsumiru.app/download/) has install steps for each platform.
 
-**Android, with auto-updates:** add this repo to
-[Obtainium](https://github.com/ImranR98/Obtainium) and it will install and keep
-Tsumiru updated straight from GitHub Releases (no app store needed).
+- **Android:** add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) to get updates straight from GitHub Releases.
+- **Linux:** the Flatpak from our own repo updates itself. An AppImage is also on Releases.
+- **iOS:** the build is unsigned, so it has to be sideloaded.
 
-## Requirements
-
-You need a running [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server)
-that Tsumiru can reach. On first launch, point it at your server's address.
+You need a running Suwayomi-Server that your device can reach.
 
 ## Building
 
-Flutter 3.44.6 (pinned via `.fvmrc`; Dart SDK ≥3.9).
+The Flutter version is pinned in `.fvmrc`.
 
 ```bash
 flutter pub get
 flutter gen-l10n
 dart run build_runner build --delete-conflicting-outputs
-flutter build apk            # or: linux / windows / macos / web
+flutter build apk            # or: ios / linux / windows / macos / web
 ```
 
-## Credits & license
+## Credits and license
 
-Tsumiru stands on the work of the [Suwayomi](https://github.com/Suwayomi) project:
-[Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) (the client Tsumiru
-grew from) and [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) (the server
-it talks to). Huge thanks to those maintainers and contributors.
+Tsumiru started as a fork of [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi) and depends on [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server). Thanks to everyone who built and maintains both.
 
-Licensed under the **Mozilla Public License 2.0** (see [LICENSE](LICENSE)). As with the
-upstream project, source files retain their MPL-2.0 headers.
+Licensed under the [Mozilla Public License 2.0](LICENSE). Source files keep their MPL-2.0 headers.
