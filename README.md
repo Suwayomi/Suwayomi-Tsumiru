@@ -18,9 +18,7 @@
 
 ## What it is
 
-[Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server) is a manga server you host yourself. It installs sources, keeps your library and downloads chapters. Tsumiru is the app you read on. Your library and reading progress live on the server, so a chapter you finish on your phone is already marked read on your desktop.
-
-It runs on Android, iOS, Linux, Windows, macOS and the web. Guides and FAQ are at [tsumiru.app](https://tsumiru.app).
+Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so you'll need a server running first. Your library and reading progress are stored on the server, and Tsumiru reads them on Android, iOS, Linux, Windows, macOS or the web. Guides and the FAQ are at [tsumiru.app](https://tsumiru.app).
 
 ## Features
 
