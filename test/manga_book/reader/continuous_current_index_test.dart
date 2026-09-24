@@ -71,6 +71,19 @@ void main() {
       expect(_select(positions, 3), 2);
     });
 
+    test(
+      'scrolled to the end: trailing edge past 1.0 by float noise completes',
+      () {
+        // The end card rides inside the last item, so that item only reaches the
+        // viewport bottom at max scroll, where float noise can push past 1.0.
+        final positions = [
+          _p(0, -0.4, 0.5),
+          _p(33, 0.5, 1.0005), // last page, bottom reached (within tolerance)
+        ];
+        expect(_select(positions, 34), 33);
+      },
+    );
+
     test('empty positions → null', () {
       expect(_select(const [], 34), isNull);
     });

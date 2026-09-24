@@ -82,6 +82,9 @@ class InfinityContinuousConfig {
 
   /// Interactive viewer max scale for pinch to zoom
   static const double maxZoomScale = 5.0;
+
+  /// Space below the end-of-strip card, clear of the reader's bottom menu.
+  static const double endOfStripSpace = 96.0;
 }
 
 /// Gap between pages in "Long strip with gaps".

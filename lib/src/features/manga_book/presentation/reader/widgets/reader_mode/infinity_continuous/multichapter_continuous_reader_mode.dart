@@ -193,7 +193,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final hasReachedEnd = useState(false);
     final hasReachedStart = useState(false);
 
-    final lastEndFeedbackTime = useRef<DateTime?>(null);
     final lastStartFeedbackTime = useRef<DateTime?>(null);
     final completedChapterIds = useRef<Set<int>>({});
 
@@ -1029,21 +1028,6 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             // only state that may latch the end (a null pair just means the
             // chapter list hasn't loaded yet).
             hasReachedEnd.value = true;
-            // Only surface the end-of-manga toast once the bottom of the very
-            // last page is actually on screen. On long webtoon pages the last
-            // page item becomes "visible" (counts toward maxIdx) long before
-            // the reader reaches its end, which previously spammed the toast on
-            // every scroll. itemTrailingEdge <= 1.0 means the page bottom has
-            // reached (or passed) the viewport bottom.
-            final lastPage = positions.where((p) => p.index == total - 1);
-            final atBottom =
-                lastPage.isNotEmpty && lastPage.first.itemTrailingEdge <= 1.0;
-            if (atBottom && readerToastsEnabled()) {
-              InfinityContinuousFeedback.showEndOfMangaFeedback(
-                context,
-                lastEndFeedbackTime,
-              );
-            }
           }
         }
         if (scrollingUp && minIdx <= 0) {
@@ -1271,6 +1255,46 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
       );
     }
 
+    // Space so the last page clears the navigation bar and the bottom menu.
+    Widget buildEndOfStrip(BuildContext context) {
+      final view = View.of(context);
+      final pair = nextPrevChapterPair.value;
+      final trailingSpace =
+          view.viewPadding.bottom / view.devicePixelRatio +
+          InfinityContinuousConfig.endOfStripSpace;
+      return Flex(
+        direction: scrollDirection,
+        textDirection: TextDirection.ltr,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InfinityContinuousChapterSeparator(
+                chapterName: loadedChapters.value.last.chapter.name,
+                isChapterStart: false,
+              ),
+              // A null pair means the chapter list hasn't loaded yet.
+              if (pair != null && pair.first == null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    context.l10n.noMoreChaptersAhead,
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: context.theme.colorScheme.onSurface.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Gap(trailingSpace),
+        ],
+      );
+    }
+
     Widget buildItem(BuildContext context, int index) {
       final loc = _locate(index, loadedChapters.value);
       final fallbackMainAxisExtent = isHorizontal
@@ -1310,7 +1334,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
               width: double.infinity,
               child: child,
             );
-      return ServerImage(
+      final page = ServerImage(
         showReloadButton: true,
         fit: fit,
         appendApiToUrl: false,
@@ -1380,6 +1404,14 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           // of letting it shrink to native.
           return pagesAtNaturalSize ? Center(child: image) : image;
         },
+      );
+      if (index != total - 1) return page;
+      final endOfStrip = buildEndOfStrip(context);
+      return Flex(
+        direction: scrollDirection,
+        textDirection: TextDirection.ltr,
+        mainAxisSize: MainAxisSize.min,
+        children: reverse ? [endOfStrip, page] : [page, endOfStrip],
       );
     }
 

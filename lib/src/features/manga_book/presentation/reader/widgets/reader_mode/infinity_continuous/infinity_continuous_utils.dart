@@ -69,11 +69,12 @@ class InfinityContinuousUtils {
 
     // total - 1 is the last loaded page; itemTrailingEdge <= 1.0 means its
     // bottom sits at or above the viewport bottom, i.e. the end is reached.
+    // The end card sits inside the last item, so allow float noise at max scroll.
     final lastPage = positions.where((p) => p.index == total - 1);
     if (total > 1 &&
         !restingAtTop &&
         lastPage.isNotEmpty &&
-        lastPage.first.itemTrailingEdge <= 1.0) {
+        lastPage.first.itemTrailingEdge <= 1.0 + restEps) {
       return total - 1;
     }
 
