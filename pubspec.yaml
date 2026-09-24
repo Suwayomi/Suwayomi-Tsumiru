@@ -52,7 +52,7 @@ dependencies:
   graphql: ^5.2.4
   hooks_riverpod: ^3.0.0
   http: ^1.2.0
-  infinite_scroll_pagination: ^4.0.0
+  infinite_scroll_pagination: ^5.1.1
   intl: ^0.20.2
   json_annotation: ^4.9.0
   logger: ^2.5.0
