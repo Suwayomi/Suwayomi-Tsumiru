@@ -24,12 +24,14 @@ import '../features/auth/data/auth_credentials_store.dart';
 import '../features/auth/data/auth_session_status.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/custom_headers_store.dart';
+import '../features/auth/data/jwt_utils.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
 import '../features/offline/data/server_reachability.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import '../utils/crash/diagnostics.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/logger/logger_link.dart';
 import '../utils/mixin/shared_preferences_client_mixin.dart';
@@ -328,19 +330,45 @@ Future<Map<String, dynamic>> uiLoginSocketPayload({
   required Future<String?> Function() readToken,
 }) async {
   if (!isCurrentSession()) {
+    _wsAuthLog('connect-init aborted=session-changed-before');
     throw StateError('Authentication session changed');
   }
   try {
     await refreshIfDue();
-  } catch (_) {}
+  } catch (e) {
+    _wsAuthLog(
+      'connect-refresh threw cause=${e.runtimeType}: '
+      '${e.toString().split('\n').first}',
+    );
+  }
   final token = await readToken();
   if (!isCurrentSession()) {
+    _wsAuthLog('connect-init aborted=session-changed-after');
     throw StateError('Authentication session changed');
   }
+  _wsAuthLog('connect-init ${describeSocketToken(token)}');
   return (token == null || token.isEmpty)
       ? <String, dynamic>{}
       : <String, dynamic>{'Authorization': token};
 }
+
+/// `expIn=<s>` for the token a socket authenticates with (negative: the
+/// server binds this socket as a visitor), `token=none` without one. Never
+/// the token itself.
+@visibleForTesting
+String describeSocketToken(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return 'token=none';
+  final exp = decodeJwtExp(token);
+  if (exp == null) return 'exp=unknown';
+  return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
+}
+
+/// The socket resolves its user once, at connect: these lines show what it
+/// was bound with, so an "Unauthorized" subscription later in the session can
+/// be traced to the connect that caused it.
+void _wsAuthLog(String event) => recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] ws-auth: $event\n',
+    );
 
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
@@ -382,15 +410,32 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     initialPayload = () => uiLoginSocketPayload(
       isCurrentSession: isCurrentSession,
       refreshIfDue: () async {
-        if (!ref.mounted) return;
-        await ref
+        if (!ref.mounted) {
+          _wsAuthLog('connect-refresh skipped=provider-disposed');
+          return;
+        }
+        final outcome = await ref
             .read(authCoordinatorProvider.notifier)
             .refreshUiAccessTokenIfDue(
               gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
             );
+        _wsAuthLog(
+          'connect-refresh outcome=${switch (outcome) {
+            null => 'not-due',
+            RefreshSuccess() => 'success',
+            RefreshAuthFailure() => 'auth-failure',
+            RefreshTransientFailure(:final error) =>
+              'transient cause=${error.runtimeType}: '
+                  '${error.toString().split('\n').first}',
+          }}',
+        );
       },
       readToken: () async {
-        if (!ref.mounted) return null;
+        if (!ref.mounted) {
+          // Sends an empty payload: the server binds a visitor socket.
+          _wsAuthLog('connect-token skipped=provider-disposed');
+          return null;
+        }
         return (await ref.read(
           authCredentialsStoreProvider.future,
         )).uiAccessToken;
