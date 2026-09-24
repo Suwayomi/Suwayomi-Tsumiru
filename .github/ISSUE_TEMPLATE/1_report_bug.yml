@@ -1,0 +1,91 @@
+name: Bug report
+description: Report a problem in Tsumiru
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        React with 👍 on issues you care about. We use reactions to see what matters most.
+        [Browse the most upvoted open issues](https://github.com/Suwayomi/Suwayomi-Tsumiru/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc)
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: List the steps to reproduce the problem, what you expected to happen, and what actually happened instead.
+      placeholder: |
+        1. Go to ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Tsumiru version
+      description: 'In the app: More → About → Client version.'
+      placeholder: v1.3.2
+    validations:
+      required: true
+
+  - type: input
+    id: server-version
+    attributes:
+      label: Suwayomi server version
+      description: 'In the app: More → About → Server version.'
+      placeholder: v2.1.1867
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Windows
+        - macOS
+        - Linux
+        - Web
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version
+      placeholder: 'e.g. Pixel 8, Android 15 or Fedora 44'
+    validations:
+      required: false
+
+  - type: textarea
+    id: debug-log
+    attributes:
+      label: Debug log
+      description: 'In the app: More → Settings → Copy debug log, then paste it here. Login tokens are hidden automatically.'
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recording
+      description: Drag images or a screen recording in here.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: I searched existing issues, including closed ones, and this is not a duplicate.
+          required: true
+        - label: "I am on the [latest version](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest)."
+          required: true
+        - label: "I checked the [troubleshooting guide](https://tsumiru.app/docs/guides/troubleshooting/)."
+          required: true
+        - label: This report was written by AI with no human review.

@@ -13,7 +13,9 @@ import '../../../../utils/crash/copy_crash_log.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/platform/current_platform_description.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../about/presentation/about/controllers/about_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -116,7 +118,19 @@ class _CopyCrashLogTile extends ConsumerWidget {
         },
       ),
       onTap: () async {
-        final log = crashLogForClipboard(await initCrashLog());
+        // Read the server version only if About already loaded it: initialising
+        // the auto-dispose provider here would fire a request to label a copy.
+        final serverVersion = ref.exists(aboutProvider)
+            ? ref.read(aboutProvider).value?.version
+            : null;
+        final packageInfo = ref.read(packageInfoProvider);
+        final header = crashLogHeader(
+          appVersion: packageInfo.version,
+          buildNumber: packageInfo.buildNumber,
+          serverVersion: serverVersion ?? 'unknown',
+          platform: currentPlatformDescription(),
+        );
+        final log = crashLogForClipboard(await initCrashLog(), header: header);
         if (!context.mounted) return;
         final toast = ref.read(toastProvider);
         if (log == null) {

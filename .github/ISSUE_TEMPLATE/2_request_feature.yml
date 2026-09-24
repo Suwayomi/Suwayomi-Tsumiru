@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement to Tsumiru
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        React with 👍 on issues you care about. We use reactions to see what matters most.
+        [Browse the most upvoted open issues](https://github.com/Suwayomi/Suwayomi-Tsumiru/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc)
+
+  - type: textarea
+    id: what-would-you-like
+    attributes:
+      label: What would you like?
+      description: Describe the change you want to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why? What problem does it solve?
+      description: What are you trying to do that Tsumiru makes hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-details
+    attributes:
+      label: Other details
+      description: Mockups, links, or anything else that helps explain it.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: I searched existing issues, including closed ones, and this is not a duplicate.
+          required: true
+        - label: This report was written by AI with no human review.

@@ -1,0 +1,90 @@
+name: AI trap
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request_target:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  ai-trap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const LABEL_NAME = 'needs-human-review';
+            const LABEL_COLOR = 'd93f0b';
+            const LABEL_DESC = 'Author confirmed no human review';
+            const COMMENT = "Thanks for opening this. The box saying it was written by AI with no human review is ticked, so we'll hold off until a person has checked it. If a human did review it, untick that box and this label will be removed.";
+
+            const TRAPS = [
+              'this report was written by ai with no human review.',
+              'this pull request was written by ai with no human review.',
+            ];
+
+            const item = context.payload.issue || context.payload.pull_request;
+            if (!item) return;
+
+            const body = item.body || '';
+
+            let ticked = false;
+            for (const line of body.split('\n')) {
+              const match = line.trim().match(/^-\s*\[([ xX])\]\s*(.+?)\s*$/);
+              if (!match) continue;
+              if (match[1].toLowerCase() !== 'x') continue;
+              const text = match[2].replace(/\s+/g, ' ').toLowerCase();
+              if (TRAPS.includes(text)) {
+                ticked = true;
+                break;
+              }
+            }
+
+            const labels = (item.labels || []).map((l) => (typeof l === 'string' ? l : l.name));
+            const hasLabel = labels.includes(LABEL_NAME);
+
+            const { owner, repo } = context.repo;
+
+            if (ticked && !hasLabel) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: LABEL_NAME });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: LABEL_NAME,
+                    color: LABEL_COLOR,
+                    description: LABEL_DESC,
+                  });
+                } catch (createError) {
+                  if (createError.status !== 422) throw createError;
+                }
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: item.number,
+                labels: [LABEL_NAME],
+              });
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: item.number,
+                body: COMMENT,
+              });
+            } else if (!ticked && hasLabel) {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: item.number,
+                name: LABEL_NAME,
+              });
+            }
