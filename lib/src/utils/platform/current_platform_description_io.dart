@@ -6,6 +6,14 @@
 
 import 'dart:io';
 
-/// Native implementation: e.g. `android 15`, `linux 7.2.3`, `macos 15.0`.
-String currentPlatformDescription() =>
-    '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+/// Native implementation: e.g. `android 15`, `linux (flatpak) 7.2.3`.
+String currentPlatformDescription() {
+  final env = Platform.environment;
+  final package = env.containsKey('FLATPAK_ID')
+      ? ' (flatpak)'
+      : env.containsKey('APPIMAGE')
+      ? ' (appimage)'
+      : '';
+  return '${Platform.operatingSystem}$package '
+      '${Platform.operatingSystemVersion}';
+}
