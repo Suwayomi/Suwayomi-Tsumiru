@@ -14,7 +14,7 @@
 
 <p align="center">A manga and webtoon reader for your Suwayomi server</p>
 
-> *Tsumiru* (積みる) is named after *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them.
+> *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look", since manga is something you look at.
 
 ## What it is
 
