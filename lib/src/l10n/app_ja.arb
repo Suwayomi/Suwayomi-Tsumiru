@@ -1874,7 +1874,7 @@
   "firstChapterNotification": "最初の章です",
   "loadingNextChapter": "次の章を読み込み中…",
   "loadingPreviousChapter": "前の章を読み込み中…",
-  "noMoreChaptersAhead": "これより後の章はありません",
+  "noMoreChaptersAhead": "次の章がありません",
   "noMoreChaptersBehind": "これより前の章はありません",
   "nextChapterLoaded": "読み込み完了：{chapterName}",
   "previousChapterLoaded": "読み込み完了：{chapterName}",

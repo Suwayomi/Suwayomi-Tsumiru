@@ -407,5 +407,6 @@
   "offlineStorageUsage": "Opslaggebruik",
   "updateProgressManualMarkRead": "Voortgang bijwerken wanneer gemarkeerd als gelezen",
   "downloadNextChaptersN": "{n, plural, one{Volgend hoofdstuk} other{Volgende {n} hoofdstukken}}",
-  "noOfChapters": "{count, plural, one{{count} hoofdstuk} other{{count} hoofdstukken}}"
+  "noOfChapters": "{count, plural, one{{count} hoofdstuk} other{{count} hoofdstukken}}",
+  "noMoreChaptersAhead": "Er is geen volgend hoofdstuk"
 }

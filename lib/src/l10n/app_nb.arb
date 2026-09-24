@@ -312,5 +312,6 @@
   "removeFromLibrary": "Fjern fra bibliotek",
   "offlineStorageUsage": "Lagringsbruk",
   "downloadNextChaptersN": "{n, plural, one{Neste kapittel} other{Neste {n} kapitler}}",
-  "noOfChapters": "{count, plural, one{{count} kapittel} other{{count} kapitler}}"
+  "noOfChapters": "{count, plural, one{{count} kapittel} other{{count} kapitler}}",
+  "noMoreChaptersAhead": "Det finnes ikke flere kapittel"
 }

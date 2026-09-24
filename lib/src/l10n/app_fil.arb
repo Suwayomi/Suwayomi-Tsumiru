@@ -385,5 +385,6 @@
   "offlineStorageUsage": "Paggamit ng storage",
   "updateProgressManualMarkRead": "I-update ang progress kapag namarka bilang nabasa na",
   "downloadNextChaptersN": "{n, plural, one{Sunod {n} na kabanata} other{Susunod na {n} mga kabanata}}",
-  "noOfChapters": "{count, plural, one{{count} kabanata} other{{count} na mga kabanata}}"
+  "noOfChapters": "{count, plural, one{{count} kabanata} other{{count} na mga kabanata}}",
+  "noMoreChaptersAhead": "Wala nang susunod na kabanata"
 }

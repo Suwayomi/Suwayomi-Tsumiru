@@ -805,5 +805,6 @@
   "offlineStorageUsage": "Penggunaan penyimpanan",
   "updateProgressManualMarkRead": "Kemajuan pembaruan saat ditandai sebagai telah dibaca",
   "downloadNextChaptersN": "{n, plural, other{berikutnya {n} chapter}}",
-  "noOfChapters": "{count, plural, other{{count} bab}}"
+  "noOfChapters": "{count, plural, other{{count} bab}}",
+  "noMoreChaptersAhead": "Tak ada bab selanjutnya"
 }

@@ -1608,5 +1608,6 @@
   "migrationHideWithoutUpdates": "புதிய அத்தியாயங்கள் இல்லாமல் உள்ளீடுகளை மறைக்கவும்",
   "notificationRestoreCompleteTitle": "மீட்டமை முடிந்தது",
   "offlineStorageUsage": "சேமிப்பக பயன்பாடு",
-  "updateProgressManualMarkRead": "படிக்கும்போது முன்னேற்றத்தைப் புதுப்பிக்கவும்"
+  "updateProgressManualMarkRead": "படிக்கும்போது முன்னேற்றத்தைப் புதுப்பிக்கவும்",
+  "noMoreChaptersAhead": "அடுத்த அத்தியாயம் இல்லை"
 }

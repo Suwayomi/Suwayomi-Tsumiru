@@ -601,7 +601,7 @@
     "description": "Loading text shown when loading previous chapter in continuous reading"
   },
   "@noMoreChaptersAhead": {
-    "description": "Notification text shown when user tries to scroll past the last chapter"
+    "description": "Shown at the end of the last chapter when no next chapter exists"
   },
   "@noMoreChaptersBehind": {
     "description": "Notification text shown when user tries to scroll past the first chapter"
@@ -2368,7 +2368,7 @@
   "firstChapterNotification": "This is the first chapter",
   "loadingNextChapter": "Loading next chapter...",
   "loadingPreviousChapter": "Loading previous chapter...",
-  "noMoreChaptersAhead": "No more chapters ahead",
+  "noMoreChaptersAhead": "There's no next chapter",
   "noMoreChaptersBehind": "No more chapters behind",
   "nextChapterLoaded": "Loaded: {chapterName}",
   "previousChapterLoaded": "Loaded: {chapterName}",

@@ -1220,5 +1220,6 @@
   "notificationRestoreCompleteTitle": "Ripristino completato",
   "offlineStorageUsage": "Archiviazione utilizzata",
   "updateProgressManualMarkRead": "Aggiorna il progresso quando segnato come letto",
-  "downloadNextChaptersN": "{n, plural, one{Prossimo capitolo} many{Prossimo {n} capitoli} other{Prossimo {n} capitoli}}"
+  "downloadNextChaptersN": "{n, plural, one{Prossimo capitolo} many{Prossimo {n} capitoli} other{Prossimo {n} capitoli}}",
+  "noMoreChaptersAhead": "Nessun capitolo successivo"
 }

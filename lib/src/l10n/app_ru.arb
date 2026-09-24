@@ -1228,5 +1228,6 @@
   "migrationHideWithoutUpdates": "Скрывать серии без новых глав",
   "notificationRestoreCompleteTitle": "Восстановление завершено",
   "offlineStorageUsage": "Использование хранилища",
-  "updateProgressManualMarkRead": "Обновлять прогресс, когда отмечено как «Прочитано»"
+  "updateProgressManualMarkRead": "Обновлять прогресс, когда отмечено как «Прочитано»",
+  "noMoreChaptersAhead": "Следующей главы нет"
 }

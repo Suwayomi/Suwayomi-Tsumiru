@@ -843,5 +843,6 @@
   "notificationRestoreCompleteTitle": "Restauración completada",
   "offlineStorageUsage": "Almacenamiento utilizado",
   "updateProgressManualMarkRead": "Actualizar el progreso al marcarlo como leído",
-  "downloadNextChaptersN": "{n, plural, one{Siguiente capítulo} many{Siguientes {n} capítulos} other{Siguientes {n} capítulos}}"
+  "downloadNextChaptersN": "{n, plural, one{Siguiente capítulo} many{Siguientes {n} capítulos} other{Siguientes {n} capítulos}}",
+  "noMoreChaptersAhead": "No hay ningún capítulo más"
 }

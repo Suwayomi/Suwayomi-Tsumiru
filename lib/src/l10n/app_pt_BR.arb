@@ -484,7 +484,7 @@
   "firstChapterNotification": "Este é o primeiro capítulo",
   "loadingNextChapter": "Carregando o próximo capítulo…",
   "loadingPreviousChapter": "Carregando o capítulo anterior…",
-  "noMoreChaptersAhead": "Não há mais capítulos à frente",
+  "noMoreChaptersAhead": "Não há próximo capítulo",
   "noMoreChaptersBehind": "Não há capítulos anteriores",
   "nextChapterLoaded": "Carregado: {chapterName}",
   "previousChapterLoaded": "Carregado: {chapterName}",

@@ -589,5 +589,6 @@
   "offlineStorageUsage": "저장공간 사용량",
   "updateProgressManualMarkRead": "읽음으로 표시될 때 진행상황 업데이트",
   "downloadNextChaptersN": "{n, plural, other{다음 {n}화}}",
-  "noOfChapters": "{count, plural, other{총 {count}화}}"
+  "noOfChapters": "{count, plural, other{총 {count}화}}",
+  "noMoreChaptersAhead": "다음 화가 없습니다"
 }

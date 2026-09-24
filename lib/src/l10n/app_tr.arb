@@ -956,5 +956,6 @@
   "searchingForUpdates": "Güncellemeler kontrol ediliyor",
   "offlineStorageUsage": "Depolama kullanımı",
   "updateProgressManualMarkRead": "Okundu olarak işaretlendiğinde ilerlemeyi güncelle",
-  "downloadNextChaptersN": "{n, plural, one{Sonraki bölüm} other{Sonraki {n} bölüm}}"
+  "downloadNextChaptersN": "{n, plural, one{Sonraki bölüm} other{Sonraki {n} bölüm}}",
+  "noMoreChaptersAhead": "Sonraki bölüm yok"
 }

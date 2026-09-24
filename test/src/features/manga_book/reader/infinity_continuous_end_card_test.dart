@@ -183,7 +183,7 @@ void main() {
           'the strip ends with no finish card, so the last page cannot '
           'scroll clear of the navigation bar and the bottom menu',
     );
-    expect(find.text('No more chapters ahead'), findsOneWidget);
+    expect(find.text("There's no next chapter"), findsOneWidget);
 
     final pageBottom = tester.getBottomLeft(find.byType(ServerImage).first).dy;
     expect(
@@ -204,7 +204,7 @@ void main() {
 
     expect(find.text('Finished'), findsOneWidget);
     expect(
-      find.text('No more chapters ahead'),
+      find.text("There's no next chapter"),
       findsNothing,
       reason: 'the end-of-manga note must not show while a chapter is ahead',
     );
@@ -218,7 +218,7 @@ void main() {
 
     expect(find.text('Finished'), findsOneWidget);
     expect(
-      find.text('No more chapters ahead'),
+      find.text("There's no next chapter"),
       findsNothing,
       reason:
           'a null pair means the list has not loaded, not that the strip '
@@ -247,7 +247,7 @@ void main() {
 
       final card = find.text('Finished');
       expect(card, findsOneWidget);
-      expect(find.text('No more chapters ahead'), findsOneWidget);
+      expect(find.text("There's no next chapter"), findsOneWidget);
 
       final page = find.byType(ServerImage).first;
       if (reverse) {

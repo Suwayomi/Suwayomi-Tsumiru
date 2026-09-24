@@ -1333,5 +1333,6 @@
   "migrationHideWithoutUpdates": "إخفاء الإدخالات بدون فصول أحدث",
   "notificationRestoreCompleteTitle": "اكتملت الاستعادة",
   "offlineStorageUsage": "التخزين",
-  "updateProgressManualMarkRead": "تحديث التقدم عند وضع علامة عليه كمقروء"
+  "updateProgressManualMarkRead": "تحديث التقدم عند وضع علامة عليه كمقروء",
+  "noMoreChaptersAhead": "لا يوجدُ فصل تالي"
 }

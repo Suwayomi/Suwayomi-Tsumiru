@@ -491,5 +491,6 @@
   "selectNext10": "Selecionar os Proximos 10",
   "@selectNext10": {
     "description": "Toast Text for selecting next 10 chapters"
-  }
+  },
+  "noMoreChaptersAhead": "Não há próximo capítulo"
 }

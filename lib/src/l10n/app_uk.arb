@@ -1191,5 +1191,6 @@
   "showUpdateProgressBanner": "Показувати оновлений банер прогресу",
   "notificationRestoreCompleteTitle": "Відновлення завершено",
   "offlineStorageUsage": "Використання сховища",
-  "updateProgressManualMarkRead": "Оновити прогрес коли главу помічено прочитаною"
+  "updateProgressManualMarkRead": "Оновити прогрес коли главу помічено прочитаною",
+  "noMoreChaptersAhead": "Наступної частини немає"
 }

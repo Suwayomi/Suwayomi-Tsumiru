@@ -1227,5 +1227,6 @@
   "notificationRestoreCompleteTitle": "Restauration terminée",
   "migrationCompleted": "Migration terminée",
   "offlineStorageUsage": "Utilisation du stockage",
-  "updateProgressManualMarkRead": "Mise à jour de la progression quand marqué comme lu"
+  "updateProgressManualMarkRead": "Mise à jour de la progression quand marqué comme lu",
+  "noMoreChaptersAhead": "C'était le dernier chapitre"
 }

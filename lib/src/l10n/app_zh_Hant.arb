@@ -2331,7 +2331,7 @@
   "@loadingPreviousChapter": {
     "description": "Loading text shown when loading previous chapter in continuous reading"
   },
-  "noMoreChaptersAhead": "前方沒有更多章節",
+  "noMoreChaptersAhead": "以下空白",
   "@noMoreChaptersAhead": {
     "description": "Notification text shown when user tries to scroll past the last chapter"
   },

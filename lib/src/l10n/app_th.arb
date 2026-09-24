@@ -393,5 +393,6 @@
   "offlineStorageUsage": "การใช้พื้นที่เก็บข้อมูล",
   "updateProgressManualMarkRead": "อัปเดตความคืบหน้าเมื่อทำเครื่องหมายว่าอ่านแล้ว",
   "downloadNextChaptersN": "{n, plural, other{{n} ตอนถัดไป}}",
-  "noOfChapters": "{count, plural, other{{count} ตอน}}"
+  "noOfChapters": "{count, plural, other{{count} ตอน}}",
+  "noMoreChaptersAhead": "ไม่มีตอนต่อไป"
 }

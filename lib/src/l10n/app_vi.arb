@@ -1637,5 +1637,6 @@
   "notificationRestoreCompleteTitle": "Khôi phục hoàn tất",
   "offlineStorageUsage": "Số liệu sử dụng kho lưu trữ",
   "updateProgressManualMarkRead": "Cập nhật tiến trình khi được đánh dấu là đã đọc",
-  "downloadNextChaptersN": "{n, plural, other{{n} Chương tiếp theo}}"
+  "downloadNextChaptersN": "{n, plural, other{{n} Chương tiếp theo}}",
+  "noMoreChaptersAhead": "Không có chương tiếp theo"
 }
