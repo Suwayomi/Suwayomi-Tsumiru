@@ -226,7 +226,10 @@ GraphQLClient graphQlClient(Ref ref) {
         );
         return await ref
             .read(authCoordinatorProvider.notifier)
-            .refreshUiAccessToken(gqlClient: rawClient);
+            .refreshUiAccessToken(
+              gqlClient: rawClient,
+              trigger: 'auth-link',
+            );
       },
       onNeedsReauth: () {
         if (ref.read(hasStoredCredentialsProvider)) {

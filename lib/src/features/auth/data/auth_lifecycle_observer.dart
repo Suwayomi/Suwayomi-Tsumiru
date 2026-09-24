@@ -20,9 +20,11 @@ class AuthLifecycleObserver with WidgetsBindingObserver {
     if (state != AppLifecycleState.resumed) return;
     final coord = _ref.read(authCoordinatorProvider.notifier);
     final gql = _ref.read(unauthenticatedGraphQlClientProvider);
-    coord.refreshUiAccessTokenIfDue(gqlClient: gql).catchError((Object e) {
-      debugPrint('lifecycle resume refresh failed: $e');
-      return null;
-    });
+    coord
+        .refreshUiAccessTokenIfDue(gqlClient: gql, trigger: 'resume')
+        .catchError((Object e) {
+          debugPrint('lifecycle resume refresh failed: $e');
+          return null;
+        });
   }
 }
