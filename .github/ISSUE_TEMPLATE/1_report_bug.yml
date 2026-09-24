@@ -47,7 +47,8 @@ body:
         - iOS
         - Windows
         - macOS
-        - Linux
+        - Linux (AppImage)
+        - Linux (Flatpak)
         - Web
     validations:
       required: true
