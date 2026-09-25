@@ -118,4 +118,40 @@ void main() {
     expect(find.textContaining('Connected'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  group('confirmLanServer', () {
+    http.Client respond(int status, String body, [Map<String, String>? h]) =>
+        MockClient((_) async => http.Response(body, status, headers: h ?? {}));
+
+    test('keeps a server that answers as Suwayomi, with its name', () async {
+      final s = await confirmLanServer(
+        'http://h:4568',
+        client: respond(
+          200,
+          '{"data":{"aboutServer":{"name":"Suwayomi-Server","version":"1.0.0"},'
+          '"downloadStatus":{"__typename":"DownloadStatus"}}}',
+        ),
+      );
+      expect(s?.url, 'http://h:4568');
+      expect(s?.name, 'Suwayomi-Server');
+    });
+
+    test('keeps a server that challenges for Basic auth', () async {
+      final s = await confirmLanServer(
+        'http://h:4567',
+        client: respond(401, '', {'www-authenticate': 'Basic realm="x"'}),
+      );
+      expect(s?.url, 'http://h:4567');
+    });
+
+    test('drops something that is not Suwayomi', () async {
+      expect(
+        await confirmLanServer(
+          'http://h:4569',
+          client: respond(404, '<html>printer</html>'),
+        ),
+        isNull,
+      );
+    });
+  });
 }

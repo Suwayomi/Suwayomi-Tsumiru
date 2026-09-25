@@ -419,32 +419,45 @@ final onboardingHttpClientProvider = Provider<http.Client Function()>(
   (Ref ref) => http.Client.new,
 );
 
+/// Keeps a found host:port only if it answers as Suwayomi, or challenges for
+/// Basic auth (such a server can't prove what it is before sign-in, and Test
+/// connection handles its login). Closes [client].
+@visibleForTesting
+Future<DiscoveredServer?> confirmLanServer(
+  String url, {
+  required http.Client client,
+  Map<String, String>? extraHeaders,
+}) async {
+  try {
+    final result = await probeServer(
+      url,
+      client: client,
+      extraHeaders: extraHeaders,
+    );
+    if (!result.confirmed && !result.basicGated) return null;
+    return DiscoveredServer(
+      url: url,
+      name: result.serverName,
+      version: result.serverVersion,
+    );
+  } catch (_) {
+    return null;
+  } finally {
+    client.close();
+  }
+}
+
 /// The LAN sweep behind "Search my network". Overridable in widget tests so the
 /// step can be driven without touching the network.
 final lanServerScanProvider =
     Provider<Future<List<DiscoveredServer>> Function()>(
       (ref) =>
           () => discoverServersOnLan(
-            confirm: (url) async {
-              final client = ref.read(onboardingHttpClientProvider)();
-              try {
-                final result = await probeServer(
-                  url,
-                  client: client,
-                  extraHeaders: ref.read(customHttpHeadersProvider).value,
-                );
-                if (!result.confirmed) return null;
-                return DiscoveredServer(
-                  url: url,
-                  name: result.serverName,
-                  version: result.serverVersion,
-                );
-              } catch (_) {
-                return null;
-              } finally {
-                client.close();
-              }
-            },
+            confirm: (url) => confirmLanServer(
+              url,
+              client: ref.read(onboardingHttpClientProvider)(),
+              extraHeaders: ref.read(customHttpHeadersProvider).value,
+            ),
           ),
     );
 
