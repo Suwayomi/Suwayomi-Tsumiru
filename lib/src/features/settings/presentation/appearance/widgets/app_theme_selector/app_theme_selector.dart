@@ -89,7 +89,7 @@ class ThemeSelector extends HookConsumerWidget {
               if (canScroll) ...[
                 arrow(
                   icon: Icons.chevron_left_rounded,
-                  tooltip: 'Previous',
+                  tooltip: context.l10n.back,
                   enabled: offset > 0,
                   onPressed: () => scrollBy(-1),
                 ),
