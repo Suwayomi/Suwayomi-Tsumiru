@@ -15,20 +15,20 @@ import '../../widgets/custom_circular_progress_indicator.dart';
 /// Custom): theme-kit's original `linear-gradient(135deg, accent, accent2)`,
 /// 135° == top-left → bottom-right, accent first.
 LinearGradient schemeBrandGradient(ColorScheme cs) => LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [cs.primary, cs.secondary],
-    );
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [cs.primary, cs.secondary],
+);
 
 /// The brand glow. Mirrors theme-kit `--glow` (accent at ~35%) as a soft shadow.
 List<BoxShadow> brandGlow(ColorScheme cs) => [
-      BoxShadow(
-        color: cs.primary.withValues(alpha: 0.35),
-        blurRadius: 22,
-        spreadRadius: -2,
-        offset: const Offset(0, 5),
-      ),
-    ];
+  BoxShadow(
+    color: cs.primary.withValues(alpha: 0.35),
+    blurRadius: 22,
+    spreadRadius: -2,
+    offset: const Offset(0, 5),
+  ),
+];
 
 /// The active theme's `--grad` and `--on-accent`, registered by
 /// [buildAppTheme]. Read this instead of inlining a gradient — the light themes
@@ -43,9 +43,9 @@ class BrandColors extends ThemeExtension<BrandColors> {
 
   @override
   BrandColors copyWith({Gradient? gradient, Color? onGradient}) => BrandColors(
-        gradient: gradient ?? this.gradient,
-        onGradient: onGradient ?? this.onGradient,
-      );
+    gradient: gradient ?? this.gradient,
+    onGradient: onGradient ?? this.onGradient,
+  );
 
   @override
   BrandColors lerp(ThemeExtension<BrandColors>? other, double t) {
@@ -56,16 +56,21 @@ class BrandColors extends ThemeExtension<BrandColors> {
     );
   }
 
-  static BrandColors of(BuildContext context) =>
-      Theme.of(context).extension<BrandColors>()!;
+  static BrandColors of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<BrandColors>() ??
+        BrandColors(
+          gradient: schemeBrandGradient(theme.colorScheme),
+          onGradient: const Color(0xFF0B0D1A),
+        );
+  }
 }
 
 /// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so
 /// the chrome reads uniform. Near-opaque — 0.9 dark / 0.95 light; a
 /// lower alpha washes out over white webtoon pages.
-Color readerNavSurface(ColorScheme cs) => cs.surface.withValues(
-      alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95,
-    );
+Color readerNavSurface(ColorScheme cs) =>
+    cs.surface.withValues(alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95);
 
 /// A lighter, more vibrant accent for text/outline actions (links, "Uninstall").
 Color brandBrightAccent(ColorScheme cs) =>
