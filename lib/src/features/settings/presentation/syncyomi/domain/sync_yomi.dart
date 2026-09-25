@@ -4,11 +4,25 @@ const kSyncYomiIntervalManual = 'PT0S';
 
 const kSyncYomiIntervalOptions = <String>[
   kSyncYomiIntervalManual,
+  'PT30M',
   'PT1H',
+  'PT3H',
   'PT6H',
   'PT12H',
   'PT24H',
+  'PT168H',
 ];
+
+const _kSyncYomiIntervalLabels = <String, SyncYomiIntervalLabel>{
+  kSyncYomiIntervalManual: SyncYomiIntervalLabel.manualOnly,
+  'PT30M': SyncYomiIntervalLabel.every30Minutes,
+  'PT1H': SyncYomiIntervalLabel.everyHour,
+  'PT3H': SyncYomiIntervalLabel.every3Hours,
+  'PT6H': SyncYomiIntervalLabel.every6Hours,
+  'PT12H': SyncYomiIntervalLabel.every12Hours,
+  'PT24H': SyncYomiIntervalLabel.daily,
+  'PT168H': SyncYomiIntervalLabel.weekly,
+};
 
 final _httpScheme = RegExp(r'^https?://', caseSensitive: false);
 final _trailingSlashes = RegExp(r'/+$');
@@ -83,10 +97,13 @@ SyncYomiStatusView syncYomiStatusView({
 
 enum SyncYomiIntervalLabel {
   manualOnly,
+  every30Minutes,
   everyHour,
+  every3Hours,
   every6Hours,
   every12Hours,
-  everyDay,
+  daily,
+  weekly,
   everyNHours,
   everyNMinutes,
   verbatim,
@@ -100,26 +117,24 @@ class SyncYomiIntervalDescription {
   final String? raw;
 }
 
+/// The offered interval whose length equals [value]'s, or null when the picker
+/// has no such option. Matched on duration, so a server sending P1D still
+/// lands on PT24H.
+String? syncYomiIntervalOption(String value) {
+  final duration = parseIsoDuration(value);
+  if (duration == null) return null;
+  for (final option in kSyncYomiIntervalOptions) {
+    if (parseIsoDuration(option) == duration) return option;
+  }
+  return null;
+}
+
 /// How to word a stored interval. A value the picker doesn't offer came from
 /// another client, so it is read out in whole hours or whole minutes.
 SyncYomiIntervalDescription describeSyncYomiInterval(String value) {
-  switch (value) {
-    case 'PT0S':
-      return const SyncYomiIntervalDescription(
-        SyncYomiIntervalLabel.manualOnly,
-      );
-    case 'PT1H':
-      return const SyncYomiIntervalDescription(SyncYomiIntervalLabel.everyHour);
-    case 'PT6H':
-      return const SyncYomiIntervalDescription(
-        SyncYomiIntervalLabel.every6Hours,
-      );
-    case 'PT12H':
-      return const SyncYomiIntervalDescription(
-        SyncYomiIntervalLabel.every12Hours,
-      );
-    case 'PT24H':
-      return const SyncYomiIntervalDescription(SyncYomiIntervalLabel.everyDay);
+  final option = syncYomiIntervalOption(value);
+  if (option != null) {
+    return SyncYomiIntervalDescription(_kSyncYomiIntervalLabels[option]!);
   }
   final duration = parseIsoDuration(value);
   if (duration == null) {
@@ -141,3 +156,43 @@ SyncYomiIntervalDescription describeSyncYomiInterval(String value) {
           count: duration.inMinutes,
         );
 }
+
+enum SyncYomiStep {
+  starting,
+  creatingBackup,
+  downloading,
+  merging,
+  uploading,
+  restoring,
+  unknown,
+}
+
+/// Which step of a running sync the server reports. Anything this build does
+/// not know reads as [SyncYomiStep.unknown].
+SyncYomiStep syncYomiStep(String? state) => switch (state) {
+  'STARTED' => SyncYomiStep.starting,
+  'CREATING_BACKUP' => SyncYomiStep.creatingBackup,
+  'DOWNLOADING' => SyncYomiStep.downloading,
+  'MERGING' => SyncYomiStep.merging,
+  'UPLOADING' => SyncYomiStep.uploading,
+  'RESTORING' => SyncYomiStep.restoring,
+  _ => SyncYomiStep.unknown,
+};
+
+/// One row of the Sync data setting, named after the server flag it writes.
+enum SyncYomiDataKind { manga, chapters, categories, history, tracking }
+
+/// The data kinds a sync includes, in the order the dialog lists them.
+List<SyncYomiDataKind> enabledSyncYomiData({
+  required bool manga,
+  required bool chapters,
+  required bool categories,
+  required bool history,
+  required bool tracking,
+}) => [
+  if (manga) SyncYomiDataKind.manga,
+  if (chapters) SyncYomiDataKind.chapters,
+  if (categories) SyncYomiDataKind.categories,
+  if (history) SyncYomiDataKind.history,
+  if (tracking) SyncYomiDataKind.tracking,
+];

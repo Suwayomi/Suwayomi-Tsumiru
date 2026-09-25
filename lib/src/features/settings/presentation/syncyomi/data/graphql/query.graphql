@@ -30,6 +30,16 @@ mutation UpdateSyncYomiInterval($syncInterval: Duration!) {
   }
 }
 
+mutation UpdateSyncYomiData($syncDataManga: Boolean!, $syncDataChapters: Boolean!, $syncDataCategories: Boolean!, $syncDataHistory: Boolean!, $syncDataTracking: Boolean!) {
+  setSettings(
+    input: {settings: {syncDataManga: $syncDataManga, syncDataChapters: $syncDataChapters, syncDataCategories: $syncDataCategories, syncDataHistory: $syncDataHistory, syncDataTracking: $syncDataTracking}}
+  ) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}
+
 mutation StartSync {
   startSync(input: {}) {
     result

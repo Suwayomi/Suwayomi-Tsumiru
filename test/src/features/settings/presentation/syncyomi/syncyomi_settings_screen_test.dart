@@ -24,6 +24,11 @@ Fragment$SettingsDto _settings({
   String host = '',
   String apiKey = '',
   String interval = 'PT0S',
+  bool dataManga = false,
+  bool dataChapters = false,
+  bool dataCategories = false,
+  bool dataHistory = false,
+  bool dataTracking = false,
 }) => Fragment$SettingsDto(
   backupInterval: 0,
   backupPath: '',
@@ -57,6 +62,11 @@ Fragment$SettingsDto _settings({
   autoDownloadNewChapters: false,
   autoDownloadNewChaptersLimit: 0,
   excludeEntryWithUnreadChapters: false,
+  syncDataCategories: dataCategories,
+  syncDataChapters: dataChapters,
+  syncDataHistory: dataHistory,
+  syncDataManga: dataManga,
+  syncDataTracking: dataTracking,
   syncInterval: interval,
   syncYomiApiKey: apiKey,
   syncYomiEnabled: enabled,
@@ -196,10 +206,40 @@ void main() {
     expect(find.text('Host'), findsOneWidget);
     expect(find.text('API key'), findsOneWidget);
     expect(find.text('Sync interval'), findsOneWidget);
+    expect(find.text('Sync data'), findsOneWidget);
+    expect(find.text('Nothing selected'), findsOneWidget);
     expect(find.text('Sync now'), findsOneWidget);
     expect(find.text('Not set'), findsNWidgets(2));
     expect(find.text('Manual only'), findsOneWidget);
     expect(find.text('Never synced'), findsOneWidget);
+  });
+
+  testWidgets('Sync data lists what a sync carries and saves all five', (
+    tester,
+  ) async {
+    final harness = _Harness(
+      settings: _settings(dataManga: true, dataHistory: true),
+    );
+    await _pump(tester, harness);
+    expect(find.text('Include: Library entries, History'), findsOneWidget);
+
+    await tester.tap(find.text('Sync data'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CheckboxListTile), findsNWidgets(5));
+
+    await tester.tap(find.text('Tracking'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(harness.server.writes, ['UpdateSyncYomiData']);
+    expect(harness.server.variables.last, {
+      'syncDataManga': true,
+      'syncDataChapters': false,
+      'syncDataCategories': false,
+      'syncDataHistory': true,
+      'syncDataTracking': true,
+    });
   });
 
   testWidgets('Sync now is disabled while the switch, host or key is missing', (
@@ -282,20 +322,20 @@ void main() {
   testWidgets('the interval picker keeps an interval it does not offer', (
     tester,
   ) async {
-    final harness = _Harness(settings: _settings(interval: 'PT3H'));
+    final harness = _Harness(settings: _settings(interval: 'PT2H'));
     await _pump(tester, harness);
 
-    expect(find.text('Every 3 hours'), findsOneWidget);
+    expect(find.text('Every 2 hours'), findsOneWidget);
     await tester.tap(find.text('Sync interval'));
     await tester.pumpAndSettle();
-    expect(find.text('Every 3 hours'), findsWidgets);
-    expect(find.text('Every 6 hours'), findsOneWidget);
+    expect(find.text('Every 2 hours'), findsWidgets);
+    expect(find.text('Every 3 hours'), findsOneWidget);
     expect(find.text('Manual only'), findsOneWidget);
 
-    await tester.tap(find.text('Every 6 hours'));
+    await tester.tap(find.text('Every 3 hours'));
     await tester.pumpAndSettle();
     expect(harness.server.writes, ['UpdateSyncYomiInterval']);
-    expect(harness.server.variables.last['syncInterval'], 'PT6H');
+    expect(harness.server.variables.last['syncInterval'], 'PT3H');
   });
 
   testWidgets('the status line follows the last sync state', (tester) async {
@@ -340,7 +380,7 @@ void main() {
       ),
       settle: false,
     );
-    expect(find.text('Syncing…'), findsOneWidget);
+    expect(find.text('Syncing: Downloading'), findsOneWidget);
     // The poll timer must not outlive the screen.
     await tester.pumpWidget(const SizedBox());
   });

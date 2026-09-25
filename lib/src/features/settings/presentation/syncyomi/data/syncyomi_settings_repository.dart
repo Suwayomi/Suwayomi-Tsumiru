@@ -81,6 +81,38 @@ class SyncYomiSettingsRepository {
     );
   }
 
+  Future<SettingsDto?> updateSyncData({
+    required bool manga,
+    required bool chapters,
+    required bool categories,
+    required bool history,
+    required bool tracking,
+  }) {
+    Future<SettingsDto?> legacy() => ferryClient
+        .mutate$UpdateSyncYomiData(
+          Options$Mutation$UpdateSyncYomiData(
+            variables: Variables$Mutation$UpdateSyncYomiData(
+              syncDataManga: manga,
+              syncDataChapters: chapters,
+              syncDataCategories: categories,
+              syncDataHistory: history,
+              syncDataTracking: tracking,
+            ),
+          ),
+        )
+        .getData((data) => data.setSettings.settings);
+    return routing.update(
+      Input$PartialUserSettingsTypeInput(
+        syncDataManga: manga,
+        syncDataChapters: chapters,
+        syncDataCategories: categories,
+        syncDataHistory: history,
+        syncDataTracking: tracking,
+      ),
+      legacy,
+    );
+  }
+
   Future<Enum$StartSyncResult> startSync() async {
     final result = await ferryClient
         .mutate$StartSync(Options$Mutation$StartSync())

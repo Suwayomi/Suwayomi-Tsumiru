@@ -28,6 +28,7 @@ import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../domain/category/category_model.dart';
 import '../../domain/library_group.dart';
 import '../category/controller/edit_category_controller.dart';
@@ -151,6 +152,13 @@ class LibraryScreen extends HookConsumerWidget {
 }
 
 // ─────────────────── shared pieces ───────────────────────────────────────────
+
+/// Re-reads the library once a SyncYomi sync this app started or watched run
+/// finishes: the sync may have added entries or moved them between categories.
+void _refreshLibraryAfterSync(WidgetRef ref) {
+  ref.invalidate(libraryMangaListProvider);
+  ref.invalidate(categoryControllerProvider);
+}
 
 /// Filter/sort/display organizer button: end-drawer on tablets, bottom sheet
 /// on phones.
@@ -352,6 +360,9 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                           icon: const Icon(Icons.search_rounded),
                         ),
                         _organizerButton(),
+                        SyncYomiSyncButton(
+                          onSynced: () => _refreshLibraryAfterSync(ref),
+                        ),
                         Builder(
                           builder: (context) {
                             return UpdateStatusPopupMenu(
@@ -498,6 +509,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                         : _LibraryTitle(sections: _categorySections(data)),
                     actions: [
                       _organizerButton(),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
                       Builder(
                         builder: (context) {
                           return UpdateStatusPopupMenu(
@@ -708,6 +722,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                         icon: const Icon(Icons.swap_horiz_rounded),
                       ),
                       _organizerButton(),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
                     ],
             ),
             endDrawerEnableOpenDragGesture: false,
@@ -834,7 +851,12 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                     title: isSearchBarHidden
                         ? const _LibrarySearchBar(inAppBar: true)
                         : _LibraryTitle(sections: _groupSections(tabs)),
-                    actions: [_organizerButton()],
+                    actions: [
+                      _organizerButton(),
+                      SyncYomiSyncButton(
+                        onSynced: () => _refreshLibraryAfterSync(ref),
+                      ),
+                    ],
                   ),
                   SliverToBoxAdapter(
                     child: KeyedSubtree(

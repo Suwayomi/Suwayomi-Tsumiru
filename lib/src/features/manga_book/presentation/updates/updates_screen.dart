@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter/graphql/__generated__/fragment.graphql.dart';
@@ -438,6 +439,7 @@ class UpdatesScreen extends HookConsumerWidget {
               // which is where Mihon keeps it.
               title: Text(context.l10n.updates),
               actions: [
+                SyncYomiSyncButton(onSynced: resetList),
                 IconButton(
                   icon: const Icon(Icons.filter_list_rounded),
                   tooltip: context.l10n.filter,

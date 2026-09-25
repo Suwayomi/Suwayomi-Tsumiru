@@ -75,8 +75,16 @@ void main() {
 
     test('values the picker offers keep their own wording', () {
       expect(
+        describeSyncYomiInterval('PT30M').label,
+        SyncYomiIntervalLabel.every30Minutes,
+      );
+      expect(
         describeSyncYomiInterval('PT1H').label,
         SyncYomiIntervalLabel.everyHour,
+      );
+      expect(
+        describeSyncYomiInterval('PT3H').label,
+        SyncYomiIntervalLabel.every3Hours,
       );
       expect(
         describeSyncYomiInterval('PT6H').label,
@@ -88,14 +96,29 @@ void main() {
       );
       expect(
         describeSyncYomiInterval('PT24H').label,
-        SyncYomiIntervalLabel.everyDay,
+        SyncYomiIntervalLabel.daily,
+      );
+      expect(
+        describeSyncYomiInterval('PT168H').label,
+        SyncYomiIntervalLabel.weekly,
+      );
+    });
+
+    test('another spelling of an offered interval matches it', () {
+      expect(
+        describeSyncYomiInterval('P1D').label,
+        SyncYomiIntervalLabel.daily,
+      );
+      expect(
+        describeSyncYomiInterval('PT60M').label,
+        SyncYomiIntervalLabel.everyHour,
       );
     });
 
     test('an hour multiple the picker does not offer reads out in hours', () {
-      final threeHours = describeSyncYomiInterval('PT3H');
-      expect(threeHours.label, SyncYomiIntervalLabel.everyNHours);
-      expect(threeHours.count, 3);
+      final twoHours = describeSyncYomiInterval('PT2H');
+      expect(twoHours.label, SyncYomiIntervalLabel.everyNHours);
+      expect(twoHours.count, 2);
     });
 
     test('a part hour reads out in minutes', () {
@@ -115,6 +138,70 @@ void main() {
       final verbatim = describeSyncYomiInterval('weekly');
       expect(verbatim.label, SyncYomiIntervalLabel.verbatim);
       expect(verbatim.raw, 'weekly');
+    });
+  });
+
+  group('syncYomiIntervalOption', () {
+    test('matches an offered interval by its length, not its spelling', () {
+      expect(syncYomiIntervalOption('PT24H'), 'PT24H');
+      expect(syncYomiIntervalOption('P1D'), 'PT24H');
+      expect(syncYomiIntervalOption('PT168H'), 'PT168H');
+      expect(syncYomiIntervalOption('PT0S'), kSyncYomiIntervalManual);
+      expect(syncYomiIntervalOption('PT60M'), 'PT1H');
+    });
+
+    test('an interval the picker does not offer has no match', () {
+      expect(syncYomiIntervalOption('PT2H'), isNull);
+      expect(syncYomiIntervalOption('PT90M'), isNull);
+      expect(syncYomiIntervalOption('weekly'), isNull);
+    });
+  });
+
+  group('syncYomiStep', () {
+    test('names each step the server reports', () {
+      expect(syncYomiStep('STARTED'), SyncYomiStep.starting);
+      expect(syncYomiStep('CREATING_BACKUP'), SyncYomiStep.creatingBackup);
+      expect(syncYomiStep('DOWNLOADING'), SyncYomiStep.downloading);
+      expect(syncYomiStep('MERGING'), SyncYomiStep.merging);
+      expect(syncYomiStep('UPLOADING'), SyncYomiStep.uploading);
+      expect(syncYomiStep('RESTORING'), SyncYomiStep.restoring);
+    });
+
+    test('a state this build does not know is unknown', () {
+      expect(syncYomiStep('COMPRESSING'), SyncYomiStep.unknown);
+      expect(syncYomiStep(null), SyncYomiStep.unknown);
+    });
+  });
+
+  group('enabledSyncYomiData', () {
+    test('lists the kinds that are on, in dialog order', () {
+      expect(
+        enabledSyncYomiData(
+          manga: true,
+          chapters: false,
+          categories: true,
+          history: false,
+          tracking: true,
+        ),
+        [
+          SyncYomiDataKind.manga,
+          SyncYomiDataKind.categories,
+          SyncYomiDataKind.tracking,
+        ],
+      );
+    });
+
+    test('nothing on is an empty list', () {
+      expect(
+        enabledSyncYomiData(
+          manga: false,
+          chapters: false,
+          categories: false,
+          history: false,
+          tracking: false,
+        ),
+        isEmpty,
+      );
     });
   });
 

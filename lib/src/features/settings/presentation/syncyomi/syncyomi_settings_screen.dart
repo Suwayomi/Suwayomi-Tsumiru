@@ -1,18 +1,15 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../account/domain/account_access.dart';
@@ -21,6 +18,7 @@ import '../../data/user_settings.dart';
 import '../../domain/settings/settings.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
+import 'syncyomi_sync.dart';
 import 'widgets/sync_yomi_host_dialog.dart';
 
 /// Wording for a stored interval. Values the picker doesn't offer come from
@@ -30,10 +28,13 @@ String syncYomiIntervalLabel(BuildContext context, String value) {
   final l10n = context.l10n;
   return switch (description.label) {
     SyncYomiIntervalLabel.manualOnly => l10n.offlineManualOnly,
+    SyncYomiIntervalLabel.every30Minutes => l10n.syncYomiEvery30Minutes,
     SyncYomiIntervalLabel.everyHour => l10n.syncYomiEveryHour,
+    SyncYomiIntervalLabel.every3Hours => l10n.syncYomiEvery3Hours,
     SyncYomiIntervalLabel.every6Hours => l10n.syncYomiEvery6Hours,
     SyncYomiIntervalLabel.every12Hours => l10n.syncYomiEvery12Hours,
-    SyncYomiIntervalLabel.everyDay => l10n.syncYomiEveryDay,
+    SyncYomiIntervalLabel.daily => l10n.syncYomiDaily,
+    SyncYomiIntervalLabel.weekly => l10n.syncYomiWeekly,
     SyncYomiIntervalLabel.everyNHours => l10n.syncYomiEveryNHours(
       description.count,
     ),
@@ -42,6 +43,25 @@ String syncYomiIntervalLabel(BuildContext context, String value) {
     ),
     SyncYomiIntervalLabel.verbatim => description.raw ?? value,
   };
+}
+
+String _syncYomiDataLabel(BuildContext context, SyncYomiDataKind kind) {
+  final l10n = context.l10n;
+  return switch (kind) {
+    SyncYomiDataKind.manga => l10n.syncYomiSyncDataManga,
+    SyncYomiDataKind.chapters => l10n.syncYomiSyncDataChapters,
+    SyncYomiDataKind.categories => l10n.syncYomiSyncDataCategories,
+    SyncYomiDataKind.history => l10n.syncYomiSyncDataHistory,
+    SyncYomiDataKind.tracking => l10n.syncYomiSyncDataTracking,
+  };
+}
+
+/// The Sync data subtitle: what a sync will carry, or that it carries nothing.
+String syncYomiDataSummary(BuildContext context, List<SyncYomiDataKind> kinds) {
+  if (kinds.isEmpty) return context.l10n.syncYomiSyncDataNone;
+  return context.l10n.syncYomiSyncDataInclude(
+    kinds.map((kind) => _syncYomiDataLabel(context, kind)).join(', '),
+  );
 }
 
 class SyncYomiSettingsScreen extends ConsumerWidget {
@@ -74,6 +94,14 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
         if (settings == null) {
           return Emoticons(title: l10n.noPropFound(l10n.syncyomi));
         }
+        final intervalOption = syncYomiIntervalOption(settings.syncInterval);
+        final syncData = enabledSyncYomiData(
+          manga: settings.syncDataManga,
+          chapters: settings.syncDataChapters,
+          categories: settings.syncDataCategories,
+          history: settings.syncDataHistory,
+          tracking: settings.syncDataTracking,
+        );
         return ListView(
           children: [
             SettingsPropTile(
@@ -125,18 +153,55 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
                       context: context,
                       builder: (context) => RadioListPopup<String>(
                         title: l10n.syncYomiSyncInterval,
+                        // Matched on duration, so P1D reads as the PT24H option
+                        // rather than being offered as a second "Daily" row.
                         optionList: [
                           ...kSyncYomiIntervalOptions,
-                          if (!kSyncYomiIntervalOptions.contains(
-                            settings.syncInterval,
-                          ))
-                            settings.syncInterval,
+                          if (intervalOption == null) settings.syncInterval,
                         ],
                         getOptionTitle: (value) =>
                             syncYomiIntervalLabel(context, value),
-                        value: settings.syncInterval,
+                        value: intervalOption ?? settings.syncInterval,
                         onChange: (value) {
                           _save(ref, () => repository.updateInterval(value));
+                          Navigator.pop(context);
+                        },
+                      ),
+                    )
+                  : null,
+            ),
+            ListTile(
+              enabled: canEdit,
+              title: Text(l10n.syncYomiSyncData),
+              subtitle: Text(syncYomiDataSummary(context, syncData)),
+              onTap: canEdit
+                  ? () => showDialog<void>(
+                      context: context,
+                      builder: (context) => MultiSelectPopup<SyncYomiDataKind>(
+                        title: l10n.syncYomiSyncData,
+                        optionList: SyncYomiDataKind.values,
+                        values: syncData,
+                        getOptionTitle: (kind) =>
+                            _syncYomiDataLabel(context, kind),
+                        onChange: (selected) {
+                          _save(
+                            ref,
+                            () => repository.updateSyncData(
+                              manga: selected.contains(SyncYomiDataKind.manga),
+                              chapters: selected.contains(
+                                SyncYomiDataKind.chapters,
+                              ),
+                              categories: selected.contains(
+                                SyncYomiDataKind.categories,
+                              ),
+                              history: selected.contains(
+                                SyncYomiDataKind.history,
+                              ),
+                              tracking: selected.contains(
+                                SyncYomiDataKind.tracking,
+                              ),
+                            ),
+                          );
                           Navigator.pop(context);
                         },
                       ),
@@ -165,57 +230,8 @@ class _SyncNowSection extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final repository = ref.watch(syncyomiSettingsRepositoryProvider);
-    final status = ref.watch(lastSyncStatusProvider);
-    final requested = useState(false);
-    final view = syncYomiStatusView(
-      state: status.value?.state.name,
-      endDate: status.value?.endDate,
-      errorMessage: status.value?.errorMessage,
-    );
-    final terminal =
-        view.kind == SyncYomiStatusKind.synced ||
-        view.kind == SyncYomiStatusKind.failed;
-    final poll =
-        !terminal &&
-        (requested.value || view.kind == SyncYomiStatusKind.syncing);
-
-    // Poll only while a sync is actually in flight, capped at ten minutes.
-    useEffect(() {
-      if (!poll) return null;
-      final deadline = DateTime.now().add(const Duration(minutes: 10));
-      final timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-        if (DateTime.now().isAfter(deadline)) {
-          timer.cancel();
-          return;
-        }
-        ref.invalidate(lastSyncStatusProvider);
-      });
-      return timer.cancel;
-    }, [poll]);
-
-    Future<void> startSync() async {
-      final result = await AppUtils.guard(
-        repository.startSync,
-        ref.read(toastProvider),
-      );
-      if (!context.mounted || result == null) return;
-      final toast = ref.read(toastProvider);
-      switch (result) {
-        case Enum$StartSyncResult.SUCCESS:
-          toast?.show(l10n.syncYomiSyncStarted);
-          requested.value = true;
-        case Enum$StartSyncResult.SYNC_IN_PROGRESS:
-          toast?.show(l10n.syncYomiAlreadyRunning);
-          requested.value = true;
-        case Enum$StartSyncResult.SYNC_DISABLED:
-          toast?.show(l10n.syncYomiDisabled);
-        case Enum$StartSyncResult.$unknown:
-          break;
-      }
-      if (requested.value) ref.invalidate(lastSyncStatusProvider);
-    }
-
+    final sync = useSyncYomi(ref);
+    final view = sync.view;
     final textStyle = context.theme.textTheme.bodyMedium?.copyWith(
       color: context.theme.hintColor,
     );
@@ -248,7 +264,10 @@ class _SyncNowSection extends HookConsumerWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const Gap(8),
-          Text(l10n.syncYomiSyncing, style: textStyle),
+          Text(
+            l10n.syncYomiSyncingStep(syncYomiStepName(context, sync.step)),
+            style: textStyle,
+          ),
         ],
       ),
     };
@@ -260,7 +279,7 @@ class _SyncNowSection extends HookConsumerWidget {
           enabled: canStart,
           leading: const Icon(Icons.sync_rounded),
           title: Text(l10n.syncYomiSyncNow),
-          onTap: canStart ? startSync : null,
+          onTap: canStart ? sync.start : null,
         ),
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),

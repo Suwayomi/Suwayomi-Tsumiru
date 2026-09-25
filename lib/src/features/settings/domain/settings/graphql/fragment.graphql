@@ -75,6 +75,11 @@ fragment SocksProxyDto on SettingsType {
 
 # Legacy servers only; multi-user servers read these from UserSettingsType.
 fragment SyncYomiSettingsDto on SettingsType {
+  syncDataCategories
+  syncDataChapters
+  syncDataHistory
+  syncDataManga
+  syncDataTracking
   syncInterval
   syncYomiApiKey
   syncYomiEnabled

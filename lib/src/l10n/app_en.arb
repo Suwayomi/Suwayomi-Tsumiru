@@ -3800,10 +3800,13 @@
   "syncYomiSet": "Set",
   "syncYomiNotSet": "Not set",
   "syncYomiSyncInterval": "Sync interval",
+  "syncYomiEvery30Minutes": "Every 30 minutes",
   "syncYomiEveryHour": "Every hour",
+  "syncYomiEvery3Hours": "Every 3 hours",
   "syncYomiEvery6Hours": "Every 6 hours",
   "syncYomiEvery12Hours": "Every 12 hours",
-  "syncYomiEveryDay": "Every day",
+  "syncYomiDaily": "Daily",
+  "syncYomiWeekly": "Weekly",
   "syncYomiEveryNHours": "{count, plural, =1{Every hour} other{Every {count} hours}}",
   "@syncYomiEveryNHours": {
     "description": "Interval wording for a server-set interval the picker does not offer",
@@ -3818,6 +3821,23 @@
       "count": { "type": "int" }
     }
   },
+  "syncYomiSyncData": "Sync data",
+  "@syncYomiSyncData": {
+    "description": "Which kinds of data a SyncYomi sync carries"
+  },
+  "syncYomiSyncDataNone": "Nothing selected",
+  "syncYomiSyncDataInclude": "Include: {list}",
+  "@syncYomiSyncDataInclude": {
+    "description": "Summary of the data kinds a sync includes, comma separated",
+    "placeholders": {
+      "list": { "type": "String" }
+    }
+  },
+  "syncYomiSyncDataManga": "Library entries",
+  "syncYomiSyncDataChapters": "Chapters",
+  "syncYomiSyncDataCategories": "Categories",
+  "syncYomiSyncDataHistory": "History",
+  "syncYomiSyncDataTracking": "Tracking",
   "syncYomiSyncNow": "Sync now",
   "syncYomiNeverSynced": "Never synced",
   "syncYomiLastSynced": "Last synced {time}",
@@ -3835,6 +3855,21 @@
   },
   "syncYomiUnknownError": "Unknown error",
   "syncYomiSyncing": "Syncing…",
+  "@syncYomiSyncing": {
+    "description": "Status line and tooltip while a step the app does not know is running"
+  },
+  "syncYomiSyncingStep": "Syncing: {step}",
+  "@syncYomiSyncingStep": {
+    "placeholders": {
+      "step": { "type": "String" }
+    }
+  },
+  "syncYomiStepStarting": "Starting",
+  "syncYomiStepCreatingBackup": "Creating backup",
+  "syncYomiStepDownloading": "Downloading",
+  "syncYomiStepMerging": "Merging",
+  "syncYomiStepUploading": "Uploading",
+  "syncYomiStepRestoring": "Restoring",
   "syncYomiSyncStarted": "Sync started",
   "syncYomiAlreadyRunning": "A sync is already running",
   "syncYomiDisabled": "Turn on Sync with SyncYomi first"
