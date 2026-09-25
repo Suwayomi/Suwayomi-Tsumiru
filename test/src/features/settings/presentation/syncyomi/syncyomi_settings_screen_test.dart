@@ -85,10 +85,11 @@ class _FixedSettings extends Settings {
 /// Answers the three operations the screen sends, and echoes any setting a
 /// mutation writes so the screen shows what the server would return.
 class _FakeServer extends Link {
-  _FakeServer(this.settings, {this.status});
+  _FakeServer(this.settings, {this.status, this.failHostWrite = false});
 
   final Fragment$SettingsDto settings;
   Map<String, dynamic>? status;
+  final bool failHostWrite;
   final operations = <String>[];
   final variables = <Map<String, dynamic>>[];
 
@@ -125,6 +126,11 @@ class _FakeServer extends Link {
             },
           },
         );
+      case 'UpdateSyncYomiHost' when failHostWrite:
+        yield Response(
+          response: {},
+          errors: [const GraphQLError(message: 'Host rejected')],
+        );
       default:
         final written = settingsJson
           ..addAll(Map<String, dynamic>.from(request.variables));
@@ -143,9 +149,16 @@ class _FakeServer extends Link {
 }
 
 class _Harness {
-  _Harness({Fragment$SettingsDto? settings, Map<String, dynamic>? status})
-    : settings = settings ?? _settings() {
-    server = _FakeServer(this.settings, status: status);
+  _Harness({
+    Fragment$SettingsDto? settings,
+    Map<String, dynamic>? status,
+    bool failHostWrite = false,
+  }) : settings = settings ?? _settings() {
+    server = _FakeServer(
+      this.settings,
+      status: status,
+      failHostWrite: failHostWrite,
+    );
     client = GraphQLClient(
       link: server,
       cache: GraphQLCache(),
@@ -321,6 +334,30 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     expect(find.text('https://syncyomi.example.com'), findsOneWidget);
   });
+
+  testWidgets(
+    'a host the server refuses leaves the dialog open with the text',
+    (tester) async {
+      final harness = _Harness(failHostWrite: true);
+      await _pump(tester, harness);
+
+      await tester.tap(find.text('Host'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField),
+        'https://syncyomi.example.com',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(harness.server.writes, ['UpdateSyncYomiHost']);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'https://syncyomi.example.com',
+      );
+    },
+  );
 
   testWidgets('the interval picker keeps an interval it does not offer', (
     tester,

@@ -68,20 +68,28 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   final pending = requested.value && !finished;
   final poll = pending || view.kind == SyncYomiStatusKind.syncing;
 
-  // Poll only while a sync is actually in flight, capped at ten minutes.
+  // Back off after ten minutes instead of giving up; a long sync is still live.
   useEffect(() {
     if (!poll) return null;
     final deadline = DateTime.now().add(const Duration(minutes: 10));
-    final timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (DateTime.now().isAfter(deadline)) {
-        timer.cancel();
-        requested.value = false;
-        return;
-      }
-      if (ref.read(lastSyncStatusProvider).isLoading) return;
-      ref.invalidate(lastSyncStatusProvider);
-    });
-    return timer.cancel;
+    Timer? timer;
+    void schedule() {
+      final interval = DateTime.now().isAfter(deadline)
+          ? const Duration(seconds: 30)
+          : const Duration(seconds: 2);
+      timer = Timer(interval, () {
+        if (DateTime.now().isAfter(deadline) && requested.value) {
+          requested.value = false;
+        }
+        if (!ref.read(lastSyncStatusProvider).isLoading) {
+          ref.invalidate(lastSyncStatusProvider);
+        }
+        schedule();
+      });
+    }
+
+    schedule();
+    return () => timer?.cancel();
   }, [poll]);
 
   useEffect(() {

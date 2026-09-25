@@ -67,12 +67,14 @@ String syncYomiDataSummary(BuildContext context, List<SyncYomiDataKind> kinds) {
 class SyncYomiSettingsScreen extends ConsumerWidget {
   const SyncYomiSettingsScreen({super.key});
 
-  Future<void> _save(
+  Future<bool> _save(
     WidgetRef ref,
     Future<SettingsDto?> Function() request,
   ) async {
     final result = await AppUtils.guard(request, ref.read(toastProvider));
-    if (result != null) ref.read(settingsProvider.notifier).updateState(result);
+    if (result == null) return false;
+    ref.read(settingsProvider.notifier).updateState(result);
+    return true;
   }
 
   @override
