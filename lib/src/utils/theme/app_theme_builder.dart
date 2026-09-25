@@ -15,8 +15,7 @@ ThemeData buildAppTheme({
   required Color customSeed,
   required bool amoled,
 }) {
-  final tokens =
-      theme == AppTheme.custom ? null : tokensFor(theme, brightness);
+  final tokens = theme == AppTheme.custom ? null : tokensFor(theme, brightness);
   ColorScheme scheme = theme == AppTheme.custom
       ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
       : schemeFromTokens(tokens!, brightness);
@@ -38,14 +37,14 @@ ThemeData buildAppTheme({
   final brightPrimary = Color.lerp(primary, Colors.white, 0.22)!;
 
   ButtonStyle filledLike() => ButtonStyle(
-        backgroundColor: WidgetStatePropertyAll(primary),
-        foregroundColor: WidgetStatePropertyAll(scheme.onPrimary),
-        shadowColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.6)),
-        elevation: const WidgetStatePropertyAll(6),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      );
+    backgroundColor: WidgetStatePropertyAll(primary),
+    foregroundColor: WidgetStatePropertyAll(scheme.onPrimary),
+    shadowColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.6)),
+    elevation: const WidgetStatePropertyAll(6),
+    shape: WidgetStatePropertyAll(
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+  );
 
   return ThemeData(
     useMaterial3: true,
@@ -64,13 +63,16 @@ ThemeData buildAppTheme({
       // and went invisible on the light surface in light themes.
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
-        statusBarBrightness:
-            brightness == Brightness.dark ? Brightness.dark : Brightness.light,
+        statusBarIconBrightness: brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: brightness == Brightness.dark
+            ? Brightness.dark
+            : Brightness.light,
         systemNavigationBarColor: scheme.surface,
-        systemNavigationBarIconBrightness:
-            brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
         systemNavigationBarDividerColor: Colors.transparent,
       ),
     ),
@@ -102,8 +104,10 @@ ThemeData buildAppTheme({
       indicatorColor: primary.withValues(alpha: 0.22),
       selectedIconTheme: IconThemeData(color: primary),
       unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
-      selectedLabelTextStyle:
-          TextStyle(color: primary, fontWeight: FontWeight.w600),
+      selectedLabelTextStyle: TextStyle(
+        color: primary,
+        fontWeight: FontWeight.w600,
+      ),
       unselectedLabelTextStyle: TextStyle(color: scheme.onSurfaceVariant),
     ),
     // Accent the leading icons of list rows (More/Settings etc.).
@@ -121,12 +125,31 @@ ThemeData buildAppTheme({
       ),
     ),
     dividerTheme: DividerThemeData(color: outline, thickness: 1, space: 1),
-    chipTheme: ChipThemeData(
-      backgroundColor: primary.withValues(alpha: 0.12),
-      side: BorderSide(color: primary.withValues(alpha: 0.40)),
-      labelStyle: TextStyle(color: scheme.onSurface),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-    ),
+    chipTheme: tokens?.accentBg != null
+        // Light: unselected chips are outlined, selected ones take the accent tint.
+        ? ChipThemeData(
+            backgroundColor: Colors.transparent,
+            selectedColor: tokens!.accentBg,
+            side: WidgetStateBorderSide.resolveWith(
+              (s) => BorderSide(
+                color: s.contains(WidgetState.selected)
+                    ? scheme.primary
+                    : scheme.outlineVariant,
+              ),
+            ),
+            labelStyle: TextStyle(color: scheme.onSurface),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
+          )
+        : ChipThemeData(
+            backgroundColor: primary.withValues(alpha: 0.12),
+            side: BorderSide(color: primary.withValues(alpha: 0.40)),
+            labelStyle: TextStyle(color: scheme.onSurface),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
+          ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.selected) ? primary : scheme.outline,
@@ -164,8 +187,9 @@ ThemeData buildAppTheme({
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style:
-          ButtonStyle(foregroundColor: WidgetStatePropertyAll(brightPrimary)),
+      style: ButtonStyle(
+        foregroundColor: WidgetStatePropertyAll(brightPrimary),
+      ),
     ),
   );
 }
