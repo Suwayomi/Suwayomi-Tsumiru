@@ -136,11 +136,12 @@ class MangaBadgesRow extends ConsumerWidget {
           if (!onDevice) return null;
           // Brand gradient + downloaded pin, distinct from the flat
           // server-download count.
+          final brand = BrandColors.of(context);
           return (
-            decoration: BoxDecoration(gradient: brandGradient(scheme)),
+            decoration: BoxDecoration(gradient: brand.gradient),
             child: Icon(
               Icons.offline_pin_rounded,
-              color: onBrandGradient,
+              color: brand.onGradient,
               size: height * .8,
             ),
             fill: false,

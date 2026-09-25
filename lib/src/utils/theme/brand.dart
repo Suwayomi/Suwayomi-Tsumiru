@@ -4,15 +4,17 @@ import 'package:material_color_utilities/material_color_utilities.dart';
 import '../../widgets/custom_circular_progress_indicator.dart';
 
 /// Brand visual language — the SINGLE source for the things Flutter's Material
-/// [ThemeData] cannot express (gradients + glow). Everything here derives from
-/// the active [ColorScheme], which is built from the theme-kit tokens, so all
-/// three named themes (Indigo Night / Carbon / Plum) + Custom work for free.
+/// [ThemeData] cannot express (gradients + glow). Gradients come from the
+/// active theme's own theme-kit `--grad` via [BrandColors]; the glow derives
+/// from the active [ColorScheme], which is built from the same tokens. Every
+/// named theme + Custom works for free.
 ///
 /// Do NOT inline gradients/colors at call sites — use these components.
 
-/// The brand gradient. Mirrors theme-kit `--grad: linear-gradient(135deg,
-/// accent, accent2)` exactly: 135° == top-left → bottom-right, accent first.
-LinearGradient brandGradient(ColorScheme cs) => LinearGradient(
+/// The gradient used when a theme ships no `--grad` (every dark set, plus
+/// Custom): theme-kit's original `linear-gradient(135deg, accent, accent2)`,
+/// 135° == top-left → bottom-right, accent first.
+LinearGradient schemeBrandGradient(ColorScheme cs) => LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [cs.primary, cs.secondary],
@@ -28,8 +30,35 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
       ),
     ];
 
-/// The gradient is bright, so on-gradient content (text/icons) is dark.
-const Color onBrandGradient = Color(0xFF0B0D1A);
+/// The active theme's `--grad` and `--on-accent`, registered by
+/// [buildAppTheme]. Read this instead of inlining a gradient — the light themes
+/// each have their own, and a few run in the opposite direction.
+class BrandColors extends ThemeExtension<BrandColors> {
+  const BrandColors({required this.gradient, required this.onGradient});
+
+  final Gradient gradient;
+
+  /// Text/icon colour on top of [gradient].
+  final Color onGradient;
+
+  @override
+  BrandColors copyWith({Gradient? gradient, Color? onGradient}) => BrandColors(
+        gradient: gradient ?? this.gradient,
+        onGradient: onGradient ?? this.onGradient,
+      );
+
+  @override
+  BrandColors lerp(ThemeExtension<BrandColors>? other, double t) {
+    if (other is! BrandColors) return this;
+    return BrandColors(
+      gradient: Gradient.lerp(gradient, other.gradient, t)!,
+      onGradient: Color.lerp(onGradient, other.onGradient, t)!,
+    );
+  }
+
+  static BrandColors of(BuildContext context) =>
+      Theme.of(context).extension<BrandColors>()!;
+}
 
 /// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so
 /// the chrome reads uniform. Near-opaque — 0.9 dark / 0.95 light; a
@@ -59,48 +88,51 @@ Widget brandGradientIcon(
   IconData icon, {
   double size = 24,
 }) {
-  final cs = Theme.of(context).colorScheme;
   return ShaderMask(
     blendMode: BlendMode.srcIn,
-    shaderCallback: (bounds) => brandGradient(cs).createShader(bounds),
+    shaderCallback: (bounds) =>
+        BrandColors.of(context).gradient.createShader(bounds),
     child: Icon(icon, size: size, color: Colors.white),
   );
 }
 
 Widget _brandRow({
+  required BuildContext context,
   required Widget label,
   Widget? icon,
   required bool expand,
-  Color content = onBrandGradient,
-}) =>
-    Row(
-      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (icon != null) ...[
-          IconTheme.merge(
-            data: IconThemeData(color: content, size: 20),
-            child: icon,
-          ),
-          const SizedBox(width: 8),
-        ],
-        // Flexible so a long label (e.g. "Downloading 14") ellipsises instead
-        // of overflowing the button's width.
-        Flexible(
-          child: DefaultTextStyle.merge(
-            style: TextStyle(
-              color: content,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            child: label,
-          ),
+  Color? content,
+}) {
+  final color = content ?? BrandColors.of(context).onGradient;
+  return Row(
+    mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      if (icon != null) ...[
+        IconTheme.merge(
+          data: IconThemeData(color: color, size: 20),
+          child: icon,
         ),
+        const SizedBox(width: 8),
       ],
-    );
+      // Flexible so a long label (e.g. "Downloading 14") ellipsises instead
+      // of overflowing the button's width.
+      Flexible(
+        child: DefaultTextStyle.merge(
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          child: label,
+        ),
+      ),
+    ],
+  );
+}
 
 /// Primary action — brand gradient + glow, dark content. (No Material fill.)
 class BrandButton extends StatelessWidget {
@@ -124,9 +156,10 @@ class BrandButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final brand = BrandColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: brandGradient(cs),
+        gradient: brand.gradient,
         borderRadius: BorderRadius.circular(14),
         boxShadow: brandGlow(cs),
       ),
@@ -141,9 +174,13 @@ class BrandButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Center(
                 child: loading
-                    ? const MiniCircularProgressIndicator(
-                        color: onBrandGradient)
-                    : _brandRow(label: label, icon: icon, expand: expand),
+                    ? MiniCircularProgressIndicator(color: brand.onGradient)
+                    : _brandRow(
+                        context: context,
+                        label: label,
+                        icon: icon,
+                        expand: expand,
+                      ),
               ),
             ),
           ),
@@ -191,6 +228,7 @@ class BrandGlassButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Center(
                 child: _brandRow(
+                  context: context,
                   label: label,
                   icon: icon,
                   expand: expand,
@@ -385,7 +423,7 @@ class BrandFab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: brandGradient(cs),
+        gradient: BrandColors.of(context).gradient,
         borderRadius: BorderRadius.circular(18),
         boxShadow: brandGlow(cs),
       ),
@@ -396,7 +434,12 @@ class BrandFab extends StatelessWidget {
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            child: _brandRow(label: label, icon: icon, expand: false),
+            child: _brandRow(
+              context: context,
+              label: label,
+              icon: icon,
+              expand: false,
+            ),
           ),
         ),
       ),

@@ -9,8 +9,8 @@ import '../../../../../../utils/theme/app_color_scheme.dart';
 import '../../../../../../utils/theme/theme_tokens.dart';
 import 'app_theme_providers.dart';
 
-/// Horizontal curated theme picker. Each card previews the theme's dark
-/// surface + accents and shows a check when selected.
+/// Horizontal curated theme picker. Each card previews the theme's surface +
+/// accents at the brightness currently in use, and shows a check when selected.
 class ThemeSelector extends HookConsumerWidget {
   const ThemeSelector({super.key});
 
@@ -64,11 +64,18 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Custom has no fixed tokens; preview with its swatch on a neutral dark bg.
+    // Preview the brightness the app is actually in, so light mode does not
+    // show a wall of dark cards.
+    final brightness = Theme.of(context).brightness;
+    // Custom has no fixed tokens; preview with its swatch on a neutral bg.
     final ColorScheme preview = theme == AppTheme.custom
-        ? const ColorScheme.dark()
-        : schemeFromTokens(tokensFor(theme, Brightness.dark), Brightness.dark);
-    final (accent, accent2) = theme.swatch;
+        ? (brightness == Brightness.dark
+            ? const ColorScheme.dark()
+            : const ColorScheme.light())
+        : schemeFromTokens(tokensFor(theme, brightness), brightness);
+    final (accent, accent2) = theme == AppTheme.custom
+        ? theme.swatch
+        : (preview.primary, preview.secondary);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: InkWell(

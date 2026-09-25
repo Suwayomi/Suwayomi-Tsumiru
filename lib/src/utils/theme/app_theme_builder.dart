@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../constants/app_theme.dart';
 import 'app_color_scheme.dart';
+import 'brand.dart';
 import 'theme_tokens.dart';
 
 /// Single source of truth for app ThemeData. Named themes use brand tokens;
@@ -14,13 +15,22 @@ ThemeData buildAppTheme({
   required Color customSeed,
   required bool amoled,
 }) {
+  final tokens =
+      theme == AppTheme.custom ? null : tokensFor(theme, brightness);
   ColorScheme scheme = theme == AppTheme.custom
       ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
-      : schemeFromTokens(tokensFor(theme, brightness), brightness);
+      : schemeFromTokens(tokens!, brightness);
 
   if (brightness == Brightness.dark && amoled) {
     scheme = applyAmoled(scheme);
   }
+
+  // theme-kit's own light gradients and on-accent colour; the dark blocks and
+  // Custom keep the accent→accent2 gradient and its dark content colour.
+  final brandColors = BrandColors(
+    gradient: tokens?.grad ?? schemeBrandGradient(scheme),
+    onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
+  );
 
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;
@@ -40,6 +50,7 @@ ThemeData buildAppTheme({
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
+    extensions: [brandColors],
     scaffoldBackgroundColor: scheme.surface,
     // Left-aligned titles app-wide; flat surface app bar (no grey elevation).
     appBarTheme: AppBarTheme(

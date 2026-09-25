@@ -56,6 +56,7 @@ class BrandPageSeekBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
+    final brand = BrandColors.of(context);
     final lastIndex = max(maxValue - 1, 1);
     final progress = (currentValue / lastIndex).clamp(0.0, 1.0);
     final position = inverted ? 1 - progress : progress;
@@ -79,6 +80,8 @@ class BrandPageSeekBar extends StatelessWidget {
               position: position,
               inverted: inverted,
               scheme: cs,
+              gradient: brand.gradient,
+              onGradient: brand.onGradient,
               count: maxValue,
             ),
           ),
@@ -140,6 +143,8 @@ class _SeekPainter extends CustomPainter {
     required this.position,
     required this.inverted,
     required this.scheme,
+    required this.gradient,
+    required this.onGradient,
     required this.count,
   });
 
@@ -147,6 +152,8 @@ class _SeekPainter extends CustomPainter {
   final double position;
   final bool inverted;
   final ColorScheme scheme;
+  final Gradient gradient;
+  final Color onGradient;
 
   /// Page count — one tick dot per page.
   final int count;
@@ -176,14 +183,14 @@ class _SeekPainter extends CustomPainter {
     if ((horizontal ? filled.width : filled.height) > 0.5) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(filled, radius),
-        Paint()..shader = brandGradient(scheme).createShader(filled),
+        Paint()..shader = gradient.createShader(filled),
       );
     }
 
     // Per-page tick dots: dark over the filled portion, light over the
     // unfilled track so they read on both.
     if (count > 1) {
-      final onFill = Paint()..color = onBrandGradient.withValues(alpha: 0.45);
+      final onFill = Paint()..color = onGradient.withValues(alpha: 0.45);
       final onTrack = Paint()..color = scheme.onSurface.withValues(alpha: 0.4);
       for (var i = 0; i < count; i++) {
         final frac = i / (count - 1);
@@ -221,7 +228,7 @@ class _SeekPainter extends CustomPainter {
       p1,
       p2,
       Paint()
-        ..shader = brandGradient(scheme).createShader(markerRect)
+        ..shader = gradient.createShader(markerRect)
         ..strokeWidth = mkt
         ..strokeCap = StrokeCap.round,
     );
@@ -233,5 +240,7 @@ class _SeekPainter extends CustomPainter {
       old.inverted != inverted ||
       old.axis != axis ||
       old.scheme != scheme ||
+      old.gradient != gradient ||
+      old.onGradient != onGradient ||
       old.count != count;
 }

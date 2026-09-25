@@ -13,9 +13,23 @@ void main() {
     expect(t.danger, const Color(0xFFFF6B6B));
   });
 
-  test('carbon light tokens use the light brand surface', () {
+  test('carbon light tokens mirror theme-kit carbon.css', () {
     final t = tokensFor(AppTheme.carbon, Brightness.light);
-    expect(t.bg, const Color(0xFFF6FFFB));
+    expect(t.bg, const Color(0xFFE4F1EC));
+  });
+
+  test('indigoNight light tokens mirror theme-kit indigo.css', () {
+    final t = tokensFor(AppTheme.indigoNight, Brightness.light);
+    expect(t.bg, const Color(0xFFEEECF9));
+    expect(t.accent, const Color(0xFF5351D4));
+    expect(t.accentBg, const Color(0xFFE2DFFF));
+  });
+
+  test('mono light accent is the near-black brand accent', () {
+    expect(
+      tokensFor(AppTheme.mono, Brightness.light).accent,
+      const Color(0xFF111114),
+    );
   });
 
   test('every named theme resolves tokens for both brightnesses', () {

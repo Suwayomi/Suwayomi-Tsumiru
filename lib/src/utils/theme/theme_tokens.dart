@@ -4,10 +4,10 @@ import '../../constants/app_theme.dart';
 
 /// Color tokens for a named theme at one brightness.
 ///
-/// DARK values are copied VERBATIM from `~/Projects/theme-kit/themes/<id>.css` —
-/// never invented, never derived by Material. LIGHT values use light surfaces
-/// (Indigo from the docs-site light palette) and keep each theme's exact brand
-/// accent.
+/// Every value is copied VERBATIM from `~/Projects/theme-kit/themes/<id>.css` —
+/// never invented, never derived by Material. The DARK sets come from the
+/// theme's `[data-mode='dark']` block, the LIGHT sets from its
+/// `[data-mode='light']` block.
 class ThemeTokens {
   const ThemeTokens({
     required this.bg,
@@ -19,6 +19,9 @@ class ThemeTokens {
     required this.accent2,
     required this.danger,
     required this.border,
+    this.onAccent,
+    this.accentBg,
+    this.grad,
   });
 
   final Color bg; // scaffold / base surface  (--bg)
@@ -30,6 +33,12 @@ class ThemeTokens {
   final Color accent2; // secondary / tertiary  (--accent2)
   final Color danger; // error  (--danger)
   final Color border; // panel border overlay  (--panel-brd → outlineVariant)
+
+  // The three below exist only on the LIGHT sets; the dark blocks name none of
+  // them, and a null here keeps the dark scheme byte-identical to before.
+  final Color? onAccent; // text on a filled accent  (--on-accent)
+  final Color? accentBg; // tinted accent container  (--accent-bg)
+  final LinearGradient? grad; // brand gradient  (--grad)
 }
 
 // --- DARK token sets: VERBATIM from theme-kit/themes/<id>.css ---
@@ -178,151 +187,243 @@ const _royalDark = ThemeTokens(
   border: Color(0x17FFFFFF),
 );
 
-// --- LIGHT token sets: light surfaces (Indigo from docs base.styl :root);
-//     each theme keeps its EXACT brand accent. ---
+// --- LIGHT token sets: VERBATIM from theme-kit/themes/<id>.css ---
 const _indigoLight = ThemeTokens(
-  bg: Color(0xFFFBFBFF), // --vp-c-bg
-  bg2: Color(0xFFEEF0FB), // --vp-c-bg-alt
-  ink: Color(0xFF11142A),
-  muted: Color(0xFF5B6080),
-  faint: Color(0xFF9AA0C4),
-  accent: Color(0xFF7C7BFF), // brand accent, same as dark
-  accent2: Color(0xFF33D6FF),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000), // black @ 0.08
+  bg: Color(0xFFEEECF9),
+  bg2: Color(0xFFFFFBFD),
+  ink: Color(0xFF191B28),
+  muted: Color(0xFF5C5D6F),
+  faint: Color(0xFF7F8090),
+  accent: Color(0xFF5351D4),
+  accent2: Color(0xFF00758D),
+  danger: Color(0xFFAE2F34),
+  border: Color(0xFFD7D6E4), // --panel-brd
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFE2DFFF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5550EC), Color(0xFF0677B3)],
+  ),
 );
 const _carbonLight = ThemeTokens(
-  bg: Color(0xFFF6FFFB),
-  bg2: Color(0xFFE8F3EF),
-  ink: Color(0xFF0C1714),
-  muted: Color(0xFF4E6B63),
-  faint: Color(0xFF8FB6AC),
-  accent: Color(0xFF19E6B0),
-  accent2: Color(0xFF22D3EE),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x12000000),
+  bg: Color(0xFFE4F1EC),
+  bg2: Color(0xFFFDFCFA),
+  ink: Color(0xFF141D1B),
+  muted: Color(0xFF4E635D),
+  faint: Color(0xFF738580),
+  accent: Color(0xFF007155),
+  accent2: Color(0xFF007586),
+  danger: Color(0xFFAC3236),
+  border: Color(0xFFCCDAD5),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFAFF0D4),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF007759), Color(0xFF007889)],
+  ),
 );
 const _plumLight = ThemeTokens(
-  bg: Color(0xFFFFF7FD),
-  bg2: Color(0xFFF7E9F4),
-  ink: Color(0xFF1B0F22),
-  muted: Color(0xFF7A5479),
-  faint: Color(0xFF946B93),
-  accent: Color(0xFFFF5DB1),
-  accent2: Color(0xFFFF9F5C),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x17000000),
+  bg: Color(0xFFF7EAF7),
+  bg2: Color(0xFFFFFBFF),
+  ink: Color(0xFF211825),
+  muted: Color(0xFF675A6B),
+  faint: Color(0xFF897D8C),
+  accent: Color(0xFFB81F78),
+  accent2: Color(0xFFA35618),
+  danger: Color(0xFFA7392F),
+  border: Color(0xFFE0D3E1),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFFFD8E6),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFBE267D), Color(0xFFA85817)],
+  ),
 );
 
 const _regressionLight = ThemeTokens(
-  bg: Color(0xFFF7F9FF),
-  bg2: Color(0xFFE8EEFC),
-  ink: Color(0xFF0A0E1C),
-  muted: Color(0xFF5A6890),
-  faint: Color(0xFF9AA6C4),
-  accent: Color(0xFF2F6FE0),
-  accent2: Color(0xFF2BB6E6),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000),
+  bg: Color(0xFFECEDF9),
+  bg2: Color(0xFFFFFBFD),
+  ink: Color(0xFF191B23),
+  muted: Color(0xFF595E6F),
+  faint: Color(0xFF7D818F),
+  accent: Color(0xFF0060C6),
+  accent2: Color(0xFF007397),
+  danger: Color(0xFFB4243A),
+  border: Color(0xFFD5D6E4),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFD7E2FF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF0065CF), Color(0xFF00769A)],
+  ),
 );
 const _emberLight = ThemeTokens(
-  bg: Color(0xFFFFF6F6),
-  bg2: Color(0xFFFBE7E8),
-  ink: Color(0xFF2A1012),
-  muted: Color(0xFF8F6468),
-  faint: Color(0xFFC0989C),
-  accent: Color(0xFFE11D2E),
-  accent2: Color(0xFFE08A10),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000),
+  bg: Color(0xFFFFE9EB),
+  bg2: Color(0xFFFFFBFF),
+  ink: Color(0xFF24191B),
+  muted: Color(0xFF72575C),
+  faint: Color(0xFF957B7F),
+  accent: Color(0xFFC8022D),
+  accent2: Color(0xFF926000),
+  danger: Color(0xFFB5242C),
+  border: Color(0xFFEBD1D4),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFFFDAD8),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFCF0E31), Color(0xFF956300)],
+  ),
 );
 const _synthwaveLight = ThemeTokens(
-  bg: Color(0xFFFBF5FF),
-  bg2: Color(0xFFF3E9FB),
-  ink: Color(0xFF1F1140),
-  muted: Color(0xFF6A5A90),
-  faint: Color(0xFFA99CC4),
-  accent: Color(0xFFE0117F),
-  accent2: Color(0xFF0BB6D6),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000),
+  bg: Color(0xFFF2EBF8),
+  bg2: Color(0xFFFFFBFF),
+  ink: Color(0xFF1F1538),
+  muted: Color(0xFF615C6E),
+  faint: Color(0xFF847F8F),
+  accent: Color(0xFFC1006E),
+  accent2: Color(0xFF007586),
+  danger: Color(0xFFB42440),
+  border: Color(0xFFDBD4E3),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFFFD9E3),
+  // The one 3-stop, 90° grad in theme-kit: left → right, magenta → violet → teal.
+  grad: LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFC8007A), Color(0xFF6B2BD6), Color(0xFF0079A0)],
+    stops: [0, 0.55, 1],
+  ),
 );
 const _terminalLight = ThemeTokens(
-  bg: Color(0xFFF4FFF5),
-  bg2: Color(0xFFE6F5E8),
-  ink: Color(0xFF0B130B),
-  muted: Color(0xFF4F6E50),
-  faint: Color(0xFF8FB892),
-  accent: Color(0xFF18A34A),
-  accent2: Color(0xFFC79100),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000),
+  bg: Color(0xFFE8F0E3),
+  bg2: Color(0xFFFEFCF9),
+  ink: Color(0xFF171D16),
+  muted: Color(0xFF536252),
+  faint: Color(0xFF788576),
+  accent: Color(0xFF007330),
+  accent2: Color(0xFF806800),
+  danger: Color(0xFFB5242C),
+  border: Color(0xFFD0DACC),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFBDEFBF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF15803D), Color(0xFF0F766E)],
+  ),
 );
 const _catppuccinLight = ThemeTokens(
   bg: Color(0xFFEFF1F5),
-  bg2: Color(0xFFE6E9EF),
+  bg2: Color(0xFFFFFFFF),
   ink: Color(0xFF4C4F69),
-  muted: Color(0xFF6C6F85),
-  faint: Color(0xFF9CA0B0),
-  accent: Color(0xFF8839EF),
+  muted: Color(0xFF5C5F77),
+  faint: Color(0xFF7C7F93),
+  accent: Color(0xFF7A2FE0),
   accent2: Color(0xFF1E66F5),
-  danger: Color(0xFFD20F39),
-  border: Color(0x14000000),
+  danger: Color(0xFFB80D32),
+  border: Color(0xFFCCD0DA),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFECE2FC),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF7A2FE0), Color(0xFF1A5AE0)],
+  ),
 );
 const _nordLight = ThemeTokens(
-  bg: Color(0xFFECEFF4),
-  bg2: Color(0xFFE5E9F0),
-  ink: Color(0xFF2E3440),
-  muted: Color(0xFF4C566A),
-  faint: Color(0xFF9AA3B4),
-  accent: Color(0xFF5E81AC),
-  accent2: Color(0xFF81A1C1),
-  danger: Color(0xFFBF616A),
-  border: Color(0x14000000),
+  bg: Color(0xFFEBEDF9),
+  bg2: Color(0xFFFEFBFD),
+  ink: Color(0xFF161C27),
+  muted: Color(0xFF575E6E),
+  faint: Color(0xFF7B818F),
+  accent: Color(0xFF006D80),
+  accent2: Color(0xFF316F9F),
+  danger: Color(0xFF99434C),
+  border: Color(0xFFD3D7E3),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFACECFF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF007286), Color(0xFF0772B0)],
+  ),
 );
 const _gruvboxLight = ThemeTokens(
-  bg: Color(0xFFFBF1C7),
-  bg2: Color(0xFFF2E5BC),
-  ink: Color(0xFF3C3836),
-  muted: Color(0xFF7C6F64),
-  faint: Color(0xFFA89984),
+  bg: Color(0xFFE7E5DF),
+  bg2: Color(0xFFF7F6F2),
+  ink: Color(0xFF282828),
+  muted: Color(0xFF5A524C),
+  faint: Color(0xFF857C74),
   accent: Color(0xFFAF3A03),
-  accent2: Color(0xFF427B58),
+  accent2: Color(0xFF3F7552),
   danger: Color(0xFF9D0006),
-  border: Color(0x14000000),
+  border: Color(0xFFCFCBC2),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFF5DCC8),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFC2530C), Color(0xFF9D3205)],
+  ),
 );
 const _draculaLight = ThemeTokens(
-  bg: Color(0xFFF5F5FB),
-  bg2: Color(0xFFEAEAF4),
-  ink: Color(0xFF282A36),
-  muted: Color(0xFF6272A4),
-  faint: Color(0xFFA3A8C4),
-  accent: Color(0xFF7D4FD6),
-  accent2: Color(0xFFD6248F),
-  danger: Color(0xFFCB3A2A),
-  border: Color(0x14000000),
+  bg: Color(0xFFEEEDF9),
+  bg2: Color(0xFFFFFBFD),
+  ink: Color(0xFF191B26),
+  muted: Color(0xFF5B5D6F),
+  faint: Color(0xFF7F8090),
+  accent: Color(0xFF764FAF),
+  accent2: Color(0xFFB43B86),
+  danger: Color(0xFFB71F29),
+  border: Color(0xFFD6D6E4),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFEDDCFF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF7C54B4), Color(0xFFB73E88)],
+  ),
 );
 const _monoLight = ThemeTokens(
-  bg: Color(0xFFFBFBFC),
-  bg2: Color(0xFFF0F0F2),
-  ink: Color(0xFF121215),
-  muted: Color(0xFF62626B),
-  faint: Color(0xFFA8A8B0),
-  accent: Color(0xFF2A2A30),
-  accent2: Color(0xFF6A6A74),
-  danger: Color(0xFFFF6B6B),
-  border: Color(0x14000000),
+  bg: Color(0xFFF3F3F5),
+  bg2: Color(0xFFFFFFFF),
+  ink: Color(0xFF0A0A0B),
+  muted: Color(0xFF4A4A52),
+  faint: Color(0xFF76767E),
+  accent: Color(0xFF111114),
+  accent2: Color(0xFF55555C),
+  danger: Color(0xFFAE2F34),
+  border: Color(0xFFD9D9DE),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFE3E3E8),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF1A1A1E), Color(0xFF55555C)],
+  ),
 );
 const _royalLight = ThemeTokens(
-  bg: Color(0xFFFBF8FF),
-  bg2: Color(0xFFF1ECFB),
-  ink: Color(0xFF16122A),
-  muted: Color(0xFF6A5F8C),
-  faint: Color(0xFFA89CC0),
-  accent: Color(0xFFB8902A),
-  accent2: Color(0xFF7B5FE0),
-  danger: Color(0xFFD92D2D),
-  border: Color(0x14000000),
+  bg: Color(0xFFF1EBF9),
+  bg2: Color(0xFFFFFBFF),
+  ink: Color(0xFF1C1A26),
+  muted: Color(0xFF605C6E),
+  faint: Color(0xFF837F8F),
+  accent: Color(0xFF5F45CC),
+  accent2: Color(0xFF8A6400),
+  danger: Color(0xFFAE2F34),
+  border: Color(0xFFDAD5E3),
+  onAccent: Color(0xFFFFFFFF),
+  accentBg: Color(0xFFE7E0FF),
+  grad: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF5F45CC), Color(0xFF8E3FB8)],
+  ),
 );
 
 ThemeTokens tokensFor(AppTheme theme, Brightness brightness) {

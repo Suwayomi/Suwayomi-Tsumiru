@@ -119,7 +119,7 @@ class ChapterGridTile extends StatelessWidget {
                 height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: brandGradient(cs),
+                  gradient: BrandColors.of(context).gradient,
                 ),
               ),
             ),
@@ -131,7 +131,7 @@ class ChapterGridTile extends StatelessWidget {
       // "Continue here" — gradient ring + soft glow around the tile.
       tile = Container(
         decoration: BoxDecoration(
-          gradient: brandGradient(cs),
+          gradient: BrandColors.of(context).gradient,
           borderRadius: BorderRadius.circular(13.5),
           boxShadow: [
             BoxShadow(

@@ -11,6 +11,11 @@ import 'theme_tokens.dart';
 ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
   Color mix(Color a, Color b, double amt) => Color.lerp(a, b, amt)!;
 
+  // theme-kit's light blocks name --on-accent / --accent-bg, so use them
+  // verbatim. The dark blocks name neither, and fall back to the derived
+  // values so the dark scheme is unchanged.
+  final accentBg = t.accentBg;
+
   return ColorScheme(
     brightness: brightness,
     // Brand accents (verbatim)
@@ -18,17 +23,19 @@ ColorScheme schemeFromTokens(ThemeTokens t, Brightness brightness) {
     // Contrast against the accent, not always white: a light accent (e.g. the
     // Monochrome theme's near-white grey) needs dark text so the unread-count
     // badge and other primary-filled elements stay legible.
-    onPrimary: ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
-        ? Colors.black
-        : Colors.white,
-    primaryContainer: mix(t.accent, t.bg, 0.72),
+    onPrimary: accentBg != null
+        ? t.onAccent!
+        : ThemeData.estimateBrightnessForColor(t.accent) == Brightness.light
+            ? Colors.black
+            : Colors.white,
+    primaryContainer: accentBg ?? mix(t.accent, t.bg, 0.72),
     onPrimaryContainer: t.accent,
     secondary: t.accent2,
-    onSecondary: t.bg,
-    secondaryContainer: mix(t.accent2, t.bg, 0.72),
-    onSecondaryContainer: t.accent2,
+    onSecondary: accentBg != null ? t.onAccent! : t.bg,
+    secondaryContainer: accentBg ?? mix(t.accent2, t.bg, 0.72),
+    onSecondaryContainer: accentBg != null ? t.accent : t.accent2,
     tertiary: t.accent2,
-    onTertiary: t.bg,
+    onTertiary: accentBg != null ? t.onAccent! : t.bg,
     tertiaryContainer: mix(t.accent2, t.bg, 0.72),
     onTertiaryContainer: t.accent2,
     error: t.danger,
