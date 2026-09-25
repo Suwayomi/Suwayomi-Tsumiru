@@ -152,9 +152,38 @@ class MangaDescription extends HookConsumerWidget {
                 child: ClipRect(
                   child: ImageFiltered(
                     imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: ServerImage(
-                      imageUrl: manga.thumbnailUrl ?? "",
-                      fit: BoxFit.cover,
+                    child: ColorFiltered(
+                      colorFilter: BrandColors.of(context).neutral
+                          ? const ColorFilter.matrix(<double>[
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                            ])
+                          : const ColorFilter.mode(
+                              Colors.transparent,
+                              BlendMode.dst,
+                            ),
+                      child: ServerImage(
+                        imageUrl: manga.thumbnailUrl ?? "",
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -206,61 +235,69 @@ class MangaDescription extends HookConsumerWidget {
             ),
           ],
         ),
-        Builder(builder: (context) {
-          // Action row: equal-width icon-over-label columns.
-          final offlineEnabled = ref.watch(offlineEnabledProvider);
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: MangaActionButton(
-                    active: inLibrary,
-                    icon: Icon(
-                      inLibrary
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                    ),
-                    label: inLibrary
-                        ? context.l10n.inLibrary
-                        : context.l10n.addToLibrary,
-                    onPressed: () async {
-                      final val = await AsyncValue.guard(() async {
-                        if (inLibrary) {
-                          await removeMangaFromLibrary();
-                        } else {
-                          await addMangaToLibrary();
+        Builder(
+          builder: (context) {
+            // Action row: equal-width icon-over-label columns.
+            final offlineEnabled = ref.watch(offlineEnabledProvider);
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: MangaActionButton(
+                      active: inLibrary,
+                      icon: Icon(
+                        inLibrary
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                      ),
+                      label: inLibrary
+                          ? context.l10n.inLibrary
+                          : context.l10n.addToLibrary,
+                      onPressed: () async {
+                        final val = await AsyncValue.guard(() async {
+                          if (inLibrary) {
+                            await removeMangaFromLibrary();
+                          } else {
+                            await addMangaToLibrary();
+                          }
+                          await refresh();
+                        });
+                        if (context.mounted) {
+                          val.showToastOnError(ref.read(toastProvider));
                         }
-                        await refresh();
-                      });
-                      if (context.mounted) {
-                        val.showToastOnError(ref.read(toastProvider));
-                      }
-                    },
+                      },
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: MangaActionButton(
-                    active: manga.trackRecords.totalCount > 0,
-                    icon: const Icon(Icons.sync_rounded),
-                    label: context.l10n.tracking,
-                    onPressed: () => showTrackSheet(context, manga.id,
-                        mangaTitle: manga.title),
+                  Expanded(
+                    child: MangaActionButton(
+                      active: manga.trackRecords.totalCount > 0,
+                      icon: const Icon(Icons.sync_rounded),
+                      label: context.l10n.tracking,
+                      onPressed: () => showTrackSheet(
+                        context,
+                        manga.id,
+                        mangaTitle: manga.title,
+                      ),
+                    ),
                   ),
-                ),
-                if (offlineEnabled)
-                  Expanded(child: SeriesOfflineButton(mangaId: manga.id)),
-                Expanded(
-                  child: MangaActionButton(
-                    icon: const Icon(Icons.public_rounded),
-                    label: context.l10n.webView,
-                    onPressed: () => _openInBrowser(context, ref),
+                  if (offlineEnabled)
+                    Expanded(child: SeriesOfflineButton(mangaId: manga.id)),
+                  Expanded(
+                    child: MangaActionButton(
+                      icon: const Icon(Icons.public_rounded),
+                      label: context.l10n.webView,
+                      onPressed: () => _openInBrowser(context, ref),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        }),
+                ],
+              ),
+            );
+          },
+        ),
         MangaRatingBar(mangaId: manga.id),
         if (manga.description.isNotBlank)
           Padding(
@@ -282,7 +319,9 @@ class MangaDescription extends HookConsumerWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 AddUserTagChip(mangaId: manga.id),
-                ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
+                ...manga.genre
+                    .where((e) => e.isNotBlank)
+                    .map<Widget>(
                       (e) => Builder(
                         builder: (chipContext) => BrandChip(
                           label: e,
@@ -306,18 +345,20 @@ class MangaDescription extends HookConsumerWidget {
                     padding: KEdgeInsets.h4.size,
                     child: AddUserTagChip(mangaId: manga.id),
                   ),
-                  ...manga.genre.where((e) => e.isNotBlank).map<Widget>(
+                  ...manga.genre
+                      .where((e) => e.isNotBlank)
+                      .map<Widget>(
                         (e) => Padding(
                           padding: KEdgeInsets.h4.size,
                           child: Builder(
                             builder: (chipContext) => BrandChip(
                               label: e,
-                              onTap: () => showTagActionsMenu(chipContext, ref,
-                                  tag: e),
+                              onTap: () =>
+                                  showTagActionsMenu(chipContext, ref, tag: e),
                             ),
                           ),
                         ),
-                      )
+                      ),
                 ],
               ),
             ),
@@ -357,9 +398,7 @@ class MangaDescriptionBody extends StatelessWidget {
         },
         styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
           p: textStyle,
-          a: textStyle.copyWith(
-            color: context.theme.colorScheme.primary,
-          ),
+          a: textStyle.copyWith(color: context.theme.colorScheme.primary),
         ),
       ),
     );

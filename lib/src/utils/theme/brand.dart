@@ -38,6 +38,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
     required this.gradient,
     required this.onGradient,
     required this.success,
+    this.neutral = false,
   });
 
   final Gradient gradient;
@@ -49,15 +50,21 @@ class BrandColors extends ThemeExtension<BrandColors> {
   /// [brandSuccessColor] for why this needs its own token.
   final Color success;
 
+  /// Colourless UI (Monochrome light): genre chips and cover backdrops drop
+  /// their hues.
+  final bool neutral;
+
   @override
   BrandColors copyWith({
     Gradient? gradient,
     Color? onGradient,
     Color? success,
+    bool? neutral,
   }) => BrandColors(
     gradient: gradient ?? this.gradient,
     onGradient: onGradient ?? this.onGradient,
     success: success ?? this.success,
+    neutral: neutral ?? this.neutral,
   );
 
   @override
@@ -67,6 +74,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
       gradient: Gradient.lerp(gradient, other.gradient, t)!,
       onGradient: Color.lerp(onGradient, other.onGradient, t)!,
       success: Color.lerp(success, other.success, t)!,
+      neutral: t < 0.5 ? neutral : other.neutral,
     );
   }
 
@@ -84,8 +92,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
 /// Positive-status colour. No [ColorScheme] role means "success", and
 /// `Colors.green` is ~1.7:1 on a light surface, so each brightness gets a
 /// green that clears 4.5:1 against its own surface.
-Color brandSuccessColor(Brightness brightness) =>
-    brightness == Brightness.dark
+Color brandSuccessColor(Brightness brightness) => brightness == Brightness.dark
     ? const Color(0xFF34E0A1)
     : const Color(0xFF00754A);
 
@@ -422,10 +429,14 @@ class BrandChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = brandChipColors(
-      brandHueFor(label),
-      Theme.of(context).colorScheme.brightness,
-    );
+    final cs = Theme.of(context).colorScheme;
+    final colors = BrandColors.of(context).neutral
+        ? (
+            fill: cs.surfaceContainer,
+            border: cs.outlineVariant,
+            text: cs.onSurface,
+          )
+        : brandChipColors(brandHueFor(label), cs.brightness);
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
