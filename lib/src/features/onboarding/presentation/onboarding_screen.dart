@@ -324,8 +324,9 @@ class _ThemeStep extends ConsumerWidget {
         Center(
           child: Image.asset(
             _brandLogo(context).path,
-            // Short desktop windows shrink the mark so the theme row still fits.
-            height: MediaQuery.sizeOf(context).height < 1000 ? 96 : 160,
+            // Short, wide windows (desktop, landscape) shrink the mark so the
+            // theme row still fits; portrait phones keep it full size.
+            height: _compactLogo(MediaQuery.sizeOf(context)) ? 96 : 160,
           ),
         ),
         const SizedBox(height: 24),
@@ -1293,3 +1294,6 @@ class _FinishStep extends StatelessWidget {
     );
   }
 }
+
+bool _compactLogo(Size screen) =>
+    screen.height < 1000 && screen.width > screen.height;
