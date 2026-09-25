@@ -201,6 +201,7 @@ class TokenBroker {
   Future<String?> resolveAfter401(String tokenThat401d) async {
     lastRefreshTransient = false;
     final current = await _read();
+    _log('auth-rejected gen=${current.gen}');
     if (expectedIdentity != null && !current.sameIdentity(expectedIdentity!)) {
       _log('identity-changed-before-refresh gen=${current.gen}');
       return null;
@@ -234,12 +235,15 @@ class TokenBroker {
         refreshToken: tokens.refresh,
       ),
     );
+    _log('refreshed gen=${current.gen + 1}');
     return tokens.access;
   }
 
-  /// Why a background 401 did or didn't end in a refresh. The callers log a
-  /// null result only as `refresh-failed transient=…`, which can't tell an
-  /// identity mismatch or a missing refresh token from a real rejection.
+  /// Every background 401 and how it ended: a refresh, a reused newer token, or
+  /// why none happened. The callers log a null result only as
+  /// `refresh-failed transient=…`, which can't tell an identity mismatch or a
+  /// missing refresh token from a real rejection; and a successful refresh left
+  /// no trace, so a healthy worker looked the same as one never challenged.
   static void _log(String event) => recordDiagnostic(
         '[${DateTime.now().toIso8601String()}] token-broker: $event\n',
       );

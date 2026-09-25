@@ -90,7 +90,10 @@ void main() {
         refreshFn: (_) async => (tokens: null, transient: false),
       );
       expect(await broker.resolveAfter401('SAME'), isNull);
-      expect(lines.single, contains('token-broker: no-refresh-token gen=3'));
+      expect(lines, [
+        contains('token-broker: auth-rejected gen=3'),
+        contains('token-broker: no-refresh-token gen=3'),
+      ]);
     });
 
     test('broker logs an identity change during the refresh', () async {
@@ -122,11 +125,32 @@ void main() {
         },
       );
       expect(await broker.resolveAfter401('A'), isNull);
-      expect(
-        lines.single,
+      expect(lines, [
+        contains('token-broker: auth-rejected gen=1'),
         contains('token-broker: identity-changed-during-refresh'),
+      ]);
+      expect(lines.join(), isNot(contains('R2')));
+    });
+
+    test('broker logs a successful refresh with the new generation', () async {
+      var current = const BackgroundTokenRecord(
+        gen: 4,
+        authType: 'uiLogin',
+        accessToken: 'A',
+        refreshToken: 'R',
       );
-      expect(lines.single, isNot(contains('R2')));
+      final broker = TokenBroker(
+        read: () async => current,
+        write: (r) async => current = r,
+        refreshFn: (_) async =>
+            (tokens: (access: 'B', refresh: 'R2'), transient: false),
+      );
+      expect(await broker.resolveAfter401('A'), 'B');
+      expect(lines, [
+        contains('token-broker: auth-rejected gen=4'),
+        contains('token-broker: refreshed gen=5'),
+      ]);
+      expect(lines.join(), isNot(contains('R2')));
     });
   });
 
