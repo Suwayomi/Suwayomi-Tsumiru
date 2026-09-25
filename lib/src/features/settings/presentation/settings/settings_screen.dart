@@ -77,6 +77,12 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => const BackupRoute().push(context),
           ),
           ListTile(
+            title: Text(context.l10n.syncyomi),
+            subtitle: Text(context.l10n.syncyomiSubtitle),
+            leading: const Icon(Icons.cloud_sync_rounded),
+            onTap: () => const SyncYomiSettingsRoute().push(context),
+          ),
+          ListTile(
             title: Text(context.l10n.tracking),
             leading: const Icon(Icons.sync_rounded),
             onTap: () => const TrackingSettingsRoute().push(context),

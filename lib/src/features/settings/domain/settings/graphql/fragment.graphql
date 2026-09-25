@@ -7,6 +7,7 @@ fragment SettingsDto on SettingsType {
     ...BrowserSettingsDto
     ...LibrarySettingsDto
     ...DownloadsSettingsDto
+    ...SyncYomiSettingsDto
 }
 
 fragment AutomaticBackupSettingsDto on SettingsType {
@@ -70,4 +71,12 @@ fragment SocksProxyDto on SettingsType {
   socksProxyPort
   socksProxyUsername
   socksProxyVersion
+}
+
+# Legacy servers only; multi-user servers read these from UserSettingsType.
+fragment SyncYomiSettingsDto on SettingsType {
+  syncInterval
+  syncYomiApiKey
+  syncYomiEnabled
+  syncYomiHost
 }

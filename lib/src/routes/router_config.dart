@@ -54,6 +54,7 @@ import '../features/settings/presentation/reader/reader_settings_screen.dart';
 import '../features/settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../features/settings/presentation/server/server_screen.dart';
 import '../features/settings/presentation/settings/settings_screen.dart';
+import '../features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
@@ -115,6 +116,7 @@ abstract class Routes {
   static const connection = 'connection';
   static const account = 'account';
   static const trackingSettings = 'tracking';
+  static const syncyomiSettings = 'syncyomi';
   static const hotkeysSettings = 'hotkeys';
 
   // Commons
@@ -284,6 +286,9 @@ GoRouter routerConfig(Ref ref) {
                     ),
                     TypedGoRoute<TrackingSettingsRoute>(
                       path: Routes.trackingSettings,
+                    ),
+                    TypedGoRoute<SyncYomiSettingsRoute>(
+                      path: Routes.syncyomiSettings,
                     ),
                     TypedGoRoute<HotkeysSettingsRoute>(
                       path: Routes.hotkeysSettings,

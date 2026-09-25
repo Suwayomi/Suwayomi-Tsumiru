@@ -1,0 +1,46 @@
+mutation UpdateSyncYomiEnabled($syncYomiEnabled: Boolean!) {
+  setSettings(input: {settings: {syncYomiEnabled: $syncYomiEnabled}}) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}
+
+mutation UpdateSyncYomiHost($syncYomiHost: String!) {
+  setSettings(input: {settings: {syncYomiHost: $syncYomiHost}}) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}
+
+mutation UpdateSyncYomiApiKey($syncYomiApiKey: String!) {
+  setSettings(input: {settings: {syncYomiApiKey: $syncYomiApiKey}}) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}
+
+mutation UpdateSyncYomiInterval($syncInterval: Duration!) {
+  setSettings(input: {settings: {syncInterval: $syncInterval}}) {
+    settings {
+      ...SettingsDto
+    }
+  }
+}
+
+mutation StartSync {
+  startSync(input: {}) {
+    result
+  }
+}
+
+query LastSyncStatus {
+  lastSyncStatus {
+    state
+    errorMessage
+    startDate
+    endDate
+  }
+}

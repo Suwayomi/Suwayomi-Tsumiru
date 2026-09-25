@@ -166,6 +166,15 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
   Widget build(context, state) => const TrackingSettingsScreen();
 }
 
+class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
+  const SyncYomiSettingsRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Widget build(context, state) => const SyncYomiSettingsScreen();
+}
+
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
   const HotkeysSettingsRoute();
 

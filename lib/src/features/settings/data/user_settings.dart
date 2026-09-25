@@ -36,6 +36,10 @@ SettingsDto mergeUserSettings(
   excludeCompleted: user.excludeCompleted,
   excludeNotStarted: user.excludeNotStarted,
   excludeUnreadChapters: user.excludeUnreadChapters,
+  syncInterval: user.syncInterval,
+  syncYomiApiKey: user.syncYomiApiKey,
+  syncYomiEnabled: user.syncYomiEnabled,
+  syncYomiHost: user.syncYomiHost,
 );
 
 final personalSettingsProvider = FutureProvider<SettingsDto?>((ref) async {
