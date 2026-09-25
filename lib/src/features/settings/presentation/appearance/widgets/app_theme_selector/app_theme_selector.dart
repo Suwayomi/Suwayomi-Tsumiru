@@ -30,14 +30,11 @@ class ThemeSelector extends HookConsumerWidget {
     // Bumped on every scroll (controller listener) and on first layout or a
     // viewport resize (metrics notification), so the arrows track both ends.
     final rebuild = useState(0);
-    useEffect(
-      () {
-        void onScroll() => rebuild.value++;
-        controller.addListener(onScroll);
-        return () => controller.removeListener(onScroll);
-      },
-      [controller],
-    );
+    useEffect(() {
+      void onScroll() => rebuild.value++;
+      controller.addListener(onScroll);
+      return () => controller.removeListener(onScroll);
+    }, [controller]);
 
     final position = controller.hasClients ? controller.position : null;
     final maxExtent = position?.maxScrollExtent ?? 0;
@@ -113,24 +110,37 @@ class ThemeSelector extends HookConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: SizedBox(
               height: _cardsHeight,
-              child: ListView(
-                controller: controller,
-                scrollDirection: Axis.horizontal,
-                children: [
-                  // Named themes first, Custom last (custom sits mid-enum
-                  // because values are persisted by index — display order is
-                  // independent).
-                  for (final theme in [
-                    ...AppTheme.values.where((t) => t != AppTheme.custom),
-                    AppTheme.custom,
-                  ])
-                    _ThemeCard(
-                      theme: theme,
-                      selected: theme == selected,
-                      onTap: () =>
-                          ref.read(appThemeKeyProvider.notifier).update(theme),
-                    ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Size cards so the row always ends on half a card, which
+                  // shows it scrolls at every width.
+                  const slot = 104.0;
+                  final whole = (constraints.maxWidth / slot - 0.5)
+                      .floor()
+                      .clamp(1, 100);
+                  final cardWidth = constraints.maxWidth / (whole + 0.5) - 12;
+                  return ListView(
+                    controller: controller,
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      // Named themes first, Custom last (custom sits mid-enum
+                      // because values are persisted by index — display order is
+                      // independent).
+                      for (final theme in [
+                        ...AppTheme.values.where((t) => t != AppTheme.custom),
+                        AppTheme.custom,
+                      ])
+                        _ThemeCard(
+                          theme: theme,
+                          width: cardWidth,
+                          selected: theme == selected,
+                          onTap: () => ref
+                              .read(appThemeKeyProvider.notifier)
+                              .update(theme),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -143,11 +153,13 @@ class ThemeSelector extends HookConsumerWidget {
 class _ThemeCard extends StatelessWidget {
   const _ThemeCard({
     required this.theme,
+    required this.width,
     required this.selected,
     required this.onTap,
   });
 
   final AppTheme theme;
+  final double width;
   final bool selected;
   final VoidCallback onTap;
 
@@ -159,8 +171,8 @@ class _ThemeCard extends StatelessWidget {
     // Custom has no fixed tokens; preview with its swatch on a neutral bg.
     final ColorScheme preview = theme == AppTheme.custom
         ? (brightness == Brightness.dark
-            ? const ColorScheme.dark()
-            : const ColorScheme.light())
+              ? const ColorScheme.dark()
+              : const ColorScheme.light())
         : schemeFromTokens(tokensFor(theme, brightness), brightness);
     final (accent, accent2) = theme == AppTheme.custom
         ? theme.swatch
@@ -171,7 +183,7 @@ class _ThemeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Container(
-          width: 92,
+          width: width,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: preview.surface,
@@ -212,10 +224,10 @@ class _ThemeCard extends StatelessWidget {
   }
 
   Widget _dot(Color c) => Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-      );
+    width: 16,
+    height: 16,
+    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+  );
 }
 
 /// Tile to pick a custom seed color; only meaningful when AppTheme.custom.
@@ -246,9 +258,7 @@ class CustomColorTile extends ConsumerWidget {
           enableShadesSelection: false,
         );
         if (!context.mounted) return;
-        ref
-            .read(customThemeColorProvider.notifier)
-            .update(picked.toARGB32());
+        ref.read(customThemeColorProvider.notifier).update(picked.toARGB32());
       },
     );
   }

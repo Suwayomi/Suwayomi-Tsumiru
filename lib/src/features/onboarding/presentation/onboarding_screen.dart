@@ -107,7 +107,7 @@ class OnboardingScreen extends HookConsumerWidget {
             // Wide desktop windows keep onboarding a readable column.
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
+                constraints: const BoxConstraints(maxWidth: 620),
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
@@ -325,7 +325,7 @@ class _ThemeStep extends ConsumerWidget {
           child: Image.asset(
             _brandLogo(context).path,
             // Short desktop windows shrink the mark so the theme row still fits.
-            height: MediaQuery.sizeOf(context).height < 800 ? 96 : 160,
+            height: MediaQuery.sizeOf(context).height < 1000 ? 96 : 160,
           ),
         ),
         const SizedBox(height: 24),

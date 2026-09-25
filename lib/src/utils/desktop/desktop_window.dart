@@ -18,7 +18,7 @@ import 'window_geometry_store.dart';
 // Deliberately small so the window can shrink to the app's compact layout;
 // just large enough that it can't collapse to an unusable sliver.
 const kMinWindowSize = Size(300, 400);
-const kDefaultWindowSize = Size(1280, 720);
+const kDefaultWindowSize = Size(1280, 900);
 
 /// Initialise the desktop window: hide the OS title bar, restore the saved
 /// size/maximized state, and show only once Flutter is ready (no white flash).
