@@ -62,8 +62,10 @@ class ConnectionScreen extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.connection)),
       body: ListTileTheme(
-        data: const ListTileThemeData(
-          subtitleTextStyle: TextStyle(color: Colors.grey),
+        data: ListTileThemeData(
+          subtitleTextStyle: TextStyle(
+            color: context.theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         child: ListView(
           children: [

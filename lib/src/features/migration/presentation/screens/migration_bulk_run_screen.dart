@@ -16,6 +16,7 @@ import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../auth/data/auth_credentials_store.dart';
@@ -648,7 +649,7 @@ class _MangaCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.white,
+                      color: OnImage.text,
                     ),
                   ),
                 ),

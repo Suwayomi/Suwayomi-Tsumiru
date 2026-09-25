@@ -139,12 +139,15 @@ class _HeadTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = (chapter.isRead).ifNull() ? Colors.grey : null;
+    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
+    final color = (chapter.isRead).ifNull()
+        ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
+        : null;
     final manga = chapter.manga;
 
     return Material(
       color: isSelected
-          ? (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300)
+          ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
       child: InkWell(
         onTap: () async {
@@ -284,7 +287,10 @@ class _TailTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = (chapter.isRead).ifNull() ? Colors.grey : null;
+    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
+    final color = (chapter.isRead).ifNull()
+        ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
+        : null;
     final manga = chapter.manga;
 
     // Indented to align with the text column of the head tile.
@@ -293,7 +299,7 @@ class _TailTile extends StatelessWidget {
 
     return Material(
       color: isSelected
-          ? (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300)
+          ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
       child: InkWell(
         onTap: () async {

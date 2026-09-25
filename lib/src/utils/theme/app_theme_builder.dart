@@ -29,6 +29,7 @@ ThemeData buildAppTheme({
   final brandColors = BrandColors(
     gradient: tokens?.grad ?? schemeBrandGradient(scheme),
     onGradient: tokens?.onAccent ?? const Color(0xFF0B0D1A),
+    success: brandSuccessColor(brightness),
   );
 
   final primary = scheme.primary;

@@ -31,7 +31,11 @@ class Toast {
     toast() {
       if (instantShow) close();
       _fToast.showToast(
-        child: ToastWidget(text: msg, backgroundColor: Colors.black),
+        child: ToastWidget(
+          text: msg,
+          backgroundColor: _context.colorScheme.inverseSurface,
+          textColor: _context.colorScheme.onInverseSurface,
+        ),
         gravity: ToastGravity.BOTTOM,
       );
     }
@@ -58,8 +62,8 @@ class Toast {
       _fToast.showToast(
         child: ToastWidget(
           text: text,
-          backgroundColor: Colors.red.shade400,
-          textColor: Colors.white,
+          backgroundColor: _context.colorScheme.error,
+          textColor: _context.colorScheme.onError,
         ),
         gravity: ToastGravity.TOP,
       );

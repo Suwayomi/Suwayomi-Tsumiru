@@ -999,7 +999,7 @@ List<Widget> _buildTestStatus(
     case _TestState.connected:
       return [
         _StatusRow(
-          color: Colors.green,
+          color: BrandColors.of(context).success,
           icon: Icons.check_circle_rounded,
           text: (version != null && version.isNotEmpty)
               // The server reports "v2.3.x"; the l10n string adds its own "v".

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/organizer_heading.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../../../../tracking/data/tracker_repository.dart';
@@ -117,7 +118,7 @@ class _RatingFilterRow extends ConsumerWidget {
                   star <= min ? Icons.star_rounded : Icons.star_border_rounded,
                   size: 22,
                   color: star <= min
-                      ? Colors.amber
+                      ? brandStarColor(context.theme.brightness)
                       : context.theme.unselectedWidgetColor,
                 ),
               ),

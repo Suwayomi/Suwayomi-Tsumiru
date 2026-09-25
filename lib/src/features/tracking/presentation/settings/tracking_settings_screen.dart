@@ -25,8 +25,10 @@ class TrackingSettingsScreen extends ConsumerWidget {
     final trackersAsync = ref.watch(trackersProvider);
 
     return ListTileTheme(
-      data: const ListTileThemeData(
-        subtitleTextStyle: TextStyle(color: Colors.grey),
+      data: ListTileThemeData(
+        subtitleTextStyle: TextStyle(
+          color: context.theme.colorScheme.onSurfaceVariant,
+        ),
       ),
       child: Scaffold(
         appBar: AppBar(

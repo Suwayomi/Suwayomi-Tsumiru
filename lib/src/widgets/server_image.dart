@@ -203,7 +203,10 @@ class ServerImage extends HookConsumerWidget {
               frame != null ? child : const CenterSorayomiShimmerIndicator(),
           errorBuilder: (ctx, error, stack) => AppUtils.wrapOn(
             wrapper,
-            const Icon(Icons.broken_image_rounded, color: Colors.grey),
+            Icon(
+              Icons.broken_image_rounded,
+              color: ctx.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -251,7 +254,10 @@ class ServerImage extends HookConsumerWidget {
           fit: fit ?? BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => AppUtils.wrapOn(
             wrapper,
-            const Icon(Icons.broken_image_rounded, color: Colors.grey),
+            Icon(
+              Icons.broken_image_rounded,
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -263,7 +269,10 @@ class ServerImage extends HookConsumerWidget {
     if (imageUrl.isEmpty) {
       return AppUtils.wrapOn(
         wrapper,
-        const Icon(Icons.broken_image_rounded, color: Colors.grey),
+        Icon(
+          Icons.broken_image_rounded,
+          color: context.theme.colorScheme.onSurfaceVariant,
+        ),
       );
     }
 
@@ -364,7 +373,10 @@ class ServerImage extends HookConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.broken_image_rounded, color: Colors.grey),
+                  Icon(
+                    Icons.broken_image_rounded,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
                   const Gap(32),
                   TextButton(
                     onPressed: () async {
@@ -394,7 +406,10 @@ class ServerImage extends HookConsumerWidget {
       } else {
         return AppUtils.wrapOn(
           wrapper,
-          const Icon(Icons.broken_image_rounded, color: Colors.grey),
+          Icon(
+            Icons.broken_image_rounded,
+            color: context.theme.colorScheme.onSurfaceVariant,
+          ),
         );
       }
     }

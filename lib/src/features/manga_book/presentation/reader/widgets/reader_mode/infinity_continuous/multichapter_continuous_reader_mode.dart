@@ -1372,8 +1372,11 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             // Flutter's red error widget for every page. Show a stable-extent
             // broken-image placeholder instead.
             errorBuilder: (context, error, stackTrace) => placeholderBox(
-              child: const Center(
-                child: Icon(Icons.broken_image_rounded, color: Colors.grey),
+              child: Center(
+                child: Icon(
+                  Icons.broken_image_rounded,
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             // Reserve the page's extent UNTIL the bitmap decodes. The network path

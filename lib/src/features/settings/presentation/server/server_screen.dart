@@ -33,8 +33,10 @@ class ServerScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
-          data: const ListTileThemeData(
-            subtitleTextStyle: TextStyle(color: Colors.grey),
+          data: ListTileThemeData(
+            subtitleTextStyle: TextStyle(
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           child: ListView(
             children: [
@@ -43,7 +45,7 @@ class ServerScreen extends ConsumerWidget {
                 child: Text(
                   context.l10n.serverOwnSettingsCaption,
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+                    color: context.theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),

@@ -53,8 +53,10 @@ class LibrarySettingsScreen extends ConsumerWidget {
         ref.watch(categoryControllerProvider).value ?? const <CategoryDto>[];
 
     return ListTileTheme(
-      data: const ListTileThemeData(
-        subtitleTextStyle: TextStyle(color: Colors.grey),
+      data: ListTileThemeData(
+        subtitleTextStyle: TextStyle(
+          color: context.theme.colorScheme.onSurfaceVariant,
+        ),
       ),
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.library)),

@@ -34,17 +34,30 @@ List<BoxShadow> brandGlow(ColorScheme cs) => [
 /// [buildAppTheme]. Read this instead of inlining a gradient — the light themes
 /// each have their own, and a few run in the opposite direction.
 class BrandColors extends ThemeExtension<BrandColors> {
-  const BrandColors({required this.gradient, required this.onGradient});
+  const BrandColors({
+    required this.gradient,
+    required this.onGradient,
+    required this.success,
+  });
 
   final Gradient gradient;
 
   /// Text/icon colour on top of [gradient].
   final Color onGradient;
 
+  /// Positive-status colour (server connected, migration finished). See
+  /// [brandSuccessColor] for why this needs its own token.
+  final Color success;
+
   @override
-  BrandColors copyWith({Gradient? gradient, Color? onGradient}) => BrandColors(
+  BrandColors copyWith({
+    Gradient? gradient,
+    Color? onGradient,
+    Color? success,
+  }) => BrandColors(
     gradient: gradient ?? this.gradient,
     onGradient: onGradient ?? this.onGradient,
+    success: success ?? this.success,
   );
 
   @override
@@ -53,6 +66,7 @@ class BrandColors extends ThemeExtension<BrandColors> {
     return BrandColors(
       gradient: Gradient.lerp(gradient, other.gradient, t)!,
       onGradient: Color.lerp(onGradient, other.onGradient, t)!,
+      success: Color.lerp(success, other.success, t)!,
     );
   }
 
@@ -62,8 +76,31 @@ class BrandColors extends ThemeExtension<BrandColors> {
         BrandColors(
           gradient: schemeBrandGradient(theme.colorScheme),
           onGradient: const Color(0xFF0B0D1A),
+          success: brandSuccessColor(theme.colorScheme.brightness),
         );
   }
+}
+
+/// Positive-status colour. No [ColorScheme] role means "success", and
+/// `Colors.green` is ~1.7:1 on a light surface, so each brightness gets a
+/// green that clears 4.5:1 against its own surface.
+Color brandSuccessColor(Brightness brightness) =>
+    brightness == Brightness.dark
+    ? const Color(0xFF34E0A1)
+    : const Color(0xFF00754A);
+
+/// Star-rating colour. Amber is conventional and reads on dark surfaces; on a
+/// light one it drops to ~1.8:1, so light takes a darker amber at 3:1.
+Color brandStarColor(Brightness brightness) =>
+    brightness == Brightness.dark ? Colors.amber : const Color(0xFFB7791F);
+
+/// Colours for content drawn on the cover art rather than the theme surface.
+/// Theme-independent on purpose: the art underneath is, so these must not
+/// follow the light/dark scheme.
+abstract final class OnImage {
+  static const text = Colors.white;
+  static const shadow = Colors.black;
+  static const scrim = Color(0xAA000000);
 }
 
 /// The single reader-chrome surface (top/bottom bars, seekbars, skip buttons) so

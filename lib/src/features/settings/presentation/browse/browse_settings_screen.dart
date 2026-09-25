@@ -38,8 +38,10 @@ class BrowseSettingsScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
-          data: const ListTileThemeData(
-            subtitleTextStyle: TextStyle(color: Colors.grey),
+          data: ListTileThemeData(
+            subtitleTextStyle: TextStyle(
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           child: ListView(
             children: [
@@ -47,9 +49,9 @@ class BrowseSettingsScreen extends ConsumerWidget {
               Row(
                 children: [
                   const Gap(16),
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: Colors.grey,
+                    color: context.theme.colorScheme.onSurfaceVariant,
                     size: 18,
                   ),
                   const Gap(10),
@@ -57,7 +59,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
                     child: Text(
                       context.l10n.nsfwInfo,
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                        color: context.theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),

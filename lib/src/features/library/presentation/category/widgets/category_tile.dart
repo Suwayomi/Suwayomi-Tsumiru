@@ -44,15 +44,21 @@ class CategoryTile extends HookConsumerWidget {
             if (!isDefault)
               ReorderableDragStartListener(
                 index: index,
-                child: const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Icon(Icons.drag_handle_rounded, color: Colors.grey),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Icon(
+                    Icons.drag_handle_rounded,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               )
             else
-              const Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Icon(Icons.label_rounded, color: Colors.grey),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Icon(
+                  Icons.label_rounded,
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             Expanded(
               child: Text(
@@ -79,7 +85,7 @@ class CategoryTile extends HookConsumerWidget {
                       ),
                     ),
               icon: const Icon(Icons.edit_rounded),
-              color: Colors.grey,
+              color: context.theme.colorScheme.onSurfaceVariant,
             ),
             IconButton(
               visualDensity: VisualDensity.compact,
@@ -119,7 +125,7 @@ class CategoryTile extends HookConsumerWidget {
                     ? Icons.visibility_rounded
                     : Icons.visibility_off_rounded,
               ),
-              color: Colors.grey,
+              color: context.theme.colorScheme.onSurfaceVariant,
             ),
             IconButton(
               visualDensity: VisualDensity.compact,
@@ -164,7 +170,7 @@ class CategoryTile extends HookConsumerWidget {
                     )
                   : null,
               icon: const Icon(Icons.delete_rounded),
-              color: Colors.grey,
+              color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ],
         ),

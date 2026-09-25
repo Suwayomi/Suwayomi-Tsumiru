@@ -221,8 +221,10 @@ class OfflineSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTileTheme(
-      data: const ListTileThemeData(
-        subtitleTextStyle: TextStyle(color: Colors.grey),
+      data: ListTileThemeData(
+        subtitleTextStyle: TextStyle(
+          color: context.theme.colorScheme.onSurfaceVariant,
+        ),
       ),
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.onDeviceDownloads)),

@@ -34,13 +34,16 @@ class ChapterMangaListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = (chapterWithMangaDto.isRead).ifNull() ? Colors.grey : null;
+    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
+    final color = (chapterWithMangaDto.isRead).ifNull()
+        ? context.theme.colorScheme.onSurface.withValues(alpha: 0.38)
+        : null;
     final manga = chapterWithMangaDto.manga;
     // Custom Row (rather than ListTile's height-constrained `leading`) so the
     // cover renders at the standard portrait size used on the History list.
     return Material(
       color: isSelected
-          ? (context.isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300)
+          ? context.theme.colorScheme.secondaryContainer
           : Colors.transparent,
       child: InkWell(
         onTap: () async {

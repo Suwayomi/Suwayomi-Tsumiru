@@ -42,6 +42,10 @@ class ChapterListTile extends ConsumerWidget {
     final scanlator = chapter.scanlator.isNotBlank
         ? chapter.scanlator!
         : context.l10n.unknownScanlator;
+    // Mihon parity: a read chapter is drawn at 38% of the normal colour.
+    final readColor = context.theme.colorScheme.onSurface.withValues(
+      alpha: 0.38,
+    );
     return GestureDetector(
       key: Key("manga-${manga.id}-chapter-${chapter.id}"),
       onSecondaryTap: () => toggleSelect(chapter),
@@ -53,7 +57,7 @@ class ChapterListTile extends ConsumerWidget {
               Icon(
                 Icons.bookmark_rounded,
                 color: chapter.isRead.ifNull()
-                    ? Colors.grey
+                    ? readColor
                     : context.iconColor,
                 size: 20,
               ),
@@ -65,7 +69,7 @@ class ChapterListTile extends ConsumerWidget {
                     ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
                     : chapter.name,
                 style: TextStyle(
-                  color: chapter.isRead.ifNull() ? Colors.grey : null,
+                  color: chapter.isRead.ifNull() ? readColor : null,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -77,21 +81,23 @@ class ChapterListTile extends ConsumerWidget {
             Text(
               int.tryParse(chapter.uploadDate).toDaysAgo(context),
               style: TextStyle(
-                color: chapter.isRead.ifNull() ? Colors.grey : null,
+                color: chapter.isRead.ifNull() ? readColor : null,
               ),
             ),
             if (!chapter.isRead.ifNull() &&
                 (chapter.lastPageRead).getValueOnNullOrNegative() != 0)
               Text(
                 " • ${context.l10n.page(chapter.lastPageRead.getValueOnNullOrNegative() + 1)}",
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: context.theme.colorScheme.onSurfaceVariant,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             Expanded(
               child: Text(
                 " • $scanlator",
                 style: TextStyle(
-                  color: chapter.isRead.ifNull() ? Colors.grey : null,
+                  color: chapter.isRead.ifNull() ? readColor : null,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -114,9 +120,7 @@ class ChapterListTile extends ConsumerWidget {
           ],
         ),
         selectedColor: context.theme.colorScheme.onSurface,
-        selectedTileColor: context.isDarkMode
-            ? Colors.grey.shade700
-            : Colors.grey.shade300,
+        selectedTileColor: context.theme.colorScheme.secondaryContainer,
         selected: isSelected,
         onTap: canTapSelect
             ? () => toggleSelect(chapter)

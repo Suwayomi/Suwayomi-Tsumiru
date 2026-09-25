@@ -73,9 +73,9 @@ class CustomHeadersSection extends HookConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
               context.l10n.customHeaderEmpty,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         for (final entry in entries)

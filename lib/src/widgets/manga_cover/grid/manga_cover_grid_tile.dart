@@ -15,6 +15,7 @@ import '../../../constants/gen/assets.gen.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/theme/brand.dart';
 import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
 import '../providers/manga_cover_providers.dart';
@@ -273,10 +274,10 @@ class MangaCoverGridTile extends StatelessWidget {
           // the black scrim, shadowed for light covers (Komikku's
           // CoverTextOverlay values).
           style: const TextStyle(
-            color: Colors.white,
+            color: OnImage.text,
             fontSize: 12,
             height: 1.5,
-            shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+            shadows: [Shadow(color: OnImage.shadow, blurRadius: 4)],
           ),
         ),
         // The button shares the footer row: the title takes the remaining
@@ -328,7 +329,7 @@ class MangaCoverGridTile extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Color(0xAA000000),
+                  OnImage.scrim,
                 ],
               )
             : null,

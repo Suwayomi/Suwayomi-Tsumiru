@@ -136,8 +136,10 @@ class DownloadsSettingsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: ListTileTheme(
-        data: const ListTileThemeData(
-          subtitleTextStyle: TextStyle(color: Colors.grey),
+        data: ListTileThemeData(
+          subtitleTextStyle: TextStyle(
+            color: context.theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         child: Scaffold(
           appBar: AppBar(

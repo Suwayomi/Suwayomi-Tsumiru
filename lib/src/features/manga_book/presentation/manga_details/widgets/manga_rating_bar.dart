@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/theme/brand.dart';
 import '../controller/manga_details_controller.dart';
 
 /// A tappable 0-5 star row for the reader's personal rating of a manga. Tapping
@@ -41,9 +42,12 @@ class MangaRatingBar extends ConsumerWidget {
                   star <= rating
                       ? Icons.star_rounded
                       : Icons.star_border_rounded,
-                  // Conventional amber reads on every theme; the theme accent
-                  // isn't always a sensible star colour.
-                  color: star <= rating ? Colors.amber : null,
+                  // Conventional amber, darkened in light mode to keep 3:1 on
+                  // the light surface; the theme accent isn't always a sensible
+                  // star colour.
+                  color: star <= rating
+                      ? brandStarColor(context.theme.brightness)
+                      : null,
                 ),
               ),
             ),

@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/theme/brand.dart';
 import '../../domain/migration_models.dart';
 
 class MigrationSourceCard extends StatelessWidget {
@@ -119,7 +120,7 @@ class MigrationSourceCard extends StatelessWidget {
                     if (source.isConfigured)
                       Icon(
                         Icons.check_circle_outline,
-                        color: Colors.green,
+                        color: BrandColors.of(context).success,
                         size: 20,
                       )
                     else

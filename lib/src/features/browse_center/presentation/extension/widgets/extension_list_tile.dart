@@ -62,9 +62,9 @@ class ExtensionListTile extends HookConsumerWidget {
             if (isNsfwFromWarning(extension.contentWarning))
               TextSpan(
                 text: context.l10n.nsfw18,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w400,
-                  color: Colors.redAccent,
+                  color: context.colorScheme.error,
                 ),
               ),
           ],
@@ -132,7 +132,7 @@ class ExtensionListTileTailing extends StatelessWidget {
             : null,
         child: Text(
           context.l10n.obsolete,
-          style: const TextStyle(color: Colors.redAccent),
+          style: TextStyle(color: context.colorScheme.error),
         ),
       );
     }

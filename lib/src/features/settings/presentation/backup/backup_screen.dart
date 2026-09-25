@@ -22,8 +22,10 @@ class BackupScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(settingsProvider.future),
         child: ListTileTheme(
-          data: const ListTileThemeData(
-            subtitleTextStyle: TextStyle(color: Colors.grey),
+          data: ListTileThemeData(
+            subtitleTextStyle: TextStyle(
+              color: context.theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           child: ListView(
             children: const [
