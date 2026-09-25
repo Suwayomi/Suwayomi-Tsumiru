@@ -330,8 +330,8 @@ class _ThemeStep extends ConsumerWidget {
         const SizedBox(height: 28),
         Text(context.l10n.appearance, style: context.textTheme.titleMedium),
         const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
           child: SegmentedButton<ThemeMode>(
             segments: [
               ButtonSegment(
