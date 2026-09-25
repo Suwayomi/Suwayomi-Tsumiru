@@ -428,7 +428,11 @@ final lanServerScanProvider =
             confirm: (url) async {
               final client = ref.read(onboardingHttpClientProvider)();
               try {
-                final result = await probeServer(url, client: client);
+                final result = await probeServer(
+                  url,
+                  client: client,
+                  extraHeaders: ref.read(customHttpHeadersProvider).value,
+                );
                 if (!result.confirmed) return null;
                 return DiscoveredServer(
                   url: url,
@@ -539,12 +543,10 @@ class _ServerStep extends HookConsumerWidget {
             ref.watch(settledAccountAccessProvider).capability !=
                 AccountCapability.unsupported);
 
-    // Pre-select the sign-in method the server's responses point at. A null
-    // detection leaves the Basic default alone, and a manual pick always wins.
+    // Pre-select the sign-in method the server's responses point at; an
+    // undetectable server falls back to Basic. A manual pick always wins.
     void applyDetectedAuth(AuthType? detected) {
-      if (detected != null && !userChangedAuth.value) {
-        authChoice.value = detected;
-      }
+      if (!userChangedAuth.value) authChoice.value = detected ?? AuthType.basic;
     }
 
     void resetToIdle() {
