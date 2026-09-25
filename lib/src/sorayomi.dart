@@ -143,7 +143,7 @@ class Sorayomi extends HookConsumerWidget {
           customSeed: Color(customSeed ?? 0xFF7C7BFF),
           amoled: isTrueBlack,
         ),
-        themeMode: themeMode ?? ThemeMode.dark,
+        themeMode: themeMode ?? ThemeMode.system,
         scrollBehavior: const AppScrollBehavior(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -158,7 +158,7 @@ class AccountSessionLoading extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(appThemeModeProvider) ?? ThemeMode.dark;
+    final mode = ref.watch(appThemeModeProvider) ?? ThemeMode.system;
     final brightness = switch (mode) {
       ThemeMode.dark => Brightness.dark,
       ThemeMode.light => Brightness.light,

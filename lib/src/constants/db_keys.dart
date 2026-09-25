@@ -30,7 +30,7 @@ enum DBKeys {
   sourceLastUsed(null),
   // Dark, not the platform mode: the app's themes are built dark-first, and a
   // fresh install should open the way the brand reads.
-  themeMode(ThemeMode.dark),
+  themeMode(ThemeMode.system),
   isTrueBlack(false),
   authType(AuthType.none),
   basicCredentials(null),

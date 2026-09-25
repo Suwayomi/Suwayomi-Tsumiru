@@ -36,12 +36,13 @@ http.Client _openServerClient() => MockClient.streaming((request, body) async {
 
 /// Pumps the onboarding wizard on the server step with discovery stubbed to
 /// return [results].
-Future<void> _pumpServerStep(
+Future<SharedPreferences> _pumpServerStep(
   WidgetTester tester,
-  List<DiscoveredServer> results,
-) async {
+  List<DiscoveredServer> results, {
+  Map<String, Object> prefs = const {'onboarding.step': 1},
+}) async {
   FlutterSecureStorage.setMockInitialValues({});
-  SharedPreferences.setMockInitialValues({'onboarding.step': 1});
+  SharedPreferences.setMockInitialValues(prefs);
   final preferences = await SharedPreferences.getInstance();
   await tester.binding.setSurfaceSize(const Size(1080, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -60,6 +61,7 @@ Future<void> _pumpServerStep(
     ),
   );
   await tester.pumpAndSettle();
+  return preferences;
 }
 
 String _urlFieldText(WidgetTester tester) => tester
@@ -153,5 +155,21 @@ void main() {
         isNull,
       );
     });
+  });
+
+  testWidgets('a fresh install saves Dark when onboarding opens', (
+    tester,
+  ) async {
+    final prefs = await _pumpServerStep(tester, const [], prefs: const {});
+    expect(prefs.getInt('themeMode'), ThemeMode.dark.index);
+  });
+
+  testWidgets('a stored mode is left alone', (tester) async {
+    final prefs = await _pumpServerStep(
+      tester,
+      const [],
+      prefs: {'themeMode': ThemeMode.light.index},
+    );
+    expect(prefs.getInt('themeMode'), ThemeMode.light.index);
   });
 }

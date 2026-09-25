@@ -77,7 +77,7 @@ void main() {
     expect(_arrow(Icons.chevron_right_rounded), findsNothing);
   });
 
-  test('a fresh install has no stored mode, and Dark is the default', () async {
+  test('with no stored mode the app follows the system', () async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -85,7 +85,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    expect(DBKeys.themeMode.initial, ThemeMode.dark);
-    expect(container.read(appThemeModeProvider), ThemeMode.dark);
+    expect(DBKeys.themeMode.initial, ThemeMode.system);
+    expect(container.read(appThemeModeProvider), ThemeMode.system);
   });
 }
