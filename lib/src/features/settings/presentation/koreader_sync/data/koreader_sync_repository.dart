@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../../account/domain/account_access.dart';
 import '../../../data/user_settings.dart';
@@ -13,26 +14,6 @@ import './graphql/__generated__/koreader_sync.graphql.dart';
 part 'koreader_sync_repository.g.dart';
 
 typedef KoSyncConnectResult = ({bool isLoggedIn, String? message});
-
-bool isGraphqlFieldUndefined(Object? error) {
-  final cause = error is OperationMessageException ? error.exception : error;
-  final errors = cause is OperationException
-      ? cause.graphqlErrors
-      : const <GraphQLError>[];
-  return errors.isNotEmpty && errors.every(_undefinedField);
-}
-
-bool _undefinedField(GraphQLError error) {
-  final extensions = error.extensions;
-  final classification = extensions?['classification'];
-  final code = extensions?['code'];
-  if (classification != null && classification != 'ValidationError') {
-    return false;
-  }
-  if (code != null && code != 'GRAPHQL_VALIDATION_FAILED') return false;
-  return error.message.contains('FieldUndefined') ||
-      error.message.contains('Cannot query field');
-}
 
 class KoreaderSyncRepository {
   const KoreaderSyncRepository(
@@ -73,7 +54,7 @@ class KoreaderSyncRepository {
           )
           .getData((data) => data.settings);
     } on OperationMessageException catch (error) {
-      if (isGraphqlFieldUndefined(error)) return null;
+      if (onlyUndefinedFieldErrors(error, type: 'SettingsType')) return null;
       rethrow;
     }
   }

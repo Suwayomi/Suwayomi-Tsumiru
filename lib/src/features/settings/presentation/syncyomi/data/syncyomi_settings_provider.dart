@@ -1,8 +1,8 @@
-import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../global_providers/global_providers.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../../account/data/graphql/__generated__/account.graphql.dart';
 import '../../../../account/domain/account_access.dart';
@@ -80,16 +80,12 @@ Future<SyncYomiSettings?> _legacySettings(Ref ref) async {
   final exception = result.exception;
   if (exception != null) {
     final errors = exception.graphqlErrors;
-    if (errors.isNotEmpty && errors.every(_settingsFieldUndefined)) return null;
+    if (errors.isNotEmpty &&
+        errors.every((e) => isUndefinedFieldError(e, type: 'SettingsType'))) {
+      return null;
+    }
     throw OperationMessageException(exception);
   }
   final settings = result.parsedData?.settings;
   return settings == null ? null : SyncYomiSettings.fromLegacy(settings);
-}
-
-/// A server without SyncYomi rejects the query by naming a field it lacks.
-bool _settingsFieldUndefined(GraphQLError error) {
-  final message = error.message;
-  return message.contains("in type 'SettingsType' is undefined") ||
-      message.contains('on type "SettingsType"');
 }

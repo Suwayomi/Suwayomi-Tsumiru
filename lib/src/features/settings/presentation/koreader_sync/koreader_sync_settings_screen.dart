@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
+import '../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
@@ -71,7 +72,12 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
         (server) {
           final koSyncError = koSync.error;
           if (server == null ||
-              (koSyncError != null && isGraphqlFieldUndefined(koSyncError))) {
+              (koSyncError != null &&
+                  onlyUndefinedFieldErrors(
+                    koSyncError,
+                    type: 'Query',
+                    field: 'koSyncStatus',
+                  ))) {
             return Emoticons(title: l10n.koreaderSyncUnsupported);
           }
           return koSync.showUiWhenData(
