@@ -402,6 +402,29 @@ void main() {
       expect(r.detectedAuthType, AuthType.basic);
     });
 
+    test('about 200 but protected probe 401 Basic with empty body → '
+        'login required, basic', () async {
+      final client = MockClient.streaming((request, bodyStream) async {
+        final query =
+            (jsonDecode(await bodyStream.bytesToString()) as Map)['query']
+                as String;
+        if (query.contains('aboutServer')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(_aboutOk)),
+            200,
+          );
+        }
+        return http.StreamedResponse(
+          const Stream<List<int>>.empty(),
+          401,
+          headers: {'www-authenticate': 'Basic realm="proxy"'},
+        );
+      });
+      final r = await resolveServer('http://h:4567', client: client);
+      expect(r.authMode, ProbeAuthMode.authRequired);
+      expect(r.detectedAuthType, AuthType.basic);
+    });
+
     test('simple_login: Unauthorized probe + root 303 to /login.html → '
         'AuthType.simpleLogin', () async {
       final r = await resolveServer(

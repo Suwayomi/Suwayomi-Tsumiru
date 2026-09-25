@@ -670,7 +670,11 @@ Future<ProbeResult> probeServer(
       confirmed: classified.confirmed,
       reached: classified.reached,
       basicGated: classified.basicGated,
-      authMode: classified.authMode,
+      // A Basic challenge on the protected probe needs a login even when its
+      // body was empty and read as open.
+      authMode: detected == AuthType.basic
+          ? ProbeAuthMode.authRequired
+          : classified.authMode,
       detectedAuthType: detected,
       serverName: classified.serverName,
       serverVersion: classified.serverVersion,
