@@ -112,11 +112,11 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
     switch (result) {
       case Enum$StartSyncResult.SUCCESS:
         toast?.show(l10n.syncYomiSyncStarted);
-        requestedFrom.value = startDate;
+        requestedFrom.value = terminal ? startDate : null;
         requested.value = true;
       case Enum$StartSyncResult.SYNC_IN_PROGRESS:
         toast?.show(l10n.syncYomiAlreadyRunning);
-        requestedFrom.value = startDate;
+        requestedFrom.value = terminal ? startDate : null;
         requested.value = true;
       case Enum$StartSyncResult.SYNC_DISABLED:
         toast?.show(l10n.syncYomiDisabled);
