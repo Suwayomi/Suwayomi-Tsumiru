@@ -36,6 +36,21 @@ void main() {
       expect(normaliseSyncYomiHost('https://'), isNull);
     });
 
+    test('rejects a host with a query', () {
+      expect(
+        normaliseSyncYomiHost('https://syncyomi.example.com/?token=x'),
+        isNull,
+      );
+    });
+
+    test('rejects a host with a fragment', () {
+      expect(normaliseSyncYomiHost('https://h/#x'), isNull);
+    });
+
+    test('keeps a host with a path', () {
+      expect(normaliseSyncYomiHost('https://h/syncyomi'), 'https://h/syncyomi');
+    });
+
     test('rejects a blank entry', () {
       expect(normaliseSyncYomiHost('   '), isNull);
     });

@@ -36,7 +36,9 @@ String? normaliseSyncYomiHost(String raw) {
   final trimmed = raw.trim();
   if (!_httpScheme.hasMatch(trimmed)) return null;
   final uri = Uri.tryParse(trimmed);
-  if (uri == null || uri.host.isEmpty) return null;
+  if (uri == null || uri.host.isEmpty || uri.hasQuery || uri.hasFragment) {
+    return null;
+  }
   return trimmed.replaceFirst(_trailingSlashes, '');
 }
 

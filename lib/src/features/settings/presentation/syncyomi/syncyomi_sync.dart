@@ -56,13 +56,17 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
     endDate: status.value?.endDate,
     errorMessage: status.value?.errorMessage,
   );
+  final startDate = status.value?.startDate;
   final terminal =
       view.kind == SyncYomiStatusKind.synced ||
       view.kind == SyncYomiStatusKind.failed;
   final requested = useState(false);
+  final requestedFrom = useRef<String?>(null);
   final sawRunning = useRef(false);
-  final poll =
-      !terminal && (requested.value || view.kind == SyncYomiStatusKind.syncing);
+  // A start stays pending until the status reports a run other than the old one.
+  final finished = terminal && startDate != requestedFrom.value;
+  final pending = requested.value && !finished;
+  final poll = pending || view.kind == SyncYomiStatusKind.syncing;
 
   // Poll only while a sync is actually in flight, capped at ten minutes.
   useEffect(() {
@@ -71,14 +75,22 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
     final timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (DateTime.now().isAfter(deadline)) {
         timer.cancel();
+        requested.value = false;
         return;
       }
+      if (ref.read(lastSyncStatusProvider).isLoading) return;
       ref.invalidate(lastSyncStatusProvider);
     });
     return timer.cancel;
   }, [poll]);
 
   useEffect(() {
+    if (requested.value && finished) {
+      requested.value = false;
+      sawRunning.value = false;
+      if (view.kind == SyncYomiStatusKind.synced) onSynced?.call();
+      return null;
+    }
     if (!terminal) {
       if (view.kind == SyncYomiStatusKind.syncing) sawRunning.value = true;
       return null;
@@ -88,7 +100,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
       onSynced?.call();
     }
     return null;
-  }, [terminal, view.kind]);
+  }, [terminal, view.kind, startDate]);
 
   Future<void> start() async {
     final result = await AppUtils.guard(
@@ -100,11 +112,11 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
     switch (result) {
       case Enum$StartSyncResult.SUCCESS:
         toast?.show(l10n.syncYomiSyncStarted);
-        sawRunning.value = true;
+        requestedFrom.value = startDate;
         requested.value = true;
       case Enum$StartSyncResult.SYNC_IN_PROGRESS:
         toast?.show(l10n.syncYomiAlreadyRunning);
-        sawRunning.value = true;
+        requestedFrom.value = startDate;
         requested.value = true;
       case Enum$StartSyncResult.SYNC_DISABLED:
         toast?.show(l10n.syncYomiDisabled);
@@ -117,9 +129,7 @@ SyncYomiSync useSyncYomi(WidgetRef ref, {VoidCallback? onSynced}) {
   return SyncYomiSync(
     view: view,
     step: syncYomiStep(status.value?.state.name),
-    running:
-        view.kind == SyncYomiStatusKind.syncing ||
-        (requested.value && !terminal),
+    running: view.kind == SyncYomiStatusKind.syncing || pending,
     start: start,
   );
 }

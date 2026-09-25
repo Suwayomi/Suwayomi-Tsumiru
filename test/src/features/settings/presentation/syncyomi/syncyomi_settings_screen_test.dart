@@ -88,7 +88,7 @@ class _FakeServer extends Link {
   _FakeServer(this.settings, {this.status});
 
   final Fragment$SettingsDto settings;
-  final Map<String, dynamic>? status;
+  Map<String, dynamic>? status;
   final operations = <String>[];
   final variables = <Map<String, dynamic>>[];
 
@@ -194,6 +194,9 @@ Future<void> _pump(
 
 ListTile _tileWith(WidgetTester tester, String text) =>
     tester.widget<ListTile>(find.widgetWithText(ListTile, text));
+
+int _statusPolls(_Harness harness) =>
+    harness.server.operations.where((name) => name == 'LastSyncStatus').length;
 
 void main() {
   testWidgets('shows every setting, unset until the server has them', (
@@ -412,6 +415,55 @@ void main() {
       harness.server.operations.where((name) => name == 'LastSyncStatus'),
       hasLength(greaterThan(polls)),
     );
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a sync started over an old SUCCESS is watched to its own end', (
+    tester,
+  ) async {
+    final harness = _Harness(
+      settings: _settings(
+        enabled: true,
+        host: 'https://syncyomi.example.com',
+        apiKey: 'k',
+      ),
+      status: {
+        '__typename': 'SyncStatus',
+        'state': 'SUCCESS',
+        'errorMessage': null,
+        'startDate': '1',
+        'endDate': '1700000001000',
+      },
+    );
+    await _pump(tester, harness, settle: false);
+    expect(find.textContaining('Last synced'), findsOneWidget);
+
+    await tester.tap(find.text('Sync now'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(harness.server.writes, ['StartSync']);
+    final polls = _statusPolls(harness);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(_statusPolls(harness), greaterThan(polls));
+
+    harness.server.status = {
+      '__typename': 'SyncStatus',
+      'state': 'SUCCESS',
+      'errorMessage': null,
+      'startDate': '2',
+      'endDate': '1800000001000',
+    };
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Last synced'), findsOneWidget);
+    final settled = _statusPolls(harness);
+
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump();
+    expect(_statusPolls(harness), settled);
     await tester.pumpWidget(const SizedBox());
   });
 }
