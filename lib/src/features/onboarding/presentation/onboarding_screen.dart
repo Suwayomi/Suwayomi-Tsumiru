@@ -104,70 +104,77 @@ class OnboardingScreen extends HookConsumerWidget {
             ),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                // Brand wordmark, centered, with a top-right "Skip" escape on
-                // every step except the final one (nothing left to skip there).
-                Stack(
-                  alignment: Alignment.center,
+            // Wide desktop windows keep onboarding a readable column.
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
                   children: [
-                    const _BrandHeader(),
-                    if (step.value < _stepCount - 1)
-                      Positioned(
-                        right: 4,
-                        child: TextButton(
-                          onPressed: activity.value == null ? finish : null,
-                          child: Text(context.l10n.onboardingSkip),
+                    const SizedBox(height: 12),
+                    // Brand wordmark, centered, with a top-right "Skip" escape on
+                    // every step except the final one (nothing left to skip there).
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const _BrandHeader(),
+                        if (step.value < _stepCount - 1)
+                          Positioned(
+                            right: 4,
+                            child: TextButton(
+                              onPressed: activity.value == null ? finish : null,
+                              child: Text(context.l10n.onboardingSkip),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _StepDots(count: _stepCount, active: step.value),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: SingleChildScrollView(
+                          key: ValueKey(step.value),
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                          child: switch (step.value) {
+                            0 => const _ThemeStep(),
+                            1 => _ServerStep(
+                              nextRequest: nextRequest.value,
+                              onActivityChanged: (value) {
+                                if (context.mounted && step.value == 1) {
+                                  activity.value = value;
+                                }
+                              },
+                              onVerifiedChanged: (v) =>
+                                  serverVerified.value = v,
+                              onSignedIn: () {
+                                activity.value = null;
+                                serverVerified.value = true;
+                                step.value = 2;
+                              },
+                            ),
+                            _ => const _FinishStep(),
+                          },
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _StepDots(count: _stepCount, active: step.value),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: SingleChildScrollView(
-                      key: ValueKey(step.value),
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                      child: switch (step.value) {
-                        0 => const _ThemeStep(),
-                        1 => _ServerStep(
-                          nextRequest: nextRequest.value,
-                          onActivityChanged: (value) {
-                            if (context.mounted && step.value == 1) {
-                              activity.value = value;
-                            }
-                          },
-                          onVerifiedChanged: (v) => serverVerified.value = v,
-                          onSignedIn: () {
-                            activity.value = null;
-                            serverVerified.value = true;
-                            step.value = 2;
-                          },
-                        ),
-                        _ => const _FinishStep(),
+                    ),
+                    _NavBar(
+                      activity: step.value == 1 ? activity.value : null,
+                      showBack: step.value > 0,
+                      isLast: isLast,
+                      onBack: () => moveTo(step.value - 1),
+                      onNext: () {
+                        if (step.value == 1 && !serverVerified.value) {
+                          nextRequest.value++;
+                        } else if (isLast) {
+                          finish();
+                        } else {
+                          moveTo(step.value + 1);
+                        }
                       },
                     ),
-                  ),
+                  ],
                 ),
-                _NavBar(
-                  activity: step.value == 1 ? activity.value : null,
-                  showBack: step.value > 0,
-                  isLast: isLast,
-                  onBack: () => moveTo(step.value - 1),
-                  onNext: () {
-                    if (step.value == 1 && !serverVerified.value) {
-                      nextRequest.value++;
-                    } else if (isLast) {
-                      finish();
-                    } else {
-                      moveTo(step.value + 1);
-                    }
-                  },
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -314,7 +321,13 @@ class _ThemeStep extends ConsumerWidget {
       children: [
         const SizedBox(height: 12),
         // The big brand mark — the swirl logo above the welcome heading.
-        Center(child: Image.asset(_brandLogo(context).path, height: 160)),
+        Center(
+          child: Image.asset(
+            _brandLogo(context).path,
+            // Short desktop windows shrink the mark so the theme row still fits.
+            height: MediaQuery.sizeOf(context).height < 800 ? 96 : 160,
+          ),
+        ),
         const SizedBox(height: 24),
         Text(
           context.l10n.onboardingWelcomeTitle,
