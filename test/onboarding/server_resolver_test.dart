@@ -1117,4 +1117,14 @@ void main() {
       },
     );
   });
+
+  test('readRootStatus asks for the base path with a trailing slash', () async {
+    Uri? seen;
+    final client = MockClient.streaming((request, _) async {
+      seen = request.url;
+      return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+    });
+    await readRootStatus('https://h.example/suwayomi', client: client);
+    expect(seen.toString(), 'https://h.example/suwayomi/');
+  });
 }

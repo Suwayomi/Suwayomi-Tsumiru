@@ -720,7 +720,10 @@ Future<(int, String?)?> readRootStatus(
   Map<String, String>? extraHeaders,
 }) async {
   try {
-    final request = http.Request('GET', Uri.parse(baseUrl))
+    // A trailing slash skips a proxy's path-canonicalising redirect, which
+    // would otherwise hide the hop detection reads.
+    final root = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    final request = http.Request('GET', Uri.parse(root))
       ..followRedirects = false;
     if (extraHeaders != null && extraHeaders.isNotEmpty) {
       for (final entry in extraHeaders.entries) {
