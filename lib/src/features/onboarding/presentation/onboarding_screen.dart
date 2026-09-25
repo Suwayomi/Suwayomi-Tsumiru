@@ -180,8 +180,8 @@ class OnboardingScreen extends HookConsumerWidget {
 /// logo drawn for pale surfaces, the default one reads on dark ones.
 AssetGenImage _brandLogo(BuildContext context) =>
     Theme.of(context).brightness == Brightness.light
-        ? Assets.icons.logoOnLight
-        : Assets.icons.darkIcon;
+    ? Assets.icons.logoOnLight
+    : Assets.icons.darkIcon;
 
 /// The swirl logo + "Tsumiru" wordmark shown at the top of every step.
 class _BrandHeader extends StatelessWidget {
@@ -441,12 +441,22 @@ class _ServerStep extends HookConsumerWidget {
     final userController = useTextEditingController();
     final passController = useTextEditingController();
     final authChoice = useState(AuthType.basic);
+    // Once the user picks a method themselves, detection stops overriding it.
+    final userChangedAuth = useState(false);
     final credsRejected = useState(false);
     final showAccountCodes =
         authChoice.value == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
                 AccountCapability.unsupported);
+
+    // Pre-select the sign-in method the server's responses point at. A null
+    // detection leaves the Basic default alone, and a manual pick always wins.
+    void applyDetectedAuth(AuthType? detected) {
+      if (detected != null && !userChangedAuth.value) {
+        authChoice.value = detected;
+      }
+    }
 
     void resetToIdle() {
       if (state.value != _TestState.idle) {
@@ -587,14 +597,16 @@ class _ServerStep extends HookConsumerWidget {
       resolvedUrl.value = url;
       final client = ref.read(onboardingHttpClientProvider)();
       try {
-        if (!await webAuthRequired(
+        final probe = await webAuthProbe(
           url,
           client: client,
           extraHeaders: ref.read(customHttpHeadersProvider).value,
-        )) {
+        );
+        if (!probe.required) {
           await markConnected();
           return;
         }
+        applyDetectedAuth(probe.detected);
         final hasCreds =
             userController.text.trim().isNotEmpty &&
             passController.text.isNotEmpty;
@@ -667,6 +679,7 @@ class _ServerStep extends HookConsumerWidget {
             if (!needsLogin) {
               await markConnected();
             } else {
+              applyDetectedAuth(result.detectedAuthType);
               final hasCreds =
                   userController.text.trim().isNotEmpty &&
                   passController.text.isNotEmpty;
@@ -926,6 +939,7 @@ class _ServerStep extends HookConsumerWidget {
             ],
             onSelected: (m) {
               if (m != null) {
+                userChangedAuth.value = true;
                 authChoice.value = m;
                 credsRejected.value = false;
               }

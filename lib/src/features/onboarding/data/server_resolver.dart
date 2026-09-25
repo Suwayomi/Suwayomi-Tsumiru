@@ -9,6 +9,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../constants/enum.dart';
+
 /// "Find server" connection resolver.
 ///
 /// The onboarding Step 2 lets a user type a half-remembered address — a bare
@@ -58,6 +60,7 @@ class ProbeResult {
     required this.reached,
     required this.basicGated,
     this.authMode,
+    this.detectedAuthType,
     this.serverName,
     this.serverVersion,
   });
@@ -68,6 +71,7 @@ class ProbeResult {
       reached = false,
       basicGated = false,
       authMode = null,
+      detectedAuthType = null,
       serverName = null,
       serverVersion = null;
 
@@ -77,6 +81,7 @@ class ProbeResult {
       reached = true,
       basicGated = false,
       authMode = null,
+      detectedAuthType = null,
       serverName = null,
       serverVersion = null;
 
@@ -86,6 +91,7 @@ class ProbeResult {
       reached = true,
       basicGated = true,
       authMode = null,
+      detectedAuthType = null,
       serverName = null,
       serverVersion = null;
 
@@ -103,6 +109,10 @@ class ProbeResult {
   /// When [confirmed], whether the server's @RequireAuth surface needs creds.
   final ProbeAuthMode? authMode;
 
+  /// The sign-in method this candidate appears to use, per [detectAuthType].
+  /// Null when the responses don't pin one down.
+  final AuthType? detectedAuthType;
+
   /// `aboutServer.name`, when present in the body (read independently of
   /// the `errors[]` array — a partial/errored response can still carry it).
   final String? serverName;
@@ -117,6 +127,7 @@ class ResolvedServer {
     required this.baseUrl,
     required this.outcome,
     this.authMode,
+    this.detectedAuthType,
     this.serverName,
     this.serverVersion,
   });
@@ -129,6 +140,10 @@ class ResolvedServer {
 
   /// For a [ResolveOutcome.found] result, whether the server needs auth.
   final ProbeAuthMode? authMode;
+
+  /// Which sign-in method the server's responses point at, so onboarding can
+  /// pre-select it. Null means undetectable — keep the Basic default.
+  final AuthType? detectedAuthType;
 
   final String? serverName;
   final String? serverVersion;
@@ -415,6 +430,59 @@ bool _bodyIndicatesUnauthorised(String authBody) {
 }
 
 // ---------------------------------------------------------------------------
+// Auth-type detection
+// ---------------------------------------------------------------------------
+
+/// Reads a probe's HTTP shape into the sign-in method it implies, so the
+/// onboarding dropdown can open on the right entry instead of always Basic.
+///
+/// PURE: plain data in, [AuthType] out — no I/O, no context.
+///
+/// Inputs:
+///   * [probeStatus] — status of the @RequireAuth probe response.
+///   * [wwwAuthenticate] — that response's `WWW-Authenticate` header, if any.
+///   * [probeUnauthorized] — whether that response said "Unauthorized".
+///   * [rootStatus] / [rootLocation] — a redirect-OFF GET of the base URL, when
+///     one could be taken. On web the browser follows redirects and the 303 is
+///     invisible, so both stay null.
+///
+/// Detection is deliberately conservative — [AuthType.basic] on a 401 Basic
+/// challenge, and simple-vs-ui only when the root hop actually distinguishes
+/// them. Anything it can't tell apart returns null (unknown).
+AuthType? detectAuthType({
+  required int probeStatus,
+  String? wwwAuthenticate,
+  bool? probeUnauthorized,
+  int? rootStatus,
+  String? rootLocation,
+}) {
+  if (probeStatus == 401 &&
+      (wwwAuthenticate?.toLowerCase().startsWith('basic') ?? false)) {
+    return AuthType.basic;
+  }
+
+  if (probeStatus == 200 && probeUnauthorized == true) {
+    // A root redirect to the login page is the simple-login tell; a redirect
+    // anywhere else tells us nothing.
+    if (rootStatus == 301 ||
+        rootStatus == 302 ||
+        rootStatus == 303 ||
+        rootStatus == 307 ||
+        rootStatus == 308) {
+      return (rootLocation?.contains('login.html') ?? false)
+          ? AuthType.simpleLogin
+          : null;
+    }
+    // Root serves the app shell → the login is the UI's. Same reading when the
+    // root hop couldn't be observed at all (web, or a failed read): simple
+    // login cannot be proven, and the UI login form works everywhere.
+    if (rootStatus == 200 || rootStatus == null) return AuthType.uiLogin;
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Network probe (one candidate)
 // ---------------------------------------------------------------------------
 
@@ -484,7 +552,14 @@ Future<ProbeResult> probeServer(
   if (aboutResp.statusCode == 401 &&
       (aboutResp.headers['www-authenticate']?.toLowerCase().contains('basic') ??
           false)) {
-    return ProbeResult.basicGatedResult(baseUrl);
+    return ProbeResult(
+      url: baseUrl,
+      confirmed: false,
+      reached: true,
+      basicGated: true,
+      authMode: null,
+      detectedAuthType: AuthType.basic,
+    );
   }
 
   // A redirect: follow ONE hop to the destination (a proxy bouncing the API to
@@ -515,16 +590,21 @@ Future<ProbeResult> probeServer(
 
   // Auth probe (request B). Failure here doesn't sink the candidate — we can
   // still confirm Suwayomi from request A and assume auth-required if B is
-  // unreadable.
+  // unreadable. Its status + WWW-Authenticate are kept for auth detection: a
+  // Basic challenge can surface here even when request A came back 200.
+  int? authStatus;
+  String? authWwwAuthenticate;
   String? authBody;
   try {
-    final (_, body) = await _sendNoRedirect(
+    final (resp, body) = await _sendNoRedirect(
       client,
       uri,
       kAuthProbeQuery,
       timeout,
       extraHeaders: extraHeaders,
     );
+    authStatus = resp.statusCode;
+    authWwwAuthenticate = resp.headers['www-authenticate'];
     authBody = body;
   } catch (_) {
     authBody = null;
@@ -538,7 +618,8 @@ Future<ProbeResult> probeServer(
   if (classified != null) {
     if (authBody == null && classified.confirmed) {
       // B unreadable: we can't prove the server is open, and reading it as
-      // open would onboard an auth server with no login step.
+      // open would onboard an auth server with no login step. No response means
+      // no detection signal either.
       return ProbeResult(
         url: classified.url,
         confirmed: true,
@@ -549,7 +630,51 @@ Future<ProbeResult> probeServer(
         serverVersion: classified.serverVersion,
       );
     }
-    return classified;
+
+    // Detection reads request B's own status/headers, so a Basic challenge
+    // that surfaced here rather than on request A is still caught. Only the
+    // simple-vs-ui split needs the extra root GET, and only an OBSERVED root
+    // hop may decide it — a failed read leaves detection unknown (and so
+    // leaves today's Basic default) rather than claiming a mode it never saw.
+    AuthType? detected;
+    final status = authStatus;
+    if (status != null) {
+      final probeUnauthorized = _bodyIndicatesUnauthorised(authBody ?? '');
+      if (status == 200 && probeUnauthorized) {
+        final root = await readRootStatus(
+          baseUrl,
+          client: client,
+          timeout: timeout,
+          extraHeaders: extraHeaders,
+        );
+        if (root != null) {
+          detected = detectAuthType(
+            probeStatus: status,
+            wwwAuthenticate: authWwwAuthenticate,
+            probeUnauthorized: probeUnauthorized,
+            rootStatus: root.$1,
+            rootLocation: root.$2,
+          );
+        }
+      } else {
+        detected = detectAuthType(
+          probeStatus: status,
+          wwwAuthenticate: authWwwAuthenticate,
+          probeUnauthorized: probeUnauthorized,
+        );
+      }
+    }
+
+    return ProbeResult(
+      url: classified.url,
+      confirmed: classified.confirmed,
+      reached: classified.reached,
+      basicGated: classified.basicGated,
+      authMode: classified.authMode,
+      detectedAuthType: detected,
+      serverName: classified.serverName,
+      serverVersion: classified.serverVersion,
+    );
   }
 
   return ProbeResult.reachedUnconfirmed(baseUrl);
@@ -578,6 +703,34 @@ Future<(http.StreamedResponse, String)> _sendNoRedirect(
   final streamed = await client.send(request).timeout(timeout);
   final body = await streamed.stream.bytesToString().timeout(timeout);
   return (streamed, body);
+}
+
+/// GETs the candidate's base URL with redirects OFF and returns
+/// `(status, Location)` — the root hop that separates the two login modes: a
+/// simple-login server 303s to `/login.html`, a UI-login one serves its app
+/// shell. Null when the read fails (detection then reads as unknown).
+Future<(int, String?)?> readRootStatus(
+  String baseUrl, {
+  required http.Client client,
+  Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
+}) async {
+  try {
+    final request = http.Request('GET', Uri.parse(baseUrl))
+      ..followRedirects = false;
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      for (final entry in extraHeaders.entries) {
+        final lower = entry.key.toLowerCase();
+        if (lower == 'authorization' || lower == 'cookie') continue;
+        request.headers[entry.key] = entry.value;
+      }
+    }
+    final streamed = await client.send(request).timeout(timeout);
+    await streamed.stream.drain<void>().timeout(timeout);
+    return (streamed.statusCode, streamed.headers['location']);
+  } catch (_) {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -636,6 +789,7 @@ Future<ResolvedServer> resolveServer(
         baseUrl: result.url,
         outcome: ResolveOutcome.found,
         authMode: result.authMode,
+        detectedAuthType: result.detectedAuthType,
         serverName: result.serverName,
         serverVersion: result.serverVersion,
       );
@@ -653,6 +807,7 @@ Future<ResolvedServer> resolveServer(
     return ResolvedServer(
       baseUrl: bestBasicGated.url,
       outcome: ResolveOutcome.basicGated,
+      detectedAuthType: bestBasicGated.detectedAuthType,
     );
   }
   if (bestReached != null) {
@@ -712,6 +867,27 @@ Future<bool> webAuthRequired(
   Duration timeout = const Duration(seconds: 4),
   Map<String, String>? extraHeaders,
 }) async {
+  final probe = await webAuthProbe(
+    baseUrl,
+    client: client,
+    timeout: timeout,
+    extraHeaders: extraHeaders,
+  );
+  return probe.required;
+}
+
+/// The same web probe as [webAuthRequired], plus the detected sign-in method.
+///
+/// The browser has already followed any redirect by the time we see the
+/// response and never exposes the root hop, so [detectAuthType] runs with
+/// `rootStatus` null: a 200 + Unauthorized server reads as UI login, since
+/// simple login can't be told apart from here.
+Future<({bool required, AuthType? detected})> webAuthProbe(
+  String baseUrl, {
+  required http.Client client,
+  Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
+}) async {
   final uri = graphqlUriFor(baseUrl);
   final headers = <String, String>{'Content-Type': 'application/json'};
   if (extraHeaders != null && extraHeaders.isNotEmpty) {
@@ -729,10 +905,21 @@ Future<bool> webAuthRequired(
           body: jsonEncode({'query': kAuthProbeQuery}),
         )
         .timeout(timeout);
-    if (resp.statusCode == 401 || resp.statusCode == 403) return true;
-    return _bodyIndicatesUnauthorised(resp.body);
+    final unauthorized =
+        resp.statusCode == 401 ||
+        resp.statusCode == 403 ||
+        _bodyIndicatesUnauthorised(resp.body);
+    return (
+      required: unauthorized,
+      detected: detectAuthType(
+        probeStatus: resp.statusCode,
+        wwwAuthenticate: resp.headers['www-authenticate'],
+        probeUnauthorized: unauthorized,
+        rootStatus: null,
+      ),
+    );
   } catch (_) {
-    return true;
+    return (required: true, detected: null);
   }
 }
 

@@ -40,6 +40,23 @@ http.Client _gatedServerClient() => MockClient.streaming((request, body) async {
   );
 });
 
+/// A UI-login server: aboutServer answers, the @RequireAuth probe is
+/// Unauthorized, and GET / serves the app shell (200) rather than bouncing to
+/// /login.html — the shape detection reads as [AuthType.uiLogin].
+http.Client _uiLoginServerClient() =>
+    MockClient.streaming((request, body) async {
+      if (request.method == 'GET') {
+        return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+      }
+      final q =
+          ((jsonDecode(await body.bytesToString()) as Map)['query'] as String);
+      final isAbout = q.contains('aboutServer');
+      return http.StreamedResponse(
+        Stream.value(utf8.encode(isAbout ? _aboutOk : _authUnauthorized)),
+        200,
+      );
+    });
+
 class _SimpleLoginCoordinator extends AuthCoordinator {
   _SimpleLoginCoordinator({this.pending});
 
@@ -455,6 +472,82 @@ void main() {
     expect(find.text('Basic auth'), findsWidgets);
     expect(find.widgetWithText(TextField, 'User Name'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
+  });
+
+  /// Pumps the onboarding wizard on step 2 with [client] standing in for the
+  /// server, then runs "Test connection" on [address].
+  Future<void> pumpAndTestConnection(
+    WidgetTester tester,
+    http.Client Function() client, {
+    String address = '192.168.0.10',
+  }) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    final sp = await SharedPreferences.getInstance();
+    await tester.binding.setSurfaceSize(const Size(1080, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          onboardingHttpClientProvider.overrideWithValue(client),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const OnboardingScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, address);
+    await tester.tap(find.text('Test connection'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a UI-login server pre-selects UI login with no user tap', (
+    tester,
+  ) async {
+    await pumpAndTestConnection(tester, _uiLoginServerClient);
+
+    expect(find.text('This server needs a login'), findsOneWidget);
+    expect(find.text('UI login'), findsWidgets);
+    expect(
+      tester
+          .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
+          .initialSelection,
+      AuthType.uiLogin,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a manual sign-in method pick wins over later detection', (
+    tester,
+  ) async {
+    await pumpAndTestConnection(tester, _uiLoginServerClient);
+    expect(find.text('UI login'), findsWidgets);
+
+    // The user picks simple login themselves...
+    tester
+        .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
+        .onSelected!(AuthType.simpleLogin);
+    await tester.pumpAndSettle();
+    expect(find.text('Simple login'), findsWidgets);
+
+    // ...and a later probe, which detects UI login again, must not override it.
+    await tester.tap(find.text('Test connection'));
+    await tester.pumpAndSettle();
+    expect(find.text('This server needs a login'), findsOneWidget);
+    expect(find.text('Simple login'), findsWidgets);
+    expect(
+      tester
+          .widget<DropdownMenu<AuthType>>(find.byType(DropdownMenu<AuthType>))
+          .initialSelection,
+      AuthType.simpleLogin,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

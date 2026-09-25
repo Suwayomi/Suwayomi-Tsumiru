@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
 
 // ---------------------------------------------------------------------------
@@ -202,6 +203,256 @@ void main() {
     });
   });
 
+  group('detectAuthType — probe shape → sign-in method', () {
+    final cases =
+        <
+          ({
+            String name,
+            int probeStatus,
+            String? wwwAuthenticate,
+            bool? probeUnauthorized,
+            int? rootStatus,
+            String? rootLocation,
+            AuthType? expected,
+          })
+        >[
+          (
+            name: '401 + WWW-Authenticate: Basic → basic',
+            probeStatus: 401,
+            wwwAuthenticate: 'Basic realm="suwayomi"',
+            probeUnauthorized: null,
+            rootStatus: null,
+            rootLocation: null,
+            expected: AuthType.basic,
+          ),
+          (
+            name: 'the Basic challenge is matched case-insensitively',
+            probeStatus: 401,
+            wwwAuthenticate: 'basic realm="suwayomi"',
+            probeUnauthorized: null,
+            rootStatus: null,
+            rootLocation: null,
+            expected: AuthType.basic,
+          ),
+          (
+            name: '401 + WWW-Authenticate: Bearer → unknown',
+            probeStatus: 401,
+            wwwAuthenticate: 'Bearer realm="suwayomi"',
+            probeUnauthorized: null,
+            rootStatus: null,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '401 with no WWW-Authenticate → unknown',
+            probeStatus: 401,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: null,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '200 Unauth + root 303 to /login.html → simpleLogin',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: 303,
+            rootLocation: '/login.html',
+            expected: AuthType.simpleLogin,
+          ),
+          (
+            name: '200 Unauth + root 302 to /login.html → simpleLogin',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: 302,
+            rootLocation: 'https://h:4567/login.html',
+            expected: AuthType.simpleLogin,
+          ),
+          (
+            name: '200 Unauth + root redirect somewhere else → unknown',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: 303,
+            rootLocation: '/setup',
+            expected: null,
+          ),
+          (
+            name: '200 Unauth + root 200 (app shell) → uiLogin',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: 200,
+            rootLocation: null,
+            expected: AuthType.uiLogin,
+          ),
+          (
+            name: '200 Unauth + root unseen (web) → uiLogin',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: null,
+            rootLocation: null,
+            expected: AuthType.uiLogin,
+          ),
+          (
+            name: '200 Unauth + root 500 → unknown',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: 500,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '200 but not Unauthorized → unknown (no login needed)',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: false,
+            rootStatus: 200,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '200 with no Unauthorized signal at all → unknown',
+            probeStatus: 200,
+            wwwAuthenticate: null,
+            probeUnauthorized: null,
+            rootStatus: 200,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '403 → unknown',
+            probeStatus: 403,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: null,
+            rootLocation: null,
+            expected: null,
+          ),
+          (
+            name: '500 → unknown',
+            probeStatus: 500,
+            wwwAuthenticate: null,
+            probeUnauthorized: true,
+            rootStatus: null,
+            rootLocation: null,
+            expected: null,
+          ),
+        ];
+
+    for (final c in cases) {
+      test(c.name, () {
+        expect(
+          detectAuthType(
+            probeStatus: c.probeStatus,
+            wwwAuthenticate: c.wwwAuthenticate,
+            probeUnauthorized: c.probeUnauthorized,
+            rootStatus: c.rootStatus,
+            rootLocation: c.rootLocation,
+          ),
+          c.expected,
+        );
+      });
+    }
+  });
+
+  group('resolveServer — detected auth type per mode', () {
+    /// The documented shape of each auth mode, driven over the wire: both
+    /// GraphQL probes answer, and GET / gives the root hop detection reads.
+    http.Client authModeClient({
+      required int rootStatus,
+      String? rootLocation,
+    }) => MockClient.streaming((request, bodyStream) async {
+      if (request.method == 'GET') {
+        final headers = <String, String>{};
+        if (rootLocation != null) headers['location'] = rootLocation;
+        return http.StreamedResponse(
+          const Stream<List<int>>.empty(),
+          rootStatus,
+          headers: headers,
+        );
+      }
+      final query =
+          (jsonDecode(await bodyStream.bytesToString()) as Map)['query']
+              as String;
+      return http.StreamedResponse(
+        Stream.value(
+          utf8.encode(
+            query.contains('aboutServer') ? _aboutOk : _authUnauthorized,
+          ),
+        ),
+        200,
+      );
+    });
+
+    test('basic_auth: 401 + Basic challenge → AuthType.basic', () async {
+      final client = MockClient.streaming(
+        (_, _) async => http.StreamedResponse(
+          const Stream<List<int>>.empty(),
+          401,
+          headers: {'www-authenticate': 'Basic realm="suwayomi"'},
+        ),
+      );
+      final r = await resolveServer('http://h:4567', client: client);
+      expect(r.outcome, ResolveOutcome.basicGated);
+      expect(r.detectedAuthType, AuthType.basic);
+    });
+
+    test('simple_login: Unauthorized probe + root 303 to /login.html → '
+        'AuthType.simpleLogin', () async {
+      final r = await resolveServer(
+        'http://h:4567',
+        client: authModeClient(rootStatus: 303, rootLocation: '/login.html'),
+      );
+      expect(r.outcome, ResolveOutcome.found);
+      expect(r.authMode, ProbeAuthMode.authRequired);
+      expect(r.detectedAuthType, AuthType.simpleLogin);
+    });
+
+    test(
+      'ui_login: Unauthorized probe + root 200 → AuthType.uiLogin',
+      () async {
+        final r = await resolveServer(
+          'http://h:4567',
+          client: authModeClient(rootStatus: 200),
+        );
+        expect(r.outcome, ResolveOutcome.found);
+        expect(r.authMode, ProbeAuthMode.authRequired);
+        expect(r.detectedAuthType, AuthType.uiLogin);
+      },
+    );
+
+    test('unreadable root hop → null (Basic default stays)', () async {
+      final r = await resolveServer(
+        'http://h:4567',
+        client: authModeClient(rootStatus: 500),
+      );
+      expect(r.detectedAuthType, isNull);
+    });
+
+    test('an open server is never given a detected auth type', () async {
+      final client = MockClient.streaming((request, bodyStream) async {
+        final query =
+            (jsonDecode(await bodyStream.bytesToString()) as Map)['query']
+                as String;
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(query.contains('aboutServer') ? _aboutOk : _authOpen),
+          ),
+          200,
+        );
+      });
+      final r = await resolveServer('http://h:4567', client: client);
+      expect(r.outcome, ResolveOutcome.found);
+      expect(r.authMode, ProbeAuthMode.open);
+      expect(r.detectedAuthType, isNull);
+    });
+  });
+
   group('resolveServer — ladder walk', () {
     test('first confirmed candidate (http:4567) short-circuits', () async {
       final tried = <String>[];
@@ -345,6 +596,11 @@ void main() {
   group('probeServer — wire behaviour via MockClient', () {
     test('confirms a Suwayomi server and reads auth mode', () async {
       final mock = MockClient.streaming((request, bodyStream) async {
+        if (request.method == 'GET') {
+          // The root hop detection reads once the auth probe says Unauthorized.
+          expect(request.url.host, 'h');
+          return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+        }
         final body = await bodyStream.bytesToString();
         final query = (jsonDecode(body) as Map)['query'] as String;
         expect(request.url.path, '/api/graphql');
@@ -363,6 +619,61 @@ void main() {
       final r = await probeServer('http://h:4567', client: mock);
       expect(r.confirmed, isTrue);
       expect(r.authMode, ProbeAuthMode.authRequired);
+      expect(r.detectedAuthType, AuthType.uiLogin);
+    });
+
+    test('401 + Basic challenge on the auth probe → basic detection', () async {
+      // aboutServer answers (200), but the @RequireAuth probe is where the
+      // Basic challenge shows up — detection must read request B's status.
+      final mock = MockClient.streaming((request, bodyStream) async {
+        final query =
+            (jsonDecode(await bodyStream.bytesToString()) as Map)['query']
+                as String;
+        if (query.contains('aboutServer')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(_aboutOk)),
+            200,
+          );
+        }
+        return http.StreamedResponse(
+          const Stream<List<int>>.empty(),
+          401,
+          headers: {'www-authenticate': 'Basic realm="suwayomi"'},
+        );
+      });
+      final r = await probeServer('http://h:4567', client: mock);
+      expect(r.confirmed, isTrue);
+      expect(r.detectedAuthType, AuthType.basic);
+    });
+
+    test(
+      '401 + WWW-Authenticate: Basic → basicGated, detected basic',
+      () async {
+        final mock = MockClient.streaming((request, bodyStream) async {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('')),
+            401,
+            headers: {'www-authenticate': 'Basic realm="suwayomi"'},
+          );
+        });
+        final r = await probeServer('http://h:4567', client: mock);
+        expect(r.basicGated, isTrue);
+        expect(r.confirmed, isFalse);
+        expect(r.detectedAuthType, AuthType.basic);
+      },
+    );
+
+    test('a non-Basic 401 challenge is not detected', () async {
+      final mock = MockClient.streaming((request, bodyStream) async {
+        return http.StreamedResponse(
+          const Stream<List<int>>.empty(),
+          401,
+          headers: {'www-authenticate': 'Bearer realm="suwayomi"'},
+        );
+      });
+      final r = await probeServer('http://h:4567', client: mock);
+      expect(r.basicGated, isFalse);
+      expect(r.detectedAuthType, isNull);
     });
 
     test('401 + WWW-Authenticate: Basic → basicGated', () async {
