@@ -117,8 +117,10 @@ Color readerNavSurface(ColorScheme cs) =>
     cs.surface.withValues(alpha: cs.brightness == Brightness.dark ? 0.9 : 0.95);
 
 /// A lighter, more vibrant accent for text/outline actions (links, "Uninstall").
-Color brandBrightAccent(ColorScheme cs) =>
-    Color.lerp(cs.primary, Colors.white, 0.22)!;
+/// Light mode keeps the deep primary; lightening it would undo its contrast.
+Color brandBrightAccent(ColorScheme cs) => cs.brightness == Brightness.light
+    ? cs.primary
+    : Color.lerp(cs.primary, Colors.white, 0.22)!;
 
 /// Deterministic hue (0-360) for a label — same genre always gets the same
 /// color. Mirrors the playground's `hueFor`: h = (h*31 + codeUnit) % 360.
@@ -262,7 +264,7 @@ class BrandGlassButton extends StatelessWidget {
     final accent = brandBrightAccent(cs);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: cs.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: cs.outlineVariant),
       ),
@@ -313,7 +315,7 @@ class BrandCircleButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.06),
+        color: cs.onSurface.withValues(alpha: 0.06),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Material(

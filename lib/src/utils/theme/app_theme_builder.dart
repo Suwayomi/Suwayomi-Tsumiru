@@ -36,7 +36,7 @@ ThemeData buildAppTheme({
   final primary = scheme.primary;
   final outline = scheme.outlineVariant;
   // A lighter, more vibrant blue for text/outline actions (Uninstall, links…).
-  final brightPrimary = Color.lerp(primary, Colors.white, 0.22)!;
+  final brightPrimary = brandBrightAccent(scheme);
 
   ButtonStyle filledLike() => ButtonStyle(
     backgroundColor: WidgetStatePropertyAll(primary),
