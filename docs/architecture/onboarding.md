@@ -51,7 +51,7 @@ The "I don't have a server yet" link opens the setup docs and unlocks `Next`, so
 
 `data/onboarding_complete.dart` — `OnboardingComplete`, a `bool` backed by `SharedPreferenceClientMixin` at `DBKeys.onboardingComplete`. `serverConfiguredForOnboarding(url)` is true when a real (non-default) server URL is stored; a one-time startup migration (`lib/main.dart`) calls `seedFirstRunPreferences`, which uses it to seed existing installs as already-onboarded, so the wizard never appears for them.
 
-`seedFirstRunPreferences` also starts genuinely new installs in **Dark**: when no server URL is configured and `DBKeys.themeMode` is unset, it writes `ThemeMode.dark`. `DBKeys.themeMode`'s own default stays `ThemeMode.system`, so an install that already stored a mode — every existing user — keeps following the system. The wizard's Appearance picker reads that stored value.
+`seedFirstRunPreferences` also starts genuinely new installs in **Dark**: when no server URL is configured and `DBKeys.themeMode` is unset, it writes `ThemeMode.dark`. Existing installs are untouched: `seedFirstRunPreferences` returns immediately when `onboardingComplete` is already set, and an install whose flag is unset but that has a configured server is marked onboarded with no theme write, so it keeps the `DBKeys.themeMode` default of `ThemeMode.system` and follows the system. The wizard's Appearance picker reads that stored value.
 
 The gate is a redirect in `lib/src/routes/router_config.dart`:
 

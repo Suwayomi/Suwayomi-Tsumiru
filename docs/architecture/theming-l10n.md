@@ -6,7 +6,7 @@ Tsumiru ships a **curated, branded named-theme system** (replacing the old
 `flex_color_scheme` picker). Every colour is explicit — Material never generates
 a palette. The source of truth is the external **theme-kit**
 (`~/Projects/theme-kit/themes/<id>.css`, mirrored token-for-token); the in-repo
-Dart copies its `[data-mode='dark']` and
+Dart copies its `[data-theme='<id>']` and
 `[data-theme='<id>'][data-mode='light']` blocks verbatim.
 
 ### Layers
@@ -17,7 +17,7 @@ Dart copies its `[data-mode='dark']` and
 | File | Responsibility |
 |---|---|
 | `constants/app_theme.dart` | `AppTheme` enum (the curated set + `custom`) + `swatch` (picker preview accents) + `AppThemeLabel.label()`. |
-| `utils/theme/theme_tokens.dart` | `ThemeTokens` (bg, bg2, ink, muted, faint, accent, accent2, danger, border) plus the light-only `onAccent`, `accentBg` and `grad` — one **dark** + one **light** const per theme. `tokensFor(AppTheme, Brightness)` resolves them. Both brightnesses are theme-kit verbatim: dark from the `[data-mode='dark']` block, light from the `[data-mode='light']` block. |
+| `utils/theme/theme_tokens.dart` | `ThemeTokens` (bg, bg2, ink, muted, faint, accent, accent2, danger, border) plus the light-only `onAccent`, `accentBg` and `grad` — one **dark** + one **light** const per theme. `tokensFor(AppTheme, Brightness)` resolves them. Both brightnesses are theme-kit verbatim: dark from the plain `[data-theme='<id>']` block, light from the `[data-theme='<id>'][data-mode='light']` block. |
 | `utils/theme/app_color_scheme.dart` | `schemeFromTokens(tokens, brightness)` builds an **explicit** Material 3 `ColorScheme` — no `ColorScheme.fromSeed`. Surfaces map straight to `bg`/`bg2`, `surfaceTint: Colors.transparent` (no elevation tinting). The light-only tokens feed the accent roles: `onAccent` becomes `onPrimary`/`onSecondary`/`onTertiary`, `accentBg` the container roles. Dark themes name neither, so those roles keep their derived fallbacks (an accent-over-`bg` lerp, and black-or-white chosen by the accent's own brightness). `grad` never reaches the scheme; `buildAppTheme` hands it to `BrandColors`. `applyAmoled(scheme)` post-processes a dark scheme to near/true black. |
 | `utils/theme/app_theme_builder.dart` | `buildAppTheme({theme, brightness, customSeed, amoled})` — the single global `ThemeData`. Named themes → `schemeFromTokens`; `custom` → `ColorScheme.fromSeed(customSeed)`. Sets every component theme (appBar, navigationBar/Rail, listTile, card, divider, chip, switch, slider, FAB, filled/elevated/outlined/text buttons) from the scheme. The chip theme branches on brightness: light themes get an outlined unselected chip and an `accentBg`-tinted selected one with an accent border, dark keeps the primary-tinted fill. |
 | `utils/theme/brand.dart` | The **brand component layer** — the gradient/glow things `ThemeData` cannot express. See below. |
