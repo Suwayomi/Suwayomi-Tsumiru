@@ -418,6 +418,81 @@ final onboardingHttpClientProvider = Provider<http.Client Function()>(
   (Ref ref) => http.Client.new,
 );
 
+/// The LAN sweep behind "Search my network". Overridable in widget tests so the
+/// step can be driven without touching the network.
+final lanServerScanProvider =
+    Provider<Future<List<DiscoveredServer>> Function()>(
+      (ref) =>
+          () => discoverServersOnLan(
+            confirm: (url) async {
+              final client = ref.read(onboardingHttpClientProvider)();
+              try {
+                final result = await probeServer(url, client: client);
+                if (!result.confirmed) return null;
+                return DiscoveredServer(
+                  url: url,
+                  name: result.serverName,
+                  version: result.serverVersion,
+                );
+              } catch (_) {
+                return null;
+              } finally {
+                client.close();
+              }
+            },
+          ),
+    );
+
+/// The picker row label: name and version when the server reported them, then
+/// the address, e.g. `Suwayomi-Server v2.3.2162 · 192.168.2.4:4568`.
+String _serverLabel(DiscoveredServer server) {
+  final name = server.name?.trim();
+  final version = server.version?.trim();
+  if (name == null || name.isEmpty) return server.address;
+  final titled = (version == null || version.isEmpty)
+      ? name
+      : '$name v$version';
+  return '$titled · ${server.address}';
+}
+
+/// Picker shown when "Search my network" finds more than one Suwayomi server.
+/// Popping with a server is the only action; dismissing picks nothing.
+class _ServerPickerSheet extends StatelessWidget {
+  const _ServerPickerSheet({required this.servers});
+
+  final List<DiscoveredServer> servers;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Text(
+                context.l10n.onboardingChooseServer,
+                style: context.theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            for (final server in servers)
+              ListTile(
+                leading: const Icon(Icons.dns_outlined),
+                title: Text(_serverLabel(server)),
+                onTap: () => Navigator.pop(context, server),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ServerStep extends HookConsumerWidget {
   const _ServerStep({
     required this.nextRequest,
@@ -731,27 +806,47 @@ class _ServerStep extends HookConsumerWidget {
       return null;
     }, const []);
 
-    // "Search my network": scan the LAN for a Suwayomi server on :4567, fill
-    // the field, then test it.
+    // "Search my network": sweep the LAN for Suwayomi servers, fill the field
+    // with the one found (or let the user pick when several answered), then
+    // test it.
     Future<void> searchNetwork() async {
       if (kIsWeb) return;
       final noServerMsg = context.l10n.onboardingNoServerFound;
       state.value = _TestState.searching;
       errorDetail.value = null;
       onVerifiedChanged(false);
-      String? found;
+      List<DiscoveredServer> found;
       try {
-        found = await discoverServerOnLan();
+        found = await ref.read(lanServerScanProvider)();
       } catch (_) {
-        found = null;
+        found = const [];
       }
-      if (found == null) {
+      if (!context.mounted) return;
+      if (found.isEmpty) {
         errorDetail.value = noServerMsg;
         state.value = _TestState.failed;
         onVerifiedChanged(false);
         return;
       }
-      urlController.text = found;
+      var chosen = found.first;
+      if (found.length > 1) {
+        // The sweep is done; nothing is "being searched" while the picker is up.
+        resetToIdle();
+        final picked = await showModalBottomSheet<DiscoveredServer>(
+          context: context,
+          showDragHandle: true,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (_) => _ServerPickerSheet(servers: found),
+        );
+        if (!context.mounted) return;
+        // Dismissed without choosing: no server picked, nothing to test.
+        if (picked == null) return;
+        chosen = picked;
+      }
+      urlController.text = chosen.url;
       await testConnection();
     }
 
