@@ -1127,4 +1127,15 @@ void main() {
     await readRootStatus('https://h.example/suwayomi', client: client);
     expect(seen.toString(), 'https://h.example/suwayomi/');
   });
+
+  test('readRootStatus keeps a base path that already ends in a slash',
+      () async {
+    Uri? seen;
+    final client = MockClient.streaming((request, _) async {
+      seen = request.url;
+      return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
+    });
+    await readRootStatus('https://h.example/suwayomi/', client: client);
+    expect(seen.toString(), 'https://h.example/suwayomi/');
+  });
 }

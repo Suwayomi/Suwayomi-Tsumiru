@@ -56,16 +56,6 @@ class OnboardingScreen extends HookConsumerWidget {
       resume ? 2 : (preferences.getInt('onboarding.step') ?? 0).clamp(0, 1),
     );
     final serverVerified = useState(resume);
-    // Fresh installs start in Dark. Existing installs never reach onboarding,
-    // and one that saved a mode keeps it.
-    useEffect(() {
-      if (!preferences.containsKey(DBKeys.themeMode.name)) {
-        Future.microtask(
-          () => ref.read(appThemeModeProvider.notifier).update(ThemeMode.dark),
-        );
-      }
-      return null;
-    }, const []);
     final nextRequest = useState(0);
     final activity = useState<String?>(null);
     useEffect(() {

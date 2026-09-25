@@ -28,8 +28,8 @@ enum DBKeys {
   migrationTargetSources(<String>[]),
   extensionLanguageFilter(["installed", "update", "en", "all"]),
   sourceLastUsed(null),
-  // Dark, not the platform mode: the app's themes are built dark-first, and a
-  // fresh install should open the way the brand reads.
+  // Installs that never chose a mode follow the system. Fresh installs are
+  // seeded Dark at first launch (seedFirstRunPreferences).
   themeMode(ThemeMode.system),
   isTrueBlack(false),
   authType(AuthType.none),

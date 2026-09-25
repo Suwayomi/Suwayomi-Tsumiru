@@ -159,13 +159,7 @@ Future<void> _startApp() async {
   //    existing users. Only run when the flag is unset; treat the default
   //    loopback URL (and no URL) as not-configured.
   try {
-    if (sharedPreferences.getBool('onboardingComplete') == null) {
-      final url = sharedPreferences.getString('serverUrl');
-      await sharedPreferences.setBool(
-        'onboardingComplete',
-        serverConfiguredForOnboarding(url),
-      );
-    }
+    await seedFirstRunPreferences(sharedPreferences);
   } catch (e, st) {
     debugPrint('onboarding migration failed: $e\n$st');
   }

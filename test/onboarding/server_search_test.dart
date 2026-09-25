@@ -157,19 +157,4 @@ void main() {
     });
   });
 
-  testWidgets('a fresh install saves Dark when onboarding opens', (
-    tester,
-  ) async {
-    final prefs = await _pumpServerStep(tester, const [], prefs: const {});
-    expect(prefs.getInt('themeMode'), ThemeMode.dark.index);
-  });
-
-  testWidgets('a stored mode is left alone', (tester) async {
-    final prefs = await _pumpServerStep(
-      tester,
-      const [],
-      prefs: {'themeMode': ThemeMode.light.index},
-    );
-    expect(prefs.getInt('themeMode'), ThemeMode.light.index);
-  });
 }
