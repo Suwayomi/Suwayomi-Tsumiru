@@ -72,16 +72,14 @@ class ReaderScreen extends HookConsumerWidget {
     // or it isn't long-strip — in which case the per-series/global default
     // takes over below. Auto never picks a page direction (LTR/RTL).
     final mangaData = manga.value;
-    final autoReaderMode =
-        (ref.watch(autoWebtoonModeProvider).ifNull(true) &&
-            mangaData != null &&
-            (mangaData.metaData.readerMode ?? ReaderMode.defaultReader) ==
-                ReaderMode.defaultReader)
-        ? autoReaderModeFor(
+    final autoReaderMode = mangaData == null
+        ? null
+        : sessionAutoReaderMode(
+            enabled: ref.watch(autoWebtoonModeProvider).ifNull(true),
+            seriesMode: mangaData.metaData.readerMode,
             genres: mangaData.genre,
             sourceName: mangaData.source?.name,
-          )
-        : null;
+          );
     final toast = ref.watch(toastProvider);
     // Resolve the l10n string in build (safe); the effect runs during hook-init
     // where an inherited-widget lookup (context.l10n) throws _debugIsInitHook.

@@ -1434,10 +1434,6 @@
   "@readerGroupWebtoonViewer": {
     "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
   },
-  "readerSectionPaged": "分頁",
-  "@readerSectionPaged": {
-    "description": "Heading for the paged-only reader settings section"
-  },
   "readerSectionReadingMode": "閱讀模式",
   "@readerSectionReadingMode": {
     "description": "Section label for the reading-mode chip row"

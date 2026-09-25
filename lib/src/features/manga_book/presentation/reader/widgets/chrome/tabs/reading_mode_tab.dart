@@ -10,8 +10,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../settings/presentation/reader/widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
+import '../../../../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
+import '../../../../manga_details/controller/manga_details_controller.dart';
+import '../../../controller/auto_webtoon.dart';
 import '../../../controller/reader_mode_adapter.dart';
 import '../../../controller/reader_settings_model.dart';
 import '../../../utils/reader_mode_kind.dart';
@@ -37,10 +40,22 @@ class ReadingModeTab extends ConsumerWidget {
     const perSeries = true;
     final settings = ref.watch(readerSettingsModelProvider(mangaId));
     final model = ref.read(readerSettingsModelProvider(mangaId).notifier);
-    // "Default" dereferences the app-wide mode, mirroring reader_screen.
-    final resolvedMode = settings.readerMode == ReaderMode.defaultReader
-        ? (ref.watch(readerModeKeyProvider) ?? ReaderMode.singleHorizontalRTL)
-        : settings.readerMode;
+    // Same resolution as reader_screen: auto-detect, then the series' mode,
+    // then the app-wide default.
+    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId)).value;
+    final autoMode = manga == null
+        ? null
+        : sessionAutoReaderMode(
+            enabled: ref.watch(autoWebtoonModeProvider).ifNull(true),
+            seriesMode: settings.readerMode,
+            genres: manga.genre,
+            sourceName: manga.source?.name,
+          );
+    final resolvedMode = autoMode ??
+        (settings.readerMode == ReaderMode.defaultReader
+            ? (ref.watch(readerModeKeyProvider) ??
+                ReaderMode.singleHorizontalRTL)
+            : settings.readerMode);
     final isLongStrip = switch (resolvedMode) {
       ReaderMode.webtoon ||
       ReaderMode.continuousVertical ||
@@ -183,7 +198,6 @@ class _PagedSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionLabel(context.l10n.readerSectionPaged),
         _SectionLabel(context.l10n.imageScaleType),
         _ChipRow(
           children: [

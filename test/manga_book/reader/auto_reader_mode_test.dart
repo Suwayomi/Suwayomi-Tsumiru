@@ -116,4 +116,26 @@ void main() {
       });
     });
   });
+
+  group('sessionAutoReaderMode', () {
+    ReaderMode? resolve({bool enabled = true, ReaderMode? seriesMode}) =>
+        sessionAutoReaderMode(
+          enabled: enabled,
+          seriesMode: seriesMode,
+          genres: const ['Manhwa'],
+        );
+
+    test('Default or unset series mode takes the detected mode', () {
+      expect(resolve(), ReaderMode.webtoon);
+      expect(resolve(seriesMode: ReaderMode.defaultReader), ReaderMode.webtoon);
+    });
+
+    test('an explicit series mode wins over detection', () {
+      expect(resolve(seriesMode: ReaderMode.singleHorizontalLTR), isNull);
+    });
+
+    test('off when auto-detect is disabled', () {
+      expect(resolve(enabled: false), isNull);
+    });
+  });
 }

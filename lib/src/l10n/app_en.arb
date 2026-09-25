@@ -202,9 +202,6 @@
   "@readerGroupWebtoonViewer": {
     "description": "Group heading for the long-strip settings, in both the reader sheet and Reader settings"
   },
-  "@readerSectionPaged": {
-    "description": "Heading for the paged-only reader settings section"
-  },
   "@readerSectionReadingMode": {
     "description": "Section label for the reading-mode chip row"
   },
@@ -1412,7 +1409,6 @@
   "readerGroupPagerViewer": "Paged",
   "readerGroupReading": "Reading",
   "readerGroupWebtoonViewer": "Long strip",
-  "readerSectionPaged": "Paged",
   "readerSectionReadingMode": "Reading mode",
   "readerSectionRotation": "Rotation",
   "readerSectionTapInvert": "Invert tap zones",

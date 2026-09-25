@@ -36,6 +36,21 @@ ReaderMode? autoReaderModeFor({
   };
 }
 
+/// The mode a series opens in this session via auto-detect, or null when
+/// auto-detect is off or the series has its own mode. The reader and the
+/// settings sheet both go through this so they can't disagree.
+ReaderMode? sessionAutoReaderMode({
+  required bool enabled,
+  required ReaderMode? seriesMode,
+  required List<String>? genres,
+  String? sourceName,
+}) =>
+    enabled &&
+            (seriesMode ?? ReaderMode.defaultReader) ==
+                ReaderMode.defaultReader
+        ? autoReaderModeFor(genres: genres, sourceName: sourceName)
+        : null;
+
 // Precedence: manga tag wins outright; then webtoon, comic, manhua, manhwa
 // (tag or source name); fallback manga.
 _MangaType _mangaType(List<String> tags, String? sourceName) {
