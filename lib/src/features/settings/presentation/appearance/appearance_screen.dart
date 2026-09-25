@@ -29,8 +29,7 @@ class AppearanceScreen extends ConsumerWidget {
         children: [
           const AppThemeModeTile(),
           if (themeMode != ThemeMode.light) const IsTrueBlackTile(),
-          SectionTitle(title: context.l10n.appThemeTitle),
-          const ThemeSelector(),
+          ThemeSelector(title: SectionTitle(title: context.l10n.appThemeTitle)),
           Consumer(
             builder: (context, ref, _) {
               final theme = ref.watch(appThemeKeyProvider);

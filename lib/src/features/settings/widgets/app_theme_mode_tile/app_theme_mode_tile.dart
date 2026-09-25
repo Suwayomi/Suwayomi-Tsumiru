@@ -50,7 +50,7 @@ class AppThemeModeTile extends ConsumerWidget {
         builder: (context) => RadioListPopup<ThemeMode>(
           title: context.l10n.appTheme,
           optionList: ThemeMode.values,
-          value: themeMode ?? ThemeMode.system,
+          value: themeMode ?? ThemeMode.dark,
           getOptionTitle: (value) => value.toLocale(context),
           onChange: (enumValue) async {
             ref.read(appThemeModeProvider.notifier).update(enumValue);

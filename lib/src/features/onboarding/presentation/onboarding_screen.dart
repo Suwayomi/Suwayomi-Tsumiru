@@ -32,6 +32,7 @@ import '../../settings/presentation/appearance/widgets/app_theme_selector/app_th
 import '../../settings/presentation/connection/custom_headers_section.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../../settings/widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import '../data/onboarding_complete.dart';
 import '../data/server_discovery.dart';
 import '../data/server_resolver.dart';
@@ -175,6 +176,13 @@ class OnboardingScreen extends HookConsumerWidget {
   }
 }
 
+/// The swirl mark for the brightness in use: the light artwork is a darker
+/// logo drawn for pale surfaces, the default one reads on dark ones.
+AssetGenImage _brandLogo(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.light
+        ? Assets.icons.logoOnLight
+        : Assets.icons.darkIcon;
+
 /// The swirl logo + "Tsumiru" wordmark shown at the top of every step.
 class _BrandHeader extends StatelessWidget {
   const _BrandHeader();
@@ -184,7 +192,7 @@ class _BrandHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset(Assets.icons.darkIcon.path, height: 26),
+        Image.asset(_brandLogo(context).path, height: 26),
         const SizedBox(width: 8),
         Text(
           'Tsumiru',
@@ -294,18 +302,19 @@ class _NavBar extends StatelessWidget {
 
 // --- Step 1: theme ----------------------------------------------------------
 
-class _ThemeStep extends StatelessWidget {
+class _ThemeStep extends ConsumerWidget {
   const _ThemeStep();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final mode = ref.watch(appThemeModeProvider) ?? ThemeMode.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
         // The big brand mark — the swirl logo above the welcome heading.
-        Center(child: Image.asset(Assets.icons.darkIcon.path, height: 160)),
+        Center(child: Image.asset(_brandLogo(context).path, height: 160)),
         const SizedBox(height: 24),
         Text(
           context.l10n.onboardingWelcomeTitle,
@@ -319,11 +328,52 @@ class _ThemeStep extends StatelessWidget {
           style: TextStyle(color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 28),
-        Text(
-          context.l10n.onboardingChooseTheme,
-          style: context.textTheme.titleMedium,
+        Text(context.l10n.appearance, style: context.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThemeMode>(
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.system,
+                icon: const Icon(Icons.brightness_auto_rounded),
+                label: Text(context.l10n.themeModeSystem),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                icon: const Icon(Icons.light_mode_rounded),
+                label: Text(context.l10n.themeModeLight),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                icon: const Icon(Icons.dark_mode_rounded),
+                label: Text(context.l10n.themeModeDark),
+              ),
+            ],
+            selected: {mode},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) =>
+                ref.read(appThemeModeProvider.notifier).update(selection.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? cs.secondaryContainer
+                    : null,
+              ),
+              foregroundColor: WidgetStatePropertyAll(cs.onSurface),
+              side: WidgetStatePropertyAll(
+                BorderSide(color: cs.outlineVariant),
+              ),
+            ),
+          ),
         ),
-        const ThemeSelector(),
+        const SizedBox(height: 20),
+        ThemeSelector(
+          title: Text(
+            context.l10n.onboardingChooseTheme,
+            style: context.textTheme.titleMedium,
+          ),
+        ),
       ],
     );
   }

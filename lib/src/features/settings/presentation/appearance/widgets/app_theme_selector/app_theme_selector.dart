@@ -11,42 +11,131 @@ import 'app_theme_providers.dart';
 
 /// Horizontal curated theme picker. Each card previews the theme's surface +
 /// accents at the brightness currently in use, and shows a check when selected.
+///
+/// Give it a [title] to get a header row carrying that title plus a pair of
+/// scroll arrows, shown only while the cards overflow.
 class ThemeSelector extends HookConsumerWidget {
-  const ThemeSelector({super.key});
+  const ThemeSelector({super.key, this.title});
+
+  final Widget? title;
+
+  /// Card height; 16px shorter than the 148 the scrollbar lane used to need.
+  static const _cardsHeight = 132.0;
+  static const _arrowSize = 34.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(appThemeKeyProvider) ?? AppTheme.indigoNight;
     final controller = useScrollController();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: SizedBox(
-        height: 148,
-        child: Scrollbar(
-          controller: controller,
-          // Sit the horizontal scrollbar in its own lane below the cards
-          // instead of overlaying their labels.
-          child: ListView(
-            controller: controller,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(bottom: 16),
-            children: [
-              // Named themes first, Custom last (custom sits mid-enum because
-              // values are persisted by index — display order is independent).
-              for (final theme in [
-                ...AppTheme.values.where((t) => t != AppTheme.custom),
-                AppTheme.custom,
-              ])
-                _ThemeCard(
-                  theme: theme,
-                  selected: theme == selected,
-                  onTap: () =>
-                      ref.read(appThemeKeyProvider.notifier).update(theme),
-                ),
-            ],
-          ),
+    // Bumped on every scroll (controller listener) and on first layout or a
+    // viewport resize (metrics notification), so the arrows track both ends.
+    final rebuild = useState(0);
+    useEffect(
+      () {
+        void onScroll() => rebuild.value++;
+        controller.addListener(onScroll);
+        return () => controller.removeListener(onScroll);
+      },
+      [controller],
+    );
+
+    final position = controller.hasClients ? controller.position : null;
+    final maxExtent = position?.maxScrollExtent ?? 0;
+    final offset = position?.pixels ?? 0;
+    final canScroll = maxExtent > 0;
+    final cs = Theme.of(context).colorScheme;
+
+    void scrollBy(double direction) {
+      final position = controller.position;
+      final target =
+          position.pixels + direction * position.viewportDimension * 0.8;
+      controller.animateTo(
+        target.clamp(position.minScrollExtent, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+
+    Widget arrow({
+      required IconData icon,
+      required String tooltip,
+      required bool enabled,
+      required VoidCallback onPressed,
+    }) => Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: IconButton.outlined(
+        onPressed: enabled ? onPressed : null,
+        tooltip: tooltip,
+        icon: Icon(icon, size: 20),
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(_arrowSize),
+          maximumSize: const Size.square(_arrowSize),
+          padding: EdgeInsets.zero,
+          foregroundColor: cs.onSurface,
+          backgroundColor: cs.surfaceContainer,
+          side: BorderSide(color: cs.outlineVariant),
+          shape: const CircleBorder(),
         ),
       ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (title != null)
+          Row(
+            children: [
+              Expanded(child: title!),
+              if (canScroll) ...[
+                arrow(
+                  icon: Icons.chevron_left_rounded,
+                  tooltip: 'Previous',
+                  enabled: offset > 0,
+                  onPressed: () => scrollBy(-1),
+                ),
+                const SizedBox(width: 8),
+                arrow(
+                  icon: Icons.chevron_right_rounded,
+                  tooltip: context.l10n.next,
+                  enabled: offset < maxExtent,
+                  onPressed: () => scrollBy(1),
+                ),
+              ],
+              const SizedBox(width: 16),
+            ],
+          ),
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: (_) {
+            rebuild.value++;
+            return false;
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: SizedBox(
+              height: _cardsHeight,
+              child: ListView(
+                controller: controller,
+                scrollDirection: Axis.horizontal,
+                children: [
+                  // Named themes first, Custom last (custom sits mid-enum
+                  // because values are persisted by index — display order is
+                  // independent).
+                  for (final theme in [
+                    ...AppTheme.values.where((t) => t != AppTheme.custom),
+                    AppTheme.custom,
+                  ])
+                    _ThemeCard(
+                      theme: theme,
+                      selected: theme == selected,
+                      onTap: () =>
+                          ref.read(appThemeKeyProvider.notifier).update(theme),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
