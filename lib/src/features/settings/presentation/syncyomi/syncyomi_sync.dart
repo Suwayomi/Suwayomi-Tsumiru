@@ -8,7 +8,7 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../data/user_settings.dart';
+import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
 
@@ -150,11 +150,11 @@ class SyncYomiSyncButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(personalSettingsProvider).value;
+    final settings = ref.watch(syncYomiSettingsProvider).value;
     if (settings == null ||
-        !settings.syncYomiEnabled ||
-        settings.syncYomiHost.isBlank ||
-        settings.syncYomiApiKey.isBlank) {
+        !settings.enabled ||
+        settings.host.isBlank ||
+        settings.apiKey.isBlank) {
       return const SizedBox.shrink();
     }
     return _SyncYomiSyncAction(onSynced: onSynced);

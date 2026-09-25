@@ -1,7 +1,13 @@
+query SyncYomiLegacySettings {
+  settings {
+    ...SyncYomiSettingsDto
+  }
+}
+
 mutation UpdateSyncYomiEnabled($syncYomiEnabled: Boolean!) {
   setSettings(input: {settings: {syncYomiEnabled: $syncYomiEnabled}}) {
     settings {
-      ...SettingsDto
+      ...SyncYomiSettingsDto
     }
   }
 }
@@ -9,7 +15,7 @@ mutation UpdateSyncYomiEnabled($syncYomiEnabled: Boolean!) {
 mutation UpdateSyncYomiHost($syncYomiHost: String!) {
   setSettings(input: {settings: {syncYomiHost: $syncYomiHost}}) {
     settings {
-      ...SettingsDto
+      ...SyncYomiSettingsDto
     }
   }
 }
@@ -17,7 +23,7 @@ mutation UpdateSyncYomiHost($syncYomiHost: String!) {
 mutation UpdateSyncYomiApiKey($syncYomiApiKey: String!) {
   setSettings(input: {settings: {syncYomiApiKey: $syncYomiApiKey}}) {
     settings {
-      ...SettingsDto
+      ...SyncYomiSettingsDto
     }
   }
 }
@@ -25,7 +31,7 @@ mutation UpdateSyncYomiApiKey($syncYomiApiKey: String!) {
 mutation UpdateSyncYomiInterval($syncInterval: Duration!) {
   setSettings(input: {settings: {syncInterval: $syncInterval}}) {
     settings {
-      ...SettingsDto
+      ...SyncYomiSettingsDto
     }
   }
 }
@@ -35,7 +41,7 @@ mutation UpdateSyncYomiData($syncDataManga: Boolean!, $syncDataChapters: Boolean
     input: {settings: {syncDataManga: $syncDataManga, syncDataChapters: $syncDataChapters, syncDataCategories: $syncDataCategories, syncDataHistory: $syncDataHistory, syncDataTracking: $syncDataTracking}}
   ) {
     settings {
-      ...SettingsDto
+      ...SyncYomiSettingsDto
     }
   }
 }

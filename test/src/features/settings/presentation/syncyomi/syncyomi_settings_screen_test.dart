@@ -11,15 +11,13 @@ import 'package:gql/ast.dart';
 import 'package:graphql/client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
-import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
-import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 import '../../../../../helpers/legacy_account_access.dart';
 
-Fragment$SettingsDto _settings({
+Map<String, dynamic> _settings({
   bool enabled = false,
   String host = '',
   String apiKey = '',
@@ -29,76 +27,42 @@ Fragment$SettingsDto _settings({
   bool dataCategories = false,
   bool dataHistory = false,
   bool dataTracking = false,
-}) => Fragment$SettingsDto(
-  backupInterval: 0,
-  backupPath: '',
-  backupTTL: 0,
-  backupTime: '',
-  ip: '',
-  port: 0,
-  socksProxyEnabled: false,
-  socksProxyHost: '',
-  socksProxyPassword: '',
-  socksProxyPort: '',
-  socksProxyUsername: '',
-  socksProxyVersion: 0,
-  flareSolverrEnabled: false,
-  flareSolverrSessionName: '',
-  flareSolverrSessionTtl: 0,
-  flareSolverrTimeout: 0,
-  flareSolverrUrl: '',
-  debugLogsEnabled: false,
-  systemTrayEnabled: false,
-  extensionRepos: const [],
-  maxSourcesInParallel: 0,
-  localSourcePath: '',
-  globalUpdateInterval: 12,
-  updateMangas: false,
-  excludeCompleted: false,
-  excludeNotStarted: false,
-  excludeUnreadChapters: false,
-  downloadAsCbz: false,
-  downloadsPath: '',
-  autoDownloadNewChapters: false,
-  autoDownloadNewChaptersLimit: 0,
-  excludeEntryWithUnreadChapters: false,
-  syncDataCategories: dataCategories,
-  syncDataChapters: dataChapters,
-  syncDataHistory: dataHistory,
-  syncDataManga: dataManga,
-  syncDataTracking: dataTracking,
-  syncInterval: interval,
-  syncYomiApiKey: apiKey,
-  syncYomiEnabled: enabled,
-  syncYomiHost: host,
-);
+}) => {
+  '__typename': 'SettingsType',
+  'syncYomiEnabled': enabled,
+  'syncYomiHost': host,
+  'syncYomiApiKey': apiKey,
+  'syncInterval': interval,
+  'syncDataManga': dataManga,
+  'syncDataChapters': dataChapters,
+  'syncDataCategories': dataCategories,
+  'syncDataHistory': dataHistory,
+  'syncDataTracking': dataTracking,
+};
 
-class _FixedSettings extends Settings {
-  _FixedSettings(this.settings);
-
-  final Fragment$SettingsDto settings;
-
-  @override
-  Future<Fragment$SettingsDto?> build() async => settings;
-}
-
-/// Answers the three operations the screen sends, and echoes any setting a
-/// mutation writes so the screen shows what the server would return.
+/// Answers the operations the screen sends, and keeps whatever a mutation
+/// writes so the next read shows what the server would return.
 class _FakeServer extends Link {
-  _FakeServer(this.settings, {this.status, this.failHostWrite = false});
+  _FakeServer(
+    this.settings, {
+    this.status,
+    this.failHostWrite = false,
+    this.supportsSyncYomi = true,
+  });
 
-  final Fragment$SettingsDto settings;
+  final Map<String, dynamic> settings;
   Map<String, dynamic>? status;
   final bool failHostWrite;
+  final bool supportsSyncYomi;
   final operations = <String>[];
-  final variables = <Map<String, dynamic>>[];
+  final writeVariables = <Map<String, dynamic>>[];
 
-  /// Operations other than the status poll, in the order the screen sent them.
-  List<String> get writes =>
-      operations.where((name) => name != 'LastSyncStatus').toList();
-
-  Map<String, dynamic> get settingsJson =>
-      Map<String, dynamic>.from(settings.toJson());
+  /// Operations that write something, in the order the screen sent them.
+  List<String> get writes => operations
+      .where(
+        (name) => name != 'LastSyncStatus' && name != 'SyncYomiLegacySettings',
+      )
+      .toList();
 
   @override
   Stream<Response> request(Request request, [NextLink? forward]) async* {
@@ -108,8 +72,24 @@ class _FakeServer extends Link {
         .name!
         .value;
     operations.add(name);
-    variables.add(request.variables);
     switch (name) {
+      case 'SyncYomiLegacySettings':
+        if (!supportsSyncYomi) {
+          yield Response(
+            response: {},
+            errors: [
+              const GraphQLError(
+                message:
+                    "Validation error (FieldUndefined@[settings/syncYomiEnabled]) : Field 'syncYomiEnabled' in type 'SettingsType' is undefined",
+              ),
+            ],
+          );
+          return;
+        }
+        yield Response(
+          response: {},
+          data: {'__typename': 'Query', 'settings': settings},
+        );
       case 'LastSyncStatus':
         yield Response(
           response: {},
@@ -132,15 +112,15 @@ class _FakeServer extends Link {
           errors: [const GraphQLError(message: 'Host rejected')],
         );
       default:
-        final written = settingsJson
-          ..addAll(Map<String, dynamic>.from(request.variables));
+        writeVariables.add(request.variables);
+        settings.addAll(Map<String, dynamic>.from(request.variables));
         yield Response(
           response: {},
           data: {
             '__typename': 'Mutation',
             'setSettings': {
               '__typename': 'SetSettingsPayload',
-              'settings': written,
+              'settings': settings,
             },
           },
         );
@@ -150,14 +130,16 @@ class _FakeServer extends Link {
 
 class _Harness {
   _Harness({
-    Fragment$SettingsDto? settings,
+    Map<String, dynamic>? settings,
     Map<String, dynamic>? status,
     bool failHostWrite = false,
+    bool supportsSyncYomi = true,
   }) : settings = settings ?? _settings() {
     server = _FakeServer(
       this.settings,
       status: status,
       failHostWrite: failHostWrite,
+      supportsSyncYomi: supportsSyncYomi,
     );
     client = GraphQLClient(
       link: server,
@@ -168,7 +150,7 @@ class _Harness {
     );
   }
 
-  final Fragment$SettingsDto settings;
+  final Map<String, dynamic> settings;
   late final _FakeServer server;
   late final GraphQLClient client;
 }
@@ -187,7 +169,6 @@ Future<void> _pump(
         sharedPreferencesProvider.overrideWithValue(prefs),
         graphQlClientProvider.overrideWithValue(harness.client),
         settledAccountAccessProvider.overrideWithValue(legacyAccountAccess),
-        settingsProvider.overrideWith(() => _FixedSettings(harness.settings)),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -230,6 +211,19 @@ void main() {
     expect(find.text('Never synced'), findsOneWidget);
   });
 
+  testWidgets('a server without the SyncYomi fields says so', (tester) async {
+    await _pump(tester, _Harness(supportsSyncYomi: false));
+
+    expect(
+      find.text(
+        'This server does not support SyncYomi. Update Suwayomi to use it.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Sync now'), findsNothing);
+    expect(find.text('Host'), findsNothing);
+  });
+
   testWidgets('Sync data lists what a sync carries and saves all five', (
     tester,
   ) async {
@@ -249,7 +243,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(harness.server.writes, ['UpdateSyncYomiData']);
-    expect(harness.server.variables.last, {
+    expect(harness.server.writeVariables.last, {
       'syncDataManga': true,
       'syncDataChapters': false,
       'syncDataCategories': false,
@@ -328,7 +322,7 @@ void main() {
 
     expect(harness.server.writes, ['UpdateSyncYomiHost']);
     expect(
-      harness.server.variables.last['syncYomiHost'],
+      harness.server.writeVariables.last['syncYomiHost'],
       'https://syncyomi.example.com',
     );
     expect(find.byType(TextField), findsNothing);
@@ -375,7 +369,7 @@ void main() {
     await tester.tap(find.text('Every 3 hours'));
     await tester.pumpAndSettle();
     expect(harness.server.writes, ['UpdateSyncYomiInterval']);
-    expect(harness.server.variables.last['syncInterval'], 'PT3H');
+    expect(harness.server.writeVariables.last['syncInterval'], 'PT3H');
   });
 
   testWidgets('the status line follows the last sync state', (tester) async {
@@ -436,22 +430,17 @@ void main() {
       ),
     );
     await _pump(tester, harness, settle: false);
-    expect(harness.server.operations, ['LastSyncStatus']);
+    expect(harness.server.writes, isEmpty);
+    final polls = _statusPolls(harness);
 
     await tester.tap(find.text('Sync now'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(harness.server.writes, ['StartSync']);
-    final polls = harness.server.operations
-        .where((name) => name == 'LastSyncStatus')
-        .length;
 
     await tester.pump(const Duration(seconds: 2));
     await tester.pump();
-    expect(
-      harness.server.operations.where((name) => name == 'LastSyncStatus'),
-      hasLength(greaterThan(polls)),
-    );
+    expect(_statusPolls(harness), greaterThan(polls));
     await tester.pumpWidget(const SizedBox());
   });
 

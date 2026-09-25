@@ -3872,5 +3872,9 @@
   "syncYomiStepRestoring": "Restoring",
   "syncYomiSyncStarted": "Sync started",
   "syncYomiAlreadyRunning": "A sync is already running",
-  "syncYomiDisabled": "Turn on Sync with SyncYomi first"
+  "syncYomiDisabled": "Turn on Sync with SyncYomi first",
+  "syncYomiUnsupported": "This server does not support SyncYomi. Update Suwayomi to use it.",
+  "@syncYomiUnsupported": {
+    "description": "Message on the SyncYomi settings screen when the server has no SyncYomi settings"
+  }
 }

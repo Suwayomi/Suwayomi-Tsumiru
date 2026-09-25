@@ -237,15 +237,6 @@ Fragment$SettingsDto serverSettings() => Fragment$SettingsDto(
   autoDownloadNewChapters: false,
   autoDownloadNewChaptersLimit: 0,
   excludeEntryWithUnreadChapters: false,
-  syncDataCategories: false,
-  syncDataChapters: false,
-  syncDataHistory: false,
-  syncDataManga: false,
-  syncDataTracking: false,
-  syncInterval: 'PT0S',
-  syncYomiApiKey: '',
-  syncYomiEnabled: false,
-  syncYomiHost: '',
 );
 
 Fragment$AccountSettingsDto accountSettings() => Fragment$AccountSettingsDto(

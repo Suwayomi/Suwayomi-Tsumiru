@@ -11,11 +11,7 @@ import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
-import '../../../account/data/account_providers.dart';
-import '../../../account/domain/account_access.dart';
-import '../../controller/server_controller.dart';
-import '../../data/user_settings.dart';
-import '../../domain/settings/settings.dart';
+import 'data/syncyomi_settings_provider.dart';
 import 'data/syncyomi_settings_repository.dart';
 import 'domain/sync_yomi.dart';
 import 'syncyomi_sync.dart';
@@ -67,155 +63,120 @@ String syncYomiDataSummary(BuildContext context, List<SyncYomiDataKind> kinds) {
 class SyncYomiSettingsScreen extends ConsumerWidget {
   const SyncYomiSettingsScreen({super.key});
 
-  Future<bool> _save(
-    WidgetRef ref,
-    Future<SettingsDto?> Function() request,
-  ) async {
-    final result = await AppUtils.guard(request, ref.read(toastProvider));
-    if (result == null) return false;
-    ref.read(settingsProvider.notifier).updateState(result);
-    return true;
-  }
+  Future<bool> _save(WidgetRef ref, Future<bool> Function() request) async =>
+      await AppUtils.guard(request, ref.read(toastProvider)) ?? false;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final repository = ref.watch(syncyomiSettingsRepositoryProvider);
-    final serverSettings = ref.watch(settingsProvider);
-    final personalSettings = ref.watch(personalSettingsProvider);
-    final access = ref.watch(settledAccountAccessProvider);
-    final canEdit =
-        access.capability != AccountCapability.unknown &&
-        !personalSettings.isLoading &&
-        !personalSettings.hasError &&
-        personalSettings.value != null;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.syncyomi)),
-      body: serverSettings.showUiWhenData(context, (data) {
-        final settings = canEdit ? personalSettings.value : data;
+      body: ref.watch(syncYomiSettingsProvider).showUiWhenData(context, (
+        settings,
+      ) {
         if (settings == null) {
-          return Emoticons(title: l10n.noPropFound(l10n.syncyomi));
+          return Emoticons(title: l10n.syncYomiUnsupported);
         }
-        final intervalOption = syncYomiIntervalOption(settings.syncInterval);
+        final intervalOption = syncYomiIntervalOption(settings.interval);
         final syncData = enabledSyncYomiData(
-          manga: settings.syncDataManga,
-          chapters: settings.syncDataChapters,
-          categories: settings.syncDataCategories,
-          history: settings.syncDataHistory,
-          tracking: settings.syncDataTracking,
+          manga: settings.dataManga,
+          chapters: settings.dataChapters,
+          categories: settings.dataCategories,
+          history: settings.dataHistory,
+          tracking: settings.dataTracking,
         );
         return ListView(
           children: [
             SettingsPropTile(
               title: l10n.syncYomiEnabled,
               type: SettingsPropType.switchTile(
-                value: settings.syncYomiEnabled,
-                onChanged: canEdit ? repository.updateEnabled : null,
+                value: settings.enabled,
+                onChanged: repository.updateEnabled,
               ),
             ),
             ListTile(
-              enabled: canEdit,
               title: Text(l10n.syncYomiHost),
               subtitle: Text(
-                settings.syncYomiHost.isBlank
-                    ? l10n.syncYomiNotSet
-                    : settings.syncYomiHost,
+                settings.host.isBlank ? l10n.syncYomiNotSet : settings.host,
               ),
-              onTap: canEdit
-                  ? () => showDialog<void>(
-                      context: context,
-                      builder: (_) => SyncYomiHostDialog(
-                        value: settings.syncYomiHost,
-                        onSave: (host) =>
-                            _save(ref, () => repository.updateHost(host)),
-                      ),
-                    )
-                  : null,
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (_) => SyncYomiHostDialog(
+                  value: settings.host,
+                  onSave: (host) =>
+                      _save(ref, () => repository.updateHost(host)),
+                ),
+              ),
             ),
             SettingsPropTile(
               title: l10n.syncYomiApiKey,
-              subtitle: settings.syncYomiApiKey.isBlank
+              subtitle: settings.apiKey.isBlank
                   ? l10n.syncYomiNotSet
                   : l10n.syncYomiSet,
               type: SettingsPropType.textField(
                 hintText: l10n.syncYomiApiKey,
-                value: settings.syncYomiApiKey,
+                value: settings.apiKey,
                 canObscure: true,
-                onChanged: canEdit ? repository.updateApiKey : null,
+                onChanged: repository.updateApiKey,
               ),
             ),
             ListTile(
-              enabled: canEdit,
               title: Text(l10n.syncYomiSyncInterval),
-              subtitle: Text(
-                syncYomiIntervalLabel(context, settings.syncInterval),
+              subtitle: Text(syncYomiIntervalLabel(context, settings.interval)),
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (context) => RadioListPopup<String>(
+                  title: l10n.syncYomiSyncInterval,
+                  // Matched on duration, so P1D reads as the PT24H option
+                  // rather than being offered as a second "Daily" row.
+                  optionList: [
+                    ...kSyncYomiIntervalOptions,
+                    if (intervalOption == null) settings.interval,
+                  ],
+                  getOptionTitle: (value) =>
+                      syncYomiIntervalLabel(context, value),
+                  value: intervalOption ?? settings.interval,
+                  onChange: (value) {
+                    _save(ref, () => repository.updateInterval(value));
+                    Navigator.pop(context);
+                  },
+                ),
               ),
-              onTap: canEdit
-                  ? () => showDialog<void>(
-                      context: context,
-                      builder: (context) => RadioListPopup<String>(
-                        title: l10n.syncYomiSyncInterval,
-                        // Matched on duration, so P1D reads as the PT24H option
-                        // rather than being offered as a second "Daily" row.
-                        optionList: [
-                          ...kSyncYomiIntervalOptions,
-                          if (intervalOption == null) settings.syncInterval,
-                        ],
-                        getOptionTitle: (value) =>
-                            syncYomiIntervalLabel(context, value),
-                        value: intervalOption ?? settings.syncInterval,
-                        onChange: (value) {
-                          _save(ref, () => repository.updateInterval(value));
-                          Navigator.pop(context);
-                        },
-                      ),
-                    )
-                  : null,
             ),
             ListTile(
-              enabled: canEdit,
               title: Text(l10n.syncYomiSyncData),
               subtitle: Text(syncYomiDataSummary(context, syncData)),
-              onTap: canEdit
-                  ? () => showDialog<void>(
-                      context: context,
-                      builder: (context) => MultiSelectPopup<SyncYomiDataKind>(
-                        title: l10n.syncYomiSyncData,
-                        optionList: SyncYomiDataKind.values,
-                        values: syncData,
-                        getOptionTitle: (kind) =>
-                            _syncYomiDataLabel(context, kind),
-                        onChange: (selected) {
-                          _save(
-                            ref,
-                            () => repository.updateSyncData(
-                              manga: selected.contains(SyncYomiDataKind.manga),
-                              chapters: selected.contains(
-                                SyncYomiDataKind.chapters,
-                              ),
-                              categories: selected.contains(
-                                SyncYomiDataKind.categories,
-                              ),
-                              history: selected.contains(
-                                SyncYomiDataKind.history,
-                              ),
-                              tracking: selected.contains(
-                                SyncYomiDataKind.tracking,
-                              ),
-                            ),
-                          );
-                          Navigator.pop(context);
-                        },
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (context) => MultiSelectPopup<SyncYomiDataKind>(
+                  title: l10n.syncYomiSyncData,
+                  optionList: SyncYomiDataKind.values,
+                  values: syncData,
+                  getOptionTitle: (kind) => _syncYomiDataLabel(context, kind),
+                  onChange: (selected) {
+                    _save(
+                      ref,
+                      () => repository.updateSyncData(
+                        manga: selected.contains(SyncYomiDataKind.manga),
+                        chapters: selected.contains(SyncYomiDataKind.chapters),
+                        categories: selected.contains(
+                          SyncYomiDataKind.categories,
+                        ),
+                        history: selected.contains(SyncYomiDataKind.history),
+                        tracking: selected.contains(SyncYomiDataKind.tracking),
                       ),
-                    )
-                  : null,
+                    );
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
             ),
             _SyncNowSection(
               canStart:
-                  canEdit &&
-                  settings.syncYomiEnabled &&
-                  settings.syncYomiHost.isNotBlank &&
-                  settings.syncYomiApiKey.isNotBlank,
+                  settings.enabled &&
+                  settings.host.isNotBlank &&
+                  settings.apiKey.isNotBlank,
             ),
           ],
         );

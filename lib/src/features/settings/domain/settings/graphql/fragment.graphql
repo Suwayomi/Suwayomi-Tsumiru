@@ -7,7 +7,6 @@ fragment SettingsDto on SettingsType {
     ...BrowserSettingsDto
     ...LibrarySettingsDto
     ...DownloadsSettingsDto
-    ...SyncYomiSettingsDto
 }
 
 fragment AutomaticBackupSettingsDto on SettingsType {
