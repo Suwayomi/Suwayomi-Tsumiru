@@ -1,0 +1,93 @@
+fragment KoreaderSyncSettingsDto on SettingsType {
+  koreaderSyncStrategyForward
+  koreaderSyncStrategyBackward
+  koreaderSyncChecksumMethod
+  koreaderSyncPercentageTolerance
+}
+
+query KoSyncStatus {
+  koSyncStatus {
+    isLoggedIn
+    serverAddress
+    username
+  }
+}
+
+query KoreaderSyncLegacySettings {
+  settings {
+    ...KoreaderSyncSettingsDto
+  }
+}
+
+mutation ConnectKoSyncAccount($input: ConnectKoSyncAccountInput!) {
+  connectKoSyncAccount(input: $input) {
+    message
+    status {
+      isLoggedIn
+      serverAddress
+      username
+    }
+  }
+}
+
+mutation LogoutKoSyncAccount($input: LogoutKoSyncAccountInput!) {
+  logoutKoSyncAccount(input: $input) {
+    status {
+      isLoggedIn
+      serverAddress
+      username
+    }
+  }
+}
+
+mutation UpdateKoreaderSyncStrategyForward(
+  $koreaderSyncStrategyForward: KoreaderSyncConflictStrategy!
+) {
+  setSettings(
+    input: { settings: { koreaderSyncStrategyForward: $koreaderSyncStrategyForward } }
+  ) {
+    settings {
+      ...KoreaderSyncSettingsDto
+    }
+  }
+}
+
+mutation UpdateKoreaderSyncStrategyBackward(
+  $koreaderSyncStrategyBackward: KoreaderSyncConflictStrategy!
+) {
+  setSettings(
+    input: {
+      settings: { koreaderSyncStrategyBackward: $koreaderSyncStrategyBackward }
+    }
+  ) {
+    settings {
+      ...KoreaderSyncSettingsDto
+    }
+  }
+}
+
+mutation UpdateKoreaderSyncChecksumMethod(
+  $koreaderSyncChecksumMethod: KoreaderSyncChecksumMethod!
+) {
+  setSettings(
+    input: { settings: { koreaderSyncChecksumMethod: $koreaderSyncChecksumMethod } }
+  ) {
+    settings {
+      ...KoreaderSyncSettingsDto
+    }
+  }
+}
+
+mutation UpdateKoreaderSyncPercentageTolerance(
+  $koreaderSyncPercentageTolerance: Float!
+) {
+  setSettings(
+    input: {
+      settings: { koreaderSyncPercentageTolerance: $koreaderSyncPercentageTolerance }
+    }
+  ) {
+    settings {
+      ...KoreaderSyncSettingsDto
+    }
+  }
+}

@@ -47,6 +47,7 @@ import '../features/settings/presentation/browse/browse_settings_screen.dart';
 import '../features/settings/presentation/connection/connection_screen.dart';
 import '../features/settings/presentation/downloads/downloads_settings_screen.dart';
 import '../features/settings/presentation/general/general_screen.dart';
+import '../features/settings/presentation/koreader_sync/koreader_sync_settings_screen.dart';
 import '../features/settings/presentation/library/library_settings_screen.dart';
 import '../features/settings/presentation/more/more_screen.dart';
 import '../features/settings/presentation/notifications/notifications_settings_screen.dart';
@@ -117,6 +118,7 @@ abstract class Routes {
   static const account = 'account';
   static const trackingSettings = 'tracking';
   static const syncyomiSettings = 'syncyomi';
+  static const koreaderSyncSettings = 'koreader-sync';
   static const hotkeysSettings = 'hotkeys';
 
   // Commons
@@ -289,6 +291,9 @@ GoRouter routerConfig(Ref ref) {
                     ),
                     TypedGoRoute<SyncYomiSettingsRoute>(
                       path: Routes.syncyomiSettings,
+                    ),
+                    TypedGoRoute<KoreaderSyncSettingsRoute>(
+                      path: Routes.koreaderSyncSettings,
                     ),
                     TypedGoRoute<HotkeysSettingsRoute>(
                       path: Routes.hotkeysSettings,

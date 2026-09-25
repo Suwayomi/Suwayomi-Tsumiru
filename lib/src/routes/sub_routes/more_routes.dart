@@ -175,6 +175,16 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
   Widget build(context, state) => const SyncYomiSettingsScreen();
 }
 
+class KoreaderSyncSettingsRoute extends GoRouteData
+    with $KoreaderSyncSettingsRoute {
+  const KoreaderSyncSettingsRoute();
+
+  static final $parentNavigatorKey = _quickOpenNavigatorKey;
+
+  @override
+  Widget build(context, state) => const KoreaderSyncSettingsScreen();
+}
+
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
   const HotkeysSettingsRoute();
 

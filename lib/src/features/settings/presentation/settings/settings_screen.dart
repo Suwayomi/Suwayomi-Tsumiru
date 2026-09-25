@@ -83,6 +83,12 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => const SyncYomiSettingsRoute().push(context),
           ),
           ListTile(
+            title: Text(context.l10n.koreaderSync),
+            subtitle: Text(context.l10n.koreaderSyncSubtitle),
+            leading: const Icon(Icons.menu_book_rounded),
+            onTap: () => const KoreaderSyncSettingsRoute().push(context),
+          ),
+          ListTile(
             title: Text(context.l10n.tracking),
             leading: const Icon(Icons.sync_rounded),
             onTap: () => const TrackingSettingsRoute().push(context),

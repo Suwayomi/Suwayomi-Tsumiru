@@ -3872,5 +3872,40 @@
   "syncYomiUnsupported": "This server does not support SyncYomi. Update Suwayomi to use it.",
   "@syncYomiUnsupported": {
     "description": "Message on the SyncYomi settings screen when the server has no SyncYomi settings"
-  }
+  },
+  "koreaderSync": "KOReader Sync",
+  "koreaderSyncSubtitle": "Sync reading progress with KOReader",
+  "koreaderSyncStatus": "Sync status",
+  "koreaderSyncStatusDisconnected": "Disconnected",
+  "koreaderSyncConnectedAs": "Connected as {username} to {serverAddress}",
+  "@koreaderSyncConnectedAs": {
+    "description": "KOReader Sync connection status subtitle",
+    "placeholders": {
+      "username": { "type": "String" },
+      "serverAddress": { "type": "String" }
+    }
+  },
+  "koreaderSyncConnectTitle": "Connect to KOReader Sync server",
+  "koreaderSyncDisconnectTitle": "Disconnect from KOReader Sync server",
+  "koreaderSyncConnect": "Connect",
+  "koreaderSyncDisconnect": "Disconnect",
+  "koreaderSyncUsername": "Username",
+  "koreaderSyncConnectFailed": "Failed to connect to KOReader Sync server.",
+  "koreaderSyncDisconnectFailed": "Failed to disconnect from KOReader Sync server.",
+  "koreaderSyncUnknownError": "Unknown error",
+  "koreaderSyncStrategyForward": "Sync to a newer state",
+  "koreaderSyncStrategyBackward": "Sync to an older state",
+  "koreaderSyncStrategyPrompt": "Prompt",
+  "koreaderSyncStrategyKeepLocal": "Keep local",
+  "koreaderSyncStrategyKeepRemote": "Keep remote",
+  "koreaderSyncStrategyDisabled": "Disabled",
+  "koreaderSyncChecksumMethod": "Document matching method",
+  "koreaderSyncChecksumBinary": "Binary",
+  "koreaderSyncChecksumFilename": "Filename",
+  "koreaderSyncPercentageTolerance": "Percentage tolerance",
+  "koreaderSyncPercentageToleranceDescription": "Sync will not be triggered if the progress difference is within this tolerance.",
+  "koreaderSyncPercentageToleranceInvalid": "Enter a number between 0 and 1.",
+  "koreaderSyncShowPassword": "Show password",
+  "koreaderSyncHidePassword": "Hide password",
+  "koreaderSyncUnsupported": "This server does not support KOReader Sync. Update Suwayomi to use it."
 }
