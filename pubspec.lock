@@ -162,7 +162,7 @@ packages:
     source: hosted
     version: "2.16.1"
   built_collection:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: built_collection
       sha256: "376e3dd27b51ea877c28d525560790aee2e6fbb5f20e2f85d5081027d94e2100"
@@ -313,14 +313,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
-  cupertino_icons:
-    dependency: "direct main"
-    description:
-      name: cupertino_icons
-      sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.9"
   cupertino_ui:
     dependency: transitive
     description:
@@ -369,14 +361,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.35.0"
-  extension_type_unions:
-    dependency: "direct main"
-    description:
-      name: extension_type_unions
-      sha256: "1b2ac85028437f06087bf4bfd40fc20df7d704c3d611090ae17db855b42e9130"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.10"
   fake_async:
     dependency: "direct dev"
     description:
@@ -783,7 +767,7 @@ packages:
     source: hosted
     version: "1.1.1-alpha+1699813812660"
   gql_http_link:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: gql_http_link
       sha256: "07635e85a4f313836904961904417fd27844fe8f68f77b410a4e6b81d8e9202e"
@@ -1893,7 +1877,7 @@ packages:
     source: hosted
     version: "1.0.1"
   web_socket_channel:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: web_socket_channel
       sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
