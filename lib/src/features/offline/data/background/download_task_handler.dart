@@ -691,6 +691,8 @@ class DownloadTaskHandler extends TaskHandler {
     writePage: _store,
     parallelPageLimit: 5,
     fetchPage: (pageUrl) async {
+      // The broker's write keeps [_record] current, which the request reads.
+      await _broker.refreshIfDue(_record);
       final (url, headers) = _authedPageRequest(pageUrl);
       final http.Response res;
       try {
