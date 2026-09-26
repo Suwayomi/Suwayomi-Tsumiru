@@ -123,6 +123,19 @@ void main() {
       expect(describeSocketToken('opaque'), 'exp=unknown');
     });
   });
+
+  test('only a present, unexpired token binds the socket to its user', () {
+    final now = DateTime.now().toUtc();
+    expect(socketTokenIsLive(null), isFalse);
+    expect(socketTokenIsLive(''), isFalse);
+    expect(
+      socketTokenIsLive(_jwt(now.subtract(const Duration(seconds: 1)))),
+      isFalse,
+    );
+    expect(socketTokenIsLive(_jwt(now.add(const Duration(minutes: 5)))), isTrue);
+    // No readable expiry: nothing a reconnect could improve on.
+    expect(socketTokenIsLive('opaque'), isTrue);
+  });
 }
 
 String _jwt(DateTime exp) {

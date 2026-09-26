@@ -184,6 +184,22 @@ GraphQLClient graphQlClient(Ref ref) {
       isCurrentSession: isCurrentSession,
       authType: () => authType,
       getHeaders: () async {
+        // A token already known to be expired (or about to be) is refreshed
+        // before the request instead of after its 401: at launch after a
+        // pause, every early request otherwise went out, was rejected, and
+        // waited on the same refresh to be retried. Refreshing early costs
+        // nothing (the refresh token isn't rotated) and joins any refresh
+        // already in flight. A failed one sends the current token, as before.
+        if (authType == AuthType.uiLogin) {
+          try {
+            await ref
+                .read(authCoordinatorProvider.notifier)
+                .refreshUiAccessTokenIfDue(
+                  gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+                  trigger: 'request-ahead',
+                );
+          } catch (_) {}
+        }
         // Synchronously read the cached snapshot — populated at startup
         // by the eager `await container.read(...future)` in main(). We
         // read via `.future` defensively in case a caller invokes a
@@ -363,6 +379,15 @@ String describeSocketToken(String? token, {DateTime? now}) {
   return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
 }
 
+/// Whether the server would bind a socket sending [token] to its user. A token
+/// without a readable expiry counts as live: there's nothing to wait for.
+@visibleForTesting
+bool socketTokenIsLive(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return false;
+  final exp = decodeJwtExp(token);
+  return exp == null || exp.isAfter(now ?? DateTime.now().toUtc());
+}
+
 /// The socket resolves its user once, at connect: these lines show what it
 /// was bound with, so an "Unauthorized" subscription later in the session can
 /// be traced to the connect that caused it.
@@ -402,6 +427,8 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   //   * simple_login / basic -> the WS handshake (upgrade) headers.
   dynamic initialPayload;
   Map<String, String>? handshakeHeaders;
+  // Whether this socket's latest connect sent no live token.
+  var boundAsVisitor = false;
   if (authType == AuthType.uiLogin) {
     // This provider rebuilds at launch as async settings load, disposing the
     // socket it built — often while that socket's connect is still awaiting
@@ -436,9 +463,25 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
           _wsAuthLog('connect-token skipped=provider-disposed');
           return null;
         }
-        return (await ref.read(
+        final token = (await ref.read(
           authCredentialsStoreProvider.future,
         )).uiAccessToken;
+        boundAsVisitor = !socketTokenIsLive(token);
+        return token;
+      },
+    );
+    // A socket bound as a visitor stays one until it reconnects, and nothing
+    // made it reconnect: HTTP recovered with the next refresh, but live
+    // updates stayed dead for the session. Rebuild it once a live token lands.
+    // Only then: a token expiring on a socket already bound doesn't matter,
+    // and rebuilding on every refresh would kill the subscriptions for nothing.
+    ref.listen(
+      authCredentialsStoreProvider.select((s) => s.value?.uiAccessToken),
+      (_, token) {
+        if (!boundAsVisitor || !socketTokenIsLive(token)) return;
+        boundAsVisitor = false;
+        _wsAuthLog('reconnect reason=visitor-bind');
+        ref.invalidateSelf();
       },
     );
   } else if (authType == AuthType.simpleLogin) {

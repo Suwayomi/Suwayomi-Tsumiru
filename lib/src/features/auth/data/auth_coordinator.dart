@@ -565,6 +565,9 @@ class AuthCoordinator extends _$AuthCoordinator {
     String trigger = 'other',
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
+    // Inside an identity change the refresh is refused anyway; joining one in
+    // flight could leave this caller waiting on its own change to settle.
+    if (store.insideIdentityChange) return _refreshUiAccessTokenImpl(gqlClient);
     final inFlight = _refreshInFlight[store];
     if (inFlight != null) {
       recordDiagnostic(
@@ -577,7 +580,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     final completer = Completer<RefreshOutcome>();
     _refreshInFlight[store] = completer;
     try {
-      final outcome = await _refreshUiAccessTokenImpl(gqlClient);
+      final outcome = await _refreshAcrossHandover(store, gqlClient);
       recordDiagnostic(
         '[${DateTime.now().toIso8601String()}] auth-refresh: '
         'trigger=$trigger ${describeRefreshOutcome(outcome)}\n',
@@ -602,6 +605,43 @@ class AuthCoordinator extends _$AuthCoordinator {
         _refreshInFlight[store] = null;
       }
     }
+  }
+
+  /// How long a refresh interrupted by an endpoint handover waits for it to
+  /// finish before retrying. The handover only swaps the address (and restarts
+  /// the download worker), so this is a ceiling, not an expected delay.
+  static const Duration _handoverSettleTimeout = Duration(seconds: 10);
+
+  /// Runs the refresh, and retries it once if a LAN/remote endpoint handover
+  /// discarded it. The handover keeps the account but bumps the epoch, so at
+  /// launch, whenever the LAN probe switched endpoints mid-refresh, it failed
+  /// "Credentials changed" and every caller sharing it fell back to the
+  /// expired token: the subscription socket bound as a visitor for the whole
+  /// session, and each HTTP request paid a 401 first. The retry goes through
+  /// the post-handover client, since the one passed in may point at the
+  /// address just abandoned. A sign-in change (session epoch moved) is never
+  /// retried.
+  Future<RefreshOutcome> _refreshAcrossHandover(
+    AuthCredentialsStore store,
+    GraphQLClient gqlClient,
+  ) async {
+    final session = store.sessionEpoch;
+    final handovers = store.handovers;
+    final outcome = await _refreshUiAccessTokenImpl(gqlClient);
+    if (outcome is! RefreshTransientFailure) return outcome;
+    final handedOver =
+        store.handovers != handovers ||
+        (store.identityChanging && !store.sessionChanging);
+    if (!handedOver || store.sessionEpoch != session) return outcome;
+    if (!await store.identitySettled(timeout: _handoverSettleTimeout) ||
+        !ref.mounted ||
+        store.sessionEpoch != session ||
+        !store.sessionAdmitted) {
+      return outcome;
+    }
+    return _refreshUiAccessTokenImpl(
+      ref.read(unauthenticatedGraphQlClientProvider),
+    );
   }
 
   Future<RefreshOutcome> _refreshUiAccessTokenImpl(
