@@ -55,6 +55,7 @@ class AccountSessionStartup {
   bool _restoreUnboundRequested = false;
   bool _endpointChanged = false;
   bool _catchupStarted = false;
+  bool _offlineActivationPending = false;
   bool? _downloadsAllowed;
   int _permissionRevision = 0;
 
@@ -89,7 +90,17 @@ class AccountSessionStartup {
     );
     _subscriptions.add(
       container.listen<bool>(offlineActiveProvider, (previous, next) {
-        if (_current && previous != true && next) unawaited(_request());
+        if (!_current || previous == true || !next) return;
+        // At launch this flips on as soon as the server's identity loads,
+        // while the pass that awaited that identity is still running and is
+        // about to read it. Forcing a rerun then repeated the whole launch
+        // reconcile and catch-up. Only rerun if the running pass read it
+        // before it flipped.
+        if (_flight != null) {
+          _offlineActivationPending = true;
+        } else {
+          unawaited(_request());
+        }
       }),
     );
     _subscriptions.add(
@@ -119,6 +130,7 @@ class AccountSessionStartup {
     final work = Future<void>(() async {
       do {
         _rerun = false;
+        _offlineActivationPending = false;
         final restoreUnbound = _restoreUnboundRequested;
         _restoreUnboundRequested = false;
         if (!_current) return;
@@ -175,12 +187,14 @@ class AccountSessionStartup {
         } catch (error, stack) {
           if (_current) debugPrint('Account startup failed: $error\n$stack');
         }
-      } while (_rerun && _current);
+      } while ((_rerun || _offlineActivationPending) && _current);
     });
     _flight = work;
     return work.whenComplete(() {
       _flight = null;
-      if (_rerun && _current) unawaited(_request());
+      if ((_rerun || _offlineActivationPending) && _current) {
+        unawaited(_request());
+      }
     });
   }
 
@@ -192,7 +206,7 @@ class AccountSessionStartup {
     } catch (error) {
       if (_current) debugPrint('Notification startup failed: $error');
     }
-    if (!_current || !container.read(offlineActiveProvider)) return;
+    if (!_current || !_offlineActiveNow()) return;
     final runtime = container.read(offlineRuntimeStorageProvider.notifier);
     // Settle disk FIRST: launch reconcile and the catch-up must see
     // post-recovery device state, or overnight background downloads read as
@@ -249,7 +263,7 @@ class AccountSessionStartup {
 
   Future<void> _resume() async {
     if (!_current ||
-        !container.read(offlineActiveProvider) ||
+        !_offlineActiveNow() ||
         !await resolvedDownloadPermissionAllowed(container.read)) {
       return;
     }
@@ -288,6 +302,14 @@ class AccountSessionStartup {
         );
       }
     }
+  }
+
+  /// Reads whether offline is active, for the pass running now: an
+  /// activation that landed before this read is handled by this pass, so it
+  /// no longer calls for another.
+  bool _offlineActiveNow() {
+    _offlineActivationPending = false;
+    return container.read(offlineActiveProvider);
   }
 
   void _snapshot() {
