@@ -84,3 +84,14 @@ query LibraryUpdateFailures {
     }
   }
 }
+
+# Statuses only: the error count on More and in the update menu doesn't need
+# the series, and asking for them made the server resolve every series of the
+# last run (~780 KB for 360 series) at every launch.
+query LibraryUpdateFailureCount {
+  libraryUpdateStatus {
+    mangaUpdates {
+      status
+    }
+  }
+}
