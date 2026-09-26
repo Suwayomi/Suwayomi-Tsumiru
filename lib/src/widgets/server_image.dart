@@ -391,6 +391,7 @@ class ServerImage extends HookConsumerWidget {
                                 gqlClient: ref.read(
                                   unauthenticatedGraphQlClientProvider,
                                 ),
+                                trigger: 'image-reload',
                               );
                         },
                       );

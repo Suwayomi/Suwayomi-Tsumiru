@@ -4,7 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import '../../../../utils/crash/diagnostics.dart';
+
 typedef RefreshResult = ({String access, String refresh});
+
+/// Logs one background refresh-call outcome that would otherwise leave no
+/// trace. `source` names the worker (`notify`, `download`); the error keeps
+/// its type, since `package:http` wraps a socket failure in a
+/// `ClientException` that a bare `on SocketException` doesn't catch.
+void logBackgroundRefresh(String source, String event, [Object? error]) {
+  final cause = error == null
+      ? ''
+      : ' cause=${error.runtimeType}: '
+            '${error.toString().split('\n').first.trim()}';
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] offline-refresh: '
+    'source=$source $event$cause\n',
+  );
+}
 
 class BackgroundTokenRecord {
   const BackgroundTokenRecord({
@@ -184,21 +201,26 @@ class TokenBroker {
   Future<String?> resolveAfter401(String tokenThat401d) async {
     lastRefreshTransient = false;
     final current = await _read();
+    _log('auth-rejected gen=${current.gen}');
     if (expectedIdentity != null && !current.sameIdentity(expectedIdentity!)) {
+      _log('identity-changed-before-refresh gen=${current.gen}');
       return null;
     }
     // Someone already refreshed to a different access token — use it, no refresh.
     if (current.accessToken != null && current.accessToken != tokenThat401d) {
+      _log('reused-newer-token gen=${current.gen}');
       return current.accessToken;
     }
     final rt = current.refreshToken;
     if (rt == null) {
       lastRefreshTransient = false;
+      _log('no-refresh-token gen=${current.gen}');
       return null;
     }
     final attempt = await refreshFn(rt);
     if (expectedIdentity != null &&
         !(await _read()).sameIdentity(expectedIdentity!)) {
+      _log('identity-changed-during-refresh gen=${current.gen}');
       return null;
     }
     final tokens = attempt.tokens;
@@ -213,6 +235,16 @@ class TokenBroker {
         refreshToken: tokens.refresh,
       ),
     );
+    _log('refreshed gen=${current.gen + 1}');
     return tokens.access;
   }
+
+  /// Every background 401 and how it ended: a refresh, a reused newer token, or
+  /// why none happened. The callers log a null result only as
+  /// `refresh-failed transient=…`, which can't tell an identity mismatch or a
+  /// missing refresh token from a real rejection; and a successful refresh left
+  /// no trace, so a healthy worker looked the same as one never challenged.
+  static void _log(String event) => recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] token-broker: $event\n',
+      );
 }

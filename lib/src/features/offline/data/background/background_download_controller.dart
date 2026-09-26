@@ -1082,7 +1082,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
     logger.i('Offline: server unreachable — downloads parked for $delay');
     // Lets the reconnect listener resume us as soon as anything else in the app
     // reaches the server, instead of waiting out the backoff.
-    _ref.read(serverUnreachableProvider.notifier).set(true);
+    _ref
+        .read(serverUnreachableProvider.notifier)
+        .set(true, reason: 'background-downloads-parked');
     _ref.read(offlineDownloadRestrictionProvider.notifier).set('connection');
     // Only on the first park of a run: the service took its own notification
     // with it when it stopped, so without this the queue just goes quiet.

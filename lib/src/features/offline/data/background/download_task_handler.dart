@@ -16,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/crash/crash_log.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../account/data/account_permission.dart';
 import '../chapter_download_engine.dart';
@@ -131,6 +133,12 @@ class DownloadTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    // This isolate starts with no diagnostic sink (main.dart wires the UI
+    // isolate's), so every recordDiagnostic() below would be a silent no-op.
+    try {
+      final crashLogPath = await initCrashLog();
+      setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+    } catch (_) {}
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
       // Nothing to do — self-stop so we don't sit as a zombie notification.
@@ -827,14 +835,28 @@ class DownloadTaskHandler extends TaskHandler {
         // (which races the network actually settling) permanently condemns
         // every chapter that happened to 401 in that window.
         if (isGatewayStatus(res.statusCode)) {
+          logBackgroundRefresh(
+            'download',
+            'gateway status=${res.statusCode} transient=true',
+          );
           return (tokens: null, transient: true);
         }
-        if (res.statusCode != 200) return (tokens: null, transient: false);
+        if (res.statusCode != 200) {
+          logBackgroundRefresh(
+            'download',
+            'rejected status=${res.statusCode} transient=false',
+          );
+          return (tokens: null, transient: false);
+        }
         final decoded = jsonDecode(res.body) as Map<String, Object?>;
         final data = decoded['data'] as Map<String, Object?>?;
         final refreshed = data?['refreshToken'] as Map<String, Object?>?;
         final access = refreshed?['accessToken'] as String?;
         if (access == null || access.isEmpty) {
+          logBackgroundRefresh(
+            'download',
+            'no-token transient=false errors=${decoded['errors']}',
+          );
           return (tokens: null, transient: false);
         }
         // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
@@ -843,11 +865,14 @@ class DownloadTaskHandler extends TaskHandler {
           tokens: (access: access, refresh: refreshToken),
           transient: false,
         );
-      } on SocketException {
+      } on SocketException catch (e) {
+        logBackgroundRefresh('download', 'network-error transient=true', e);
         return (tokens: null, transient: true);
-      } on TimeoutException {
+      } on TimeoutException catch (e) {
+        logBackgroundRefresh('download', 'timeout transient=true', e);
         return (tokens: null, transient: true);
-      } catch (_) {
+      } catch (e) {
+        logBackgroundRefresh('download', 'error transient=false', e);
         return (tokens: null, transient: false);
       }
     },
