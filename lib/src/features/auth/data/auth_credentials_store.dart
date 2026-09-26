@@ -250,6 +250,14 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   /// to settle there would wait on itself.
   bool get insideIdentityChange => Zone.current[_identityZone] == this;
 
+  /// Runs [body] as if outside any identity change. For work a change only
+  /// spawns and never awaits, such as a socket connect started by the rebuild
+  /// the change triggers: it inherits the change's zone through the microtasks
+  /// that start it, and would otherwise be refused as if the change itself
+  /// were asking, instead of waiting for it to finish.
+  R outsideIdentityChange<R>(R Function() body) =>
+      runZoned(body, zoneValues: {_identityZone: null});
+
   /// Waits (up to [timeout]) for every queued identity change to finish.
   /// Returns whether none is still running.
   Future<bool> identitySettled({required Duration timeout}) async {

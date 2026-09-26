@@ -567,7 +567,13 @@ class AuthCoordinator extends _$AuthCoordinator {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     // Inside an identity change the refresh is refused anyway; joining one in
     // flight could leave this caller waiting on its own change to settle.
-    if (store.insideIdentityChange) return _refreshUiAccessTokenImpl(gqlClient);
+    if (store.insideIdentityChange) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger refused=inside-identity-change\n',
+      );
+      return _refreshUiAccessTokenImpl(gqlClient);
+    }
     final inFlight = _refreshInFlight[store];
     if (inFlight != null) {
       recordDiagnostic(

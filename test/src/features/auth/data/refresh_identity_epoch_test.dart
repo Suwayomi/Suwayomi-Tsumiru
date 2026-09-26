@@ -585,6 +585,37 @@ void main() {
       expect(retryCalls, 1);
     });
 
+    test('work it spawns but never awaits can wait for it', () async {
+      // A handover rebuilds the subscription socket through microtasks that
+      // inherit its zone; the socket's refresh must still wait it out.
+      final release = Completer<void>();
+      final spawned = Completer<Future<RefreshOutcome>>();
+      final refusedInZone = Completer<RefreshOutcome>();
+      final handover = store.withIdentityChange(() async {
+        final coordinator = container.read(authCoordinatorProvider.notifier);
+        scheduleMicrotask(() {
+          // Without the mask the same call is refused on the spot.
+          refusedInZone.complete(
+            coordinator.refreshUiAccessToken(gqlClient: client),
+          );
+          spawned.complete(
+            store.outsideIdentityChange(
+              () => coordinator.refreshUiAccessToken(gqlClient: client),
+            ),
+          );
+        });
+        await release.future;
+      }, preserveSession: true);
+      expect(await refusedInZone.future, isA<RefreshTransientFailure>());
+      final spawnedRefresh = await spawned.future;
+      await pumpEventQueue();
+      expect(retryCalls, 0);
+      release.complete();
+      await handover;
+      expect(await spawnedRefresh, isA<RefreshSuccess>());
+      expect(retryCalls, 1);
+    });
+
     test('a sign-in change is not retried', () async {
       final refresh = container
           .read(authCoordinatorProvider.notifier)

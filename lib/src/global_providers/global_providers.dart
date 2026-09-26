@@ -441,11 +441,19 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
           _wsAuthLog('connect-refresh skipped=provider-disposed');
           return;
         }
+        // An endpoint handover rebuilds this socket from inside the handover's
+        // zone, so the refresh would be refused on the spot instead of waiting
+        // for the handover to finish. Nothing awaits a socket connect, so it
+        // can't be the handover waiting on itself.
+        final coordinator = ref.read(authCoordinatorProvider.notifier);
+        final gql = ref.read(unauthenticatedGraphQlClientProvider);
         final outcome = await ref
-            .read(authCoordinatorProvider.notifier)
-            .refreshUiAccessTokenIfDue(
-              gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
-              trigger: 'socket-connect',
+            .read(authCredentialsStoreProvider.notifier)
+            .outsideIdentityChange(
+              () => coordinator.refreshUiAccessTokenIfDue(
+                gqlClient: gql,
+                trigger: 'socket-connect',
+              ),
             );
         _wsAuthLog(
           'connect-refresh outcome=${switch (outcome) {
