@@ -445,6 +445,7 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
             .read(authCoordinatorProvider.notifier)
             .refreshUiAccessTokenIfDue(
               gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+              trigger: 'socket-connect',
             );
         _wsAuthLog(
           'connect-refresh outcome=${switch (outcome) {
