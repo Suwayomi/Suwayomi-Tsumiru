@@ -19,6 +19,7 @@ import '../../../global_providers/global_providers.dart';
 // auth.graphql.dart, so we import the schema directly.
 import '../../../graphql/__generated__/schema.graphql.dart'
     show Input$LoginInput, Input$RefreshTokenInput;
+import '../../../utils/crash/diagnostics.dart';
 import '../../account/data/account_notice.dart';
 import '../../account/data/account_session_repository.dart';
 import '../../account/domain/account_binding.dart';
@@ -32,6 +33,7 @@ import 'auth_state.dart';
 import 'basic_credentials_rejected.dart';
 import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
+import 'jwt_utils.dart';
 import 'simple_login_client.dart';
 
 part 'auth_coordinator.g.dart';
@@ -148,6 +150,36 @@ class RefreshAuthFailure extends RefreshOutcome {
 class RefreshTransientFailure extends RefreshOutcome {
   const RefreshTransientFailure(this.error);
   final Object error;
+}
+
+/// One-line, token-free summary of [outcome] for the diagnostic log: the new
+/// token's remaining lifetime on success, the error's type and first line on
+/// a transient failure. `null` means no refresh was due.
+String describeRefreshOutcome(RefreshOutcome? outcome, {DateTime? now}) =>
+    switch (outcome) {
+      null => 'outcome=not-due',
+      RefreshSuccess(:final newAccessToken) =>
+        'outcome=success ${describeTokenExpiry(newAccessToken, now: now)}',
+      RefreshAuthFailure() => 'outcome=auth-failure',
+      RefreshTransientFailure(:final error) =>
+        'outcome=transient cause=${describeDiagnosticError(error)}',
+    };
+
+/// `expIn=<seconds>` (negative once expired) for a JWT, `exp=unknown` when it
+/// can't be decoded, `token=none` for a missing one. Never the token itself.
+String describeTokenExpiry(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return 'token=none';
+  final exp = decodeJwtExp(token);
+  if (exp == null) return 'exp=unknown';
+  return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
+}
+
+/// `<Type>: <first line>` of [error], capped so a server stack trace packed
+/// into a message can't flood the log.
+String describeDiagnosticError(Object error) {
+  final first = error.toString().split('\n').first.trim();
+  final text = first.length > 160 ? '${first.substring(0, 160)}…' : first;
+  return '${error.runtimeType}: $text';
 }
 
 Expando<Completer<RefreshOutcome>> _refreshInFlight = Expando();
@@ -280,7 +312,10 @@ class AuthCoordinator extends _$AuthCoordinator {
   Future<void> _firePeriodicRefresh() async {
     try {
       final gqlClient = ref.read(unauthenticatedGraphQlClientProvider);
-      final outcome = await refreshUiAccessToken(gqlClient: gqlClient);
+      final outcome = await refreshUiAccessToken(
+        gqlClient: gqlClient,
+        trigger: 'timer',
+      );
       if (outcome is RefreshSuccess) {
         _proactiveBackoffStep = 0;
         _scheduleProactiveRefresh();
@@ -523,17 +558,39 @@ class AuthCoordinator extends _$AuthCoordinator {
     }, expectedEpoch: forEpoch);
   }
 
+  /// [trigger] names the caller in the `auth-refresh` diagnostic, so a field
+  /// log shows which path refreshed (or failed to) and when.
   Future<RefreshOutcome> refreshUiAccessToken({
     required GraphQLClient gqlClient,
+    String trigger = 'other',
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
+    // Inside an identity change the refresh is refused anyway; joining one in
+    // flight could leave this caller waiting on its own change to settle.
+    if (store.insideIdentityChange) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger refused=inside-identity-change\n',
+      );
+      return _refreshUiAccessTokenImpl(gqlClient);
+    }
     final inFlight = _refreshInFlight[store];
-    if (inFlight != null) return inFlight.future;
+    if (inFlight != null) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger joined-in-flight\n',
+      );
+      return inFlight.future;
+    }
 
     final completer = Completer<RefreshOutcome>();
     _refreshInFlight[store] = completer;
     try {
-      final outcome = await _refreshUiAccessTokenImpl(gqlClient);
+      final outcome = await _refreshAcrossHandover(store, gqlClient);
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger ${describeRefreshOutcome(outcome)}\n',
+      );
       completer.complete(outcome);
       return outcome;
     } catch (e, st) {
@@ -543,6 +600,10 @@ class AuthCoordinator extends _$AuthCoordinator {
       // tokens for the wrong reason.
       debugPrint('refreshUiAccessToken: unexpected throw: $e\n$st');
       final outcome = RefreshOutcome.transientFailure(e);
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger threw ${describeRefreshOutcome(outcome)}\n',
+      );
       completer.complete(outcome);
       return outcome;
     } finally {
@@ -550,6 +611,43 @@ class AuthCoordinator extends _$AuthCoordinator {
         _refreshInFlight[store] = null;
       }
     }
+  }
+
+  /// How long a refresh interrupted by an endpoint handover waits for it to
+  /// finish before retrying. The handover only swaps the address (and restarts
+  /// the download worker), so this is a ceiling, not an expected delay.
+  static const Duration _handoverSettleTimeout = Duration(seconds: 10);
+
+  /// Runs the refresh, and retries it once if a LAN/remote endpoint handover
+  /// discarded it. The handover keeps the account but bumps the epoch, so at
+  /// launch, whenever the LAN probe switched endpoints mid-refresh, it failed
+  /// "Credentials changed" and every caller sharing it fell back to the
+  /// expired token: the subscription socket bound as a visitor for the whole
+  /// session, and each HTTP request paid a 401 first. The retry goes through
+  /// the post-handover client, since the one passed in may point at the
+  /// address just abandoned. A sign-in change (session epoch moved) is never
+  /// retried.
+  Future<RefreshOutcome> _refreshAcrossHandover(
+    AuthCredentialsStore store,
+    GraphQLClient gqlClient,
+  ) async {
+    final session = store.sessionEpoch;
+    final handovers = store.handovers;
+    final outcome = await _refreshUiAccessTokenImpl(gqlClient);
+    if (outcome is! RefreshTransientFailure) return outcome;
+    final handedOver =
+        store.handovers != handovers ||
+        (store.identityChanging && !store.sessionChanging);
+    if (!handedOver || store.sessionEpoch != session) return outcome;
+    if (!await store.identitySettled(timeout: _handoverSettleTimeout) ||
+        !ref.mounted ||
+        store.sessionEpoch != session ||
+        !store.sessionAdmitted) {
+      return outcome;
+    }
+    return _refreshUiAccessTokenImpl(
+      ref.read(unauthenticatedGraphQlClientProvider),
+    );
   }
 
   Future<RefreshOutcome> _refreshUiAccessTokenImpl(
@@ -697,6 +795,7 @@ class AuthCoordinator extends _$AuthCoordinator {
   Future<RefreshOutcome?> refreshUiAccessTokenIfDue({
     required GraphQLClient gqlClient,
     Duration leadTime = proactiveRefreshLead,
+    String trigger = 'other',
   }) async {
     if ((ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial) !=
         AuthType.uiLogin) {
@@ -709,7 +808,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     if (expiresAt == null) return null;
     final remaining = expiresAt.difference(DateTime.now().toUtc());
     if (remaining > leadTime) return null;
-    return refreshUiAccessToken(gqlClient: gqlClient);
+    return refreshUiAccessToken(gqlClient: gqlClient, trigger: trigger);
   }
 
   /// Runs the appropriate verify-only round-trip and returns a typed

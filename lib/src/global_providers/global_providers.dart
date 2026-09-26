@@ -24,12 +24,14 @@ import '../features/auth/data/auth_credentials_store.dart';
 import '../features/auth/data/auth_session_status.dart';
 import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/custom_headers_store.dart';
+import '../features/auth/data/jwt_utils.dart';
 import '../features/auth/data/suwayomi_auth_link.dart';
 import '../features/offline/data/server_reachability.dart';
 import '../features/settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import '../utils/crash/diagnostics.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/logger/logger_link.dart';
 import '../utils/mixin/shared_preferences_client_mixin.dart';
@@ -182,6 +184,22 @@ GraphQLClient graphQlClient(Ref ref) {
       isCurrentSession: isCurrentSession,
       authType: () => authType,
       getHeaders: () async {
+        // A token already known to be expired (or about to be) is refreshed
+        // before the request instead of after its 401: at launch after a
+        // pause, every early request otherwise went out, was rejected, and
+        // waited on the same refresh to be retried. Refreshing early costs
+        // nothing (the refresh token isn't rotated) and joins any refresh
+        // already in flight. A failed one sends the current token, as before.
+        if (authType == AuthType.uiLogin) {
+          try {
+            await ref
+                .read(authCoordinatorProvider.notifier)
+                .refreshUiAccessTokenIfDue(
+                  gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+                  trigger: 'request-ahead',
+                );
+          } catch (_) {}
+        }
         // Synchronously read the cached snapshot — populated at startup
         // by the eager `await container.read(...future)` in main(). We
         // read via `.future` defensively in case a caller invokes a
@@ -226,7 +244,10 @@ GraphQLClient graphQlClient(Ref ref) {
         );
         return await ref
             .read(authCoordinatorProvider.notifier)
-            .refreshUiAccessToken(gqlClient: rawClient);
+            .refreshUiAccessToken(
+              gqlClient: rawClient,
+              trigger: 'auth-link',
+            );
       },
       onNeedsReauth: () {
         if (ref.read(hasStoredCredentialsProvider)) {
@@ -247,7 +268,12 @@ GraphQLClient graphQlClient(Ref ref) {
           if (response.errors == null || response.errors!.isEmpty) {
             Future(() {
               try {
-                ref.read(serverUnreachableProvider.notifier).set(false);
+                ref
+                    .read(serverUnreachableProvider.notifier)
+                    .set(
+                      false,
+                      reason: 'op=${request.operation.operationName}',
+                    );
               } catch (_) {}
             });
           }
@@ -259,7 +285,14 @@ GraphQLClient graphQlClient(Ref ref) {
           if (isConnectionError(error)) {
             Future(() {
               try {
-                ref.read(serverUnreachableProvider.notifier).set(true);
+                ref
+                    .read(serverUnreachableProvider.notifier)
+                    .set(
+                      true,
+                      reason:
+                          'op=${request.operation.operationName} '
+                          'error=${error.runtimeType}: $error',
+                    );
               } catch (_) {}
             });
           }
@@ -294,6 +327,74 @@ GraphQLClient graphQlClient(Ref ref) {
 // to be watching a subscription, so navigating tore the socket down and the
 // next screen opened a fresh one. Measured against the server: 2 handshakes per
 // 10 min idle, 53 while navigating.
+/// The ui_login `connection_init` payload.
+///
+/// The server resolves the socket's user once, from this payload, and keeps
+/// it for the connection's whole life: an expired access token makes the
+/// socket a visitor, and every @RequireAuth subscription on it
+/// (updateStatusChanged, downloadStatusChanged) then fails "Unauthorized"
+/// until it reconnects. Access tokens last 5 minutes by default and the first
+/// subscription starts at launch, before any HTTP call has refreshed the
+/// stored one — so without [refreshIfDue] a session opened after a pause lost
+/// its live updates (and the library re-read they trigger) entirely.
+///
+/// A failed refresh still sends the current token: blocking the connection
+/// would only trade a visitor socket for none.
+Future<Map<String, dynamic>> uiLoginSocketPayload({
+  required bool Function() isCurrentSession,
+  required Future<void> Function() refreshIfDue,
+  required Future<String?> Function() readToken,
+}) async {
+  if (!isCurrentSession()) {
+    _wsAuthLog('connect-init aborted=session-changed-before');
+    throw StateError('Authentication session changed');
+  }
+  try {
+    await refreshIfDue();
+  } catch (e) {
+    _wsAuthLog(
+      'connect-refresh threw cause=${e.runtimeType}: '
+      '${e.toString().split('\n').first}',
+    );
+  }
+  final token = await readToken();
+  if (!isCurrentSession()) {
+    _wsAuthLog('connect-init aborted=session-changed-after');
+    throw StateError('Authentication session changed');
+  }
+  _wsAuthLog('connect-init ${describeSocketToken(token)}');
+  return (token == null || token.isEmpty)
+      ? <String, dynamic>{}
+      : <String, dynamic>{'Authorization': token};
+}
+
+/// `expIn=<s>` for the token a socket authenticates with (negative: the
+/// server binds this socket as a visitor), `token=none` without one. Never
+/// the token itself.
+@visibleForTesting
+String describeSocketToken(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return 'token=none';
+  final exp = decodeJwtExp(token);
+  if (exp == null) return 'exp=unknown';
+  return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
+}
+
+/// Whether the server would bind a socket sending [token] to its user. A token
+/// without a readable expiry counts as live: there's nothing to wait for.
+@visibleForTesting
+bool socketTokenIsLive(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return false;
+  final exp = decodeJwtExp(token);
+  return exp == null || exp.isAfter(now ?? DateTime.now().toUtc());
+}
+
+/// The socket resolves its user once, at connect: these lines show what it
+/// was bound with, so an "Unauthorized" subscription later in the session can
+/// be traced to the connect that caused it.
+void _wsAuthLog(String event) => recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] ws-auth: $event\n',
+    );
+
 @Riverpod(keepAlive: true)
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final isCurrentSession = watchAuthSession(ref);
@@ -315,10 +416,9 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
 
   // Authenticate the SOCKET itself, not a per-operation Link. A header /
   // context Link (AuthLink / SuwayomiAuthLink) never reaches the WebSocket,
-  // so it leaves the connection unauthenticated and any @requireAuth
-  // subscription (e.g. downloadStatusChanged) fails with "Unauthorized" —
-  // while auth-exempt subscriptions (updateStatusChanged) still work, which
-  // is what made this look downloads-specific.
+  // so it leaves the connection unauthenticated and every @RequireAuth
+  // subscription (downloadStatusChanged, updateStatusChanged) fails with
+  // "Unauthorized".
   //
   // graphql-transport-ws carries auth two ways, matching Suwayomi-Server:
   //   * ui_login  -> connection_init payload `{Authorization: <bare token>}`
@@ -327,20 +427,72 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
   //   * simple_login / basic -> the WS handshake (upgrade) headers.
   dynamic initialPayload;
   Map<String, String>? handshakeHeaders;
+  // Whether this socket's latest connect sent no live token.
+  var boundAsVisitor = false;
   if (authType == AuthType.uiLogin) {
-    initialPayload = () async {
-      if (!isCurrentSession()) {
-        throw StateError('Authentication session changed');
-      }
-      final snapshot = await ref.read(authCredentialsStoreProvider.future);
-      if (!isCurrentSession()) {
-        throw StateError('Authentication session changed');
-      }
-      final token = snapshot.uiAccessToken;
-      return (token == null || token.isEmpty)
-          ? <String, dynamic>{}
-          : <String, dynamic>{'Authorization': token};
-    };
+    // This provider rebuilds at launch as async settings load, disposing the
+    // socket it built — often while that socket's connect is still awaiting
+    // the refresh. Its payload no longer matters then, but touching `ref`
+    // would throw, so the callbacks check `ref.mounted` first.
+    initialPayload = () => uiLoginSocketPayload(
+      isCurrentSession: isCurrentSession,
+      refreshIfDue: () async {
+        if (!ref.mounted) {
+          _wsAuthLog('connect-refresh skipped=provider-disposed');
+          return;
+        }
+        // An endpoint handover rebuilds this socket from inside the handover's
+        // zone, so the refresh would be refused on the spot instead of waiting
+        // for the handover to finish. Nothing awaits a socket connect, so it
+        // can't be the handover waiting on itself.
+        final coordinator = ref.read(authCoordinatorProvider.notifier);
+        final gql = ref.read(unauthenticatedGraphQlClientProvider);
+        final outcome = await ref
+            .read(authCredentialsStoreProvider.notifier)
+            .outsideIdentityChange(
+              () => coordinator.refreshUiAccessTokenIfDue(
+                gqlClient: gql,
+                trigger: 'socket-connect',
+              ),
+            );
+        _wsAuthLog(
+          'connect-refresh outcome=${switch (outcome) {
+            null => 'not-due',
+            RefreshSuccess() => 'success',
+            RefreshAuthFailure() => 'auth-failure',
+            RefreshTransientFailure(:final error) =>
+              'transient cause=${error.runtimeType}: '
+                  '${error.toString().split('\n').first}',
+          }}',
+        );
+      },
+      readToken: () async {
+        if (!ref.mounted) {
+          // Sends an empty payload: the server binds a visitor socket.
+          _wsAuthLog('connect-token skipped=provider-disposed');
+          return null;
+        }
+        final token = (await ref.read(
+          authCredentialsStoreProvider.future,
+        )).uiAccessToken;
+        boundAsVisitor = !socketTokenIsLive(token);
+        return token;
+      },
+    );
+    // A socket bound as a visitor stays one until it reconnects, and nothing
+    // made it reconnect: HTTP recovered with the next refresh, but live
+    // updates stayed dead for the session. Rebuild it once a live token lands.
+    // Only then: a token expiring on a socket already bound doesn't matter,
+    // and rebuilding on every refresh would kill the subscriptions for nothing.
+    ref.listen(
+      authCredentialsStoreProvider.select((s) => s.value?.uiAccessToken),
+      (_, token) {
+        if (!boundAsVisitor || !socketTokenIsLive(token)) return;
+        boundAsVisitor = false;
+        _wsAuthLog('reconnect reason=visitor-bind');
+        ref.invalidateSelf();
+      },
+    );
   } else if (authType == AuthType.simpleLogin) {
     final cookie = socketCookie;
     handshakeHeaders = (cookie == null || cookie.isEmpty)
@@ -386,7 +538,6 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     cache: GraphQLCache(store: InMemoryStore()),
   );
 }
-
 
 @riverpod
 class AuthTypeKey extends _$AuthTypeKey

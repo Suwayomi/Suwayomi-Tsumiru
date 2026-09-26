@@ -239,6 +239,42 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   Future<void> _identityTail = Future<void>.value();
   final _identityZone = Object();
 
+  // Bumped when a session-preserving change (a LAN/remote endpoint handover)
+  // starts. It still bumps [serverEpoch], so a refresh racing it is discarded
+  // although the account never changed; this lets the coordinator tell that
+  // case from a real sign-in change and retry instead of giving up.
+  int _handovers = 0;
+  int get handovers => _handovers;
+
+  /// True inside a [withIdentityChange] action: waiting for identity changes
+  /// to settle there would wait on itself.
+  bool get insideIdentityChange => Zone.current[_identityZone] == this;
+
+  /// Runs [body] as if outside any identity change. For work a change only
+  /// spawns and never awaits, such as a socket connect started by the rebuild
+  /// the change triggers: it inherits the change's zone through the microtasks
+  /// that start it, and would otherwise be refused as if the change itself
+  /// were asking, instead of waiting for it to finish.
+  R outsideIdentityChange<R>(R Function() body) =>
+      runZoned(body, zoneValues: {_identityZone: null});
+
+  /// Waits (up to [timeout]) for every queued identity change to finish.
+  /// Returns whether none is still running.
+  Future<bool> identitySettled({required Duration timeout}) async {
+    if (insideIdentityChange) return false;
+    final deadline = DateTime.now().add(timeout);
+    while (identityChanging && !_retired) {
+      final left = deadline.difference(DateTime.now());
+      if (left <= Duration.zero) return false;
+      try {
+        await _identityTail.timeout(left);
+      } on TimeoutException {
+        return false;
+      }
+    }
+    return !identityChanging;
+  }
+
   Future<T> _mutate<T>(Future<T> Function() action) {
     if (_retired) {
       return Future.error(StateError('Authentication session has ended'));
@@ -280,6 +316,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     }
     if (Zone.current[_identityZone] == this) return action();
     _identityChanges++;
+    if (preserveSession) _handovers++;
     if (!preserveSession) {
       _sessionChanges++;
       _sessionEpoch++;
