@@ -7,11 +7,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
-import '../../manga_book/domain/chapter/chapter_model.dart';
+import '../data/graphql/__generated__/query.graphql.dart';
 
-// Use existing ChapterWithMangaDto as the base for history items
-// since it already contains all the data we need including lastReadAt
-typedef HistoryItemDto = ChapterWithMangaDto;
+// A chapter with just the series fields a history row shows (see the
+// HistoryChapterDto fragment); ChapterDto's fields plus lastReadAt as usual.
+typedef HistoryItemDto = Fragment$HistoryChapterDto;
 
 extension HistoryItemExtension on HistoryItemDto {
   /// Get the read timestamp as DateTime
