@@ -5,12 +5,12 @@ library;
 
 import 'dart:async';
 
-import 'package:unorm_dart/unorm_dart.dart' as unorm;
+import 'title_fold.dart';
 
 final _nonAlnum = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
 
 String normalizeTitle(String raw) =>
-    unorm.nfkc(raw).toLowerCase().replaceAll(_nonAlnum, ' ').trim();
+    foldTitleCompat(raw).toLowerCase().replaceAll(_nonAlnum, ' ').trim();
 
 typedef TrackerPair = ({int trackerId, String remoteId, String remoteTitle});
 typedef DupEntry = ({
