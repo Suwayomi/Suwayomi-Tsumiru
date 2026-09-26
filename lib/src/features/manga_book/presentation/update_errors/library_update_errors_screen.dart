@@ -32,7 +32,10 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
       body: failed.showUiWhenData(
         context,
         (mangas) => RefreshIndicator(
-          onRefresh: () => ref.refresh(failedUpdatesProvider.future),
+          onRefresh: () {
+            ref.invalidate(failedUpdateCountProvider);
+            return ref.refresh(failedUpdatesProvider.future);
+          },
           child: mangas.isEmpty
               ? Stack(
                   children: [
