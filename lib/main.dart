@@ -17,6 +17,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'src/constants/brand_icons.dart';
 import 'src/constants/enum.dart';
 import 'src/constants/timeout_constants.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
@@ -97,6 +98,7 @@ Future<void> _startApp() async {
   // 100 MB default is too small even for tile-sized covers — evicted covers
   // re-shimmer on every tab switch. A cap, not an allocation.
   PaintingBinding.instance.imageCache.maximumSizeBytes = 256 << 20;
+  registerBrandIconsLicense();
   await _setUpCrashReporting();
   // Initialise the foreground-task plugin (Android-only; no-op elsewhere) before
   // any download service is started. Must run after the binding is ready.

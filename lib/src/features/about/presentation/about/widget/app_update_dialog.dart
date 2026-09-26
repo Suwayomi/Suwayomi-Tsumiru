@@ -5,8 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../../../../../constants/brand_icons.dart';
 import '../../../../../constants/urls.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
@@ -56,7 +56,7 @@ void appUpdateDialog({
                       url ?? AppUrls.sorayomiLatestReleaseUrl.url, toast);
                   Navigator.pop(context);
                 },
-                icon: const FaIcon(FontAwesomeIcons.github),
+                icon: const Icon(BrandIcons.github),
                 label: Text(context.l10n.gitHub),
               ),
             ],
