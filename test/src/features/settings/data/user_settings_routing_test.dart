@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/ast.dart';
 import 'package:graphql/client.dart';
@@ -201,6 +203,78 @@ void main() {
     expect(settings!.excludeCompleted, isTrue);
     expect(settings.globalUpdateInterval, 12);
     expect(link.operations, ['AccountSettings']);
+  });
+
+  group('personalSettingsState', () {
+    final supported = AccountAccess(capability: AccountCapability.supported);
+    final unknown = AccountAccess(capability: AccountCapability.unknown);
+    final checked = AsyncValue.data(supported);
+    const checking = AsyncLoading<AccountAccess>();
+    final loaded = AsyncValue<Fragment$SettingsDto?>.data(serverSettings());
+
+    PersonalSettingsState state(
+      AccountAccess access,
+      AsyncValue<AccountAccess> accessCheck,
+      AsyncValue<Fragment$SettingsDto?> personal,
+    ) => personalSettingsState(
+      access: access,
+      accessCheck: accessCheck,
+      personal: personal,
+    );
+
+    test('an account check in flight is loading, not unavailable', () {
+      expect(
+        state(unknown, checking, const AsyncLoading()),
+        PersonalSettingsState.loading,
+      );
+    });
+
+    test('a first load in flight is loading, not unavailable', () {
+      expect(
+        state(supported, checked, const AsyncLoading()),
+        PersonalSettingsState.loading,
+      );
+    });
+
+    test('a reload keeps the settings it already has editable', () async {
+      // Riverpod flags a refresh as loading while keeping the previous value;
+      // counting that as a failure flashed the "could not be verified" message.
+      var pending = Future<Fragment$SettingsDto?>.value(serverSettings());
+      final personal = FutureProvider<Fragment$SettingsDto?>((ref) => pending);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.listen(personal, (_, _) {});
+      await container.read(personal.future);
+      pending = Completer<Fragment$SettingsDto?>().future;
+      container.invalidate(personal);
+      final reloading = container.read(personal);
+      expect(reloading.isLoading, isTrue);
+      expect(reloading.value, isNotNull);
+      expect(state(supported, checked, reloading), PersonalSettingsState.ready);
+    });
+
+    test('loaded settings are ready', () {
+      expect(state(supported, checked, loaded), PersonalSettingsState.ready);
+    });
+
+    test('a settled unknown account or a failed load is unavailable', () {
+      expect(
+        state(unknown, AsyncValue.data(unknown), loaded),
+        PersonalSettingsState.unavailable,
+      );
+      expect(
+        state(
+          supported,
+          checked,
+          AsyncValue.error(StateError('offline'), StackTrace.empty),
+        ),
+        PersonalSettingsState.unavailable,
+      );
+      expect(
+        state(supported, checked, const AsyncValue.data(null)),
+        PersonalSettingsState.unavailable,
+      );
+    });
   });
 }
 

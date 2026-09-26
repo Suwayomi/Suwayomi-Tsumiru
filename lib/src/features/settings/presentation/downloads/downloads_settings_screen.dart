@@ -9,7 +9,6 @@ import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../account/data/account_providers.dart';
-import '../../../account/domain/account_access.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../offline/presentation/offline_settings_screen.dart';
@@ -172,11 +171,8 @@ class _ServerDownloadsTab extends ConsumerWidget {
     final personalSettings = ref.watch(personalSettingsProvider);
     final access = ref.watch(settledAccountAccessProvider);
     final canManage = access.allows(Enum$UserPermission.MANAGE_SETTINGS);
-    final canEditPersonal =
-        access.capability != AccountCapability.unknown &&
-        !personalSettings.isLoading &&
-        !personalSettings.hasError &&
-        personalSettings.value != null;
+    final personalState = ref.watch(personalSettingsStateProvider);
+    final canEditPersonal = personalState == PersonalSettingsState.ready;
     final serverDelete =
         ref.watch(deleteChaptersSettingsControllerProvider).value ??
         const DeleteChaptersSettings();
@@ -240,7 +236,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
               onBookmark: serverDeleteController.setDeleteWithBookmark,
             ),
             SectionTitle(title: context.l10n.autoDownload),
-            if (!canEditPersonal)
+            if (personalState == PersonalSettingsState.unavailable)
               ListTile(title: Text(context.l10n.accountSettingsUnavailable)),
             SettingsPropTile(
               title: context.l10n.autoDownloadNewChapters,
