@@ -53,7 +53,6 @@ class SourceMangaListScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sourceRepository = ref.watch(sourceRepositoryProvider);
     final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
     final appliedFilterNotifier =
         ref.watch(appliedSourceFilterProvider(sourceId).notifier);
@@ -67,8 +66,10 @@ class SourceMangaListScreen extends HookConsumerWidget {
     final showSearch = useState(initialQuery.isNotBlank);
     final controller = useServerPagingController<MangaDto>(
       firstPageKey: 1,
+      // Read per request: a LAN/remote endpoint switch replaces the client,
+      // and the one captured on the first build is disposed with it.
       fetchPage: (pageKey) => _fetchPage(
-        sourceRepository,
+        ref.read(sourceRepositoryProvider),
         pageKey,
         query: query.value,
         filter: liveAppliedFilter.value,

@@ -334,8 +334,13 @@ class UpdatesScreen extends HookConsumerWidget {
     latestFilter.value = filter;
     final controller = useServerPagingController<ChapterWithMangaDto>(
       firstPageKey: 0,
-      fetchPage: (pageKey) =>
-          _fetchPage(updatesRepository, pageKey, latestFilter.value),
+      // Read per request: a LAN/remote endpoint switch replaces the client,
+      // and the one captured on the first build is disposed with it.
+      fetchPage: (pageKey) => _fetchPage(
+        ref.read(updatesRepositoryProvider),
+        pageKey,
+        latestFilter.value,
+      ),
     );
     // Bumped by every reset of the list, so replies from the previous one can be
     // recognised as stale and dropped.
