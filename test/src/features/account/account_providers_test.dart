@@ -32,7 +32,7 @@ class FakeAccountRepository extends AccountRepository {
   int currentCalls = 0;
 
   @override
-  Future<AccountCapability> capability() async {
+  Future<AccountCapability> capability({bool Function()? stillWanted}) async {
     probes++;
     return support;
   }
