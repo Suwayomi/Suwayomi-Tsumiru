@@ -7,7 +7,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
-import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
@@ -16,11 +15,7 @@ const _totalChapters = 5;
 
 /// [readChapters] drives the server's unread count; [lastPageRead] is progress
 /// inside the chapter currently being read, which is not the same thing.
-MangaDto _manga(
-  int id, {
-  required int readChapters,
-  int lastPageRead = 0,
-}) =>
+MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
     Fragment$MangaDto(
       id: id,
       title: 'M$id',
@@ -35,30 +30,18 @@ MangaDto _manga(
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      trackRecords: Fragment$MangaDto$trackRecords(
+        totalCount: 0,
+        nodes: const [],
+      ),
       unreadCount: _totalChapters - readChapters,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/$id',
-      lastReadChapter: Fragment$ChapterDto(
+      lastReadChapter: Fragment$MangaDto$lastReadChapter(
         id: id * 100,
-        chapterNumber: 1,
-        fetchedAt: '0',
-        isBookmarked: false,
-        isDownloaded: false,
         isRead: readChapters > 0,
         lastPageRead: lastPageRead,
-        lastReadAt:
-            (readChapters > 0 || lastPageRead > 0) ? '1700000000' : '0',
-        mangaId: id,
-        name: 'Chapter 1',
-        pageCount: 10,
-        realUrl: null,
-        scanlator: null,
-        sourceOrder: 1,
-        uploadDate: '0',
-        url: '/c/$id',
-        meta: const [],
+        lastReadAt: (readChapters > 0 || lastPageRead > 0) ? '1700000000' : '0',
       ),
     );
 

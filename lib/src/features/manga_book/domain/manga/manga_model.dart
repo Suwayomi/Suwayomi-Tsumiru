@@ -19,6 +19,13 @@ typedef MangaDto = Fragment$MangaDto;
 
 typedef MangaBaseDto = Fragment$MangaBaseDto;
 
+/// A series' last read chapter carries only what reading progress needs.
+extension LastReadChapterProgress on Fragment$MangaDto$lastReadChapter {
+  /// Same rule as the full chapter's `hasReadingProgress`.
+  bool get hasReadingProgress =>
+      isRead || lastPageRead > 0 || lastReadAt != '0';
+}
+
 extension MangaExtensions on MangaDto {
   MangaMeta get metaData => MangaMeta.fromJson(
       {for (final metaItem in meta) metaItem.key: metaItem.value});

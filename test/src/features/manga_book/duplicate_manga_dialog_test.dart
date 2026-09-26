@@ -6,8 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tsumiru/src/features/browse_center/domain/source/graphql/__generated__/fragment.graphql.dart'
-    show Fragment$SourceDto, Fragment$SourceDto$extension;
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/duplicate_manga_dialog.dart';
@@ -36,20 +34,14 @@ MangaDto _dup({
   status: status,
   source: sourceName == null
       ? null
-      : Fragment$SourceDto(
+      : Fragment$MangaDto$source(
           displayName: sourceName,
           iconUrl: '',
           id: '1',
-          isConfigurable: false,
           contentWarning: Enum$ContentWarning.SAFE,
           lang: 'en',
           name: sourceName,
-          supportsLatest: false,
-          meta: const [],
-          $extension: Fragment$SourceDto$extension(
-            pkgName: 'test.pkg',
-            isObsolete: false,
-          ),
+          $extension: Fragment$MangaDto$source$extension(isObsolete: false),
         ),
   trackRecords: Fragment$MangaDto$trackRecords(
     totalCount: trackerNodes.length,
@@ -465,5 +457,4 @@ void main() {
       expect(opened?.id, candidate.id);
     });
   });
-
 }

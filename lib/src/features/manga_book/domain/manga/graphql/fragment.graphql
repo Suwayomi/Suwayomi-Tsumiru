@@ -19,17 +19,23 @@ fragment MangaDto on MangaType {
   inLibraryAt
   initialized
   lastFetchedAt
+  # This fragment carries every series of the library list (~1.5 MB for 360
+  # series), so the chapters and source below keep only the fields read off
+  # them: a full ChapterDto per chapter was ~440 B, a full SourceDto ~530 B.
+  # Sort and offline mirror read these timestamps; the page shows progress.
   lastReadChapter {
-    ...ChapterDto
+    id
+    isRead
+    lastPageRead
+    lastReadAt
   }
   latestFetchedChapter {
-    ...ChapterDto
-  }
-  latestReadChapter {
-    ...ChapterDto
+    id
+    fetchedAt
   }
   latestUploadedChapter {
-    ...ChapterDto
+    id
+    uploadDate
   }
   meta {
     key
@@ -37,7 +43,15 @@ fragment MangaDto on MangaType {
   }
   realUrl
   source {
-    ...SourceDto
+    id
+    name
+    displayName
+    lang
+    contentWarning
+    iconUrl
+    extension {
+      isObsolete
+    }
   }
   sourceId
   status
