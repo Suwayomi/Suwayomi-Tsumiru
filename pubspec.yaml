@@ -119,9 +119,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  # assets/icons/launcher/ holds build-time sources only (launcher icons, splash)
+  # and stays out of the bundle: it was ~2.8 MB of the APK that no code read.
   assets:
     - assets/icons/
-    - assets/icons/launcher/
     - assets/licenses/
 
 # flutter_gen removed from the build pipeline: flutter_gen_runner's build.yaml is
@@ -129,18 +130,15 @@ flutter:
 # lib/src/constants/gen/assets.gen.dart, is committed and treated as source; the
 # asset set (static icons) changes rarely. Regenerate manually with a one-off
 # flutter_gen_runner add if assets ever change.
+# The splash is the same in light and dark mode, so it has no *_dark keys:
+# they only generated a second, identical copy of every image.
 flutter_native_splash:
   color: "#0b0d1a"
-  image: assets/icons/dark_icon.png
-  color_dark: "#0b0d1a"
-  image_dark: assets/icons/light_icon.png
+  image: assets/icons/launcher/splash_icon.png
   android_12:
     color: "#0b0d1a"
-    color_dark: "#0b0d1a"
     icon_background_color: "#0b0d1a"
-    icon_background_color_dark: "#0b0d1a"
-    image: assets/icons/dark_icon.png
-    image_dark: assets/icons/light_icon.png
+    image: assets/icons/launcher/splash_icon.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
