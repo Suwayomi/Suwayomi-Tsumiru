@@ -93,7 +93,7 @@ dependencies:
   uuid: ^4.6.0
 
 dev_dependencies:
-  cross_file: ^0.3.5+4
+  cross_file: ^0.4.0
   build_runner: ^2.4.14
   # flutter_flavorizr: ^2.1.5
   drift_dev: ^2.32.0
