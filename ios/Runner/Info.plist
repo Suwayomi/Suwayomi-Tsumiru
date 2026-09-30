@@ -62,6 +62,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Find and connect to your Suwayomi server on your local network.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save manga pages to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
