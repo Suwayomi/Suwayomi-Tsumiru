@@ -26,7 +26,7 @@ abstract class FilePickerUtils {
         throw context.l10n.errorFilePick;
       }
       if (extensions.isNotBlank &&
-          !extensions!.any((e) => file.name.endsWith(".$e"))) {
+          !extensions!.any((e) => file.name.toLowerCase().endsWith(".$e"))) {
         throw context.l10n.errorFilePickUnknownExtension(
             extensions.join(" ${context.l10n.or} "));
       }
