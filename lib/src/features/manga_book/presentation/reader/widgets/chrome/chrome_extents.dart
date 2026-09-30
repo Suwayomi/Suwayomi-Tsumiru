@@ -17,7 +17,7 @@ part 'chrome_extents.g.dart';
 ///                 `size.height` from [MeasureSize] already includes the
 ///                 status-bar inset — do NOT add it again at the call site.
 ///
-/// [bottomInset] = system nav-bar inset (`View.viewPadding.bottom / dpr`)
+/// [bottomInset] = system nav-bar inset (`MediaQuery.viewPaddingOf(context).bottom`)
 ///                 + measured bottom-controls height.
 ///                 The bottom bar is **shorter in webtoon mode** (no horizontal
 ///                 seek row), so the extent is mode-specific and must be
