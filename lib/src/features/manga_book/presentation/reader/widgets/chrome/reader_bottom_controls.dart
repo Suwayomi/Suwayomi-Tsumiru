@@ -83,8 +83,7 @@ class ReaderBottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final view = View.of(context);
-    final systemBottomInset = view.viewPadding.bottom / view.devicePixelRatio;
+    final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final isPagedMode = isPagedReaderMode(resolvedReaderMode);
     final chapterButtons = chapterNavCallbacks(
       isRtl: isRTLReaderMode(resolvedReaderMode),
