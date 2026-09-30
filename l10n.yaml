@@ -8,3 +8,5 @@ arb-dir: lib/src/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-dir: lib/src/l10n/generated
+# The first supported locale is the fallback for unsupported device languages.
+preferred-supported-locales: [en]
