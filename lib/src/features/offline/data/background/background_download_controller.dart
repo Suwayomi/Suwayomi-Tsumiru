@@ -14,6 +14,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -1459,6 +1460,9 @@ class BackgroundDownloadController with WidgetsBindingObserver {
                 offlineCatalogServerIdKey(_ref.read(sharedPreferencesProvider)),
               ),
           serverBase: _ref.read(serverUrlProvider) ?? '',
+          lanUrl: _ref.read(serverLanUrlProvider),
+          externalUrl:
+              _ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial,
           port: _ref.read(serverPortProvider),
           addPort: _ref.read(serverPortToggleProvider).ifNull(),
           wifiOnly: _ref.read(offlineWifiOnlyProvider) ?? true,
