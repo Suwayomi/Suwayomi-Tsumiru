@@ -1,13 +1,3 @@
-fragment ChapterPageDto on ChapterNodeList {
-    nodes {
-      ...ChapterDto
-    }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
-}
-
 # Nodes only: the server computes `totalCount` (a COUNT) and `pageInfo` (two
 # sorted bound lookups) over the whole filtered chapter set on every request,
 # whatever the page size. The Updates feed pages by offset and learns whether
