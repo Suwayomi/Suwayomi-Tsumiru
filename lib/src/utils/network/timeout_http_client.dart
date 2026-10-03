@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../crash/diagnostics.dart';
+
 import 'fast_connect_client_stub.dart'
     if (dart.library.io) 'fast_connect_client_io.dart';
 
@@ -21,6 +23,7 @@ class TimeoutHttpClient extends http.BaseClient {
     this.retryDelay = const Duration(seconds: 1),
     this.onConnectionFailure,
     this.isCurrentSession,
+    this.retryHeaders,
     http.Client? inner,
   }) : _inner = inner ?? createFastConnectClient(kConnectionEstablishTimeout);
 
@@ -36,6 +39,14 @@ class TimeoutHttpClient extends http.BaseClient {
   final Future<Uri?> Function(http.BaseRequest request)? onConnectionFailure;
 
   final bool Function()? isCurrentSession;
+
+  /// Re-derives a retry's headers from the request's. Retries are replayed
+  /// here, below the auth link, so a retry after a long stall (the app frozen
+  /// mid-request) would otherwise resend the access token the request started
+  /// with, long expired by then. Throwing abandons the retry and surfaces the
+  /// original failure.
+  final Future<Map<String, String>> Function(Map<String, String> headers)?
+  retryHeaders;
 
   final http.Client _inner;
 
@@ -57,7 +68,7 @@ class TimeoutHttpClient extends http.BaseClient {
     // `{"query": "...", ...}` shape when it parses as one.
     final isMutation = _isMutationRequest(request);
 
-    Future<http.BaseRequest?> retryAfterFailure() async {
+    Future<http.BaseRequest?> retryAfterFailure(Object error) async {
       _checkSession();
       if (isMutation) return null;
 
@@ -74,7 +85,23 @@ class TimeoutHttpClient extends http.BaseClient {
       final retryClone = _cloneRequest(current, url: replacement);
       if (retryClone == null) return null;
       attempt++;
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] http-retry: '
+        'attempt=$attempt failover=${replacement != null} '
+        'cause=${error.runtimeType}\n',
+      );
       if (replacement == null) await Future.delayed(retryDelay);
+      if (retryHeaders != null) {
+        try {
+          final headers = await retryHeaders!(Map.of(retryClone.headers));
+          retryClone.headers
+            ..clear()
+            ..addAll(headers);
+        } catch (_) {
+          return null;
+        }
+        _checkSession();
+      }
       return retryClone;
     }
 
@@ -82,12 +109,12 @@ class TimeoutHttpClient extends http.BaseClient {
       try {
         _checkSession();
         return await _inner.send(current).timeout(timeout);
-      } on TimeoutException {
-        final retry = await retryAfterFailure();
+      } on TimeoutException catch (e) {
+        final retry = await retryAfterFailure(e);
         if (retry == null) rethrow;
         current = retry;
-      } on http.ClientException {
-        final retry = await retryAfterFailure();
+      } on http.ClientException catch (e) {
+        final retry = await retryAfterFailure(e);
         if (retry == null) rethrow;
         current = retry;
       }

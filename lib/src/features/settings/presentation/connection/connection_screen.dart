@@ -11,9 +11,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/endpoints.dart';
+import '../../../../constants/enum.dart';
+import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/network/cleartext_address.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
@@ -33,6 +36,13 @@ class ConnectionScreen extends HookConsumerWidget {
     final lanUrl = ref.watch(serverLanUrlProvider);
     final usesLan = lanUrl != null && activeUrl == lanUrl;
     final showLanAddress = useState(lanUrl != null);
+    final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
+    final cleartext =
+        authType != AuthType.none &&
+        [
+          ref.watch(serverExternalUrlProvider),
+          lanUrl,
+        ].any((url) => url != null && sendsCredentialsInClear(url));
     // One-time migration: the separate "Server Port" toggle is retired in
     // favour of the URL being the single source of truth. If a user still has
     // the toggle on, fold the port into the URL and switch the toggle off so
@@ -93,6 +103,17 @@ class ConnectionScreen extends HookConsumerWidget {
                         ? context.l10n.serverUsingLanUrl
                         : context.l10n.serverUsingExternalUrl,
                   ),
+                ),
+              ),
+            if (cleartext)
+              ListTile(
+                leading: Icon(
+                  Icons.lock_open_rounded,
+                  color: context.theme.colorScheme.error,
+                ),
+                subtitle: Text(
+                  context.l10n.cleartextAddressWarning,
+                  style: TextStyle(color: context.theme.colorScheme.error),
                 ),
               ),
             const InlineAuthSection(),

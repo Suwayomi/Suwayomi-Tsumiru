@@ -100,10 +100,11 @@ class OfflineCoverWarmer extends _$OfflineCoverWarmer {
             customHeaders,
           );
         }
-        final fetchUrl = appendUiLoginToken(
-          request.url,
-          authType == AuthType.uiLogin ? creds?.uiAccessToken : null,
-        );
+        final uiToken = authType == AuthType.uiLogin
+            ? creds?.uiAccessToken
+            : null;
+        headers = withUiLoginImageAuth(headers, uiToken);
+        final fetchUrl = uiLoginImageUrl(request.url, uiToken);
         await manager.downloadFile(
           fetchUrl,
           key: cacheKey,

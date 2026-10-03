@@ -127,4 +127,86 @@ void main() {
       expect(client.currentRecord().accessToken, 'fresh');
     },
   );
+
+  test('a token known to be expired is refreshed before the first request, '
+      'so the worker never collects the 401', () async {
+    String part(Object json) =>
+        base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+    final expired =
+        '${part({'alg': 'HS256'})}.'
+        '${part({'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 10800})}'
+        '.sig';
+    var stored = BackgroundTokenRecord(
+      gen: 0,
+      authType: 'uiLogin',
+      endpoint: 'e',
+      accessToken: expired,
+      refreshToken: 'rt',
+    );
+    var refreshCalls = 0;
+    final broker = TokenBroker(
+      read: () async => stored,
+      write: (r) async => stored = r,
+      refreshFn: (rt) async {
+        refreshCalls++;
+        return (tokens: (access: 'fresh', refresh: rt), transient: false);
+      },
+    );
+    final auths = <String?>[];
+    final client = NotificationBackgroundClient(
+      endpoint: const NotificationEndpoint(
+        baseUrl: 'http://server.test',
+        addPort: false,
+      ),
+      record: stored,
+      broker: broker,
+      httpClient: MockClient((req) async {
+        auths.add(req.headers['Authorization']);
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'chapters': {
+                'pageInfo': {'hasNextPage': false, 'endCursor': null},
+                'nodes': const [],
+              },
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    expect(await client.fetchNewChaptersPage(fetchedAtGte: '0'), isNotNull);
+    expect(refreshCalls, 1);
+    expect(auths, ['Bearer fresh']);
+    expect(client.currentRecord().accessToken, 'fresh');
+  });
+
+  test('a refresh made through the shared broker reaches the client', () async {
+    var stored = const BackgroundTokenRecord(
+      gen: 0,
+      authType: 'uiLogin',
+      endpoint: 'e',
+      accessToken: 'old',
+      refreshToken: 'rt',
+    );
+    final broker = TokenBroker(
+      read: () async => stored,
+      write: (r) async => stored = r,
+      refreshFn: (rt) async =>
+          (tokens: (access: 'fresh', refresh: rt), transient: false),
+    );
+    final client = NotificationBackgroundClient(
+      endpoint: const NotificationEndpoint(
+        baseUrl: 'http://server.test',
+        addPort: false,
+      ),
+      record: stored,
+      broker: broker,
+      httpClient: MockClient((_) async => http.Response('{}', 200)),
+    );
+    // What the catch-up executor does on its own 401.
+    await broker.resolveAfter401('old');
+    expect(client.currentRecord().accessToken, 'fresh');
+  });
 }

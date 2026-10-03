@@ -2805,6 +2805,10 @@
   "serverActiveUrl": "Active connection",
   "serverUsingLanUrl": "Using LAN",
   "serverUsingExternalUrl": "Using remote",
+  "cleartextAddressWarning": "This address uses unencrypted http:// over the internet: your sign-in and session travel in clear, readable by anyone on the way. Use https://, for example through a reverse proxy.",
+  "@cleartextAddressWarning": {
+    "description": "Warning under the server addresses when a non-local one is plain HTTP while an authentication mode is set"
+  },
   "serverVersion": "Server version",
   "settings": "Settings",
   "skipThisVersion": "Don't remind me about this version",
