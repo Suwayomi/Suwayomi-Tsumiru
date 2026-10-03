@@ -10,8 +10,12 @@ fragment MangaDto on MangaType {
   chaptersLastFetchedAt
   description
   downloadCount
-  firstUnreadChapter {
-    ...ChapterDto
+  # Only the library's "continue reading" button reads this, by id, and that
+  # button is off by default. Selecting it costs the server a ranking over
+  # every chapter of every series returned, so the library asks for it only
+  # when the button is on; every other operation keeps the default.
+  firstUnreadChapter @include(if: $withFirstUnread) {
+    id
   }
   genre
   id
@@ -61,8 +65,9 @@ fragment MangaDto on MangaType {
   categories {
     nodes { id }
   }
+  # No totalCount: the server counts in a query of its own, and the nodes
+  # already say it.
   trackRecords {
-    totalCount
     nodes { id trackerId remoteId status score title }
   }
   unreadCount

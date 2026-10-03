@@ -70,7 +70,7 @@ subscription UpdateProgressChange {
 # Failed series from the most recent run, off the server's current status API.
 # The deprecated `updateStatus` job lists hang on a live server (n+1 in the
 # server's data loaders), which is what made the old summary screen spin.
-query LibraryUpdateFailures {
+query LibraryUpdateFailures($withFirstUnread: Boolean = false) {
   libraryUpdateStatus {
     mangaUpdates {
       status

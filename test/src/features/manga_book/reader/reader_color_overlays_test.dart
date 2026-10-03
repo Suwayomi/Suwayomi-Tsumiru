@@ -55,7 +55,7 @@ MangaDto _manga() => Fragment$MangaDto(
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
       trackRecords:
-          Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+          Fragment$MangaDto$trackRecords(nodes: const []),
       unreadCount: 0,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/1',

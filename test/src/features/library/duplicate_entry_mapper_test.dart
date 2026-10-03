@@ -21,7 +21,6 @@ void main() {
   test('trackRecords nodes map to tracker pairs', () {
     final manga = testManga().copyWith.call(
       trackRecords: Fragment$MangaDto$trackRecords(
-        totalCount: 2,
         nodes: [
           _node(trackerId: 1, remoteId: '42', title: 'Solo Leveling'),
           _node(trackerId: 2, remoteId: '99', title: 'Only I Level Up'),

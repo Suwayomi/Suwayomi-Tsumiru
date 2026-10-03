@@ -33,7 +33,7 @@ Fragment$MangaDto$trackRecords$nodes _trackNode({
 
 Fragment$MangaDto$trackRecords _trks(
     List<Fragment$MangaDto$trackRecords$nodes> nodes) =>
-    Fragment$MangaDto$trackRecords(totalCount: nodes.length, nodes: nodes);
+    Fragment$MangaDto$trackRecords(nodes: nodes);
 
 Fragment$MangaDto$categories _cats(List<int> ids) =>
     Fragment$MangaDto$categories(
