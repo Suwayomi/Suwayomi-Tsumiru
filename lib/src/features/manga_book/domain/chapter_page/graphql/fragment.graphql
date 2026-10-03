@@ -8,14 +8,14 @@ fragment ChapterPageDto on ChapterNodeList {
     totalCount
 }
 
+# Nodes only: the server computes `totalCount` (a COUNT) and `pageInfo` (two
+# sorted bound lookups) over the whole filtered chapter set on every request,
+# whatever the page size. The Updates feed pages by offset and learns whether
+# another page follows from one extra row (UpdatesRepository).
 fragment ChapterPageWithMangaDto on ChapterNodeList {
     nodes {
       ...ChapterWithMangaDto
     }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
 }
 
 fragment ChapterPagesDto on FetchChapterPagesPayload {

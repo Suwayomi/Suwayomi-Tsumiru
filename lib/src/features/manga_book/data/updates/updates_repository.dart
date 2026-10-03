@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../../domain/update_status/update_status_model.dart';
@@ -21,6 +22,20 @@ part 'updates_repository.g.dart';
 /// Rows per page. The offset step must match, or pages overlap and the list
 /// repeats rows.
 const int updatesPageSize = 50;
+
+/// One page of the Updates feed: at most [updatesPageSize] chapters, newest
+/// first, and whether another page follows.
+typedef UpdatesPage = ({List<ChapterWithMangaDto> nodes, bool hasNextPage});
+
+/// Splits a window fetched as [pageSize] + 1 rows into the page and whether
+/// another one follows.
+({List<T> nodes, bool hasNextPage}) splitPageWindow<T>(
+  List<T> window,
+  int pageSize,
+) => (
+  nodes: window.take(pageSize).toList(),
+  hasNextPage: window.length > pageSize,
+);
 
 Input$BooleanFilterInput? _equals(bool? value) =>
     value == null ? null : Input$BooleanFilterInput(equalTo: value);
@@ -53,16 +68,29 @@ class UpdatesRepository {
   // Downloads
 
   // Updates
-  Future<ChapterPageWithMangaDto?> getRecentChaptersPage({
+
+  /// Asks for one row more than a page rather than for `pageInfo` or
+  /// `totalCount`: those cost the server a COUNT and two sorted lookups over
+  /// every matching chapter on each request, where the extra row alone says
+  /// whether another page follows. That leaves one query per page.
+  Future<UpdatesPage?> getRecentChaptersPage({
     int pageNo = 0,
     UpdatesFilter filter = kNoUpdatesFilter,
-  }) =>
+  }) async {
+    final page = await _getRecentChaptersWindow(pageNo, filter);
+    return page == null ? null : splitPageWindow(page.nodes, updatesPageSize);
+  }
+
+  Future<ChapterPageWithMangaDto?> _getRecentChaptersWindow(
+    int pageNo,
+    UpdatesFilter filter,
+  ) =>
       client
           .query$GetChapterWithMangaPage(
             Options$Query$GetChapterWithMangaPage(
               variables: Variables$Query$GetChapterWithMangaPage(
                 filter: updatesFilterInput(filter),
-                first: updatesPageSize,
+                first: updatesPageSize + 1,
                 offset: pageNo * updatesPageSize,
                 order: [
                   Input$ChapterOrderInput(
