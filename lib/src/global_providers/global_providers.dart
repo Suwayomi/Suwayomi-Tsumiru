@@ -356,8 +356,10 @@ GraphQLClient graphQlClient(Ref ref) {
 /// stored one — so without [refreshIfDue] a session opened after a pause lost
 /// its live updates (and the library re-read they trigger) entirely.
 ///
-/// A failed refresh still sends the current token: blocking the connection
-/// would only trade a visitor socket for none.
+/// A failed refresh still opens the connection, as a visitor: blocking it
+/// would only trade a visitor socket for none. The expired token itself is
+/// not sent, since the server can only reject it; the socket reconnects once
+/// a live token lands (`reconnect reason=visitor-bind`).
 Future<Map<String, dynamic>> uiLoginSocketPayload({
   required bool Function() isCurrentSession,
   required Future<void> Function() refreshIfDue,
@@ -380,10 +382,14 @@ Future<Map<String, dynamic>> uiLoginSocketPayload({
     _wsAuthLog('connect-init aborted=session-changed-after');
     throw StateError('Authentication session changed');
   }
-  _wsAuthLog('connect-init ${describeSocketToken(token)}');
-  return (token == null || token.isEmpty)
-      ? <String, dynamic>{}
-      : <String, dynamic>{'Authorization': token};
+  final live = socketTokenIsLive(token);
+  _wsAuthLog(
+    'connect-init ${describeSocketToken(token)}'
+    '${live || token == null || token.isEmpty ? '' : ' withheld=expired'}',
+  );
+  return live
+      ? <String, dynamic>{'Authorization': token!}
+      : <String, dynamic>{};
 }
 
 /// `expIn=<s>` for the token a socket authenticates with (negative: the

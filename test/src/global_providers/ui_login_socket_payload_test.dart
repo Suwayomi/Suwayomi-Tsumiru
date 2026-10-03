@@ -39,6 +39,19 @@ void main() {
     expect(payload, {'Authorization': 'current'});
   });
 
+  test('an expired token is withheld: the server could only reject it, and '
+      'the socket reconnects once a live one lands', () async {
+    final expired = _jwt(
+      DateTime.now().toUtc().subtract(const Duration(minutes: 78)),
+    );
+    final payload = await uiLoginSocketPayload(
+      isCurrentSession: () => true,
+      refreshIfDue: () async => throw Exception('offline'),
+      readToken: () async => expired,
+    );
+    expect(payload, isEmpty);
+  });
+
   test('no token sends an empty payload', () async {
     for (final token in [null, '']) {
       final payload = await uiLoginSocketPayload(
@@ -99,7 +112,10 @@ void main() {
         lines[0],
         contains('ws-auth: connect-refresh threw cause=StateError'),
       );
-      expect(lines[1], matches(RegExp(r'ws-auth: connect-init expIn=-\d+s')));
+      expect(
+        lines[1],
+        matches(RegExp(r'ws-auth: connect-init expIn=-\d+s withheld=expired')),
+      );
       expect(lines.join(), isNot(contains(expired)));
     });
 
