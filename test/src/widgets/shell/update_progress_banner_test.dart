@@ -10,94 +10,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tsumiru/src/features/browse_center/domain/manga_page/graphql/__generated__/fragment.graphql.dart'
-    show Fragment$MangaPageDto;
-import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart'
-    show Fragment$CategoryPageDto;
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/update_status/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
-import 'package:tsumiru/src/graphql/__generated__/fragments.graphql.dart'
-    show Fragment$PageInfoDto;
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/shell/update_banner_state.dart';
 import 'package:tsumiru/src/widgets/shell/update_progress_banner.dart';
 
-Fragment$PageInfoDto _emptyPage() =>
-    Fragment$PageInfoDto(hasNextPage: false, hasPreviousPage: false);
-
-Fragment$UpdateStatusJobDto _jobs(int count) => Fragment$UpdateStatusJobDto(
-      mangas: Fragment$MangaPageDto(
-        nodes: const [],
-        pageInfo: _emptyPage(),
-        totalCount: count,
-      ),
-    );
-
-Fragment$UpdateStatusDto$skippedCategories _emptyCategoryPage() =>
-    Fragment$UpdateStatusDto$skippedCategories(
-      categories: Fragment$CategoryPageDto(
-        nodes: const [],
-        pageInfo: _emptyPage(),
-        totalCount: 0,
-      ),
-    );
-
-Fragment$UpdateStatusDto _status({
+Fragment$UpdateProgressDto _progress({
   required bool isRunning,
-  int pending = 0,
-  int running = 0,
-  int complete = 0,
-  int failed = 0,
-}) =>
-    Fragment$UpdateStatusDto(
-      isRunning: isRunning,
-      pendingJobs: _jobs(pending),
-      runningJobs: _jobs(running),
-      completeJobs: _jobs(complete),
-      failedJobs: _jobs(failed),
-      skippedJobs: _jobs(0),
-      skippedCategories: _emptyCategoryPage(),
-      updatingCategories: Fragment$UpdateStatusDto$updatingCategories(
-        categories: Fragment$CategoryPageDto(
-          nodes: const [],
-          pageInfo: _emptyPage(),
-          totalCount: 0,
-        ),
-      ),
-    );
-
-/// A stream that never emits and never closes — models the heavy status feed
-/// stalling mid-update (the server can't resolve the job-list fields), so the
-/// StreamProvider stays in loading and `valueOrNull` is null throughout.
-Stream<T> _stalled<T>() => Stream<T>.fromFuture(Completer<T>().future);
+  int total = 0,
+  int finished = 0,
+}) => Fragment$UpdateProgressDto(
+  isRunning: isRunning,
+  totalJobs: total,
+  finishedJobs: finished,
+);
 
 Future<void> _pump(
   WidgetTester tester, {
-  // Visibility source (cheap running-only signal).
-  Stream<bool?>? running,
-  Future<bool?>? runningFallback,
-  // Label source (heavy status feed; percent enrichment).
-  Stream<Fragment$UpdateStatusDto?>? heavy,
-  Future<Fragment$UpdateStatusDto?>? heavyFallback,
+  // The one progress feed: on/off and the counts.
+  Stream<Fragment$UpdateProgressDto?>? progress,
+  Future<Fragment$UpdateProgressDto?>? progressFallback,
   bool prefOn = true,
 }) async {
-  SharedPreferences.setMockInitialValues(
-    {'showUpdateProgressBanner': prefOn},
-  );
+  SharedPreferences.setMockInitialValues({'showUpdateProgressBanner': prefOn});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        updateRunningSocketProvider
-            .overrideWith((ref) => running ?? Stream.value(false)),
-        updateRunningSummaryProvider
-            .overrideWith((ref) => runningFallback ?? Future.value(null)),
-        updatesSocketProvider
-            .overrideWith((ref) => heavy ?? _stalled()),
-        updateSummaryProvider
-            .overrideWith((ref) => heavyFallback ?? Future.value(null)),
+        updateProgressSocketProvider.overrideWith(
+          (ref) => progress ?? Stream.value(_progress(isRunning: false)),
+        ),
+        updateProgressSummaryProvider.overrideWith(
+          (ref) => progressFallback ?? Future.value(null),
+        ),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -110,7 +58,7 @@ Future<void> _pump(
 
 void main() {
   testWidgets('hidden while idle', (tester) async {
-    await _pump(tester, running: Stream.value(false));
+    await _pump(tester, progress: Stream.value(_progress(isRunning: false)));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1000));
 
@@ -119,7 +67,7 @@ void main() {
   });
 
   testWidgets('appears after the 1000ms debounce once running', (tester) async {
-    await _pump(tester, running: Stream.value(true));
+    await _pump(tester, progress: Stream.value(_progress(isRunning: true)));
     await tester.pump();
 
     // Before the debounce fires, the banner must not have appeared yet.
@@ -130,56 +78,57 @@ void main() {
     expect(find.text('Updating library…'), findsOneWidget);
   });
 
-  testWidgets('optimistic arm shows the banner immediately, before the debounce',
-      (tester) async {
-    // Server still reports idle — but the user just triggered an update. The
-    // banner must appear at once (bypassing the appear-debounce), so a pull
-    // doesn't feel dead for the ~1.5s before the server confirms it's running.
-    await _pump(tester, running: Stream.value(false));
-    await tester.pump();
-    expect(find.textContaining('Updating library'), findsNothing);
+  testWidgets(
+    'optimistic arm shows the banner immediately, before the debounce',
+    (tester) async {
+      // Server still reports idle — but the user just triggered an update. The
+      // banner must appear at once (bypassing the appear-debounce), so a pull
+      // doesn't feel dead for the ~1.5s before the server confirms it's running.
+      await _pump(tester, progress: Stream.value(_progress(isRunning: false)));
+      await tester.pump();
+      expect(find.textContaining('Updating library'), findsNothing);
 
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(UpdateProgressBanner)),
-    );
-    container.read(updateOptimisticProvider.notifier).arm();
-    await tester.pump(); // no debounce wait
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(UpdateProgressBanner)),
+      );
+      container.read(updateOptimisticProvider.notifier).arm();
+      await tester.pump(); // no debounce wait
 
-    expect(find.text('Updating library…'), findsOneWidget);
+      expect(find.text('Updating library…'), findsOneWidget);
 
-    // Drain the arm's safety timeout so no timer outlives the test.
-    await tester.pump(const Duration(seconds: 13));
-  });
+      // Drain the arm's safety timeout so no timer outlives the test.
+      await tester.pump(const Duration(seconds: 13));
+    },
+  );
 
   testWidgets(
-      'shows the running bar with indeterminate text when the heavy feed '
-      'stalls (the bug this fix addresses)', (tester) async {
-    // Running signal says "yes", but the heavy status feed never delivers —
-    // exactly the large-update case where the server stalls on job lists.
-    // The bar must still appear, showing "Updating library…", not nothing.
+    'shows the running bar with indeterminate text until counts arrive',
+    (tester) async {
+      // Running, but no job counted yet (the run is still being set up): the
+      // bar must show "Updating library…", not a 0% or nothing.
+      await _pump(
+        tester,
+        progress: Stream.value(_progress(isRunning: true)),
+        progressFallback: Completer<Fragment$UpdateProgressDto?>().future,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+
+      expect(find.text('Updating library…'), findsOneWidget);
+    },
+  );
+
+  testWidgets('shows the floor-rounded percent from the progress counts', (
+    tester,
+  ) async {
     await _pump(
       tester,
-      running: Stream.value(true),
-      heavy: _stalled(),
-      heavyFallback: Completer<Fragment$UpdateStatusDto?>().future,
+      progress: Stream.value(
+        _progress(isRunning: true, total: 100, finished: 37),
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1000));
-
-    expect(find.text('Updating library…'), findsOneWidget);
-  });
-
-  testWidgets('enriches to floor-rounded percent when the heavy feed resolves',
-      (tester) async {
-    await _pump(
-      tester,
-      running: Stream.value(true),
-      heavy: Stream.value(_status(isRunning: true, complete: 37, pending: 63)),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1000));
-    // The heavy feed is only subscribed once the bar is visible, so it first
-    // shows "Updating library…" then enriches to the percent a frame later.
     await tester.pump();
 
     expect(find.text('Updating library (37% · 37/100)'), findsOneWidget);
@@ -188,8 +137,7 @@ void main() {
   testWidgets('hidden when the preference is off', (tester) async {
     await _pump(
       tester,
-      running: Stream.value(true),
-      heavy: Stream.value(_status(isRunning: true, complete: 1, pending: 1)),
+      progress: Stream.value(_progress(isRunning: true, total: 2, finished: 1)),
       prefOn: false,
     );
     await tester.pump();
@@ -198,13 +146,12 @@ void main() {
     expect(find.textContaining('Updating library'), findsNothing);
   });
 
-  testWidgets(
-      'visibility falls back to the one-shot running query when the running '
-      'socket errors', (tester) async {
+  testWidgets('visibility falls back to the one-shot progress query when the '
+      'progress socket errors', (tester) async {
     await _pump(
       tester,
-      running: Stream<bool?>.error(Exception('ws down')),
-      runningFallback: Future.value(true),
+      progress: Stream<Fragment$UpdateProgressDto?>.error(Exception('ws down')),
+      progressFallback: Future.value(_progress(isRunning: true)),
     );
     await tester.pump();
     // The error->invalidate round trip only lands on the frame the first

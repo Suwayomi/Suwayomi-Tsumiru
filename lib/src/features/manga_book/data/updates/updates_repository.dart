@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
@@ -137,9 +138,10 @@ class UpdatesRepository {
         ),
       );
 
-  Future<UpdateStatusDto?> summaryUpdates() async => client
-      .query$UpdateStatusDto(Options$Query$UpdateStatusDto())
-      .getData((data) => data.updateStatus);
+  /// The current run's progress, read once. See [updateProgressSubscription].
+  Future<UpdateProgressDto?> updateProgress() async => client
+      .query$UpdateProgress(Options$Query$UpdateProgress())
+      .getData((data) => data.libraryUpdateStatus.jobsInfo);
 
   /// Series that failed in the most recent run. Reads the server's current
   /// status API — the deprecated `updateStatus` job lists hang on a live
@@ -164,28 +166,19 @@ class UpdatesRepository {
             .length,
       );
 
-  /// Cheap "is a run in progress" read, decoupled from the heavy job lists
-  /// (see [updateRunningSubscription]).
-  Future<bool?> runningSummary() async => client
-      .query$UpdateRunningStatus(Options$Query$UpdateRunningStatus())
-      .getData((data) => data.updateStatus.isRunning);
-
   /// Epoch-millis (as a string) of the last global library update, or null.
   Future<String?> lastUpdateTimestamp() async => client
       .query$LastUpdateTimestamp(Options$Query$LastUpdateTimestamp())
       .getData((data) => data.lastUpdateTimestamp.timestamp);
 
-  Stream<UpdateStatusDto?> updateStatusSubscription() => subscriptionClient
-      .subscribe$UpdateStatusChange(Options$Subscription$UpdateStatusChange())
-      .getData((data) => data.updateStatusChanged);
-
-  /// Running-only live signal. Requesting just `isRunning` keeps each pushed
-  /// frame tiny, so it arrives promptly even mid-update when the full-status
-  /// feed ([updateStatusSubscription]) stalls on the server's job-list
-  /// resolvers. The banner's visibility rides on this, not the heavy feed.
-  Stream<bool?> updateRunningSubscription() => subscriptionClient
-      .subscribe$UpdateRunningChange(Options$Subscription$UpdateRunningChange())
-      .getData((data) => data.updateStatusChanged.isRunning);
+  /// Live progress of library updates: whether one runs and how far it got,
+  /// pushed at most once a second. The server keeps these counts in memory,
+  /// so a push costs it no query, however large the library.
+  Stream<UpdateProgressDto?> updateProgressSubscription() => subscriptionClient
+      .subscribe$UpdateProgressChange(
+        Options$Subscription$UpdateProgressChange(),
+      )
+      .getData((data) => data.libraryUpdateStatusChanged.jobsInfo);
 }
 
 @riverpod
@@ -193,25 +186,32 @@ UpdatesRepository updatesRepository(Ref ref) => UpdatesRepository(
     ref.watch(graphQlClientProvider),
     ref.watch(graphQlSubscriptionClientProvider));
 
+/// One-shot read of [updateProgressSocketProvider]'s data, for when the
+/// socket is down or hasn't delivered yet.
 @riverpod
-Future<UpdateStatusDto?> updateSummary(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).summaryUpdates();
+Future<UpdateProgressDto?> updateProgressSummary(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).updateProgress();
 
 @riverpod
 Future<String?> libraryLastUpdated(Ref ref) =>
     ref.watch(updatesRepositoryProvider).lastUpdateTimestamp();
 
+/// The single live progress subscription. Everything that follows a run reads
+/// it, directly or through [updateRunningSocketProvider], so the server runs
+/// one subscription per app instead of one per feature.
 @riverpod
-Stream<UpdateStatusDto?> updatesSocket(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).updateStatusSubscription();
+Stream<UpdateProgressDto?> updateProgressSocket(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).updateProgressSubscription();
 
+/// Whether a library update is running, off [updateProgressSocketProvider].
+/// Changes only when that does: progress is pushed every second during a
+/// run, and listeners here act on the running edges.
 @riverpod
-Future<bool?> updateRunningSummary(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).runningSummary();
-
-@riverpod
-Stream<bool?> updateRunningSocket(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).updateRunningSubscription();
+AsyncValue<bool?> updateRunningSocket(Ref ref) => ref.watch(
+  updateProgressSocketProvider.select(
+    (progress) => progress.whenData((value) => value?.isRunning),
+  ),
+);
 
 @riverpod
 Future<List<MangaDto>> failedUpdates(Ref ref) =>
