@@ -152,6 +152,36 @@ class RefreshTransientFailure extends RefreshOutcome {
   final Object error;
 }
 
+/// Thrown instead of sending a request whose access token has already expired
+/// when no refresh could replace it: the server can only reject that token.
+///
+/// A [ServerException] carrying the refresh's own cause, so a refresh that
+/// couldn't reach the server reads as the connection error it is (offline
+/// fallbacks, reachability) rather than as an auth rejection.
+class AccessTokenUnavailable extends ServerException {
+  AccessTokenUnavailable(this.outcome)
+    : super(
+        originalException: switch (outcome) {
+          RefreshTransientFailure(:final error) => _rootCause(error),
+          _ => StateError('Session expired'),
+        },
+      );
+
+  final RefreshOutcome outcome;
+
+  static Object _rootCause(Object error) {
+    final link = error is OperationException ? error.linkException : error;
+    if (link is ServerException && link.originalException != null) {
+      return link.originalException!;
+    }
+    return link ?? error;
+  }
+
+  @override
+  String toString() =>
+      'AccessTokenUnavailable(${describeRefreshOutcome(outcome)})';
+}
+
 /// One-line, token-free summary of [outcome] for the diagnostic log: the new
 /// token's remaining lifetime on success, the error's type and first line on
 /// a transient failure. `null` means no refresh was due.
@@ -810,6 +840,84 @@ class AuthCoordinator extends _$AuthCoordinator {
     if (remaining > leadTime) return null;
     return refreshUiAccessToken(gqlClient: gqlClient, trigger: trigger);
   }
+
+  /// The ui_login access token a request should carry: the stored one, or a
+  /// refreshed one when it expires within [proactiveRefreshLead]. `null` when
+  /// there is none (or the mode isn't ui_login): nothing to attach.
+  ///
+  /// Requests are authorised up front rather than by refreshing after the
+  /// server rejects them. A token that expires soon but is still valid is
+  /// sent if the refresh fails; one that has already expired never is — it
+  /// gets one more refresh attempt, then [AccessTokenUnavailable] is thrown.
+  /// Launch logs showed the alternative: every early request waited on a
+  /// refresh that timed out on a waking network, went out anyway, came back
+  /// Unauthorized, and was replayed after the refresh that succeeded a second
+  /// later.
+  ///
+  /// A request spawned by an endpoint handover runs in the handover's zone;
+  /// the handover awaits no request, so this one waits it out and refreshes
+  /// against the new endpoint instead of being refused as part of it.
+  Future<String?> usableUiAccessToken({
+    required GraphQLClient Function() gqlClient,
+    required String trigger,
+  }) async {
+    if ((ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial) !=
+        AuthType.uiLogin) {
+      return null;
+    }
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    final state = await ref.read(authCredentialsStoreProvider.future);
+    final token = state.uiAccessToken;
+    if (token == null || token.isEmpty) return null;
+    if (!_expiresWithin(state.uiAccessTokenExpiresAt, proactiveRefreshLead)) {
+      return token;
+    }
+
+    // Any other identity change (sign-in, account switch) refuses the refresh:
+    // it may be awaiting this very request.
+    final handover = store.insideHandover;
+    final refusing = store.insideIdentityChange && !handover;
+    Future<RefreshOutcome> refresh() {
+      Future<RefreshOutcome> run() =>
+          refreshUiAccessToken(gqlClient: gqlClient(), trigger: trigger);
+      return handover ? store.outsideIdentityChange(run) : run();
+    }
+
+    // Returns the stored token while it hasn't expired: another path may have
+    // refreshed it, or it was only due and remains valid for now.
+    String? stillValid() {
+      final current = ref.read(authCredentialsStoreProvider).value;
+      final access = current?.uiAccessToken;
+      if (access == null || access.isEmpty) return null;
+      return _expiresWithin(current?.uiAccessTokenExpiresAt, Duration.zero)
+          ? null
+          : access;
+    }
+
+    var outcome = await refresh();
+    if (outcome is RefreshSuccess) return outcome.newAccessToken;
+    var valid = stillValid();
+    if (valid != null) return valid;
+    // One more attempt: on a waking network the first refresh often times out
+    // while the very next connection goes through.
+    if (outcome is RefreshTransientFailure && !refusing) {
+      outcome = await refresh();
+      if (outcome is RefreshSuccess) return outcome.newAccessToken;
+      valid = stillValid();
+      if (valid != null) return valid;
+    }
+    recordDiagnostic(
+      '[${DateTime.now().toIso8601String()}] auth-gate: trigger=$trigger '
+      'blocked ${describeTokenExpiry(token)} '
+      '${describeRefreshOutcome(outcome)}\n',
+    );
+    throw AccessTokenUnavailable(outcome);
+  }
+
+  /// Whether a token expiring at [expiresAt] has less than [lead] left. An
+  /// unknown expiry counts as live: there's nothing to refresh ahead of.
+  static bool _expiresWithin(DateTime? expiresAt, Duration lead) =>
+      expiresAt != null && expiresAt.difference(DateTime.now().toUtc()) <= lead;
 
   /// Runs the appropriate verify-only round-trip and returns a typed
   /// [TestConnectionResult]. **Does not persist credentials** — caller

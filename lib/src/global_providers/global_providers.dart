@@ -184,30 +184,26 @@ GraphQLClient graphQlClient(Ref ref) {
       isCurrentSession: isCurrentSession,
       authType: () => authType,
       getHeaders: () async {
-        // A token already known to be expired (or about to be) is refreshed
-        // before the request instead of after its 401: at launch after a
-        // pause, every early request otherwise went out, was rejected, and
-        // waited on the same refresh to be retried. Refreshing early costs
-        // nothing (the refresh token isn't rotated) and joins any refresh
-        // already in flight. A failed one sends the current token, as before.
+        // ui_login requests are authorised up front: a token expired or about
+        // to be is refreshed before the request (joining any refresh in
+        // flight), and one that has expired and can't be refreshed stops the
+        // request here instead of sending it to be rejected.
+        // See AuthCoordinator.usableUiAccessToken.
+        final Map<String, String>? base;
         if (authType == AuthType.uiLogin) {
-          try {
-            await ref
-                .read(authCoordinatorProvider.notifier)
-                .refreshUiAccessTokenIfDue(
-                  gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
-                  trigger: 'request-ahead',
-                );
-          } catch (_) {}
+          final token = await ref
+              .read(authCoordinatorProvider.notifier)
+              .usableUiAccessToken(
+                gqlClient: () => ref.read(unauthenticatedGraphQlClientProvider),
+                trigger: 'request-ahead',
+              );
+          base = token == null ? null : {'Authorization': 'Bearer $token'};
+        } else {
+          // Read via `.future` defensively in case a caller invokes a GraphQL
+          // operation before main()'s eager preload finishes.
+          final snapshot = await ref.read(authCredentialsStoreProvider.future);
+          base = snapshot.simpleLoginCookieHeader;
         }
-        // Synchronously read the cached snapshot — populated at startup
-        // by the eager `await container.read(...future)` in main(). We
-        // read via `.future` defensively in case a caller invokes a
-        // GraphQL operation before the preload finishes.
-        final snapshot = await ref.read(authCredentialsStoreProvider.future);
-        final base = authType == AuthType.simpleLogin
-            ? snapshot.simpleLoginCookieHeader
-            : snapshot.uiAuthorizationHeader;
         final custom = ref.read(customHttpHeadersProvider).value ?? const {};
         if (base == null) {
           return custom.isEmpty ? null : Map<String, String>.from(custom);
