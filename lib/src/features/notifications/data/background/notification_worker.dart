@@ -732,6 +732,10 @@ TokenBroker _brokerFor(
         // actually settling) permanently condemns every chapter that
         // happened to 401 in that window.
         if (isGatewayStatus(res.statusCode)) {
+          logBackgroundRefresh(
+            'notify',
+            'gateway status=${res.statusCode} transient=true',
+          );
           return (tokens: null, transient: true);
         }
         if (res.statusCode != 200) {
@@ -765,11 +769,14 @@ TokenBroker _brokerFor(
           tokens: (access: access, refresh: refreshToken),
           transient: false,
         );
-      } on SocketException {
+      } on SocketException catch (e) {
+        logBackgroundRefresh('notify', 'network-error transient=true', e);
         return (tokens: null, transient: true);
-      } on TimeoutException {
+      } on TimeoutException catch (e) {
+        logBackgroundRefresh('notify', 'timeout transient=true', e);
         return (tokens: null, transient: true);
-      } catch (_) {
+      } catch (e) {
+        logBackgroundRefresh('notify', 'error transient=false', e);
         return (tokens: null, transient: false);
       }
     },

@@ -43,6 +43,7 @@ class AccountActions {
         .read(authCoordinatorProvider.notifier)
         .refreshUiAccessToken(
           gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+          trigger: 'account-refresh',
         );
     if (!current()) throw StateError('Authentication session changed');
     if (result is RefreshTransientFailure) throw result.error;
@@ -147,6 +148,7 @@ class AccountActions {
     if (!builtIn) {
       final refresh = await coordinator.refreshUiAccessTokenIfDue(
         gqlClient: client,
+        trigger: 'account-check',
       );
       if (refresh is RefreshTransientFailure) throw refresh.error;
       if (refresh is RefreshAuthFailure || !current()) {

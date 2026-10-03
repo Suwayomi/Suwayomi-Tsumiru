@@ -33,7 +33,10 @@ Future<void> restoreAccountSession(ProviderContainer container) async {
     final password = credentials.password;
     final expiry = credentials.uiAccessTokenExpiresAt;
     if (expiry != null && !expiry.isAfter(DateTime.now())) {
-      final outcome = await coordinator.refreshUiAccessToken(gqlClient: client);
+      final outcome = await coordinator.refreshUiAccessToken(
+        gqlClient: client,
+        trigger: 'account-bootstrap',
+      );
       checkSession();
       if (outcome is! RefreshSuccess) {
         throw StateError('Account credentials could not be refreshed');

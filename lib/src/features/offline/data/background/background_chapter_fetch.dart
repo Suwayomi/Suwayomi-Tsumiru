@@ -314,7 +314,9 @@ ChapterDownloadEngine buildBackgroundEngine({
     if (target.isCancelled?.call() ?? false) {
       throw StateError('Download cancelled');
     }
-    final r = record();
+    final current = record();
+    final ahead = await broker.refreshIfDue(current);
+    final r = ahead.sameIdentity(current) ? ahead : current;
     var fetchUrl = '${target.pageBase}$pageUrl';
     final headers = <String, String>{};
     switch (r.authType) {

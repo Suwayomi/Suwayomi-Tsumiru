@@ -238,6 +238,50 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   Future<void> _mutationTail = Future<void>.value();
   Future<void> _identityTail = Future<void>.value();
   final _identityZone = Object();
+  final _handoverZone = Object();
+
+  // Bumped when a session-preserving change (a LAN/remote endpoint handover)
+  // starts. It still bumps [serverEpoch], so a refresh racing it is discarded
+  // although the account never changed; this lets the coordinator tell that
+  // case from a real sign-in change and retry instead of giving up.
+  int _handovers = 0;
+  int get handovers => _handovers;
+
+  /// True inside a [withIdentityChange] action: waiting for identity changes
+  /// to settle there would wait on itself.
+  bool get insideIdentityChange => Zone.current[_identityZone] == this;
+
+  /// True inside an endpoint handover (a session-preserving identity change).
+  /// A handover only swaps the address and resets local download state; it
+  /// awaits no server request, so any request running in its zone is one its
+  /// rebuild spawned, safe to run as if outside it.
+  bool get insideHandover =>
+      insideIdentityChange && Zone.current[_handoverZone] == this;
+
+  /// Runs [body] as if outside any identity change. For work a change only
+  /// spawns and never awaits, such as a socket connect started by the rebuild
+  /// the change triggers: it inherits the change's zone through the microtasks
+  /// that start it, and would otherwise be refused as if the change itself
+  /// were asking, instead of waiting for it to finish.
+  R outsideIdentityChange<R>(R Function() body) =>
+      runZoned(body, zoneValues: {_identityZone: null, _handoverZone: null});
+
+  /// Waits (up to [timeout]) for every queued identity change to finish.
+  /// Returns whether none is still running.
+  Future<bool> identitySettled({required Duration timeout}) async {
+    if (insideIdentityChange) return false;
+    final deadline = DateTime.now().add(timeout);
+    while (identityChanging && !_retired) {
+      final left = deadline.difference(DateTime.now());
+      if (left <= Duration.zero) return false;
+      try {
+        await _identityTail.timeout(left);
+      } on TimeoutException {
+        return false;
+      }
+    }
+    return !identityChanging;
+  }
 
   Future<T> _mutate<T>(Future<T> Function() action) {
     if (_retired) {
@@ -280,6 +324,7 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     }
     if (Zone.current[_identityZone] == this) return action();
     _identityChanges++;
+    if (preserveSession) _handovers++;
     if (!preserveSession) {
       _sessionChanges++;
       _sessionEpoch++;
@@ -292,14 +337,20 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       await previous;
       invalidatePendingWrites();
       await _mutationTail;
-      return await runZoned(() async {
-        final transition = preserveSession
-            ? null
-            : ref.read(authSessionTransitionProvider);
-        return transition == null
-            ? await action()
-            : await transition.run(action);
-      }, zoneValues: {_identityZone: this});
+      return await runZoned(
+        () async {
+          final transition = preserveSession
+              ? null
+              : ref.read(authSessionTransitionProvider);
+          return transition == null
+              ? await action()
+              : await transition.run(action);
+        },
+        zoneValues: {
+          _identityZone: this,
+          _handoverZone: preserveSession ? this : null,
+        },
+      );
     } finally {
       _identityChanges--;
       if (!preserveSession) {

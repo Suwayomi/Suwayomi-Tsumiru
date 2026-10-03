@@ -6,6 +6,7 @@ import 'package:tsumiru/src/features/account/data/account_repository.dart';
 import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.graphql.dart';
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 
 class RecordingLink extends Link {
@@ -167,5 +168,36 @@ void main() {
       printNode(link.recorded.operation.document),
       contains('setUserSettings'),
     );
+  });
+
+  group('capability diagnostics', () {
+    final lines = <String>[];
+    setUp(() {
+      lines.clear();
+      setDiagnosticSink(lines.add);
+    });
+    tearDown(() => setDiagnosticSink(null));
+
+    AccountRepository dying() => AccountRepository(
+      GraphQLClient(
+        link: Link.function(
+          (request, [forward]) => Stream.error(StateError('client disposed')),
+        ),
+        cache: GraphQLCache(),
+      ),
+    );
+
+    test('an unknown answer the caller still wants is logged', () async {
+      expect(await dying().capability(), AccountCapability.unknown);
+      expect(lines.single, contains('account-capability: unknown'));
+    });
+
+    test('an answer a superseded caller throws away is not logged', () async {
+      expect(
+        await dying().capability(stillWanted: () => false),
+        AccountCapability.unknown,
+      );
+      expect(lines, isEmpty);
+    });
   });
 }

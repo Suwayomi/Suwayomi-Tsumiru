@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
@@ -213,5 +214,97 @@ void main() {
         reason: changed.key,
       );
     }
+  });
+
+  group('refreshIfDue', () {
+    final now = DateTime.utc(2026, 9, 26, 12);
+    String jwt(Duration expIn) {
+      String part(Object json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      final exp = now.add(expIn).millisecondsSinceEpoch ~/ 1000;
+      return '${part({'alg': 'HS256'})}.${part({'exp': exp})}.sig';
+    }
+
+    late BackgroundTokenRecord stored;
+    late int refreshCalls;
+    late Completer<void>? gate;
+    late RefreshAttempt attempt;
+    TokenBroker broker() => TokenBroker(
+      read: () async => stored,
+      write: (r) async => stored = r,
+      refreshFn: (_) async {
+        refreshCalls++;
+        await gate?.future;
+        return attempt;
+      },
+    );
+    BackgroundTokenRecord withAccess(String access) => BackgroundTokenRecord(
+      gen: 1,
+      authType: 'uiLogin',
+      accessToken: access,
+      refreshToken: 'R',
+    );
+
+    setUp(() {
+      refreshCalls = 0;
+      gate = null;
+      attempt = (tokens: (access: 'NEW', refresh: 'R'), transient: false);
+    });
+
+    test('refreshes an expired token before the request', () async {
+      stored = withAccess(jwt(const Duration(hours: -3)));
+      final b = broker();
+      final used = await b.refreshIfDue(stored, now: now);
+      expect(refreshCalls, 1);
+      expect(used.accessToken, 'NEW');
+      expect(used.gen, 2);
+      expect(b.latest?.accessToken, 'NEW');
+    });
+
+    test('refreshes a token inside the lead, leaves a fresh one alone',
+        () async {
+      stored = withAccess(jwt(const Duration(seconds: 30)));
+      expect((await broker().refreshIfDue(stored, now: now)).accessToken, 'NEW');
+      refreshCalls = 0;
+      final fresh = withAccess(jwt(const Duration(minutes: 4)));
+      stored = fresh;
+      expect(await broker().refreshIfDue(fresh, now: now), same(fresh));
+      expect(refreshCalls, 0);
+    });
+
+    test('leaves opaque tokens and other auth modes to the 401 path',
+        () async {
+      stored = withAccess('opaque');
+      expect(await broker().refreshIfDue(stored, now: now), same(stored));
+      const basic = BackgroundTokenRecord(gen: 1, authType: 'basic');
+      expect(await broker().refreshIfDue(basic, now: now), same(basic));
+      expect(refreshCalls, 0);
+    });
+
+    test('parallel callers share one refresh', () async {
+      stored = withAccess(jwt(const Duration(hours: -1)));
+      gate = Completer<void>();
+      final b = broker();
+      final calls = [
+        for (var i = 0; i < 5; i++) b.refreshIfDue(stored, now: now),
+      ];
+      await pumpEventQueue();
+      gate!.complete();
+      final used = await Future.wait(calls);
+      expect(refreshCalls, 1);
+      expect(used.map((r) => r.accessToken).toSet(), {'NEW'});
+    });
+
+    test('a failed refresh answers the next 401 without calling again',
+        () async {
+      final expired = jwt(const Duration(hours: -1));
+      stored = withAccess(expired);
+      attempt = (tokens: null, transient: true);
+      final b = broker();
+      expect(await b.refreshIfDue(stored, now: now), same(stored));
+      expect(await b.resolveAfter401(expired), isNull);
+      expect(b.lastRefreshTransient, isTrue);
+      expect(refreshCalls, 1);
+    });
   });
 }

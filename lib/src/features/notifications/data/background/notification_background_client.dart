@@ -92,7 +92,17 @@ class NotificationBackgroundClient {
 
   /// Live view of the auth record (the broker rotates it mid-run) — the
   /// catch-up executor shares this client's auth.
-  BackgroundTokenRecord currentRecord() => _record;
+  BackgroundTokenRecord currentRecord() {
+    // The catch-up executor refreshes through the shared broker; pick that up
+    // rather than keep sending the token it replaced.
+    final latest = broker.latest;
+    if (latest != null &&
+        latest.gen > _record.gen &&
+        latest.sameIdentity(_record)) {
+      _record = latest;
+    }
+    return _record;
+  }
 
   static const Object _authError = gqlAuthError;
   static const Object _networkError = gqlNetworkError;
@@ -104,6 +114,8 @@ class NotificationBackgroundClient {
     Map<String, Object?> variables, {
     bool downloadOperation = false,
   }) async {
+    final ahead = await broker.refreshIfDue(currentRecord());
+    if (ahead.sameIdentity(_record)) _record = ahead;
     var res = await _raw(
       query,
       variables,

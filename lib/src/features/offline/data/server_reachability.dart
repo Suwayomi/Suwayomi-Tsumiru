@@ -6,6 +6,9 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../utils/crash/diagnostics.dart';
+import '../../../utils/crash/redact_tokens.dart';
+
 part 'server_reachability.g.dart';
 
 /// Whether the last server request failed to connect — a wrong URL, a server
@@ -21,8 +24,19 @@ class ServerUnreachable extends _$ServerUnreachable {
   @override
   bool build() => false;
 
-  void set(bool value) {
-    if (state != value) state = value;
+  /// [reason] says what flipped it, for the debug log: while it's set, the
+  /// library serves the on-device catalog without trying the server, so an
+  /// unexplained flip at launch looked like the library losing its counts.
+  void set(bool value, {String? reason}) {
+    if (state == value) return;
+    state = value;
+    recordDiagnostic(
+      redactTokens(
+        '[${DateTime.now().toIso8601String()}] reachability: '
+        '${value ? 'unreachable' : 'reachable'}'
+        '${reason == null ? '' : ' $reason'}\n',
+      ),
+    );
   }
 }
 
