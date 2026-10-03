@@ -142,6 +142,28 @@ GraphQLClient graphQlClient(Ref ref) {
       retries: retryCount,
       retryDelay: Duration(milliseconds: retryDelayMs),
       isCurrentSession: isCurrentSession,
+      retryHeaders: authType != AuthType.uiLogin
+          ? null
+          : (headers) async {
+              const key = 'authorization';
+              final carriesToken = headers.entries.any(
+                (e) =>
+                    e.key.toLowerCase() == key && e.value.startsWith('Bearer '),
+              );
+              if (!carriesToken) return headers;
+              final token = await ref
+                  .read(authCoordinatorProvider.notifier)
+                  .usableUiAccessToken(
+                    gqlClient: () =>
+                        ref.read(unauthenticatedGraphQlClientProvider),
+                    trigger: 'request-retry',
+                  );
+              return {
+                for (final e in headers.entries)
+                  if (e.key.toLowerCase() != key) e.key: e.value,
+                if (token != null) 'Authorization': 'Bearer $token',
+              };
+            },
       onConnectionFailure: (request) async {
         if (!_isGraphQlRead(request)) return null;
         await ref.read(serverEndpointResolverProvider.notifier).refresh();
