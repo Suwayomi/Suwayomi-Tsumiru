@@ -153,6 +153,17 @@ class UpdatesRepository {
               ])) ??
       const [];
 
+  /// How many series failed in the most recent run, without fetching them.
+  Future<int?> failedUpdateCount() async => client
+      .query$LibraryUpdateFailureCount(
+        Options$Query$LibraryUpdateFailureCount(),
+      )
+      .getData(
+        (data) => data.libraryUpdateStatus.mangaUpdates
+            .where((update) => update.status == Enum$MangaJobStatus.FAILED)
+            .length,
+      );
+
   /// Cheap "is a run in progress" read, decoupled from the heavy job lists
   /// (see [updateRunningSubscription]).
   Future<bool?> runningSummary() async => client
@@ -205,3 +216,8 @@ Stream<bool?> updateRunningSocket(Ref ref) =>
 @riverpod
 Future<List<MangaDto>> failedUpdates(Ref ref) =>
     ref.watch(updatesRepositoryProvider).failedUpdates();
+
+/// For badges and menu labels; [failedUpdatesProvider] is for the errors list.
+@riverpod
+Future<int> failedUpdateCount(Ref ref) async =>
+    await ref.watch(updatesRepositoryProvider).failedUpdateCount() ?? 0;
