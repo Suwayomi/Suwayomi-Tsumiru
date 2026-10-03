@@ -20,6 +20,7 @@ import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../account/data/account_permission.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../chapter_download_engine.dart';
 import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
@@ -33,6 +34,7 @@ import 'background_download_lock.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 import 'catchup_work_spec.dart';
+import 'record_seal.dart';
 import 'work_order_admission.dart';
 
 /// Foreground-service entry point. Must be top-level +
@@ -139,6 +141,8 @@ class DownloadTaskHandler extends TaskHandler {
       final crashLogPath = await initCrashLog();
       setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
     } catch (_) {}
+    // The work order's and token record's secrets are sealed.
+    await RecordSeal.load(kSecureStorage);
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
       // Nothing to do — self-stop so we don't sit as a zombie notification.

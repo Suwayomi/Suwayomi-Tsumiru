@@ -91,6 +91,7 @@ dependencies:
   workmanager: ^0.10.9
   battery_plus: ^7.1.1
   uuid: ^4.6.0
+  pointycastle: ^4.0.0
 
 dev_dependencies:
   cross_file: ^0.3.5+4

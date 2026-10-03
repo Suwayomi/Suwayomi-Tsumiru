@@ -35,6 +35,7 @@ import 'src/features/notifications/data/background/notification_background_entry
 import 'src/features/offline/data/account_storage_recovery_state.dart';
 import 'src/features/offline/data/background/background_download_controller_shim.dart';
 import 'src/features/offline/data/background/catchup_work_spec.dart';
+import 'src/features/offline/data/background/record_seal.dart';
 import 'src/features/offline/data/offline_background_downloads.dart';
 import 'src/features/offline/data/offline_download_coordinator.dart';
 import 'src/features/offline/data/offline_repository.dart';
@@ -130,6 +131,12 @@ Future<void> _startApp() async {
   final container = _createSessionContainer(packageInfo, sharedPreferences);
 
   final secure = container.read(secureStorageProvider);
+
+  // Before anything reads or writes the background workers' credential
+  // records, whose secrets are sealed with this key.
+  if (!await RecordSeal.load(secure, create: true)) {
+    _logBoot('background credentials key unavailable');
+  }
 
   // 1) Migrate legacy SharedPreferences basic-auth → secure storage.
   try {

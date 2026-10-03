@@ -205,7 +205,6 @@ void main() {
       'endpoint': 'https://other',
       'identityEpoch': 9,
       'catalogServerId': 'different-catalogue',
-      'originalRefreshToken': 'different-refresh',
     }.entries) {
       final json = owner.toJson()..[changed.key] = changed.value;
       expect(
@@ -214,6 +213,24 @@ void main() {
         reason: changed.key,
       );
     }
+    // Sealed with the other secrets, so it can't be edited in place.
+    const otherOriginal = BackgroundTokenRecord(
+      gen: 1,
+      authType: 'uiLogin',
+      endpoint: 'https://server',
+      accessToken: 'A',
+      refreshToken: 'refresh-a',
+      identityEpoch: 4,
+      catalogServerId: 'account-a',
+      originalRefreshToken: 'different-refresh',
+    );
+    expect(
+      owner.sameIdentity(
+        BackgroundTokenRecord.fromJson(otherOriginal.toJson()),
+      ),
+      isFalse,
+      reason: 'originalRefreshToken',
+    );
   });
 
   group('refreshIfDue', () {

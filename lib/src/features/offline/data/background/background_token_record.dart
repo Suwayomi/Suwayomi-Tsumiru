@@ -6,6 +6,7 @@
 
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../auth/data/jwt_utils.dart';
+import 'record_seal.dart';
 
 typedef RefreshResult = ({String access, String refresh});
 
@@ -88,42 +89,56 @@ class BackgroundTokenRecord {
       catalogServerId == other.catalogServerId &&
       originalRefreshToken == other.originalRefreshToken;
 
+  /// The secrets are sealed (see [RecordSeal]): these records are persisted
+  /// outside secure storage. Custom headers count, since they can carry
+  /// access tokens (Cloudflare Zero Trust service tokens).
   Map<String, Object?> toJson() => {
     'gen': gen,
     'authType': authType,
     'endpoint': endpoint,
     'identityEpoch': identityEpoch,
     'catalogServerId': catalogServerId,
-    'originalRefreshToken': originalRefreshToken,
     'notificationSessionId': notificationSessionId,
-    'accessToken': accessToken,
-    'refreshToken': refreshToken,
-    'password': password,
-    'basicCredential': basicCredential,
-    'simpleCookie': simpleCookie,
-    'extraHeaders': extraHeaders,
+    'sealed': RecordSeal.seal({
+      'originalRefreshToken': originalRefreshToken,
+      'accessToken': accessToken,
+      'refreshToken': refreshToken,
+      'password': password,
+      'basicCredential': basicCredential,
+      'simpleCookie': simpleCookie,
+      'extraHeaders': extraHeaders,
+    }),
   };
 
-  factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) =>
-      BackgroundTokenRecord(
-        gen: j['gen'] as int,
-        authType: j['authType'] as String,
-        endpoint: j['endpoint'] as String?,
-        identityEpoch: j['identityEpoch'] as int?,
-        catalogServerId: j['catalogServerId'] as String?,
-        originalRefreshToken: j['originalRefreshToken'] as String?,
-        notificationSessionId: j['notificationSessionId'] as String?,
-        accessToken: j['accessToken'] as String?,
-        refreshToken: j['refreshToken'] as String?,
-        password: j['password'] as String?,
-        basicCredential: j['basicCredential'] as String?,
-        simpleCookie: j['simpleCookie'] as String?,
-        extraHeaders:
-            (j['extraHeaders'] as Map?)?.map(
-              (k, v) => MapEntry(k.toString(), v.toString()),
-            ) ??
-            const {},
-      );
+  /// Reads a record written by [toJson], or a plain one from before records
+  /// were sealed (rewritten sealed on the next write). Secrets that can't be
+  /// unsealed read as absent: the record then matches no identity and
+  /// authenticates as nobody.
+  factory BackgroundTokenRecord.fromJson(Map<String, Object?> j) {
+    final sealed = j['sealed'];
+    final secrets = sealed is String
+        ? RecordSeal.open(sealed) ?? const <String, Object?>{}
+        : j;
+    return BackgroundTokenRecord(
+      gen: j['gen'] as int,
+      authType: j['authType'] as String,
+      endpoint: j['endpoint'] as String?,
+      identityEpoch: j['identityEpoch'] as int?,
+      catalogServerId: j['catalogServerId'] as String?,
+      originalRefreshToken: secrets['originalRefreshToken'] as String?,
+      notificationSessionId: j['notificationSessionId'] as String?,
+      accessToken: secrets['accessToken'] as String?,
+      refreshToken: secrets['refreshToken'] as String?,
+      password: secrets['password'] as String?,
+      basicCredential: secrets['basicCredential'] as String?,
+      simpleCookie: secrets['simpleCookie'] as String?,
+      extraHeaders:
+          (secrets['extraHeaders'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), v.toString()),
+          ) ??
+          const {},
+    );
+  }
 }
 
 /// Merge isolate-side custom headers into [headers] without clobbering the
@@ -320,6 +335,6 @@ class TokenBroker {
   /// missing refresh token from a real rejection; and a successful refresh left
   /// no trace, so a healthy worker looked the same as one never challenged.
   static void _log(String event) => recordDiagnostic(
-        '[${DateTime.now().toIso8601String()}] token-broker: $event\n',
-      );
+    '[${DateTime.now().toIso8601String()}] token-broker: $event\n',
+  );
 }
