@@ -26,7 +26,7 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final defaultId = ref.watch(settledDefaultCategoryIdProvider);
-    final failedCount = ref.watch(failedUpdatesProvider).value?.length ?? 0;
+    final failedCount = ref.watch(failedUpdateCountProvider).value ?? 0;
     return PopupMenuButton(
       icon: const Icon(Icons.more_vert_rounded),
       shape: RoundedRectangleBorder(borderRadius: KBorderRadius.r16.radius),
