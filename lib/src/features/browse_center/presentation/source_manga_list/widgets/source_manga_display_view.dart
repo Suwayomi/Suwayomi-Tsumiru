@@ -73,14 +73,10 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       );
       if (result is! AsyncData<List<int>>) return 0;
       final addedIds = result.value;
-      final items = [...?controller.itemList];
       final idSet = addedIds.toSet();
-      for (var i = 0; i < items.length; i++) {
-        if (idSet.contains(items[i].id)) {
-          items[i] = items[i].copyWith(inLibrary: true);
-        }
-      }
-      controller.itemList = items;
+      controller.mapItems(
+        (m) => idSet.contains(m.id) ? m.copyWith(inLibrary: true) : m,
+      );
       container.invalidate(libraryMangaListProvider);
       return addedIds.length;
     }
@@ -89,7 +85,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       final ids = selection.value.toList();
       if (ids.isEmpty) return;
       final selected = [
-        for (final m in controller.itemList ?? const <MangaDto>[])
+        for (final m in controller.items ?? const <MangaDto>[])
           if (ids.contains(m.id)) m,
       ];
       selection.value = const {};
@@ -247,7 +243,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                     tooltip: 'Select all',
                     icon: const Icon(Icons.select_all_rounded),
                     onPressed: () => selection.value = {
-                      for (final m in controller.itemList ?? const <MangaDto>[])
+                      for (final m in controller.items ?? const <MangaDto>[])
                         m.id,
                     },
                   ),

@@ -18,7 +18,7 @@ class UpdateStatusFab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final updateStatus = ref.watch(updatesSocketProvider);
+    final updateStatus = ref.watch(updateProgressSocketProvider);
     final showStatus = (updateStatus.value?.isUpdateChecking).ifNull();
     return BrandFab(
       icon: Icon(showStatus ? Icons.stop_rounded : Icons.refresh_rounded),

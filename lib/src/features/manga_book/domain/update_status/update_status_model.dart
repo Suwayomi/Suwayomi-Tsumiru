@@ -5,30 +5,20 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../manga/manga_model.dart';
 import 'graphql/__generated__/fragment.graphql.dart';
 
-typedef UpdateStatusDto = Fragment$UpdateStatusDto;
+/// A library update's progress, as the server counts it.
+typedef UpdateProgressDto = Fragment$UpdateProgressDto;
 
-extension UpdateStatusExt on UpdateStatusDto {
-  int get total =>
-      (pendingJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative() +
-      (runningJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative() +
-      (completeJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative() +
-      (failedJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative();
+extension UpdateProgressExt on UpdateProgressDto {
+  /// Series in the run: pending, running, complete and failed.
+  int get total => totalJobs.getValueOnNullOrNegative();
 
-  int get updateChecked =>
-      (completeJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative() +
-      (failedJobs.mangas.totalCount.toInt()).getValueOnNullOrNegative();
+  /// Series the run is done with, complete or failed.
+  int get updateChecked => finishedJobs.getValueOnNullOrNegative();
 
   bool get isUpdateCheckCompleted => total == updateChecked;
 
   bool get isUpdateChecking =>
       (total).isGreaterThan(0) && !(isUpdateCheckCompleted);
-}
-
-extension U on Fragment$UpdateStatusJobDto {
-  bool get isNotBlank => mangas.nodes.isNotBlank;
-
-  List<MangaDto> get mangaList => mangas.nodes;
 }

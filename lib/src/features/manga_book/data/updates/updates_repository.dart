@@ -5,11 +5,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_page/chapter_page_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../../domain/update_status/update_status_model.dart';
@@ -21,6 +23,20 @@ part 'updates_repository.g.dart';
 /// Rows per page. The offset step must match, or pages overlap and the list
 /// repeats rows.
 const int updatesPageSize = 50;
+
+/// One page of the Updates feed: at most [updatesPageSize] chapters, newest
+/// first, and whether another page follows.
+typedef UpdatesPage = ({List<ChapterWithMangaDto> nodes, bool hasNextPage});
+
+/// Splits a window fetched as [pageSize] + 1 rows into the page and whether
+/// another one follows.
+({List<T> nodes, bool hasNextPage}) splitPageWindow<T>(
+  List<T> window,
+  int pageSize,
+) => (
+  nodes: window.take(pageSize).toList(),
+  hasNextPage: window.length > pageSize,
+);
 
 Input$BooleanFilterInput? _equals(bool? value) =>
     value == null ? null : Input$BooleanFilterInput(equalTo: value);
@@ -53,16 +69,29 @@ class UpdatesRepository {
   // Downloads
 
   // Updates
-  Future<ChapterPageWithMangaDto?> getRecentChaptersPage({
+
+  /// Asks for one row more than a page rather than for `pageInfo` or
+  /// `totalCount`: those cost the server a COUNT and two sorted lookups over
+  /// every matching chapter on each request, where the extra row alone says
+  /// whether another page follows. That leaves one query per page.
+  Future<UpdatesPage?> getRecentChaptersPage({
     int pageNo = 0,
     UpdatesFilter filter = kNoUpdatesFilter,
-  }) =>
+  }) async {
+    final page = await _getRecentChaptersWindow(pageNo, filter);
+    return page == null ? null : splitPageWindow(page.nodes, updatesPageSize);
+  }
+
+  Future<ChapterPageWithMangaDto?> _getRecentChaptersWindow(
+    int pageNo,
+    UpdatesFilter filter,
+  ) =>
       client
           .query$GetChapterWithMangaPage(
             Options$Query$GetChapterWithMangaPage(
               variables: Variables$Query$GetChapterWithMangaPage(
                 filter: updatesFilterInput(filter),
-                first: updatesPageSize,
+                first: updatesPageSize + 1,
                 offset: pageNo * updatesPageSize,
                 order: [
                   Input$ChapterOrderInput(
@@ -109,9 +138,10 @@ class UpdatesRepository {
         ),
       );
 
-  Future<UpdateStatusDto?> summaryUpdates() async => client
-      .query$UpdateStatusDto(Options$Query$UpdateStatusDto())
-      .getData((data) => data.updateStatus);
+  /// The current run's progress, read once. See [updateProgressSubscription].
+  Future<UpdateProgressDto?> updateProgress() async => client
+      .query$UpdateProgress(Options$Query$UpdateProgress())
+      .getData((data) => data.libraryUpdateStatus.jobsInfo);
 
   /// Series that failed in the most recent run. Reads the server's current
   /// status API — the deprecated `updateStatus` job lists hang on a live
@@ -125,28 +155,30 @@ class UpdatesRepository {
               ])) ??
       const [];
 
-  /// Cheap "is a run in progress" read, decoupled from the heavy job lists
-  /// (see [updateRunningSubscription]).
-  Future<bool?> runningSummary() async => client
-      .query$UpdateRunningStatus(Options$Query$UpdateRunningStatus())
-      .getData((data) => data.updateStatus.isRunning);
+  /// How many series failed in the most recent run, without fetching them.
+  Future<int?> failedUpdateCount() async => client
+      .query$LibraryUpdateFailureCount(
+        Options$Query$LibraryUpdateFailureCount(),
+      )
+      .getData(
+        (data) => data.libraryUpdateStatus.mangaUpdates
+            .where((update) => update.status == Enum$MangaJobStatus.FAILED)
+            .length,
+      );
 
   /// Epoch-millis (as a string) of the last global library update, or null.
   Future<String?> lastUpdateTimestamp() async => client
       .query$LastUpdateTimestamp(Options$Query$LastUpdateTimestamp())
       .getData((data) => data.lastUpdateTimestamp.timestamp);
 
-  Stream<UpdateStatusDto?> updateStatusSubscription() => subscriptionClient
-      .subscribe$UpdateStatusChange(Options$Subscription$UpdateStatusChange())
-      .getData((data) => data.updateStatusChanged);
-
-  /// Running-only live signal. Requesting just `isRunning` keeps each pushed
-  /// frame tiny, so it arrives promptly even mid-update when the full-status
-  /// feed ([updateStatusSubscription]) stalls on the server's job-list
-  /// resolvers. The banner's visibility rides on this, not the heavy feed.
-  Stream<bool?> updateRunningSubscription() => subscriptionClient
-      .subscribe$UpdateRunningChange(Options$Subscription$UpdateRunningChange())
-      .getData((data) => data.updateStatusChanged.isRunning);
+  /// Live progress of library updates: whether one runs and how far it got,
+  /// pushed at most once a second. The server keeps these counts in memory,
+  /// so a push costs it no query, however large the library.
+  Stream<UpdateProgressDto?> updateProgressSubscription() => subscriptionClient
+      .subscribe$UpdateProgressChange(
+        Options$Subscription$UpdateProgressChange(),
+      )
+      .getData((data) => data.libraryUpdateStatusChanged.jobsInfo);
 }
 
 @riverpod
@@ -154,26 +186,38 @@ UpdatesRepository updatesRepository(Ref ref) => UpdatesRepository(
     ref.watch(graphQlClientProvider),
     ref.watch(graphQlSubscriptionClientProvider));
 
+/// One-shot read of [updateProgressSocketProvider]'s data, for when the
+/// socket is down or hasn't delivered yet.
 @riverpod
-Future<UpdateStatusDto?> updateSummary(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).summaryUpdates();
+Future<UpdateProgressDto?> updateProgressSummary(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).updateProgress();
 
 @riverpod
 Future<String?> libraryLastUpdated(Ref ref) =>
     ref.watch(updatesRepositoryProvider).lastUpdateTimestamp();
 
+/// The single live progress subscription. Everything that follows a run reads
+/// it, directly or through [updateRunningSocketProvider], so the server runs
+/// one subscription per app instead of one per feature.
 @riverpod
-Stream<UpdateStatusDto?> updatesSocket(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).updateStatusSubscription();
+Stream<UpdateProgressDto?> updateProgressSocket(Ref ref) =>
+    ref.watch(updatesRepositoryProvider).updateProgressSubscription();
 
+/// Whether a library update is running, off [updateProgressSocketProvider].
+/// Changes only when that does: progress is pushed every second during a
+/// run, and listeners here act on the running edges.
 @riverpod
-Future<bool?> updateRunningSummary(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).runningSummary();
-
-@riverpod
-Stream<bool?> updateRunningSocket(Ref ref) =>
-    ref.watch(updatesRepositoryProvider).updateRunningSubscription();
+AsyncValue<bool?> updateRunningSocket(Ref ref) => ref.watch(
+  updateProgressSocketProvider.select(
+    (progress) => progress.whenData((value) => value?.isRunning),
+  ),
+);
 
 @riverpod
 Future<List<MangaDto>> failedUpdates(Ref ref) =>
     ref.watch(updatesRepositoryProvider).failedUpdates();
+
+/// For badges and menu labels; [failedUpdatesProvider] is for the errors list.
+@riverpod
+Future<int> failedUpdateCount(Ref ref) async =>
+    await ref.watch(updatesRepositoryProvider).failedUpdateCount() ?? 0;
