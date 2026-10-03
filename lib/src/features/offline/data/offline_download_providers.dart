@@ -1417,7 +1417,7 @@ http.Client offlinePageClient(Ref ref) {
 
 /// Fetch one page image's bytes with the active auth, resolved at call time
 /// (never baked) — mirrors `ServerImage`'s request building (base API without
-/// `/api`, ui_login `?token=`, basic/simple_login via headers). Throws
+/// `/api`, every auth mode via headers). Throws
 /// [PageAuthException] on 401 so the engine refreshes and retries; any other
 /// non-200 is a plain transient exception.
 Future<PageBytes> fetchOfflinePageBytes(
@@ -1435,7 +1435,7 @@ Future<PageBytes> fetchOfflinePageBytes(
     addPort: ref.read(serverPortToggleProvider).ifNull(),
     appendApiToUrl: false,
   );
-  var fetchUrl = '$base$pageUrl';
+  final fetchUrl = '$base$pageUrl';
 
   final headers = <String, String>{};
   if (authType == AuthType.basic && basicToken != null) {
@@ -1445,9 +1445,7 @@ Future<PageBytes> fetchOfflinePageBytes(
     if (cookie != null) headers.addAll(cookie);
   } else if (authType == AuthType.uiLogin &&
       (creds?.uiAccessToken?.isNotEmpty ?? false)) {
-    final sep = fetchUrl.contains('?') ? '&' : '?';
-    fetchUrl =
-        '$fetchUrl${sep}token=${Uri.encodeQueryComponent(creds!.uiAccessToken!)}';
+    headers['Authorization'] = 'Bearer ${creds!.uiAccessToken}';
   }
   applyCustomHeaders(headers, ref.read(customHttpHeadersProvider).value);
 

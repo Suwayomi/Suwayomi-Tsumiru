@@ -740,7 +740,7 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Builds the page-image GET URL + headers, mirroring
   /// `fetchOfflinePageBytes`: base API without `/api` (page URLs already carry
-  /// it), ui_login as `?token=`, basic/simpleLogin via headers. Reads the
+  /// it), every auth mode via headers. Reads the
   /// current in-isolate [_record] (kept fresh by the broker), not Riverpod.
   (String, Map<String, String>) _authedPageRequest(String pageUrl) {
     final order = _order!;
@@ -750,7 +750,7 @@ class DownloadTaskHandler extends TaskHandler {
       addPort: order.addPort,
       appendApiToUrl: false,
     );
-    var fetchUrl = '$base$pageUrl';
+    final fetchUrl = '$base$pageUrl';
     final headers = <String, String>{};
     switch (_record.authType) {
       case 'basic':
@@ -762,8 +762,7 @@ class DownloadTaskHandler extends TaskHandler {
       case 'uiLogin':
         final token = _record.accessToken;
         if (token != null && token.isNotEmpty) {
-          final sep = fetchUrl.contains('?') ? '&' : '?';
-          fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(token)}';
+          headers['Authorization'] = 'Bearer $token';
         }
     }
     applyIsolateCustomHeaders(headers, _record.extraHeaders);

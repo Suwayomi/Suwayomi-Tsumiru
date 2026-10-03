@@ -317,7 +317,7 @@ ChapterDownloadEngine buildBackgroundEngine({
     final current = record();
     final ahead = await broker.refreshIfDue(current);
     final r = ahead.sameIdentity(current) ? ahead : current;
-    var fetchUrl = '${target.pageBase}$pageUrl';
+    final fetchUrl = '${target.pageBase}$pageUrl';
     final headers = <String, String>{};
     switch (r.authType) {
       case 'basic':
@@ -329,12 +329,9 @@ ChapterDownloadEngine buildBackgroundEngine({
         final cookie = r.simpleCookie;
         if (cookie != null && cookie.isNotEmpty) headers['Cookie'] = cookie;
       case 'uiLogin':
-        // Pages take the token as a query param, mirroring
-        // fetchOfflinePageBytes.
         final token = r.accessToken;
         if (token != null && token.isNotEmpty) {
-          final sep = fetchUrl.contains('?') ? '&' : '?';
-          fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(token)}';
+          headers['Authorization'] = 'Bearer $token';
         }
     }
     applyIsolateCustomHeaders(headers, r.extraHeaders);

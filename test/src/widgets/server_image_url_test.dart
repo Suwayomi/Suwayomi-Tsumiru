@@ -128,4 +128,31 @@ void main() {
       expect(appendUiLoginToken('', 'abc.def'), '');
     });
   });
+
+  // Off the web, a ui_login token rides an image request's header, never its
+  // URL, where reverse-proxy access logs would record it.
+  group('ui_login image auth (native)', () {
+    const url = 'http://127.0.0.1:4567$_icon';
+
+    test('puts the token in an Authorization header', () {
+      expect(
+        withUiLoginImageAuth({'X-Custom': 'kept'}, 'abc.def'),
+        {'X-Custom': 'kept', 'Authorization': 'Bearer abc.def'},
+      );
+      expect(withUiLoginImageAuth(null, 'abc.def'), {
+        'Authorization': 'Bearer abc.def',
+      });
+    });
+
+    test('leaves the URL alone', () {
+      expect(uiLoginImageUrl(url, 'abc.def'), url);
+    });
+
+    test('adds nothing without a token', () {
+      expect(withUiLoginImageAuth(null, null), isNull);
+      expect(withUiLoginImageAuth({'X-Custom': 'kept'}, ''), {
+        'X-Custom': 'kept',
+      });
+    });
+  });
 }
