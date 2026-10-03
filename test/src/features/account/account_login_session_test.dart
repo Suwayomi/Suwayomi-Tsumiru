@@ -73,7 +73,6 @@ void main() {
           .requireValue;
       expect(credentials.uiAccessToken, isNull);
       expect(credentials.accountBinding, isNull);
-      expect(credentials.password, isNull);
     },
   );
 }

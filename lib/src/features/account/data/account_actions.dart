@@ -60,7 +60,6 @@ class AccountActions {
       await ref.read(accountNoticeProvider.notifier).set(null);
       await store.clearUiLoginTokens();
       await store.clearSimpleLoginCookie();
-      await store.clearPassword();
       await store.clearBasicCredentials();
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
@@ -118,7 +117,6 @@ class AccountActions {
         forEpoch: epoch,
         address: address,
         username: canonicalUsername,
-        password: password,
       );
       await store.clearSimpleLoginCookie();
       await store.clearBasicCredentials();
@@ -257,7 +255,6 @@ class AccountActions {
           forEpoch: epoch,
           address: address,
           username: binding.username,
-          password: newPassword,
         );
       } on Object {
         await ref
@@ -268,7 +265,6 @@ class AccountActions {
                   : AccountNoticeKind.passwordUnconfirmed,
             );
         await store.clearUiLoginTokens();
-        await store.clearPassword();
         ref.read(needsReauthProvider.notifier).set(true);
         if (confirmed) throw const AccountPasswordSignInRequired();
         throw const AccountPasswordUnconfirmed();

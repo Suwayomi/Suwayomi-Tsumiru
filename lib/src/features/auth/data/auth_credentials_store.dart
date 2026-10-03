@@ -37,7 +37,6 @@ class AuthCredentialsState {
     this.sessionEpoch = 0,
     this.sessionChanging = false,
     this.accountBinding,
-    this.password,
     this.simpleLoginCookie,
     this.uiAccessToken,
     this.uiRefreshToken,
@@ -48,7 +47,6 @@ class AuthCredentialsState {
     : sessionEpoch = 0,
       sessionChanging = false,
       accountBinding = null,
-      password = null,
       simpleLoginCookie = null,
       uiAccessToken = null,
       uiRefreshToken = null,
@@ -57,7 +55,6 @@ class AuthCredentialsState {
   final AccountBinding? accountBinding;
   final int sessionEpoch;
   final bool sessionChanging;
-  final String? password;
   final String? simpleLoginCookie;
   final String? uiAccessToken;
   final String? uiRefreshToken;
@@ -92,8 +89,6 @@ class AuthCredentialsState {
     bool? sessionChanging,
     AccountBinding? accountBinding,
     bool clearAccountBinding = false,
-    String? password,
-    bool clearPassword = false,
     String? simpleLoginCookie,
     bool clearSimpleLoginCookie = false,
     String? uiAccessToken,
@@ -109,7 +104,6 @@ class AuthCredentialsState {
       accountBinding: clearAccountBinding
           ? null
           : (accountBinding ?? this.accountBinding),
-      password: clearPassword ? null : (password ?? this.password),
       simpleLoginCookie: clearSimpleLoginCookie
           ? null
           : (simpleLoginCookie ?? this.simpleLoginCookie),
@@ -129,7 +123,8 @@ class AuthCredentialsState {
 /// Typed wrapper over `flutter_secure_storage` for auth credentials.
 ///
 /// Storage key conventions (all in secure storage):
-///   `auth.password`            — password for simpleLogin + uiLogin re-auth
+///   `auth.password`            — no longer written (nothing ever read it);
+///                                deleted at launch from older installs
 ///   `auth.simple.cookie`       — full Cookie header value (e.g.
 ///                                "JSESSIONID=abc123") for simpleLogin
 ///   `auth.ui.accessToken`      — current uiLogin access token (JWT)
@@ -156,8 +151,11 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   @override
   Future<AuthCredentialsState> build() async {
     final storage = ref.read(secureStorageProvider);
+    // Older versions stored the sign-in password here although nothing ever
+    // read it back: refresh tokens, the Basic credential and the session
+    // cookie are what keep a session alive.
+    unawaited(storage.delete(key: _kPasswordKey).catchError((Object _) {}));
     final results = await Future.wait([
-      storage.read(key: _kPasswordKey),
       storage.read(key: _kSimpleCookieKey),
       storage.read(key: _kUiAccessKey),
       storage.read(key: _kUiRefreshKey),
@@ -167,17 +165,16 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       sessionEpoch: _sessionEpoch,
       sessionChanging: sessionChanging,
       accountBinding: AccountBinding.decode(
-        results[4],
-        accessToken: results[2],
-        refreshToken: results[3],
+        results[3],
+        accessToken: results[1],
+        refreshToken: results[2],
       ),
-      password: results[0],
-      simpleLoginCookie: results[1],
-      uiAccessToken: results[2],
-      uiRefreshToken: results[3],
-      uiAccessTokenExpiresAt: results[2] == null
+      simpleLoginCookie: results[0],
+      uiAccessToken: results[1],
+      uiRefreshToken: results[2],
+      uiAccessTokenExpiresAt: results[1] == null
           ? null
-          : decodeJwtExp(results[2]!),
+          : decodeJwtExp(results[1]!),
     );
   }
 
@@ -374,25 +371,6 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
     }
     await withIdentityChange(() => action(_serverEpoch));
   }
-
-  // ---------- Password ----------
-
-  Future<void> savePassword(String password, {int? forEpoch}) =>
-      _mutate(() async {
-        if (forEpoch != null && forEpoch != _serverEpoch) return;
-        final storage = ref.read(secureStorageProvider);
-        await storage.write(key: _kPasswordKey, value: password);
-        if (forEpoch != null && forEpoch != _serverEpoch) {
-          await storage.delete(key: _kPasswordKey);
-          return;
-        }
-        state = AsyncData(_current.copyWith(password: password));
-      });
-
-  Future<void> clearPassword() => _mutate(() async {
-    await ref.read(secureStorageProvider).delete(key: _kPasswordKey);
-    state = AsyncData(_current.copyWith(clearPassword: true));
-  });
 
   // ---------- Simple Login ----------
 
