@@ -74,7 +74,6 @@ class _MetaManga extends MangaWithId {
     status: Enum$MangaStatus.ONGOING,
     categories: Fragment$MangaDto$categories(nodes: const []),
     trackRecords: Fragment$MangaDto$trackRecords(
-      totalCount: 0,
       nodes: const [],
     ),
     unreadCount: 0,

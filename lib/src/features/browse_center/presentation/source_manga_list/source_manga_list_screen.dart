@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
@@ -35,47 +34,25 @@ class SourceMangaListScreen extends HookConsumerWidget {
   final SourceType sourceType;
   final String? initialQuery;
 
-  void _fetchPage(
+  Future<ServerPage<MangaDto>> _fetchPage(
     SourceRepository repository,
-    PagingController<int, MangaDto> controller,
     int pageKey, {
-    ValueNotifier<String?>? query,
+    String? query,
     List<FilterChange>? filter,
-  }) {
-    AsyncValue.guard(
-      () => repository.fetchSourceManga(
-        sourceId: sourceId,
-        sourceType: sourceType,
-        page: pageKey,
-        query: query?.value,
-        filters: filter,
-      ),
-    ).then(
-      (value) => value.whenOrNull(
-        data: (recentMangaPage) {
-          try {
-            if (recentMangaPage != null) {
-              if (recentMangaPage.hasNextPage.ifNull()) {
-                controller.appendPage(
-                  [...recentMangaPage.mangas],
-                  pageKey + 1,
-                );
-              } else {
-                controller.appendLastPage([...recentMangaPage.mangas]);
-              }
-            }
-          } catch (e) {
-            //
-          }
-        },
-        error: (error, stackTrace) => controller.error = error,
-      ),
+  }) async {
+    final page = await repository.fetchSourceManga(
+      sourceId: sourceId,
+      sourceType: sourceType,
+      page: pageKey,
+      query: query,
+      filters: filter,
     );
+    if (page == null) return (items: <MangaDto>[], hasNextPage: false);
+    return (items: [...page.mangas], hasNextPage: page.hasNextPage.ifNull());
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sourceRepository = ref.watch(sourceRepositoryProvider);
     final appliedFilter = ref.watch(appliedSourceFilterProvider(sourceId));
     final appliedFilterNotifier =
         ref.watch(appliedSourceFilterProvider(sourceId).notifier);
@@ -87,20 +64,17 @@ class SourceMangaListScreen extends HookConsumerWidget {
 
     final query = useState(initialQuery);
     final showSearch = useState(initialQuery.isNotBlank);
-    final controller = usePagingController<int, MangaDto>(firstPageKey: 1);
-
-    useEffect(() {
-      controller.addPageRequestListener(
-        (pageKey) => _fetchPage(
-          sourceRepository,
-          controller,
-          pageKey,
-          query: query,
-          filter: liveAppliedFilter.value,
-        ),
-      );
-      return;
-    }, []);
+    final controller = useServerPagingController<MangaDto>(
+      firstPageKey: 1,
+      // Read per request: a LAN/remote endpoint switch replaces the client,
+      // and the one captured on the first build is disposed with it.
+      fetchPage: (pageKey) => _fetchPage(
+        ref.read(sourceRepositoryProvider),
+        pageKey,
+        query: query.value,
+        filter: liveAppliedFilter.value,
+      ),
+    );
     return source.showUiWhenData(
       context,
       (data) => Scaffold(

@@ -36,19 +36,16 @@ mutation StopCategoryUpdate($input: UpdateStopInput!) {
   }
 }
 
-query UpdateStatusDto {
-  updateStatus {
-    ...UpdateStatusDto
-  }
-}
-
-# Lightweight running-only status. The full UpdateStatusDto drags every
-# manga in every job list, which the server can't resolve promptly during a
-# large library update — so the banner's "is it running" signal must come
-# from this cheap shape, not the heavy one.
-query UpdateRunningStatus {
-  updateStatus {
-    ...UpdateStatusBaseDto
+# Library update progress: whether a run is going, and how far. The server
+# keeps these counts in memory, so a status read or push costs it no query.
+# The deprecated `updateStatus` instead resolved every series of every job
+# list, one query per series and per series field (subscriptions don't batch
+# data loaders), once a second for the whole run.
+query UpdateProgress {
+  libraryUpdateStatus {
+    jobsInfo {
+      ...UpdateProgressDto
+    }
   }
 }
 
@@ -58,15 +55,14 @@ query LastUpdateTimestamp {
   }
 }
 
-subscription UpdateStatusChange {
-  updateStatusChanged {
-    ...UpdateStatusDto
-  }
-}
-
-subscription UpdateRunningChange {
-  updateStatusChanged {
-    ...UpdateStatusBaseDto
+# The one live progress feed, shared by everything that follows a run. The
+# per-series updates it can also carry aren't selected, so maxUpdates 0 keeps
+# the server from even listing them.
+subscription UpdateProgressChange {
+  libraryUpdateStatusChanged(input: { maxUpdates: 0 }) {
+    jobsInfo {
+      ...UpdateProgressDto
+    }
   }
 }
 
@@ -74,13 +70,24 @@ subscription UpdateRunningChange {
 # Failed series from the most recent run, off the server's current status API.
 # The deprecated `updateStatus` job lists hang on a live server (n+1 in the
 # server's data loaders), which is what made the old summary screen spin.
-query LibraryUpdateFailures {
+query LibraryUpdateFailures($withFirstUnread: Boolean = false) {
   libraryUpdateStatus {
     mangaUpdates {
       status
       manga {
         ...MangaDto
       }
+    }
+  }
+}
+
+# Statuses only: the error count on More and in the update menu doesn't need
+# the series, and asking for them made the server resolve every series of the
+# last run (~780 KB for 360 series) at every launch.
+query LibraryUpdateFailureCount {
+  libraryUpdateStatus {
+    mangaUpdates {
+      status
     }
   }
 }

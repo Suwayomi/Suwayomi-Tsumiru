@@ -3,14 +3,14 @@
 
 
 
-query GetManga($id: Int!) {
+query GetManga($id: Int!, $withFirstUnread: Boolean = true) {
   manga(id: $id) {
     ...MangaDto
     __typename
   }
 }
 
-mutation UpdateManga($input: UpdateMangaInput!) {
+mutation UpdateManga($input: UpdateMangaInput!, $withFirstUnread: Boolean = true) {
   updateManga(input: $input) {
     manga {
         ...MangaDto
@@ -54,6 +54,9 @@ query GetChapter($id: Int!) {
   }
 }
 
+# A series' stored chapters, all of them: nodes only. `totalCount` and
+# `pageInfo` would cost the server a COUNT and two sorted bound lookups on
+# every call, for values nothing here reads.
 query GetChapterPage($after: Cursor, $before: Cursor, $condition: ChapterConditionInput, $filter: ChapterFilterInput, $first: Int, $last: Int, $offset: Int, $order: [ChapterOrderInput!]) {
   chapters(
     after: $after
@@ -68,10 +71,6 @@ query GetChapterPage($after: Cursor, $before: Cursor, $condition: ChapterConditi
     nodes {
       ...ChapterDto
     }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
   }
 }
 

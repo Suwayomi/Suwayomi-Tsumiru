@@ -39,38 +39,42 @@ class SourceMangaGridView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PagedGridView(
-      pagingController: controller,
-      builderDelegate: PagedChildBuilderDelegate<MangaDto>(
-        firstPageProgressIndicatorBuilder: (context) =>
-            const CenterSorayomiShimmerIndicator(),
-        newPageProgressIndicatorBuilder: (context) =>
-            const CenterSorayomiShimmerIndicator(),
-        firstPageErrorIndicatorBuilder: (context) => Emoticons(
-          title: controller.error.toString(),
-          button: TextButton(
-            onPressed: () => controller.refresh(),
-            child: Text(context.l10n.retry),
+    return PagingListener(
+      controller: controller,
+      builder: (context, state, fetchNextPage) => PagedGridView(
+        state: state,
+        fetchNextPage: fetchNextPage,
+        builderDelegate: PagedChildBuilderDelegate<MangaDto>(
+          firstPageProgressIndicatorBuilder: (context) =>
+              const CenterSorayomiShimmerIndicator(),
+          newPageProgressIndicatorBuilder: (context) =>
+              const CenterSorayomiShimmerIndicator(),
+          firstPageErrorIndicatorBuilder: (context) => Emoticons(
+            title: state.error.toString(),
+            button: TextButton(
+              onPressed: () => controller.refresh(),
+              child: Text(context.l10n.retry),
+            ),
+          ),
+          noItemsFoundIndicatorBuilder: (context) => Emoticons(
+            title: context.l10n.noMangaFound,
+            button: TextButton(
+              onPressed: () => controller.refresh(),
+              child: Text(context.l10n.refresh),
+            ),
+          ),
+          itemBuilder: (context, item, index) => MangaCoverGridTile(
+            manga: item,
+            selected: selectedIds.contains(item.id),
+            showDarkOverlay: item.inLibrary.ifNull(),
+            onLongPress: () => onToggleSelection(item.id),
+            onPressed: () => selecting
+                ? onToggleSelection(item.id)
+                : MangaRoute(mangaId: item.id).push(context),
           ),
         ),
-        noItemsFoundIndicatorBuilder: (context) => Emoticons(
-          title: context.l10n.noMangaFound,
-          button: TextButton(
-            onPressed: () => controller.refresh(),
-            child: Text(context.l10n.refresh),
-          ),
-        ),
-        itemBuilder: (context, item, index) => MangaCoverGridTile(
-          manga: item,
-          selected: selectedIds.contains(item.id),
-          showDarkOverlay: item.inLibrary.ifNull(),
-          onLongPress: () => onToggleSelection(item.id),
-          onPressed: () => selecting
-              ? onToggleSelection(item.id)
-              : MangaRoute(mangaId: item.id).push(context),
-        ),
+        gridDelegate: mangaCoverGridDelegate(ref.watch(gridMinWidthProvider)),
       ),
-      gridDelegate: mangaCoverGridDelegate(ref.watch(gridMinWidthProvider)),
     );
   }
 }

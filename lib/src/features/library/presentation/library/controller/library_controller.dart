@@ -17,6 +17,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../browse_center/domain/content_rating.dart';
+import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../../data/default_category.dart';
@@ -267,6 +268,18 @@ List<MangaDto> applyLibraryFilterSort(
   }
 
   return input.where(filter).toList()..sort(sort);
+}
+
+/// Whether the library's copy of a series differs from [fresh], a fetch of it
+/// made since (both use MangaDto). Reloading the library costs ~1.5 MB and
+/// ~2 s for 360 series, so leaving a series' page only reloads it when
+/// something on the series actually changed. `age` and `chaptersAge` are
+/// ignored: the server derives them from the current time. Unknown either
+/// side counts as changed.
+bool libraryEntryOutdated(MangaDto? listed, MangaDto? fresh) {
+  if (listed == null || fresh == null) return true;
+  return fresh.copyWith(age: listed.age, chaptersAge: listed.chaptersAge) !=
+      listed;
 }
 
 @riverpod
