@@ -34,9 +34,9 @@ class PageOfflineException implements Exception {
 typedef PageRef = ({int index, String url});
 
 /// Fetches one page's bytes over HTTP given the server page path/URL. The
-/// closure MUST resolve the server base AND the current auth (ui_login `?token=`
-/// query param, or basic/simple_login headers) itself, at call time — that's
-/// what makes auth run-time-fresh instead of baked at enqueue. It MUST throw
+/// closure MUST resolve the server base AND the current auth headers itself,
+/// at call time — that's what makes auth run-time-fresh instead of baked at
+/// enqueue. It MUST throw
 /// [PageAuthException] on a 401 so the engine can refresh and retry; any other
 /// failure should throw a plain exception (treated as transient).
 typedef PageFetcher = Future<PageBytes> Function(String pageUrl);

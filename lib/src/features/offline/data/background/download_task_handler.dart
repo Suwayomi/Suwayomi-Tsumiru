@@ -16,8 +16,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/endpoints.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/crash/crash_log.dart';
+import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../account/data/account_permission.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../chapter_download_engine.dart';
 import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
@@ -28,9 +31,11 @@ import '../offline_storage_identity.dart';
 import 'background_chapter_fetch.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
+import 'background_endpoint.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 import 'catchup_work_spec.dart';
+import 'record_seal.dart';
 import 'work_order_admission.dart';
 
 /// Foreground-service entry point. Must be top-level +
@@ -129,8 +134,21 @@ class DownloadTaskHandler extends TaskHandler {
   late BackgroundTokenRecord _record;
   late TokenBroker _broker;
 
+  /// Where this run reaches the server: the order's verified address, or the
+  /// server's other address when only that one answers from this network.
+  /// See [pickBackgroundServerBase] and [_repickServer].
+  late String _serverBase;
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    // This isolate starts with no diagnostic sink (main.dart wires the UI
+    // isolate's), so every recordDiagnostic() below would be a silent no-op.
+    try {
+      final crashLogPath = await initCrashLog();
+      setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+    } catch (_) {}
+    // The work order's and token record's secrets are sealed.
+    await RecordSeal.load(kSecureStorage);
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
       // Nothing to do — self-stop so we don't sit as a zombie notification.
@@ -220,6 +238,12 @@ class DownloadTaskHandler extends TaskHandler {
     _order = admitted;
     _record = order.auth;
     _broker = _buildBroker();
+    _serverBase = await pickBackgroundServerBase(
+      active: order.serverBase,
+      lanUrl: order.lanUrl,
+      externalUrl: order.externalUrl,
+      source: 'download',
+    );
     _sendEvent({'kind': 'owned', 'attemptId': order.attemptId});
 
     _queue.addAll(order.chapterIds);
@@ -254,7 +278,7 @@ class DownloadTaskHandler extends TaskHandler {
         !_stopping &&
         !await verifyBackgroundServerIdentity(
           target: BackgroundServerTarget(
-            serverBase: order.serverBase,
+            serverBase: _serverBase,
             port: order.port,
             addPort: order.addPort,
             client: _http,
@@ -443,7 +467,11 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Returns true when the chapter was parked (server unreachable) — the drain
   /// should stop and leave the queue intact for a later resume.
-  Future<bool> _downloadChapter(int chapterId, int mangaId) async {
+  Future<bool> _downloadChapter(
+    int chapterId,
+    int mangaId, {
+    bool afterRepick = false,
+  }) async {
     final List<String>? urls;
     try {
       urls = await _resolvePageUrls(chapterId);
@@ -453,6 +481,11 @@ class DownloadTaskHandler extends TaskHandler {
     }
     if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
     if (urls == null) {
+      // The phone may have moved between home Wi-Fi and mobile data since the
+      // run picked its address: try the server's other one before parking.
+      if (!afterRepick && await _repickServer()) {
+        return _downloadChapter(chapterId, mangaId, afterRepick: true);
+      }
       // Server unreachable resolving pages: leave `downloading` (resumable) and
       // park. Marking it error here poisoned the whole queue — one blip
       // cascaded through every remaining chapter.
@@ -663,10 +696,39 @@ class DownloadTaskHandler extends TaskHandler {
 
   String? _lastNetworkErrorReason;
 
+  /// After the server stopped answering, whether its other address answers
+  /// from this network instead, and is still the same server. Switches this
+  /// run to it when so.
+  Future<bool> _repickServer() async {
+    final order = _order;
+    if (order == null || _paused || _stopping) return false;
+    final next = await pickBackgroundServerBase(
+      active: order.serverBase,
+      lanUrl: order.lanUrl,
+      externalUrl: order.externalUrl,
+      source: 'download-retry',
+    );
+    if (next == _serverBase) return false;
+    final verified = await verifyBackgroundServerIdentity(
+      target: BackgroundServerTarget(
+        serverBase: next,
+        port: order.port,
+        addPort: order.addPort,
+        client: _http,
+        isCancelled: () => _paused || _stopping,
+      ),
+      record: () => _record,
+      broker: _broker,
+      expected: order.catalogServerId!,
+    );
+    if (verified) _serverBase = next;
+    return verified;
+  }
+
   Future<List<String>?> _resolvePageUrls(int chapterId) =>
       resolveChapterPageUrls(
         target: BackgroundServerTarget(
-          serverBase: _order!.serverBase,
+          serverBase: _serverBase,
           port: _order!.port,
           addPort: _order!.addPort,
           client: _http,
@@ -683,6 +745,8 @@ class DownloadTaskHandler extends TaskHandler {
     writePage: _store,
     parallelPageLimit: 5,
     fetchPage: (pageUrl) async {
+      // The broker's write keeps [_record] current, which the request reads.
+      await _broker.refreshIfDue(_record);
       final (url, headers) = _authedPageRequest(pageUrl);
       final http.Response res;
       try {
@@ -730,17 +794,17 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Builds the page-image GET URL + headers, mirroring
   /// `fetchOfflinePageBytes`: base API without `/api` (page URLs already carry
-  /// it), ui_login as `?token=`, basic/simpleLogin via headers. Reads the
+  /// it), every auth mode via headers. Reads the
   /// current in-isolate [_record] (kept fresh by the broker), not Riverpod.
   (String, Map<String, String>) _authedPageRequest(String pageUrl) {
     final order = _order!;
     final base = Endpoints.baseApi(
-      baseUrl: order.serverBase,
+      baseUrl: _serverBase,
       port: order.port,
       addPort: order.addPort,
       appendApiToUrl: false,
     );
-    var fetchUrl = '$base$pageUrl';
+    final fetchUrl = '$base$pageUrl';
     final headers = <String, String>{};
     switch (_record.authType) {
       case 'basic':
@@ -752,8 +816,7 @@ class DownloadTaskHandler extends TaskHandler {
       case 'uiLogin':
         final token = _record.accessToken;
         if (token != null && token.isNotEmpty) {
-          final sep = fetchUrl.contains('?') ? '&' : '?';
-          fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(token)}';
+          headers['Authorization'] = 'Bearer $token';
         }
     }
     applyIsolateCustomHeaders(headers, _record.extraHeaders);
@@ -799,7 +862,7 @@ class DownloadTaskHandler extends TaskHandler {
       }
       final order = _order!;
       final endpoint = Endpoints.baseApi(
-        baseUrl: order.serverBase,
+        baseUrl: _serverBase,
         port: order.port,
         addPort: order.addPort,
         isGraphQl: true,
@@ -827,14 +890,28 @@ class DownloadTaskHandler extends TaskHandler {
         // (which races the network actually settling) permanently condemns
         // every chapter that happened to 401 in that window.
         if (isGatewayStatus(res.statusCode)) {
+          logBackgroundRefresh(
+            'download',
+            'gateway status=${res.statusCode} transient=true',
+          );
           return (tokens: null, transient: true);
         }
-        if (res.statusCode != 200) return (tokens: null, transient: false);
+        if (res.statusCode != 200) {
+          logBackgroundRefresh(
+            'download',
+            'rejected status=${res.statusCode} transient=false',
+          );
+          return (tokens: null, transient: false);
+        }
         final decoded = jsonDecode(res.body) as Map<String, Object?>;
         final data = decoded['data'] as Map<String, Object?>?;
         final refreshed = data?['refreshToken'] as Map<String, Object?>?;
         final access = refreshed?['accessToken'] as String?;
         if (access == null || access.isEmpty) {
+          logBackgroundRefresh(
+            'download',
+            'no-token transient=false errors=${decoded['errors']}',
+          );
           return (tokens: null, transient: false);
         }
         // Suwayomi's refresh doesn't rotate the refresh token, so reuse the
@@ -843,11 +920,14 @@ class DownloadTaskHandler extends TaskHandler {
           tokens: (access: access, refresh: refreshToken),
           transient: false,
         );
-      } on SocketException {
+      } on SocketException catch (e) {
+        logBackgroundRefresh('download', 'network-error transient=true', e);
         return (tokens: null, transient: true);
-      } on TimeoutException {
+      } on TimeoutException catch (e) {
+        logBackgroundRefresh('download', 'timeout transient=true', e);
         return (tokens: null, transient: true);
-      } catch (_) {
+      } catch (e) {
+        logBackgroundRefresh('download', 'error transient=false', e);
         return (tokens: null, transient: false);
       }
     },

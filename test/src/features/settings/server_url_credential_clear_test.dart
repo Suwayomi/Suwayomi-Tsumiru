@@ -83,7 +83,6 @@ void main() {
 
       // Establish host A, then seed credentials against it.
       await serverUrl.update('http://192.168.1.10:4567');
-      await store.savePassword('hunter2');
       await store.saveSimpleLoginCookie('JSESSIONID=abc');
       await c.read(credentialsProvider.notifier).set('Basic abc123');
 
@@ -91,7 +90,6 @@ void main() {
       await serverUrl.update('http://192.168.1.10:4567/manga');
       await Future<void>.delayed(Duration.zero);
       var state = await c.read(authCredentialsStoreProvider.future);
-      expect(state.password, 'hunter2');
       expect(state.simpleLoginCookie, 'JSESSIONID=abc');
       expect(await c.read(credentialsProvider.future), 'Basic abc123');
 
@@ -99,7 +97,6 @@ void main() {
       await serverUrl.update('http://10.0.0.5:4567');
       await Future<void>.delayed(Duration.zero);
       state = await c.read(authCredentialsStoreProvider.future);
-      expect(state.password, isNull);
       expect(state.simpleLoginCookie, isNull);
       expect(await c.read(credentialsProvider.future), isNull);
     },
@@ -112,13 +109,11 @@ void main() {
     final port = c.read(serverPortProvider.notifier);
 
     await port.update(4567);
-    await store.savePassword('pw');
+    await store.saveSimpleLoginCookie('JSESSIONID=pw');
     await port.update(4568); // effective endpoint changed
     await Future<void>.delayed(Duration.zero);
-    expect(
-      (await c.read(authCredentialsStoreProvider.future)).password,
-      isNull,
-    );
+    final state = await c.read(authCredentialsStoreProvider.future);
+    expect(state.simpleLoginCookie, isNull);
   });
 
   test('a delayed token write with a stale epoch is discarded', () async {
@@ -145,10 +140,10 @@ void main() {
     final serverUrl = c.read(serverUrlProvider.notifier);
 
     await serverUrl.update('http://host.local:4567');
-    await store.savePassword('pw');
+    await store.saveSimpleLoginCookie('JSESSIONID=pw');
     await serverUrl.update('http://host.local:4568');
     await Future<void>.delayed(Duration.zero);
     final state = await c.read(authCredentialsStoreProvider.future);
-    expect(state.password, isNull);
+    expect(state.simpleLoginCookie, isNull);
   });
 }

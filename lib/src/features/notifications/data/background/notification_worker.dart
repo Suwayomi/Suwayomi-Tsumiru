@@ -20,12 +20,14 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_download_lock.dart';
 import '../../../offline/data/background/background_schedule.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
+import '../../../offline/data/background/record_seal.dart';
 import '../../domain/new_chapter_detection.dart';
 import '../local_notification_service.dart';
 import '../notification_state_store.dart';
@@ -46,6 +48,9 @@ Future<bool> runNewChapterCheck() async {
   // actually checks.
   final crashLogPath = await initCrashLog();
   setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+  // The token record's secrets are sealed; without the key it reads as
+  // unauthenticated (logged as `record-seal: …`).
+  await RecordSeal.load(kSecureStorage);
 
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
@@ -72,10 +77,13 @@ Future<bool> runNewChapterCheck() async {
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
   await notifier.init(onBackgroundTap: notificationActionCallback);
+  // Where to reach the server from this network. Identity checks below keep
+  // using `config`, tied to the address the foreground verified.
+  final endpoint = await config.endpoint.forThisNetwork(source: 'worker');
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         config.catalogServerId != null && !catchupStore.matchesIdentity(config),
     admitDownload: () async {
@@ -135,6 +143,7 @@ Future<bool> runNewChapterCheck() async {
         await runCatchupDownloads(
           catchupStore: catchupStore,
           config: config,
+          endpoint: endpoint,
           record: client.currentRecord,
           broker: client.broker,
         ) &&
@@ -394,9 +403,9 @@ Future<bool> _runDownloadResolution(
 
     if (!await verifyBackgroundServerIdentity(
       target: BackgroundServerTarget(
-        serverBase: config.endpoint.baseUrl,
-        port: config.endpoint.port,
-        addPort: config.endpoint.addPort,
+        serverBase: client.endpoint.baseUrl,
+        port: client.endpoint.port,
+        addPort: client.endpoint.addPort,
       ),
       record: client.currentRecord,
       broker: client.broker,
@@ -584,6 +593,8 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
   }
   final p = NotificationPayload.decode(payload);
   if (p.chapterIds.isEmpty) return;
+  // Headless when the app is dead: this isolate has no key loaded yet.
+  if (!RecordSeal.ready) await RecordSeal.load(kSecureStorage);
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
@@ -603,10 +614,13 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
       catchupStore.downloadPermissionPaused(config.catalogServerId!)) {
     return;
   }
+  final endpoint = await config.endpoint.forThisNetwork(
+    source: 'notification-action',
+  );
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         actionId == kNotifActionDownload &&
         !catchupStore.matchesIdentity(config),
@@ -732,6 +746,10 @@ TokenBroker _brokerFor(
         // actually settling) permanently condemns every chapter that
         // happened to 401 in that window.
         if (isGatewayStatus(res.statusCode)) {
+          logBackgroundRefresh(
+            'notify',
+            'gateway status=${res.statusCode} transient=true',
+          );
           return (tokens: null, transient: true);
         }
         if (res.statusCode != 200) {
@@ -765,11 +783,14 @@ TokenBroker _brokerFor(
           tokens: (access: access, refresh: refreshToken),
           transient: false,
         );
-      } on SocketException {
+      } on SocketException catch (e) {
+        logBackgroundRefresh('notify', 'network-error transient=true', e);
         return (tokens: null, transient: true);
-      } on TimeoutException {
+      } on TimeoutException catch (e) {
+        logBackgroundRefresh('notify', 'timeout transient=true', e);
         return (tokens: null, transient: true);
-      } catch (_) {
+      } catch (e) {
+        logBackgroundRefresh('notify', 'error transient=false', e);
         return (tokens: null, transient: false);
       }
     },

@@ -42,7 +42,8 @@ class _Repository extends AccountRepository {
       );
   Future<Fragment$AccountDto?> Function() lookup = () async => _user(1);
   @override
-  Future<AccountCapability> capability() async => AccountCapability.supported;
+  Future<AccountCapability> capability({bool Function()? stillWanted}) async =>
+      AccountCapability.supported;
   @override
   Future<Fragment$AccountDto?> current() => lookup();
 }

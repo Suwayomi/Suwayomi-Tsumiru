@@ -22,14 +22,15 @@ part 'secure_credentials_provider.g.dart';
 /// keystore/decrypt error wipes the store (clean re-login) instead of
 /// crashing every read.
 @Riverpod(keepAlive: true)
-FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
-      aOptions: AndroidOptions(
-        migrateWithBackup: true,
-      ),
-      // The data-protection keychain needs a restricted entitlement, and macOS
-      // refuses to launch an ad-hoc-signed build that carries one. The login
-      // keychain works unsigned.
-      mOptions: MacOsOptions(
-        usesDataProtectionKeychain: false,
-      ),
-    );
+FlutterSecureStorage secureStorage(Ref ref) => kSecureStorage;
+
+/// The store [secureStorage] provides, for the background isolates, which have
+/// no Riverpod. They must open it with the very same options to see the same
+/// data.
+const kSecureStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(migrateWithBackup: true),
+  // The data-protection keychain needs a restricted entitlement, and macOS
+  // refuses to launch an ad-hoc-signed build that carries one. The login
+  // keychain works unsigned.
+  mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+);

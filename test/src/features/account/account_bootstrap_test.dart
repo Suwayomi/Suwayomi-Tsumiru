@@ -194,7 +194,6 @@ void main() {
         .read(authCredentialsStoreProvider)
         .requireValue;
     expect(credentials.accountBinding?.userId, 2);
-    expect(credentials.password, isNull);
   });
 
   test('expired unbound tokens refresh before verifying ownership', () async {

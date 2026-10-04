@@ -348,7 +348,6 @@ void main() {
         expect(state.uiAccessToken, 'A');
         expect(state.uiRefreshToken, 'R');
         expect(state.simpleLoginCookie, 'JSESSIONID=abc');
-        expect(state.password, 'hunter2');
       },
     );
 
@@ -598,20 +597,15 @@ void main() {
   });
 
   group('AuthCredentialsStore — password', () {
-    test('savePassword persists AND updates state', () async {
-      final storage = _InMemorySecureStorage();
+    test('a password stored by an older version is deleted at launch: '
+        'nothing reads it, so keeping it was only exposure', () async {
+      final storage = _InMemorySecureStorage({'auth.password': 'hunter2'});
       final c = _container(storage);
       addTearDown(c.dispose);
       await c.read(authCredentialsStoreProvider.future);
+      await pumpEventQueue();
 
-      final store = c.read(authCredentialsStoreProvider.notifier);
-      await store.savePassword('hunter2');
-
-      expect(await storage.read(key: 'auth.password'), 'hunter2');
-      expect(
-        c.read(authCredentialsStoreProvider).requireValue.password,
-        'hunter2',
-      );
+      expect(await storage.read(key: 'auth.password'), isNull);
     });
   });
 
