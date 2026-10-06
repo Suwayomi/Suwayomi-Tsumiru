@@ -36,6 +36,7 @@ import '../../../domain/chapter/missing_chapters.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
+import '../controller/auto_scroll_controller.dart';
 import '../controller/reader_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
 import '../utils/reader_mode_kind.dart';
@@ -423,6 +424,7 @@ class ReaderWrapper extends HookConsumerWidget {
       VoidCallback navigate, {
       bool visualTransitionShown = false,
     }) {
+      if (gapConfirmationPending.value) return;
       final count = visualTransitionShown
           ? 0
           : chapterGapCount(chapter.chapterNumber, target.chapterNumber);
@@ -430,8 +432,11 @@ class ReaderWrapper extends HookConsumerWidget {
         navigate();
         return;
       }
-      if (gapConfirmationPending.value) return;
       gapConfirmationPending.value = true;
+      // Timers keep running behind modal routes. Stop both paged auto-advance
+      // and continuous auto-scroll before asking; the reader can restart them
+      // explicitly after deciding, without changing position behind Cancel.
+      ref.read(autoScrollActiveProvider.notifier).stop();
       unawaited(() async {
         try {
           final confirmed = await confirmReaderChapterGap(context, count);
@@ -511,6 +516,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     final onReaderNext = useCallback(
       () {
+        if (gapConfirmationPending.value) return;
         final isAtLastPage =
             isAtLastBoundary?.call() ??
             currentIndex >= chapterPages.pages.length - 1;
@@ -533,6 +539,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     final onReaderPrevious = useCallback(
       () {
+        if (gapConfirmationPending.value) return;
         final isAtFirstPage = isAtFirstBoundary?.call() ?? currentIndex <= 0;
         if (isAtFirstPage && tryPreviousChapter()) {
           return;

@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:collection';
-
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/chapter/missing_chapters.dart';
 
@@ -30,8 +28,9 @@ class MissingChaptersEntry extends MangaChapterListEntry {
 ///
 /// Gaps come from [sortedChapters], before display filters are applied. The
 /// [visibleChapterIds] set only controls chapter rows, so filtering a present
-/// chapter cannot make it look missing. [ascending] identifies which neighbour
-/// is the lower chapter and which edge represents the beginning of the series.
+/// chapter cannot make it look missing. Each gap is anchored to its higher
+/// chapter once, regardless of display order. [ascending] controls which side
+/// of that row the notice occupies and the edge for an initial gap.
 List<MangaChapterListEntry> buildMangaChapterListEntries({
   required List<ChapterDto> sortedChapters,
   required Set<int> visibleChapterIds,
@@ -49,8 +48,7 @@ List<MangaChapterListEntry> buildMangaChapterListEntries({
     ];
   }
 
-  final pendingGaps = SplayTreeMap<int, MissingChapterRange>()
-    ..addEntries(gaps.map((gap) => MapEntry(gap.lowerChapter, gap)));
+  final pendingGaps = {for (final gap in gaps) gap.higherChapter: gap};
   final entries = <MangaChapterListEntry>[];
   final hasChapterZero = sortedChapters.any(
     (chapter) =>
@@ -72,44 +70,22 @@ List<MangaChapterListEntry> buildMangaChapterListEntries({
     );
   }
 
-  void addGapsBetween(int lower, int higher) {
-    final fresh = <MissingChapterRange>[];
-    var key = pendingGaps.firstKeyAfter(lower - 1);
-    while (key != null) {
-      final gap = pendingGaps[key]!;
-      if (gap.higherChapter > higher) break;
-      fresh.add(gap);
-      pendingGaps.remove(key);
-      key = pendingGaps.firstKeyAfter(key);
-    }
-    addGaps(fresh);
+  if (initialGap != null) {
+    pendingGaps.remove(initialGap.higherChapter);
+    if (ascending) addGaps([initialGap]);
   }
 
-  if (ascending && initialGap != null) {
-    pendingGaps.remove(initialGap.lowerChapter);
-    addGaps([initialGap]);
+  for (final chapter in sortedChapters) {
+    final number = chapter.chapterNumber;
+    final gap = number >= 0 && number.isFinite
+        ? pendingGaps.remove(number.floor())
+        : null;
+    if (ascending && gap != null) addGaps([gap]);
+    entries.add(MangaChapterEntry(chapter));
+    if (!ascending && gap != null) addGaps([gap]);
   }
 
-  for (var index = 0; index < sortedChapters.length; index++) {
-    if (index > 0) {
-      final previous = sortedChapters[index - 1].chapterNumber;
-      final current = sortedChapters[index].chapterNumber;
-      if (previous >= 0 &&
-          previous.isFinite &&
-          current >= 0 &&
-          current.isFinite) {
-        final lower = (ascending ? previous : current).floor();
-        final higher = (ascending ? current : previous).floor();
-        if (higher > lower) {
-          addGapsBetween(lower, higher);
-        }
-      }
-    }
-    entries.add(MangaChapterEntry(sortedChapters[index]));
-  }
-
-  if (!ascending && initialGap != null && pendingGaps.containsKey(0)) {
-    pendingGaps.remove(initialGap.lowerChapter);
+  if (!ascending && initialGap != null) {
     addGaps([initialGap]);
   }
 

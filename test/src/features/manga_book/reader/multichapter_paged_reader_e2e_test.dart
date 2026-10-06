@@ -13,6 +13,7 @@ import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/constants/reader_keyboard_shortcuts.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
@@ -21,10 +22,12 @@ import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/auto_scroll_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_chapter_gap_warning.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -239,15 +242,21 @@ void main() {
     });
   }
 
-  Future<_RecordingRepo> pumpSingleChapter(WidgetTester tester) async {
+  Future<_RecordingRepo> pumpSingleChapter(
+    WidgetTester tester, {
+    bool withGap = false,
+  }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    SharedPreferences.setMockInitialValues(const {});
+    SharedPreferences.setMockInitialValues(const {
+      'autoAdvanceIntervalSeconds': 1,
+    });
     final prefs = await SharedPreferences.getInstance();
     final repo = _RecordingRepo();
     final ch1 = _chapter(id: 1, sourceOrder: 1, pageCount: 3);
+    final ch5 = _chapter(id: 5, sourceOrder: 5, pageCount: 3);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -265,6 +274,17 @@ void main() {
             mangaId: 1,
             chapterId: 1,
           ).overrideWithValue(null),
+          if (withGap) ...[
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 1,
+              readerScanlatorGroup: '',
+            ).overrideWithValue((first: ch5, second: null)),
+            chapterProvider(chapterId: 5).overrideWith((ref) => ch5),
+            chapterPagesProvider(
+              chapterId: 5,
+            ).overrideWith((ref) => _pages(5, 3)),
+          ],
           trackerRepositoryProvider.overrideWithValue(_FakeTrackerRepository()),
           updateProgressAfterReadingProvider.overrideWith(
             () => _FixedToggle(false),
@@ -309,6 +329,46 @@ void main() {
           'debounced progress for page 2 was not saved; ${repo.putChapterCalls}',
     );
   });
+
+  testWidgets(
+    'gap confirmation stops auto-advance and Cancel preserves position',
+    (tester) async {
+      final repo = await pumpSingleChapter(tester, withGap: true);
+      final readerContext = tester.element(find.byType(PagedReaderViewport));
+      final container = ProviderScope.containerOf(readerContext);
+      container.read(autoScrollActiveProvider.notifier).start();
+      await tester.pump();
+      final before = tester
+          .widget<ReaderWrapper>(find.byType(ReaderWrapper))
+          .currentIndex;
+      Actions.invoke(readerContext, NextChapterIntent());
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(container.read(autoScrollActiveProvider), isFalse);
+
+      // Repeated commands must not stack dialogs or advance behind the modal.
+      Actions.invoke(readerContext, NextChapterIntent());
+      Actions.invoke(readerContext, NextScrollIntent());
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        tester.widget<ReaderWrapper>(find.byType(ReaderWrapper)).currentIndex,
+        before,
+      );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ReaderWrapper>(find.byType(ReaderWrapper)).currentIndex,
+        before,
+      );
+      expect(
+        repo.putChapterCalls.where((call) => call.chapterId == 5),
+        isEmpty,
+      );
+      expect(container.read(autoScrollActiveProvider), isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('flushes the visible page on exit before the debounce fires', (
     tester,
