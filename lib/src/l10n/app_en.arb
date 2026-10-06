@@ -2228,6 +2228,15 @@
   "noMangaFound": "No Mangas Found",
   "noOfChapters": "{count} Chapters",
   "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
+  "readerChapterGapWarning": "{count, plural, =1{Skipping 1 chapter. It may be missing from the source or filtered out.} other{Skipping {count} chapters. They may be missing from the source or filtered out.}}",
+  "@readerChapterGapWarning": {
+    "description": "Reader warning before crossing a gap in chapter numbering, including filtered chapters",
+    "placeholders": { "count": { "type": "int", "example": "3" } }
+  },
+  "readerChapterGapContinue": "Continue",
+  "@readerChapterGapContinue": {
+    "description": "Confirm skipping chapters in the reader"
+  },
   "@missingChapters": {
     "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
     "placeholders": {

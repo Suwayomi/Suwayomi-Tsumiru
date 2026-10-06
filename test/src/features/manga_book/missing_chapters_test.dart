@@ -8,6 +8,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/missing_chapters.dart';
 
 void main() {
+  test('reader gap counts skipped chapters in either direction', () {
+    expect(chapterGapCount(8.5, 10), 1);
+    expect(chapterGapCount(10, 8.5), 1);
+    expect(chapterGapCount(1.1, 10), 8);
+    expect(chapterGapCount(1, 1.9), 0);
+    expect(chapterGapCount(1, 2), 0);
+    expect(chapterGapCount(-1, 10), 0);
+    expect(chapterGapCount(null, 10), 0);
+    expect(chapterGapCount(double.nan, 10), 0);
+    expect(chapterGapCount(double.infinity, 10), 0);
+  });
   test('empty and unknown chapter lists have no gaps', () {
     expect(findMissingChapterRanges(const []), isEmpty);
     expect(findMissingChapterRanges(const [-1, -1]), isEmpty);

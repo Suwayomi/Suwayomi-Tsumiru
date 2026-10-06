@@ -1443,6 +1443,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         chapterName: info.chapterName,
         isChapterStart: info.isChapterStart,
         alwaysShow: alwaysShowTransition,
+        gapCount: info.gapCount,
       );
     }
 
