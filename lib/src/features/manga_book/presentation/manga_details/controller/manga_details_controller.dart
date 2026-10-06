@@ -27,6 +27,7 @@ import '../../../../library/presentation/library/controller/library_manga_list.d
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import 'chapter_list_entry.dart';
 import 'scanlator_dedup.dart';
 import 'scanlator_propagation.dart';
 
@@ -565,29 +566,6 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
     return true;
   }
 
-  int applyChapterSort(ChapterDto m1, ChapterDto m2) {
-    final sortDirToggle = (sortedDirection ? 1 : -1);
-    final key = switch (sortedBy) {
-      ChapterSort.fetchedDate => (int.tryParse(m1.fetchedAt) ?? 0).compareTo(
-        int.tryParse(m2.fetchedAt) ?? 0,
-      ),
-      ChapterSort.source => (m1.index).compareTo(m2.index),
-      ChapterSort.uploadDate => (int.tryParse(m1.uploadDate) ?? 0).compareTo(
-        int.tryParse(m2.uploadDate) ?? 0,
-      ),
-      ChapterSort.chapterNumber => m1.chapterNumber.compareTo(m2.chapterNumber),
-      ChapterSort.alphabetical => m1.name.toLowerCase().compareTo(
-        m2.name.toLowerCase(),
-      ),
-    };
-    // List.sort is unstable; break ties by source order, and reverse the tie
-    // too when descending — the whole list flips, as WebUI does (stable sort,
-    // then reverse). Reading order then never depends on the display
-    // direction, so the reader's next chapter and the offline keep-window
-    // (always ascending, see reconcile_logic.dart) agree on tied chapters.
-    return (key != 0 ? key : m1.index.compareTo(m2.index)) * sortDirToggle;
-  }
-
   return chapterList.copyWithData((data) {
     var list = data ?? const <ChapterDto>[];
     if (readerScanlatorGroup != null) {
@@ -605,7 +583,81 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
         keepChapterId: keepChapterId,
       );
     }
-    return [...list.where(applyChapterFilter)]..sort(applyChapterSort);
+    return [...list.where(applyChapterFilter)]..sort(
+      (first, second) => _compareChapters(
+        first,
+        second,
+        sortedBy: sortedBy,
+        ascending: sortedDirection,
+      ),
+    );
+  });
+}
+
+int _compareChapters(
+  ChapterDto first,
+  ChapterDto second, {
+  required ChapterSort sortedBy,
+  required bool ascending,
+}) {
+  final key = switch (sortedBy) {
+    ChapterSort.fetchedDate => (int.tryParse(first.fetchedAt) ?? 0).compareTo(
+      int.tryParse(second.fetchedAt) ?? 0,
+    ),
+    ChapterSort.source => first.index.compareTo(second.index),
+    ChapterSort.uploadDate => (int.tryParse(first.uploadDate) ?? 0).compareTo(
+      int.tryParse(second.uploadDate) ?? 0,
+    ),
+    ChapterSort.chapterNumber => first.chapterNumber.compareTo(
+      second.chapterNumber,
+    ),
+    ChapterSort.alphabetical => first.name.toLowerCase().compareTo(
+      second.name.toLowerCase(),
+    ),
+  };
+  // List.sort is unstable; break ties by source order, and reverse the tie too
+  // when descending. Reading order then never depends on display direction.
+  return (key != 0 ? key : first.index.compareTo(second.index)) *
+      (ascending ? 1 : -1);
+}
+
+/// Chapter rows plus missing-chapter notices for the details screen only.
+/// Reader navigation and bulk actions continue to consume plain ChapterDto
+/// lists and can never mistake a notice for a chapter.
+@riverpod
+AsyncValue<List<MangaChapterListEntry>?> mangaChapterListEntries(
+  Ref ref, {
+  required int mangaId,
+}) {
+  final allChapters = ref.watch(mangaChapterListProvider(mangaId: mangaId));
+  final visibleChapters = ref.watch(
+    mangaChapterListWithFilterProvider(mangaId: mangaId),
+  );
+  final sortedBy =
+      ref.watch(mangaChapterSortPreferenceProvider(mangaId: mangaId)) ??
+      DBKeys.chapterSort.initial;
+  final ascending =
+      ref.watch(
+        mangaChapterSortDirectionPreferenceProvider(mangaId: mangaId),
+      ) ??
+      DBKeys.chapterSortDirection.initial;
+
+  return visibleChapters.copyWithData((visible) {
+    if (visible == null) return null;
+    final sortedAll = [...?allChapters.value]
+      ..sort(
+        (first, second) => _compareChapters(
+          first,
+          second,
+          sortedBy: sortedBy,
+          ascending: ascending,
+        ),
+      );
+    return buildMangaChapterListEntries(
+      sortedChapters: sortedAll,
+      visibleChapterIds: visible.map((chapter) => chapter.id).toSet(),
+      ascending: ascending,
+    );
   });
 }
 

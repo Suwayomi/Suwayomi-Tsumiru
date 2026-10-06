@@ -24,6 +24,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs
 import '../../../../../tracking/domain/track_progress_gate.dart';
 import '../../../../data/manga_book/manga_book_repository.dart';
 import '../../../../domain/chapter/chapter_model.dart';
+import '../../../../domain/chapter/missing_chapters.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
@@ -605,19 +606,28 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final window = useMemoized(
       () {
         final windowChapters = <WindowChapter>[
-          for (final lc in loadedChapters.value)
+          for (var index = 0; index < loadedChapters.value.length; index++)
             WindowChapter(
-              chapterId: lc.chapterId,
-              chapterName: lc.chapter.name,
+              chapterId: loadedChapters.value[index].chapterId,
+              chapterName: loadedChapters.value[index].chapter.name,
+              hasGapBefore:
+                  index > 0 &&
+                  chapterGapCount(
+                        loadedChapters.value[index - 1].chapter.chapterNumber,
+                        loadedChapters.value[index].chapter.chapterNumber,
+                      ) >
+                      0,
               mapping: buildSpreadMapping(
-                pageCount: lc.pages.pages.length,
+                pageCount: loadedChapters.value[index].pages.pages.length,
                 doublePages: wantDouble,
                 splitWide: splitWide,
                 splitInvert: splitInvert,
                 isWide: (raw) =>
-                    (widePages.value[lc.chapterId] ?? const {}).contains(raw),
+                    (widePages.value[loadedChapters.value[index].chapterId] ??
+                            const {})
+                        .contains(raw),
               ),
-              pages: lc.pages.pages,
+              pages: loadedChapters.value[index].pages.pages,
             ),
         ];
         return buildPagedDisplayWindow(
@@ -746,9 +756,21 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       final name = t.isEnd
           ? nameForChapter(t.fromChapterId)
           : nameForChapter(t.toChapterId);
+      ChapterDto? chapterById(int? id) {
+        for (final loaded in loadedChapters.value) {
+          if (loaded.chapterId == id) return loaded.chapter;
+        }
+        return null;
+      }
+
+      final from = t.isStart
+          ? headAdjacency?.second
+          : chapterById(t.fromChapterId);
+      final to = t.isEnd ? tailAdjacency?.first : chapterById(t.toChapterId);
       return _PagedChapterTransition(
         chapterName: name,
         isChapterStart: !t.isEnd,
+        gapCount: chapterGapCount(from?.chapterNumber, to?.chapterNumber),
       );
     }
 
@@ -919,10 +941,12 @@ class _PagedChapterTransition extends StatelessWidget {
   const _PagedChapterTransition({
     required this.chapterName,
     required this.isChapterStart,
+    required this.gapCount,
   });
 
   final String chapterName;
   final bool isChapterStart;
+  final int gapCount;
 
   @override
   Widget build(BuildContext context) {
@@ -931,6 +955,7 @@ class _PagedChapterTransition extends StatelessWidget {
         child: InfinityContinuousChapterSeparator(
           chapterName: chapterName,
           isChapterStart: isChapterStart,
+          gapCount: gapCount,
         ),
       ),
     );

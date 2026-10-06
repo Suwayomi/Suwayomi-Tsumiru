@@ -16,8 +16,10 @@ import '../../../../../../utils/extensions/cache_manager_extensions.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_mouse_scroll_speed_slider/reader_mouse_scroll_speed_slider.dart';
 import '../../../../domain/chapter/chapter_model.dart';
+import '../../../../domain/chapter/missing_chapters.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../../manga_details/controller/manga_details_controller.dart';
 import '../../../manga_details/controller/scanlator_dedup.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
@@ -100,6 +102,21 @@ class SinglePageReaderMode extends HookConsumerWidget {
     );
 
     final showChapterTransition = settings.alwaysShowChapterTransition;
+    final adjacent = ref.watch(
+      getNextAndPreviousChaptersProvider(
+        mangaId: manga.id,
+        chapterId: chapter.id,
+        readerScanlatorGroup: scanlatorGroupOf(chapter),
+      ),
+    );
+    final previousGap = chapterGapCount(
+      chapter.chapterNumber,
+      adjacent?.second?.chapterNumber,
+    );
+    final nextGap = chapterGapCount(
+      chapter.chapterNumber,
+      adjacent?.first?.chapterNumber,
+    );
     final window = useMemoized(
       () => buildPagedDisplayWindow(
         chapters: [
@@ -111,10 +128,17 @@ class SinglePageReaderMode extends HookConsumerWidget {
           ),
         ],
         forceTransition: false,
-        leadingTransition: showChapterTransition,
-        trailingTransition: showChapterTransition,
+        leadingTransition: showChapterTransition || previousGap > 0,
+        trailingTransition: showChapterTransition || nextGap > 0,
       ),
-      [mapping, chapterPages.pages, showChapterTransition, chapter.id],
+      [
+        mapping,
+        chapterPages.pages,
+        showChapterTransition,
+        chapter.id,
+        previousGap,
+        nextGap,
+      ],
     );
 
     final initialRaw = readerInitialPageIndex(
@@ -215,6 +239,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
         transitionBuilder: (t) => _PagedChapterTransition(
           chapterName: chapter.name,
           isChapterStart: !t.isEnd,
+          gapCount: t.isEnd ? nextGap : previousGap,
         ),
         pinchEnabled: settings.pagedPinchToZoom,
         doubleTapToZoom: settings.pagedDoubleTapToZoom,
@@ -252,10 +277,12 @@ class _PagedChapterTransition extends StatelessWidget {
   const _PagedChapterTransition({
     required this.chapterName,
     required this.isChapterStart,
+    required this.gapCount,
   });
 
   final String chapterName;
   final bool isChapterStart;
+  final int gapCount;
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +291,7 @@ class _PagedChapterTransition extends StatelessWidget {
         child: InfinityContinuousChapterSeparator(
           chapterName: chapterName,
           isChapterStart: isChapterStart,
+          gapCount: gapCount,
         ),
       ),
     );
