@@ -2227,6 +2227,16 @@
   "noDownloads": "No Downloads",
   "noMangaFound": "No Mangas Found",
   "noOfChapters": "{count} Chapters",
+  "missingChapters": "{count, plural, =1{Missing 1 chapter} other{Missing {count} chapters}}",
+  "@missingChapters": {
+    "description": "Notice inserted in a manga chapter list when numbered chapters are absent",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
   "seeRecommendations": "See Recommendations",
   "@seeRecommendations": {
     "description": "Button on the manga details page opening the recommendations screen"

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -224,5 +225,35 @@ void main() {
         .map((e) => e.id)
         .toList();
     expect(rows, unorderedEquals([1, 2, 3, 4, 5]));
+  });
+
+  test('hidden scanlator chapters do not become missing chapters', () async {
+    final c = await _container(
+      preference: const ['A'],
+      chapters: [
+        ch(id: 1, number: 1, scanlator: 'A', sourceOrder: 0),
+        ch(id: 2, number: 2, scanlator: 'B', sourceOrder: 1),
+        ch(id: 3, number: 3, scanlator: 'A', sourceOrder: 2),
+      ],
+    );
+
+    final entries = c.read(mangaChapterListEntriesProvider(mangaId: 1)).value!;
+    expect(entries.whereType<MissingChaptersEntry>(), isEmpty);
+    expect(
+      entries.whereType<MangaChapterEntry>().map((entry) => entry.chapter.id),
+      [3, 1],
+    );
+  });
+
+  test('presentation entries include real catalogue gaps', () async {
+    final c = await _container(
+      chapters: [
+        ch(id: 1, number: 1, sourceOrder: 0),
+        ch(id: 3, number: 3, sourceOrder: 1),
+      ],
+    );
+
+    final entries = c.read(mangaChapterListEntriesProvider(mangaId: 1)).value!;
+    expect(entries.whereType<MissingChaptersEntry>().single.count, 1);
   });
 }

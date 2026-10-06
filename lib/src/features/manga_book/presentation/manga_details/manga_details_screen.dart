@@ -46,9 +46,13 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final chapterListFilteredProvider = mangaChapterListWithFilterProvider(
       mangaId: mangaId,
     );
+    final chapterListEntriesProvider = mangaChapterListEntriesProvider(
+      mangaId: mangaId,
+    );
 
     final manga = ref.watch(mangaProvider);
     final filteredChapterList = ref.watch(chapterListFilteredProvider);
+    final chapterListEntries = ref.watch(chapterListEntriesProvider);
     final bulkActionsChapterList = ref.watch(
       mangaChapterListForBulkActionsProvider(mangaId: mangaId),
     );
@@ -425,7 +429,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       child: data != null
                           ? context.isTablet
                                 ? BigScreenMangaDetails(
-                                    chapterList: filteredChapterList,
+                                    chapterList: chapterListEntries,
                                     manga: data,
                                     mangaId: mangaId,
                                     onRefresh: refresh,
@@ -434,7 +438,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                     selectedChapters: selectedChapters,
                                   )
                                 : SmallScreenMangaDetails(
-                                    chapterList: filteredChapterList,
+                                    chapterList: chapterListEntries,
                                     manga: data,
                                     mangaId: mangaId,
                                     onRefresh: refresh,
