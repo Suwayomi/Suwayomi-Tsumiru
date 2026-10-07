@@ -32,7 +32,6 @@ import '../../controller/auto_scroll_controller.dart';
 import '../../controller/reader_controller.dart';
 import '../../controller/reader_settings_model.dart';
 import '../../utils/reader_initial_page.dart';
-import '../../utils/reader_mount_diagnostic.dart';
 import '../reader_wrapper.dart';
 import 'infinity_continuous/infinity_continuous_feedback.dart';
 import 'infinity_continuous/infinity_continuous_utils.dart';
@@ -176,13 +175,6 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       openAtEnd: openAtEnd,
     );
     final currentChapterPageIndex = useState<int>(initialChapterPageIndex);
-    useReaderMountDiagnostic(
-      engine: 'paged',
-      routeChapterId: chapter.id,
-      initialPage: initialChapterPageIndex,
-      visibleChapterId: currentVisibleChapter.value.id,
-      page: currentChapterPageIndex.value,
-    );
 
     final loadingNext = useState(false);
     final loadingPrevious = useState(false);

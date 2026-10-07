@@ -14,7 +14,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
-import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../history/presentation/history_controller.dart';
@@ -61,10 +60,7 @@ class ReaderScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mangaProvider = mangaWithIdProvider(mangaId: mangaId);
     final chapterProviderWithIndex = chapterProvider(chapterId: chapterId);
-    final chapterPagesProviderWithIndex = chapterPagesProvider(
-      chapterId: chapterId,
-    );
-    final chapterPages = ref.watch(chapterPagesProviderWithIndex);
+    final chapterPages = ref.watch(chapterPagesProvider(chapterId: chapterId));
     final manga = ref.watch(mangaProvider);
     final chapter = ref.watch(chapterProviderWithIndex);
     final defaultReaderMode = ref.watch(readerModeKeyProvider);
@@ -80,31 +76,6 @@ class ReaderScreen extends HookConsumerWidget {
     // opening chapter, so the opening data is pinned for the screen's life.
     final pinnedChapter = _usePinned(chapter.value, chapterId);
     final pinnedChapterPages = _usePinned(chapterPages.value, chapterId);
-    // Set on a real exit: the pop handler's own invalidations aren't reloads
-    // the reader has to survive.
-    final leaving = useRef(false);
-    void logIgnoredReload(
-      String provider,
-      AsyncValue<Object?>? previous,
-      AsyncValue<Object?> next,
-    ) {
-      if (leaving.value || previous == null || previous.isLoading) return;
-      if (!previous.hasValue || !next.isLoading) return;
-      recordDiagnostic(
-        '[${DateTime.now().toIso8601String()}] reader: reload-ignored '
-        'provider=$provider mangaId=$mangaId chapterId=$chapterId\n',
-      );
-    }
-
-    ref.listen(mangaProvider, (p, n) => logIgnoredReload('manga', p, n));
-    ref.listen(
-      chapterProviderWithIndex,
-      (p, n) => logIgnoredReload('chapter', p, n),
-    );
-    ref.listen(
-      chapterPagesProviderWithIndex,
-      (p, n) => logIgnoredReload('pages', p, n),
-    );
 
     // Auto reading mode: a Default-mode long-strip series (manhwa/manhua/
     // webtoon) opens in webtoon scroll THIS session; never written to meta.
@@ -339,7 +310,6 @@ class ReaderScreen extends HookConsumerWidget {
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
-          leaving.value = true;
           // Leaving the reader for real — bring the OS bars back (kept hidden
           // across chapter transitions by dropping the dispose-time restore).
           SystemChrome.setEnabledSystemUIMode(

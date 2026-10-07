@@ -23,13 +23,13 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/reader_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/multichapter_paged_reader_mode.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 
 const _png1x1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
@@ -326,16 +326,13 @@ void main() {
   // The reader keeps going across a network change: an endpoint switch (LAN
   // <-> external) or the server coming back rebuilds every reader provider.
   group('chapter loading across an endpoint switch', () {
-    Future<List<String>> pumpReader(
+    Future<Element> pumpReader(
       WidgetTester tester, {
       required bool nextKnownBeforeSwitch,
     }) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
-      final lines = <String>[];
-      setDiagnosticSink(lines.add);
-      addTearDown(() => setDiagnosticSink(null));
 
       SharedPreferences.setMockInitialValues(const {});
       final prefs = await SharedPreferences.getInstance();
@@ -407,7 +404,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('1 / 3'), findsOneWidget);
-      return lines;
+      return tester.element(find.byType(MultiChapterPagedReaderMode));
     }
 
     Future<void> pageForward(WidgetTester tester, int times) async {
@@ -433,7 +430,7 @@ void main() {
 
     testWidgets('loads the next chapter after a switch and stays in it '
         'through another one', (tester) async {
-      final lines = await pumpReader(tester, nextKnownBeforeSwitch: true);
+      final engine = await pumpReader(tester, nextKnownBeforeSwitch: true);
 
       await pageForward(tester, 1);
       expect(find.text('2 / 3'), findsOneWidget);
@@ -453,14 +450,17 @@ void main() {
       await switchEndpoint(tester);
       expect(tester.takeException(), isNull);
       expect(find.textContaining('/ 2'), findsOneWidget);
-      expect(lines.where((l) => l.contains('reader: mount')), hasLength(1));
-      expect(lines.where((l) => l.contains('reader: dispose')), isEmpty);
+      expect(
+        tester.element(find.byType(MultiChapterPagedReaderMode)),
+        same(engine),
+        reason: 'the reader was remounted',
+      );
     });
 
     testWidgets('a next chapter missing before the switch loads after it', (
       tester,
     ) async {
-      final lines = await pumpReader(tester, nextKnownBeforeSwitch: false);
+      final engine = await pumpReader(tester, nextKnownBeforeSwitch: false);
 
       await pageForward(tester, 4);
       expect(find.text('3 / 3'), findsOneWidget);
@@ -475,7 +475,11 @@ void main() {
         findsOneWidget,
         reason: 'the next chapter never loaded once the list had it',
       );
-      expect(lines.where((l) => l.contains('reader: mount')), hasLength(1));
+      expect(
+        tester.element(find.byType(MultiChapterPagedReaderMode)),
+        same(engine),
+        reason: 'the reader was remounted',
+      );
     });
   });
 }
