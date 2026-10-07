@@ -29,6 +29,7 @@ import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 
 const _png1x1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
@@ -321,4 +322,170 @@ void main() {
       reason: 'progress was not flushed on exit; ${repo.putChapterCalls}',
     );
   });
+
+  // The reader keeps going across a network change: an endpoint switch (LAN
+  // <-> external) or the server coming back rebuilds every reader provider.
+  group('chapter loading across an endpoint switch', () {
+    Future<List<String>> pumpReader(
+      WidgetTester tester, {
+      required bool nextKnownBeforeSwitch,
+    }) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final lines = <String>[];
+      setDiagnosticSink(lines.add);
+      addTearDown(() => setDiagnosticSink(null));
+
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      final ch1 = _chapter(id: 1, sourceOrder: 1, pageCount: 3);
+      final ch2 = _chapter(id: 2, sourceOrder: 2, pageCount: 2);
+      final pages1 = _pages(1, 3);
+      final pages2 = _pages(2, 2);
+
+      // Each switch reloads through a dependency change, slowly enough to
+      // show a loading state.
+      Future<T> reloadable<T>(Ref ref, T value) async {
+        if (ref.watch(_endpointProvider) == 0) return value;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return value;
+      }
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
+            mangaWithIdProvider(
+              mangaId: 1,
+            ).overrideWith(() => _FakeMangaWithId(_manga())),
+            chapterProvider(
+              chapterId: 1,
+            ).overrideWith((ref) => reloadable(ref, ch1)),
+            chapterProvider(
+              chapterId: 2,
+            ).overrideWith((ref) => reloadable(ref, ch2)),
+            chapterPagesProvider(
+              chapterId: 1,
+            ).overrideWith((ref) => reloadable(ref, pages1)),
+            chapterPagesProvider(
+              chapterId: 2,
+            ).overrideWith((ref) => reloadable(ref, pages2)),
+            // Before the switch the list may come from the device and lack
+            // chapter 2 (not downloaded yet); after it, the server's list has it.
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 1,
+              readerScanlatorGroup: '',
+            ).overrideWith(
+              (ref) => ref.watch(_endpointProvider) > 0 || nextKnownBeforeSwitch
+                  ? (first: ch2, second: null)
+                  : (first: null, second: null),
+            ),
+            getNextAndPreviousChaptersProvider(
+              mangaId: 1,
+              chapterId: 2,
+              readerScanlatorGroup: '',
+            ).overrideWith((ref) {
+              ref.watch(_endpointProvider);
+              return (first: null, second: ch1);
+            }),
+            trackerRepositoryProvider.overrideWithValue(
+              _FakeTrackerRepository(),
+            ),
+            updateProgressAfterReadingProvider.overrideWith(
+              () => _FixedToggle(false),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const ReaderScreen(mangaId: 1, chapterId: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 3'), findsOneWidget);
+      return lines;
+    }
+
+    Future<void> pageForward(WidgetTester tester, int times) async {
+      for (var i = 0; i < times; i++) {
+        await tester.timedDrag(
+          find.byType(PagedReaderViewport),
+          const Offset(-400, 0),
+          const Duration(milliseconds: 80),
+        );
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    Future<void> switchEndpoint(WidgetTester tester) async {
+      ProviderScope.containerOf(
+        tester.element(find.byType(ReaderScreen)),
+      ).read(_endpointProvider.notifier).switchEndpoint();
+      await tester.pump();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('loads the next chapter after a switch and stays in it '
+        'through another one', (tester) async {
+      final lines = await pumpReader(tester, nextKnownBeforeSwitch: true);
+
+      await pageForward(tester, 1);
+      expect(find.text('2 / 3'), findsOneWidget);
+
+      await switchEndpoint(tester);
+      expect(find.text('2 / 3'), findsOneWidget);
+
+      await pageForward(tester, 5);
+      expect(
+        find.textContaining('/ 2'),
+        findsOneWidget,
+        reason: 'reader never crossed into chapter 2 after the switch',
+      );
+
+      // The reported jump: a switch while reading a chapter loaded in-place
+      // sent the reader back to the chapter it was opened on.
+      await switchEndpoint(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('/ 2'), findsOneWidget);
+      expect(lines.where((l) => l.contains('reader: mount')), hasLength(1));
+      expect(lines.where((l) => l.contains('reader: dispose')), isEmpty);
+    });
+
+    testWidgets('a next chapter missing before the switch loads after it', (
+      tester,
+    ) async {
+      final lines = await pumpReader(tester, nextKnownBeforeSwitch: false);
+
+      await pageForward(tester, 4);
+      expect(find.text('3 / 3'), findsOneWidget);
+
+      await switchEndpoint(tester);
+      // Past the end card, through the transition card, into chapter 2.
+      await pageForward(tester, 5);
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.textContaining('/ 2'),
+        findsOneWidget,
+        reason: 'the next chapter never loaded once the list had it',
+      );
+      expect(lines.where((l) => l.contains('reader: mount')), hasLength(1));
+    });
+  });
 }
+
+/// Stands in for the active server endpoint every reader provider depends on.
+class _Endpoint extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void switchEndpoint() => state++;
+}
+
+final _endpointProvider = NotifierProvider<_Endpoint, int>(_Endpoint.new);
