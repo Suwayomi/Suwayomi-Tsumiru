@@ -325,7 +325,7 @@ class AccountSessionStartup {
   void _addressSettingChanged(String? previous, String? next) {
     if (!_current || previous == next) return;
     final credentials = container.read(authCredentialsStoreProvider.notifier);
-    if (!credentials.identityChanging && !credentials.sessionChanging) {
+    if (!credentials.identityChanging) {
       _syncNotifications();
       return;
     }
@@ -339,11 +339,12 @@ class AccountSessionStartup {
   ) async {
     try {
       await credentials.outsideIdentityChange(() async {
-        while (_current &&
-            (credentials.identityChanging || credentials.sessionChanging)) {
-          await credentials.identitySettled(
+        while (_current && credentials.identityChanging) {
+          if (!await credentials.identitySettled(
             timeout: const Duration(seconds: 5),
-          );
+          )) {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+          }
         }
       });
     } finally {
