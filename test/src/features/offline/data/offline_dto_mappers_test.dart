@@ -52,7 +52,6 @@ void main() {
 
     final withTarget = offlineMangaToDto(m, firstUnread: chapter);
     expect(withTarget.firstUnreadChapter?.id, 42);
-    expect(withTarget.firstUnreadChapter?.sourceOrder, 5);
 
     final noTarget = offlineMangaToDto(m);
     expect(noTarget.firstUnreadChapter, isNull);

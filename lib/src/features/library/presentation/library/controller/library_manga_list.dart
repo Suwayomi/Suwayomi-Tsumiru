@@ -14,6 +14,8 @@ import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../utils/crash/diagnostics.dart';
 import '../../../../../utils/crash/redact_tokens.dart';
+import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../data/category_repository.dart';
@@ -27,6 +29,11 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   if (!current()) return null;
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
+  // The first unread chapter only feeds the "continue reading" button, off by
+  // default; turning it on refetches the list with it.
+  final withFirstUnread = ref
+      .watch(showContinueReadingButtonProvider)
+      .ifNull(false);
   // Captured before the await; touching ref after the async gap throws if this
   // provider was disposed mid-build. The keepAlive notifiers outlive it.
   final reachability = ref.read(serverUnreachableProvider.notifier);
@@ -44,7 +51,9 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   try {
     list = await libraryWithOfflineFallback(
       fetch: () async {
-        final r = await categoryRepository.getAllLibraryMangas();
+        final r = await categoryRepository.getAllLibraryMangas(
+          withFirstUnread: withFirstUnread,
+        );
         fromServer = true;
         return r;
       },

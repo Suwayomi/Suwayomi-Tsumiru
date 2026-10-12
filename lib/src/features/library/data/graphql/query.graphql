@@ -57,7 +57,7 @@ mutation DeleteCategoryMeta($input: DeleteCategoryMetaInput!) {
   }
 }
 
-query GetCategoryMangas($filter: MangaFilterInput, $first: Int, $after: Cursor) {
+query GetCategoryMangas($filter: MangaFilterInput, $first: Int, $after: Cursor, $withFirstUnread: Boolean = true) {
   mangas(
     filter: $filter
     order: [{ by: ID, byType: ASC }]

@@ -44,7 +44,6 @@ MangaDto _dup({
           $extension: Fragment$MangaDto$source$extension(isObsolete: false),
         ),
   trackRecords: Fragment$MangaDto$trackRecords(
-    totalCount: trackerNodes.length,
     nodes: trackerNodes,
   ),
 );
@@ -317,7 +316,6 @@ void main() {
         builder: (_) => DuplicateMangaDialog(
           candidate: candidate.copyWith.call(
             trackRecords: Fragment$MangaDto$trackRecords(
-              totalCount: 1,
               nodes: [_node(trackerId: 3)],
             ),
           ),
@@ -339,7 +337,6 @@ void main() {
         builder: (_) => DuplicateMangaDialog(
           candidate: candidate.copyWith.call(
             trackRecords: Fragment$MangaDto$trackRecords(
-              totalCount: 1,
               nodes: [_node(trackerId: 3)],
             ),
           ),

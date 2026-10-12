@@ -32,7 +32,7 @@ Fragment$MangaDto _minimalManga({String title = 'Test Manga'}) =>
       sourceId: '1',
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
-      trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+      trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
       unreadCount: 0,
       updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
       url: '/manga/1',

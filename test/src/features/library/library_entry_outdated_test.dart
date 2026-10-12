@@ -22,7 +22,6 @@ MangaDto _manga({int unread = 3, String? age, String? chaptersAge}) =>
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
       trackRecords: Fragment$MangaDto$trackRecords(
-        totalCount: 0,
         nodes: const [],
       ),
       unreadCount: unread,

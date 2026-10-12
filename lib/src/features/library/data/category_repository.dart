@@ -156,28 +156,34 @@ class CategoryRepository {
   // call kept only the first page while silently discarding pageInfo/totalCount.
   // A partial or failed page therefore yields null — treated by the caller as a
   // failed fetch (no sync, no prune, offline fallback) — never a short list.
-  Future<List<MangaDto>?> getAllLibraryMangas() => collectAllPages<MangaDto>(
-    (after) => ferryClient
-        .query$GetCategoryMangas(
-          Options$Query$GetCategoryMangas(
-            variables: Variables$Query$GetCategoryMangas(
-              filter: Input$MangaFilterInput(
-                inLibrary: Input$BooleanFilterInput(equalTo: true),
+  ///
+  /// [withFirstUnread] asks for each series' first unread chapter, which only
+  /// the "continue reading" button reads and which costs the server a ranking
+  /// over every chapter of the library.
+  Future<List<MangaDto>?> getAllLibraryMangas({bool withFirstUnread = true}) =>
+      collectAllPages<MangaDto>(
+        (after) => ferryClient
+            .query$GetCategoryMangas(
+              Options$Query$GetCategoryMangas(
+                variables: Variables$Query$GetCategoryMangas(
+                  filter: Input$MangaFilterInput(
+                    inLibrary: Input$BooleanFilterInput(equalTo: true),
+                  ),
+                  first: 500,
+                  after: after,
+                  withFirstUnread: withFirstUnread,
+                ),
               ),
-              first: 500,
-              after: after,
+            )
+            .getData(
+              (data) => (
+                nodes: data.mangas.nodes,
+                hasNextPage: data.mangas.pageInfo.hasNextPage,
+                endCursor: data.mangas.pageInfo.endCursor,
+                totalCount: data.mangas.totalCount,
+              ),
             ),
-          ),
-        )
-        .getData(
-          (data) => (
-            nodes: data.mangas.nodes,
-            hasNextPage: data.mangas.pageInfo.hasNextPage,
-            endCursor: data.mangas.pageInfo.endCursor,
-            totalCount: data.mangas.totalCount,
-          ),
-        ),
-  );
+      );
 
   Future<List<MangaDto>?> getMangasFromCategory({
     required int categoryId,

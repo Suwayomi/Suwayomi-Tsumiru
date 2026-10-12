@@ -31,7 +31,6 @@ MangaDto _manga(int id, {required int readChapters, int lastPageRead = 0}) =>
       status: Enum$MangaStatus.ONGOING,
       categories: Fragment$MangaDto$categories(nodes: const []),
       trackRecords: Fragment$MangaDto$trackRecords(
-        totalCount: 0,
         nodes: const [],
       ),
       unreadCount: _totalChapters - readChapters,

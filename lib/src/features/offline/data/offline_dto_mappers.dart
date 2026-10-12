@@ -102,7 +102,7 @@ MangaDto offlineMangaToDto(
     // the next unread chapter isn't on the device, so it's never a dead end.
     firstUnreadChapter: firstUnread == null
         ? null
-        : offlineChapterToDto(firstUnread),
+        : Fragment$MangaDto$firstUnreadChapter(id: firstUnread.id),
     genre: offlineGenre(m.genre),
     inLibrary: true,
     inLibraryAt: m.inLibraryAt ?? '0',
@@ -128,10 +128,7 @@ MangaDto offlineMangaToDto(
     sourceId: m.sourceId ?? '0',
     status: status,
     categories: Fragment$MangaDto$categories(nodes: categoryNodes),
-    trackRecords: Fragment$MangaDto$trackRecords(
-      totalCount: 0,
-      nodes: const [],
-    ),
+    trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
     // The stored count is the server's, so it does not move when you read
     // offline. Add back what this device has changed since the server last
     // reported, measured per chapter against its synced baseline — exact in

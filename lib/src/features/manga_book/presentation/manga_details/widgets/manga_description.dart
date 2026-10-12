@@ -274,7 +274,7 @@ class MangaDescription extends HookConsumerWidget {
                   ),
                   Expanded(
                     child: MangaActionButton(
-                      active: manga.trackRecords.totalCount > 0,
+                      active: manga.trackRecords.nodes.isNotEmpty,
                       icon: const Icon(Icons.sync_rounded),
                       label: context.l10n.tracking,
                       onPressed: () => showTrackSheet(

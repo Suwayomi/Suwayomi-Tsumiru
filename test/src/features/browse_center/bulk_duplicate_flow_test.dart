@@ -32,7 +32,6 @@ MangaDto _m(
   id: id,
   title: title,
   trackRecords: Fragment$MangaDto$trackRecords(
-    totalCount: nodes.length,
     nodes: nodes,
   ),
 );
