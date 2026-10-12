@@ -58,6 +58,7 @@ import '../features/settings/presentation/settings/settings_screen.dart';
 import '../features/settings/presentation/syncyomi/syncyomi_settings_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/motion/reduce_motion.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
 part 'router_config.g.dart';

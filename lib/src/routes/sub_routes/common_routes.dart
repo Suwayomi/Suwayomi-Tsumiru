@@ -73,26 +73,36 @@ class ReaderRoute extends GoRouteData with $ReaderRoute {
         showReaderLayoutAnimation: showReaderLayoutAnimation,
         openAtEnd: openAtEnd,
       ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        Offset offset = Offset.zero;
-        offset += Offset(
-          transVertical.ifNull() ? 0 : 1,
-          transVertical.ifNull() ? 1 : 0,
-        );
-        if (toPrev.ifNull()) {
-          offset *= -1;
-        }
+      transitionsBuilder: transitionsBuilder,
+    );
+  }
 
-        return _ReaderRouteTransition(
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: offset,
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        );
-      },
+  @visibleForTesting
+  Widget transitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (context.reduceMotion) return child;
+
+    Offset offset = Offset.zero;
+    offset += Offset(
+      transVertical.ifNull() ? 0 : 1,
+      transVertical.ifNull() ? 1 : 0,
+    );
+    if (toPrev.ifNull()) {
+      offset *= -1;
+    }
+
+    return _ReaderRouteTransition(
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: offset,
+          end: Offset.zero,
+        ).animate(animation),
+        child: child,
+      ),
     );
   }
 }
