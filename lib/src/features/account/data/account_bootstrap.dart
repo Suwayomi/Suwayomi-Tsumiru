@@ -30,10 +30,12 @@ Future<void> restoreAccountSession(ProviderContainer container) async {
     final client = container.read(unauthenticatedGraphQlClientProvider);
     final coordinator = container.read(authCoordinatorProvider.notifier);
     final username = container.read(authUsernameProvider) ?? '';
-    final password = credentials.password;
     final expiry = credentials.uiAccessTokenExpiresAt;
     if (expiry != null && !expiry.isAfter(DateTime.now())) {
-      final outcome = await coordinator.refreshUiAccessToken(gqlClient: client);
+      final outcome = await coordinator.refreshUiAccessToken(
+        gqlClient: client,
+        trigger: 'account-bootstrap',
+      );
       checkSession();
       if (outcome is! RefreshSuccess) {
         throw StateError('Account credentials could not be refreshed');
@@ -50,7 +52,6 @@ Future<void> restoreAccountSession(ProviderContainer container) async {
       forEpoch: epoch,
       address: address,
       username: username,
-      password: password,
     );
     if (store.sessionChanging ||
         store.uiLoginTokens()?.accessToken != tokens.accessToken ||

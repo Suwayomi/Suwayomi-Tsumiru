@@ -7,11 +7,13 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql/client.dart';
 import 'package:tsumiru/src/features/account/data/account_permission.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_reconciler.dart';
 import 'package:tsumiru/src/features/offline/data/reconcile_types.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import '../../../../helpers/offline_test_db.dart';
 
 void main() {
@@ -180,6 +182,24 @@ void main() {
     const AccountPermissionDenied(Enum$UserPermission.DOWNLOAD_CHAPTERS),
     const AccountPermissionUnavailable(),
     StateError('The server did not accept the download request'),
+    // Never reached the server, the server refused the account, or the session
+    // expired: none is about one chapter, so none is retried chapter by chapter.
+    OperationMessageException(OperationException()),
+    OperationMessageException(
+      OperationException(
+        graphqlErrors: [const GraphQLError(message: 'Forbidden')],
+      ),
+    ),
+    OperationMessageException(
+      OperationException(
+        graphqlErrors: [
+          const GraphQLError(
+            message:
+                'Exception while fetching data (/enqueueChapterDownloads) : Unauthorized',
+          ),
+        ],
+      ),
+    ),
   ]) {
     test('unaccepted server enqueue does not spend budget: $failure', () async {
       await db.upsertMangaMetadata(
@@ -697,6 +717,49 @@ void main() {
             'without downloadProtectionWindow, a read chapter not in '
             'desired must not be re-downloaded',
       );
+    },
+  );
+
+  test(
+    'a request the server rejects for one chapter still queues the others',
+    () async {
+      await db.upsertMangaMetadata(
+        id: 1,
+        title: 'M',
+        updatedAt: DateTime(2026),
+      );
+      await db.setKeepRule(1, OfflineKeepRule.all, 3);
+      // Chapter 2 no longer exists server-side (its source recreated it under a
+      // new id), and the server fails the whole request for it.
+      await seedChapter(1, 1, serverDl: false);
+      await seedChapter(2, 2, serverDl: false);
+      await seedChapter(3, 3, serverDl: false);
+      final queued = <int>{};
+      await OfflineReconciler(
+        db: db,
+        nets: SafetyNetConfig.off,
+        now: DateTime(2026),
+        onDownload: (_) async {},
+        onEvict: (_) async {},
+        onServerDownload: (ids) async {
+          if (ids.contains(2)) {
+            throw OperationMessageException(
+              OperationException(
+                graphqlErrors: [
+                  const GraphQLError(
+                    message: 'Referential integrity constraint violation',
+                  ),
+                ],
+              ),
+            );
+          }
+          queued.addAll(ids);
+        },
+      ).reconcileManga(1);
+      expect(queued, {1, 3});
+      // The rejected chapter spends an attempt, so it is given up on at the cap
+      // instead of being asked again forever.
+      expect((await db.chapterById(2))!.serverFetchAttempts, 1);
     },
   );
 }

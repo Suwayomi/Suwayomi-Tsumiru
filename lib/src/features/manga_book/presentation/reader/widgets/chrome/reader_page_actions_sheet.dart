@@ -115,7 +115,10 @@ Future<void> showReaderPageActionsSheet({
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
-  final openUrl = requests[firstPageIndex]!.fetchUrl;
+  final openUrl = serverImageBrowserUrl(
+    ref,
+    requests[firstPageIndex]!.fetchUrl,
+  );
 
   return showModalBottomSheet<void>(
     context: context,

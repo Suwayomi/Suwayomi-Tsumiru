@@ -77,7 +77,12 @@ void main() {
       final release = Completer<void>();
       final sent = <String?>[];
       final client = MockClient((request) async {
-        final token = request.url.queryParameters['token'];
+        // The token rides the header, never the URL (proxy access logs).
+        expect(request.url.queryParameters, isNot(contains('token')));
+        final token = request.headers['Authorization']?.replaceFirst(
+          'Bearer ',
+          '',
+        );
         sent.add(token);
         if (token == 'A') {
           received.complete();

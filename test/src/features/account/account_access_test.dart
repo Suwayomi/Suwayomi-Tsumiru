@@ -219,4 +219,32 @@ void main() {
       AccountCapability.unsupported,
     );
   });
+
+  group('describeAccountResponse (debug log for an unknown capability)', () {
+    test('names the link failure and its cause', () {
+      final text = describeAccountResponse(
+        response(
+          linkException: ServerException(
+            originalException: const SocketException('unreachable'),
+          ),
+        ),
+      );
+      expect(text, contains('link=ServerException'));
+      expect(text, contains('cause=SocketException'));
+    });
+
+    test('lists the GraphQL error messages', () {
+      final text = describeAccountResponse(
+        response(errors: [const GraphQLError(message: 'Unauthorized')]),
+      );
+      expect(text, 'graphql=[Unauthorized]');
+    });
+
+    test('shows the user the server answered with', () {
+      expect(
+        describeAccountResponse(response(data: {'user': null})),
+        'user=null',
+      );
+    });
+  });
 }

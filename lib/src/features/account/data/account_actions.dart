@@ -43,6 +43,7 @@ class AccountActions {
         .read(authCoordinatorProvider.notifier)
         .refreshUiAccessToken(
           gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+          trigger: 'account-refresh',
         );
     if (!current()) throw StateError('Authentication session changed');
     if (result is RefreshTransientFailure) throw result.error;
@@ -59,7 +60,6 @@ class AccountActions {
       await ref.read(accountNoticeProvider.notifier).set(null);
       await store.clearUiLoginTokens();
       await store.clearSimpleLoginCookie();
-      await store.clearPassword();
       await store.clearBasicCredentials();
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
@@ -117,7 +117,6 @@ class AccountActions {
         forEpoch: epoch,
         address: address,
         username: canonicalUsername,
-        password: password,
       );
       await store.clearSimpleLoginCookie();
       await store.clearBasicCredentials();
@@ -147,6 +146,7 @@ class AccountActions {
     if (!builtIn) {
       final refresh = await coordinator.refreshUiAccessTokenIfDue(
         gqlClient: client,
+        trigger: 'account-check',
       );
       if (refresh is RefreshTransientFailure) throw refresh.error;
       if (refresh is RefreshAuthFailure || !current()) {
@@ -255,7 +255,6 @@ class AccountActions {
           forEpoch: epoch,
           address: address,
           username: binding.username,
-          password: newPassword,
         );
       } on Object {
         await ref
@@ -266,7 +265,6 @@ class AccountActions {
                   : AccountNoticeKind.passwordUnconfirmed,
             );
         await store.clearUiLoginTokens();
-        await store.clearPassword();
         ref.read(needsReauthProvider.notifier).set(true);
         if (confirmed) throw const AccountPasswordSignInRequired();
         throw const AccountPasswordUnconfirmed();

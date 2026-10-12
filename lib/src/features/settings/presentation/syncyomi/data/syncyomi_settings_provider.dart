@@ -62,7 +62,11 @@ class SyncYomiSettings {
 
 /// Null means the server has no SyncYomi settings at all.
 final syncYomiSettingsProvider = FutureProvider<SyncYomiSettings?>((ref) async {
-  switch (ref.watch(settledAccountAccessProvider).capability) {
+  // Only the capability picks the source. Watching the whole access re-ran
+  // the legacy query on every account re-check, even when nothing changed.
+  switch (ref.watch(
+    settledAccountAccessProvider.select((access) => access.capability),
+  )) {
     case AccountCapability.supported:
       final user = await ref.watch(userSettingsProvider.future);
       return user == null ? null : SyncYomiSettings.fromUser(user);

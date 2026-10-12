@@ -1,6 +1,8 @@
 import 'package:graphql/client.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/crash/diagnostics.dart';
+import '../../../utils/crash/redact_tokens.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../domain/account_access.dart';
 import 'account_permission.dart';
@@ -23,8 +25,28 @@ class AccountRepository {
 
   final GraphQLClient client;
 
-  Future<AccountCapability> capability() async =>
-      classifyAccountResponse(await client.query$AccountCapability());
+  /// [stillWanted] tells whether the caller still uses the answer. An endpoint
+  /// switch replaces the GraphQL client and rebuilds the provider asking, and
+  /// the superseded build's query dies with the old client ("Cannot use the
+  /// Ref of graphQlClientProvider after it has been disposed"). That answer is
+  /// thrown away, so it isn't logged as a failed check.
+  Future<AccountCapability> capability({bool Function()? stillWanted}) async {
+    final result = await client.query$AccountCapability();
+    final capability = classifyAccountResponse(result);
+    if (capability == AccountCapability.unknown &&
+        (stillWanted?.call() ?? true)) {
+      // accountAccessProvider turns `unknown` into "Could not verify account
+      // support", which fails the library's default category and category
+      // lists; the response that caused it was dropped.
+      recordDiagnostic(
+        redactTokens(
+          '[${DateTime.now().toIso8601String()}] account-capability: unknown '
+          '${describeAccountResponse(result)}\n',
+        ),
+      );
+    }
+    return capability;
+  }
 
   Future<Fragment$AccountDto?> current() =>
       client.query$CurrentAccount().getData((data) => data.user);

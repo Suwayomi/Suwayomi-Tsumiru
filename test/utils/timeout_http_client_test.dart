@@ -287,5 +287,75 @@ void main() {
       );
       expect(urls.map((uri) => uri.host), ['x', 'new']);
     });
+
+    group('retry headers', () {
+      test('a retry carries the headers re-derived at retry time, not the '
+          'ones the request started with', () async {
+        final sent = <String?>[];
+        final client = TimeoutHttpClient(
+          const Duration(seconds: 5),
+          retries: 1,
+          retryDelay: Duration.zero,
+          inner: MockClient.streaming((request, body) async {
+            sent.add(request.headers['authorization']);
+            if (sent.length == 1) throw TimeoutException('app frozen');
+            return http.StreamedResponse(const Stream.empty(), 200);
+          }),
+          retryHeaders: (headers) async => {
+            ...headers..remove('Authorization'),
+            'Authorization': 'Bearer refreshed',
+          },
+        );
+        final request = _graphqlRequest('{ library { id } }')
+          ..headers['Authorization'] = 'Bearer stale';
+
+        final response = await client.send(request);
+
+        expect(response.statusCode, 200);
+        expect(sent, ['Bearer stale', 'Bearer refreshed']);
+      });
+
+      test('the endpoint failover re-derives them too', () async {
+        final sent = <String?>[];
+        final client = TimeoutHttpClient(
+          const Duration(seconds: 5),
+          inner: MockClient.streaming((request, body) async {
+            sent.add(request.headers['authorization']);
+            if (sent.length == 1) throw http.ClientException('offline');
+            return http.StreamedResponse(const Stream.empty(), 200);
+          }),
+          onConnectionFailure: (_) async => Uri.parse('http://new/api/graphql'),
+          retryHeaders: (headers) async => {'Authorization': 'Bearer refreshed'},
+        );
+
+        await client.send(
+          _graphqlRequest('{ library { id } }')
+            ..headers['Authorization'] = 'Bearer stale',
+        );
+
+        expect(sent, ['Bearer stale', 'Bearer refreshed']);
+      });
+
+      test('a throwing re-derivation abandons the retry with the original '
+          'failure', () async {
+        var attempts = 0;
+        final client = TimeoutHttpClient(
+          const Duration(seconds: 5),
+          retries: 2,
+          retryDelay: Duration.zero,
+          inner: MockClient.streaming((request, body) async {
+            attempts++;
+            throw http.ClientException('offline');
+          }),
+          retryHeaders: (_) async => throw StateError('token unavailable'),
+        );
+
+        await expectLater(
+          client.send(_graphqlRequest('{ library { id } }')),
+          throwsA(isA<http.ClientException>()),
+        );
+        expect(attempts, 1);
+      });
+    });
   });
 }

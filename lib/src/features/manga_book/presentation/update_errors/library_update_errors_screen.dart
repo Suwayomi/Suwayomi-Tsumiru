@@ -25,9 +25,11 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
     final count = failed.value?.length;
     return Scaffold(
       appBar: AppBar(
-        title: Text(count == null
-            ? context.l10n.libraryUpdateErrors
-            : context.l10n.libraryUpdateErrorsCount(count)),
+        title: Text(
+          count == null
+              ? context.l10n.libraryUpdateErrors
+              : context.l10n.libraryUpdateErrorsCount(count),
+        ),
       ),
       body: failed.showUiWhenData(
         context,
@@ -52,7 +54,8 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
                     final manga = mangas[index];
                     return MangaCoverListTile(
                       manga: manga,
-                      onPressed: () => MangaRoute(mangaId: manga.id).push(context),
+                      onPressed: () =>
+                          MangaRoute(mangaId: manga.id).push(context),
                       trailing: _MigrateButton(
                         onPressed: () => MigrationBulkConfigRoute(
                           $extra: MigrationBulkConfigData(mangaIds: [manga.id]),
@@ -62,7 +65,10 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
                   },
                 ),
         ),
-        refresh: () => ref.invalidate(failedUpdatesProvider),
+        refresh: () {
+          ref.invalidate(failedUpdateCountProvider);
+          ref.invalidate(failedUpdatesProvider);
+        },
       ),
     );
   }

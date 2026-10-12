@@ -88,7 +88,10 @@ ChapterDownloadEngine? chapterDownloadEngine(Ref ref) {
       );
       final outcome = await ref
           .read(authCoordinatorProvider.notifier)
-          .refreshUiAccessToken(gqlClient: rawClient);
+          .refreshUiAccessToken(
+            gqlClient: rawClient,
+            trigger: 'offline-downloads',
+          );
       return isCurrentSession() && outcome is RefreshSuccess;
     },
   );
@@ -151,7 +154,9 @@ OfflineDownloadCoordinator? offlineDownloadCoordinator(Ref ref) {
     onServerUnreachable: () => Future(() {
       if (!isCurrentSession()) return;
       try {
-        ref.read(serverUnreachableProvider.notifier).set(true);
+        ref
+            .read(serverUnreachableProvider.notifier)
+            .set(true, reason: 'download-pump');
       } catch (_) {}
     }),
   );

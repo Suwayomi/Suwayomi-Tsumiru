@@ -20,12 +20,14 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_download_lock.dart';
 import '../../../offline/data/background/background_schedule.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
+import '../../../offline/data/background/record_seal.dart';
 import '../../domain/new_chapter_detection.dart';
 import '../local_notification_service.dart';
 import '../notification_state_store.dart';
@@ -46,6 +48,9 @@ Future<bool> runNewChapterCheck() async {
   // actually checks.
   final crashLogPath = await initCrashLog();
   setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+  // The token record's secrets are sealed; without the key it reads as
+  // unauthenticated (logged as `record-seal: …`).
+  await RecordSeal.load(kSecureStorage);
 
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
@@ -72,10 +77,13 @@ Future<bool> runNewChapterCheck() async {
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
   await notifier.init(onBackgroundTap: notificationActionCallback);
+  // Where to reach the server from this network. Identity checks below keep
+  // using `config`, tied to the address the foreground verified.
+  final endpoint = await config.endpoint.forThisNetwork(source: 'worker');
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         config.catalogServerId != null && !catchupStore.matchesIdentity(config),
     admitDownload: () async {
@@ -135,6 +143,7 @@ Future<bool> runNewChapterCheck() async {
         await runCatchupDownloads(
           catchupStore: catchupStore,
           config: config,
+          endpoint: endpoint,
           record: client.currentRecord,
           broker: client.broker,
         ) &&
@@ -244,25 +253,21 @@ Future<bool> runNewChapters(
 
   var watermark = store.readWatermark(config.sessionFingerprint!);
 
-  // 1. First enable: seed the cursor to the server's current max fetch time and
-  // notify nothing, so we don't dump the backlog.
+  // 1. First enable (or a fresh session after reinstall/re-login): seed the
+  // cursor to the server's current max fetch time and notify nothing, so we
+  // don't dump the backlog.
   if (watermark.fetchedAt == 0 && watermark.recent.isEmpty) {
-    final maxFetched = await client.serverMaxFetchedAt();
+    final seed = await _seedWatermark(client);
+    if (seed == null) return false; // transient — retry next wake
     await _withNotificationOwner(
       config,
-      (current) => current.writeWatermark(
-        config.sessionFingerprint!,
-        NewChapterWatermark(fetchedAt: maxFetched),
-      ),
+      (current) => current.writeWatermark(config.sessionFingerprint!, seed),
     );
     return true;
   }
 
   // 2. Paginate the overlap window to exhaustion.
-  final gte = (watermark.fetchedAt - kDefaultOverlapMs).clamp(
-    0,
-    watermark.fetchedAt,
-  );
+  final gte = _overlapStart(watermark);
   final all = <NotifChapter>[];
   final mangaCategories = <int, Set<int>>{};
   String? after;
@@ -359,6 +364,52 @@ Future<bool> runNewChapters(
   return true;
 }
 
+/// Start of the re-scan window below [cursor]'s high-water mark. `fetchedAt` is
+/// epoch seconds server-side, so the overlap is in seconds too.
+int _overlapStart(NewChapterWatermark cursor) =>
+    (cursor.fetchedAt - kDefaultOverlapSeconds).clamp(0, cursor.fetchedAt);
+
+/// A first-enable cursor that also marks the chapters the next overlap re-scan
+/// will return as already seen — otherwise that pass notifies (or queues) them
+/// as fresh. Null when the window fetch fails.
+Future<NewChapterWatermark?> _seedWatermark(
+  NotificationBackgroundClient client,
+) async {
+  final maxFetched = await client.serverMaxFetchedAt();
+  // 0 = empty library or failed query: the cursor stays unseeded and the next
+  // wake tries again, as before.
+  if (maxFetched == 0) return const NewChapterWatermark();
+  final window = <NotifChapter>[];
+  String? after;
+  while (true) {
+    final page = await client.fetchNewChaptersPage(
+      fetchedAtGte: '${_overlapStart(NewChapterWatermark(fetchedAt: maxFetched))}',
+      after: after,
+    );
+    if (page == null) return null;
+    window.addAll(page.nodes);
+    if (!page.hasNextPage || page.endCursor == null) break;
+    after = page.endCursor;
+  }
+  final seed = seedNewChapterWatermark(
+    maxFetched: maxFetched,
+    window: [
+      for (final n in window)
+        (
+          id: n.id,
+          mangaId: n.mangaId,
+          chapterNumber: n.chapterNumber,
+          fetchedAt: n.fetchedAt,
+        ),
+    ],
+  );
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] new-chapter-cursor: seeded '
+    'fetchedAt=$maxFetched recent=${seed.recent.length}\n',
+  );
+  return seed;
+}
+
 /// The download side of detection. Same pagination and detector as the notify
 /// step but consuming its OWN cursor, scoped to the spec's keep-rule manga and
 /// never the notification category filter — muting a category must not
@@ -394,9 +445,9 @@ Future<bool> _runDownloadResolution(
 
     if (!await verifyBackgroundServerIdentity(
       target: BackgroundServerTarget(
-        serverBase: config.endpoint.baseUrl,
-        port: config.endpoint.port,
-        addPort: config.endpoint.addPort,
+        serverBase: client.endpoint.baseUrl,
+        port: client.endpoint.port,
+        addPort: client.endpoint.addPort,
       ),
       record: client.currentRecord,
       broker: client.broker,
@@ -410,19 +461,17 @@ Future<bool> _runDownloadResolution(
     // First enable: seed to now. The toggle does not backfill history — the
     // foreground launch pass owns the backlog.
     if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
-      final maxFetched = await client.serverMaxFetchedAt();
+      final seed = await _seedWatermark(client);
+      if (seed == null) return false; // transient — retry next wake
       if (await lock.yieldRequested()) return true;
       await catchupStore.writeLedger(
         spec.serverId,
-        ledger.copyWith(cursor: NewChapterWatermark(fetchedAt: maxFetched)),
+        ledger.copyWith(cursor: seed),
       );
       return true;
     }
 
-    final gte = (ledger.cursor.fetchedAt - kDefaultOverlapMs).clamp(
-      0,
-      ledger.cursor.fetchedAt,
-    );
+    final gte = _overlapStart(ledger.cursor);
     final all = <NotifChapter>[];
     String? after;
     while (true) {
@@ -584,6 +633,8 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
   }
   final p = NotificationPayload.decode(payload);
   if (p.chapterIds.isEmpty) return;
+  // Headless when the app is dead: this isolate has no key loaded yet.
+  if (!RecordSeal.ready) await RecordSeal.load(kSecureStorage);
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
@@ -603,10 +654,13 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
       catchupStore.downloadPermissionPaused(config.catalogServerId!)) {
     return;
   }
+  final endpoint = await config.endpoint.forThisNetwork(
+    source: 'notification-action',
+  );
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         actionId == kNotifActionDownload &&
         !catchupStore.matchesIdentity(config),
@@ -732,6 +786,10 @@ TokenBroker _brokerFor(
         // actually settling) permanently condemns every chapter that
         // happened to 401 in that window.
         if (isGatewayStatus(res.statusCode)) {
+          logBackgroundRefresh(
+            'notify',
+            'gateway status=${res.statusCode} transient=true',
+          );
           return (tokens: null, transient: true);
         }
         if (res.statusCode != 200) {
@@ -765,11 +823,14 @@ TokenBroker _brokerFor(
           tokens: (access: access, refresh: refreshToken),
           transient: false,
         );
-      } on SocketException {
+      } on SocketException catch (e) {
+        logBackgroundRefresh('notify', 'network-error transient=true', e);
         return (tokens: null, transient: true);
-      } on TimeoutException {
+      } on TimeoutException catch (e) {
+        logBackgroundRefresh('notify', 'timeout transient=true', e);
         return (tokens: null, transient: true);
-      } catch (_) {
+      } catch (e) {
+        logBackgroundRefresh('notify', 'error transient=false', e);
         return (tokens: null, transient: false);
       }
     },
