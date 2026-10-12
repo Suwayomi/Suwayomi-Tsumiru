@@ -34,6 +34,8 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
     required this.onNextPage,
     required this.onPreviousPage,
     required this.pageController,
+    this.onNextChapterCommand,
+    this.onPreviousChapterCommand,
   });
 
   final Widget child;
@@ -54,6 +56,8 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   final VoidCallback onNextPage;
   final VoidCallback onPreviousPage;
   final PageController? pageController;
+  final VoidCallback? onNextChapterCommand;
+  final VoidCallback? onPreviousChapterCommand;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -289,6 +293,10 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   }
 
   void _navigateToNextChapterWithFallback(BuildContext context) {
+    if (onNextChapterCommand != null && prevNextChapterPair?.first != null) {
+      onNextChapterCommand!();
+      return;
+    }
     if (prevNextChapterPair?.first != null) {
       try {
         ReaderRoute(
@@ -306,6 +314,11 @@ class DirectionalSwipeGestureHandler extends HookConsumerWidget {
   }
 
   void _navigateToPreviousChapterWithFallback(BuildContext context) {
+    if (onPreviousChapterCommand != null &&
+        prevNextChapterPair?.second != null) {
+      onPreviousChapterCommand!();
+      return;
+    }
     if (prevNextChapterPair?.second != null) {
       try {
         ReaderRoute(

@@ -378,11 +378,25 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         item.entry.first.raw,
       );
     } else if (item is TransitionDisplay) {
-      // Anchor to the chapter being ENTERED (its first page). For an
-      // end-of-window "next chapter" card that doesn't know its target yet, fall
-      // back to the LAST page of the chapter just finished — never its first,
-      // which would throw the reader back to that chapter's start.
-      if (item.toChapterId != null) {
+      // A transition is content too: rebuilding spread mappings (e.g. when a
+      // wide page is decoded) must not turn the notice into the next page.
+      target = widget.window.items.indexOf(item);
+      if (target < 0 && (item.isStart || item.isEnd)) {
+        // Preload can replace an outer boundary with an interior transition.
+        // Preserve the known side: end cards leave the same chapter, start
+        // cards enter the same chapter. Never match an interior card by only
+        // one side, as that could move it to a different chapter boundary.
+        target = widget.window.items.indexWhere(
+          (candidate) =>
+              candidate is TransitionDisplay &&
+              (item.isEnd
+                  ? candidate.fromChapterId == item.fromChapterId
+                  : candidate.toChapterId == item.toChapterId),
+        );
+      }
+      // Only fall back to chapter pages if the transition no longer exists
+      // (e.g. a seamless neighbour was loaded, or transitions were disabled).
+      if (target < 0 && item.toChapterId != null) {
         target = widget.window.firstDisplayOf(item.toChapterId!);
       }
       if (target < 0 && item.fromChapterId != null) {
@@ -1187,9 +1201,7 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _diagnosticCount++;
 
     final strand = _strand;
-    final held = strand == null
-        ? -1
-        : now.difference(strand.at).inMilliseconds;
+    final held = strand == null ? -1 : now.difference(strand.at).inMilliseconds;
     recordDiagnostic(
       '[${now.toIso8601String()}] reader-rest: action=$action '
       'progress=${progress.toStringAsFixed(3)} '
@@ -1247,8 +1259,8 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           // Only claim the arena when a long press has somewhere to go.
-          onLongPress: ReaderInputScope.maybeOf(context)?.onLongPressStart ==
-                  null
+          onLongPress:
+              ReaderInputScope.maybeOf(context)?.onLongPressStart == null
               ? null
               : _claimLongPressArena,
           child: Listener(

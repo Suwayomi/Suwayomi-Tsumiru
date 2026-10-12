@@ -10,7 +10,9 @@ import 'package:gap/gap.dart';
 
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
+import '../../../../../domain/chapter/missing_chapters.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
+import '../../reader_chapter_gap_warning.dart';
 import 'infinity_continuous_config.dart';
 
 /// UI feedback components for infinity continuous reader mode
@@ -56,9 +58,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -102,9 +102,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -143,9 +141,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(seconds: 1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -184,9 +180,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(seconds: 1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -221,9 +215,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(milliseconds: 1500),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -258,9 +250,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(milliseconds: 1500),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -297,9 +287,7 @@ class InfinityContinuousFeedback {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
         duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -312,10 +300,12 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
     required this.chapterName,
     required this.isChapterStart,
     this.alwaysShow = true,
+    this.gapCount = 0,
   });
 
   final String chapterName;
   final bool isChapterStart;
+  final int gapCount;
 
   /// "Always show chapter transition": off collapses this to a slim label so
   /// chapters run together with less interruption.
@@ -323,7 +313,7 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!alwaysShow) {
+    if (!alwaysShow && gapCount == 0) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(
@@ -378,8 +368,9 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
               Text(
                 chapterName,
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.theme.colorScheme.onSurface
-                      .withValues(alpha: 0.8),
+                  color: context.theme.colorScheme.onSurface.withValues(
+                    alpha: 0.8,
+                  ),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -404,6 +395,10 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
                   ],
                 ),
               ],
+              if (gapCount > 0) ...[
+                const Gap(16),
+                ReaderChapterGapWarning(count: gapCount),
+              ],
             ],
           ),
         ),
@@ -413,10 +408,11 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
   }
 
   /// Get separator information for the given index
-  static ({String chapterName, bool isChapterStart})? getSeparatorInfo(
+  static ({String chapterName, bool isChapterStart, int gapCount})?
+  getSeparatorInfo(
     int index,
     List<({ChapterPagesDto pages, ChapterDto chapter, int chapterId})>
-        loadedChapters,
+    loadedChapters,
   ) {
     int currentIndex = 0;
     for (int i = 0; i < loadedChapters.length; i++) {
@@ -428,6 +424,10 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
         return (
           chapterName: chapterData.chapter.name,
           isChapterStart: false,
+          gapCount: chapterGapCount(
+            chapterData.chapter.chapterNumber,
+            loadedChapters[i + 1].chapter.chapterNumber,
+          ),
         );
       }
 
