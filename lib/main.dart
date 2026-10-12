@@ -51,6 +51,7 @@ import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
 import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/diagnostics.dart';
+import 'src/utils/crash/provider_failure_logger.dart';
 import 'src/utils/crash/redact_tokens.dart';
 import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
@@ -397,6 +398,7 @@ ProviderContainer _createSessionContainer(
   SharedPreferences preferences, {
   CacheManager? coverCache,
 }) => ProviderContainer(
+  observers: [ProviderFailureLogger()],
   retry: (retryCount, error) => isConnectionError(error)
       ? null
       : ProviderContainer.defaultRetry(retryCount, error),

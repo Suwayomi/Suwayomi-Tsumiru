@@ -783,6 +783,21 @@ class OfflineDatabase extends _$OfflineDatabase {
     return counts;
   }
 
+  /// Mirrored chapter rows per manga — the unread bound for rows whose
+  /// totalChapters was never synced (see offlineMangaToDto's chapterCount).
+  Future<Map<int, int>> chapterCountByManga() async {
+    final mangaId = offlineChapters.mangaId;
+    final chapterCount = offlineChapters.id.count();
+    final query = selectOnly(offlineChapters)
+      ..addColumns([mangaId, chapterCount])
+      ..groupBy([mangaId]);
+    final counts = <int, int>{};
+    for (final row in await query.get()) {
+      counts[row.read(mangaId)!] = row.read(chapterCount) ?? 0;
+    }
+    return counts;
+  }
+
   /// Of [mangaIds], the ones with no membership in a STORED category — these
   /// render under Default. A row pointing at a pruned/unmirrored category
   /// doesn't count either; the mapper's inner join drops it the same way.

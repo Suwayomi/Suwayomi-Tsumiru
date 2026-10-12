@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
 import 'package:tsumiru/src/features/offline/data/offline_read_fallback.dart';
+import 'package:tsumiru/src/utils/crash/diagnostics.dart';
 import '../../../../helpers/offline_test_db.dart';
 
 void main() {
@@ -191,5 +192,61 @@ void main() {
             onReachability: calls.add),
         throwsA(predicate((e) => e.toString().contains('HTTP 500'))));
     expect(calls, [true]);
+  });
+
+  test('library: a catalog row whose totalChapters was never synced keeps its '
+      'unread count (bounded by the chapters on hand, not by zero)', () async {
+    await db.upsertMangaMetadata(
+      id: 1,
+      title: 'A',
+      updatedAt: DateTime(2026),
+      unreadCount: 2,
+    );
+    for (final (id, read) in [(11, true), (12, false), (13, false)]) {
+      await db.upsertChapterMetadata(id: id, mangaId: 1, name: 'c$id',
+          chapterIndex: id, isRead: read, lastPageRead: 0,
+          isBookmarked: false, serverIsDownloaded: true, pageCount: 1,
+          updatedAt: DateTime(2026), syncedIsRead: read);
+      await db.setChapterDeviceState(id, OfflineDeviceState.downloaded,
+          bytes: 1);
+    }
+    expect((await db.mangaById(1))!.totalChapters, 0);
+
+    final r = await libraryWithOfflineFallback(
+        fetch: boom, db: db, offlineEnabled: true);
+    expect(r!.single.unreadCount, 2);
+    expect(r.single.chapters.totalCount, 3);
+  });
+
+  group('library catalog serves are logged', () {
+    late List<String> lines;
+    setUp(() {
+      lines = [];
+      setDiagnosticSink(lines.add);
+    });
+    tearDown(() => setDiagnosticSink(null));
+
+    test('with the reason when the network fails', () async {
+      await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+      await seedDownloadedChapter(1);
+      await libraryWithOfflineFallback(
+          fetch: boom, db: db, offlineEnabled: true);
+      expect(lines.single, contains('library-catalog-serve: '
+          'reason=connection-error manga=1'));
+    });
+
+    test('with the reason when offline-first skips the network', () async {
+      await db.upsertMangaMetadata(id: 1, title: 'A', updatedAt: DateTime(2026));
+      await seedDownloadedChapter(1);
+      await libraryWithOfflineFallback(fetch: () async => [], db: db,
+          offlineEnabled: true, offlineFirst: true);
+      expect(lines.single, contains('reason=offline-first manga=1'));
+    });
+
+    test('not when the server answers', () async {
+      await libraryWithOfflineFallback(
+          fetch: () async => null, db: db, offlineEnabled: true);
+      expect(lines, isEmpty);
+    });
   });
 }

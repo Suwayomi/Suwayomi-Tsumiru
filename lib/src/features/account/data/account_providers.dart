@@ -50,7 +50,7 @@ final accountAccessProvider = FutureProvider<AccountAccess>((ref) async {
   final permissionRevision = binding == null
       ? 0
       : permissionStore!.downloadPermissionRevision(binding.catalogId);
-  final capability = await repository.capability();
+  final capability = await repository.capability(stillWanted: valid);
   if (!valid()) throw StateError('Authentication session changed');
   if (capability == AccountCapability.unknown) {
     throw StateError('Could not verify account support');

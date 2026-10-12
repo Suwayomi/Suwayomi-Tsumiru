@@ -19,6 +19,7 @@ import '../../../global_providers/global_providers.dart';
 // auth.graphql.dart, so we import the schema directly.
 import '../../../graphql/__generated__/schema.graphql.dart'
     show Input$LoginInput, Input$RefreshTokenInput;
+import '../../../utils/crash/diagnostics.dart';
 import '../../account/data/account_notice.dart';
 import '../../account/data/account_session_repository.dart';
 import '../../account/domain/account_binding.dart';
@@ -32,6 +33,7 @@ import 'auth_state.dart';
 import 'basic_credentials_rejected.dart';
 import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
+import 'jwt_utils.dart';
 import 'simple_login_client.dart';
 
 part 'auth_coordinator.g.dart';
@@ -148,6 +150,36 @@ class RefreshAuthFailure extends RefreshOutcome {
 class RefreshTransientFailure extends RefreshOutcome {
   const RefreshTransientFailure(this.error);
   final Object error;
+}
+
+/// One-line, token-free summary of [outcome] for the diagnostic log: the new
+/// token's remaining lifetime on success, the error's type and first line on
+/// a transient failure. `null` means no refresh was due.
+String describeRefreshOutcome(RefreshOutcome? outcome, {DateTime? now}) =>
+    switch (outcome) {
+      null => 'outcome=not-due',
+      RefreshSuccess(:final newAccessToken) =>
+        'outcome=success ${describeTokenExpiry(newAccessToken, now: now)}',
+      RefreshAuthFailure() => 'outcome=auth-failure',
+      RefreshTransientFailure(:final error) =>
+        'outcome=transient cause=${describeDiagnosticError(error)}',
+    };
+
+/// `expIn=<seconds>` (negative once expired) for a JWT, `exp=unknown` when it
+/// can't be decoded, `token=none` for a missing one. Never the token itself.
+String describeTokenExpiry(String? token, {DateTime? now}) {
+  if (token == null || token.isEmpty) return 'token=none';
+  final exp = decodeJwtExp(token);
+  if (exp == null) return 'exp=unknown';
+  return 'expIn=${exp.difference(now ?? DateTime.now().toUtc()).inSeconds}s';
+}
+
+/// `<Type>: <first line>` of [error], capped so a server stack trace packed
+/// into a message can't flood the log.
+String describeDiagnosticError(Object error) {
+  final first = error.toString().split('\n').first.trim();
+  final text = first.length > 160 ? '${first.substring(0, 160)}…' : first;
+  return '${error.runtimeType}: $text';
 }
 
 Expando<Completer<RefreshOutcome>> _refreshInFlight = Expando();
@@ -280,7 +312,10 @@ class AuthCoordinator extends _$AuthCoordinator {
   Future<void> _firePeriodicRefresh() async {
     try {
       final gqlClient = ref.read(unauthenticatedGraphQlClientProvider);
-      final outcome = await refreshUiAccessToken(gqlClient: gqlClient);
+      final outcome = await refreshUiAccessToken(
+        gqlClient: gqlClient,
+        trigger: 'timer',
+      );
       if (outcome is RefreshSuccess) {
         _proactiveBackoffStep = 0;
         _scheduleProactiveRefresh();
@@ -523,17 +558,30 @@ class AuthCoordinator extends _$AuthCoordinator {
     }, expectedEpoch: forEpoch);
   }
 
+  /// [trigger] names the caller in the `auth-refresh` diagnostic, so a field
+  /// log shows which path refreshed (or failed to) and when.
   Future<RefreshOutcome> refreshUiAccessToken({
     required GraphQLClient gqlClient,
+    String trigger = 'other',
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     final inFlight = _refreshInFlight[store];
-    if (inFlight != null) return inFlight.future;
+    if (inFlight != null) {
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger joined-in-flight\n',
+      );
+      return inFlight.future;
+    }
 
     final completer = Completer<RefreshOutcome>();
     _refreshInFlight[store] = completer;
     try {
       final outcome = await _refreshUiAccessTokenImpl(gqlClient);
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger ${describeRefreshOutcome(outcome)}\n',
+      );
       completer.complete(outcome);
       return outcome;
     } catch (e, st) {
@@ -543,6 +591,10 @@ class AuthCoordinator extends _$AuthCoordinator {
       // tokens for the wrong reason.
       debugPrint('refreshUiAccessToken: unexpected throw: $e\n$st');
       final outcome = RefreshOutcome.transientFailure(e);
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] auth-refresh: '
+        'trigger=$trigger threw ${describeRefreshOutcome(outcome)}\n',
+      );
       completer.complete(outcome);
       return outcome;
     } finally {
@@ -697,6 +749,7 @@ class AuthCoordinator extends _$AuthCoordinator {
   Future<RefreshOutcome?> refreshUiAccessTokenIfDue({
     required GraphQLClient gqlClient,
     Duration leadTime = proactiveRefreshLead,
+    String trigger = 'other',
   }) async {
     if ((ref.read(authTypeKeyProvider) ?? DBKeys.authType.initial) !=
         AuthType.uiLogin) {
@@ -709,7 +762,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     if (expiresAt == null) return null;
     final remaining = expiresAt.difference(DateTime.now().toUtc());
     if (remaining > leadTime) return null;
-    return refreshUiAccessToken(gqlClient: gqlClient);
+    return refreshUiAccessToken(gqlClient: gqlClient, trigger: trigger);
   }
 
   /// Runs the appropriate verify-only round-trip and returns a typed

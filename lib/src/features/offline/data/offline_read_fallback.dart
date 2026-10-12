@@ -6,6 +6,8 @@
 
 import 'dart:async';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/crash/diagnostics.dart';
+import '../../../utils/crash/redact_tokens.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../library/domain/category/category_model.dart';
@@ -78,6 +80,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     final lastReadByManga = await db.lastReadAtByManga();
     final firstUnreadByManga = await db.firstUnreadDownloadedChapterByManga();
     final readDelta = await db.unsyncedReadDeltaByManga();
+    final chapterCounts = await db.chapterCountByManga();
     // Load all category memberships in one query, keyed by mangaId.
     final categoryMap = await db.categoriesForMangas({
       for (final m in rows) m.id,
@@ -97,6 +100,9 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
       for (final m in rows)
         offlineMangaToDto(
           m,
+          // Without it, a row whose totalChapters was never synced bounds its
+          // unread count at zero, as mangaWithOfflineFallback already avoids.
+          chapterCount: chapterCounts[m.id] ?? 0,
           lastReadAt: mergedLastRead(m),
           firstUnread: firstUnreadByManga[m.id],
           offlineCategories: categoryMap[m.id] ?? [],
@@ -111,6 +117,7 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
   if (offlineEnabled && offlineFirst && await canServe()) {
     final served = await serveCatalog();
     if (served != null) {
+      _logLibraryCatalogServe('offline-first', served.length);
       onReachability?.call(false);
       onCatalogServe?.call();
       return served;
@@ -128,10 +135,26 @@ Future<List<MangaDto>?> libraryWithOfflineFallback({
     if (!offlineEnabled || !connectionLost) rethrow;
     final served = await serveCatalog();
     if (served == null) rethrow;
+    _logLibraryCatalogServe(
+      e is TimeoutException ? 'fetch-timeout' : 'connection-error',
+      served.length,
+      error: e,
+    );
     onCatalogServe?.call();
     return served;
   }
 }
+
+/// The library silently switching to the on-device catalog explains stale
+/// counts and missing series, but left no trace in the debug log.
+void _logLibraryCatalogServe(String reason, int count, {Object? error}) =>
+    recordDiagnostic(
+      redactTokens(
+        '[${DateTime.now().toIso8601String()}] library-catalog-serve: '
+        'reason=$reason manga=$count'
+        '${error == null ? '' : ' error=${error.runtimeType}: $error'}\n',
+      ),
+    );
 
 Future<MangaDto?> mangaWithOfflineFallback({
   required Future<MangaDto?> Function() fetch,
