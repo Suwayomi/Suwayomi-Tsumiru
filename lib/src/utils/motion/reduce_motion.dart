@@ -12,7 +12,12 @@ part 'reduce_motion.g.dart';
 
 /// App-requested reduced motion, in addition to the OS "Remove animations" flag.
 @riverpod
-bool appReduceMotion(Ref ref) => false;
+class AppReduceMotion extends _$AppReduceMotion {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
+}
 
 extension ReduceMotionContext on BuildContext {
   bool get reduceMotion => MediaQuery.disableAnimationsOf(this);
@@ -61,5 +66,32 @@ class _NoPageTransitionBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) => child;
+  ) => ReducedRouteTransition(animation: animation, child: child);
+}
+
+/// Keeps a route's page mounted but unpainted while the route pops, so the
+/// page underneath shows at once instead of after the 300 ms reverse.
+class ReducedRouteTransition extends StatelessWidget {
+  const ReducedRouteTransition({
+    super.key,
+    required this.animation,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: animation,
+      builder: (context, child) => Visibility(
+        visible: animation.status != AnimationStatus.reverse,
+        maintainState: true,
+        maintainAnimation: true,
+        child: child!,
+      ),
+      child: child,
+    );
+  }
 }

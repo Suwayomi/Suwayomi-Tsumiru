@@ -7,6 +7,11 @@ import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
 const _nextKey = ValueKey('next');
 
+class _ReduceMotionOn extends AppReduceMotion {
+  @override
+  bool build() => true;
+}
+
 class _Probe {
   bool? reduceMotion;
   ThemeData? theme;
@@ -63,6 +68,12 @@ Future<void> _pushNext(WidgetTester tester) async {
   await tester.pump();
 }
 
+Future<void> _popNext(WidgetTester tester, _Probe probe) async {
+  await tester.pumpAndSettle();
+  Navigator.of(probe.context!).pop();
+  await tester.pump();
+}
+
 void _expectReduced(_Probe probe) {
   expect(probe.reduceMotion, isTrue);
   expect(probe.theme!.splashFactory, NoSplash.splashFactory);
@@ -115,7 +126,9 @@ void main() {
       await tester.pumpWidget(
         _app(
           probe,
-          overrides: [appReduceMotionProvider.overrideWithValue(true)],
+          overrides: [
+            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
+          ],
         ),
       );
 
@@ -125,13 +138,65 @@ void main() {
   );
 
   testWidgets(
-    'reader route transition returns the page unchanged when reduced',
+    'app flag hides a closing page at once and shows the page underneath',
     (tester) async {
       final probe = _Probe();
       await tester.pumpWidget(
         _app(
           probe,
-          overrides: [appReduceMotionProvider.overrideWithValue(true)],
+          overrides: [
+            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
+          ],
+        ),
+      );
+
+      await _pushNext(tester);
+      await _popNext(tester, probe);
+
+      expect(find.byKey(_nextKey), findsNothing);
+      expect(find.byKey(_nextKey, skipOffstage: false), findsOneWidget);
+      expect(find.text('open'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'without reduced motion the closing page is still painted on the first pop frame',
+    (tester) async {
+      final probe = _Probe();
+      await tester.pumpWidget(_app(probe));
+
+      await _pushNext(tester);
+      await _popNext(tester, probe);
+
+      expect(find.byKey(_nextKey), findsOneWidget);
+    },
+  );
+
+  testWidgets('set(true) at runtime turns reduced motion on below the scope', (
+    tester,
+  ) async {
+    final probe = _Probe();
+    await tester.pumpWidget(_app(probe));
+    expect(probe.reduceMotion, isFalse);
+
+    ProviderScope.containerOf(
+      probe.context!,
+    ).read(appReduceMotionProvider.notifier).set(true);
+    await tester.pump();
+
+    _expectReduced(probe);
+  });
+
+  testWidgets(
+    'reader route transition wraps the page in a closing-page hider when reduced',
+    (tester) async {
+      final probe = _Probe();
+      await tester.pumpWidget(
+        _app(
+          probe,
+          overrides: [
+            appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
+          ],
         ),
       );
 
@@ -145,7 +210,14 @@ void main() {
         animation,
         page,
       );
-      expect(identical(result, page), isTrue);
+      expect(
+        result,
+        isA<ReducedRouteTransition>().having(
+          (w) => w.child,
+          'child',
+          same(page),
+        ),
+      );
     },
   );
 

@@ -84,7 +84,9 @@ class ReaderRoute extends GoRouteData with $ReaderRoute {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    if (context.reduceMotion) return child;
+    if (context.reduceMotion) {
+      return ReducedRouteTransition(animation: animation, child: child);
+    }
 
     Offset offset = Offset.zero;
     offset += Offset(

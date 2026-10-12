@@ -121,7 +121,12 @@ class MangaCoverGridTile extends StatelessWidget {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
-                    if (context.reduceMotion) return child;
+                    if (context.reduceMotion) {
+                      return ReducedRouteTransition(
+                        animation: animation,
+                        child: child,
+                      );
+                    }
 
                     const begin = Offset(-1.0, 0.0);
                     const end = Offset.zero;
