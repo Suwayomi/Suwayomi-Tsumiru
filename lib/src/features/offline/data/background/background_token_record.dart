@@ -99,15 +99,17 @@ class BackgroundTokenRecord {
     'identityEpoch': identityEpoch,
     'catalogServerId': catalogServerId,
     'notificationSessionId': notificationSessionId,
-    'sealed': RecordSeal.seal({
-      'originalRefreshToken': originalRefreshToken,
-      'accessToken': accessToken,
-      'refreshToken': refreshToken,
-      'password': password,
-      'basicCredential': basicCredential,
-      'simpleCookie': simpleCookie,
-      'extraHeaders': extraHeaders,
-    }),
+    // Without a key the secrets are left out, so the record reads as nobody.
+    if (RecordSeal.ready)
+      'sealed': RecordSeal.seal({
+        'originalRefreshToken': originalRefreshToken,
+        'accessToken': accessToken,
+        'refreshToken': refreshToken,
+        'password': password,
+        'basicCredential': basicCredential,
+        'simpleCookie': simpleCookie,
+        'extraHeaders': extraHeaders,
+      }),
   };
 
   /// Reads a record written by [toJson], or a plain one from before records

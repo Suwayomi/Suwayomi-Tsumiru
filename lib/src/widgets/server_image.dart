@@ -123,10 +123,19 @@ String serverImageBrowserUrl(WidgetRef ref, String fetchUrl) {
       ref.read(authTypeKeyProvider) != AuthType.uiLogin) {
     return fetchUrl;
   }
-  return appendUiLoginToken(
+  return appendUiLoginTokenToWebUrl(
     fetchUrl,
     ref.read(authCredentialsStoreProvider).value?.uiAccessToken,
   );
+}
+
+/// [appendUiLoginToken] for web addresses only: a local `file:` page would
+/// hand the token to the OS opener.
+String appendUiLoginTokenToWebUrl(String url, String? token) {
+  final scheme = Uri.tryParse(url)?.scheme;
+  return scheme == 'http' || scheme == 'https'
+      ? appendUiLoginToken(url, token)
+      : url;
 }
 
 /// Appends the ui_login access token to [url] as a query parameter, which the

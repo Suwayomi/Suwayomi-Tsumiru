@@ -43,7 +43,7 @@ abstract final class RecordSeal {
   }) async {
     try {
       final stored = await storage.read(key: storageKey);
-      final bytes = stored == null ? null : base64Decode(stored);
+      final bytes = stored == null ? null : _decodeKey(stored);
       if (bytes != null && bytes.length == 32) {
         _key = bytes;
         return true;
@@ -60,6 +60,14 @@ abstract final class RecordSeal {
     } catch (e) {
       _log('key-unreadable cause=${e.runtimeType}');
       return false;
+    }
+  }
+
+  static Uint8List? _decodeKey(String stored) {
+    try {
+      return base64Decode(stored);
+    } on FormatException {
+      return null;
     }
   }
 

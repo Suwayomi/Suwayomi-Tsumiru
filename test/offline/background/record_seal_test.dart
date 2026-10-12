@@ -88,9 +88,23 @@ void main() {
     expect(BackgroundTokenRecord.fromJson(json).accessToken, isNull);
   });
 
-  test('without a key nothing is written, rather than written in clear', () {
+  test('without a key the record is written with no secrets in clear', () {
     RecordSeal.debugKey = null;
-    expect(_record.toJson, throwsStateError);
+    final json = _record.toJson();
+    final raw = jsonEncode(json);
+    expect(json, isNot(contains('sealed')));
+    expect(raw, isNot(contains('secret')));
+    expect(raw, isNot(contains('c2VjcmV0')));
+
+    final read = BackgroundTokenRecord.fromJson(
+      jsonDecode(raw) as Map<String, Object?>,
+    );
+    expect(read.accessToken, isNull);
+    expect(read.refreshToken, isNull);
+    expect(read.basicCredential, isNull);
+    expect(read.gen, _record.gen);
+    expect(read.authType, _record.authType);
+    expect(read.endpoint, _record.endpoint);
   });
 
   group('load', () {
@@ -114,6 +128,17 @@ void main() {
         jsonDecode(sealed) as Map<String, Object?>,
       );
       expect(read.refreshToken, 'secret-refresh');
+    });
+
+    test('a stored key that is not base64 is replaced by the app', () async {
+      FlutterSecureStorage.setMockInitialValues({
+        RecordSeal.storageKey: 'not-base64!!',
+      });
+      const storage = FlutterSecureStorage();
+      expect(await RecordSeal.load(storage), isFalse);
+      expect(await RecordSeal.load(storage, create: true), isTrue);
+      final stored = await storage.read(key: RecordSeal.storageKey);
+      expect(base64Decode(stored!), hasLength(32));
     });
   });
 }
