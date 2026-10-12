@@ -1736,10 +1736,10 @@ packages:
     dependency: "direct dev"
     description:
       name: unorm_dart
-      sha256: "0c69186b03ca6addab0774bcc0f4f17b88d4ce78d9d4d8f0619e30a99ead58e7"
+      sha256: b4f4d2aff27d65a5fc37f400d4c09e55d7535359315acbe3b895a9add4de3a23
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.2"
+    version: "0.3.3"
   upower:
     dependency: transitive
     description:
