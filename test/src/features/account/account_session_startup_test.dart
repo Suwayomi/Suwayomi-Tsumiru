@@ -192,6 +192,64 @@ void main() {
     },
   );
 
+  test('changing the LAN address re-syncs notifications', () async {
+    var notifications = 0;
+    final container = await setup(
+      verify: () async => 'A',
+      notify: () async {
+        notifications++;
+      },
+    );
+    final startup = AccountSessionStartup(container);
+    addTearDown(startup.dispose);
+    await startup.start();
+    final atLaunch = notifications;
+    container
+        .read(serverLanUrlProvider.notifier)
+        .update('http://192.168.5.5:4567');
+    await Future<void>.delayed(Duration.zero);
+    expect(notifications, atLaunch + 1);
+  });
+
+  test(
+    'address changes during an identity change re-sync once it settles',
+    () async {
+      var notifications = 0;
+      final resynced = Completer<void>();
+      final container = await setup(
+        verify: () async => 'A',
+        notify: () async {
+          if (++notifications == 2) resynced.complete();
+        },
+      );
+      final startup = AccountSessionStartup(container);
+      addTearDown(startup.dispose);
+      await startup.start();
+      expect(notifications, 1);
+      final gate = Completer<void>();
+      final change = container
+          .read(authCredentialsStoreProvider.notifier)
+          .withIdentityChange(() => gate.future, preserveSession: true);
+      expect(
+        container.read(authCredentialsStoreProvider.notifier).identityChanging,
+        isTrue,
+      );
+      container
+          .read(serverLanUrlProvider.notifier)
+          .update('http://192.168.5.5:4567');
+      container
+          .read(serverLanUrlProvider.notifier)
+          .update('http://192.168.5.6:4567');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(notifications, 1);
+      gate.complete();
+      await change;
+      await resynced.future;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(notifications, 2);
+    },
+  );
+
   test('restoring download permission requests startup work again', () async {
     var verifications = 0;
     var notifications = 0;

@@ -55,6 +55,7 @@ class AccountSessionStartup {
   bool _restoreUnboundRequested = false;
   bool _endpointChanged = false;
   bool _catchupStarted = false;
+  bool _notificationSyncDeferred = false;
   bool _offlineActivationPending = false;
   bool? _downloadsAllowed;
   int _permissionRevision = 0;
@@ -82,6 +83,15 @@ class AccountSessionStartup {
         _endpointChanged = true;
         unawaited(_request());
       }),
+    );
+    _subscriptions.add(
+      container.listen<String?>(serverLanUrlProvider, _addressSettingChanged),
+    );
+    _subscriptions.add(
+      container.listen<String?>(
+        serverExternalUrlProvider,
+        _addressSettingChanged,
+      ),
     );
     _subscriptions.add(
       container.listen<bool>(serverUnreachableProvider, (previous, next) {
@@ -310,6 +320,48 @@ class AccountSessionStartup {
   bool _offlineActiveNow() {
     _offlineActivationPending = false;
     return container.read(offlineActiveProvider);
+  }
+
+  void _addressSettingChanged(String? previous, String? next) {
+    if (!_current || previous == next) return;
+    final credentials = container.read(authCredentialsStoreProvider.notifier);
+    if (!credentials.identityChanging) {
+      _syncNotifications();
+      return;
+    }
+    if (_notificationSyncDeferred) return;
+    _notificationSyncDeferred = true;
+    unawaited(_syncNotificationsOnceSettled(credentials));
+  }
+
+  Future<void> _syncNotificationsOnceSettled(
+    AuthCredentialsStore credentials,
+  ) async {
+    try {
+      await credentials.outsideIdentityChange(() async {
+        while (_current && credentials.identityChanging) {
+          if (!await credentials.identitySettled(
+            timeout: const Duration(seconds: 5),
+          )) {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+          }
+        }
+      });
+    } finally {
+      _notificationSyncDeferred = false;
+    }
+    _syncNotifications();
+  }
+
+  void _syncNotifications() {
+    if (!_current) return;
+    unawaited(
+      Future<void>.sync(
+        () => container.read(notificationsControllerProvider).sync(),
+      ).catchError((Object error) {
+        if (_current) debugPrint('Notification re-sync failed: $error');
+      }),
+    );
   }
 
   void _snapshot() {
