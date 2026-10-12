@@ -132,6 +132,7 @@ class MigrationRepositoryImpl implements MigrationRepository {
       final result = await client.mutate$FetchSourceManga(
         Options$Mutation$FetchSourceManga(
           variables: Variables$Mutation$FetchSourceManga(
+            withFirstUnread: false,
             input: Input$FetchSourceMangaInput(
               source: sourceId,
               query: query,

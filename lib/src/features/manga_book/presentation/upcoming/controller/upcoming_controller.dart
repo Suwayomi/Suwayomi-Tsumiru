@@ -64,7 +64,11 @@ UpcomingData buildUpcomingData(
 Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
   final nodes = await ref
       .watch(graphQlClientProvider)
-      .query$GetLibraryMangas(Options$Query$GetLibraryMangas())
+      .query$GetLibraryMangas(
+        Options$Query$GetLibraryMangas(
+          variables: Variables$Query$GetLibraryMangas(withFirstUnread: false),
+        ),
+      )
       .getData((data) => data.mangas.nodes);
   return [for (final n in nodes ?? const []) n as MangaDto];
 }
