@@ -82,6 +82,26 @@ void main() {
     });
   });
 
+  group('transcodeAvifInFlight', () {
+    test('returned future completes and clears the in-flight entry', () async {
+      var calls = 0;
+      Future<void> transcode() async {
+        calls++;
+      }
+
+      await transcodeAvifInFlight(
+        'cover-in-flight',
+        transcode,
+      ).timeout(const Duration(seconds: 5));
+      await transcodeAvifInFlight(
+        'cover-in-flight',
+        transcode,
+      ).timeout(const Duration(seconds: 5));
+
+      expect(calls, 2);
+    });
+  });
+
   group('createCoverCacheManager', () {
     late Directory support;
     late PathProviderPlatform previousPaths;
