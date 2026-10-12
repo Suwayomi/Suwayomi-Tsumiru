@@ -61,7 +61,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -106,7 +106,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -146,7 +146,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -186,7 +186,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -222,7 +222,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(milliseconds: 1500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -258,7 +258,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(milliseconds: 1500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 
@@ -296,7 +296,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      snackBarAnimationStyle: context.motionStyle,
+      snackBarAnimationStyle: context.snackBarMotionStyle,
     );
   }
 }

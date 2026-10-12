@@ -60,7 +60,7 @@ class AppErrorApp extends StatelessWidget {
                             const SnackBar(
                               content: Text('Log copied to clipboard'),
                             ),
-                            snackBarAnimationStyle: context.motionStyle,
+                            snackBarAnimationStyle: context.snackBarMotionStyle,
                           );
                         }
                       },

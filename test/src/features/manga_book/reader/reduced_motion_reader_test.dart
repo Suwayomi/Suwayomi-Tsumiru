@@ -146,7 +146,6 @@ Future<void> _pumpLongStrip(
 
   SharedPreferences.setMockInitialValues({
     'animatePageTransitions': animatePageTransitions,
-    'readerFeedbackToasts': false,
   });
   final prefs = await SharedPreferences.getInstance();
 

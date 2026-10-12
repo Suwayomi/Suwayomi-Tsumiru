@@ -205,7 +205,7 @@ class SeriesOfflineButton extends ConsumerWidget {
     int count,
   ) async {
     final messenger = ScaffoldMessenger.of(sheetContext);
-    final motionStyle = sheetContext.motionStyle;
+    final snackBarMotionStyle = sheetContext.snackBarMotionStyle;
     final toast = sheetContext.l10n.offlineDownloadingToast;
     Navigator.of(sheetContext).pop();
     final current = ref
@@ -221,7 +221,7 @@ class SeriesOfflineButton extends ConsumerWidget {
     ref.invalidate(mangaDownloadedCountProvider(mangaId));
     messenger.showSnackBar(
       SnackBar(content: Text(toast)),
-      snackBarAnimationStyle: motionStyle,
+      snackBarAnimationStyle: snackBarMotionStyle,
     );
   }
 

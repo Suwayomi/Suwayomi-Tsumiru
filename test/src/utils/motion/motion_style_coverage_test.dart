@@ -2,12 +2,18 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-final _kinds = <RegExp, String>{
-  RegExp(r'\bshowDialog\b(?:<[^>(]*>)?\('): 'animationStyle:',
-  RegExp(r'\bshowModalBottomSheet\b(?:<[^(]*?>)?\('): 'sheetAnimationStyle:',
-  RegExp(r'\bshowMenu\b(?:<[^>(]*>)?\('): 'popUpAnimationStyle:',
-  RegExp(r'\bPopupMenuButton\b(?:<[^>(]*>)?\('): 'popUpAnimationStyle:',
-  RegExp(r'\.showSnackBar\('): 'snackBarAnimationStyle:',
+final _kinds = <RegExp, RegExp>{
+  RegExp(r'\bshowDialog\b(?:<[^>(]*>)?\('): RegExp(r'\banimationStyle:'),
+  RegExp(r'\bshowModalBottomSheet\b(?:<[^(]*?>)?\('): RegExp(
+    r'\bsheetAnimationStyle:',
+  ),
+  RegExp(r'\bshowMenu\b(?:<[^>(]*>)?\('): RegExp(r'\bpopUpAnimationStyle:'),
+  RegExp(r'\bPopupMenuButton\b(?:<[^>(]*>)?\('): RegExp(
+    r'\bpopUpAnimationStyle:',
+  ),
+  RegExp(r'\.showSnackBar\('): RegExp(
+    r'\bsnackBarAnimationStyle:\s*(?:context\.)?snackBarMotionStyle\b',
+  ),
 };
 
 bool _skip(String path) =>
@@ -52,29 +58,35 @@ String _topLevel(String args) {
 }
 
 void main() {
-  test('every dialog, sheet, menu and snackbar call takes a motion style', () {
-    final misses = <String>[];
-    final files = Directory('lib')
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart') && !_skip(f.path));
-    for (final file in files) {
-      final src = file.readAsStringSync();
-      for (final entry in _kinds.entries) {
-        for (final m in entry.key.allMatches(src)) {
-          final lineStart = src.lastIndexOf('\n', m.start) + 1;
-          if (src.substring(lineStart, m.start).trimLeft().startsWith('//')) {
-            continue;
-          }
-          final close = _closingParen(src, m.end);
-          final args = close < 0 ? '' : _topLevel(src.substring(m.end, close));
-          if (!args.contains(entry.value)) {
-            final line = '\n'.allMatches(src.substring(0, m.start)).length + 1;
-            misses.add('${file.path}:$line missing ${entry.value}');
+  test(
+    'every dialog, sheet, menu and snackbar call takes its motion style',
+    () {
+      final misses = <String>[];
+      final files = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart') && !_skip(f.path));
+      for (final file in files) {
+        final src = file.readAsStringSync();
+        for (final entry in _kinds.entries) {
+          for (final m in entry.key.allMatches(src)) {
+            final lineStart = src.lastIndexOf('\n', m.start) + 1;
+            if (src.substring(lineStart, m.start).trimLeft().startsWith('//')) {
+              continue;
+            }
+            final close = _closingParen(src, m.end);
+            final args = close < 0
+                ? ''
+                : _topLevel(src.substring(m.end, close));
+            if (!entry.value.hasMatch(args)) {
+              final line =
+                  '\n'.allMatches(src.substring(0, m.start)).length + 1;
+              misses.add('${file.path}:$line missing ${entry.value.pattern}');
+            }
           }
         }
       }
-    }
-    expect(misses, isEmpty, reason: misses.join('\n'));
-  });
+      expect(misses, isEmpty, reason: misses.join('\n'));
+    },
+  );
 }

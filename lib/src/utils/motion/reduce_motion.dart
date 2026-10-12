@@ -25,6 +25,14 @@ extension ReduceMotionContext on BuildContext {
   /// Flutter's own off switch for dialogs, sheets, menus and snackbars.
   AnimationStyle? get motionStyle =>
       reduceMotion ? AnimationStyle.noAnimation : null;
+
+  /// Not zero: a zero-length snackbar re-enters Flutter's queue at once.
+  AnimationStyle? get snackBarMotionStyle => reduceMotion
+      ? const AnimationStyle(
+          duration: Duration(milliseconds: 1),
+          reverseDuration: Duration(milliseconds: 1),
+        )
+      : null;
 }
 
 /// Merges the OS flag with [appReduceMotionProvider] into [MediaQuery] and

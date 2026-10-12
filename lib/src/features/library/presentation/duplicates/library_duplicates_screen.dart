@@ -112,7 +112,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
         context,
       ).showSnackBar(
         SnackBar(content: Text(message)),
-        snackBarAnimationStyle: context.motionStyle,
+        snackBarAnimationStyle: context.snackBarMotionStyle,
       );
     }
 

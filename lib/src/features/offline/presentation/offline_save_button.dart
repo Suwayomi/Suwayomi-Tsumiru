@@ -85,7 +85,7 @@ class OfflineSaveButton extends ConsumerWidget {
                   : context.l10n.errorSomethingWentWrong,
             ),
           ),
-          snackBarAnimationStyle: context.motionStyle,
+          snackBarAnimationStyle: context.snackBarMotionStyle,
         );
       }
     }

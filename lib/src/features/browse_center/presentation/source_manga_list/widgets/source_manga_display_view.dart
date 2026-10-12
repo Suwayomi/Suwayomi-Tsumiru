@@ -181,7 +181,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
                 : context.l10n.bulkAdded(added),
           ),
         ),
-        snackBarAnimationStyle: context.motionStyle,
+        snackBarAnimationStyle: context.snackBarMotionStyle,
       );
     }
 

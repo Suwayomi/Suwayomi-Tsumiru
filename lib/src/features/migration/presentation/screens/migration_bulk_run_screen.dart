@@ -411,7 +411,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     if (ok != true || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final motionStyle = context.motionStyle;
+    final snackBarMotionStyle = context.snackBarMotionStyle;
     // Blocking progress while copying/removing (Komikku MigrationProgressDialog).
     unawaited(
       showDialog<void>(
@@ -438,7 +438,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
               : l10n.migrationDoneCopied(migrated),
         ),
       ),
-      snackBarAnimationStyle: motionStyle,
+      snackBarAnimationStyle: snackBarMotionStyle,
     );
     if (context.mounted) context.pop(); // back to the library
   }
@@ -453,7 +453,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
   }) async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
-    final motionStyle = context.motionStyle;
+    final snackBarMotionStyle = context.snackBarMotionStyle;
     await r.commitOne(fromMangaId, deleteSource: deleteSource);
     if (r.isCancelled) return;
     final ok = _committed(r, fromMangaId);
@@ -467,7 +467,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                 : l10n.migrationDoneCopied(1),
           ),
         ),
-        snackBarAnimationStyle: motionStyle,
+        snackBarAnimationStyle: snackBarMotionStyle,
       );
     }
     if (r.entries.isEmpty && context.mounted) context.pop();

@@ -167,7 +167,7 @@ class CategoryMangaList extends HookConsumerWidget {
       if (!allOk && !ref.read(offlineActiveProvider)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
-          snackBarAnimationStyle: context.motionStyle,
+          snackBarAnimationStyle: context.snackBarMotionStyle,
         );
         return;
       }
@@ -179,7 +179,7 @@ class CategoryMangaList extends HookConsumerWidget {
                 : 'Marked ${ids.length} series unread',
           ),
         ),
-        snackBarAnimationStyle: context.motionStyle,
+        snackBarAnimationStyle: context.snackBarMotionStyle,
       );
     }
 
@@ -412,7 +412,8 @@ class CategoryMangaList extends HookConsumerWidget {
                                     'Keeping ${ids.length} series offline',
                                   ),
                                 ),
-                                snackBarAnimationStyle: context.motionStyle,
+                                snackBarAnimationStyle:
+                                    context.snackBarMotionStyle,
                               );
                             }
                           },
@@ -483,7 +484,8 @@ class CategoryMangaList extends HookConsumerWidget {
                                       : context.l10n.nothingToDownload,
                                 ),
                               ),
-                              snackBarAnimationStyle: context.motionStyle,
+                              snackBarAnimationStyle:
+                                  context.snackBarMotionStyle,
                             );
                           },
                     onEditCategories: () async {
