@@ -148,7 +148,13 @@ class UpdatesRepository {
   /// server, which is what left the old summary screen spinning.
   Future<List<MangaDto>> failedUpdates() async =>
       (await client
-          .query$LibraryUpdateFailures(Options$Query$LibraryUpdateFailures())
+          .query$LibraryUpdateFailures(
+            Options$Query$LibraryUpdateFailures(
+              variables: Variables$Query$LibraryUpdateFailures(
+                withFirstUnread: false,
+              ),
+            ),
+          )
           .getData((data) => [
                 for (final update in data.libraryUpdateStatus.mangaUpdates)
                   if (update.status == Enum$MangaJobStatus.FAILED) update.manga,

@@ -39,6 +39,7 @@ class SourceRepository {
       .mutate$FetchSourceManga(
         Options$Mutation$FetchSourceManga(
           variables: Variables$Mutation$FetchSourceManga(
+            withFirstUnread: false,
             input: Input$FetchSourceMangaInput(
               query: query,
               page: page,
