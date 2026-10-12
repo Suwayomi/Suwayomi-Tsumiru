@@ -211,6 +211,38 @@ void main() {
     expect(notifications, atLaunch + 1);
   });
 
+  test(
+    'an address change during an identity change does not re-sync',
+    () async {
+      var notifications = 0;
+      final container = await setup(
+        verify: () async => 'A',
+        notify: () async {
+          notifications++;
+        },
+      );
+      final startup = AccountSessionStartup(container);
+      addTearDown(startup.dispose);
+      await startup.start();
+      final atLaunch = notifications;
+      final gate = Completer<void>();
+      final change = container
+          .read(authCredentialsStoreProvider.notifier)
+          .withIdentityChange(() => gate.future, preserveSession: true);
+      expect(
+        container.read(authCredentialsStoreProvider.notifier).identityChanging,
+        isTrue,
+      );
+      container
+          .read(serverLanUrlProvider.notifier)
+          .update('http://192.168.5.5:4567');
+      await Future<void>.delayed(Duration.zero);
+      expect(notifications, atLaunch);
+      gate.complete();
+      await change;
+    },
+  );
+
   test('restoring download permission requests startup work again', () async {
     var verifications = 0;
     var notifications = 0;

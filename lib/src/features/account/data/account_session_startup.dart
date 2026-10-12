@@ -323,6 +323,8 @@ class AccountSessionStartup {
 
   void _addressSettingChanged(String? previous, String? next) {
     if (!_current || previous == next) return;
+    final credentials = container.read(authCredentialsStoreProvider.notifier);
+    if (credentials.identityChanging || credentials.sessionChanging) return;
     unawaited(
       Future<void>.sync(
         () => container.read(notificationsControllerProvider).sync(),
