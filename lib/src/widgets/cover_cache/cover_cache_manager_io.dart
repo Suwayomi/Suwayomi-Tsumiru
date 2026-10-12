@@ -8,6 +8,7 @@ import 'dart:io' as io;
 
 import 'package:file/file.dart' hide FileSystem;
 import 'package:file/local.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as p;
@@ -87,9 +88,17 @@ Future<void> _transcodeAvifIfNeeded(io.File file) {
   if (!io.Platform.isAndroid || _failedFileTranscodes.contains(path)) {
     return Future.value();
   }
-  return _inFlightFileTranscodes[path] ??= _transcodeAvif(
-    file,
-  ).whenComplete(() => _inFlightFileTranscodes.remove(path));
+  return transcodeAvifInFlight(path, () => _transcodeAvif(file));
+}
+
+@visibleForTesting
+Future<void> transcodeAvifInFlight(
+  String path,
+  Future<void> Function() transcode,
+) {
+  return _inFlightFileTranscodes[path] ??= transcode().whenComplete(() {
+    _inFlightFileTranscodes.remove(path);
+  });
 }
 
 Future<FileInfo> _transcodeAvifInfo(FileInfo info) async {
