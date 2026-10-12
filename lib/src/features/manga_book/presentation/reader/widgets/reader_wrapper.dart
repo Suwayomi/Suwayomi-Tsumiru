@@ -422,12 +422,16 @@ class ReaderWrapper extends HookConsumerWidget {
     void navigateWithGapConfirmation(
       ChapterDto target,
       VoidCallback navigate, {
+      required bool forward,
       bool visualTransitionShown = false,
     }) {
       if (gapConfirmationPending.value) return;
+      final (higher, lower) = forward
+          ? (target.chapterNumber, chapter.chapterNumber)
+          : (chapter.chapterNumber, target.chapterNumber);
       final count = visualTransitionShown
           ? 0
-          : chapterGapCount(chapter.chapterNumber, target.chapterNumber);
+          : chapterGap(higher: higher, lower: lower);
       if (count == 0) {
         navigate();
         return;
@@ -461,6 +465,7 @@ class ReaderWrapper extends HookConsumerWidget {
           toPrev: toPrev,
           readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context),
+        forward: true,
         visualTransitionShown: visualTransitionShown,
       );
       return true;
@@ -488,6 +493,7 @@ class ReaderWrapper extends HookConsumerWidget {
           openAtEnd: openAtEnd,
           readerScanlatorGroup: readerScanlatorGroup,
         ).pushReplacement(context),
+        forward: false,
         visualTransitionShown: visualTransitionShown,
       );
       return true;

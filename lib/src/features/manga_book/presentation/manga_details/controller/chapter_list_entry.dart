@@ -75,11 +75,19 @@ List<MangaChapterListEntry> buildMangaChapterListEntries({
     if (ascending) addGaps([initialGap]);
   }
 
-  for (final chapter in sortedChapters) {
+  final lastIndexByFloor = <int, int>{};
+  for (var i = 0; i < sortedChapters.length; i++) {
+    final number = sortedChapters[i].chapterNumber;
+    if (number >= 0 && number.isFinite) lastIndexByFloor[number.floor()] = i;
+  }
+
+  for (var i = 0; i < sortedChapters.length; i++) {
+    final chapter = sortedChapters[i];
     final number = chapter.chapterNumber;
-    final gap = number >= 0 && number.isFinite
-        ? pendingGaps.remove(number.floor())
-        : null;
+    final floor = number >= 0 && number.isFinite ? number.floor() : null;
+    final gap = floor == null || (!ascending && lastIndexByFloor[floor] != i)
+        ? null
+        : pendingGaps.remove(floor);
     if (ascending && gap != null) addGaps([gap]);
     entries.add(MangaChapterEntry(chapter));
     if (!ascending && gap != null) addGaps([gap]);

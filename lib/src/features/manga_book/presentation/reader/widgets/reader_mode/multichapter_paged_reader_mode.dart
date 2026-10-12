@@ -612,9 +612,13 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
               chapterName: loadedChapters.value[index].chapter.name,
               hasGapBefore:
                   index > 0 &&
-                  chapterGapCount(
-                        loadedChapters.value[index - 1].chapter.chapterNumber,
-                        loadedChapters.value[index].chapter.chapterNumber,
+                  chapterGap(
+                        higher:
+                            loadedChapters.value[index].chapter.chapterNumber,
+                        lower: loadedChapters
+                            .value[index - 1]
+                            .chapter
+                            .chapterNumber,
                       ) >
                       0,
               mapping: buildSpreadMapping(
@@ -770,7 +774,10 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
       return _PagedChapterTransition(
         chapterName: name,
         isChapterStart: !t.isEnd,
-        gapCount: chapterGapCount(from?.chapterNumber, to?.chapterNumber),
+        gapCount: chapterGap(
+          higher: to?.chapterNumber,
+          lower: from?.chapterNumber,
+        ),
       );
     }
 

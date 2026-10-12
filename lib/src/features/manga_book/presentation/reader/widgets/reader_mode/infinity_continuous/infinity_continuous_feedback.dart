@@ -424,9 +424,9 @@ class InfinityContinuousChapterSeparator extends StatelessWidget {
         return (
           chapterName: chapterData.chapter.name,
           isChapterStart: false,
-          gapCount: chapterGapCount(
-            chapterData.chapter.chapterNumber,
-            loadedChapters[i + 1].chapter.chapterNumber,
+          gapCount: chapterGap(
+            higher: loadedChapters[i + 1].chapter.chapterNumber,
+            lower: chapterData.chapter.chapterNumber,
           ),
         );
       }

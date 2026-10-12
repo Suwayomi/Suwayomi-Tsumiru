@@ -8,16 +8,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/missing_chapters.dart';
 
 void main() {
-  test('reader gap counts skipped chapters in either direction', () {
-    expect(chapterGapCount(8.5, 10), 1);
-    expect(chapterGapCount(10, 8.5), 1);
-    expect(chapterGapCount(1.1, 10), 8);
-    expect(chapterGapCount(1, 1.9), 0);
-    expect(chapterGapCount(1, 2), 0);
-    expect(chapterGapCount(-1, 10), 0);
-    expect(chapterGapCount(null, 10), 0);
-    expect(chapterGapCount(double.nan, 10), 0);
-    expect(chapterGapCount(double.infinity, 10), 0);
+  test('reader gap counts skipped chapters in the direction of travel', () {
+    expect(chapterGap(higher: 13, lower: 10), 2);
+    expect(chapterGap(higher: 1, lower: 50), 0);
+    expect(chapterGap(higher: 18, lower: 16.5), 1);
+    expect(chapterGap(higher: 10, lower: 8.5), 1);
+    expect(chapterGap(higher: 8.5, lower: 10), 0);
+    expect(chapterGap(higher: 10, lower: 1.1), 8);
+    expect(chapterGap(higher: 1.9, lower: 1), 0);
+    expect(chapterGap(higher: 2, lower: 1), 0);
+    expect(chapterGap(higher: -1, lower: 10), 0);
+    expect(chapterGap(higher: 10, lower: -1), 0);
+    expect(chapterGap(higher: null, lower: 10), 0);
+    expect(chapterGap(higher: 10, lower: double.nan), 0);
+    expect(chapterGap(higher: double.infinity, lower: 10), 0);
   });
   test('empty and unknown chapter lists have no gaps', () {
     expect(findMissingChapterRanges(const []), isEmpty);
