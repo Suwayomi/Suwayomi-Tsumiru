@@ -14,6 +14,7 @@ import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../history/presentation/history_controller.dart';
 import '../../../../../offline/data/offline_download_providers.dart';
 import '../../../../../offline/data/offline_repository.dart';
@@ -858,7 +859,8 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
         initialDisplayIndex: initialDisplayIndex,
         axis: scrollDirection,
         reverse: reverse,
-        animateTransitions: settings.animatePageTransitions,
+        animateTransitions:
+            settings.animatePageTransitions && !context.reduceMotion,
         pageFit: pageFit,
         pageSize: pageSize,
         pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,

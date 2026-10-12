@@ -1234,6 +1234,42 @@ void main() {
     expect(menuToggles, 0);
   });
 
+  for (final reduce in [true, false]) {
+    testWidgets('double tap zoom with reduced motion=$reduce', (tester) async {
+      final clock = _FakeClock();
+      await _pumpViewport(
+        tester,
+        controller: PagedReaderController(),
+        mapping: _singlePageMapping(),
+        pages: _localPages(1),
+        initialDisplayIndex: 0,
+        onRawPageChanged: (_) {},
+        callbacks: _callbacks(),
+        clock: clock.now,
+        wrapper: (child) => Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: reduce),
+            child: child,
+          ),
+        ),
+      );
+
+      final target = find.byType(PagedReaderViewport);
+      await tester.tap(target);
+      clock.advance(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(target);
+      await tester.pump();
+
+      if (reduce) {
+        expect(_largestScale(tester), greaterThan(1.9));
+      } else {
+        expect(_largestScale(tester), lessThan(1.9));
+      }
+      await tester.pumpAndSettle();
+    });
+  }
+
   testWidgets('taps beyond the window stay two separate taps', (tester) async {
     final clock = _FakeClock();
     var menuToggles = 0;

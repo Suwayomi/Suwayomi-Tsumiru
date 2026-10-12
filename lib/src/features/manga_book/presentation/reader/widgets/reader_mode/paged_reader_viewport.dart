@@ -14,6 +14,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/crash/diagnostics.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../reader_wrapper.dart';
 import 'double_page_view.dart';
@@ -930,6 +931,10 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
     _zoomAnimation
       ..stop()
       ..reset();
+    if (context.reduceMotion) {
+      zoom.setScaleOffset(end.scale, end.offset);
+      return;
+    }
     _zoomAnimationTarget = zoom;
     _zoomScaleTween = Tween<double>(begin: zoom.scale, end: end.scale).animate(
       CurvedAnimation(parent: _zoomAnimation, curve: Curves.easeOutCubic),

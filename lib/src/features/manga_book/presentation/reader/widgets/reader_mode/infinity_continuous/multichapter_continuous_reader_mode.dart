@@ -21,6 +21,7 @@ import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../../utils/platform/platform_runtime.dart';
 import '../../../../../../../widgets/server_image.dart';
 import '../../../../../../../widgets/zoom/scroll_offset_to_scroll_controller.dart';
@@ -43,6 +44,7 @@ import '../../../../manga_details/controller/manga_details_controller.dart';
 import '../../../../manga_details/controller/scanlator_dedup.dart';
 import '../../../controller/auto_scroll_controller.dart';
 import '../../../controller/reader_controller.dart';
+import '../../../controller/reader_settings_model.dart';
 import '../../../utils/flush_progress_on_lifecycle.dart';
 import '../../../utils/reader_initial_page.dart';
 import '../../mouse_wheel_speed.dart';
@@ -466,6 +468,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
     final bool isAnimationEnabled = ref
         .watch(readerScrollAnimationProvider)
         .ifNull(true);
+    final bool animatePageTransitions = ref
+        .watch(readerEffectiveSettingsProvider(manga.id))
+        .animatePageTransitions;
     final bool isPinchToZoomEnabled = ref
         .watch(longStripPinchToZoomProvider)
         .ifNull(true);
@@ -1105,7 +1110,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
           );
       if (globalIndex < 0) return;
       if (!itemScrollController.isAttached) return;
-      if (isAnimationEnabled) {
+      if (isAnimationEnabled && !context.reduceMotion) {
         itemScrollController.scrollTo(
           index: globalIndex,
           alignment: 0.0,
@@ -1124,11 +1129,21 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         final double viewport = pos.viewportDimension;
         // reverse:true flips the visual direction of the list.
         final double sign = (forward ? 1.0 : -1.0) * (reverse ? -1.0 : 1.0);
-        scrollOffsetController.animateScroll(
-          offset: viewport * scrollAmount.fraction * sign,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+        final double offset = viewport * scrollAmount.fraction * sign;
+        if (animatePageTransitions && !context.reduceMotion) {
+          scrollOffsetController.animateScroll(
+            offset: offset,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        } else {
+          pos.jumpTo(
+            (pos.pixels + offset).clamp(
+              pos.minScrollExtent,
+              pos.maxScrollExtent,
+            ),
+          );
+        }
       } catch (_) {
         // Attached but not laid out yet (no ScrollPosition) — skip this press.
       }
