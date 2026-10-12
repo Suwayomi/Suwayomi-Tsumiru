@@ -14,6 +14,7 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/download_presets_menu.dart';
 import '../../../../widgets/emoticons.dart';
@@ -166,6 +167,7 @@ class CategoryMangaList extends HookConsumerWidget {
       if (!allOk && !ref.read(offlineActiveProvider)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.errorSomethingWentWrong)),
+          snackBarAnimationStyle: context.snackBarMotionStyle,
         );
         return;
       }
@@ -177,6 +179,7 @@ class CategoryMangaList extends HookConsumerWidget {
                 : 'Marked ${ids.length} series unread',
           ),
         ),
+        snackBarAnimationStyle: context.snackBarMotionStyle,
       );
     }
 
@@ -310,6 +313,7 @@ class CategoryMangaList extends HookConsumerWidget {
                                         ),
                                       ],
                                     ),
+                                    animationStyle: context.motionStyle,
                                   ) ??
                                   false;
                               if (!ok || !current()) return;
@@ -408,6 +412,8 @@ class CategoryMangaList extends HookConsumerWidget {
                                     'Keeping ${ids.length} series offline',
                                   ),
                                 ),
+                                snackBarAnimationStyle:
+                                    context.snackBarMotionStyle,
                               );
                             }
                           },
@@ -478,6 +484,8 @@ class CategoryMangaList extends HookConsumerWidget {
                                       : context.l10n.nothingToDownload,
                                 ),
                               ),
+                              snackBarAnimationStyle:
+                                  context.snackBarMotionStyle,
                             );
                           },
                     onEditCategories: () async {
@@ -496,6 +504,7 @@ class CategoryMangaList extends HookConsumerWidget {
                                 title: selected.first.title,
                               )
                             : EditMangasCategoryDialog(mangas: selected),
+                        animationStyle: context.motionStyle,
                       );
                       refresh();
                     },
@@ -596,6 +605,7 @@ class _SelectionBar extends StatelessWidget {
               onMigrate,
             ),
           ],
+          popUpAnimationStyle: context.motionStyle,
         ),
       ],
     );

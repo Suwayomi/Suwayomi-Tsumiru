@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/app_constants.dart';
 import '../../../../../../constants/enum.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_tap_invert/reader_tap_invert.dart';
 import 'layouts/edge_layout.dart';
@@ -35,14 +36,16 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
   final bool showReaderLayoutAnimation;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final reduceMotion = context.reduceMotion;
+    final showFlash = showReaderLayoutAnimation && !reduceMotion;
     final animationController = useAnimationController(duration: kLongDuration);
     useAnimation(animationController);
     final nextColorTween = ColorTween(
-      begin: showReaderLayoutAnimation ? Colors.green : Colors.transparent,
+      begin: showFlash ? Colors.green : null,
     ).animate(animationController).value;
 
     final prevColorTween = ColorTween(
-      begin: showReaderLayoutAnimation ? Colors.blue : Colors.transparent,
+      begin: showFlash ? Colors.blue : null,
     ).animate(animationController).value;
     // Callers resolve this (see effectiveNavigationLayout); an unresolved
     // value just draws nothing rather than falling back here and risking
@@ -53,9 +56,13 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
     // different one flashes the zones for it too (Komikku's
     // navigationModeChanged).
     useEffect(() {
-      animationController.forward(from: 0);
+      if (reduceMotion) {
+        animationController.value = 1;
+      } else {
+        animationController.forward(from: 0);
+      }
       return;
-    }, [layout]);
+    }, [layout, reduceMotion]);
     // Axis-wise inversion: horizontal swaps the
     // left/right zones, vertical swaps the L-shaped top/bottom rows.
     final TapInvert invert =

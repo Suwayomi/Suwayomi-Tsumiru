@@ -12,6 +12,7 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
@@ -46,7 +47,13 @@ class DownloadsScreen extends HookConsumerWidget {
     );
     // Own the tab controller so the FAB can be tab-contextual: the server queue
     // pause on the Server tab, the on-device pause on the On-device tab.
-    final tabController = useTabController(initialLength: 2);
+    final tabController = useTabController(
+      initialLength: 2,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
+      keys: [context.reduceMotion],
+    );
     useListenable(tabController);
     final onDeviceTab = tabController.index == 1;
     return Scaffold(

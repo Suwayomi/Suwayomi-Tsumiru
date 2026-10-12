@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../features/auth/data/custom_headers_store.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/section_title.dart';
 
 /// Connection-screen editor for generic custom HTTP headers.
@@ -36,6 +37,7 @@ class CustomHeadersSection extends HookConsumerWidget {
     Future<void> addOrEdit({String? existingName}) async {
       final result = await showDialog<({String name, String value})>(
         context: context,
+        animationStyle: context.motionStyle,
         builder: (_) => _HeaderDialog(
           isEdit: existingName != null,
           initialName: existingName ?? '',

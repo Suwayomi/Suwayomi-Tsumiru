@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/file_picker_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../data/backup_settings_repository.dart';
@@ -72,6 +73,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
         context: context,
         builder: (context) =>
             BackupMissingDialog(backupMissing: validateResult.value!),
+        animationStyle: context.motionStyle,
       ))
           .ifNull();
     }
@@ -119,6 +121,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
             showDialog(
               context: context,
               builder: (context) => const CreateBackupDialog(),
+              animationStyle: context.motionStyle,
             );
           },
         ),

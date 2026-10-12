@@ -12,6 +12,7 @@ import '../../../../../routes/navigation.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/presentation/library/controller/library_controller.dart';
 
 /// Komikku's tag-chip actions (MangaInfoHeader.kt:399-425): a dropdown anchored
@@ -44,6 +45,7 @@ Future<void> showTagActionsMenu(
       PopupMenuItem(
           value: 'copy', child: Text(context.l10n.copyToClipboard)),
     ],
+    popUpAnimationStyle: context.motionStyle,
   );
   if (action == null || !context.mounted) return;
 

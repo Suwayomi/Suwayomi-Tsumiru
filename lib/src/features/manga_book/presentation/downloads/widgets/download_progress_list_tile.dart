@@ -12,6 +12,7 @@ import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
@@ -177,6 +178,7 @@ class DownloadProgressListTile extends HookConsumerWidget {
                             ),
                       ),
                   ],
+                  popUpAnimationStyle: context.motionStyle,
                 ),
                 ReorderableDragStartListener(
                   index: index,

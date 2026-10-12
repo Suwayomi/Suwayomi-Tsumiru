@@ -18,6 +18,7 @@ import '../../../../features/auth/presentation/sign_in_action.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
@@ -146,6 +147,7 @@ class InlineAuthSection extends HookConsumerWidget {
       await showDialog<void>(
         context: context,
         builder: (_) => AccountCodeDialog(mode: mode, onSubmit: redeem),
+        animationStyle: context.motionStyle,
       );
     }
 
@@ -174,6 +176,7 @@ class InlineAuthSection extends HookConsumerWidget {
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       );
       if (confirmed != true || !context.mounted || !current()) return;
       await signOut();

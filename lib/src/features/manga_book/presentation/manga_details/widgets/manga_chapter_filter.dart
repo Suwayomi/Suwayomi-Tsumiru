@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
 import '../controller/manga_details_controller.dart';
 import '../controller/scanlator_dedup.dart';
@@ -75,6 +76,7 @@ class MangaChapterFilter extends ConsumerWidget {
             onTap: () => showDialog(
               context: context,
               builder: (_) => ScanlatorPreferenceDialog(mangaId: mangaId),
+              animationStyle: context.motionStyle,
             ),
           ),
           SwitchListTile(

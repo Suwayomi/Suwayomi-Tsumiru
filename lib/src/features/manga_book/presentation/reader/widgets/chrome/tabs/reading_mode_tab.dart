@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../settings/presentation/reader/widgets/long_strip_width_limit_slider/long_strip_width_limit_slider.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_auto_webtoon_mode/reader_auto_webtoon_mode.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -166,7 +167,9 @@ class ReadingModeTab extends ConsumerWidget {
             ? context.l10n.readerGroupWebtoonViewer
             : context.l10n.readerGroupPagerViewer),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
+          duration: context.reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
           child: isLongStrip
               ? _LongStripSection(
                   key: const ValueKey('longStrip'),

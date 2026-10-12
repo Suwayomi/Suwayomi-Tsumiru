@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../widgets/input_popup/settings_prop_tile.dart';
@@ -67,6 +68,7 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
               ),
             ],
           ),
+          animationStyle: context.motionStyle,
         );
         if (confirmed != true || !context.mounted || !current()) return;
         try {

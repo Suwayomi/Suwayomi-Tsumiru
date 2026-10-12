@@ -16,6 +16,7 @@ import '../../../../constants/enum.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
@@ -365,6 +366,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
           );
         },
       ),
+      sheetAnimationStyle: context.motionStyle,
     );
   }
 
@@ -404,10 +406,12 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
           ),
         ],
       ),
+      animationStyle: context.motionStyle,
     );
     if (ok != true || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    final snackBarMotionStyle = context.snackBarMotionStyle;
     // Blocking progress while copying/removing (Komikku MigrationProgressDialog).
     unawaited(
       showDialog<void>(
@@ -418,6 +422,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
           committing: committing,
           onCancel: r.cancel,
         ),
+        animationStyle: context.motionStyle,
       ),
     );
     await r.commit(deleteSource: deleteSource);
@@ -433,6 +438,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
               : l10n.migrationDoneCopied(migrated),
         ),
       ),
+      snackBarAnimationStyle: snackBarMotionStyle,
     );
     if (context.mounted) context.pop(); // back to the library
   }
@@ -447,6 +453,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
   }) async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
+    final snackBarMotionStyle = context.snackBarMotionStyle;
     await r.commitOne(fromMangaId, deleteSource: deleteSource);
     if (r.isCancelled) return;
     final ok = _committed(r, fromMangaId);
@@ -460,6 +467,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                 : l10n.migrationDoneCopied(1),
           ),
         ),
+        snackBarAnimationStyle: snackBarMotionStyle,
       );
     }
     if (r.entries.isEmpty && context.mounted) context.pop();
@@ -758,6 +766,7 @@ class _ActionMenu extends StatelessWidget {
           PopupMenuItem(value: 'copy', child: Text(l10n.migrationCopyNow)),
         ],
       ],
+      popUpAnimationStyle: context.motionStyle,
     );
   }
 }

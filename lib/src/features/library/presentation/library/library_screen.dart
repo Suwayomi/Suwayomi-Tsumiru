@@ -18,6 +18,7 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
@@ -178,6 +179,7 @@ Widget _organizerButton() => Builder(
           // The organizer sizes itself to the active tab's content
           // (capped at 72% height), so no fixed-height wrapper.
           builder: (_) => const LibraryMangaOrganizer(),
+          sheetAnimationStyle: context.motionStyle,
         );
       }
     },
@@ -290,6 +292,9 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
             // _TabBarState._handleTabControllerAnimationTick.
             key: ValueKey('categories-${data!.map((c) => c.id).join(',')}'),
             length: data.length,
+            animationDuration: context.reduceMotion
+                ? Duration.zero
+                : kTabScrollDuration,
             // The route param is a category ID (e.g. from quick-search), not a
             // positional tab index — the visible list filters out empty/hidden
             // categories, so id != index. Select the tab whose category matches
@@ -485,6 +490,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           // swapping its length under an in-flight drag.
           key: ValueKey('categories-${data.map((c) => c.id).join(',')}'),
           length: data.length,
+          animationDuration: context.reduceMotion
+              ? Duration.zero
+              : kTabScrollDuration,
           // The route param is a category ID (e.g. from quick-search), not a
           // positional tab index — the visible list filters out empty/hidden
           // categories, so id != index. Select the tab whose category matches
@@ -669,6 +677,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
           // into an infinite rebuild flicker.
           key: ValueKey('group-$groupType-${tabs.length}'),
           length: tabs.length,
+          animationDuration: context.reduceMotion
+              ? Duration.zero
+              : kTabScrollDuration,
           child: Scaffold(
             appBar: AppBar(
               title: !showSearch
@@ -834,6 +845,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
           // into an infinite rebuild flicker.
           key: ValueKey('group-$groupType-${tabs.length}'),
           length: tabs.length,
+          animationDuration: context.reduceMotion
+              ? Duration.zero
+              : kTabScrollDuration,
           child: Scaffold(
             endDrawerEnableOpenDragGesture: false,
             endDrawer: const Drawer(
@@ -1109,6 +1123,7 @@ void showSearchTips(BuildContext context) {
         ),
       ],
     ),
+    animationStyle: context.motionStyle,
   );
 }
 

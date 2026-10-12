@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/shell/update_banner_state.dart';
 import '../../library/data/default_category.dart';
 import '../../library/domain/category/category_model.dart';
@@ -61,6 +62,7 @@ class UpdateStatusPopupMenu extends ConsumerWidget {
             ),
         ];
       },
+      popUpAnimationStyle: context.motionStyle,
     );
   }
 }

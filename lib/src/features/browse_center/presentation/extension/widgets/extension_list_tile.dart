@@ -13,6 +13,7 @@ import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/app_utils.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../domain/content_rating.dart';
@@ -196,6 +197,7 @@ class ExtensionListTileTailing extends StatelessWidget {
                 child: Text(context.l10n.uninstall),
               ),
             ],
+            popUpAnimationStyle: context.motionStyle,
           )
         else
           IconButton(

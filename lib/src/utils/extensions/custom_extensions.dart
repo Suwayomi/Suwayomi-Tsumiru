@@ -24,6 +24,7 @@ import '../callbacks.dart';
 import '../logger/logger.dart';
 import '../misc/app_utils.dart';
 import '../misc/toast/toast.dart';
+import '../motion/reduce_motion.dart';
 import '../network/graphql_errors.dart';
 
 part 'custom_extensions/async_value_extensions.dart';

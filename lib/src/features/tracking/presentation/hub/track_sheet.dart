@@ -12,6 +12,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../controller/manga_track_records_controller.dart';
 import '../../data/graphql/__generated__/query.graphql.dart';
 import '../../data/tracker_repository.dart';
@@ -35,6 +36,7 @@ Future<void> showTrackSheet(
       mangaId: mangaId,
       mangaTitle: mangaTitle,
     ),
+    sheetAnimationStyle: context.motionStyle,
   );
 }
 
@@ -277,6 +279,7 @@ class _TrackerCard extends ConsumerWidget {
                           mangaTrackRecordsProvider(mangaId: mangaId));
                     },
                   ),
+                  sheetAnimationStyle: context.motionStyle,
                 ),
                 child: Text(context.l10n.addTracking),
               ),

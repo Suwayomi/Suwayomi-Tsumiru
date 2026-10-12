@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/selection_action_bar.dart';
 import '../../../widgets/server_image.dart';
@@ -364,6 +365,7 @@ class OfflineFilesView extends HookConsumerWidget {
           );
         },
       ),
+      sheetAnimationStyle: context.motionStyle,
     );
   }
 
@@ -472,6 +474,7 @@ class OfflineFilesView extends HookConsumerWidget {
               ),
             ],
           ),
+          animationStyle: context.motionStyle,
         ) ??
         false;
   }

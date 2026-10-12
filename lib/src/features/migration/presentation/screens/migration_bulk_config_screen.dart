@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../browse_center/domain/language/flag_emoji.dart';
@@ -91,6 +92,7 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
                 child: Text(l10n.migrationSelectAllSources),
               ),
             ],
+            popUpAnimationStyle: context.motionStyle,
           ),
         ],
       ),
@@ -188,6 +190,7 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
           _start(context, ref, options, extraSearchQuery);
         },
       ),
+      sheetAnimationStyle: context.motionStyle,
     );
   }
 

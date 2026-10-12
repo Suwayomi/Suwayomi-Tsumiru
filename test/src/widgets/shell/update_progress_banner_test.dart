@@ -14,6 +14,7 @@ import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.
 import 'package:tsumiru/src/features/manga_book/domain/update_status/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 import 'package:tsumiru/src/widgets/shell/update_banner_state.dart';
 import 'package:tsumiru/src/widgets/shell/update_progress_banner.dart';
 
@@ -33,6 +34,7 @@ Future<void> _pump(
   Stream<Fragment$UpdateProgressDto?>? progress,
   Future<Fragment$UpdateProgressDto?>? progressFallback,
   bool prefOn = true,
+  bool reduceMotion = false,
 }) async {
   SharedPreferences.setMockInitialValues({'showUpdateProgressBanner': prefOn});
   final prefs = await SharedPreferences.getInstance();
@@ -46,14 +48,22 @@ Future<void> _pump(
         updateProgressSummaryProvider.overrideWith(
           (ref) => progressFallback ?? Future.value(null),
         ),
+        if (reduceMotion)
+          appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: UpdateProgressBanner()),
+        builder: (context, child) => ReduceMotionScope(child: child!),
+        home: const Scaffold(body: UpdateProgressBanner()),
       ),
     ),
   );
+}
+
+class _ReduceMotionOn extends AppReduceMotion {
+  @override
+  bool build() => true;
 }
 
 void main() {
@@ -75,6 +85,22 @@ void main() {
     expect(find.textContaining('Updating library'), findsNothing);
 
     await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Updating library…'), findsOneWidget);
+  });
+
+  testWidgets('reduced motion shows the banner at once without resizing', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      progress: Stream.value(_progress(isRunning: true)),
+      reduceMotion: true,
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pump();
+
+    expect(find.byType(AnimatedSize), findsNothing);
     expect(find.text('Updating library…'), findsOneWidget);
   });
 

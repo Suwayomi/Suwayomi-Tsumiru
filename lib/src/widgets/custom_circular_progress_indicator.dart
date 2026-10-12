@@ -12,6 +12,7 @@ import 'package:shimmer/shimmer.dart';
 import '../constants/app_sizes.dart';
 import '../constants/gen/assets.gen.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/motion/reduce_motion.dart';
 
 class CenterSorayomiShimmerIndicator extends StatelessWidget {
   const CenterSorayomiShimmerIndicator({super.key, this.value});
@@ -58,11 +59,17 @@ class _DelayedShimmerState extends State<DelayedShimmer> {
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedOpacity(
-        opacity: _visible ? 1 : 0,
-        duration: const Duration(milliseconds: 150),
-        child: const CenterSorayomiShimmerIndicator(),
-      );
+  Widget build(BuildContext context) {
+    const indicator = CenterSorayomiShimmerIndicator();
+    if (context.reduceMotion) {
+      return Opacity(opacity: _visible ? 1 : 0, child: indicator);
+    }
+    return AnimatedOpacity(
+      opacity: _visible ? 1 : 0,
+      duration: const Duration(milliseconds: 150),
+      child: indicator,
+    );
+  }
 }
 
 class SorayomiShimmerIndicator extends StatelessWidget {
@@ -70,10 +77,15 @@ class SorayomiShimmerIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = context.colorScheme.surface;
+    final icon = AssetImage(Assets.icons.darkIcon.path);
+    if (context.reduceMotion) {
+      return ImageIcon(icon, color: context.colorScheme.primary);
+    }
     return Shimmer.fromColors(
-      baseColor: context.colorScheme.surface,
+      baseColor: baseColor,
       highlightColor: context.theme.colorScheme.primary,
-      child: ImageIcon(AssetImage(Assets.icons.darkIcon.path)),
+      child: ImageIcon(icon),
     );
   }
 }

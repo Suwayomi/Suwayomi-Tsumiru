@@ -15,6 +15,7 @@ import '../../../constants/gen/assets.gen.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/theme/brand.dart';
 import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
@@ -120,6 +121,13 @@ class MangaCoverGridTile extends StatelessWidget {
                   ),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                    if (context.reduceMotion) {
+                      return ReducedRouteTransition(
+                        animation: animation,
+                        child: child,
+                      );
+                    }
+
                     const begin = Offset(-1.0, 0.0);
                     const end = Offset.zero;
                     const curve = Curves.ease;

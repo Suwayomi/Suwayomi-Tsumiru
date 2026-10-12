@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/network/graphql_errors.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
@@ -84,6 +85,7 @@ class OfflineSaveButton extends ConsumerWidget {
                   : context.l10n.errorSomethingWentWrong,
             ),
           ),
+          snackBarAnimationStyle: context.snackBarMotionStyle,
         );
       }
     }

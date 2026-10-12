@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/app_theme.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/app_color_scheme.dart';
 import '../../../../../../utils/theme/theme_tokens.dart';
 import 'app_theme_providers.dart';
@@ -46,8 +47,16 @@ class ThemeSelector extends HookConsumerWidget {
       final position = controller.position;
       final target =
           position.pixels + direction * position.viewportDimension * 0.8;
+      final clamped = target.clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if (context.reduceMotion) {
+        controller.jumpTo(clamped);
+        return;
+      }
       controller.animateTo(
-        target.clamp(position.minScrollExtent, position.maxScrollExtent),
+        clamped,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );

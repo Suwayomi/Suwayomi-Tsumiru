@@ -15,6 +15,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
@@ -277,6 +278,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 context: context,
                                 builder: (context) =>
                                     EditMangaCategoryDialog(mangaId: mangaId),
+                                animationStyle: context.motionStyle,
                               ),
                               icon: const Icon(Icons.category_rounded),
                             ),
@@ -302,6 +304,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                   child: Text(context.l10n.openOnServer),
                                 ),
                               ],
+                              popUpAnimationStyle: context.motionStyle,
                             ),
                           ],
                           // Local-source files already live on the server, so
@@ -326,6 +329,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                     clipBehavior: Clip.hardEdge,
                                     builder: (_) =>
                                         MangaChapterOrganizer(mangaId: mangaId),
+                                    sheetAnimationStyle: context.motionStyle,
                                   );
                                 }
                               },
@@ -363,6 +367,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                           EditMangaCategoryDialog(
                                             mangaId: mangaId,
                                           ),
+                                      animationStyle: context.motionStyle,
                                     );
                                   }),
                                   child: Text(context.l10n.editCategory),
@@ -388,6 +393,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                   child: Text(context.l10n.openOnServer),
                                 ),
                               ],
+                              popUpAnimationStyle: context.motionStyle,
                             ),
                         ],
                       );
@@ -572,6 +578,7 @@ class MultiSelectPopupButton extends StatelessWidget {
           child: Text(context.l10n.selectBelow),
         ),
       ],
+      popUpAnimationStyle: context.motionStyle,
     );
   }
 }

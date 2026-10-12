@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../utils/crash/copy_crash_log.dart';
+import '../utils/motion/reduce_motion.dart';
 
 /// A self-contained fallback screen shown when the app fails to start —
 /// instead of a blank white window with no clue. Kept dependency-light (its own
@@ -59,6 +60,7 @@ class AppErrorApp extends StatelessWidget {
                             const SnackBar(
                               content: Text('Log copied to clipboard'),
                             ),
+                            snackBarAnimationStyle: context.snackBarMotionStyle,
                           );
                         }
                       },

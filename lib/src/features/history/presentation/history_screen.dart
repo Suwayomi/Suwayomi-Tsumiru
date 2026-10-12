@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import 'history_controller.dart';
@@ -44,6 +45,7 @@ class HistoryScreen extends ConsumerWidget {
               ),
               clipBehavior: Clip.hardEdge,
               builder: (_) => const HistoryFilterSheet(),
+              sheetAnimationStyle: context.motionStyle,
             ),
           ),
           IconButton(

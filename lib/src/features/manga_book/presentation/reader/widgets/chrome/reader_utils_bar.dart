@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
 import '../../controller/auto_scroll_controller.dart';
@@ -79,7 +80,9 @@ class ReaderUtilsBar extends ConsumerWidget {
           children: [
             // Controls slide in above the handle.
             AnimatedSize(
-              duration: const Duration(milliseconds: 200),
+              duration: context.reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 200),
               curve: Curves.fastOutSlowIn,
               alignment: Alignment.topCenter,
               child: !isOpen

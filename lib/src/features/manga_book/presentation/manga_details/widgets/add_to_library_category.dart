@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/data/default_category.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../../library/domain/duplicate_entry_mapper.dart';
@@ -82,6 +83,7 @@ Future<void> addMangaToLibraryWithCategory(
     if (!context.mounted) return;
     final picked = await showDialog<List<int>>(
       context: context,
+      animationStyle: context.motionStyle,
       builder: (context) => SetCategoriesOnAddDialog(categories: categories),
     );
     if (picked == null) return; // cancelled
@@ -156,6 +158,7 @@ Future<bool> _passesDuplicateGate(
       onMigrate: (dup) => migrate(dup, manga),
       onOpenEntry: (m) => toOpen = m,
     ),
+    animationStyle: context.motionStyle,
   );
   if (!context.mounted) return false;
   if (result == DuplicateDialogResult.openedEntry) {

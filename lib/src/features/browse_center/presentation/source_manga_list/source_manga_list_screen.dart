@@ -12,6 +12,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../data/source_repository/source_repository.dart';
@@ -227,6 +228,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
                                   controller.refresh();
                                 },
                               ),
+                              sheetAnimationStyle: context.motionStyle,
                             ),
                       label: Text(context.l10n.filter),
                     ),

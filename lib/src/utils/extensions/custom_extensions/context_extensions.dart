@@ -245,6 +245,7 @@ extension ContextExtensions on BuildContext {
             EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: sheet,
       ),
+      sheetAnimationStyle: motionStyle,
     );
   }
 
@@ -257,6 +258,7 @@ extension ContextExtensions on BuildContext {
       builder: (context) => Dialog.fullscreen(
         child: dialog,
       ),
+      animationStyle: motionStyle,
     );
   }
 }

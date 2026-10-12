@@ -19,6 +19,7 @@ import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../../account/data/account_actions.dart';
 import '../../../../../account/data/account_providers.dart';
@@ -70,6 +71,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
             completed = true;
           },
         ),
+        animationStyle: context.motionStyle,
       );
       if (completed && context.mounted) Navigator.pop(context);
     }
@@ -98,6 +100,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       );
       return proceed == true;
     }

@@ -12,6 +12,7 @@ import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_notice.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_lifecycle_observer.dart';
@@ -104,6 +105,7 @@ class _ReauthBannerHostState extends ConsumerState<ReauthBannerHost> {
               showDialog(
                 context: navigatorContext,
                 builder: (_) => LoginCredentialsPopup(authType: authType),
+                animationStyle: navigatorContext.motionStyle,
               );
             } else {
               const ConnectionRoute().push(navigatorContext);

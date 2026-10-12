@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_providers.dart';
 import '../data/offline_database.dart';
 
@@ -30,6 +31,7 @@ Future<({OfflineKeepRule rule, int count, bool remove})?> pickOfflineKeepRule(
 ) {
   return showModalBottomSheet<({OfflineKeepRule rule, int count, bool remove})>(
     context: context,
+    sheetAnimationStyle: context.motionStyle,
     showDragHandle: true,
     // Scroll-controlled and scrollable: a default sheet is capped at 9/16 of
     // the space it is given, and the "Updating library" strip is a sibling of

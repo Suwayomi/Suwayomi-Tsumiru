@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../widgets/download_status_icon.dart';
@@ -64,6 +65,22 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
     }, [groupingMode]);
 
     final isGroup = tail.isNotEmpty;
+    final tailTiles = isExpanded.value
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final chapter in tail)
+                _TailTile(
+                  chapter: chapter,
+                  updatePair: updatePairFor(chapter),
+                  refreshManga: refreshManga,
+                  isSelected: isSelectedFor(chapter),
+                  canTapSelect: canTapSelect,
+                  toggleSelect: toggleSelect,
+                ),
+            ],
+          )
+        : const SizedBox.shrink();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -82,27 +99,14 @@ class ChapterMangaGroupedTile extends HookConsumerWidget {
           toggleSelect: toggleSelect,
         ),
         if (isGroup)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: isExpanded.value
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final chapter in tail)
-                        _TailTile(
-                          chapter: chapter,
-                          updatePair: updatePairFor(chapter),
-                          refreshManga: refreshManga,
-                          isSelected: isSelectedFor(chapter),
-                          canTapSelect: canTapSelect,
-                          toggleSelect: toggleSelect,
-                        ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
+          context.reduceMotion
+              ? tailTiles
+              : AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOut,
+                  alignment: Alignment.topCenter,
+                  child: tailTiles,
+                ),
       ],
     );
   }

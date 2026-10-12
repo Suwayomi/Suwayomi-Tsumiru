@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
 import '../../../domain/tracker_oauth_helpers.dart';
@@ -74,6 +75,7 @@ Future<void> loginToTracker(
           }
         },
       ),
+      sheetAnimationStyle: context.motionStyle,
     );
   }
 }

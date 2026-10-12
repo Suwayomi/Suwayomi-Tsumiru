@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -124,6 +125,7 @@ class ReaderChrome extends HookConsumerWidget {
     //
     // initialValue seeds from the current visibility so there is no flash when
     // the widget first mounts (the reader opens with chrome visible by default).
+    final reduceMotion = context.reduceMotion;
     final controller = useAnimationController(
       duration: const Duration(milliseconds: 200),
       initialValue: visibility.value ? 1.0 : 0.0,
@@ -198,7 +200,13 @@ class ReaderChrome extends HookConsumerWidget {
     // ── Drive the controller from the visibility notifier ─────────────────────
     useEffect(() {
       void onVisibilityChanged() {
-        if (visibility.value) {
+        if (reduceMotion) {
+          controller.value = visibility.value ? 1 : 0;
+          if (visibility.value) {
+            SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+            SystemChrome.setSystemUIOverlayStyle(readerOverlayStyle);
+          }
+        } else if (visibility.value) {
           controller.forward();
         } else {
           controller.reverse();
@@ -207,7 +215,7 @@ class ReaderChrome extends HookConsumerWidget {
 
       visibility.addListener(onVisibilityChanged);
       return () => visibility.removeListener(onVisibilityChanged);
-    }, [visibility, controller]);
+    }, [visibility, controller, reduceMotion]);
 
     // Two curves off the ONE controller: slide = tween(200) and
     // fade = tween(150) (the fade is FASTER than the

@@ -15,6 +15,7 @@ import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
 void main() {
   testWidgets('wizard retains the server step across root replacement', (
@@ -119,4 +120,57 @@ void main() {
       expect(find.text('Welcome to Tsumiru'), findsOneWidget);
     },
   );
+
+  testWidgets('reduced motion swaps the onboarding step at once', (
+    tester,
+  ) async {
+    await _pumpOnboarding(tester, reduceMotion: true);
+
+    await tester.tap(find.text('Next'));
+    await tester.pump();
+    expect(find.text('Welcome to Tsumiru'), findsNothing);
+    expect(find.text('Connect your server'), findsOneWidget);
+  });
+
+  testWidgets(
+    'without reduced motion the outgoing step is still on screen after one frame',
+    (tester) async {
+      await _pumpOnboarding(tester, reduceMotion: false);
+
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
+      expect(find.text('Connect your server'), findsOneWidget);
+    },
+  );
+}
+
+class _ReduceMotionOn extends AppReduceMotion {
+  @override
+  bool build() => true;
+}
+
+Future<void> _pumpOnboarding(
+  WidgetTester tester, {
+  required bool reduceMotion,
+}) async {
+  FlutterSecureStorage.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({});
+  final preferences = await SharedPreferences.getInstance();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        if (reduceMotion)
+          appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => ReduceMotionScope(child: child!),
+        home: const OnboardingScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }

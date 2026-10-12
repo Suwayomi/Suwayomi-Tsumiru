@@ -7,6 +7,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/zoom/zoom_view.dart';
 
 /// The reader's [ZoomView] wrapper, controlling pinch and double-tap zoom
@@ -62,6 +63,9 @@ class ReaderZoomView extends HookWidget {
       final target = zoomController.scale > 1.01 ? 1.0 : zoomInTarget;
       zoomController.setScaleWithAnimation(
         target,
+        duration: context.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 150),
         focalPoint: details.localPosition,
       );
     }

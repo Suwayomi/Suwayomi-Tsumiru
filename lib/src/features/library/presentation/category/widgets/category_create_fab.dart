@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../controller/edit_category_controller.dart';
 import 'edit_category_dialog.dart';
@@ -38,6 +39,7 @@ class CategoryCreateFab extends HookConsumerWidget {
                     }
                   },
                 ),
+                animationStyle: context.motionStyle,
               );
             },
       isExtended: context.isTablet && !isLoading.value,

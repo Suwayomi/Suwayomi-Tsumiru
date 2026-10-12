@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
 
@@ -69,6 +70,7 @@ class OfflineServerMismatchBanner extends ConsumerWidget {
           ),
         ],
       ),
+      animationStyle: context.motionStyle,
     );
     if (confirmed != true || !context.mounted) return;
     try {

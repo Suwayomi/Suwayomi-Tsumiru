@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/motion/reduce_motion.dart';
 
 /// Above this many chapters, a bulk download asks for confirmation first.
 const int kBulkDownloadConfirmThreshold = 20;
@@ -56,6 +57,7 @@ Future<bool> confirmBulkDownload(
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       ) ??
       false;
 }

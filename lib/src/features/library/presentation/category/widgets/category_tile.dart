@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../data/default_category.dart';
@@ -83,6 +84,7 @@ class CategoryTile extends HookConsumerWidget {
                             .read(categoryControllerProvider.notifier)
                             .editCategory(category.id, updated),
                       ),
+                      animationStyle: context.motionStyle,
                     ),
               icon: const Icon(Icons.edit_rounded),
               color: context.theme.colorScheme.onSurfaceVariant,
@@ -167,6 +169,7 @@ class CategoryTile extends HookConsumerWidget {
                           ),
                         ],
                       ),
+                      animationStyle: context.motionStyle,
                     )
                   : null,
               icon: const Icon(Icons.delete_rounded),

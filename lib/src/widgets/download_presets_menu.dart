@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../features/manga_book/domain/chapter/chapter_download_presets.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/motion/reduce_motion.dart';
 
 String downloadPresetLabel(BuildContext context, DownloadPreset preset) =>
     switch (preset) {
@@ -46,6 +47,7 @@ class DownloadPresetsMenu extends StatelessWidget {
             child: Text(downloadPresetLabel(context, preset)),
           ),
       ],
+      popUpAnimationStyle: context.motionStyle,
     );
   }
 }

@@ -13,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
@@ -459,6 +460,7 @@ class UpdatesScreen extends HookConsumerWidget {
                     ),
                     clipBehavior: Clip.hardEdge,
                     builder: (_) => const UpdatesFilterSheet(),
+                    sheetAnimationStyle: context.motionStyle,
                   ),
                 ),
                 IconButton(

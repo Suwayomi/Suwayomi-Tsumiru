@@ -13,6 +13,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
@@ -46,6 +47,7 @@ class GeneralScreen extends ConsumerWidget {
                 getOptionTitle: getLanguageNameFormLocale,
                 getOptionSubtitle: getLanguageNameInEnFormLocale,
               ),
+              animationStyle: context.motionStyle,
             ),
           ),
           ListTile(

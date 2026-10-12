@@ -12,6 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
@@ -74,6 +75,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       );
       if (confirmed != true || !context.mounted) return;
 
@@ -108,7 +110,10 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
           : context.l10n.duplicatesRemoved(removed.length);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ).showSnackBar(
+        SnackBar(content: Text(message)),
+        snackBarAnimationStyle: context.snackBarMotionStyle,
+      );
     }
 
     final body = Column(

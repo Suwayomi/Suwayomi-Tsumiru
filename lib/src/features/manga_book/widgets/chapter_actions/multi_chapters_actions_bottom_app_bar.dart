@@ -13,6 +13,7 @@ import '../../../../features/offline/data/offline_repository.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../account/data/account_providers.dart';
@@ -217,6 +218,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                       ),
                     ],
                   ),
+                  animationStyle: context.motionStyle,
                 ) ??
                 false;
             if (!ok) return;

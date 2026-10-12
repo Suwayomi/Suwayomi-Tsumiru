@@ -13,6 +13,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
@@ -51,6 +52,7 @@ class UpcomingScreen extends HookConsumerWidget {
                   ),
                 ],
               ),
+              animationStyle: context.motionStyle,
             ),
           ),
         ],
@@ -98,13 +100,16 @@ class UpcomingScreen extends HookConsumerWidget {
 
           void scrollToDay(DateTime day) {
             final idx = dateToIndex[DateTime(day.year, day.month, day.day)];
-            if (idx != null) {
-              itemScrollController.scrollTo(
-                index: idx,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
+            if (idx == null) return;
+            if (context.reduceMotion) {
+              itemScrollController.jumpTo(index: idx);
+              return;
             }
+            itemScrollController.scrollTo(
+              index: idx,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
           }
 
           return ScrollablePositionedList.builder(

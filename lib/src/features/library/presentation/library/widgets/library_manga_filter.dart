@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/organizer_heading.dart';
 import '../../../../../widgets/tri_state_filter_tile.dart';
@@ -250,6 +251,7 @@ class _CategoryFilterRow extends ConsumerWidget {
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (_) => const _CategoryFilterDialog(),
+                  animationStyle: context.motionStyle,
                 ),
                 child: Text(context.l10n.edit),
               ),
@@ -293,6 +295,7 @@ class _TagFilterRow extends ConsumerWidget {
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (_) => const _TagFilterDialog(),
+                  animationStyle: context.motionStyle,
                 ),
                 child: Text(context.l10n.edit),
               ),

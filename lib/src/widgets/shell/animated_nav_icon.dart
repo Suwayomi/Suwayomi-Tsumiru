@@ -7,6 +7,8 @@
 import 'package:animated_vector/animated_vector.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/motion/reduce_motion.dart';
+
 /// Nav destination icon that plays its vector forward on select and in
 /// reverse on deselect (Komikku's trigger model). Mounting already-selected
 /// renders the settled end frame without animating, so rebuilds that reshape
@@ -40,7 +42,7 @@ class _AnimatedNavIconState extends State<AnimatedNavIcon>
       _controller.duration = widget.vector.duration;
     }
     if (widget.selected == oldWidget.selected) return;
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (context.reduceMotion) {
       _controller.value = widget.selected ? 1 : 0;
     } else if (widget.selected) {
       _controller.forward();

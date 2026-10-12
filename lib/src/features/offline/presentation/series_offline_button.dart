@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_permission.dart';
 import '../../account/data/account_providers.dart';
 import '../../auth/data/auth_credentials_store.dart';
@@ -193,6 +194,7 @@ class SeriesOfflineButton extends ConsumerWidget {
           );
         },
       ),
+      sheetAnimationStyle: context.motionStyle,
     );
   }
 
@@ -203,6 +205,7 @@ class SeriesOfflineButton extends ConsumerWidget {
     int count,
   ) async {
     final messenger = ScaffoldMessenger.of(sheetContext);
+    final snackBarMotionStyle = sheetContext.snackBarMotionStyle;
     final toast = sheetContext.l10n.offlineDownloadingToast;
     Navigator.of(sheetContext).pop();
     final current = ref
@@ -216,7 +219,10 @@ class SeriesOfflineButton extends ConsumerWidget {
     ref.invalidate(mangaKeepRuleProvider(mangaId));
     ref.invalidate(mangaKeepConfigProvider(mangaId));
     ref.invalidate(mangaDownloadedCountProvider(mangaId));
-    messenger.showSnackBar(SnackBar(content: Text(toast)));
+    messenger.showSnackBar(
+      SnackBar(content: Text(toast)),
+      snackBarAnimationStyle: snackBarMotionStyle,
+    );
   }
 
   Future<void> _removeAll(BuildContext sheetContext, WidgetRef ref) async {

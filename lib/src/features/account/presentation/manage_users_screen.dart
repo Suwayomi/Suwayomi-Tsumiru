@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import '../domain/account_access.dart';
@@ -67,6 +68,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                     await showDialog<void>(
                       context: context,
                       builder: (_) => const CreateAccountDialog(),
+                      animationStyle: context.motionStyle,
                     );
                     if (context.mounted) ref.invalidate(accountUsersProvider);
                   },
@@ -123,6 +125,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                                           ),
                                         ],
                                       ),
+                                      animationStyle: context.motionStyle,
                                     ),
                                   ),
                                 ],
@@ -131,6 +134,7 @@ class ManageUsersScreen extends HookConsumerWidget {
                                 await showDialog<void>(
                                   context: context,
                                   builder: (_) => EditAccountDialog(user: user),
+                                  animationStyle: context.motionStyle,
                                 );
                                 if (context.mounted) {
                                   ref.invalidate(accountUsersProvider);

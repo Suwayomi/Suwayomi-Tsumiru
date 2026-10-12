@@ -13,6 +13,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
@@ -144,6 +145,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                               Navigator.pop(context);
                             },
                           ),
+                          animationStyle: context.motionStyle,
                         ),
                 ),
                 // HideEmptyCategoryTile(),
@@ -221,6 +223,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                           context: context,
                           builder: (context) =>
                               const SkipUpdatingEntriesPopup(),
+                          animationStyle: context.motionStyle,
                         ),
                 ),
                 ListTile(
@@ -231,6 +234,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   onTap: () => showDialog<void>(
                     context: context,
                     builder: (_) => const UpdateCategoriesDialog(),
+                    animationStyle: context.motionStyle,
                   ),
                 ),
                 ListTile(

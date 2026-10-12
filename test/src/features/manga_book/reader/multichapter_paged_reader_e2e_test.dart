@@ -34,6 +34,7 @@ import 'package:tsumiru/src/features/tracking/domain/tracking_settings_providers
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
 const _png1x1 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
@@ -59,6 +60,13 @@ class _FixedToggle extends UpdateProgressAfterReading {
   final bool _value;
   @override
   bool? build() => _value;
+}
+
+class _FixedReduceMotion extends AppReduceMotion {
+  _FixedReduceMotion(this._value);
+  final bool _value;
+  @override
+  bool build() => _value;
 }
 
 class _RecordingRepo extends Fake implements MangaBookRepository {
@@ -246,6 +254,7 @@ void main() {
   Future<_RecordingRepo> pumpSingleChapter(
     WidgetTester tester, {
     bool withGap = false,
+    bool reduceMotion = false,
   }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -263,6 +272,9 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
+          appReduceMotionProvider.overrideWith(
+            () => _FixedReduceMotion(reduceMotion),
+          ),
           mangaBookRepositoryProvider.overrideWithValue(repo),
           mangaWithIdProvider(
             mangaId: 1,
@@ -294,6 +306,7 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => ReduceMotionScope(child: child!),
           home: const ReaderScreen(mangaId: 1, chapterId: 1),
         ),
       ),
@@ -301,6 +314,36 @@ void main() {
     await tester.pumpAndSettle();
     return repo;
   }
+
+  testWidgets('reduced motion turns the page at once', (tester) async {
+    await pumpSingleChapter(tester, reduceMotion: true);
+    expect(find.text('1 / 3'), findsOneWidget);
+
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-400, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pump();
+
+    expect(find.text('2 / 3'), findsOneWidget);
+  });
+
+  testWidgets('page turns still animate by default', (tester) async {
+    await pumpSingleChapter(tester);
+    expect(find.text('1 / 3'), findsOneWidget);
+
+    await tester.timedDrag(
+      find.byType(PagedReaderViewport),
+      const Offset(-400, 0),
+      const Duration(milliseconds: 80),
+    );
+    await tester.pump();
+
+    expect(find.text('1 / 3'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 3'), findsOneWidget);
+  });
 
   testWidgets('saves the visible page after the debounce', (tester) async {
     final repo = await pumpSingleChapter(tester);

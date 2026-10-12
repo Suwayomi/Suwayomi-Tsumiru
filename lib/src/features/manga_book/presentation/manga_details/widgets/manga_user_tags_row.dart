@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../controller/manga_details_controller.dart';
 import 'tag_actions_menu.dart';
 
@@ -36,6 +37,7 @@ Future<void> _showAddTagDialog(
         ),
       ],
     ),
+    animationStyle: context.motionStyle,
   );
   if (tag != null && tag.trim().isNotEmpty) {
     await ref.read(mangaUserTagsProvider(mangaId: mangaId).notifier).add(tag);
