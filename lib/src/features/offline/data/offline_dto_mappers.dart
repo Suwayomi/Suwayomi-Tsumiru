@@ -6,7 +6,6 @@
 
 import 'dart:convert';
 import '../../../graphql/__generated__/schema.graphql.dart';
-import '../../browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
 import '../../library/domain/category/category_model.dart';
 import '../../library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
@@ -48,9 +47,9 @@ MangaDto offlineMangaToDto(
   final effectiveTotal = m.totalChapters > 0 ? m.totalChapters : chapterCount;
 
   // Restore source from stored columns
-  final Fragment$SourceDto? source = m.sourceId == null
+  final Fragment$MangaDto$source? source = m.sourceId == null
       ? null
-      : Fragment$SourceDto(
+      : Fragment$MangaDto$source(
           id: m.sourceId!,
           name: m.sourceName ?? '',
           lang: m.sourceLang ?? '',
@@ -61,13 +60,7 @@ MangaDto offlineMangaToDto(
               : fromJson$Enum$ContentWarning(m.sourceContentWarning!),
           displayName: m.sourceName ?? '',
           iconUrl: '',
-          isConfigurable: false,
-          supportsLatest: false,
-          meta: const <Fragment$SourceDto$meta>[],
-          $extension: Fragment$SourceDto$extension(
-            pkgName: '',
-            isObsolete: false,
-          ),
+          $extension: Fragment$MangaDto$source$extension(isObsolete: false),
         );
 
   // Restore status (stored as the enum name string)
@@ -78,43 +71,17 @@ MangaDto offlineMangaToDto(
   // Restore latestFetchedChapter (carries fetchedAt for sort; minimal stub otherwise)
   final latestFetched = m.latestFetchedAt == null
       ? null
-      : Fragment$ChapterDto(
+      : Fragment$MangaDto$latestFetchedChapter(
           id: 0,
-          mangaId: m.id,
-          name: '',
-          chapterNumber: 0,
-          sourceOrder: 0,
-          isRead: false,
-          isBookmarked: false,
-          isDownloaded: false,
-          lastPageRead: 0,
-          pageCount: 0,
           fetchedAt: m.latestFetchedAt!,
-          uploadDate: '0',
-          lastReadAt: '0',
-          url: '',
-          meta: const <Fragment$ChapterDto$meta>[],
         );
 
   // Restore latestUploadedChapter (carries uploadDate for sort)
   final latestUploaded = m.latestUploadedAt == null
       ? null
-      : Fragment$ChapterDto(
+      : Fragment$MangaDto$latestUploadedChapter(
           id: 0,
-          mangaId: m.id,
-          name: '',
-          chapterNumber: 0,
-          sourceOrder: 0,
-          isRead: false,
-          isBookmarked: false,
-          isDownloaded: false,
-          lastPageRead: 0,
-          pageCount: 0,
-          fetchedAt: '0',
           uploadDate: m.latestUploadedAt!,
-          lastReadAt: '0',
-          url: '',
-          meta: const <Fragment$ChapterDto$meta>[],
         );
 
   // Restore category membership
@@ -145,22 +112,11 @@ MangaDto offlineMangaToDto(
     // library_controller). Null when nothing in the manga has been read.
     lastReadChapter: lastReadAt == null
         ? null
-        : Fragment$ChapterDto(
+        : Fragment$MangaDto$lastReadChapter(
             id: 0,
-            mangaId: m.id,
-            name: '',
-            chapterNumber: 0,
-            sourceOrder: 0,
             isRead: true,
-            isBookmarked: false,
-            isDownloaded: false,
             lastPageRead: 0,
-            pageCount: 0,
-            fetchedAt: '0',
-            uploadDate: '0',
             lastReadAt: lastReadAt,
-            url: '',
-            meta: const <Fragment$ChapterDto$meta>[],
           ),
     latestFetchedChapter: latestFetched,
     latestUploadedChapter: latestUploaded,
