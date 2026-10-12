@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
@@ -84,5 +84,39 @@ void main() {
     ]);
     expect(
         (await db.chapterById(1))!.deviceState, OfflineDeviceState.downloaded);
+  });
+
+  Future<void> row(int id, OfflineDeviceState state, {int mangaId = 1}) =>
+      db.into(db.offlineChapters).insert(OfflineChaptersCompanion.insert(
+            id: Value(id), mangaId: mangaId, name: 'c$id', chapterIndex: id,
+            updatedAt: DateTime(2026),
+            deviceState: Value(state),
+          ));
+
+  test('syncChapters drops the old row of a chapter the server recreated '
+      'under a new id', () async {
+    // The source changed chapters 2 and 3: the server deleted them and
+    // recreated them as 12 and 13. Neither old row has anything on device.
+    await row(1, OfflineDeviceState.none);
+    await row(2, OfflineDeviceState.none);
+    await row(3, OfflineDeviceState.error);
+    await row(4, OfflineDeviceState.queued);
+    await OfflineSync(db).syncChapters(
+      [serverChapter(1), serverChapter(12), serverChapter(13)],
+    );
+    // Left behind, they were still picked for download and asked of the
+    // server, which rejected the whole request for them.
+    expect(await db.chapterById(2), isNull);
+    expect(await db.chapterById(3), isNull);
+    expect(await db.chapterById(1), isNotNull);
+    expect(await db.chapterById(12), isNotNull);
+    // A queued chapter belongs to the download worker until it settles.
+    expect((await db.chapterById(4))!.deviceState, OfflineDeviceState.queued);
+  });
+
+  test("syncChapters leaves other manga's rows alone", () async {
+    await row(7, OfflineDeviceState.none, mangaId: 2);
+    await OfflineSync(db).syncChapters([serverChapter(1)]);
+    expect(await db.chapterById(7), isNotNull);
   });
 }

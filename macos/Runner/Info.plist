@@ -38,9 +38,9 @@
 		<string>pt</string>
 		<string>uk</string>
 		<string>ko</string>
-		<string>pt-pt</string>
+		<string>pt-PT</string>
 		<string>zh</string>
-		<string>zh-hans</string>
+		<string>zh-Hans</string>
 		<string>id</string>
 		<string>it</string>
 		<string>ja</string>
@@ -50,6 +50,10 @@
 		<string>tr</string>
 		<string>vi</string>
 		<string>fil</string>
+		<string>nb</string>
+		<string>pt-BR</string>
+		<string>ta</string>
+		<string>zh-Hant</string>
 	</array>
 </dict>
 </plist>

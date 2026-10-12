@@ -17,7 +17,6 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chro
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/utils/extensions/cache_manager_extensions.dart';
 import 'package:tsumiru/src/widgets/cover_cache/cover_cache.dart';
 import 'package:tsumiru/src/widgets/server_image.dart';
 
@@ -81,6 +80,17 @@ class _Cache extends Fake implements CacheManager {
   }) => stream.stream;
 }
 
+/// What a paged prefetch does: fetch the page through its account-keyed
+/// server image request.
+Future<File> _prefetch(CacheManager cache, WidgetRef ref, String url) {
+  final request = serverImageRequest(ref, url);
+  return cache.getSingleFile(
+    request.fetchUrl,
+    key: request.cacheKey,
+    headers: request.headers,
+  );
+}
+
 void main() {
   testWidgets(
     'paged prefetch is reused by rendering and offline sharing only for its account',
@@ -131,7 +141,7 @@ void main() {
           ),
         ),
       );
-      final prefetched = await cache.getServerFile(readerRef, page);
+      final prefetched = await _prefetch(cache, readerRef, page);
       final keyA = cache.reads.single;
       final requestA = serverImageRequest(readerRef, page);
       expect(requestA.cacheKey, keyA);
@@ -148,13 +158,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(cache.reads.last, keyA);
       expect(cache.entries.length, 1);
-      cache.entries[requestA.fetchUrl.split('?').first] = prefetched as File;
+      cache.entries[requestA.fetchUrl.split('?').first] = prefetched;
       auth.adopt('account-b', 'token-b');
-      await expectLater(cache.getServerFile(readerRef, page), throwsStateError);
+      await expectLater(_prefetch(cache, readerRef, page), throwsStateError);
       expect(cache.reads.last, isNot(keyA));
       expect(cache.reads.last, isNot(requestA.fetchUrl));
       auth.adopt('account-a', 'token-a-new');
-      expect(await cache.getServerFile(readerRef, page), same(prefetched));
+      expect(await _prefetch(cache, readerRef, page), same(prefetched));
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

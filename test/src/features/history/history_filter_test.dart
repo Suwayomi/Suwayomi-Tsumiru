@@ -5,18 +5,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tsumiru/src/features/history/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/history/domain/history_item.dart';
 import 'package:tsumiru/src/features/history/presentation/history_controller.dart';
-import 'package:tsumiru/src/features/manga_book/domain/chapter/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
-import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 HistoryItemDto _item({
   bool isRead = false,
   int unreadCount = 3,
   bool inLibrary = true,
 }) =>
-    Fragment$ChapterWithMangaDto(
+    Fragment$HistoryChapterDto(
       id: 1,
       chapterNumber: 1,
       fetchedAt: '0',
@@ -32,19 +30,11 @@ HistoryItemDto _item({
       uploadDate: '0',
       url: '/c/1',
       meta: const [],
-      manga: Fragment$MangaBaseDto(
+      manga: Fragment$HistoryChapterDto$manga(
         id: 7,
-        genre: const [],
         inLibrary: inLibrary,
-        inLibraryAt: '0',
-        initialized: true,
-        meta: const [],
-        sourceId: '1',
-        status: Enum$MangaStatus.ONGOING,
         title: 'Series',
         unreadCount: unreadCount,
-        updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-        url: '/manga/7',
       ),
     );
 

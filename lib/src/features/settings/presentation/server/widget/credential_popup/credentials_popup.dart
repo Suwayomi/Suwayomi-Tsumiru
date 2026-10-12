@@ -26,7 +26,11 @@ import '../client/server_url_tile/server_url_tile.dart';
 
 part 'credentials_popup.g.dart';
 
-@riverpod
+// keepAlive, like AuthCredentialsStore: main() preloads it so images, links
+// and background work can read `.value` synchronously. Auto-disposed, the
+// preload was dropped at once, those reads saw null, and the first watch
+// rebuilt the GraphQL client under requests already on their way.
+@Riverpod(keepAlive: true)
 class Credentials extends _$Credentials {
   @override
   Future<String?> build() async =>
@@ -35,30 +39,25 @@ class Credentials extends _$Credentials {
   /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
   /// meanwhile. Omit for a clear (set null).
   Future<void> set(String? value, {int? forEpoch}) async {
-    final lease = ref.keepAlive();
-    try {
-      await ref.read(authCredentialsStoreProvider.notifier).replaceCredentials((
-        epoch,
-      ) async {
-        await future;
-        final storage = ref.read(secureStorageProvider);
-        final credentials = ref.read(authCredentialsStoreProvider.notifier);
-        if (epoch != credentials.serverEpoch) return;
-        if (value == null) {
-          state = const AsyncData(null);
-          await storage.delete(key: kBasicCredentialsSecureKey);
-          return;
-        }
-        await storage.write(key: kBasicCredentialsSecureKey, value: value);
-        if (epoch != credentials.serverEpoch) {
-          await storage.delete(key: kBasicCredentialsSecureKey);
-          return;
-        }
-        state = AsyncData(value);
-      }, forEpoch: forEpoch);
-    } finally {
-      lease.close();
-    }
+    await ref.read(authCredentialsStoreProvider.notifier).replaceCredentials((
+      epoch,
+    ) async {
+      await future;
+      final storage = ref.read(secureStorageProvider);
+      final credentials = ref.read(authCredentialsStoreProvider.notifier);
+      if (epoch != credentials.serverEpoch) return;
+      if (value == null) {
+        state = const AsyncData(null);
+        await storage.delete(key: kBasicCredentialsSecureKey);
+        return;
+      }
+      await storage.write(key: kBasicCredentialsSecureKey, value: value);
+      if (epoch != credentials.serverEpoch) {
+        await storage.delete(key: kBasicCredentialsSecureKey);
+        return;
+      }
+      state = AsyncData(value);
+    }, forEpoch: forEpoch);
   }
 }
 

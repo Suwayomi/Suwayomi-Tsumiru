@@ -11,8 +11,9 @@
 library;
 
 /// The minimal shape the detector reasons about. `fetchedAt` is the server's
-/// fetch timestamp as epoch millis — the authoritative "new" signal (never the
-/// device clock, so client/server skew can't drop or duplicate a chapter).
+/// fetch timestamp as epoch SECONDS (Suwayomi stores `now.epochSecond`) — the
+/// authoritative "new" signal (never the device clock, so client/server skew
+/// can't drop or duplicate a chapter).
 typedef NotifiableChapter = ({
   int id,
   int mangaId,
@@ -60,9 +61,28 @@ class NewChapterDetectionResult {
   final NewChapterWatermark watermark;
 }
 
-/// Default overlap window (ms) the worker re-scans below the high-water mark to
-/// catch out-of-order `fetchedAt` commits. Generous vs. realistic commit skew.
-const kDefaultOverlapMs = 5 * 60 * 1000;
+/// Default overlap window (seconds, the unit of `fetchedAt`) the worker
+/// re-scans below the high-water mark to catch out-of-order `fetchedAt`
+/// commits. Generous vs. realistic commit skew.
+const kDefaultOverlapSeconds = 5 * 60;
+
+/// The first-enable cursor: high-water at [maxFetched], with every chapter the
+/// next pass's overlap re-scan (`fetchedAt >= maxFetched − overlap`) would
+/// return already marked seen. Without that, the pass right after a seed treats
+/// the whole window as fresh and notifies the existing backlog. [window] is the
+/// server's candidates for that range; anything fetched after [maxFetched]
+/// (committed between the two queries) stays fresh.
+NewChapterWatermark seedNewChapterWatermark({
+  required int maxFetched,
+  required List<NotifiableChapter> window,
+}) =>
+    NewChapterWatermark(
+      fetchedAt: maxFetched,
+      recent: {
+        for (final c in window)
+          if (c.fetchedAt <= maxFetched) c.id: c.fetchedAt,
+      },
+    );
 
 /// Given the server's candidate chapters (unread, in-library, `fetchedAt >=`
 /// high-water − overlap, paginated to exhaustion by the caller), returns the
@@ -79,7 +99,7 @@ NewChapterDetectionResult detectNewChapters({
   required List<NotifiableChapter> candidates,
   required NewChapterWatermark watermark,
   Set<int>? allowedMangaIds,
-  int overlapMs = kDefaultOverlapMs,
+  int overlapSeconds = kDefaultOverlapSeconds,
 }) {
   final fresh = [
     for (final c in candidates)
@@ -109,7 +129,7 @@ NewChapterDetectionResult detectNewChapters({
   }
   // Carry the old recent set + the ids we just notified, pruned to the window
   // the next query will re-scan (`>= maxFetched − overlap`).
-  final cutoff = maxFetched - overlapMs;
+  final cutoff = maxFetched - overlapSeconds;
   final recent = <int, int>{
     for (final e in watermark.recent.entries)
       if (e.value >= cutoff) e.key: e.value,

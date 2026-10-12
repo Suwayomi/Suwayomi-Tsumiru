@@ -1,3 +1,19 @@
+# A history row shows the series' title, cover, author, unread count and
+# library membership. The full MangaBaseDto (description, meta, genres, URLs…)
+# repeated for each of up to 2000 chapters made one fetch ~3.8 MB and ~7 s on a
+# 360-series library.
+fragment HistoryChapterDto on ChapterType {
+  ...ChapterDto
+  manga {
+    id
+    title
+    thumbnailUrl
+    author
+    inLibrary
+    unreadCount
+  }
+}
+
 query GetReadingHistory(
   $first: Int,
   $offset: Int,
@@ -14,6 +30,8 @@ query GetReadingHistory(
     filter: $filter
     order: $order
   ) {
-    ...ChapterPageWithMangaDto
+    nodes {
+      ...HistoryChapterDto
+    }
   }
-} 
+}
