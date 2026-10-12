@@ -244,25 +244,21 @@ Future<bool> runNewChapters(
 
   var watermark = store.readWatermark(config.sessionFingerprint!);
 
-  // 1. First enable: seed the cursor to the server's current max fetch time and
-  // notify nothing, so we don't dump the backlog.
+  // 1. First enable (or a fresh session after reinstall/re-login): seed the
+  // cursor to the server's current max fetch time and notify nothing, so we
+  // don't dump the backlog.
   if (watermark.fetchedAt == 0 && watermark.recent.isEmpty) {
-    final maxFetched = await client.serverMaxFetchedAt();
+    final seed = await _seedWatermark(client);
+    if (seed == null) return false; // transient — retry next wake
     await _withNotificationOwner(
       config,
-      (current) => current.writeWatermark(
-        config.sessionFingerprint!,
-        NewChapterWatermark(fetchedAt: maxFetched),
-      ),
+      (current) => current.writeWatermark(config.sessionFingerprint!, seed),
     );
     return true;
   }
 
   // 2. Paginate the overlap window to exhaustion.
-  final gte = (watermark.fetchedAt - kDefaultOverlapMs).clamp(
-    0,
-    watermark.fetchedAt,
-  );
+  final gte = _overlapStart(watermark);
   final all = <NotifChapter>[];
   final mangaCategories = <int, Set<int>>{};
   String? after;
@@ -359,6 +355,52 @@ Future<bool> runNewChapters(
   return true;
 }
 
+/// Start of the re-scan window below [cursor]'s high-water mark. `fetchedAt` is
+/// epoch seconds server-side, so the overlap is in seconds too.
+int _overlapStart(NewChapterWatermark cursor) =>
+    (cursor.fetchedAt - kDefaultOverlapSeconds).clamp(0, cursor.fetchedAt);
+
+/// A first-enable cursor that also marks the chapters the next overlap re-scan
+/// will return as already seen — otherwise that pass notifies (or queues) them
+/// as fresh. Null when the window fetch fails.
+Future<NewChapterWatermark?> _seedWatermark(
+  NotificationBackgroundClient client,
+) async {
+  final maxFetched = await client.serverMaxFetchedAt();
+  // 0 = empty library or failed query: the cursor stays unseeded and the next
+  // wake tries again, as before.
+  if (maxFetched == 0) return const NewChapterWatermark();
+  final window = <NotifChapter>[];
+  String? after;
+  while (true) {
+    final page = await client.fetchNewChaptersPage(
+      fetchedAtGte: '${_overlapStart(NewChapterWatermark(fetchedAt: maxFetched))}',
+      after: after,
+    );
+    if (page == null) return null;
+    window.addAll(page.nodes);
+    if (!page.hasNextPage || page.endCursor == null) break;
+    after = page.endCursor;
+  }
+  final seed = seedNewChapterWatermark(
+    maxFetched: maxFetched,
+    window: [
+      for (final n in window)
+        (
+          id: n.id,
+          mangaId: n.mangaId,
+          chapterNumber: n.chapterNumber,
+          fetchedAt: n.fetchedAt,
+        ),
+    ],
+  );
+  recordDiagnostic(
+    '[${DateTime.now().toIso8601String()}] new-chapter-cursor: seeded '
+    'fetchedAt=$maxFetched recent=${seed.recent.length}\n',
+  );
+  return seed;
+}
+
 /// The download side of detection. Same pagination and detector as the notify
 /// step but consuming its OWN cursor, scoped to the spec's keep-rule manga and
 /// never the notification category filter — muting a category must not
@@ -410,19 +452,17 @@ Future<bool> _runDownloadResolution(
     // First enable: seed to now. The toggle does not backfill history — the
     // foreground launch pass owns the backlog.
     if (ledger.cursor.fetchedAt == 0 && ledger.cursor.recent.isEmpty) {
-      final maxFetched = await client.serverMaxFetchedAt();
+      final seed = await _seedWatermark(client);
+      if (seed == null) return false; // transient — retry next wake
       if (await lock.yieldRequested()) return true;
       await catchupStore.writeLedger(
         spec.serverId,
-        ledger.copyWith(cursor: NewChapterWatermark(fetchedAt: maxFetched)),
+        ledger.copyWith(cursor: seed),
       );
       return true;
     }
 
-    final gte = (ledger.cursor.fetchedAt - kDefaultOverlapMs).clamp(
-      0,
-      ledger.cursor.fetchedAt,
-    );
+    final gte = _overlapStart(ledger.cursor);
     final all = <NotifChapter>[];
     String? after;
     while (true) {
