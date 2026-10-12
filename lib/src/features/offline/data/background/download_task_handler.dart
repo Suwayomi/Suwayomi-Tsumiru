@@ -709,20 +709,23 @@ class DownloadTaskHandler extends TaskHandler {
       source: 'download-retry',
     );
     if (next == _serverBase) return false;
-    final verified = await verifyBackgroundServerIdentity(
-      target: BackgroundServerTarget(
-        serverBase: next,
-        port: order.port,
-        addPort: order.addPort,
-        client: _http,
-        isCancelled: () => _paused || _stopping,
+    return switchServerBaseIfVerified(
+      base: () => _serverBase,
+      setBase: (base) => _serverBase = base,
+      next: next,
+      verify: () => verifyBackgroundServerIdentity(
+        target: BackgroundServerTarget(
+          serverBase: next,
+          port: order.port,
+          addPort: order.addPort,
+          client: _http,
+          isCancelled: () => _paused || _stopping,
+        ),
+        record: () => _record,
+        broker: _broker,
+        expected: order.catalogServerId!,
       ),
-      record: () => _record,
-      broker: _broker,
-      expected: order.catalogServerId!,
     );
-    if (verified) _serverBase = next;
-    return verified;
   }
 
   Future<List<String>?> _resolvePageUrls(int chapterId) =>

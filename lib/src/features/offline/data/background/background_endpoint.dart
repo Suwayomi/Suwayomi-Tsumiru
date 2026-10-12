@@ -51,6 +51,25 @@ Future<String> pickBackgroundServerBase({
   return selected;
 }
 
+/// Runs [verify] with [next] as the active address, so its token refresh goes
+/// there, and keeps [next] only when verification succeeds.
+Future<bool> switchServerBaseIfVerified({
+  required String Function() base,
+  required void Function(String) setBase,
+  required String next,
+  required Future<bool> Function() verify,
+}) async {
+  final previous = base();
+  setBase(next);
+  var verified = false;
+  try {
+    verified = await verify();
+  } finally {
+    if (!verified) setBase(previous);
+  }
+  return verified;
+}
+
 /// The foreground's LAN probe (`serverUrlIsReachable`), without its Riverpod
 /// surroundings: any answer at all, auth challenge included, means the host
 /// is there. Never sends credentials.

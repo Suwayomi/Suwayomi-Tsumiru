@@ -192,6 +192,25 @@ void main() {
     },
   );
 
+  test('changing the LAN address re-syncs notifications', () async {
+    var notifications = 0;
+    final container = await setup(
+      verify: () async => 'A',
+      notify: () async {
+        notifications++;
+      },
+    );
+    final startup = AccountSessionStartup(container);
+    addTearDown(startup.dispose);
+    await startup.start();
+    final atLaunch = notifications;
+    container
+        .read(serverLanUrlProvider.notifier)
+        .update('http://192.168.5.5:4567');
+    await Future<void>.delayed(Duration.zero);
+    expect(notifications, atLaunch + 1);
+  });
+
   test('restoring download permission requests startup work again', () async {
     var verifications = 0;
     var notifications = 0;

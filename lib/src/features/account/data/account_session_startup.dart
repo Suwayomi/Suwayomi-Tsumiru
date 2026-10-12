@@ -84,6 +84,15 @@ class AccountSessionStartup {
       }),
     );
     _subscriptions.add(
+      container.listen<String?>(serverLanUrlProvider, _addressSettingChanged),
+    );
+    _subscriptions.add(
+      container.listen<String?>(
+        serverExternalUrlProvider,
+        _addressSettingChanged,
+      ),
+    );
+    _subscriptions.add(
       container.listen<bool>(serverUnreachableProvider, (previous, next) {
         if (_current && previous == true && !next) unawaited(_request());
       }),
@@ -310,6 +319,17 @@ class AccountSessionStartup {
   bool _offlineActiveNow() {
     _offlineActivationPending = false;
     return container.read(offlineActiveProvider);
+  }
+
+  void _addressSettingChanged(String? previous, String? next) {
+    if (!_current || previous == next) return;
+    unawaited(
+      Future<void>.sync(
+        () => container.read(notificationsControllerProvider).sync(),
+      ).catchError((Object error) {
+        if (_current) debugPrint('Notification re-sync failed: $error');
+      }),
+    );
   }
 
   void _snapshot() {
