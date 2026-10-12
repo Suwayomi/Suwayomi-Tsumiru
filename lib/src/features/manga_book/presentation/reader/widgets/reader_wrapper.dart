@@ -32,9 +32,11 @@ import '../../../../settings/presentation/reader/widgets/reader_volume_tap_tile/
 import '../../../../settings/presentation/reader/widgets/tap_zones_overlay/tap_zones_overlay.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
+import '../../../domain/chapter/missing_chapters.dart';
 import '../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../manga_details/controller/manga_details_controller.dart';
+import '../controller/auto_scroll_controller.dart';
 import '../controller/reader_controller.dart';
 import '../utils/last_page_swipe_utils.dart';
 import '../utils/reader_mode_kind.dart';
@@ -42,6 +44,7 @@ import 'chrome/reader_chrome.dart';
 import 'chrome/reader_page_actions_sheet.dart';
 import 'chrome/reader_settings_dialog.dart';
 import 'directional_swipe_gesture_handler.dart';
+import 'reader_chapter_gap_warning.dart';
 import 'reader_gesture_state.dart';
 import 'reader_navigation_layout/reader_navigation_layout.dart';
 
@@ -415,17 +418,51 @@ class ReaderWrapper extends HookConsumerWidget {
     final canSwipeAcrossChapterBoundary =
         lastPageSwipeEnabled || readerSwipeChapterToggle;
 
-    bool pushNextChapter() {
-      if (nextPrevChapterPair?.first == null) return false;
+    final gapConfirmationPending = useRef(false);
+    void navigateWithGapConfirmation(
+      ChapterDto target,
+      VoidCallback navigate, {
+      bool visualTransitionShown = false,
+    }) {
+      if (gapConfirmationPending.value) return;
+      final count = visualTransitionShown
+          ? 0
+          : chapterGapCount(chapter.chapterNumber, target.chapterNumber);
+      if (count == 0) {
+        navigate();
+        return;
+      }
+      gapConfirmationPending.value = true;
+      // Timers keep running behind modal routes. Stop both paged auto-advance
+      // and continuous auto-scroll before asking; the reader can restart them
+      // explicitly after deciding, without changing position behind Cancel.
+      ref.read(autoScrollActiveProvider.notifier).stop();
+      unawaited(() async {
+        try {
+          final confirmed = await confirmReaderChapterGap(context, count);
+          if (confirmed && context.mounted) navigate();
+        } finally {
+          gapConfirmationPending.value = false;
+        }
+      }());
+    }
+
+    bool pushNextChapter({bool visualTransitionShown = false}) {
+      final target = nextPrevChapterPair?.first;
+      if (target == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
       final toPrev = isRTLReaderMode(resolvedReaderMode);
-      ReaderRoute(
-        mangaId: manga.id,
-        chapterId: nextPrevChapterPair!.first!.id,
-        transVertical: transVertical,
-        toPrev: toPrev,
-        readerScanlatorGroup: readerScanlatorGroup,
-      ).pushReplacement(context);
+      navigateWithGapConfirmation(
+        target,
+        () => ReaderRoute(
+          mangaId: manga.id,
+          chapterId: target.id,
+          transVertical: transVertical,
+          toPrev: toPrev,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ).pushReplacement(context),
+        visualTransitionShown: visualTransitionShown,
+      );
       return true;
     }
 
@@ -433,18 +470,26 @@ class ReaderWrapper extends HookConsumerWidget {
     // still moving through the story and the last page is the next thing they
     // should see. An explicit "previous chapter" command resumes that chapter
     // instead, matching Komikku's loadPreviousChapter.
-    bool pushPreviousChapter({bool openAtEnd = false}) {
-      if (nextPrevChapterPair?.second == null) return false;
+    bool pushPreviousChapter({
+      bool openAtEnd = false,
+      bool visualTransitionShown = false,
+    }) {
+      final target = nextPrevChapterPair?.second;
+      if (target == null) return false;
       final transVertical = _shouldUseVerticalTransition(resolvedReaderMode);
       final toPrev = !isRTLReaderMode(resolvedReaderMode);
-      ReaderRoute(
-        mangaId: manga.id,
-        chapterId: nextPrevChapterPair!.second!.id,
-        transVertical: transVertical,
-        toPrev: toPrev,
-        openAtEnd: openAtEnd,
-        readerScanlatorGroup: readerScanlatorGroup,
-      ).pushReplacement(context);
+      navigateWithGapConfirmation(
+        target,
+        () => ReaderRoute(
+          mangaId: manga.id,
+          chapterId: target.id,
+          transVertical: transVertical,
+          toPrev: toPrev,
+          openAtEnd: openAtEnd,
+          readerScanlatorGroup: readerScanlatorGroup,
+        ).pushReplacement(context),
+        visualTransitionShown: visualTransitionShown,
+      );
       return true;
     }
 
@@ -453,17 +498,25 @@ class ReaderWrapper extends HookConsumerWidget {
       // reading-flow boundary fall through to the child's controller.
       if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
-      return pushNextChapter();
+      return pushNextChapter(
+        visualTransitionShown:
+            childHandlesGestures && isPagedReaderMode(resolvedReaderMode),
+      );
     }
 
     bool tryPreviousChapter() {
       if (handlesOwnChapterNavigation) return false;
       if (!canSwipeAcrossChapterBoundary) return false;
-      return pushPreviousChapter(openAtEnd: true);
+      return pushPreviousChapter(
+        openAtEnd: true,
+        visualTransitionShown:
+            childHandlesGestures && isPagedReaderMode(resolvedReaderMode),
+      );
     }
 
     final onReaderNext = useCallback(
       () {
+        if (gapConfirmationPending.value) return;
         final isAtLastPage =
             isAtLastBoundary?.call() ??
             currentIndex >= chapterPages.pages.length - 1;
@@ -486,6 +539,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     final onReaderPrevious = useCallback(
       () {
+        if (gapConfirmationPending.value) return;
         final isAtFirstPage = isAtFirstBoundary?.call() ?? currentIndex <= 0;
         if (isAtFirstPage && tryPreviousChapter()) {
           return;
@@ -653,6 +707,9 @@ class ReaderWrapper extends HookConsumerWidget {
                     child: Listener(
                       child: RepaintBoundary(
                         child: ReaderView(
+                          onNextChapterCommand: () => pushNextChapter(),
+                          onPreviousChapterCommand: () =>
+                              pushPreviousChapter(openAtEnd: true),
                           toggleVisibility: () {
                             final gate = ref.read(
                               readerTapArrestsFlingProvider.notifier,
@@ -730,7 +787,7 @@ class ReaderWrapper extends HookConsumerWidget {
                     ? () => pushPreviousChapter()
                     : null,
                 onNextChapter: nextPrevChapterPair?.first != null
-                    ? pushNextChapter
+                    ? () => pushNextChapter()
                     : null,
                 resolvedReaderMode: resolvedReaderMode,
                 autoScrollSupported: onToggleAutoScroll != null,
@@ -982,9 +1039,13 @@ class ReaderView extends HookConsumerWidget {
     this.showReaderLayoutAnimation = false,
     this.pageController,
     this.childHandlesGestures = false,
+    this.onNextChapterCommand,
+    this.onPreviousChapterCommand,
   });
 
   final VoidCallback toggleVisibility;
+  final VoidCallback? onNextChapterCommand;
+  final VoidCallback? onPreviousChapterCommand;
   final Axis scrollDirection;
   final int mangaId;
   final String readerScanlatorGroup;
@@ -1129,6 +1190,8 @@ class ReaderView extends HookConsumerWidget {
       );
     } else {
       content = DirectionalSwipeGestureHandler(
+        onNextChapterCommand: onNextChapterCommand,
+        onPreviousChapterCommand: onPreviousChapterCommand,
         readerScanlatorGroup: readerScanlatorGroup,
         onTap: toggleVisibility,
         // Null when nothing consumes it, so the recognizer is never registered
