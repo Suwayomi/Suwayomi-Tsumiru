@@ -152,6 +152,32 @@ void main() {
       ]);
       expect(lines.join(), isNot(contains('R2')));
     });
+
+    test('a refresh ahead of expiry is not logged as a rejection', () async {
+      String part(Object json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      final expired =
+          '${part({'alg': 'HS256'})}.'
+          '${part({'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60})}'
+          '.sig';
+      var current = BackgroundTokenRecord(
+        gen: 2,
+        authType: 'uiLogin',
+        accessToken: expired,
+        refreshToken: 'R',
+      );
+      final broker = TokenBroker(
+        read: () async => current,
+        write: (r) async => current = r,
+        refreshFn: (_) async =>
+            (tokens: (access: 'B', refresh: 'R'), transient: false),
+      );
+      await broker.refreshIfDue(current);
+      expect(lines, [
+        contains('token-broker: refreshed gen=3'),
+        matches(RegExp(r'token-broker: refresh-ahead expIn=-\d+s ok')),
+      ]);
+    });
   });
 
   test('SocketException stays distinct from the ClientException wrapper', () {

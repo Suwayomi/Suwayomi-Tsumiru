@@ -106,8 +106,18 @@ void main() {
   late _DelayedRefresh link;
   late GraphQLClient client;
   late _ControlledSecureStorage storage;
+  // The post-handover client a discarded refresh retries through.
+  var retryCalls = 0;
+  final retryClient = GraphQLClient(
+    link: Link.function((request, [forward]) {
+      retryCalls++;
+      return Stream.value(_success('account-a-retried'));
+    }),
+    cache: GraphQLCache(),
+  );
 
   setUp(() async {
+    retryCalls = 0;
     debugResetAuthCoordinatorSingleFlight();
     FlutterSecureStorage.setMockInitialValues({
       'auth.ui.accessToken': 'account-a-access',
@@ -122,6 +132,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         secureStorageProvider.overrideWithValue(storage),
+        unauthenticatedGraphQlClientProvider.overrideWithValue(retryClient),
       ],
     );
     await container.read(authCredentialsStoreProvider.future);
@@ -512,6 +523,117 @@ void main() {
       },
     );
   }
+
+  group('endpoint handover', () {
+    Future<String?> storedAccess() async =>
+        (await container.read(authCredentialsStoreProvider.future))
+            .uiAccessToken;
+
+    test('a refresh it discards is retried once it settles', () async {
+      final refresh = container
+          .read(authCoordinatorProvider.notifier)
+          .refreshUiAccessToken(gqlClient: client);
+      await link.requested.future;
+      final release = Completer<void>();
+      final handover = store.withIdentityChange(
+        () => release.future,
+        preserveSession: true,
+      );
+      link.response.complete(_success('account-a-refreshed'));
+      await pumpEventQueue();
+      // Still waiting for the handover, not failed with the old token.
+      expect(retryCalls, 0);
+      release.complete();
+      await handover;
+      expect(await refresh, isA<RefreshSuccess>());
+      expect(retryCalls, 1);
+      expect(await storedAccess(), 'account-a-retried');
+    });
+
+    test('a refresh started during it waits and then runs', () async {
+      final release = Completer<void>();
+      final handover = store.withIdentityChange(
+        () => release.future,
+        preserveSession: true,
+      );
+      final refresh = container
+          .read(authCoordinatorProvider.notifier)
+          .refreshUiAccessToken(gqlClient: client);
+      await pumpEventQueue();
+      expect(link.requested.isCompleted, isFalse);
+      release.complete();
+      await handover;
+      expect(await refresh, isA<RefreshSuccess>());
+      expect(retryCalls, 1);
+      expect(await storedAccess(), 'account-a-retried');
+    });
+
+    test('a refresh from inside it neither waits on it nor joins', () async {
+      final outer = container
+          .read(authCoordinatorProvider.notifier)
+          .refreshUiAccessToken(gqlClient: client);
+      await link.requested.future;
+      RefreshOutcome? inner;
+      await store.withIdentityChange(() async {
+        inner = await container
+            .read(authCoordinatorProvider.notifier)
+            .refreshUiAccessToken(gqlClient: client);
+      }, preserveSession: true);
+      expect(inner, isA<RefreshTransientFailure>());
+      link.response.complete(_success('account-a-refreshed'));
+      expect(await outer, isA<RefreshSuccess>());
+      expect(retryCalls, 1);
+    });
+
+    test('work it spawns but never awaits can wait for it', () async {
+      // A handover rebuilds the subscription socket through microtasks that
+      // inherit its zone; the socket's refresh must still wait it out.
+      final release = Completer<void>();
+      final spawned = Completer<Future<RefreshOutcome>>();
+      final refusedInZone = Completer<RefreshOutcome>();
+      final handover = store.withIdentityChange(() async {
+        final coordinator = container.read(authCoordinatorProvider.notifier);
+        scheduleMicrotask(() {
+          // Without the mask the same call is refused on the spot.
+          refusedInZone.complete(
+            coordinator.refreshUiAccessToken(gqlClient: client),
+          );
+          spawned.complete(
+            store.outsideIdentityChange(
+              () => coordinator.refreshUiAccessToken(gqlClient: client),
+            ),
+          );
+        });
+        await release.future;
+      }, preserveSession: true);
+      expect(await refusedInZone.future, isA<RefreshTransientFailure>());
+      final spawnedRefresh = await spawned.future;
+      await pumpEventQueue();
+      expect(retryCalls, 0);
+      release.complete();
+      await handover;
+      expect(await spawnedRefresh, isA<RefreshSuccess>());
+      expect(retryCalls, 1);
+    });
+
+    test('a sign-in change is not retried', () async {
+      final refresh = container
+          .read(authCoordinatorProvider.notifier)
+          .refreshUiAccessToken(gqlClient: client);
+      await link.requested.future;
+      final release = Completer<void>();
+      final transition = store.withIdentityChange(() async {
+        await release.future;
+        await saveAccountB();
+      });
+      link.response.complete(_success('account-a-refreshed'));
+      expect(await refresh, isA<RefreshTransientFailure>());
+      release.complete();
+      await transition;
+      expect(retryCalls, 0);
+      await expectAccountB();
+    });
+  });
 
   test('a refresh for the current epoch still succeeds', () async {
     final refresh = container

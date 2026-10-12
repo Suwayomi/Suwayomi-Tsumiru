@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../auth/data/jwt_utils.dart';
 
 typedef RefreshResult = ({String access, String refresh});
 
@@ -197,11 +198,84 @@ class TokenBroker {
   /// chapter permanently instead of retrying once the network is real.
   bool lastRefreshTransient = false;
 
+  /// How close to expiry [refreshIfDue] refreshes a ui_login access token.
+  static const Duration refreshLead = Duration(seconds: 60);
+
+  /// How long a failed [refreshIfDue] answers the 401 that follows it for the
+  /// same token, instead of the broker calling the server a second time.
+  static const Duration _failedRefreshReuse = Duration(seconds: 15);
+
+  BackgroundTokenRecord? _latest;
+  Future<BackgroundTokenRecord>? _refreshAhead;
+  String? _failedFor;
+  DateTime? _failedAt;
+
+  /// The newest record this broker wrote. A caller holding a record from
+  /// before another path refreshed would otherwise send the stale token, take
+  /// a 401, and only then pick the new one up.
+  BackgroundTokenRecord? get latest => _latest;
+
+  /// [record], or the record refreshed first when its ui_login access token
+  /// has expired or is about to. The worker wakes every few hours and access
+  /// tokens last minutes, so its first request always went out only to come
+  /// back 401 and be retried after the refresh it was going to need anyway.
+  /// The refresh token isn't rotated, so refreshing early costs nothing.
+  /// Concurrent callers (parallel page fetches) share one refresh; a failed
+  /// one returns [record] and the request takes the 401 path as before.
+  Future<BackgroundTokenRecord> refreshIfDue(
+    BackgroundTokenRecord record, {
+    DateTime? now,
+  }) {
+    if (record.authType != 'uiLogin' || record.refreshToken == null) {
+      return Future.value(record);
+    }
+    final token = record.accessToken;
+    final exp = token == null || token.isEmpty ? null : decodeJwtExp(token);
+    // An opaque token has no expiry to read: leave it to the 401 path.
+    if (exp == null && token != null && token.isNotEmpty) {
+      return Future.value(record);
+    }
+    final left = exp?.difference(now ?? DateTime.now().toUtc());
+    if (left != null && left > refreshLead) return Future.value(record);
+    return _refreshAhead ??= () async {
+      try {
+        final fresh = await _resolve(token ?? '', rejected: false);
+        _log(
+          'refresh-ahead expIn=${left?.inSeconds ?? 'none'}s '
+          '${fresh == null ? 'failed transient=$lastRefreshTransient' : 'ok'}',
+        );
+        if (fresh == null) {
+          _failedFor = token ?? '';
+          _failedAt = DateTime.now();
+          return record;
+        }
+        return await readCurrent() ?? record;
+      } finally {
+        _refreshAhead = null;
+      }
+    }();
+  }
+
   /// Returns a usable access token to retry with, or null if auth is dead.
-  Future<String?> resolveAfter401(String tokenThat401d) async {
+  Future<String?> resolveAfter401(String tokenThat401d) {
+    final failedAt = _failedAt;
+    if (tokenThat401d == _failedFor &&
+        failedAt != null &&
+        DateTime.now().difference(failedAt) < _failedRefreshReuse) {
+      // refreshIfDue just tried this token and failed; lastRefreshTransient
+      // still describes that attempt.
+      _log('auth-rejected after-failed-refresh-ahead');
+      return Future.value(null);
+    }
+    return _resolve(tokenThat401d);
+  }
+
+  /// [rejected]: the server refused [tokenThat401d], as opposed to
+  /// [refreshIfDue] renewing it ahead of time.
+  Future<String?> _resolve(String tokenThat401d, {bool rejected = true}) async {
     lastRefreshTransient = false;
     final current = await _read();
-    _log('auth-rejected gen=${current.gen}');
+    if (rejected) _log('auth-rejected gen=${current.gen}');
     if (expectedIdentity != null && !current.sameIdentity(expectedIdentity!)) {
       _log('identity-changed-before-refresh gen=${current.gen}');
       return null;
@@ -228,14 +302,15 @@ class TokenBroker {
       lastRefreshTransient = attempt.transient;
       return null;
     }
-    await write(
-      current.copyWith(
-        gen: current.gen + 1,
-        accessToken: tokens.access,
-        refreshToken: tokens.refresh,
-      ),
+    final next = current.copyWith(
+      gen: current.gen + 1,
+      accessToken: tokens.access,
+      refreshToken: tokens.refresh,
     );
-    _log('refreshed gen=${current.gen + 1}');
+    await write(next);
+    _latest = next;
+    _failedFor = null;
+    _log('refreshed gen=${next.gen}');
     return tokens.access;
   }
 
