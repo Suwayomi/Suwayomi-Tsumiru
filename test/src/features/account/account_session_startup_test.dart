@@ -212,19 +212,20 @@ void main() {
   });
 
   test(
-    'an address change during an identity change does not re-sync',
+    'address changes during an identity change re-sync once it settles',
     () async {
       var notifications = 0;
+      final resynced = Completer<void>();
       final container = await setup(
         verify: () async => 'A',
         notify: () async {
-          notifications++;
+          if (++notifications == 2) resynced.complete();
         },
       );
       final startup = AccountSessionStartup(container);
       addTearDown(startup.dispose);
       await startup.start();
-      final atLaunch = notifications;
+      expect(notifications, 1);
       final gate = Completer<void>();
       final change = container
           .read(authCredentialsStoreProvider.notifier)
@@ -236,10 +237,16 @@ void main() {
       container
           .read(serverLanUrlProvider.notifier)
           .update('http://192.168.5.5:4567');
-      await Future<void>.delayed(Duration.zero);
-      expect(notifications, atLaunch);
+      container
+          .read(serverLanUrlProvider.notifier)
+          .update('http://192.168.5.6:4567');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(notifications, 1);
       gate.complete();
       await change;
+      await resynced.future;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(notifications, 2);
     },
   );
 
