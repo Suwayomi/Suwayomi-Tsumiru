@@ -6,18 +6,18 @@
 
 import 'dart:math';
 
-/// Whole chapters skipped between two recognized chapter numbers, in either
-/// reading direction. This intentionally includes chapters hidden by filters.
-int chapterGapCount(double? first, double? second) {
-  if (first == null ||
-      second == null ||
-      !first.isFinite ||
-      !second.isFinite ||
-      first < 0 ||
-      second < 0) {
+/// Whole chapters skipped from [lower] up to [higher]. Going backwards (such as
+/// a season restart) is not a skip. Includes chapters hidden by filters.
+int chapterGap({required double? higher, required double? lower}) {
+  if (higher == null ||
+      lower == null ||
+      !higher.isFinite ||
+      !lower.isFinite ||
+      higher < 0 ||
+      lower < 0) {
     return 0;
   }
-  return max(0, (first.floor() - second.floor()).abs() - 1);
+  return max(0, higher.floor() - lower.floor() - 1);
 }
 
 /// A contiguous run of whole chapter numbers absent from a chapter catalogue.
