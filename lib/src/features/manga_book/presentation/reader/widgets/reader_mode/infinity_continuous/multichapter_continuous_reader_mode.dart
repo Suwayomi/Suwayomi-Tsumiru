@@ -1257,10 +1257,9 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
 
     // Space so the last page clears the navigation bar and the bottom menu.
     Widget buildEndOfStrip(BuildContext context) {
-      final view = View.of(context);
       final pair = nextPrevChapterPair.value;
       final trailingSpace =
-          view.viewPadding.bottom / view.devicePixelRatio +
+          MediaQuery.viewPaddingOf(context).bottom +
           InfinityContinuousConfig.endOfStripSpace;
       return Flex(
         direction: scrollDirection,
