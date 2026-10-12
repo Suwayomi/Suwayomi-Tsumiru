@@ -353,8 +353,9 @@ class OfflineReconciler {
   /// recreated under a new id), so a rejected request is retried one chapter
   /// at a time: the valid chapters still get queued, and a rejected one spends
   /// its attempt towards [_maxServerFetchAttempts] instead of blocking the rest
-  /// on every pass. A dead network or a missing permission isn't about one
-  /// chapter, so it still fails the pass without spending attempts.
+  /// on every pass. A dead network, a missing permission or an expired session
+  /// isn't about one chapter, so it still fails the pass without spending
+  /// attempts.
   Future<void> _askServerToFetch(int mangaId, Set<int> ids) async {
     Future<bool> ask(Set<int> batch) async {
       try {
@@ -378,10 +379,11 @@ class OfflineReconciler {
 }
 
 /// The server answered and refused the request, as opposed to never being
-/// reached or the account lacking the permission.
+/// reached, the account lacking the permission, or the session signed out.
 bool _isChapterRejection(Object error) {
   final cause = error is OperationMessageException ? error.exception : error;
   return cause is OperationException &&
       cause.graphqlErrors.isNotEmpty &&
-      !isPermissionDenied(cause);
+      !isPermissionDenied(cause) &&
+      !isAuthenticationRequired(cause);
 }
