@@ -26,6 +26,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/reader/controller/r
 import 'package:tsumiru/src/features/manga_book/presentation/reader/reader_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/chrome/reader_top_bar.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_mode/reader_zoom_view.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/reader/widgets/reader_navigation_layout/layouts/l_shaped_layout.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/delete_chapters_settings_repository.dart';
 import 'package:tsumiru/src/features/settings/presentation/downloads/data/graphql/__generated__/global_meta.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
@@ -256,6 +257,22 @@ void main() {
       expect(afterOnePump, lessThan(_listPosition(tester).pixels));
     });
   });
+
+  for (final reduce in [true, false]) {
+    testWidgets(
+      'drag inside tap zone scrolls the strip with reduced motion=$reduce',
+      (tester) async {
+        await _pumpLongStrip(tester, reduceMotion: reduce);
+        expect(find.byType(LShapedLayout), findsOneWidget);
+        final before = _listPosition(tester).pixels;
+
+        await tester.dragFrom(const Offset(50, 800), const Offset(0, -300));
+        await tester.pumpAndSettle();
+
+        expect(_listPosition(tester).pixels, closeTo(before + 300, 60));
+      },
+    );
+  }
 
   testWidgets('reduced motion shows the reader menu at once', (tester) async {
     await _pumpLongStrip(tester, reduceMotion: true);

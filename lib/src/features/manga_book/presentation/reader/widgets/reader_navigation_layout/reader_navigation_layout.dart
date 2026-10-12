@@ -41,11 +41,11 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
     final animationController = useAnimationController(duration: kLongDuration);
     useAnimation(animationController);
     final nextColorTween = ColorTween(
-      begin: showFlash ? Colors.green : Colors.transparent,
+      begin: showFlash ? Colors.green : null,
     ).animate(animationController).value;
 
     final prevColorTween = ColorTween(
-      begin: showFlash ? Colors.blue : Colors.transparent,
+      begin: showFlash ? Colors.blue : null,
     ).animate(animationController).value;
     // Callers resolve this (see effectiveNavigationLayout); an unresolved
     // value just draws nothing rather than falling back here and risking
@@ -56,9 +56,13 @@ class ReaderNavigationLayoutWidget extends HookConsumerWidget {
     // different one flashes the zones for it too (Komikku's
     // navigationModeChanged).
     useEffect(() {
-      if (!reduceMotion) animationController.forward(from: 0);
+      if (reduceMotion) {
+        animationController.value = 1;
+      } else {
+        animationController.forward(from: 0);
+      }
       return;
-    }, [layout]);
+    }, [layout, reduceMotion]);
     // Axis-wise inversion: horizontal swaps the
     // left/right zones, vertical swaps the L-shaped top/bottom rows.
     final TapInvert invert =
