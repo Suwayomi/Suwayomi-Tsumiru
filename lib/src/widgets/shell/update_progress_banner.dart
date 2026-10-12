@@ -21,6 +21,7 @@ import '../../features/settings/presentation/library/widgets/show_update_progres
 import '../../global_providers/global_providers.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import '../../utils/motion/reduce_motion.dart';
 import 'update_banner_state.dart';
 
 /// App-root "Updating library…" strip, shown while a global/category update
@@ -141,40 +142,40 @@ class UpdateProgressBanner extends HookConsumerWidget {
         : View.of(context).viewPadding.top / View.of(context).devicePixelRatio;
 
     final scheme = context.theme.colorScheme;
+    final banner = !visible
+        ? const SizedBox.shrink()
+        : Material(
+            color: scheme.secondary,
+            child: Padding(
+              padding:
+                  EdgeInsets.only(top: topInset) +
+                  const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: scheme.onSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _label(context, status),
+                    style: TextStyle(color: scheme.onSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          );
+    if (context.reduceMotion) return banner;
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       alignment: Alignment.topCenter,
-      child: !visible
-          ? const SizedBox.shrink()
-          : Material(
-              color: scheme.secondary,
-              child: Padding(
-                  padding: EdgeInsets.only(top: topInset) +
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: scheme.onSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _label(context, status),
-                        style: TextStyle(
-                          color: scheme.onSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ),
+      child: banner,
     );
   }
 

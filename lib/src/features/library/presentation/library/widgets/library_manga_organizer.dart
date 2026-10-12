@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import 'library_manga_badges.dart';
 import 'library_manga_display.dart';
@@ -41,6 +42,9 @@ class LibraryMangaOrganizer extends ConsumerWidget {
         ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
     return DefaultTabController(
       length: 5,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
       child: _OrganizerBody(hasTrackers: hasTrackers),
     );
   }
@@ -102,15 +106,19 @@ class _OrganizerBody extends StatelessWidget {
           Flexible(
             child: AnimatedBuilder(
               animation: controller,
-              builder: (context, _) => AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
+              builder: (context, _) {
+                final content = ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: maxHeight),
                   child: tabs[controller.index],
-                ),
-              ),
+                );
+                if (context.reduceMotion) return content;
+                return AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  alignment: Alignment.topCenter,
+                  child: content,
+                );
+              },
             ),
           ),
         ],

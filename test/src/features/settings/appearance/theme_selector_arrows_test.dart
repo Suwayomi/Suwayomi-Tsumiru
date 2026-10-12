@@ -13,10 +13,20 @@ import 'package:tsumiru/src/features/settings/presentation/appearance/widgets/ap
 import 'package:tsumiru/src/features/settings/widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/motion/reduce_motion.dart';
 
 Finder _arrow(IconData icon) => find.widgetWithIcon(IconButton, icon);
 
-Future<void> _pumpSelector(WidgetTester tester, {required Size size}) async {
+class _ReduceMotionOn extends AppReduceMotion {
+  @override
+  bool build() => true;
+}
+
+Future<void> _pumpSelector(
+  WidgetTester tester, {
+  required Size size,
+  bool reduceMotion = false,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -24,10 +34,15 @@ Future<void> _pumpSelector(WidgetTester tester, {required Size size}) async {
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        if (reduceMotion)
+          appReduceMotionProvider.overrideWith(_ReduceMotionOn.new),
+      ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => ReduceMotionScope(child: child!),
         home: const Scaffold(
           body: Align(
             alignment: Alignment.topLeft,
@@ -68,6 +83,18 @@ void main() {
       tester.widget<IconButton>(_arrow(Icons.chevron_left_rounded)).onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('reduced motion scrolls the row at once', (tester) async {
+    await _pumpSelector(tester, size: const Size(412, 800), reduceMotion: true);
+
+    await tester.tap(_arrow(Icons.chevron_right_rounded));
+    await tester.pump();
+
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable))
+        .position;
+    expect(position.pixels, greaterThan(0));
   });
 
   testWidgets('a row with nothing to scroll shows no arrows', (tester) async {

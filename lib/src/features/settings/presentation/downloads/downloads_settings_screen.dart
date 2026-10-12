@@ -136,6 +136,9 @@ class DownloadsSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
       child: ListTileTheme(
         data: ListTileThemeData(
           subtitleTextStyle: TextStyle(

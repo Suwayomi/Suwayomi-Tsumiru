@@ -131,8 +131,7 @@ class OnboardingScreen extends HookConsumerWidget {
                     const SizedBox(height: 12),
                     _StepDots(count: _stepCount, active: step.value),
                     Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
+                      child: _StepSwitcher(
                         child: SingleChildScrollView(
                           key: ValueKey(step.value),
                           padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
@@ -214,6 +213,19 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
+class _StepSwitcher extends StatelessWidget {
+  const _StepSwitcher({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => context.reduceMotion
+      ? child
+      : AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: child,
+        );
+}
+
 class _StepDots extends StatelessWidget {
   const _StepDots({required this.count, required this.active});
   final int count;
@@ -226,20 +238,43 @@ class _StepDots extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < count; i++)
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          _StepDot(
             width: i == active ? 22 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: i == active
-                  ? cs.primary
-                  : cs.onSurface.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(4),
-            ),
+            color: i == active
+                ? cs.primary
+                : cs.onSurface.withValues(alpha: 0.22),
           ),
       ],
     );
+  }
+}
+
+class _StepDot extends StatelessWidget {
+  const _StepDot({required this.width, required this.color});
+  final double width;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    const margin = EdgeInsets.symmetric(horizontal: 4, vertical: 12);
+    final decoration = BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(4),
+    );
+    return context.reduceMotion
+        ? Container(
+            margin: margin,
+            width: width,
+            height: 8,
+            decoration: decoration,
+          )
+        : AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: margin,
+            width: width,
+            height: 8,
+            decoration: decoration,
+          );
   }
 }
 

@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import 'manga_chapter_display.dart';
 import 'manga_chapter_filter.dart';
 import 'manga_chapter_sort.dart';
@@ -18,6 +19,9 @@ class MangaChapterOrganizer extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
       child: Scaffold(
         appBar: TabBar(
           // Fill alignment so the underline aligns under each tab (the global

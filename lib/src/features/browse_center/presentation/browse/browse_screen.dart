@@ -29,8 +29,13 @@ class BrowseScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tabController =
-        useTabController(initialLength: 3, initialIndex: currentIndex);
+    final tabController = useTabController(
+      initialLength: 3,
+      initialIndex: currentIndex,
+      animationDuration: context.reduceMotion
+          ? Duration.zero
+          : kTabScrollDuration,
+    );
 
     useEffect(() {
       if (currentIndex != tabController.index) {

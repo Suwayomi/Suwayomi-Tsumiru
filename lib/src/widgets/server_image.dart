@@ -27,6 +27,7 @@ import '../global_providers/global_providers.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/hooks/debounced_hook.dart';
 import '../utils/misc/app_utils.dart';
+import '../utils/motion/reduce_motion.dart';
 import 'cover_cache/cover_cache.dart';
 import 'custom_circular_progress_indicator.dart';
 
@@ -481,6 +482,9 @@ class ServerImage extends HookConsumerWidget {
         : (BuildContext ctx, ImageProvider provider) =>
               imageBuilder!(ctx, _capDecode(provider, cacheWidth, cacheHeight));
 
+    final fadeDuration = context.reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 150);
     return CachedNetworkImage(
       key: key.value,
       imageUrl: fetchUrl,
@@ -491,9 +495,9 @@ class ServerImage extends HookConsumerWidget {
       width: size?.width,
       fit: fit ?? BoxFit.cover,
       // Package defaults linger the placeholder a full second after the image
-      // is ready.
-      fadeOutDuration: const Duration(milliseconds: 150),
-      fadeInDuration: const Duration(milliseconds: 150),
+      // is ready. Zero shows the image at once (octo_image completes it inline).
+      fadeOutDuration: fadeDuration,
+      fadeInDuration: fadeDuration,
       memCacheWidth: imageBuilder == null ? cacheWidth : null,
       memCacheHeight: imageBuilder == null ? cacheHeight : null,
       imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,

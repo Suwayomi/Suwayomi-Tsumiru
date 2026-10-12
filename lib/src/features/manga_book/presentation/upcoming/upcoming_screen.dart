@@ -100,13 +100,16 @@ class UpcomingScreen extends HookConsumerWidget {
 
           void scrollToDay(DateTime day) {
             final idx = dateToIndex[DateTime(day.year, day.month, day.day)];
-            if (idx != null) {
-              itemScrollController.scrollTo(
-                index: idx,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
+            if (idx == null) return;
+            if (context.reduceMotion) {
+              itemScrollController.jumpTo(index: idx);
+              return;
             }
+            itemScrollController.scrollTo(
+              index: idx,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
           }
 
           return ScrollablePositionedList.builder(
