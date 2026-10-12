@@ -40,9 +40,8 @@ class ReaderTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Compute the system status-bar inset so the bar sits below it.
-    final view = View.of(context);
-    final systemTopInset = view.viewPadding.top / view.devicePixelRatio;
+    // Status-bar inset the reader's SafeArea hasn't already applied.
+    final systemTopInset = MediaQuery.viewPaddingOf(context).top;
 
     return Material(
       // Shared chrome surface; the Material fills behind the status bar.

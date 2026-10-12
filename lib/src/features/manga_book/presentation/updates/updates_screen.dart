@@ -46,7 +46,7 @@ class _UpdatesPagedList extends StatefulWidget {
     required this.refetchChapter,
   });
 
-  final PagingController<int, ChapterWithMangaDto> controller;
+  final ServerPagingController<ChapterWithMangaDto> controller;
   final UpdatesGroupingMode groupingMode;
   final ValueNotifier<Map<int, ChapterDto>> selectedChapters;
   final ValueGetter<int> getGeneration;
@@ -59,62 +59,77 @@ class _UpdatesPagedList extends StatefulWidget {
 }
 
 class _UpdatesPagedListState extends State<_UpdatesPagedList> {
-  // Memoizes the grouping pass per itemList instance instead of recomputing
-  // it once per visible row: PagedSliverList's itemBuilder calls _buildItem
-  // separately for every rendered row, and grouping/index-mapping re-walk
-  // the WHOLE loaded (all-pages-so-far) list each time they're asked. This
-  // State persists across those calls (only scrolling triggers them, not a
-  // rebuild of this widget), so caching on the itemList's identity is enough
-  // to turn an O(rows x loaded-items) pass back into one O(loaded-items) pass
-  // reused by every row. Requires State (not StatelessWidget) since Widget
-  // subclasses are @immutable — plain mutable fields on the widget itself
-  // would fail analysis (must_be_immutable / const_constructor_with_non_final_field).
+  // Memoizes the grouping pass per loaded-pages instance instead of
+  // recomputing it once per visible row: PagedSliverList's itemBuilder calls
+  // _buildItem separately for every rendered row, and grouping/index-mapping
+  // re-walk the WHOLE loaded (all-pages-so-far) list each time they're asked.
+  // This State persists across those calls (only scrolling triggers them, not
+  // a rebuild of this widget), so caching on the pages list's identity is
+  // enough to turn an O(rows x loaded-items) pass back into one
+  // O(loaded-items) pass reused by every row. The key is `pages`, not
+  // `items`: `items` flattens into a fresh list on every read. Requires State
+  // (not StatelessWidget) since Widget subclasses are @immutable — plain
+  // mutable fields on the widget itself would fail analysis (must_be_immutable
+  // / const_constructor_with_non_final_field).
+  List<List<ChapterWithMangaDto>>? _memoPages;
   List<ChapterWithMangaDto>? _memoItems;
   List<UpdatesGroupedEntry>? _memoGroups;
   Map<int, int>? _memoHeadIndex;
   Set<int>? _memoHeaderIndices;
 
   ({
+    List<ChapterWithMangaDto> items,
     List<UpdatesGroupedEntry> groups,
     Map<int, int> headIndex,
     Set<int> headerIndices,
   }) _groupingFor(
-    List<ChapterWithMangaDto> items,
+    List<List<ChapterWithMangaDto>>? pages,
   ) {
-    if (identical(_memoItems, items)) {
+    if (_memoPages != null && identical(_memoPages, pages)) {
       return (
+        items: _memoItems!,
         groups: _memoGroups!,
         headIndex: _memoHeadIndex!,
         headerIndices: _memoHeaderIndices!,
       );
     }
+    final items = [
+      for (final page in pages ?? <List<ChapterWithMangaDto>>[]) ...page,
+    ];
     final groups = groupUpdatesForDisplay(items);
     final headIndex = headFlatIndexToDisplayIndex(groups);
     final headerIndices = dateHeaderIndices(items);
+    _memoPages = pages;
     _memoItems = items;
     _memoGroups = groups;
     _memoHeadIndex = headIndex;
     _memoHeaderIndices = headerIndices;
-    return (groups: groups, headIndex: headIndex, headerIndices: headerIndices);
+    return (
+      items: items,
+      groups: groups,
+      headIndex: headIndex,
+      headerIndices: headerIndices,
+    );
   }
 
   Future<void> _updatePair(ChapterWithMangaDto item) async {
     final chapter = await widget.refetchChapter(item.id);
-    final list = [...?widget.controller.itemList];
-    final i = list.indexWhere((e) => e.id == item.id);
-    if (i < 0) return;
-    list[i] = list[i].copyWith(
-      isRead: (chapter?.isRead ?? false) || list[i].isRead,
-      isDownloaded: chapter?.isDownloaded,
-      lastPageRead: chapter?.lastPageRead,
+    if (!widget.screenContext.mounted) return;
+    widget.controller.mapItems(
+      (row) => row.id != item.id
+          ? row
+          : row.copyWith(
+              isRead: (chapter?.isRead ?? false) || row.isRead,
+              isDownloaded: chapter?.isDownloaded,
+              lastPageRead: chapter?.lastPageRead,
+            ),
     );
-    widget.controller.itemList = list;
   }
 
   Future<void> _refreshManga(int mangaId) async {
     final startGeneration = widget.getGeneration();
     final ids = [
-      for (final row in [...?widget.controller.itemList])
+      for (final row in widget.controller.items ?? <ChapterWithMangaDto>[])
         if (row.mangaId == mangaId) row.id,
     ];
     final chapters = await fetchChaptersInBatches(
@@ -125,10 +140,12 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         widget.getGeneration() != startGeneration) {
       return;
     }
-    widget.controller.itemList = patchRowsForManga(
-      rows: [...?widget.controller.itemList],
-      mangaId: mangaId,
-      chapters: chapters,
+    final controller = widget.controller;
+    controller.value = controller.value.copyWith(
+      pages: [
+        for (final page in controller.pages ?? <List<ChapterWithMangaDto>>[])
+          patchRowsForManga(rows: page, mangaId: mangaId, chapters: chapters),
+      ],
     );
   }
 
@@ -138,13 +155,16 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         widget.selectedChapters.value.toggleKey(val.id, val);
   }
 
-  Widget _buildItem(BuildContext context, ChapterWithMangaDto _, int flatIndex) {
-    final items = widget.controller.itemList ?? [];
+  Widget _buildItem(
+    BuildContext context,
+    PagingState<int, ChapterWithMangaDto> state,
+    int flatIndex,
+  ) {
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
-    // Memoized per itemList instance — see _groupingFor's doc comment. Needed
-    // on both paths below since date headers are independent of manga
-    // grouping.
-    final grouping = _groupingFor(items);
+    // Memoized per pages instance — see _groupingFor's doc comment. Needed on
+    // both paths below since date headers are independent of manga grouping.
+    final grouping = _groupingFor(state.pages);
+    final items = grouping.items;
 
     if (isGrouped) {
       // A flat index missing from headIndex is a tail member (or the head of
@@ -217,26 +237,30 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
 
   @override
   Widget build(BuildContext context) {
-    return PagedSliverList(
-      pagingController: widget.controller,
-      builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
-        firstPageProgressIndicatorBuilder: (context) =>
-            const CenterSorayomiShimmerIndicator(),
-        firstPageErrorIndicatorBuilder: (context) => Emoticons(
-          title: widget.controller.error.toString(),
-          button: TextButton(
-            onPressed: widget.resetList,
-            child: Text(context.l10n.retry),
+    return PagingListener(
+      controller: widget.controller,
+      builder: (context, state, fetchNextPage) => PagedSliverList(
+        state: state,
+        fetchNextPage: fetchNextPage,
+        builderDelegate: PagedChildBuilderDelegate<ChapterWithMangaDto>(
+          firstPageProgressIndicatorBuilder: (context) =>
+              const CenterSorayomiShimmerIndicator(),
+          firstPageErrorIndicatorBuilder: (context) => Emoticons(
+            title: state.error.toString(),
+            button: TextButton(
+              onPressed: widget.resetList,
+              child: Text(context.l10n.retry),
+            ),
           ),
-        ),
-        noItemsFoundIndicatorBuilder: (context) => Emoticons(
-          title: context.l10n.noUpdatesFound,
-          button: TextButton(
-            onPressed: widget.resetList,
-            child: Text(context.l10n.refresh),
+          noItemsFoundIndicatorBuilder: (context) => Emoticons(
+            title: context.l10n.noUpdatesFound,
+            button: TextButton(
+              onPressed: widget.resetList,
+              child: Text(context.l10n.refresh),
+            ),
           ),
+          itemBuilder: (context, _, index) => _buildItem(context, state, index),
         ),
-        itemBuilder: _buildItem,
       ),
     );
   }
@@ -278,50 +302,22 @@ Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
 class UpdatesScreen extends HookConsumerWidget {
   const UpdatesScreen({super.key});
 
-  Future<void> _fetchPage(
+  // A refresh or filter change while a request is in flight leaves it
+  // describing a list that no longer exists; the controller drops its reply
+  // rather than interleave two result sets.
+  Future<ServerPage<ChapterWithMangaDto>> _fetchPage(
     UpdatesRepository repository,
-    PagingController<int, ChapterWithMangaDto> controller,
     int pageKey,
     UpdatesFilter filter,
-    int generation,
-    ValueGetter<int> currentGeneration,
   ) async {
-    AsyncValue.guard(
-      () => repository.getRecentChaptersPage(pageNo: pageKey, filter: filter),
-    ).then(
-      (value) => value.whenOrNull(
-        data: (recentChaptersPage) {
-          // A refresh or filter change while this request was in flight leaves
-          // it describing a list that no longer exists; appending its rows would
-          // interleave two different result sets and skew the next page key.
-          if (generation != currentGeneration()) return;
-          try {
-            if (recentChaptersPage != null) {
-              if (recentChaptersPage.pageInfo.hasNextPage) {
-                controller.appendPage([
-                  ...recentChaptersPage.nodes,
-                ], pageKey + 1);
-              } else {
-                controller.appendLastPage([...recentChaptersPage.nodes]);
-              }
-            }
-          } catch (e) {
-            //
-          }
-        },
-        error: (error, stackTrace) {
-          if (generation != currentGeneration()) return;
-          controller.error = error;
-        },
-      ),
-    );
+    final page =
+        await repository.getRecentChaptersPage(pageNo: pageKey, filter: filter);
+    if (page == null) return (items: <ChapterWithMangaDto>[], hasNextPage: false);
+    return (items: [...page.nodes], hasNextPage: page.pageInfo.hasNextPage);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = usePagingController<int, ChapterWithMangaDto>(
-      firstPageKey: 0,
-    );
     // The item builder's context belongs to a row that recycles on scroll, so
     // post-await guards ask this one whether the screen itself is still alive.
     final screenContext = context;
@@ -332,10 +328,20 @@ class UpdatesScreen extends HookConsumerWidget {
     final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
     final groupingMode = ref.watch(updatesGroupingModeProvider) ??
         UpdatesGroupingMode.disabled;
-    // The page listener is registered once, so it can't close over `filter` —
-    // it reads the latest value through this holder instead.
+    // The page fetcher is captured once, so it can't close over `filter` — it
+    // reads the latest value through this holder instead.
     final latestFilter = useRef(filter);
     latestFilter.value = filter;
+    final controller = useServerPagingController<ChapterWithMangaDto>(
+      firstPageKey: 0,
+      // Read per request: a LAN/remote endpoint switch replaces the client,
+      // and the one captured on the first build is disposed with it.
+      fetchPage: (pageKey) => _fetchPage(
+        ref.read(updatesRepositoryProvider),
+        pageKey,
+        latestFilter.value,
+      ),
+    );
     // Bumped by every reset of the list, so replies from the previous one can be
     // recognised as stale and dropped.
     final generation = useRef(0);
@@ -343,19 +349,6 @@ class UpdatesScreen extends HookConsumerWidget {
       generation.value++;
       selectedChapters.value = ({});
       controller.refresh();
-    }, []);
-    useEffect(() {
-      controller.addPageRequestListener(
-        (pageKey) => _fetchPage(
-          updatesRepository,
-          controller,
-          pageKey,
-          latestFilter.value,
-          generation.value,
-          () => generation.value,
-        ),
-      );
-      return;
     }, []);
     // Use the lightweight running-only socket (not updatesSocketProvider, the
     // heavy feed that goes silent mid-run on large updates and can miss the
@@ -368,7 +361,7 @@ class UpdatesScreen extends HookConsumerWidget {
     Future<void> liveUpdate() async {
       final gen = generation.value;
       final existingIds = {
-        for (final item in controller.itemList ?? <ChapterWithMangaDto>[])
+        for (final item in controller.items ?? <ChapterWithMangaDto>[])
           item.id,
       };
       final newItems = <ChapterWithMangaDto>[];
@@ -395,8 +388,17 @@ class UpdatesScreen extends HookConsumerWidget {
           return;
         }
       }
-      if (newItems.isEmpty) return;
-      controller.itemList = [...newItems, ...?controller.itemList];
+      if (newItems.isEmpty || !screenContext.mounted) return;
+      // Prepended onto the first page so the keys, and the next page to
+      // fetch, stay as they were.
+      final pages = controller.pages;
+      if (pages == null || pages.isEmpty) return;
+      controller.value = controller.value.copyWith(
+        pages: [
+          [...newItems, ...pages.first],
+          ...pages.skip(1),
+        ],
+      );
     }
 
     ref.listen(updateRunningSocketProvider, (_, next) {

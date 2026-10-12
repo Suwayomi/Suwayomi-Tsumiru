@@ -149,4 +149,99 @@ void main() {
       expect(prefs.getString(DBKeys.offlineLastServerAddress.name), address);
     },
   );
+
+  const remoteUrl = 'https://remote.example';
+  const lanUrl = 'http://192.168.2.4';
+  const remoteAddress = 'https://remote.example:443';
+  const lanAddress = 'http://192.168.2.4:80';
+
+  Future<ProviderContainer> endpointContainer({
+    required String active,
+    required String cachedId,
+    required String cachedAddress,
+    required _HangingRepo repo,
+  }) async {
+    SharedPreferences.setMockInitialValues({
+      DBKeys.serverUrl.name: active,
+      DBKeys.serverExternalUrl.name: remoteUrl,
+      DBKeys.serverLanUrl.name: lanUrl,
+      DBKeys.serverPortToggle.name: false,
+      DBKeys.offlineLastServerId.name: cachedId,
+      DBKeys.offlineLastServerAddress.name: cachedAddress,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        offlineServerIdentityRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(() {
+      if (!repo.completer.isCompleted) repo.completer.complete('late');
+      c.dispose();
+    });
+    return c;
+  }
+
+  test(
+    'cached identity from the LAN address resolves while on the remote address',
+    () async {
+      final repo = _HangingRepo();
+      final c = await endpointContainer(
+        active: remoteUrl,
+        cachedId: 'lan-cached-id',
+        cachedAddress: lanAddress,
+        repo: repo,
+      );
+      expect(c.read(currentServerAddressProvider), remoteAddress);
+
+      c.listen(serverInstanceIdProvider, (_, _) {});
+      expect(
+        await c
+            .read(serverInstanceIdProvider.future)
+            .timeout(const Duration(seconds: 2)),
+        'lan-cached-id',
+      );
+    },
+  );
+
+  test(
+    'cached identity from the remote address resolves while on the LAN address',
+    () async {
+      final repo = _HangingRepo();
+      final c = await endpointContainer(
+        active: lanUrl,
+        cachedId: 'remote-cached-id',
+        cachedAddress: remoteAddress,
+        repo: repo,
+      );
+      expect(c.read(currentServerAddressProvider), lanAddress);
+
+      c.listen(serverInstanceIdProvider, (_, _) {});
+      expect(
+        await c
+            .read(serverInstanceIdProvider.future)
+            .timeout(const Duration(seconds: 2)),
+        'remote-cached-id',
+      );
+    },
+  );
+
+  test('a cached identity from an unrelated address is not used', () async {
+    final repo = _HangingRepo();
+    final c = await endpointContainer(
+      active: remoteUrl,
+      cachedId: 'stranger-id',
+      cachedAddress: 'http://203.0.113.9:80',
+      repo: repo,
+    );
+
+    c.listen(serverInstanceIdProvider, (_, _) {});
+    await expectLater(
+      c
+          .read(serverInstanceIdProvider.future)
+          .timeout(const Duration(milliseconds: 300)),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
 }

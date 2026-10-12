@@ -160,8 +160,17 @@ class MangaDetailsScreen extends HookConsumerWidget {
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop && categoryId != null) {
           final id = categoryId!;
+          // Every action re-fetches the series; mid-refetch, assume it changed.
+          final fresh = manga.isLoading ? null : manga.value;
           // Defer off the pop's build phase (Riverpod-3 modify-during-build).
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!providerContainer.exists(libraryMangaListProvider)) return;
+            final listed = providerContainer
+                .read(libraryMangaListProvider)
+                .value
+                ?.where((m) => m.id == mangaId)
+                .firstOrNull;
+            if (!libraryEntryOutdated(listed, fresh)) return;
             providerContainer.invalidate(libraryMangaListProvider);
             providerContainer.invalidate(categoryMangaListProvider(id));
           });

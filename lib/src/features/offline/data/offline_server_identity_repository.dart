@@ -82,6 +82,22 @@ String currentServerAddress(Ref ref) => serverAddress(
   addPort: ref.watch(serverPortToggleProvider).ifNull(),
 );
 
+@riverpod
+Set<String> knownServerAddresses(Ref ref) {
+  final port = ref.watch(serverPortProvider);
+  final addPort = ref.watch(serverPortToggleProvider).ifNull();
+  final external = ref.watch(serverExternalUrlProvider);
+  final lan = ref.watch(serverLanUrlProvider);
+  return {
+    ref.watch(currentServerAddressProvider),
+    // The remote and LAN URLs are two endpoints of the same server.
+    if (external != null && external.isNotEmpty)
+      serverAddress(baseUrl: external, port: port, addPort: addPort),
+    if (lan != null && lan.isNotEmpty)
+      serverAddress(baseUrl: lan, port: port, addPort: addPort),
+  };
+}
+
 final verifiedServerInstanceIdProvider = FutureProvider<String>((ref) async {
   final preferences = ref.watch(sharedPreferencesProvider);
   final address = ref.watch(currentServerAddressProvider);
@@ -144,7 +160,6 @@ final verifiedServerInstanceIdProvider = FutureProvider<String>((ref) async {
 @riverpod
 Future<String> serverInstanceId(Ref ref) async {
   final preferences = ref.watch(sharedPreferencesProvider);
-  final address = ref.watch(currentServerAddressProvider);
   final authType = ref.watch(authTypeKeyProvider);
   final verified = ref.watch(verifiedServerInstanceIdProvider);
   if (authType == AuthType.uiLogin) {
@@ -161,7 +176,9 @@ Future<String> serverInstanceId(Ref ref) async {
   final cachedAddress = preferences.getString(
     offlineLastServerAddressKey(preferences),
   );
-  if (cachedId != null && cachedId.isNotEmpty && cachedAddress == address) {
+  if (cachedId != null &&
+      cachedId.isNotEmpty &&
+      ref.watch(knownServerAddressesProvider).contains(cachedAddress)) {
     return cachedId;
   }
   return ref.watch(verifiedServerInstanceIdProvider.future);

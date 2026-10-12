@@ -235,6 +235,12 @@ class OfflineSync {
     // orphan everything). A chapter the server lists but hasn't downloaded
     // server-side yet is still present here, so a device-on-demand download is
     // NOT orphaned (#32).
+    //
+    // A gone chapter with nothing on the device (`none`/`error`) loses its row
+    // outright. The server recreates a chapter under a new id when the source
+    // changes it, and the old row is otherwise still picked by the keep-rule
+    // and asked of the server, which rejects the whole enqueue batch for that
+    // one id, so the valid chapters in it never download either.
     if (!_current) return {};
     final serverIdsByManga = <int, Set<int>>{};
     for (final c in chapters) {
@@ -243,14 +249,30 @@ class OfflineSync {
     for (final entry in serverIdsByManga.entries) {
       if (!_current) return {};
       final serverIds = entry.value;
-      final goneIds = [
-        for (final lc in await _db.chaptersForManga(entry.key))
-          if (!serverIds.contains(lc.id) &&
-              lc.deviceState == OfflineDeviceState.downloaded)
-            lc.id,
-      ];
+      final orphanIds = <int>[];
+      final staleIds = <int>[];
+      for (final lc in await _db.chaptersForManga(entry.key)) {
+        if (serverIds.contains(lc.id)) continue;
+        switch (lc.deviceState) {
+          case OfflineDeviceState.downloaded:
+            orphanIds.add(lc.id);
+          case OfflineDeviceState.none || OfflineDeviceState.error:
+            staleIds.add(lc.id);
+          case _:
+        }
+      }
       if (!_current) return {};
-      if (goneIds.isNotEmpty) await _db.markChaptersOrphaned(goneIds);
+      if (orphanIds.isNotEmpty) await _db.markChaptersOrphaned(orphanIds);
+      if (staleIds.isNotEmpty) {
+        final dropped = await _db.deleteGoneChapters(staleIds);
+        if (dropped > 0) {
+          recordDiagnostic(
+            '[${DateTime.now().toIso8601String()}] offline-sync: '
+            'drop-gone-chapters mangaId=${entry.key} '
+            'chapterIds=[${staleIds.join(',')}]\n',
+          );
+        }
+      }
     }
     if (_current) await onSynced?.call();
     return _current ? newlyRead : {};

@@ -6,27 +6,23 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/constants/enum.dart';
-import 'package:tsumiru/src/features/browse_center/domain/source/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 
 // ─────────────────────────── helpers ────────────────────────────
 
-Fragment$SourceDto _source({required Enum$ContentWarning contentWarning}) =>
-    Fragment$SourceDto(
-      displayName: 'Test Source',
-      iconUrl: '',
-      id: '1',
-      isConfigurable: false,
-      contentWarning: contentWarning,
-      lang: 'en',
-      name: 'Test Source',
-      supportsLatest: false,
-      meta: const [],
-      $extension:
-          Fragment$SourceDto$extension(pkgName: 'test.pkg', isObsolete: false),
-    );
+Fragment$MangaDto$source _source({
+  required Enum$ContentWarning contentWarning,
+}) => Fragment$MangaDto$source(
+  displayName: 'Test Source',
+  iconUrl: '',
+  id: '1',
+  contentWarning: contentWarning,
+  lang: 'en',
+  name: 'Test Source',
+  $extension: Fragment$MangaDto$source$extension(isObsolete: false),
+);
 
 Fragment$MangaDto$categories _cats(List<int> ids) =>
     Fragment$MangaDto$categories(
@@ -37,33 +33,32 @@ Fragment$MangaDto$categories _cats(List<int> ids) =>
 
 Fragment$MangaDto _manga({
   required int id,
-  Fragment$SourceDto? source,
+  Fragment$MangaDto$source? source,
   List<int> categoryIds = const [],
   int unreadCount = 0,
   int downloadCount = 0,
   int bookmarkCount = 0,
   List<String> genre = const [],
-}) =>
-    Fragment$MangaDto(
-      id: id,
-      title: 'Manga $id',
-      bookmarkCount: bookmarkCount,
-      chapters: Fragment$MangaDto$chapters(totalCount: 0),
-      downloadCount: downloadCount,
-      genre: genre,
-      inLibrary: true,
-      inLibraryAt: '0',
-      initialized: true,
-      meta: const [],
-      source: source,
-      sourceId: '1',
-      status: Enum$MangaStatus.ONGOING,
-      categories: _cats(categoryIds),
-      trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
-      unreadCount: unreadCount,
-      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
-      url: 'https://example.com/manga/$id',
-    );
+}) => Fragment$MangaDto(
+  id: id,
+  title: 'Manga $id',
+  bookmarkCount: bookmarkCount,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: downloadCount,
+  genre: genre,
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  source: source,
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: _cats(categoryIds),
+  trackRecords: Fragment$MangaDto$trackRecords(totalCount: 0, nodes: const []),
+  unreadCount: unreadCount,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: 'https://example.com/manga/$id',
+);
 
 /// Calls applyLibraryFilterSort with all defaults off/null and returns ids.
 List<int> _filter(
@@ -75,36 +70,39 @@ List<int> _filter(
   bool filterTags = false,
   Set<String> tagsInclude = const {},
   Set<String> tagsExclude = const {},
-}) =>
-    applyLibraryFilterSort(
-      input,
-      query: null,
-      mangaFilterUnread: null,
-      mangaFilterDownloaded: null,
-      mangaFilterCompleted: null,
-      mangaFilterStarted: null,
-      mangaFilterBookmarked: null,
-      mangaFilterOffline: null,
-      offlineMangaIds: const {},
-      mangaFilterLewd: lewd,
-      mangaFilterMinRating: 0,
-      filterCategories: filterCategories,
-      filterCategoriesInclude: include,
-      filterCategoriesExclude: exclude,
-      filterTags: filterTags,
-      filterTagsInclude: tagsInclude,
-      filterTagsExclude: tagsExclude,
-      sortedBy: MangaSort.alphabetical,
-      sortedDirection: true,
-    ).map((m) => m.id).toList();
+}) => applyLibraryFilterSort(
+  input,
+  query: null,
+  mangaFilterUnread: null,
+  mangaFilterDownloaded: null,
+  mangaFilterCompleted: null,
+  mangaFilterStarted: null,
+  mangaFilterBookmarked: null,
+  mangaFilterOffline: null,
+  offlineMangaIds: const {},
+  mangaFilterLewd: lewd,
+  mangaFilterMinRating: 0,
+  filterCategories: filterCategories,
+  filterCategoriesInclude: include,
+  filterCategoriesExclude: exclude,
+  filterTags: filterTags,
+  filterTagsInclude: tagsInclude,
+  filterTagsExclude: tagsExclude,
+  sortedBy: MangaSort.alphabetical,
+  sortedDirection: true,
+).map((m) => m.id).toList();
 
 // ────────────────────────── tests ───────────────────────────────
 
 void main() {
-  final nsfw =
-      _manga(id: 1, source: _source(contentWarning: Enum$ContentWarning.NSFW));
-  final sfw =
-      _manga(id: 2, source: _source(contentWarning: Enum$ContentWarning.SAFE));
+  final nsfw = _manga(
+    id: 1,
+    source: _source(contentWarning: Enum$ContentWarning.NSFW),
+  );
+  final sfw = _manga(
+    id: 2,
+    source: _source(contentWarning: Enum$ContentWarning.SAFE),
+  );
   final noSource = _manga(id: 3); // source == null → treated as non-nsfw
 
   group('Lewd filter (mangaFilterLewd)', () {
@@ -176,15 +174,18 @@ void main() {
       expect(ids, [10]);
     });
 
-    test('empty include + empty exclude → all pass when filterCategories true', () {
-      final ids = _filter(
-        [inCat2, inCat3, noCat],
-        filterCategories: true,
-        include: {},
-        exclude: {},
-      );
-      expect(ids, containsAll([10, 11, 13]));
-    });
+    test(
+      'empty include + empty exclude → all pass when filterCategories true',
+      () {
+        final ids = _filter(
+          [inCat2, inCat3, noCat],
+          filterCategories: true,
+          include: {},
+          exclude: {},
+        );
+        expect(ids, containsAll([10, 11, 13]));
+      },
+    );
   });
 
   group('Tag filter (source genres + custom tags, case-insensitive)', () {
@@ -198,20 +199,29 @@ void main() {
     });
 
     test('include matches regardless of case', () {
-      final ids = _filter([action, romance, actionLower],
-          filterTags: true, tagsInclude: {'action'});
+      final ids = _filter(
+        [action, romance, actionLower],
+        filterTags: true,
+        tagsInclude: {'action'},
+      );
       expect(ids, [20, 22]);
     });
 
     test('include is OR across selected tags', () {
-      final ids = _filter([action, romance],
-          filterTags: true, tagsInclude: {'seinen', 'romance'});
+      final ids = _filter(
+        [action, romance],
+        filterTags: true,
+        tagsInclude: {'seinen', 'romance'},
+      );
       expect(ids, containsAll([20, 21]));
     });
 
     test('exclude drops matching manga, case-insensitively', () {
-      final ids = _filter([action, romance, actionLower],
-          filterTags: true, tagsExclude: {'Action'});
+      final ids = _filter(
+        [action, romance, actionLower],
+        filterTags: true,
+        tagsExclude: {'Action'},
+      );
       expect(ids, [21]);
     });
   });

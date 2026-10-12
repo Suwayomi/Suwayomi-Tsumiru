@@ -1666,6 +1666,22 @@ class OfflineDatabase extends _$OfflineDatabase {
         ),
       );
 
+  /// Drop the rows of chapters the server no longer lists that have nothing on
+  /// the device. The server recreates a chapter under a new id when its source
+  /// changes it, so the old row would otherwise linger and keep being asked of
+  /// the server. The state is re-checked here so a row queued in the meantime
+  /// is left to the download worker.
+  Future<int> deleteGoneChapters(List<int> chapterIds) =>
+      (delete(offlineChapters)..where(
+            (t) =>
+                t.id.isIn(chapterIds) &
+                t.deviceState.isIn([
+                  OfflineDeviceState.none.name,
+                  OfflineDeviceState.error.name,
+                ]),
+          ))
+          .go();
+
   /// Live stream of a manga's chapter rows — drives the series download
   /// progress UI (emits as device states change during a background download).
   Stream<List<OfflineChapter>> watchChaptersForManga(int mangaId) => (select(

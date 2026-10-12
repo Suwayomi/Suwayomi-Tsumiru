@@ -94,11 +94,11 @@ class MoreScreen extends ConsumerWidget {
           ListTile(
             title: Text(context.l10n.history),
             leading: const Icon(Icons.history_rounded),
-            onTap: () => const HistoryRoute().go(context),
+            onTap: () => const HistoryRoute().push(context),
           ),
           Builder(
             builder: (context) {
-              final count = ref.watch(failedUpdatesProvider).value?.length ?? 0;
+              final count = ref.watch(failedUpdateCountProvider).value ?? 0;
               return ListTile(
                 title: Text(context.l10n.libraryUpdateErrorsCount(count)),
                 leading: const Icon(Icons.error_outline_rounded),

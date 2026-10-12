@@ -382,4 +382,104 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  // An endpoint switch (LAN <-> external) or a reachability flip rebuilds every
+  // reader provider through a dependency change, even for a chapter read from
+  // disk. That reload used to remount the engine, which restarted at the
+  // opening chapter's saved page and dropped the reader's own position.
+  group('a dependency reload mid-read keeps the reader where it is', () {
+    Future<Element> readThenReload(
+      WidgetTester tester, {
+      required bool reloadFails,
+    }) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      final pages = _chapterPages();
+
+      Future<T> reloadable<T>(Ref ref, T value) async {
+        if (ref.watch(_endpointProvider) == 0) return value;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (reloadFails) throw const SocketException('unreachable');
+        return value;
+      }
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            mangaBookRepositoryProvider.overrideWithValue(_RecordingRepo()),
+            mangaWithIdProvider(mangaId: 1)
+                .overrideWith(() => _FakeMangaWithId(_manga())),
+            chapterProvider(chapterId: 1)
+                .overrideWith((ref) => reloadable(ref, _chapter())),
+            chapterPagesProvider(chapterId: 1)
+                .overrideWith((ref) => reloadable(ref, pages)),
+            getNextAndPreviousChaptersProvider(mangaId: 1, chapterId: 1)
+                .overrideWithValue(null),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ReaderScreen(mangaId: 1, chapterId: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.timedDrag(
+        find.byType(PagedReaderViewport),
+        const Offset(-320, 0),
+        const Duration(milliseconds: 80),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2 / 3'), findsOneWidget);
+      final engine = tester.element(find.byType(MultiChapterPagedReaderMode));
+
+      ProviderScope.containerOf(tester.element(find.byType(ReaderScreen)))
+          .read(_endpointProvider.notifier)
+          .switchEndpoint();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      return engine;
+    }
+
+    testWidgets('a successful reload', (tester) async {
+      final engine = await readThenReload(tester, reloadFails: false);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('2 / 3'), findsOneWidget);
+      expect(
+        tester.element(find.byType(MultiChapterPagedReaderMode)),
+        same(engine),
+        reason: 'the reader was remounted',
+      );
+    });
+
+    testWidgets('a reload that fails while the server is unreachable',
+        (tester) async {
+      final engine = await readThenReload(tester, reloadFails: true);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('2 / 3'), findsOneWidget);
+      expect(
+        tester.element(find.byType(MultiChapterPagedReaderMode)),
+        same(engine),
+        reason: 'the reader was remounted',
+      );
+    });
+  });
 }
+
+/// Stands in for the active server endpoint every reader provider depends on.
+class _Endpoint extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void switchEndpoint() => state++;
+}
+
+final _endpointProvider = NotifierProvider<_Endpoint, int>(_Endpoint.new);
