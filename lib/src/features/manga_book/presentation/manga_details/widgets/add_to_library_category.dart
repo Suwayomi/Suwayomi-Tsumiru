@@ -83,6 +83,7 @@ Future<void> addMangaToLibraryWithCategory(
     if (!context.mounted) return;
     final picked = await showDialog<List<int>>(
       context: context,
+      animationStyle: context.motionStyle,
       builder: (context) => SetCategoriesOnAddDialog(categories: categories),
     );
     if (picked == null) return; // cancelled

@@ -35,6 +35,7 @@ class BrowseScreen extends HookConsumerWidget {
       animationDuration: context.reduceMotion
           ? Duration.zero
           : kTabScrollDuration,
+      keys: [context.reduceMotion],
     );
 
     useEffect(() {

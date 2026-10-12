@@ -52,6 +52,7 @@ class DownloadsScreen extends HookConsumerWidget {
       animationDuration: context.reduceMotion
           ? Duration.zero
           : kTabScrollDuration,
+      keys: [context.reduceMotion],
     );
     useListenable(tabController);
     final onDeviceTab = tabController.index == 1;

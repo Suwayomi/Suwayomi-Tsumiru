@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../extensions/custom_extensions.dart';
+import '../../motion/reduce_motion.dart';
 import '../../network/graphql_errors.dart';
 
 part 'toast.g.dart';
@@ -22,6 +23,9 @@ class Toast {
   }
   final BuildContext _context;
   late FToast _fToast;
+
+  Duration get _fadeDuration =>
+      _context.reduceMotion ? Duration.zero : const Duration(milliseconds: 350);
 
   void show(
     String msg, {
@@ -37,6 +41,7 @@ class Toast {
           textColor: _context.colorScheme.onInverseSurface,
         ),
         gravity: ToastGravity.BOTTOM,
+        fadeDuration: _fadeDuration,
       );
     }
 
@@ -66,6 +71,7 @@ class Toast {
           textColor: _context.colorScheme.onError,
         ),
         gravity: ToastGravity.TOP,
+        fadeDuration: _fadeDuration,
       );
     }
 

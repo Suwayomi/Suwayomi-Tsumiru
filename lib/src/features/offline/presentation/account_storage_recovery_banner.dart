@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../account/data/account_session_storage.dart';
 import '../data/account_storage_recovery.dart';
 import '../data/account_storage_recovery_state.dart';
@@ -62,6 +63,7 @@ class AccountStorageRecoveryBanner extends ConsumerWidget {
                     final storage = ref.read(accountSessionStorageProvider);
                     final choice = await showDialog<Map<int, bool>>(
                       context: context,
+                      animationStyle: context.motionStyle,
                       builder: (_) => _ProgressChoices(conflicts: conflicts),
                     );
                     if (!context.mounted ||
