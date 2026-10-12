@@ -101,7 +101,6 @@ void main() {
     }
     final store = container.read(authCredentialsStoreProvider.notifier);
     await store.clearSimpleLoginCookie();
-    await store.clearPassword();
     await expectLater(
       container
           .read(authCoordinatorProvider.notifier)
@@ -117,10 +116,6 @@ void main() {
           .read(authCredentialsStoreProvider)
           .requireValue
           .simpleLoginCookie,
-      isNull,
-    );
-    expect(
-      container.read(authCredentialsStoreProvider).requireValue.password,
       isNull,
     );
     if (crossSiteServer.isNotEmpty) {
@@ -139,10 +134,6 @@ void main() {
             .read(authCredentialsStoreProvider)
             .requireValue
             .simpleLoginCookie,
-        isNull,
-      );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.password,
         isNull,
       );
     }

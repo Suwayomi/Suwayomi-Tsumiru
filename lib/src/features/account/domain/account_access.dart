@@ -32,6 +32,25 @@ class AccountAccess {
       allows(Enum$UserPermission.MANAGE_USERS);
 }
 
+/// What in [result] a [classifyAccountResponse] of `unknown` rests on, for the
+/// debug log: the link failure, the GraphQL error messages, or the user the
+/// server answered with.
+String describeAccountResponse(QueryResult<Query$AccountCapability> result) {
+  final exception = result.exception;
+  final link = exception?.linkException;
+  if (link != null) {
+    final original = link.originalException;
+    return 'link=${link.runtimeType}'
+        '${original == null ? '' : ' cause=${original.runtimeType}: $original'}';
+  }
+  final errors = exception?.graphqlErrors ?? const <GraphQLError>[];
+  if (errors.isNotEmpty) {
+    return 'graphql=${errors.map((e) => e.message).toList()}'
+        '${result.data == null ? '' : ' with-data'}';
+  }
+  return 'user=${result.data?['user']}';
+}
+
 AccountCapability classifyAccountResponse(
   QueryResult<Query$AccountCapability> result,
 ) {

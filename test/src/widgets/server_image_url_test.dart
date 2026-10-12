@@ -128,4 +128,58 @@ void main() {
       expect(appendUiLoginToken('', 'abc.def'), '');
     });
   });
+
+  group('appendUiLoginTokenToWebUrl', () {
+    test('appends the token to an http or https URL', () {
+      expect(
+        appendUiLoginTokenToWebUrl('http://127.0.0.1:4567$_icon', 'abc.def'),
+        'http://127.0.0.1:4567$_icon?token=abc.def',
+      );
+      expect(
+        appendUiLoginTokenToWebUrl('https://host.tld/x.jpg', 'abc.def'),
+        'https://host.tld/x.jpg?token=abc.def',
+      );
+    });
+
+    test('leaves a local file URL unchanged, even with a token', () {
+      expect(
+        appendUiLoginTokenToWebUrl('file:///tmp/a.jpg', 'abc.def'),
+        'file:///tmp/a.jpg',
+      );
+    });
+
+    test('leaves an unparsable URL unchanged', () {
+      expect(
+        appendUiLoginTokenToWebUrl('http://[::1', 'abc.def'),
+        'http://[::1',
+      );
+    });
+  });
+
+  // Off the web, a ui_login token rides an image request's header, never its
+  // URL, where reverse-proxy access logs would record it.
+  group('ui_login image auth (native)', () {
+    const url = 'http://127.0.0.1:4567$_icon';
+
+    test('puts the token in an Authorization header', () {
+      expect(
+        withUiLoginImageAuth({'X-Custom': 'kept'}, 'abc.def'),
+        {'X-Custom': 'kept', 'Authorization': 'Bearer abc.def'},
+      );
+      expect(withUiLoginImageAuth(null, 'abc.def'), {
+        'Authorization': 'Bearer abc.def',
+      });
+    });
+
+    test('leaves the URL alone', () {
+      expect(uiLoginImageUrl(url, 'abc.def'), url);
+    });
+
+    test('adds nothing without a token', () {
+      expect(withUiLoginImageAuth(null, null), isNull);
+      expect(withUiLoginImageAuth({'X-Custom': 'kept'}, ''), {
+        'X-Custom': 'kept',
+      });
+    });
+  });
 }

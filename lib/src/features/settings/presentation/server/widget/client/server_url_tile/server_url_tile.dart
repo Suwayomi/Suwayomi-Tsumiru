@@ -17,6 +17,7 @@ import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../constants/endpoints.dart';
 import '../../../../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../../../../global_providers/global_providers.dart';
+import '../../../../../../../utils/crash/diagnostics.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
@@ -202,15 +203,16 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
     try {
       _connectivitySubscription ??= listenToConnectivity(
         Connectivity().onConnectivityChanged,
-        () => unawaited(refresh()),
+        () => unawaited(refresh(trigger: 'connectivity')),
       );
     } catch (_) {}
     ref.onDispose(() => _connectivitySubscription?.cancel());
-    Future.microtask(refresh);
+    Future.microtask(() => refresh(trigger: 'startup'));
     return external;
   }
 
-  Future<void> refresh() async {
+  /// [trigger] only labels the debug-log line: what made us re-probe.
+  Future<void> refresh({String trigger = 'connection-failure'}) async {
     if (_refreshing) return;
     final credentials = ref.read(authCredentialsStoreProvider.notifier);
     if (credentials.sessionChanging) return;
@@ -227,12 +229,37 @@ class ServerEndpointResolver extends _$ServerEndpointResolver {
         ref.read(serverLanUrlProvider) == lan;
     _refreshing = true;
     try {
+      final probe = Stopwatch();
+      bool? lanReachable;
       final selected = await selectServerUrl(
         externalUrl: external,
         lanUrl: lan,
-        isReachable: serverUrlIsReachable,
+        isReachable: (url) async {
+          probe.start();
+          lanReachable = await serverUrlIsReachable(url);
+          probe.stop();
+          return lanReachable!;
+        },
       );
       if (!current()) return;
+      final previous = ref.read(serverUrlProvider);
+      // A switch rebuilds every server client and re-fetches the library; a
+      // LAN probe failing while Wi-Fi reconnects sends requests to the remote
+      // address, which may not resolve from inside the LAN. Without a LAN
+      // address there's nothing to probe, and every failed read re-runs this:
+      // only a switch is worth a line then.
+      if (lanReachable != null || selected != previous) {
+        recordDiagnostic(
+          '[${DateTime.now().toIso8601String()}] endpoint: trigger=$trigger '
+          'lan=${switch (lanReachable) {
+            null => 'none',
+            true => 'reachable',
+            false => 'unreachable',
+          }} probeMs=${probe.elapsedMilliseconds} '
+          'selected=${selected == external ? 'external' : 'lan'}'
+          '${selected == previous ? '' : ' switched'}\n',
+        );
+      }
       await ref
           .read(serverUrlProvider.notifier)
           .setActive(selected, isCurrent: current);

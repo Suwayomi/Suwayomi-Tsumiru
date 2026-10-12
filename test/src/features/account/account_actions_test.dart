@@ -269,7 +269,6 @@ void main() {
         expect(state.accountBinding?.username, 'Canonical');
         expect(state.accountBinding?.catalogId, 'canonical-root');
         expect(state.uiAccessToken, server.newAccess);
-        expect(state.password, 'new-password');
         expect(state.simpleLoginCookie, isNull);
         expect(container.read(authUsernameProvider), 'Canonical');
         expect(container.read(authTypeKeyProvider), AuthType.uiLogin);
@@ -306,10 +305,6 @@ void main() {
           'settings': {'authPassword': 'new-password'},
         });
         expect(_bearer(update), 'Bearer ${server.newAccess}');
-        expect(
-          container.read(authCredentialsStoreProvider).requireValue.password,
-          'new-password',
-        );
       },
     );
   }
@@ -329,10 +324,6 @@ void main() {
         throwsA(anything),
       );
       expect(server.requests.map(_operation), ['Login']);
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.password,
-        'old-password',
-      );
     },
   );
 
@@ -351,10 +342,6 @@ void main() {
         throwsA(anything),
       );
       expect(server.requests.map(_operation), ['Login', 'CurrentAccount']);
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.password,
-        'old-password',
-      );
     },
   );
 
@@ -547,7 +534,6 @@ void main() {
     );
     final state = container.read(authCredentialsStoreProvider).requireValue;
     expect(state.uiAccessToken, oldAccess);
-    expect(state.password, 'old-password');
     expect(state.accountBinding?.catalogId, 'canonical-root');
     expect(server.requests.map(_operation), ['RedeemRegistrationCode']);
     expectRawAndBoundHeaders();
@@ -565,7 +551,6 @@ void main() {
       expect(state.uiAccessToken, isNull);
       expect(state.uiRefreshToken, isNull);
       expect(state.accountBinding, isNull);
-      expect(state.password, isNull);
       expect(state.simpleLoginCookie, isNull);
       expect(
         await const FlutterSecureStorage().read(key: 'auth.basic.credentials'),
@@ -598,7 +583,6 @@ void main() {
       expect(_bearer(server.requests[1]), 'Bearer ${server.refreshedAccess}');
       final state = container.read(authCredentialsStoreProvider).requireValue;
       expect(state.uiAccessToken, server.newAccess);
-      expect(state.password, 'new-password');
       expect(state.accountBinding?.username, 'Canonical');
       expectRawAndBoundHeaders();
     },
@@ -615,7 +599,6 @@ void main() {
           newPassword: 'new-password',
         );
     final state = container.read(authCredentialsStoreProvider).requireValue;
-    expect(state.password, 'new-password');
     expect(state.accountBinding?.username, 'Canonical');
     expect(state.accountBinding?.address, 'http://server');
   });
@@ -656,10 +639,6 @@ void main() {
       container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
       oldAccess,
     );
-    expect(
-      container.read(authCredentialsStoreProvider).requireValue.password,
-      'old-password',
-    );
     expect(server.requests.map(_operation), ['SetAccountPassword']);
     expectRawAndBoundHeaders();
   });
@@ -678,10 +657,6 @@ void main() {
       expect(
         container.read(authCredentialsStoreProvider).requireValue.uiAccessToken,
         server.newAccess,
-      );
-      expect(
-        container.read(authCredentialsStoreProvider).requireValue.password,
-        'new-password',
       );
       expectRawAndBoundHeaders();
     },
@@ -713,7 +688,6 @@ void main() {
         expect(state.uiAccessToken, isNull);
         expect(state.uiRefreshToken, isNull);
         expect(state.accountBinding, isNull);
-        expect(state.password, isNull);
         expect(container.read(needsReauthProvider), isTrue);
         expectRawAndBoundHeaders();
       },

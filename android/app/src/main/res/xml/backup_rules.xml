@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ Copyright (c) 2026 Contributors to the Suwayomi project
+
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at http://mozilla.org/MPL/2.0/.
+-->
+
+<!-- Auto Backup up to Android 11. Keep in sync with data_extraction_rules.xml.
+
+     flutter_secure_storage's files hold the stored credentials, encrypted with
+     a Keystore key that never leaves this device. Restored anywhere else they
+     can't be decrypted ("Failed to unwrap key"), so they are left out: a
+     restored install signs in again instead. Everything else (settings, the
+     background workers' sealed records) is still backed up; without the
+     Keystore-held key, the sealed records' secrets read as absent. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+</full-backup-content>
