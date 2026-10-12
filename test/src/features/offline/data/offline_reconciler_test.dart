@@ -182,12 +182,22 @@ void main() {
     const AccountPermissionDenied(Enum$UserPermission.DOWNLOAD_CHAPTERS),
     const AccountPermissionUnavailable(),
     StateError('The server did not accept the download request'),
-    // Never reached the server, or the server refused the account: neither
-    // is about one chapter, so neither is retried chapter by chapter.
+    // Never reached the server, the server refused the account, or the session
+    // expired: none is about one chapter, so none is retried chapter by chapter.
     OperationMessageException(OperationException()),
     OperationMessageException(
       OperationException(
         graphqlErrors: [const GraphQLError(message: 'Forbidden')],
+      ),
+    ),
+    OperationMessageException(
+      OperationException(
+        graphqlErrors: [
+          const GraphQLError(
+            message:
+                'Exception while fetching data (/enqueueChapterDownloads) : Unauthorized',
+          ),
+        ],
       ),
     ),
   ]) {
