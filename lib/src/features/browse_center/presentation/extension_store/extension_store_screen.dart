@@ -14,6 +14,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../account/data/account_providers.dart';
@@ -68,6 +69,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                           ),
                         },
                       ),
+                      animationStyle: context.motionStyle,
                     ),
               child: const Icon(Icons.add_rounded),
             ),
@@ -163,6 +165,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                         ),
                                       ],
                                     ),
+                                    animationStyle: context.motionStyle,
                                   ),
                           ),
                         ],

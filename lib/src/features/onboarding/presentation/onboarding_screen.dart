@@ -19,6 +19,7 @@ import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/launch_url_in_web.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../utils/theme/brand.dart';
 import '../../about/data/about_repository.dart';
 import '../../account/data/account_actions.dart';
@@ -597,6 +598,7 @@ class _ServerStep extends HookConsumerWidget {
             );
           },
         ),
+        animationStyle: context.motionStyle,
       );
       if (context.mounted && preferences.getInt('onboarding.step') == 2) {
         onSignedIn();
@@ -856,6 +858,7 @@ class _ServerStep extends HookConsumerWidget {
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
           builder: (_) => _ServerPickerSheet(servers: found),
+          sheetAnimationStyle: context.motionStyle,
         );
         if (!context.mounted) return;
         // Dismissed without choosing: no server picked, nothing to test.

@@ -18,6 +18,7 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
@@ -178,6 +179,7 @@ Widget _organizerButton() => Builder(
           // The organizer sizes itself to the active tab's content
           // (capped at 72% height), so no fixed-height wrapper.
           builder: (_) => const LibraryMangaOrganizer(),
+          sheetAnimationStyle: context.motionStyle,
         );
       }
     },
@@ -1109,6 +1111,7 @@ void showSearchTips(BuildContext context) {
         ),
       ],
     ),
+    animationStyle: context.motionStyle,
   );
 }
 

@@ -12,6 +12,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../controller/server_controller.dart';
@@ -100,6 +101,7 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
                     onTap: () => showDialog<void>(
                       context: context,
                       builder: (_) => KoreaderSyncDialog(status: status),
+                      animationStyle: context.motionStyle,
                     ),
                   ),
                   _ChoiceTile<Enum$KoreaderSyncConflictStrategy>(
@@ -145,6 +147,7 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
                       builder: (_) => PercentageToleranceDialog(
                         value: server.percentageTolerance,
                       ),
+                      animationStyle: context.motionStyle,
                     ),
                   ),
                 ],
@@ -189,6 +192,7 @@ class _ChoiceTile<T> extends StatelessWidget {
             Navigator.pop(dialogContext);
           },
         ),
+        animationStyle: context.motionStyle,
       ),
     );
   }

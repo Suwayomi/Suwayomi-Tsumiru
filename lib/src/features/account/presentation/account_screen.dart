@@ -8,6 +8,7 @@ import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/app_utils.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/popup_widgets/pop_button.dart';
 import '../../auth/data/auth_session_status.dart';
 import '../../settings/presentation/connection/prompt_sign_in.dart';
@@ -55,6 +56,7 @@ class AccountScreen extends HookConsumerWidget {
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       );
       if (confirmed != true || !context.mounted) return;
       busy.value = true;
@@ -109,6 +111,7 @@ class AccountScreen extends HookConsumerWidget {
                   context: context,
                   builder: (_) =>
                       const LoginCredentialsPopup(authType: AuthType.uiLogin),
+                  animationStyle: context.motionStyle,
                 ),
               ),
             if (hasCredentials && !verified)
@@ -137,6 +140,7 @@ class AccountScreen extends HookConsumerWidget {
                         builder: (_) => AccountPasswordDialog(
                           onSubmit: actions.changePassword,
                         ),
+                        animationStyle: context.motionStyle,
                       ),
               ),
               if (access.canManageUsers)

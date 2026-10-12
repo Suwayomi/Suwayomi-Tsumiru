@@ -17,6 +17,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../constants/reader_keyboard_shortcuts.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../settings/presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../../../../settings/presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -310,6 +311,7 @@ class ReaderWrapper extends HookConsumerWidget {
             ref.invalidate(mangaWithIdProvider(mangaId: manga.id));
           },
         ),
+        animationStyle: context.motionStyle,
       ),
       [mangaReaderMode],
     );

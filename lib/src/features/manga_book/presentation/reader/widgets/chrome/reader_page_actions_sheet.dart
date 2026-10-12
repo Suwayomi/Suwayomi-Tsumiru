@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/launch_url_in_web.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
@@ -281,6 +282,7 @@ Future<void> showReaderPageActionsSheet({
 
       return _PageActionsSheet(rows: rows);
     },
+    sheetAnimationStyle: context.motionStyle,
   );
 }
 

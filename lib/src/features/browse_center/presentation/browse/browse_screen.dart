@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/widgets/source_language_filter.dart';
@@ -78,6 +79,7 @@ class BrowseScreen extends HookConsumerWidget {
                 builder: (context) => tabController.index == 0
                     ? const SourceLanguageFilter()
                     : const ExtensionLanguageFilterDialog(),
+                animationStyle: context.motionStyle,
               ),
               icon: const Icon(Icons.translate_rounded),
             ),

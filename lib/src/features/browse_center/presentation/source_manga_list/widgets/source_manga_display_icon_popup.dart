@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../controller/source_manga_controller.dart';
 
@@ -34,6 +35,7 @@ class SourceMangaDisplayIconPopup extends ConsumerWidget {
             if (context.mounted) Navigator.pop(context);
           },
         ),
+        animationStyle: context.motionStyle,
       ),
     );
   }

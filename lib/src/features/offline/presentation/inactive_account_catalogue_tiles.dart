@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../../../widgets/section_title.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../data/account_catalogue.dart';
@@ -80,6 +81,7 @@ class InactiveAccountCatalogueTiles extends ConsumerWidget {
           ),
         ],
       ),
+      animationStyle: context.motionStyle,
     );
     if (confirmed != true || !context.mounted || !current()) return;
     try {

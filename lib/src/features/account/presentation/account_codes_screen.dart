@@ -8,6 +8,7 @@ import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/app_utils.dart';
 import '../../../utils/misc/toast/toast.dart';
+import '../../../utils/motion/reduce_motion.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 
@@ -29,6 +30,7 @@ Future<void> issueAccountCode(
     context: context,
     barrierDismissible: false,
     builder: (_) => IssuedAccountCodeDialog(userId: userId),
+    animationStyle: context.motionStyle,
   );
   if (context.mounted) ref.invalidate(accountCodesProvider);
 }
@@ -170,6 +172,7 @@ class AccountCodesScreen extends HookConsumerWidget {
                                             ),
                                           ],
                                         ),
+                                        animationStyle: context.motionStyle,
                                       );
                                       if (confirmed != true ||
                                           !context.mounted) {

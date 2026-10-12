@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../controller/manga_track_records_controller.dart';
 import '../../../data/graphql/__generated__/query.graphql.dart';
 import '../../../data/tracker_repository.dart';
@@ -151,6 +152,7 @@ class TrackEditor extends ConsumerWidget {
                     child: Text(context.l10n.trackRemoveEntry),
                   ),
                 ],
+                popUpAnimationStyle: context.motionStyle,
               ),
             ],
           ),
@@ -298,6 +300,7 @@ class TrackEditor extends ConsumerWidget {
               ref.invalidate(mangaTrackRecordsProvider(mangaId: mangaId));
             },
           ),
+          sheetAnimationStyle: context.motionStyle,
         );
 
       case _MenuAction.remove:
@@ -353,6 +356,7 @@ class TrackEditor extends ConsumerWidget {
           ],
         ),
       ),
+      animationStyle: context.motionStyle,
     );
   }
 }
@@ -507,6 +511,7 @@ class _ChaptersRow extends StatelessWidget {
           ),
         ],
       ),
+      animationStyle: context.motionStyle,
     );
     if (result != null && result != chaptersRead) onSubmit(result);
   }

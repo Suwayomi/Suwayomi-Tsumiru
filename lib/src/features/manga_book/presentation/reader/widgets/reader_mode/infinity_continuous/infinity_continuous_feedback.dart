@@ -9,6 +9,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 
 import '../../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../domain/chapter/chapter_model.dart';
 import '../../../../../domain/chapter/missing_chapters.dart';
 import '../../../../../domain/chapter_page/chapter_page_model.dart';
@@ -60,6 +61,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -104,6 +106,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -143,6 +146,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -182,6 +186,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -217,6 +222,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(milliseconds: 1500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -252,6 +258,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(milliseconds: 1500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 
@@ -289,6 +296,7 @@ class InfinityContinuousFeedback {
         duration: const Duration(seconds: 3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      snackBarAnimationStyle: context.motionStyle,
     );
   }
 }

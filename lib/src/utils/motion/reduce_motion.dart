@@ -21,6 +21,10 @@ class AppReduceMotion extends _$AppReduceMotion {
 
 extension ReduceMotionContext on BuildContext {
   bool get reduceMotion => MediaQuery.disableAnimationsOf(this);
+
+  /// Flutter's own off switch for dialogs, sheets, menus and snackbars.
+  AnimationStyle? get motionStyle =>
+      reduceMotion ? AnimationStyle.noAnimation : null;
 }
 
 /// Merges the OS flag with [appReduceMotionProvider] into [MediaQuery] and

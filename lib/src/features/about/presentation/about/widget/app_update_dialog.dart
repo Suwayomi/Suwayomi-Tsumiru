@@ -11,6 +11,7 @@ import '../../../../../constants/urls.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 
 void appUpdateDialog({
   required String title,
@@ -63,4 +64,5 @@ void appUpdateDialog({
           ),
         );
       },
+      animationStyle: context.motionStyle,
     );

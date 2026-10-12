@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../../migration/controller/bulk_migration_providers.dart';
 import '../../../../migration/data/bulk_migration_runner.dart';
@@ -61,6 +62,7 @@ Future<bool> migrateDuplicateIntoCandidate(
       fromMangaId: from.id,
       onCancel: runner.cancel,
     ),
+    animationStyle: context.motionStyle,
   ));
 
   // commitOne can throw CancelledException where the batch commit() swallows

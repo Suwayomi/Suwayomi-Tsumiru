@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
@@ -108,6 +109,7 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
                     onSave: (host) =>
                         _save(ref, () => repository.updateHost(host)),
                   ),
+                  animationStyle: context.motionStyle,
                 ),
               ),
               SettingsPropTile(
@@ -145,6 +147,7 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
                       Navigator.pop(context);
                     },
                   ),
+                  animationStyle: context.motionStyle,
                 ),
               ),
               ListTile(
@@ -177,6 +180,7 @@ class SyncYomiSettingsScreen extends ConsumerWidget {
                       Navigator.pop(context);
                     },
                   ),
+                  animationStyle: context.motionStyle,
                 ),
               ),
               _SyncNowSection(

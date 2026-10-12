@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 
 class ReaderChapterGapWarning extends StatelessWidget {
   const ReaderChapterGapWarning({super.key, required this.count});
@@ -46,6 +47,7 @@ Future<bool> confirmReaderChapterGap(BuildContext context, int count) async {
             ),
           ],
         ),
+        animationStyle: context.motionStyle,
       ) ??
       false;
 }

@@ -13,6 +13,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/selection_action_bar.dart';
 import '../../../../library/presentation/library/controller/library_controller.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
@@ -140,6 +141,7 @@ class SourceMangaDisplayView extends HookConsumerWidget {
             ),
             onOpenEntry: (m) => toOpen = m,
           ),
+          animationStyle: context.motionStyle,
         );
         if (!context.mounted) return;
 
@@ -171,13 +173,16 @@ class SourceMangaDisplayView extends HookConsumerWidget {
       }
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          skipped > 0
-              ? context.l10n.bulkAddedSkipped(added, skipped)
-              : context.l10n.bulkAdded(added),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            skipped > 0
+                ? context.l10n.bulkAddedSkipped(added, skipped)
+                : context.l10n.bulkAdded(added),
+          ),
         ),
-      ));
+        snackBarAnimationStyle: context.motionStyle,
+      );
     }
 
     final display = switch (displayMode) {

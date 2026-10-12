@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../domain/history_item.dart';
@@ -170,6 +171,7 @@ class HistoryItemTile extends ConsumerWidget {
                       ),
                     )
                     .toList(),
+                popUpAnimationStyle: context.motionStyle,
               ),
             ],
           ),

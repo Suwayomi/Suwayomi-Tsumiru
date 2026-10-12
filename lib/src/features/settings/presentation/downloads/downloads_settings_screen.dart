@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 
@@ -82,6 +83,7 @@ List<Widget> _deleteSection(
           if (context.mounted) Navigator.pop(context);
         },
       ),
+      animationStyle: context.motionStyle,
     ),
   ),
   ...whileReadingSubOptions,
@@ -280,6 +282,7 @@ class _ServerDownloadsTab extends ConsumerWidget {
               onTap: () => showDialog<void>(
                 context: context,
                 builder: (_) => const AutoDownloadCategoriesDialog(),
+                animationStyle: context.motionStyle,
               ),
             ),
           ],

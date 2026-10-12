@@ -12,6 +12,7 @@ import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 
 part 'reader_mode_tile.g.dart';
@@ -46,6 +47,7 @@ class ReaderModeTile extends ConsumerWidget {
             if (context.mounted) Navigator.pop(context);
           },
         ),
+        animationStyle: context.motionStyle,
       ),
     );
   }

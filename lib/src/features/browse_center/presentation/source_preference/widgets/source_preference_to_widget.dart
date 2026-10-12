@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../constants/app_constants.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../widgets/popup_widgets/text_field_popup.dart';
@@ -104,6 +105,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
                     getOptionTitle: (entry) =>
                         entries[entryValues.indexOf(entry)],
                   ),
+                  animationStyle: context.motionStyle,
                 )
               : null,
         ),
@@ -140,6 +142,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
                     getOptionTitle: (entry) =>
                         entries[entryValues.indexOf(entry)],
                   ),
+                  animationStyle: context.motionStyle,
                 )
               : null,
         ),
@@ -173,6 +176,7 @@ class SourcePreferenceToWidget extends StatelessWidget {
                     },
                     initialValue: currentValue ?? defaultValue,
                   ),
+                  animationStyle: context.motionStyle,
                 )
               : null,
         ),
