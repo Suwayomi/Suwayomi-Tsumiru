@@ -7,11 +7,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import '../../../../constants/app_sizes.dart';
+import '../../../../constants/brand_icons.dart';
 import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -203,14 +203,14 @@ class AboutScreen extends HookConsumerWidget {
                 children: [
                   MediaLaunchButton(
                     title: "${context.l10n.gitHub} ",
-                    icon: FaIcon(FontAwesomeIcons.github),
+                    icon: Icon(BrandIcons.github),
                     url: AppUrls.sorayomiGithubUrl.url,
                     toast: toast,
                   ),
                   if ((about?.discord).isNotBlank)
                     MediaLaunchButton(
                       title: context.l10n.discord,
-                      icon: FaIcon(FontAwesomeIcons.discord),
+                      icon: Icon(BrandIcons.discord),
                       url: about!.discord,
                       toast: toast,
                     ),

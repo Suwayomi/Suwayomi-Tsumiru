@@ -18,6 +18,24 @@ void main() {
       expect(normalizeTitle('ＢＥＲＳＥＲＫ'), 'berserk');
       expect(normalizeTitle('ｂｅｒｓｅｒｋ！'), 'berserk');
     });
+    // Cases NFKC covers beyond full-width Latin; the folding tables must too.
+    test('half-width katakana fold to full-width, voiced marks composed', () {
+      expect(normalizeTitle('ｶﾞﾝﾀﾞﾑ'), 'ガンダム');
+      expect(normalizeTitle('ﾊﾟﾝﾀﾞ'), 'パンダ');
+      expect(normalizeTitle('ｳﾞｧｲｵﾚｯﾄ'), normalizeTitle('ヴァイオレット'));
+    });
+    test('Roman numerals, ligatures and circled digits fold to letters', () {
+      expect(normalizeTitle('Overlord Ⅱ'), 'overlord ii');
+      expect(normalizeTitle('ﬁnal ﬂight'), 'final flight');
+      expect(normalizeTitle('Pokémon ①'), 'pokémon 1');
+    });
+    test('an accent typed as its own character composes', () {
+      expect(normalizeTitle('Café'), normalizeTitle('Café'));
+      expect(normalizeTitle('Việt'), normalizeTitle('Việt'));
+    });
+    test('CJK compatibility ideographs fold to the unified ones', () {
+      expect(normalizeTitle('\u{F900}'), '\u{8C48}');
+    });
     test('fancy quotes/dashes are separators, CJK letters survive', () {
       expect(normalizeTitle('“Ａｂｃ”—ｄｅｆ'), 'abc def');
       expect(normalizeTitle('葬送のフリーレン'), '葬送のフリーレン');
