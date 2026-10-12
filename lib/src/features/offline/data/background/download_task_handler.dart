@@ -20,6 +20,7 @@ import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
 import '../../../account/data/account_permission.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../chapter_download_engine.dart';
 import '../chapter_manifest.dart';
 import '../offline_download_providers.dart' show pageImageExt;
@@ -33,6 +34,7 @@ import 'background_download_lock.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 import 'catchup_work_spec.dart';
+import 'record_seal.dart';
 import 'work_order_admission.dart';
 
 /// Foreground-service entry point. Must be top-level +
@@ -139,6 +141,8 @@ class DownloadTaskHandler extends TaskHandler {
       final crashLogPath = await initCrashLog();
       setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
     } catch (_) {}
+    // The work order's and token record's secrets are sealed.
+    await RecordSeal.load(kSecureStorage);
     final raw = await FlutterForegroundTask.getData<String>(key: kWorkOrderKey);
     if (raw == null) {
       // Nothing to do — self-stop so we don't sit as a zombie notification.
@@ -740,7 +744,7 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Builds the page-image GET URL + headers, mirroring
   /// `fetchOfflinePageBytes`: base API without `/api` (page URLs already carry
-  /// it), ui_login as `?token=`, basic/simpleLogin via headers. Reads the
+  /// it), every auth mode via headers. Reads the
   /// current in-isolate [_record] (kept fresh by the broker), not Riverpod.
   (String, Map<String, String>) _authedPageRequest(String pageUrl) {
     final order = _order!;
@@ -750,7 +754,7 @@ class DownloadTaskHandler extends TaskHandler {
       addPort: order.addPort,
       appendApiToUrl: false,
     );
-    var fetchUrl = '$base$pageUrl';
+    final fetchUrl = '$base$pageUrl';
     final headers = <String, String>{};
     switch (_record.authType) {
       case 'basic':
@@ -762,8 +766,7 @@ class DownloadTaskHandler extends TaskHandler {
       case 'uiLogin':
         final token = _record.accessToken;
         if (token != null && token.isNotEmpty) {
-          final sep = fetchUrl.contains('?') ? '&' : '?';
-          fetchUrl = '$fetchUrl${sep}token=${Uri.encodeQueryComponent(token)}';
+          headers['Authorization'] = 'Bearer $token';
         }
     }
     applyIsolateCustomHeaders(headers, _record.extraHeaders);

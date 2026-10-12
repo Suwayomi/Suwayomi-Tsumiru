@@ -318,7 +318,7 @@ mutation NotifEnqueue($ids: [Int!]!) {
 
   /// Fetch a manga cover's bytes for the per-series notification, mirroring
   /// `fetchOfflinePageBytes`: base API without `/api` (the thumbnail path carries
-  /// it), ui_login as `?token=`, basic/simpleLogin via headers. Best-effort — a
+  /// it), every auth mode via headers. Best-effort — a
   /// failed cover just falls back to a text notification, so no 401 retry.
   Future<List<int>?> fetchCover(String thumbnailUrl) async {
     final base = Endpoints.baseApi(
@@ -327,14 +327,13 @@ mutation NotifEnqueue($ids: [Int!]!) {
       addPort: endpoint.addPort,
       appendApiToUrl: false,
     );
-    var url = '$base$thumbnailUrl';
+    final url = '$base$thumbnailUrl';
     final headers = <String, String>{};
     switch (_record.authType) {
       case 'uiLogin':
         final token = _record.accessToken;
         if (token != null && token.isNotEmpty) {
-          final sep = url.contains('?') ? '&' : '?';
-          url = '$url${sep}token=${Uri.encodeQueryComponent(token)}';
+          headers['Authorization'] = 'Bearer $token';
         }
       case 'basic':
         final cred = _record.basicCredential;

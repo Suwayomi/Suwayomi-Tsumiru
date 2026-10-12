@@ -480,12 +480,11 @@ class AuthCoordinator extends _$AuthCoordinator {
             'Basic ${base64.encode(utf8.encode('$username:$password'))}',
             forEpoch: epoch,
           );
-      await store.savePassword(password, forEpoch: epoch);
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
   }
 
-  /// Performs Simple Login AND persists the resulting cookie + password.
+  /// Performs Simple Login AND persists the resulting cookie.
   /// Equivalent to `verifySimpleCredentials` + a store write. Used by
   /// the credentials popup's Save button.
   Future<void> loginSimple({
@@ -503,12 +502,12 @@ class AuthCoordinator extends _$AuthCoordinator {
         password: password,
       );
       await store.saveSimpleLoginCookie(cookie, forEpoch: epoch);
-      await store.savePassword(password, forEpoch: epoch);
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
   }
 
-  /// Performs UI Login AND persists both tokens + password.
+  /// Performs UI Login AND persists both tokens. The password itself is not
+  /// kept: the refresh token renews the session until it expires.
   Future<void> loginUi({
     required GraphQLClient gqlClient,
     required String username,
@@ -529,7 +528,6 @@ class AuthCoordinator extends _$AuthCoordinator {
         forEpoch: epoch,
         address: address,
         username: username,
-        password: password,
       );
     }, expectedEpoch: store.serverEpoch);
   }
@@ -540,7 +538,6 @@ class AuthCoordinator extends _$AuthCoordinator {
     required int forEpoch,
     required String address,
     required String username,
-    String? password,
     AccountBinding? expectedBinding,
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
@@ -580,9 +577,6 @@ class AuthCoordinator extends _$AuthCoordinator {
         binding: binding,
         forEpoch: epoch,
       );
-      if (password != null) {
-        await store.savePassword(password, forEpoch: epoch);
-      }
       await ref.read(accountNoticeProvider.notifier).set(null);
       ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: forEpoch);

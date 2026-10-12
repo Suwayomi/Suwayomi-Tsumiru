@@ -20,12 +20,14 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/crash/crash_log.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../../utils/network/gateway_status.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
 import '../../../offline/data/background/background_download_lock.dart';
 import '../../../offline/data/background/background_schedule.dart';
 import '../../../offline/data/background/background_token_record.dart';
 import '../../../offline/data/background/catchup_download_executor.dart';
 import '../../../offline/data/background/catchup_work_spec.dart';
+import '../../../offline/data/background/record_seal.dart';
 import '../../domain/new_chapter_detection.dart';
 import '../local_notification_service.dart';
 import '../notification_state_store.dart';
@@ -46,6 +48,9 @@ Future<bool> runNewChapterCheck() async {
   // actually checks.
   final crashLogPath = await initCrashLog();
   setDiagnosticSink((line) => writeCrashLog(crashLogPath, line));
+  // The token record's secrets are sealed; without the key it reads as
+  // unauthenticated (logged as `record-seal: …`).
+  await RecordSeal.load(kSecureStorage);
 
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
@@ -624,6 +629,8 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
   }
   final p = NotificationPayload.decode(payload);
   if (p.chapterIds.isEmpty) return;
+  // Headless when the app is dead: this isolate has no key loaded yet.
+  if (!RecordSeal.ready) await RecordSeal.load(kSecureStorage);
   final store = await NotificationStateStore.open();
   final config = store.readConfig();
   final token = store.readTokenRecord();
