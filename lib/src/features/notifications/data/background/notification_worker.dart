@@ -77,10 +77,13 @@ Future<bool> runNewChapterCheck() async {
   final l10n = lookupAppLocalizations(_deviceLocale());
   final notifier = LocalNotificationService();
   await notifier.init(onBackgroundTap: notificationActionCallback);
+  // Where to reach the server from this network. Identity checks below keep
+  // using `config`, tied to the address the foreground verified.
+  final endpoint = await config.endpoint.forThisNetwork(source: 'worker');
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         config.catalogServerId != null && !catchupStore.matchesIdentity(config),
     admitDownload: () async {
@@ -140,6 +143,7 @@ Future<bool> runNewChapterCheck() async {
         await runCatchupDownloads(
           catchupStore: catchupStore,
           config: config,
+          endpoint: endpoint,
           record: client.currentRecord,
           broker: client.broker,
         ) &&
@@ -441,9 +445,9 @@ Future<bool> _runDownloadResolution(
 
     if (!await verifyBackgroundServerIdentity(
       target: BackgroundServerTarget(
-        serverBase: config.endpoint.baseUrl,
-        port: config.endpoint.port,
-        addPort: config.endpoint.addPort,
+        serverBase: client.endpoint.baseUrl,
+        port: client.endpoint.port,
+        addPort: client.endpoint.addPort,
       ),
       record: client.currentRecord,
       broker: client.broker,
@@ -650,10 +654,13 @@ Future<void> handleNotificationAction(String? actionId, String? payload) async {
       catchupStore.downloadPermissionPaused(config.catalogServerId!)) {
     return;
   }
+  final endpoint = await config.endpoint.forThisNetwork(
+    source: 'notification-action',
+  );
   final client = NotificationBackgroundClient(
-    endpoint: config.endpoint,
+    endpoint: endpoint,
     record: token,
-    broker: _brokerFor(config.endpoint, token),
+    broker: _brokerFor(endpoint, token),
     isCancelled: () =>
         actionId == kNotifActionDownload &&
         !catchupStore.matchesIdentity(config),

@@ -31,6 +31,7 @@ import '../offline_storage_identity.dart';
 import 'background_chapter_fetch.dart';
 import 'background_completion_log.dart';
 import 'background_download_lock.dart';
+import 'background_endpoint.dart';
 import 'background_token_record.dart';
 import 'background_work_order.dart';
 import 'catchup_work_spec.dart';
@@ -133,6 +134,11 @@ class DownloadTaskHandler extends TaskHandler {
   late BackgroundTokenRecord _record;
   late TokenBroker _broker;
 
+  /// Where this run reaches the server: the order's verified address, or the
+  /// server's other address when only that one answers from this network.
+  /// See [pickBackgroundServerBase] and [_repickServer].
+  late String _serverBase;
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     // This isolate starts with no diagnostic sink (main.dart wires the UI
@@ -232,6 +238,12 @@ class DownloadTaskHandler extends TaskHandler {
     _order = admitted;
     _record = order.auth;
     _broker = _buildBroker();
+    _serverBase = await pickBackgroundServerBase(
+      active: order.serverBase,
+      lanUrl: order.lanUrl,
+      externalUrl: order.externalUrl,
+      source: 'download',
+    );
     _sendEvent({'kind': 'owned', 'attemptId': order.attemptId});
 
     _queue.addAll(order.chapterIds);
@@ -266,7 +278,7 @@ class DownloadTaskHandler extends TaskHandler {
         !_stopping &&
         !await verifyBackgroundServerIdentity(
           target: BackgroundServerTarget(
-            serverBase: order.serverBase,
+            serverBase: _serverBase,
             port: order.port,
             addPort: order.addPort,
             client: _http,
@@ -455,7 +467,11 @@ class DownloadTaskHandler extends TaskHandler {
 
   /// Returns true when the chapter was parked (server unreachable) — the drain
   /// should stop and leave the queue intact for a later resume.
-  Future<bool> _downloadChapter(int chapterId, int mangaId) async {
+  Future<bool> _downloadChapter(
+    int chapterId,
+    int mangaId, {
+    bool afterRepick = false,
+  }) async {
     final List<String>? urls;
     try {
       urls = await _resolvePageUrls(chapterId);
@@ -465,6 +481,11 @@ class DownloadTaskHandler extends TaskHandler {
     }
     if (_paused || _stopping || _cancelled.contains(chapterId)) return false;
     if (urls == null) {
+      // The phone may have moved between home Wi-Fi and mobile data since the
+      // run picked its address: try the server's other one before parking.
+      if (!afterRepick && await _repickServer()) {
+        return _downloadChapter(chapterId, mangaId, afterRepick: true);
+      }
       // Server unreachable resolving pages: leave `downloading` (resumable) and
       // park. Marking it error here poisoned the whole queue — one blip
       // cascaded through every remaining chapter.
@@ -675,10 +696,39 @@ class DownloadTaskHandler extends TaskHandler {
 
   String? _lastNetworkErrorReason;
 
+  /// After the server stopped answering, whether its other address answers
+  /// from this network instead, and is still the same server. Switches this
+  /// run to it when so.
+  Future<bool> _repickServer() async {
+    final order = _order;
+    if (order == null || _paused || _stopping) return false;
+    final next = await pickBackgroundServerBase(
+      active: order.serverBase,
+      lanUrl: order.lanUrl,
+      externalUrl: order.externalUrl,
+      source: 'download-retry',
+    );
+    if (next == _serverBase) return false;
+    final verified = await verifyBackgroundServerIdentity(
+      target: BackgroundServerTarget(
+        serverBase: next,
+        port: order.port,
+        addPort: order.addPort,
+        client: _http,
+        isCancelled: () => _paused || _stopping,
+      ),
+      record: () => _record,
+      broker: _broker,
+      expected: order.catalogServerId!,
+    );
+    if (verified) _serverBase = next;
+    return verified;
+  }
+
   Future<List<String>?> _resolvePageUrls(int chapterId) =>
       resolveChapterPageUrls(
         target: BackgroundServerTarget(
-          serverBase: _order!.serverBase,
+          serverBase: _serverBase,
           port: _order!.port,
           addPort: _order!.addPort,
           client: _http,
@@ -749,7 +799,7 @@ class DownloadTaskHandler extends TaskHandler {
   (String, Map<String, String>) _authedPageRequest(String pageUrl) {
     final order = _order!;
     final base = Endpoints.baseApi(
-      baseUrl: order.serverBase,
+      baseUrl: _serverBase,
       port: order.port,
       addPort: order.addPort,
       appendApiToUrl: false,
@@ -812,7 +862,7 @@ class DownloadTaskHandler extends TaskHandler {
       }
       final order = _order!;
       final endpoint = Endpoints.baseApi(
-        baseUrl: order.serverBase,
+        baseUrl: _serverBase,
         port: order.port,
         addPort: order.addPort,
         isGraphQl: true,

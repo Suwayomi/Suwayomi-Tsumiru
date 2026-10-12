@@ -6,12 +6,14 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:http/http.dart' as http;
 
 import '../../../../constants/endpoints.dart';
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../offline/data/background/background_chapter_fetch.dart';
+import '../../../offline/data/background/background_endpoint.dart';
 import '../../../offline/data/background/background_token_record.dart'
     show BackgroundTokenRecord, TokenBroker, applyIsolateCustomHeaders;
 
@@ -22,11 +24,44 @@ class NotificationEndpoint {
     required this.baseUrl,
     this.port,
     this.addPort = true,
+    this.lanUrl,
+    this.externalUrl,
   });
 
+  /// The address the foreground had verified when it wrote this; the worker's
+  /// identity checks are tied to it.
   final String baseUrl;
   final int? port;
   final bool addPort;
+
+  /// The server's two configured addresses, so a background run can reach it
+  /// from whichever network it wakes on (see [pickBackgroundServerBase]).
+  /// Null in configs written before they were kept.
+  final String? lanUrl, externalUrl;
+
+  /// This endpoint as a background run should reach it now: the same server,
+  /// at the address the current network can reach.
+  Future<NotificationEndpoint> forThisNetwork({
+    required String source,
+    @visibleForTesting Future<bool> Function(String url)? isReachable,
+  }) async {
+    final selected = await pickBackgroundServerBase(
+      active: baseUrl,
+      lanUrl: lanUrl,
+      externalUrl: externalUrl,
+      source: source,
+      isReachable: isReachable,
+    );
+    return selected == baseUrl
+        ? this
+        : NotificationEndpoint(
+            baseUrl: selected,
+            port: port,
+            addPort: addPort,
+            lanUrl: lanUrl,
+            externalUrl: externalUrl,
+          );
+  }
 
   String get graphqlUrl => Endpoints.baseApi(
     baseUrl: baseUrl,
@@ -39,6 +74,8 @@ class NotificationEndpoint {
     'baseUrl': baseUrl,
     'port': port,
     'addPort': addPort,
+    'lanUrl': lanUrl,
+    'externalUrl': externalUrl,
   };
 
   factory NotificationEndpoint.fromJson(Map<String, Object?> j) =>
@@ -46,6 +83,8 @@ class NotificationEndpoint {
         baseUrl: j['baseUrl'] as String,
         port: (j['port'] as num?)?.toInt(),
         addPort: (j['addPort'] as bool?) ?? true,
+        lanUrl: j['lanUrl'] as String?,
+        externalUrl: j['externalUrl'] as String?,
       );
 }
 

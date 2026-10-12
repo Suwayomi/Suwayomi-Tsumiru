@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -47,6 +48,11 @@ class NotificationsController {
     baseUrl: _ref.read(serverUrlProvider) ?? '',
     port: _ref.read(serverPortProvider),
     addPort: _ref.read(serverPortToggleProvider).ifNull(),
+    // Both addresses, as ServerEndpointResolver chooses between them, so the
+    // worker can make the same choice from whatever network it wakes on.
+    lanUrl: _ref.read(serverLanUrlProvider),
+    externalUrl:
+        _ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial,
   );
 
   BackgroundTokenRecord _tokenRecord() {

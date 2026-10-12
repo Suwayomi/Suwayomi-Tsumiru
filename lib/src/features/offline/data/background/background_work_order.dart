@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'background_endpoint.dart' show pickBackgroundServerBase;
 import 'background_token_record.dart';
 
 class BackgroundWorkOrder {
@@ -21,6 +22,8 @@ class BackgroundWorkOrder {
     this.attemptId,
     this.catalogServerId,
     this.identityEpoch = 0,
+    this.lanUrl,
+    this.externalUrl,
   });
 
   final String? attemptId;
@@ -32,7 +35,15 @@ class BackgroundWorkOrder {
   /// Per-chapter download generation (bumped on delete). The worker echoes it on
   /// every event so the main isolate can drop a stale generation's events.
   final Map<int, int> generationByChapter;
+
+  /// The address the foreground had verified; the worker's identity checks
+  /// are tied to it.
   final String serverBase;
+
+  /// The server's two configured addresses, so the worker can reach it from
+  /// whichever network it is on (see [pickBackgroundServerBase]). Null in
+  /// orders written before they were kept.
+  final String? lanUrl, externalUrl;
   final int? port;
   final bool addPort;
   final bool wifiOnly;
@@ -61,6 +72,8 @@ class BackgroundWorkOrder {
       (k, v) => MapEntry(k.toString(), v),
     ),
     'serverBase': serverBase,
+    'lanUrl': lanUrl,
+    'externalUrl': externalUrl,
     'port': port,
     'addPort': addPort,
     'wifiOnly': wifiOnly,
@@ -84,6 +97,8 @@ class BackgroundWorkOrder {
             ) ??
             const {},
         serverBase: j['serverBase'] as String,
+        lanUrl: j['lanUrl'] as String?,
+        externalUrl: j['externalUrl'] as String?,
         port: j['port'] as int?,
         addPort: j['addPort'] as bool,
         wifiOnly: j['wifiOnly'] as bool,

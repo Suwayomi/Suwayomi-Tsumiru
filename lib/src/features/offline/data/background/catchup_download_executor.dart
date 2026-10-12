@@ -14,6 +14,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../utils/crash/diagnostics.dart';
 import '../../../account/data/account_permission.dart';
+import '../../../notifications/data/background/notification_background_client.dart'
+    show NotificationEndpoint;
 import '../../../notifications/data/notification_state_store.dart';
 import '../chapter_manifest.dart';
 import '../offline_database.dart';
@@ -48,6 +50,9 @@ const _runBudget = Duration(minutes: 7);
 Future<bool> runCatchupDownloads({
   required CatchupStateStore catchupStore,
   required NotificationWorkerConfig config,
+  /// Where to reach the server from this network; [config]'s endpoint when
+  /// not given. See [NotificationEndpoint.forThisNetwork].
+  NotificationEndpoint? endpoint,
   required BackgroundTokenRecord Function() record,
   required TokenBroker broker,
 }) async {
@@ -201,9 +206,9 @@ Future<bool> runCatchupDownloads({
     final target = BackgroundServerTarget(
       client: client,
       isCancelled: () => cancelled,
-      serverBase: config.endpoint.baseUrl,
-      port: config.endpoint.port,
-      addPort: config.endpoint.addPort,
+      serverBase: (endpoint ?? config.endpoint).baseUrl,
+      port: (endpoint ?? config.endpoint).port,
+      addPort: (endpoint ?? config.endpoint).addPort,
     );
     if (!await verifyBackgroundServerIdentity(
       target: target,
