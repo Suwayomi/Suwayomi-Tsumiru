@@ -4,11 +4,98 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io' as io;
+
 import 'package:file/file.dart' hide FileSystem;
 import 'package:file/local.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+const _transcoderChannel = MethodChannel('tsumiru/image_transcoder');
+const _avifHeaderBytes = 256;
+final _inFlightFileTranscodes = <String, Future<void>>{};
+final _failedFileTranscodes = <String>{};
+Future<bool>? _androidSupportsAvifDecode;
+
+bool isAvifHeader(List<int> bytes) {
+  if (bytes.length < 12 ||
+      String.fromCharCodes(bytes.sublist(4, 8)) != 'ftyp') {
+    return false;
+  }
+  final boxSize =
+      (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+  if (boxSize < 16) {
+    return false;
+  }
+  final end = boxSize < bytes.length ? boxSize : bytes.length;
+  bool isAvifBrand(int offset) {
+    final brand = String.fromCharCodes(bytes.sublist(offset, offset + 4));
+    return brand == 'avif' || brand == 'avis';
+  }
+
+  if (isAvifBrand(8)) {
+    return true;
+  }
+  for (var offset = 16; offset + 4 <= end; offset += 4) {
+    if (isAvifBrand(offset)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+Future<bool> _loadAndroidSupportsAvifDecode() async {
+  try {
+    final sdkInt = await _transcoderChannel.invokeMethod<int>('sdkInt');
+    return (sdkInt ?? 0) >= 31;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> _transcodeAvif(io.File file) async {
+  final path = file.path;
+  try {
+    final supported = await (_androidSupportsAvifDecode ??=
+        _loadAndroidSupportsAvifDecode());
+    if (!supported || !await file.exists()) {
+      return;
+    }
+    final header = await file
+        .openRead(0, _avifHeaderBytes)
+        .expand((chunk) => chunk)
+        .toList();
+    if (!isAvifHeader(header)) {
+      return;
+    }
+    final transcoded = await _transcoderChannel.invokeMethod<bool>(
+      'transcodeFileToJpeg',
+      {'path': path},
+    );
+    if (transcoded != true) {
+      _failedFileTranscodes.add(path);
+    }
+  } catch (_) {
+    _failedFileTranscodes.add(path);
+  }
+}
+
+Future<void> _transcodeAvifIfNeeded(io.File file) {
+  final path = file.path;
+  if (!io.Platform.isAndroid || _failedFileTranscodes.contains(path)) {
+    return Future.value();
+  }
+  return _inFlightFileTranscodes[path] ??= _transcodeAvif(
+    file,
+  ).whenComplete(() => _inFlightFileTranscodes.remove(path));
+}
+
+Future<FileInfo> _transcodeAvifInfo(FileInfo info) async {
+  await _transcodeAvifIfNeeded(io.File(info.file.path));
+  return info;
+}
 
 /// Cover/icon image cache that survives OS cache pressure.
 ///
@@ -40,8 +127,34 @@ CacheManager createCoverCacheManager({String? serverOrigin}) =>
 /// cover past its date. Covers change when the user asks for new metadata, not
 /// on a clock: an explicit refresh evicts the entry, and the next load fetches
 /// it because there is no copy left — not because it went stale.
+///
+/// On Android 12 and newer, AVIF covers are transcoded to JPEG in place, since
+/// the platform AV1 decoder stutters or crashes on them.
 class _CoverCacheManager extends CacheManager {
   _CoverCacheManager(super.config);
+
+  @override
+  Future<FileInfo?> getFileFromCache(
+    String key, {
+    bool ignoreMemCache = false,
+  }) async {
+    final info = await super.getFileFromCache(
+      key,
+      ignoreMemCache: ignoreMemCache,
+    );
+    return info == null ? null : await _transcodeAvifInfo(info);
+  }
+
+  @override
+  Future<File> getSingleFile(
+    String url, {
+    String? key,
+    Map<String, String>? headers,
+  }) async {
+    final file = await super.getSingleFile(url, key: key, headers: headers);
+    await _transcodeAvifIfNeeded(io.File(file.path));
+    return file;
+  }
 
   @override
   Stream<FileResponse> getFileStream(
@@ -55,12 +168,16 @@ class _CoverCacheManager extends CacheManager {
       yield cached;
       return;
     }
-    yield* super.getFileStream(
+    await for (final response in super.getFileStream(
       url,
       key: key,
       headers: headers,
       withProgress: withProgress,
-    );
+    )) {
+      yield response is FileInfo
+          ? await _transcodeAvifInfo(response)
+          : response;
+    }
   }
 }
 
