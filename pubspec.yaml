@@ -106,6 +106,8 @@ dev_dependencies:
   json_serializable: ^6.5.4
   lints: ^6.1.0
   riverpod_generator: ^4.0.4
+  # Dev only: tool/generate_title_fold_tables.dart and its test; not shipped.
+  unorm_dart: 0.3.2
   vector_math: ^2.4.2
   workmanager_android: ^0.10.8
 

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// GENERATED TABLES: produced from unorm_dart's NFKC; see foldTitleCompat.
+// GENERATED TABLES: run `dart run tool/generate_title_fold_tables.dart` to regenerate from unorm_dart's NFKC.
 
 /// Unicode NFKC as title comparison needs it, from tables instead of a full
 /// normalisation library (unorm_dart weighed ~950 KB of the APK).
