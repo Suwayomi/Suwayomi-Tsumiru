@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
@@ -170,10 +171,33 @@ final currentAccountProvider = Provider<Fragment$AccountDto?>((ref) {
   }
 });
 
+bool _downloadsPausedForPermission(Ref ref) {
+  final binding = ref.read(authCredentialsStoreProvider).value?.accountBinding;
+  if (binding == null) return false;
+  return CatchupStateStore(
+    ref.read(sharedPreferencesProvider),
+  ).downloadPermissionPaused(binding.catalogId);
+}
+
+/// How long a verified account answer is reused by [refreshAccountAccessProvider].
+const accountAccessReuse = Duration(seconds: 30);
+
+@visibleForTesting
+DateTime Function() accountAccessClock = DateTime.now;
+
 final refreshAccountAccessProvider = Provider<Future<AccountAccess> Function()>(
   (ref) {
     final current = watchAuthSession(ref);
     Completer<AccountAccess>? pending;
+    // The launch reconcile verifies the download grant once per series, one
+    // after another. Each call re-ran the account check, and each answer
+    // rebuilt everything watching it (SyncYomi settings re-queried too): about
+    // 700 request pairs in 20 s on a 360-series library, while it loaded. A
+    // verified answer this recent is still the answer; the server enforces the
+    // grant on every download anyway. A session change rebuilds this provider,
+    // so the reuse never crosses sessions.
+    AccountAccess? recent;
+    DateTime? recentAt;
     ref.onDispose(() {
       if (pending?.isCompleted == false) {
         pending!.completeError(const AccountPermissionUnavailable());
@@ -182,6 +206,14 @@ final refreshAccountAccessProvider = Provider<Future<AccountAccess> Function()>(
     return () {
       if (!current()) return Future.error(const AccountPermissionUnavailable());
       if (pending != null) return pending!.future;
+      // Downloads parked by a denial resume only when a fresh check sees the
+      // grant back (accountAccessProvider clears the pause), so never reuse then.
+      final reusable = recent;
+      if (reusable != null &&
+          accountAccessClock().difference(recentAt!) < accountAccessReuse &&
+          !_downloadsPausedForPermission(ref)) {
+        return Future.value(reusable);
+      }
       final request = Completer<AccountAccess>();
       pending = request;
       ref.invalidate(accountAccessProvider);
@@ -193,6 +225,10 @@ final refreshAccountAccessProvider = Provider<Future<AccountAccess> Function()>(
               if (!current()) {
                 request.completeError(const AccountPermissionUnavailable());
               } else {
+                if (access.capability != AccountCapability.unknown) {
+                  recent = access;
+                  recentAt = accountAccessClock();
+                }
                 request.complete(access);
               }
             },
