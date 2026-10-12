@@ -29,6 +29,8 @@ import '../../../settings/presentation/reader/widgets/reader_keep_screen_on_tile
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_orientation/reader_orientation.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
+import '../../domain/chapter/chapter_model.dart';
+import '../../domain/chapter_page/chapter_page_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import '../manga_details/controller/scanlator_dedup.dart';
@@ -66,19 +68,31 @@ class ReaderScreen extends HookConsumerWidget {
     final providerContainer = ProviderScope.containerOf(context, listen: false);
     final incognitoMode = ref.watch(incognitoModeProvider);
 
+    // The engines take the opening chapter and its pages once, then track the
+    // chapter being read and the page reached in their own state. These
+    // providers reload on any dependency change — an endpoint switch between
+    // LAN and external, a reachability flip — even for a chapter read from
+    // disk. Handing that reload to the tree remounted the engine back at the
+    // opening chapter, so the opening data is pinned for the screen's life.
+    final pinnedChapter = _usePinned(chapter.value, chapterId);
+    final pinnedChapterPages = _usePinned(chapterPages.value, chapterId);
+
     // Auto reading mode: a Default-mode long-strip series (manhwa/manhua/
     // webtoon) opens in webtoon scroll THIS session; never written to meta.
     // Null when auto-detect is off, the series has an explicit per-series mode,
     // or it isn't long-strip — in which case the per-series/global default
     // takes over below. Auto never picks a page direction (LTR/RTL).
+    // Genres and source come from the first load: a reload served from another
+    // source must not flip the mode, which would swap the engine mid-read.
     final mangaData = manga.value;
-    final autoReaderMode = mangaData == null
+    final autoSource = _usePinned(mangaData, mangaId);
+    final autoReaderMode = mangaData == null || autoSource == null
         ? null
         : sessionAutoReaderMode(
             enabled: ref.watch(autoWebtoonModeProvider).ifNull(true),
             seriesMode: mangaData.metaData.readerMode,
-            genres: mangaData.genre,
-            sourceName: mangaData.source?.name,
+            genres: autoSource.genre,
+            sourceName: autoSource.source?.name,
           );
     final toast = ref.watch(toastProvider);
     // Resolve the l10n string in build (safe); the effect runs during hook-init
@@ -107,8 +121,8 @@ class ReaderScreen extends HookConsumerWidget {
       // both the debounced call and the PopScope flush). The PopScope's own
       // provider invalidations still run — they're outside this callback.
       if (incognitoMode) return;
-      final chapterValue = chapter.value;
-      final chapterPagesValue = chapterPages.value;
+      final chapterValue = pinnedChapter;
+      final chapterPagesValue = pinnedChapterPages;
       if (chapterValue == null || chapterPagesValue == null) return;
 
       // Use the actual loaded pages count, not the chapter's pageCount metadata
@@ -163,13 +177,13 @@ class ReaderScreen extends HookConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => providerContainer.invalidate(readingHistoryProvider),
       );
-    }, [chapter.value, chapterPages.value, incognitoMode, providerContainer]);
+    }, [pinnedChapter, pinnedChapterPages, incognitoMode, providerContainer]);
 
     final onPageChanged = useCallback<AsyncValueSetter<int>>((int index) async {
       // Incognito: don't track progress (also avoids needless debounce churn).
       if (ref.read(incognitoModeProvider)) return;
-      final chapterValue = chapter.value;
-      final chapterPagesValue = chapterPages.value;
+      final chapterValue = pinnedChapter;
+      final chapterPagesValue = pinnedChapterPages;
       if (chapterValue == null || chapterPagesValue == null) return;
 
       // Consume the initial restore emit — don't record or complete off it.
@@ -202,7 +216,7 @@ class ReaderScreen extends HookConsumerWidget {
         });
       }
       return;
-    }, [chapter, chapterPages, updateLastRead]);
+    }, [pinnedChapter, pinnedChapterPages, updateLastRead]);
 
     // Hold the latest updateLastRead so the []-deps unmount cleanup below flushes
     // with current chapter data, not the stale callback captured at first build.
@@ -286,6 +300,13 @@ class ReaderScreen extends HookConsumerWidget {
       return () => WakelockPlus.disable().ignore();
     }, [keepScreenOn]);
 
+    final chapterView = pinnedChapter == null
+        ? chapter
+        : AsyncData<ChapterDto?>(pinnedChapter);
+    final chapterPagesView = pinnedChapterPages == null
+        ? chapterPages
+        : AsyncData<ChapterPagesDto?>(pinnedChapterPages);
+
     return PopScope(
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
@@ -338,15 +359,17 @@ class ReaderScreen extends HookConsumerWidget {
           bottom: !ignoreSafeArea,
           left: !ignoreSafeArea,
           right: !ignoreSafeArea,
+          // The manga stays live (a reading-mode change from the settings sheet
+          // must apply) but keeps its data on screen while it reloads.
           child: manga.showUiWhenData(
             context,
             (data) {
               if (data == null) return const SizedBox.shrink();
-              return chapter.showUiWhenData(
+              return chapterView.showUiWhenData(
                 context,
                 (chapterData) {
                   if (chapterData == null) return const SizedBox.shrink();
-                  return chapterPages.showUiWhenData(context, (
+                  return chapterPagesView.showUiWhenData(context, (
                     chapterPagesData,
                   ) {
                     if (chapterPagesData == null) {
@@ -556,10 +579,21 @@ class ReaderScreen extends HookConsumerWidget {
               );
             },
             refresh: () => ref.refresh(mangaProvider.future),
+            skipLoadingOnReload: true,
             addScaffoldWrapper: true,
           ),
         ),
       ),
     );
   }
+}
+
+/// The first non-null [value] seen for [key], held from then on.
+T? _usePinned<T extends Object>(T? value, int key) {
+  final pinned = useRef<({int key, T value})?>(null);
+  final current = pinned.value;
+  if (current != null && current.key == key) return current.value;
+  if (value == null) return null;
+  pinned.value = (key: key, value: value);
+  return value;
 }

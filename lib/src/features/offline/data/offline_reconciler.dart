@@ -4,7 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:graphql/client.dart';
+
 import '../../../utils/crash/diagnostics.dart';
+import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/network/graphql_errors.dart';
 import 'offline_database.dart';
 import 'reconcile_logic.dart';
 import 'reconcile_types.dart';
@@ -314,7 +318,7 @@ class OfflineReconciler {
       await onDownload(id);
     }
     if (onServerDownload != null && toServerDownload.isNotEmpty) {
-      await onServerDownload!(toServerDownload);
+      await _askServerToFetch(mangaId, toServerDownload);
       for (final id in toServerDownload) {
         await db.transaction(() async {
           final chapter = await db.chapterById(id);
@@ -343,4 +347,43 @@ class OfflineReconciler {
       overCapWarning: ev.overCapWarning,
     );
   }
+
+  /// Asks the server to fetch [ids] in one request. The server rejects the
+  /// whole request when one id no longer exists (a chapter its source
+  /// recreated under a new id), so a rejected request is retried one chapter
+  /// at a time: the valid chapters still get queued, and a rejected one spends
+  /// its attempt towards [_maxServerFetchAttempts] instead of blocking the rest
+  /// on every pass. A dead network, a missing permission or an expired session
+  /// isn't about one chapter, so it still fails the pass without spending
+  /// attempts.
+  Future<void> _askServerToFetch(int mangaId, Set<int> ids) async {
+    Future<bool> ask(Set<int> batch) async {
+      try {
+        await onServerDownload!(batch);
+        return true;
+      } catch (e) {
+        if (!_isChapterRejection(e)) rethrow;
+        return false;
+      }
+    }
+
+    if (await ask(ids)) return;
+    for (final id in ids) {
+      if (ids.length > 1 && await ask({id})) continue;
+      recordDiagnostic(
+        '[${DateTime.now().toIso8601String()}] offline-reconcile: '
+        'server-rejected-fetch mangaId=$mangaId chapterId=$id\n',
+      );
+    }
+  }
+}
+
+/// The server answered and refused the request, as opposed to never being
+/// reached, the account lacking the permission, or the session signed out.
+bool _isChapterRejection(Object error) {
+  final cause = error is OperationMessageException ? error.exception : error;
+  return cause is OperationException &&
+      cause.graphqlErrors.isNotEmpty &&
+      !isPermissionDenied(cause) &&
+      !isAuthenticationRequired(cause);
 }

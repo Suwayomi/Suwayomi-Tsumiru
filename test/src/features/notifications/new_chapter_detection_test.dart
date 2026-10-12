@@ -43,7 +43,7 @@ void main() {
       final r = detectNewChapters(
         candidates: [ch(5, 10, 5, 1000000)],
         watermark: NewChapterWatermark(fetchedAt: 100, recent: {2: 100}),
-        overlapMs: 1000,
+        overlapSeconds: 1000,
       );
       // id 2 (fetchedAt 100) is far below 1000000 − 1000, so it's dropped.
       expect(r.watermark.recent.containsKey(2), isFalse);
@@ -67,6 +67,41 @@ void main() {
       expect(r.groups.map((g) => g.mangaId), [10]);
       // Watermark still advances past the excluded chapter so it can't re-notify.
       expect(r.watermark.fetchedAt, 110);
+    });
+
+    test('default overlap is 5 minutes in seconds, the unit of fetchedAt', () {
+      // Suwayomi stores fetchedAt as epoch seconds; a millisecond-sized
+      // overlap (300000) would re-scan ~3.5 days of unread chapters.
+      expect(kDefaultOverlapSeconds, 300);
+    });
+
+    test('the pass right after a seed does not notify the existing backlog', () {
+      // Reinstall scenario: fresh cursor, backlog of unread chapters fetched
+      // within the overlap window below the server's max.
+      const max = 1700000000;
+      final backlog = [
+        ch(1, 10, 1, max - 200),
+        ch(2, 20, 4, max - 100),
+        ch(3, 30, 9, max),
+      ];
+      final seed = seedNewChapterWatermark(maxFetched: max, window: backlog);
+
+      // Next pass: the server returns the same window plus one real newcomer.
+      final r = detectNewChapters(
+        candidates: [...backlog, ch(4, 40, 2, max + 60)],
+        watermark: seed,
+      );
+      expect(r.groups.map((g) => g.mangaId), [40]);
+    });
+
+    test('a chapter fetched after the seed max stays fresh', () {
+      const max = 1700000000;
+      final seed = seedNewChapterWatermark(
+        maxFetched: max,
+        window: [ch(1, 10, 1, max), ch(2, 20, 1, max + 5)],
+      );
+      expect(seed.fetchedAt, max);
+      expect(seed.recent.keys, [1]);
     });
 
     test('no candidates keeps the watermark and notifies nothing', () {

@@ -11,7 +11,6 @@ import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/account/presentation/account_code_dialog.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_status.dart';
 import 'package:tsumiru/src/features/settings/presentation/connection/inline_auth_section.dart';
-import 'package:tsumiru/src/features/settings/presentation/server/widget/authentication/authentication_section.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -118,25 +117,15 @@ void main() {
     expect(find.text('Log out'), findsNothing);
   });
 
-  for (final inline in [false, true]) {
-    testWidgets(
-      'logout calls shared action and preserves UI mode, inline=$inline',
-      (tester) async {
-        await mount(
-          tester,
-          inline ? const InlineAuthSection() : const AuthenticationSection(),
-          stored: true,
-        );
-        await tester.tap(find.text('Log out'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Log out'));
-        await tester.pumpAndSettle();
-        expect(actions.signOutCalls, 1);
-        expect(
-          preferences.getInt(DBKeys.authType.name),
-          AuthType.uiLogin.index,
-        );
-      },
-    );
-  }
+  testWidgets('logout calls shared action and preserves UI mode', (
+    tester,
+  ) async {
+    await mount(tester, const InlineAuthSection(), stored: true);
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Log out'));
+    await tester.pumpAndSettle();
+    expect(actions.signOutCalls, 1);
+    expect(preferences.getInt(DBKeys.authType.name), AuthType.uiLogin.index);
+  });
 }
