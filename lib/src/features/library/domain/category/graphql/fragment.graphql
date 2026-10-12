@@ -15,12 +15,3 @@ fragment CategoryDto on CategoryType {
   }
 }
 
-fragment CategoryPageDto on CategoryNodeList {
-    nodes {
-      ...CategoryDto
-    }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
-}

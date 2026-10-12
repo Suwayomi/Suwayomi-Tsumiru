@@ -54,6 +54,9 @@ query GetChapter($id: Int!) {
   }
 }
 
+# A series' stored chapters, all of them: nodes only. `totalCount` and
+# `pageInfo` would cost the server a COUNT and two sorted bound lookups on
+# every call, for values nothing here reads.
 query GetChapterPage($after: Cursor, $before: Cursor, $condition: ChapterConditionInput, $filter: ChapterFilterInput, $first: Int, $last: Int, $offset: Int, $order: [ChapterOrderInput!]) {
   chapters(
     after: $after
@@ -68,10 +71,6 @@ query GetChapterPage($after: Cursor, $before: Cursor, $condition: ChapterConditi
     nodes {
       ...ChapterDto
     }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
   }
 }
 

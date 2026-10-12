@@ -18,7 +18,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
-import 'package:tsumiru/src/features/manga_book/domain/chapter_page/chapter_page_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/updates/updates_filter.dart';
 import 'package:tsumiru/src/features/offline/data/offline_chapter_catchup.dart';
 import 'package:tsumiru/src/features/offline/data/offline_database.dart';
@@ -50,7 +49,7 @@ class _EmptyUpdatesRepository extends UpdatesRepository {
   _EmptyUpdatesRepository() : super(_dummyClient(), _dummyClient());
 
   @override
-  Future<ChapterPageWithMangaDto?> getRecentChaptersPage({
+  Future<UpdatesPage?> getRecentChaptersPage({
     int pageNo = 0,
     UpdatesFilter filter = kNoUpdatesFilter,
   }) async => null;

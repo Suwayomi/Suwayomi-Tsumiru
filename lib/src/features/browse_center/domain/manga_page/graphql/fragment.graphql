@@ -5,12 +5,3 @@ fragment SourceMangaPage on FetchSourceMangaPayload {
   }
 }
 
-fragment MangaPageDto on MangaNodeList {
-    nodes {
-      ...MangaDto
-    }
-    pageInfo {
-      ...PageInfoDto
-    }
-    totalCount
-}

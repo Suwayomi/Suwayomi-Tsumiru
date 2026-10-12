@@ -313,7 +313,7 @@ class UpdatesScreen extends HookConsumerWidget {
     final page =
         await repository.getRecentChaptersPage(pageNo: pageKey, filter: filter);
     if (page == null) return (items: <ChapterWithMangaDto>[], hasNextPage: false);
-    return (items: [...page.nodes], hasNextPage: page.pageInfo.hasNextPage);
+    return (items: page.nodes, hasNextPage: page.hasNextPage);
   }
 
   @override
@@ -382,7 +382,7 @@ class UpdatesScreen extends HookConsumerWidget {
         final result = extractNewUpdatesFromPage(page.nodes, existingIds);
         newItems.addAll(result.items);
         if (result.boundaryFound) break;
-        if (!page.pageInfo.hasNextPage) break;
+        if (!page.hasNextPage) break;
         if (pageNo == maxPages - 1) {
           resetList();
           return;
