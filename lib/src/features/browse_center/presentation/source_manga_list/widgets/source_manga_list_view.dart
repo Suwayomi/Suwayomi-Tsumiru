@@ -61,7 +61,7 @@ class SourceMangaListView extends ConsumerWidget {
                         width: context.width * .3,
                         decoration: BoxDecoration(
                           borderRadius: KBorderRadius.r8.radius,
-                          color: context.colorScheme.surface,
+                          color: context.colorScheme.surfaceContainerHighest,
                         ),
                         height: 12,
                       )

@@ -80,7 +80,7 @@ class SorayomiShimmerIndicator extends StatelessWidget {
     final baseColor = context.colorScheme.surface;
     final icon = AssetImage(Assets.icons.darkIcon.path);
     if (context.reduceMotion) {
-      return ImageIcon(icon, color: baseColor);
+      return ImageIcon(icon, color: context.colorScheme.primary);
     }
     return Shimmer.fromColors(
       baseColor: baseColor,

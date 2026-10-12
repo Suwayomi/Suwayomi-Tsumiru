@@ -57,7 +57,12 @@ void main() {
       await tester.pump();
 
       expect(find.byType(Shimmer), findsNothing);
-      expect(find.byType(ImageIcon), findsOneWidget);
+      expect(
+        tester.widget<ImageIcon>(find.byType(ImageIcon)).color,
+        Theme.of(
+          tester.element(find.byType(SorayomiShimmerIndicator)),
+        ).colorScheme.primary,
+      );
     },
   );
 
