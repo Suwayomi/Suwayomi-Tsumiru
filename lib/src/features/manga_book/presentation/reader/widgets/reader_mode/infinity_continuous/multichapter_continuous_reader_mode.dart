@@ -271,6 +271,22 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         readerScanlatorGroup: readerScanlatorGroup,
       ),
     );
+    // A missing neighbour is only the end for the list it came from. The list
+    // served while the server is unreachable lacks chapters that aren't on the
+    // device, and it reloads once the server is back; latched for good, the
+    // next chapter never loaded again that session.
+    useEffect(() {
+      if (nextPrevChapterPair.value?.first != null) {
+        hasReachedEnd.value = false;
+      }
+      if (nextPrevChapterPair.value?.second != null) {
+        hasReachedStart.value = false;
+      }
+      return null;
+    }, [
+      nextPrevChapterPair.value?.first?.id,
+      nextPrevChapterPair.value?.second?.id,
+    ]);
 
     // --- reading-progress recording -------------------------------------
     // Record progress for the CURRENTLY VISIBLE chapter, not the chapter the
