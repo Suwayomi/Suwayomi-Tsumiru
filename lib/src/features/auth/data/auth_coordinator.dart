@@ -26,7 +26,7 @@ import '../../account/data/account_session_repository.dart';
 import '../../account/domain/account_binding.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
-    show authProbeAuthorized, basicAuthConfirms;
+    show authProbeAuthorized, authProbeExplicitlyRejects, basicAuthConfirms;
 import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'auth_credentials_store.dart';
@@ -535,10 +535,11 @@ class AuthCoordinator extends _$AuthCoordinator {
       if (serverBaseUrl != null && ref.read(isWebProvider)) {
         final probe = http.Client();
         try {
-          if (!await authProbeAuthorized(
+          if (await authProbeExplicitlyRejects(
             serverBaseUrl,
             client: probe,
             bearer: tokens.accessToken,
+            extraHeaders: ref.read(customHttpHeadersProvider).value,
           )) {
             throw const UiLoginTokenRejected();
           }

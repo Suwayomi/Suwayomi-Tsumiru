@@ -1011,6 +1011,49 @@ Future<bool> authProbeAuthorized(
   }
 }
 
+/// True only on a positive token rejection: HTTP 200 with Unauthorized errors.
+Future<bool> authProbeExplicitlyRejects(
+  String baseUrl, {
+  required http.Client client,
+  required String bearer,
+  Duration timeout = const Duration(seconds: 4),
+  Map<String, String>? extraHeaders,
+}) async {
+  final uri = graphqlUriFor(baseUrl);
+  try {
+    final request = http.Request('POST', uri)
+      ..followRedirects = false
+      ..headers['Content-Type'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $bearer'
+      ..body = jsonEncode({'query': kAuthProbeQuery});
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      for (final entry in extraHeaders.entries) {
+        final lower = entry.key.toLowerCase();
+        if (lower == 'authorization' || lower == 'cookie') continue;
+        request.headers[entry.key] = entry.value;
+      }
+    }
+    final streamed = await client.send(request).timeout(timeout);
+    final body = await streamed.stream.bytesToString().timeout(timeout);
+    if (streamed.statusCode != 200) return false;
+    final decoded = _tryDecode(body);
+    if (decoded == null) return false;
+    final errors = decoded['errors'];
+    if (errors is! List) return false;
+    for (final e in errors) {
+      if (e is Map) {
+        final message = e['message'];
+        if (message is String && message.toLowerCase().contains('unauthor')) {
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Re-probes `aboutServer` carrying an HTTP Basic `Authorization` header and
 /// reports whether it confirms a Suwayomi server. This is the basic_auth
 /// equivalent of the simple/ui verified sign-in: a basic-gated host is opaque
