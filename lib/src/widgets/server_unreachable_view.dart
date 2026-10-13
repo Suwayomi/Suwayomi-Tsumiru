@@ -7,11 +7,22 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../constants/db_keys.dart';
 import '../features/offline/data/offline_repository.dart';
 import '../features/offline/data/server_reachability.dart';
+import '../global_providers/global_providers.dart';
 import '../routes/router_config.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/platform/web_auth_mode.dart';
 import 'emoticons.dart';
+
+final webAuthBlockedProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(isWebProvider) &&
+      isWebUnsupportedAuthMode(
+        ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial,
+      ),
+);
 
 /// Shown when a request failed because the server couldn't be reached (wrong
 /// URL, server down, no network) — as opposed to an auth or server-side error.
@@ -20,7 +31,12 @@ import 'emoticons.dart';
 /// server URL is fixed, so a disconnected user is never stranded on a blank
 /// screen with no way forward.
 class ServerUnreachableView extends ConsumerWidget {
-  const ServerUnreachableView({super.key, this.onRetry, this.offlineEscape = false});
+  const ServerUnreachableView({
+    super.key,
+    this.onRetry,
+    this.offlineEscape = false,
+    this.webNotFoundVerdict = false,
+  });
 
   /// Optional retry (re-runs the failed query). Omitted where there's nothing
   /// to re-fetch.
@@ -31,16 +47,24 @@ class ServerUnreachableView extends ConsumerWidget {
   /// the current screen ignores.
   final bool offlineEscape;
 
+  final bool webNotFoundVerdict;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Gated here, not inside the button: a shrunk child still costs the
     // Column's spacing, doubling the gap between its neighbours.
     final hasCatalog =
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
+    final webAuthBlocked = ref.watch(webAuthBlockedProvider);
+    final isWeb = ref.watch(isWebProvider);
     return Emoticons(
       iconData: Icons.cloud_off_rounded,
       title: context.l10n.serverUnreachableTitle,
-      subTitle: context.l10n.serverUnreachableSubtitle,
+      subTitle: webNotFoundVerdict && isWeb
+          ? context.l10n.webServerAuthUnconfirmed
+          : webAuthBlocked
+          ? context.l10n.webUnsupportedAuthMode
+          : context.l10n.serverUnreachableSubtitle,
       button: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: 8,

@@ -47,6 +47,21 @@ bool isAuthenticationRequired(Object error) {
   return error is ServerNotJsonException && error.statusCode == 401;
 }
 
+/// A Basic-auth server answers anonymous GraphQL with a readable 404 "Not Found".
+bool isBasicGatedNotFound(Object error) {
+  if (error is OperationException) {
+    final link = error.linkException;
+    return link != null && isBasicGatedNotFound(link);
+  }
+  if (error is ResponseFormatException) {
+    final original = error.originalException;
+    return original != null && isBasicGatedNotFound(original);
+  }
+  return error is ServerNotJsonException &&
+      error.statusCode == 404 &&
+      error.snippet.trim() == 'Not Found';
+}
+
 /// The server answered with a body that isn't JSON — a proxy/gateway error
 /// page, an HTML 500, etc. Carries the status so the UI can say "server error"
 /// instead of a raw "Unexpected character (at offset 0)".

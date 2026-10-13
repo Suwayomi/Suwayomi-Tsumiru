@@ -9,4 +9,4 @@ import 'package:http/http.dart' as http;
 
 /// Web: the browser owns connection handling; no connect timeout to set.
 http.Client createFastConnectClient(Duration connectionTimeout) =>
-    BrowserClient()..withCredentials = true;
+    BrowserClient()..withCredentials = false;

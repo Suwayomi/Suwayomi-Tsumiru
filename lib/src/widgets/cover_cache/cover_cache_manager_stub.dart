@@ -15,7 +15,7 @@ class _ServerImageClient extends http.BaseClient {
   _ServerImageClient(this.serverOrigin);
 
   final String? serverOrigin;
-  final _server = BrowserClient()..withCredentials = true;
+  final _server = BrowserClient()..withCredentials = false;
   final _external = BrowserClient();
 
   @override

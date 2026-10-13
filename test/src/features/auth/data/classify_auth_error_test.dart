@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/basic_credentials_rejected.dart';
 import 'package:tsumiru/src/features/auth/data/simple_login_client.dart';
+import 'package:tsumiru/src/features/auth/data/ui_login_token_rejected.dart';
 
 void main() {
   group('classifyAuthError', () {
@@ -59,6 +60,13 @@ void main() {
     test('SimpleLoginAuthFailure → invalidCredentials', () {
       final result = classifyAuthError(SimpleLoginAuthFailure());
       expect(result.kind, TestConnectionFailureKind.invalidCredentials);
+    });
+
+    test('UiLoginTokenRejected → webUnsupportedAuthMode', () {
+      expect(
+        classifyAuthError(const UiLoginTokenRejected()).kind,
+        TestConnectionFailureKind.webUnsupportedAuthMode,
+      );
     });
 
     test('unverified browser session is not labelled a wrong password', () {

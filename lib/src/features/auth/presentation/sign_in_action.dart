@@ -63,6 +63,7 @@ Future<void> performSignIn(
         gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
         username: username,
         password: password,
+        serverBaseUrl: serverBaseUrl,
       );
     case AuthType.none:
       return;

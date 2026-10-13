@@ -65,6 +65,22 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         final unwrapped = error is OperationMessageException
             ? error.exception
             : error;
+        final webBasicGated =
+            isBasicGatedNotFound(unwrapped) &&
+            ProviderScope.containerOf(
+              context,
+              listen: false,
+            ).read(isWebProvider);
+        if (webBasicGated) {
+          return AppUtils.wrapOn(
+            wrapper,
+            ServerUnreachableView(
+              onRetry: refresh,
+              offlineEscape: offlineEscapeHatch,
+              webNotFoundVerdict: webBasicGated,
+            ),
+          );
+        }
         if (isConnectionError(unwrapped)) {
           return AppUtils.wrapOn(
             wrapper,

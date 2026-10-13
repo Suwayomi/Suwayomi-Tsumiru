@@ -181,6 +181,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                 gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
                 username: username.text,
                 password: password.text,
+                serverBaseUrl: resolvedUrl,
               );
             }
           },

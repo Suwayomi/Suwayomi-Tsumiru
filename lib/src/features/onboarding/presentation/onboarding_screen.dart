@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -20,6 +19,8 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/launch_url_in_web.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../utils/network/graphql_errors.dart';
+import '../../../utils/platform/web_auth_mode.dart';
 import '../../../utils/theme/brand.dart';
 import '../../about/data/about_repository.dart';
 import '../../account/data/account_actions.dart';
@@ -28,6 +29,7 @@ import '../../account/domain/account_access.dart';
 import '../../account/presentation/account_code_dialog.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
+import '../../auth/data/ui_login_token_rejected.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
 import '../../settings/presentation/connection/custom_headers_section.dart';
@@ -445,6 +447,9 @@ enum _TestState {
   /// Couldn't reach the address at all.
   failed,
 
+  /// Web only: the server answered in a mode a cross-origin page cannot use.
+  unsupportedAuth,
+
   /// Reached something, but it isn't a Suwayomi server.
   notSuwayomi,
 }
@@ -562,6 +567,7 @@ class _ServerStep extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final isWeb = ref.watch(isWebProvider);
     final urlController = useTextEditingController(
       text: () {
         final stored = ref.read(serverExternalUrlProvider);
@@ -582,20 +588,23 @@ class _ServerStep extends HookConsumerWidget {
     // Credentials + chosen auth type, revealed when the server needs a login.
     final userController = useTextEditingController();
     final passController = useTextEditingController();
-    final authChoice = useState(AuthType.basic);
+    final authChoice = useState(onboardingAuthChoices(isWeb: isWeb).first);
     // Once the user picks a method themselves, detection stops overriding it.
     final userChangedAuth = useState(false);
     final credsRejected = useState(false);
+    final unsupportedAfterLogin = useState(false);
+    final unsupportedFromNotFound = useState(false);
     final showAccountCodes =
         authChoice.value == AuthType.uiLogin &&
         (ref.watch(authTypeKeyProvider) != AuthType.uiLogin ||
             ref.watch(settledAccountAccessProvider).capability !=
                 AccountCapability.unsupported);
 
-    // Pre-select the sign-in method the server's responses point at; an
-    // undetectable server falls back to Basic. A manual pick always wins.
     void applyDetectedAuth(AuthType? detected) {
-      if (!userChangedAuth.value) authChoice.value = detected ?? AuthType.basic;
+      if (!userChangedAuth.value) {
+        authChoice.value =
+            detected ?? (isWeb ? AuthType.uiLogin : AuthType.basic);
+      }
     }
 
     void resetToIdle() {
@@ -687,7 +696,8 @@ class _ServerStep extends HookConsumerWidget {
             password: pass,
           ),
         );
-      } catch (_) {
+      } catch (e) {
+        if (e is UiLoginTokenRejected) unsupportedAfterLogin.value = true;
         return false;
       }
       if (context.mounted) onSignedIn();
@@ -705,10 +715,6 @@ class _ServerStep extends HookConsumerWidget {
       }
     }
 
-    // Web can't run the redirect-OFF candidate ladder, so test the typed
-    // address (scheme filled in — a scheme-less URL would resolve relative to
-    // the page origin) via the about query, then detect auth with the same
-    // @RequireAuth probe the native resolver uses.
     Future<void> testWeb() async {
       final typed = urlController.text.trim();
       if (typed.isBlank) return;
@@ -717,6 +723,8 @@ class _ServerStep extends HookConsumerWidget {
       version.value = null;
       errorDetail.value = null;
       credsRejected.value = false;
+      unsupportedAfterLogin.value = false;
+      unsupportedFromNotFound.value = false;
       onVerifiedChanged(false);
       await ref.read(serverPortToggleProvider.notifier).update(false);
       if (!context.mounted) return;
@@ -729,6 +737,20 @@ class _ServerStep extends HookConsumerWidget {
       );
       if (!context.mounted) return;
       if (result.hasError || result.value == null) {
+        final failure = result.error;
+        final aboutError = failure is OperationMessageException
+            ? failure.exception
+            : failure;
+        if (webServerAuthUnsupported(
+          aboutError: aboutError,
+          detectedAuthType: null,
+        )) {
+          unsupportedFromNotFound.value =
+              aboutError != null && isBasicGatedNotFound(aboutError);
+          state.value = _TestState.unsupportedAuth;
+          onVerifiedChanged(false);
+          return;
+        }
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
         onVerifiedChanged(false);
@@ -747,12 +769,25 @@ class _ServerStep extends HookConsumerWidget {
           await markConnected();
           return;
         }
+        if (webServerAuthUnsupported(
+          aboutError: null,
+          detectedAuthType: probe.detected,
+        )) {
+          state.value = _TestState.unsupportedAuth;
+          onVerifiedChanged(false);
+          return;
+        }
         applyDetectedAuth(probe.detected);
         final hasCreds =
             userController.text.trim().isNotEmpty &&
             passController.text.isNotEmpty;
         if (hasCreds && await validateCredentials(url, client)) return;
         if (!context.mounted) return;
+        if (unsupportedAfterLogin.value) {
+          state.value = _TestState.unsupportedAuth;
+          onVerifiedChanged(false);
+          return;
+        }
         if (hasCreds) credsRejected.value = true;
         state.value = _TestState.needsLogin;
         onVerifiedChanged(false);
@@ -776,13 +811,15 @@ class _ServerStep extends HookConsumerWidget {
       version.value = null;
       errorDetail.value = null;
       credsRejected.value = false;
+      unsupportedAfterLogin.value = false;
+      unsupportedFromNotFound.value = false;
       onVerifiedChanged(false);
       final sessionIsCurrent = ref
           .read(authCredentialsStoreProvider.notifier)
           .captureSession();
       await preferences.setString('onboarding.pendingProbe', input);
       if (!context.mounted) return;
-      if (kIsWeb) {
+      if (isWeb) {
         try {
           await testWeb();
         } finally {
@@ -863,7 +900,7 @@ class _ServerStep extends HookConsumerWidget {
     // with the one found (or let the user pick when several answered), then
     // test it.
     Future<void> searchNetwork() async {
-      if (kIsWeb) return;
+      if (isWeb) return;
       final noServerMsg = context.l10n.onboardingNoServerFound;
       state.value = _TestState.searching;
       errorDetail.value = null;
@@ -916,6 +953,8 @@ class _ServerStep extends HookConsumerWidget {
         return;
       }
       credsRejected.value = false;
+      unsupportedAfterLogin.value = false;
+      unsupportedFromNotFound.value = false;
       state.value = _TestState.signingIn;
       final client = ref.read(onboardingHttpClientProvider)();
       bool ok = false;
@@ -927,6 +966,11 @@ class _ServerStep extends HookConsumerWidget {
         client.close();
       }
       if (ok || !context.mounted) return;
+      if (unsupportedAfterLogin.value) {
+        state.value = _TestState.unsupportedAuth;
+        onVerifiedChanged(false);
+        return;
+      }
       credsRejected.value = true;
       state.value = _TestState.needsLogin;
       onVerifiedChanged(false);
@@ -1009,7 +1053,7 @@ class _ServerStep extends HookConsumerWidget {
           onChanged: (_) => resetToIdle(),
         ),
         // Discover: scan the LAN and fill the address.
-        if (!kIsWeb)
+        if (!isWeb)
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
@@ -1066,6 +1110,7 @@ class _ServerStep extends HookConsumerWidget {
           version.value,
           errorDetail.value,
           shouldSuggestHttps(urlController.text.trim()),
+          unsupportedFromNotFound.value,
         ),
         // Auth sub-form, revealed only when the server needs a login.
         if (state.value == _TestState.needsLogin ||
@@ -1086,27 +1131,36 @@ class _ServerStep extends HookConsumerWidget {
               border: OutlineInputBorder(),
             ),
             dropdownMenuEntries: [
-              DropdownMenuEntry(
-                value: AuthType.basic,
-                label: context.l10n.onboardingAuthModeBasic,
-              ),
-              DropdownMenuEntry(
-                value: AuthType.simpleLogin,
-                label: context.l10n.onboardingAuthModeSimple,
-              ),
-              DropdownMenuEntry(
-                value: AuthType.uiLogin,
-                label: context.l10n.onboardingAuthModeUi,
-              ),
+              for (final mode in onboardingAuthChoices(isWeb: isWeb))
+                DropdownMenuEntry(
+                  value: mode,
+                  label: switch (mode) {
+                    AuthType.basic => context.l10n.onboardingAuthModeBasic,
+                    AuthType.simpleLogin =>
+                      context.l10n.onboardingAuthModeSimple,
+                    AuthType.uiLogin => context.l10n.onboardingAuthModeUi,
+                    AuthType.none => context.l10n.authTypeNone,
+                  },
+                ),
             ],
             onSelected: (m) {
               if (m != null) {
                 userChangedAuth.value = true;
                 authChoice.value = m;
                 credsRejected.value = false;
+                unsupportedAfterLogin.value = false;
+                unsupportedFromNotFound.value = false;
               }
             },
           ),
+          if (isWeb)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                context.l10n.webUiLoginOnlyHint,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 8),
           TextField(
             controller: userController,
@@ -1213,6 +1267,7 @@ List<Widget> _buildTestStatus(
   String? version,
   String? errorDetail,
   bool suggestHttps,
+  bool unsupportedFromNotFound,
 ) {
   final addr = (url != null && url.isNotEmpty) ? displayAddress(url) : null;
   switch (state) {
@@ -1259,6 +1314,17 @@ List<Widget> _buildTestStatus(
             text: context.l10n.onboardingFoundAt(addr),
           ),
         ],
+      ];
+
+    case _TestState.unsupportedAuth:
+      return [
+        _StatusRow(
+          color: cs.tertiary,
+          icon: Icons.lock_rounded,
+          text: unsupportedFromNotFound
+              ? context.l10n.webServerAuthUnconfirmed
+              : context.l10n.webUnsupportedAuthMode,
+        ),
       ];
 
     case _TestState.notSuwayomi:

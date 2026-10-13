@@ -20,12 +20,13 @@ import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart'
     show Input$LoginInput, Input$RefreshTokenInput;
 import '../../../utils/crash/diagnostics.dart';
+import '../../../utils/platform/web_auth_mode.dart';
 import '../../account/data/account_notice.dart';
 import '../../account/data/account_session_repository.dart';
 import '../../account/domain/account_binding.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../onboarding/data/server_resolver.dart'
-    show authProbeAuthorized, basicAuthConfirms;
+    show authProbeAuthorized, authProbeExplicitlyRejects, basicAuthConfirms;
 import '../../settings/presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'auth_credentials_store.dart';
@@ -35,6 +36,7 @@ import 'custom_headers_store.dart';
 import 'graphql/__generated__/auth.graphql.dart';
 import 'jwt_utils.dart';
 import 'simple_login_client.dart';
+import 'ui_login_token_rejected.dart';
 
 part 'auth_coordinator.g.dart';
 
@@ -61,6 +63,7 @@ enum TestConnectionFailureKind {
   unexpectedShape,
   insecureTransport,
   browserSession,
+  webUnsupportedAuthMode,
 }
 
 /// Maps a thrown error to a typed [TestConnectionFailure]. Used by both
@@ -72,6 +75,11 @@ enum TestConnectionFailureKind {
 /// like "connection" that would otherwise collapse them into a generic
 /// network failure.
 TestConnectionFailure classifyAuthError(Object e) {
+  if (e is UiLoginTokenRejected) {
+    return const TestConnectionFailure(
+      TestConnectionFailureKind.webUnsupportedAuthMode,
+    );
+  }
   if (e is BasicCredentialsRejected) {
     return const TestConnectionFailure(
       TestConnectionFailureKind.invalidCredentials,
@@ -512,6 +520,7 @@ class AuthCoordinator extends _$AuthCoordinator {
     required GraphQLClient gqlClient,
     required String username,
     required String password,
+    String? serverBaseUrl,
   }) async {
     final store = ref.read(authCredentialsStoreProvider.notifier);
     await store.withIdentityChange(() async {
@@ -522,6 +531,22 @@ class AuthCoordinator extends _$AuthCoordinator {
         username: username,
         password: password,
       );
+      // A Simple-login server answers the login mutation yet rejects the token.
+      if (serverBaseUrl != null && ref.read(isWebProvider)) {
+        final probe = http.Client();
+        try {
+          if (await authProbeExplicitlyRejects(
+            serverBaseUrl,
+            client: probe,
+            bearer: tokens.accessToken,
+            extraHeaders: ref.read(customHttpHeadersProvider).value,
+          )) {
+            throw const UiLoginTokenRejected();
+          }
+        } finally {
+          probe.close();
+        }
+      }
       await adoptUiLoginTokens(
         gqlClient: gqlClient,
         tokens: tokens,

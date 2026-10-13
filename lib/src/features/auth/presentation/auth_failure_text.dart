@@ -27,4 +27,6 @@ String authFailureText(BuildContext context, TestConnectionFailureKind kind) =>
         context.l10n.authTestConnectionFailedShape,
       TestConnectionFailureKind.insecureTransport =>
         context.l10n.authInsecureTransportWarning,
+      TestConnectionFailureKind.webUnsupportedAuthMode =>
+        context.l10n.webUnsupportedAuthMode,
     };
