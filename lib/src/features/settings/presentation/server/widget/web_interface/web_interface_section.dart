@@ -32,13 +32,9 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
   Enum$WebUIFlavor? _checkedFlavor;
   Timer? _pollTimer;
   bool _busy = false;
+  bool _installStarted = false;
+  bool _installing = false;
   String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(_pollStatus);
-  }
 
   @override
   void dispose() {
@@ -46,32 +42,53 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     super.dispose();
   }
 
-  Future<void> _pollStatus() async {
+  void _acceptInstallStatus(Fragment$WebInterfaceUpdateStatusDto? status) {
     if (!mounted) return;
-    final authenticated =
-        ref.read(settledAccountAccessProvider).capability !=
-        AccountCapability.unknown;
-    if (authenticated) {
-      try {
-        final status = await ref.read(webInterfaceRepositoryProvider).status();
-        if (!mounted) return;
-        final finished =
-            status?.state == Enum$UpdateState.FINISHED &&
-            _status?.state != Enum$UpdateState.FINISHED;
-        setState(() => _status = status);
-        if (finished) {
-          setState(() {
-            _check = null;
-            _originalFlavor = null;
-          });
-          ref.invalidate(installedWebInterfaceProvider);
-        }
-      } catch (error) {
-        if (mounted) setState(() => _error = error.toString());
+    final finished = status?.state == Enum$UpdateState.FINISHED;
+    setState(() {
+      _status = status;
+      _installing = !finished && status?.state != Enum$UpdateState.ERROR;
+      if (finished) {
+        _check = null;
+        _originalFlavor = null;
       }
-    }
-    if (mounted) _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+    });
+    if (finished) ref.invalidate(installedWebInterfaceProvider);
   }
+
+  Future<void> _pollStatus() async {
+    if (!mounted || !_installing) return;
+    try {
+      final status = await ref.read(webInterfaceRepositoryProvider).status();
+      _acceptInstallStatus(status);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    }
+    if (mounted && _installing) {
+      _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+    }
+  }
+
+  Future<void> _install() => _run(() async {
+    setState(() {
+      _installStarted = true;
+      _installing = true;
+      _status = null;
+    });
+    try {
+      final status = await ref.read(webInterfaceRepositoryProvider).install();
+      if (status == null) {
+        throw StateError('Missing web interface install response');
+      }
+      _acceptInstallStatus(status);
+      if (mounted && _installing) {
+        _pollTimer = Timer(const Duration(seconds: 2), _pollStatus);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _installing = false);
+      rethrow;
+    }
+  });
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
@@ -162,7 +179,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         ? ref.watch(webInterfaceFlavorsProvider)
         : const AsyncData<List<Enum$WebUIFlavor>>([]);
     final custom = data?.webUIFlavor == Enum$WebUIFlavor.CUSTOM;
-    final downloading = _status?.state == Enum$UpdateState.DOWNLOADING;
+    final downloading = _installing;
     final enabled = !_busy && !downloading;
     final bundledAllowed = data?.webUIFlavor == Enum$WebUIFlavor.WEBUI;
     final sameServer =
@@ -183,6 +200,29 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         settings.error?.toString() ??
         flavors.error?.toString() ??
         installed.error?.toString();
+
+    final String? updateText;
+    if (error != null) {
+      updateText = context.l10n.webInterfaceError(error);
+    } else if (downloading) {
+      updateText = context.l10n.webInterfaceInstalling(_status?.progress ?? 0);
+    } else if (_installStarted && _status?.state == Enum$UpdateState.ERROR) {
+      updateText = context.l10n.webInterfaceUpdateFailed;
+    } else if (_installStarted && _status?.state == Enum$UpdateState.FINISHED) {
+      updateText = context.l10n.webInterfaceInstalled;
+    } else if (check != null) {
+      updateText = check.updateAvailable
+          ? _originalFlavor != null &&
+                    _originalFlavor != _checkedFlavor &&
+                    _checkedFlavor != null
+                ? context.l10n.webInterfaceInstallSwitch(
+                    _flavorName(_checkedFlavor!),
+                  )
+                : context.l10n.webInterfaceUpdateAvailable(check.tag)
+          : context.l10n.webInterfaceUpToDate;
+    } else {
+      updateText = null;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,15 +324,39 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
           ),
         if (custom)
           ListTile(subtitle: Text(context.l10n.webInterfaceCustomUpdates)),
-        if (canManage &&
-            data != null &&
-            _originalFlavor != null &&
-            check == null &&
-            !custom)
-          ListTile(subtitle: Text(context.l10n.webInterfaceCheckAfterChange)),
         if (authenticated && !custom) ...[
           ListTile(
             title: Text(context.l10n.webInterfaceCheckUpdate),
+            subtitle: updateText == null && !_busy
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (updateText != null)
+                        Text(
+                          updateText,
+                          style:
+                              error != null ||
+                                  _status?.state == Enum$UpdateState.ERROR
+                              ? TextStyle(
+                                  color: context.theme.colorScheme.error,
+                                )
+                              : null,
+                        ),
+                      if (downloading || _busy)
+                        LinearProgressIndicator(
+                          value: downloading
+                              ? (_status?.progress ?? 0).clamp(0, 100) / 100
+                              : null,
+                        ),
+                    ],
+                  ),
+            trailing: check?.updateAvailable == true && !downloading
+                ? TextButton(
+                    onPressed: enabled ? _install : null,
+                    child: Text(context.l10n.webInterfaceInstallUpdate),
+                  )
+                : null,
             onTap: enabled
                 ? () => _run(() async {
                     final result = await ref
@@ -304,63 +368,15 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                     if (mounted) {
                       setState(() {
                         _check = result;
+                        _installStarted = false;
+                        _status = null;
                         _checkedFlavor = data?.webUIFlavor;
                       });
                     }
                   })
                 : null,
           ),
-          if (check != null)
-            ListTile(
-              subtitle: Text(
-                check.updateAvailable
-                    ? _originalFlavor != null &&
-                              _originalFlavor != _checkedFlavor &&
-                              _checkedFlavor != null
-                          ? context.l10n.webInterfaceInstallSwitch(
-                              _flavorName(_checkedFlavor!),
-                            )
-                          : context.l10n.webInterfaceUpdateAvailable(check.tag)
-                    : context.l10n.webInterfaceUpToDate,
-              ),
-            ),
-          if (check?.updateAvailable == true)
-            ListTile(
-              title: Text(context.l10n.webInterfaceInstallUpdate),
-              onTap: enabled
-                  ? () => _run(() async {
-                      final status = await ref
-                          .read(webInterfaceRepositoryProvider)
-                          .install();
-                      if (status == null) {
-                        throw StateError(
-                          'Missing web interface install response',
-                        );
-                      }
-                      if (mounted) setState(() => _status = status);
-                    })
-                  : null,
-            ),
         ],
-        if (_busy) const ListTile(title: LinearProgressIndicator()),
-        if (downloading)
-          ListTile(
-            title: Text(context.l10n.webInterfaceInstalling(_status!.progress)),
-            subtitle: LinearProgressIndicator(
-              value: _status!.progress.clamp(0, 100) / 100,
-            ),
-          ),
-        if (_status?.state == Enum$UpdateState.FINISHED)
-          ListTile(subtitle: Text(context.l10n.webInterfaceInstalled)),
-        if (_status?.state == Enum$UpdateState.ERROR)
-          ListTile(subtitle: Text(context.l10n.webInterfaceUpdateFailed)),
-        if (error != null)
-          ListTile(
-            subtitle: Text(
-              context.l10n.webInterfaceError(error),
-              style: TextStyle(color: context.theme.colorScheme.error),
-            ),
-          ),
       ],
     );
   }

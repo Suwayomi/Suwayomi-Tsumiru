@@ -3978,7 +3978,7 @@
   },
   "webInterfaceInstalledVersion": "Installed version",
   "webInterfaceCheckUpdate": "Check for update",
-  "webInterfaceInstallUpdate": "Install update",
+  "webInterfaceInstallUpdate": "Install",
   "webInterfaceUpdateAvailable": "Update available: {tag}",
   "@webInterfaceUpdateAvailable": {
     "placeholders": {
@@ -3995,7 +3995,7 @@
       }
     }
   },
-  "webInterfaceUpToDate": "The server's web interface is up to date.",
+  "webInterfaceUpToDate": "Up to date",
   "webInterfaceInstalling": "Installing update: {progress}%",
   "@webInterfaceInstalling": {
     "placeholders": {
