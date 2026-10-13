@@ -1635,6 +1635,10 @@
   "@webUnsupportedAuthMode": {
     "description": "Shown on web instead of the generic unreachable message when the server answers but uses Basic auth or Simple login, which a cross-origin page cannot use"
   },
+  "webServerAuthUnconfirmed": "This server didn't accept the browser's request. If it uses Basic auth or Simple login, set its authentication mode to UI login, or use the Android, iOS or desktop app. Otherwise check the address.",
+  "@webServerAuthUnconfirmed": {
+    "description": "Shown on web when the server answers 404 Not Found, which can mean Basic auth or a mistyped subpath"
+  },
   "webUiLoginOnlyHint": "The browser version only works with UI login (server setting: server.authMode).",
   "@webUiLoginOnlyHint": {
     "description": "Short note under the web sign-in method picker explaining why only UI login is offered"

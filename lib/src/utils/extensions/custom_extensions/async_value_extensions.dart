@@ -65,17 +65,19 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         final unwrapped = error is OperationMessageException
             ? error.exception
             : error;
-        // Basic-gated servers answer web GraphQL with a readable 404, never a 401.
         final webBasicGated =
-            ProviderScope.containerOf(context, listen: false)
-                .read(isWebProvider) &&
-            isBasicGatedNotFound(unwrapped);
+            isBasicGatedNotFound(unwrapped) &&
+            ProviderScope.containerOf(
+              context,
+              listen: false,
+            ).read(isWebProvider);
         if (webBasicGated) {
           return AppUtils.wrapOn(
             wrapper,
             ServerUnreachableView(
               onRetry: refresh,
               offlineEscape: offlineEscapeHatch,
+              webNotFoundVerdict: webBasicGated,
             ),
           );
         }

@@ -28,10 +28,10 @@ OperationException _notJsonError(int status, String snippet) =>
 void main() {
   group('connectionAuthChoices', () {
     test('web offers UI login and no auth only', () {
-      expect(
-        connectionAuthChoices(isWeb: true),
-        [AuthType.none, AuthType.uiLogin],
-      );
+      expect(connectionAuthChoices(isWeb: true), [
+        AuthType.none,
+        AuthType.uiLogin,
+      ]);
     });
 
     test('native offers every mode', () {
@@ -45,10 +45,11 @@ void main() {
     });
 
     test('native offers basic, simple and UI login', () {
-      expect(
-        onboardingAuthChoices(isWeb: false),
-        [AuthType.basic, AuthType.simpleLogin, AuthType.uiLogin],
-      );
+      expect(onboardingAuthChoices(isWeb: false), [
+        AuthType.basic,
+        AuthType.simpleLogin,
+        AuthType.uiLogin,
+      ]);
     });
   });
 
@@ -93,17 +94,16 @@ void main() {
       );
     });
 
-    test('detected basic or simple login reads as an unusable mode', () {
-      for (final detected in [AuthType.basic, AuthType.simpleLogin]) {
-        expect(
-          webServerAuthUnsupported(
-            aboutError: null,
-            detectedAuthType: detected,
-          ),
-          isTrue,
-          reason: '$detected',
-        );
-      }
+    test('detected basic login reads as an unusable mode', () {
+      // Simple login stays out: the browser probe cannot tell it apart, so it
+      // reads as UI login and is caught after sign-in instead.
+      expect(
+        webServerAuthUnsupported(
+          aboutError: null,
+          detectedAuthType: AuthType.basic,
+        ),
+        isTrue,
+      );
     });
 
     test('detected UI login, no auth or unknown stays usable', () {

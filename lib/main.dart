@@ -566,6 +566,7 @@ Future<void> _seedTestConfig(ProviderContainer container) async {
             gqlClient: container.read(unauthenticatedGraphQlClientProvider),
             username: user,
             password: pass,
+            serverBaseUrl: url,
           );
     },
   );

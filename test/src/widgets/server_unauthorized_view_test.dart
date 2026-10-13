@@ -17,17 +17,22 @@ import 'package:tsumiru/src/widgets/server_unauthorized_view.dart';
 const _unsupportedMessage =
     "This server uses a sign-in method the browser version can't use. Set the server's authentication mode to UI login, or use the Android, iOS or desktop app.";
 
-Future<void> _pump(WidgetTester tester,
-    {bool isWeb = false, AuthType? savedAuthType}) async {
+Future<void> _pump(
+  WidgetTester tester, {
+  bool isWeb = false,
+  AuthType? savedAuthType,
+}) async {
   SharedPreferences.setMockInitialValues({
     if (savedAuthType != null) 'authType': savedAuthType.index,
   });
-  final container = ProviderContainer(overrides: [
-    isWebProvider.overrideWithValue(isWeb),
-    sharedPreferencesProvider.overrideWithValue(
-      await SharedPreferences.getInstance(),
-    ),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      isWebProvider.overrideWithValue(isWeb),
+      sharedPreferencesProvider.overrideWithValue(
+        await SharedPreferences.getInstance(),
+      ),
+    ],
+  );
   addTearDown(container.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -60,8 +65,9 @@ void main() {
     await _unmount(tester);
   });
 
-  testWidgets('web with a saved basic login explains the mode instead',
-      (tester) async {
+  testWidgets('web with a saved basic login explains the mode instead', (
+    tester,
+  ) async {
     await _pump(tester, isWeb: true, savedAuthType: AuthType.basic);
 
     expect(find.text(_unsupportedMessage), findsOneWidget);
@@ -70,8 +76,9 @@ void main() {
     await _unmount(tester);
   });
 
-  testWidgets('web with a saved simple login explains the mode instead',
-      (tester) async {
+  testWidgets('web with a saved simple login explains the mode instead', (
+    tester,
+  ) async {
     await _pump(tester, isWeb: true, savedAuthType: AuthType.simpleLogin);
 
     expect(find.text(_unsupportedMessage), findsOneWidget);

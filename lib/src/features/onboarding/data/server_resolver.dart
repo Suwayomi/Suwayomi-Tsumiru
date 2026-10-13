@@ -932,7 +932,6 @@ Future<({bool required, AuthType? detected})> webAuthProbe(
   }
 }
 
-// Web "Test connection" verdict: true when the server answered in a mode the browser cannot use.
 bool webServerAuthUnsupported({
   required Object? aboutError,
   required AuthType? detectedAuthType,

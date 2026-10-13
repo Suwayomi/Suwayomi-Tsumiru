@@ -7,11 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../constants/db_keys.dart';
-import '../global_providers/global_providers.dart';
 import '../routes/router_config.dart';
 import '../utils/extensions/custom_extensions.dart';
-import '../utils/platform/web_auth_mode.dart';
 import 'emoticons.dart';
 import 'server_unreachable_view.dart';
 
@@ -34,29 +31,25 @@ class ServerUnauthorizedView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final webAuthBlocked =
-        ref.watch(isWebProvider) &&
-        isWebUnsupportedAuthMode(
-          ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial,
-        );
+    final webAuthBlocked = ref.watch(webAuthBlockedProvider);
     return Emoticons(
       iconData: Icons.lock_outline_rounded,
       title: context.l10n.serverSignedOutTitle,
       subTitle: webAuthBlocked ? context.l10n.webUnsupportedAuthMode : message,
-    button: Column(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 8,
-      children: [
-        FilledButton.tonalIcon(
-          onPressed: () => const ConnectionRoute().push(context),
-          icon: const Icon(Icons.settings_ethernet_rounded),
-          label: Text(context.l10n.serverUnreachableAction),
-        ),
-        if (offlineEscape) const ViewOfflineButton(),
-        if (onRetry != null)
-          TextButton(onPressed: onRetry, child: Text(context.l10n.refresh)),
-      ],
-    ),
+      button: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 8,
+        children: [
+          FilledButton.tonalIcon(
+            onPressed: () => const ConnectionRoute().push(context),
+            icon: const Icon(Icons.settings_ethernet_rounded),
+            label: Text(context.l10n.serverUnreachableAction),
+          ),
+          if (offlineEscape) const ViewOfflineButton(),
+          if (onRetry != null)
+            TextButton(onPressed: onRetry, child: Text(context.l10n.refresh)),
+        ],
+      ),
     );
   }
 }
