@@ -19,6 +19,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/platform/web_auth_mode.dart';
 import '../../../../widgets/section_title.dart';
 import '../../../account/data/account_actions.dart';
 import '../../../account/data/account_providers.dart';
@@ -45,6 +46,8 @@ class InlineAuthSection extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authType = ref.watch(authTypeKeyProvider) ?? AuthType.none;
+    final isWeb = ref.watch(isWebProvider);
+    final authChoices = connectionAuthChoices(isWeb: isWeb);
     final needsReauth = ref.watch(needsReauthProvider);
     final storedUsername = ref.watch(authUsernameProvider);
 
@@ -231,7 +234,7 @@ class InlineAuthSection extends HookConsumerWidget {
             inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
             ),
-            dropdownMenuEntries: AuthType.values
+            dropdownMenuEntries: authChoices
                 .map(
                   (t) =>
                       DropdownMenuEntry(value: t, label: t.toLocale(context)),
@@ -240,6 +243,13 @@ class InlineAuthSection extends HookConsumerWidget {
             onSelected: onAuthModeChanged,
           ),
         ),
+        if (isWeb)
+          pad(
+            Text(
+              context.l10n.webUiLoginOnlyHint,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
         if (authType != AuthType.none) ...[
           if (signedIn) ...[
             ListTile(

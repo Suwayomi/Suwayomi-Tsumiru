@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../constants/enum.dart';
+import '../../../utils/network/graphql_errors.dart';
+import '../../../utils/platform/web_auth_mode.dart';
 
 /// "Find server" connection resolver.
 ///
@@ -928,6 +930,19 @@ Future<({bool required, AuthType? detected})> webAuthProbe(
   } catch (_) {
     return (required: true, detected: null);
   }
+}
+
+/// Web "Test connection" verdict: true when the server answered but only in a
+/// mode the browser build cannot use — a Basic-gated transport (the
+/// auth-exempt about query itself came back 401/Unauthorized) or a detected
+/// Basic/Simple sign-in method. The caller shows the web-specific guidance
+/// instead of the generic unreachable message.
+bool webServerAuthUnsupported({
+  required Object? aboutError,
+  required AuthType? detectedAuthType,
+}) {
+  if (aboutError != null && isAuthenticationRequired(aboutError)) return true;
+  return isWebUnsupportedAuthMode(detectedAuthType);
 }
 
 // ---------------------------------------------------------------------------

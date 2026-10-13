@@ -7,10 +7,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../constants/db_keys.dart';
 import '../features/offline/data/offline_repository.dart';
 import '../features/offline/data/server_reachability.dart';
+import '../global_providers/global_providers.dart';
 import '../routes/router_config.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/platform/web_auth_mode.dart';
 import 'emoticons.dart';
 
 /// Shown when a request failed because the server couldn't be reached (wrong
@@ -37,10 +40,19 @@ class ServerUnreachableView extends ConsumerWidget {
     // Column's spacing, doubling the gap between its neighbours.
     final hasCatalog =
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
+    // Web with a saved Basic/Simple login: the server is up, but its mode is
+    // unusable from a cross-origin page. Explain that instead of unreachable.
+    final webAuthBlocked =
+        ref.watch(isWebProvider) &&
+        isWebUnsupportedAuthMode(
+          ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial,
+        );
     return Emoticons(
       iconData: Icons.cloud_off_rounded,
       title: context.l10n.serverUnreachableTitle,
-      subTitle: context.l10n.serverUnreachableSubtitle,
+      subTitle: webAuthBlocked
+          ? context.l10n.webUnsupportedAuthMode
+          : context.l10n.serverUnreachableSubtitle,
       button: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: 8,

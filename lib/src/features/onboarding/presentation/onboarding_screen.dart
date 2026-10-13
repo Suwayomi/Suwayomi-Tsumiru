@@ -20,6 +20,7 @@ import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/launch_url_in_web.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../utils/platform/web_auth_mode.dart';
 import '../../../utils/theme/brand.dart';
 import '../../about/data/about_repository.dart';
 import '../../account/data/account_actions.dart';
@@ -445,6 +446,10 @@ enum _TestState {
   /// Couldn't reach the address at all.
   failed,
 
+  /// Web only: the server answered but uses Basic auth or Simple login,
+  /// which a cross-origin page cannot use.
+  unsupportedAuth,
+
   /// Reached something, but it isn't a Suwayomi server.
   notSuwayomi,
 }
@@ -582,7 +587,7 @@ class _ServerStep extends HookConsumerWidget {
     // Credentials + chosen auth type, revealed when the server needs a login.
     final userController = useTextEditingController();
     final passController = useTextEditingController();
-    final authChoice = useState(AuthType.basic);
+    final authChoice = useState(onboardingAuthChoices(isWeb: kIsWeb).first);
     // Once the user picks a method themselves, detection stops overriding it.
     final userChangedAuth = useState(false);
     final credsRejected = useState(false);
@@ -593,9 +598,14 @@ class _ServerStep extends HookConsumerWidget {
                 AccountCapability.unsupported);
 
     // Pre-select the sign-in method the server's responses point at; an
-    // undetectable server falls back to Basic. A manual pick always wins.
+    // undetectable server falls back to Basic (UI login on web). A manual
+    // pick always wins. Basic/Simple never reach here on web: the caller
+    // diverts those to the unsupported-auth message instead.
     void applyDetectedAuth(AuthType? detected) {
-      if (!userChangedAuth.value) authChoice.value = detected ?? AuthType.basic;
+      if (!userChangedAuth.value) {
+        authChoice.value =
+            detected ?? (kIsWeb ? AuthType.uiLogin : AuthType.basic);
+      }
     }
 
     void resetToIdle() {
@@ -729,6 +739,16 @@ class _ServerStep extends HookConsumerWidget {
       );
       if (!context.mounted) return;
       if (result.hasError || result.value == null) {
+        // The auth-exempt about query itself was rejected: a Basic-gated
+        // server, which the browser cannot use. Say so specifically.
+        if (webServerAuthUnsupported(
+          aboutError: result.error,
+          detectedAuthType: null,
+        )) {
+          state.value = _TestState.unsupportedAuth;
+          onVerifiedChanged(false);
+          return;
+        }
         errorDetail.value = result.error?.toString();
         state.value = _TestState.failed;
         onVerifiedChanged(false);
@@ -745,6 +765,14 @@ class _ServerStep extends HookConsumerWidget {
         );
         if (!probe.required) {
           await markConnected();
+          return;
+        }
+        if (webServerAuthUnsupported(
+          aboutError: null,
+          detectedAuthType: probe.detected,
+        )) {
+          state.value = _TestState.unsupportedAuth;
+          onVerifiedChanged(false);
           return;
         }
         applyDetectedAuth(probe.detected);
@@ -1086,18 +1114,17 @@ class _ServerStep extends HookConsumerWidget {
               border: OutlineInputBorder(),
             ),
             dropdownMenuEntries: [
-              DropdownMenuEntry(
-                value: AuthType.basic,
-                label: context.l10n.onboardingAuthModeBasic,
-              ),
-              DropdownMenuEntry(
-                value: AuthType.simpleLogin,
-                label: context.l10n.onboardingAuthModeSimple,
-              ),
-              DropdownMenuEntry(
-                value: AuthType.uiLogin,
-                label: context.l10n.onboardingAuthModeUi,
-              ),
+              for (final mode in onboardingAuthChoices(isWeb: kIsWeb))
+                DropdownMenuEntry(
+                  value: mode,
+                  label: switch (mode) {
+                    AuthType.basic => context.l10n.onboardingAuthModeBasic,
+                    AuthType.simpleLogin =>
+                      context.l10n.onboardingAuthModeSimple,
+                    AuthType.uiLogin => context.l10n.onboardingAuthModeUi,
+                    AuthType.none => context.l10n.authTypeNone,
+                  },
+                ),
             ],
             onSelected: (m) {
               if (m != null) {
@@ -1107,6 +1134,14 @@ class _ServerStep extends HookConsumerWidget {
               }
             },
           ),
+          if (kIsWeb)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                context.l10n.webUiLoginOnlyHint,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 8),
           TextField(
             controller: userController,
@@ -1259,6 +1294,15 @@ List<Widget> _buildTestStatus(
             text: context.l10n.onboardingFoundAt(addr),
           ),
         ],
+      ];
+
+    case _TestState.unsupportedAuth:
+      return [
+        _StatusRow(
+          color: cs.tertiary,
+          icon: Icons.lock_rounded,
+          text: context.l10n.webUnsupportedAuthMode,
+        ),
       ];
 
     case _TestState.notSuwayomi:

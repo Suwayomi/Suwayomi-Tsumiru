@@ -7,17 +7,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/features/offline/data/server_reachability.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
+
+const _unsupportedMessage =
+    "This server uses a sign-in method the browser version can't use. Set the server's authentication mode to UI login, or use the Android, iOS or desktop app.";
 
 Future<ProviderContainer> _pump(WidgetTester tester,
     {VoidCallback? onRetry,
     bool hasCatalog = false,
-    bool offlineEscape = true}) async {
+    bool offlineEscape = true,
+    bool isWeb = false,
+    AuthType? savedAuthType}) async {
+  SharedPreferences.setMockInitialValues({
+    if (savedAuthType != null) 'authType': savedAuthType.index,
+  });
   final container = ProviderContainer(overrides: [
     offlineCatalogAvailableProvider.overrideWith((ref) async => hasCatalog),
+    isWebProvider.overrideWithValue(isWeb),
+    sharedPreferencesProvider.overrideWithValue(
+      await SharedPreferences.getInstance(),
+    ),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(
@@ -91,6 +107,41 @@ void main() {
     await tester.tap(find.text('View offline'));
     await tester.pumpAndSettle();
     expect(container.read(viewOfflineNowProvider), isTrue);
+    await _unmount(tester);
+  });
+
+  testWidgets('web with a saved basic login explains the mode instead',
+      (tester) async {
+    await _pump(tester, isWeb: true, savedAuthType: AuthType.basic);
+
+    expect(find.text(_unsupportedMessage), findsOneWidget);
+    expect(find.text('Connection settings'), findsOneWidget);
+    await _unmount(tester);
+  });
+
+  testWidgets('web with a saved simple login explains the mode instead',
+      (tester) async {
+    await _pump(tester, isWeb: true, savedAuthType: AuthType.simpleLogin);
+
+    expect(find.text(_unsupportedMessage), findsOneWidget);
+    await _unmount(tester);
+  });
+
+  testWidgets('web with UI login keeps the unreachable message',
+      (tester) async {
+    await _pump(tester, isWeb: true, savedAuthType: AuthType.uiLogin);
+
+    expect(find.text(_unsupportedMessage), findsNothing);
+    expect(find.text("Can't reach your server"), findsOneWidget);
+    await _unmount(tester);
+  });
+
+  testWidgets('native with a saved basic login keeps the unreachable message',
+      (tester) async {
+    await _pump(tester, isWeb: false, savedAuthType: AuthType.basic);
+
+    expect(find.text(_unsupportedMessage), findsNothing);
+    expect(find.text("Can't reach your server"), findsOneWidget);
     await _unmount(tester);
   });
 }
