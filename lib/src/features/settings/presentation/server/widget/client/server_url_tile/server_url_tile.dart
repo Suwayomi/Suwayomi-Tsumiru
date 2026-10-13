@@ -25,7 +25,9 @@ import '../../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../offline/data/background/background_download_controller_shim.dart';
 import '../../../../connection/prompt_sign_in.dart';
 import '../../credential_popup/credentials_popup.dart';
+import 'hosted_base_uri.dart';
 import 'server_search_button.dart';
+import 'web_default_server_url.dart';
 
 part 'server_url_tile.g.dart';
 
@@ -34,7 +36,7 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
   @override
   String? build() => initialize(
     DBKeys.serverUrl,
-    initial: kIsWeb ? Uri.base.origin : DBKeys.serverUrl.initial,
+    initial: kIsWeb ? webInitialServerUrl() : DBKeys.serverUrl.initial,
   );
 
   @override
@@ -83,7 +85,8 @@ class ServerExternalUrl extends _$ServerExternalUrl
     return initialize(
       DBKeys.serverExternalUrl,
       initial:
-          prefs.getString(DBKeys.serverUrl.name) ?? DBKeys.serverUrl.initial,
+          prefs.getString(DBKeys.serverUrl.name) ??
+          (kIsWeb ? webInitialServerUrl() : DBKeys.serverUrl.initial),
     );
   }
 
@@ -121,6 +124,18 @@ class ServerLanUrl extends _$ServerLanUrl
     super.update(_normaliseUrl(value));
     // The active resolver observes this preference and re-checks immediately.
   }
+}
+
+/// Web default for a fresh profile: the page origin plus the app's base path,
+/// so a server-hosted build under a sub-path pre-fills its own address.
+/// Falls back to the page origin when the base URI cannot be read.
+String webInitialServerUrl() {
+  final candidate = webDefaultServerUrl(readHostedBaseUri());
+  final parsed = Uri.tryParse(candidate);
+  if (parsed != null && parsed.hasScheme && parsed.host.isNotEmpty) {
+    return candidate;
+  }
+  return Uri.base.origin;
 }
 
 String? _normaliseUrl(String? value) {
