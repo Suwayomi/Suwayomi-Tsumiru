@@ -13,10 +13,12 @@ import '../../../../utils/network/graphql_errors.dart';
 import '../../../../widgets/server_unreachable_view.dart';
 import '../../../account/data/account_providers.dart';
 import '../../controller/server_controller.dart';
+import 'data/web_interface_repository.dart';
 import 'widget/cloud_flare/cloud_flare_section.dart';
 import 'widget/misc_settings/misc_settings_section.dart';
 import 'widget/server_binding/server_binding_section.dart';
 import 'widget/socks_proxy/socks_proxy_section.dart';
+import 'widget/web_interface/web_interface_section.dart';
 
 class ServerScreen extends ConsumerWidget {
   const ServerScreen({super.key});
@@ -27,7 +29,14 @@ class ServerScreen extends ConsumerWidget {
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_SETTINGS);
     final serverSettings = ref.watch(settingsProvider);
-    onRefresh() => ref.refresh(settingsProvider.future);
+    Future<void> onRefresh() async {
+      ref.invalidate(webInterfaceSettingsProvider);
+      ref.invalidate(webInterfaceFlavorsProvider);
+      ref.invalidate(installedWebInterfaceProvider);
+      ref.invalidate(settingsProvider);
+      await ref.read(settingsProvider.future);
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.server)),
       body: RefreshIndicator(
@@ -80,6 +89,7 @@ class ServerScreen extends ConsumerWidget {
                 ListTile(
                   subtitle: Text(context.l10n.manageSettingsPermissionRequired),
                 ),
+              const WebInterfaceSection(),
               if (serverSettings.value != null) ...[
                 ServerBindingSection(serverBindingDto: serverSettings.value!),
                 SocksProxySection(socksProxyDto: serverSettings.value!),

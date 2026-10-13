@@ -1,0 +1,39 @@
+fragment WebInterfaceSettingsDto on SettingsType {
+  webUIFlavor
+  webUIChannel
+  webUIUpdateCheckInterval
+}
+
+query WebInterfaceSettings {
+  settings { ...WebInterfaceSettingsDto }
+}
+
+mutation SetWebInterfaceSettings($settings: PartialSettingsTypeInput!) {
+  setSettings(input: {settings: $settings}) {
+    settings { ...WebInterfaceSettingsDto }
+  }
+}
+
+query InstalledWebInterface {
+  aboutWebUI { tag channel }
+}
+
+query CheckWebInterfaceUpdate {
+  checkForWebUIUpdate { tag channel updateAvailable }
+}
+
+fragment WebInterfaceUpdateStatusDto on WebUIUpdateStatus {
+  state
+  progress
+  info { tag channel }
+}
+
+query WebInterfaceUpdateStatus {
+  getWebUIUpdateStatus { ...WebInterfaceUpdateStatusDto }
+}
+
+mutation InstallWebInterfaceUpdate {
+  updateWebUI(input: {}) {
+    updateStatus { ...WebInterfaceUpdateStatusDto }
+  }
+}
