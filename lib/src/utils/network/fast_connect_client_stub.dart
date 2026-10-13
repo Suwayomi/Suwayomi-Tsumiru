@@ -8,7 +8,6 @@ import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 
 /// Web: the browser owns connection handling; no connect timeout to set.
-/// Credentialed cross-origin requests are refused by current servers, so the
-/// browser must not attach its credentials; UI login travels in headers.
+/// Current servers refuse credentialed cross-origin requests: send none.
 http.Client createFastConnectClient(Duration connectionTimeout) =>
     BrowserClient()..withCredentials = false;

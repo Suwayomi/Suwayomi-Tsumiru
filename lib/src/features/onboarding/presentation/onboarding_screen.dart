@@ -446,8 +446,7 @@ enum _TestState {
   /// Couldn't reach the address at all.
   failed,
 
-  /// Web only: the server answered but uses Basic auth or Simple login,
-  /// which a cross-origin page cannot use.
+  /// Web only: the server answered in a mode a cross-origin page cannot use.
   unsupportedAuth,
 
   /// Reached something, but it isn't a Suwayomi server.
@@ -597,10 +596,7 @@ class _ServerStep extends HookConsumerWidget {
             ref.watch(settledAccountAccessProvider).capability !=
                 AccountCapability.unsupported);
 
-    // Pre-select the sign-in method the server's responses point at; an
-    // undetectable server falls back to Basic (UI login on web). A manual
-    // pick always wins. Basic/Simple never reach here on web: the caller
-    // diverts those to the unsupported-auth message instead.
+    // Pre-select the detected method (UI login default on web); a manual pick wins.
     void applyDetectedAuth(AuthType? detected) {
       if (!userChangedAuth.value) {
         authChoice.value =
@@ -739,10 +735,13 @@ class _ServerStep extends HookConsumerWidget {
       );
       if (!context.mounted) return;
       if (result.hasError || result.value == null) {
-        // The auth-exempt about query itself was rejected: a Basic-gated
-        // server, which the browser cannot use. Say so specifically.
+        // A rejected about query means a mode the browser cannot use, never unreachable.
+        final failure = result.error;
+        final aboutError = failure is OperationMessageException
+            ? failure.exception
+            : failure;
         if (webServerAuthUnsupported(
-          aboutError: result.error,
+          aboutError: aboutError,
           detectedAuthType: null,
         )) {
           state.value = _TestState.unsupportedAuth;

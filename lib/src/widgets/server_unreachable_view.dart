@@ -40,8 +40,7 @@ class ServerUnreachableView extends ConsumerWidget {
     // Column's spacing, doubling the gap between its neighbours.
     final hasCatalog =
         ref.watch(offlineCatalogAvailableProvider).value ?? false;
-    // Web with a saved Basic/Simple login: the server is up, but its mode is
-    // unusable from a cross-origin page. Explain that instead of unreachable.
+    // A saved web Basic/Simple login is mode-blocked, not unreachable.
     final webAuthBlocked =
         ref.watch(isWebProvider) &&
         isWebUnsupportedAuthMode(

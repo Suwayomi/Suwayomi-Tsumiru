@@ -932,16 +932,16 @@ Future<({bool required, AuthType? detected})> webAuthProbe(
   }
 }
 
-/// Web "Test connection" verdict: true when the server answered but only in a
-/// mode the browser build cannot use — a Basic-gated transport (the
-/// auth-exempt about query itself came back 401/Unauthorized) or a detected
-/// Basic/Simple sign-in method. The caller shows the web-specific guidance
-/// instead of the generic unreachable message.
+// Web "Test connection" verdict: true when the server answered in a mode the browser cannot use.
 bool webServerAuthUnsupported({
   required Object? aboutError,
   required AuthType? detectedAuthType,
 }) {
-  if (aboutError != null && isAuthenticationRequired(aboutError)) return true;
+  if (aboutError != null &&
+      (isAuthenticationRequired(aboutError) ||
+          isBasicGatedNotFound(aboutError))) {
+    return true;
+  }
   return isWebUnsupportedAuthMode(detectedAuthType);
 }
 

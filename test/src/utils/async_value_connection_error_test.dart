@@ -7,24 +7,34 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/extensions/custom_extensions.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
+import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
 import 'package:tsumiru/src/widgets/server_unreachable_view.dart';
+
+const _unsupportedMessage =
+    "This server uses a sign-in method the browser version can't use. Set the server's authentication mode to UI login, or use the Android, iOS or desktop app.";
 
 Widget _host(AsyncValue<int> async,
         {VoidCallback? refresh,
         bool escapeHatch = false,
-        bool catalogAvailable = false}) =>
+        bool catalogAvailable = false,
+        List<Override> extraOverrides = const []}) =>
     ProviderScope(
     overrides: [
       offlineCatalogAvailableProvider
           .overrideWith((ref) async => catalogAvailable),
+      ...extraOverrides,
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -35,6 +45,32 @@ Widget _host(AsyncValue<int> async,
               async.showUiWhenData(context, (d) => Text('data $d'),
                   refresh: refresh, offlineEscapeHatch: escapeHatch),
         ),
+      ),
+    ));
+
+// Web overrides: the browser flag plus a saved sign-in method, as the
+// server-unreachable view reads them.
+Future<List<Override>> _webOverrides(
+    {required bool isWeb, AuthType? savedAuthType}) async {
+  SharedPreferences.setMockInitialValues({
+    if (savedAuthType != null) 'authType': savedAuthType.index,
+  });
+  return [
+    isWebProvider.overrideWithValue(isWeb),
+    sharedPreferencesProvider.overrideWithValue(
+      await SharedPreferences.getInstance(),
+    ),
+  ];
+}
+
+// A non-JSON GraphQL answer in its production wrapping: the repository throws
+// the message exception around the operation exception.
+OperationMessageException _notJsonError(int status, String snippet) =>
+    OperationMessageException(OperationException(
+      linkException: HttpLinkParserException(
+        originalException: ServerNotJsonException(status, snippet),
+        originalStackTrace: StackTrace.empty,
+        response: http.Response(snippet, status),
       ),
     ));
 
@@ -120,5 +156,51 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('View offline'), findsNothing);
+  });
+
+  testWidgets(
+      'a web 404 "Not Found" with a saved basic login explains the mode',
+      (tester) async {
+    await tester.pumpWidget(_host(
+      AsyncError<int>(
+          _notJsonError(404, 'Not Found'), StackTrace.current),
+      extraOverrides: await _webOverrides(
+          isWeb: true, savedAuthType: AuthType.basic),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServerUnreachableView), findsOneWidget);
+    expect(find.text(_unsupportedMessage), findsOneWidget);
+  });
+
+  testWidgets('a web 404 with another body keeps the generic error',
+      (tester) async {
+    await tester.pumpWidget(_host(
+      AsyncError<int>(
+          _notJsonError(404, '<html>proxy 404</html>'),
+          StackTrace.current),
+      extraOverrides:
+          await _webOverrides(isWeb: true, savedAuthType: AuthType.basic),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServerUnreachableView), findsNothing);
+    expect(find.text('Server returned a non-JSON response (HTTP 404)'),
+        findsOneWidget);
+  });
+
+  testWidgets('a native 404 "Not Found" keeps the generic error',
+      (tester) async {
+    await tester.pumpWidget(_host(
+      AsyncError<int>(
+          _notJsonError(404, 'Not Found'), StackTrace.current),
+      extraOverrides: await _webOverrides(
+          isWeb: false, savedAuthType: AuthType.basic),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ServerUnreachableView), findsNothing);
+    expect(find.text('Server returned a non-JSON response (HTTP 404)'),
+        findsOneWidget);
   });
 }

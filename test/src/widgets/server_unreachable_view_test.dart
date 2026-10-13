@@ -52,8 +52,7 @@ Future<ProviderContainer> _pump(WidgetTester tester,
   return container;
 }
 
-/// Unmounts the tree and flushes Riverpod's zero-length auto-dispose timer,
-/// which otherwise trips the pending-timer invariant at test end.
+/// Unmounts the tree to flush Riverpod's pending auto-dispose timer.
 Future<void> _unmount(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();

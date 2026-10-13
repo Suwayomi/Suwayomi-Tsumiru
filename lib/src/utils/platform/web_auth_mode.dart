@@ -12,15 +12,12 @@ import '../../constants/enum.dart';
 /// Injectable read of [kIsWeb] so tests can drive the browser branches.
 final isWebProvider = Provider<bool>((ref) => kIsWeb);
 
-/// Sign-in methods the Connection screen offers. The browser build only works
-/// with UI login or no auth: Simple login needs its cookie and Basic needs
-/// WebSocket headers, neither of which a cross-origin page can use.
+/// Connection choices: a cross-origin page can only use UI login or no auth.
 List<AuthType> connectionAuthChoices({required bool isWeb}) => isWeb
     ? const [AuthType.none, AuthType.uiLogin]
     : AuthType.values;
 
-/// Sign-in methods the onboarding login form offers. Same browser rule, but
-/// the form only appears when the server needs a login, so no-auth is absent.
+/// Onboarding login choices: UI login alone on web (no-auth is absent here).
 List<AuthType> onboardingAuthChoices({required bool isWeb}) => isWeb
     ? const [AuthType.uiLogin]
     : const [AuthType.basic, AuthType.simpleLogin, AuthType.uiLogin];

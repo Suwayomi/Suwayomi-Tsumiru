@@ -4,16 +4,26 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Unit tests for the web UI-login-only gating: which sign-in methods the
-// browser build offers, and when its Test connection reports an unusable
-// server mode instead of an unreachable server.
+// Web gating: offered sign-in methods and the Test connection verdict.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:http/http.dart' as http;
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
+import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 import 'package:tsumiru/src/utils/platform/web_auth_mode.dart';
+
+// A non-JSON GraphQL answer as the app sees it: the decoder throw wrapped in
+// the link parser exception, inside the operation exception.
+OperationException _notJsonError(int status, String snippet) =>
+    OperationException(
+      linkException: HttpLinkParserException(
+        originalException: ServerNotJsonException(status, snippet),
+        originalStackTrace: StackTrace.empty,
+        response: http.Response(snippet, status),
+      ),
+    );
 
 void main() {
   group('connectionAuthChoices', () {
@@ -107,6 +117,36 @@ void main() {
           reason: '$detected',
         );
       }
+    });
+
+    test('a readable 404 "Not Found" reads as Basic-gated', () {
+      expect(
+        webServerAuthUnsupported(
+          aboutError: _notJsonError(404, 'Not Found'),
+          detectedAuthType: null,
+        ),
+        isTrue,
+      );
+    });
+
+    test('a 404 with another body stays unreachable', () {
+      expect(
+        webServerAuthUnsupported(
+          aboutError: _notJsonError(404, '<html>proxy 404</html>'),
+          detectedAuthType: null,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a non-404 non-JSON error stays unreachable', () {
+      expect(
+        webServerAuthUnsupported(
+          aboutError: _notJsonError(500, '<html>error</html>'),
+          detectedAuthType: null,
+        ),
+        isFalse,
+      );
     });
   });
 }
