@@ -6,7 +6,7 @@
 # running flatpak-builder against this manifest (see the release workflow).
 app-id: io.github.aaronbamblett.tsumiru
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 command: tsumiru
 
