@@ -1,21 +1,20 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../../../constants/endpoints.dart';
 import '../../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../widgets/section_title.dart';
+import '../../../../../about/data/about_repository.dart';
+import '../../../../../about/data/hosted_web_update.dart';
+import '../../../../../about/presentation/about/controllers/about_controller.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../data/graphql/__generated__/web_interface.graphql.dart';
 import '../../data/web_interface_repository.dart';
-import '../client/server_port_tile/server_port_tile.dart';
-import '../client/server_url_tile/server_url_tile.dart';
 
 class WebInterfaceSection extends ConsumerStatefulWidget {
   const WebInterfaceSection({super.key});
@@ -53,7 +52,16 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         _originalFlavor = null;
       }
     });
-    if (finished) ref.invalidate(installedWebInterfaceProvider);
+    if (finished) {
+      ref.invalidate(installedWebInterfaceProvider);
+      if (ref.read(serverHostedWebProvider) &&
+          installedTsumiruDiffers(
+            status!.info.tag,
+            ref.read(packageInfoProvider).version,
+          )) {
+        ref.read(webBuildReloadRequiredProvider.notifier).requireReload();
+      }
+    }
   }
 
   Future<void> _pollStatus() async {
@@ -182,17 +190,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     final downloading = _installing;
     final enabled = !_busy && !downloading;
     final bundledAllowed = data?.webUIFlavor == Enum$WebUIFlavor.WEBUI;
-    final sameServer =
-        kIsWeb &&
-        isServerWebInterface(
-          Endpoints.baseApi(
-            baseUrl: ref.watch(serverUrlProvider),
-            port: ref.watch(serverPortProvider),
-            addPort: ref.watch(serverPortToggleProvider).ifNull(),
-            appendApiToUrl: false,
-          ),
-          Uri.base,
-        );
+    final sameServer = ref.watch(serverHostedWebProvider);
     final check = _check;
     final info = installed.value;
     final error =

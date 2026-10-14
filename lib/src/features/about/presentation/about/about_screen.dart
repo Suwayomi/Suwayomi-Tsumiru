@@ -14,6 +14,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../constants/brand_icons.dart';
 import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -36,49 +37,48 @@ class AboutScreen extends HookConsumerWidget {
     required Toast? toast,
   }) {
     toast?.show(context.l10n.searchingForUpdates);
-    AsyncValue.guard(updateCallback).then(
-      (value) {
-        toast?.close();
-        // Left the About screen before the check resolved → context is dead.
-        if (!context.mounted) return;
-        try {
-          value.whenOrNull(
-            data: (data) {
-              if (data == null) return;
-              final newUpdate = data.firstWhere(
-                (e) => e.channel == about.buildType,
-                orElse: () => ServerUpdate(),
-              );
-              final currentVer = Version.parse(serverVer.substring(1));
-              final newVer = Version.parse(newUpdate.tag?.substring(1) ?? "");
-              if ((newVer.compareTo(currentVer)).isGreaterThan(0)) {
-                appUpdateDialog(
-                  title: about.name,
-                  newRelease: "${newVer.canonicalizedVersion}"
-                      " (${newUpdate.channel})",
-                  context: context,
-                  toast: toast,
-                  url: newUpdate.url,
-                );
-              } else {
-                toast?.show(context.l10n.noUpdatesAvailable);
-              }
-            },
-            error: (error, stackTrace) {
-              if (toast != null) {
-                value.showToastOnError(toast);
-              }
-            },
-          );
-        } catch (e) {
-          if (context.mounted) {
-            toast?.showError(
-              kDebugMode ? e.toString() : context.l10n.errorSomethingWentWrong,
+    AsyncValue.guard(updateCallback).then((value) {
+      toast?.close();
+      // Left the About screen before the check resolved → context is dead.
+      if (!context.mounted) return;
+      try {
+        value.whenOrNull(
+          data: (data) {
+            if (data == null) return;
+            final newUpdate = data.firstWhere(
+              (e) => e.channel == about.buildType,
+              orElse: () => ServerUpdate(),
             );
-          }
+            final currentVer = Version.parse(serverVer.substring(1));
+            final newVer = Version.parse(newUpdate.tag?.substring(1) ?? "");
+            if ((newVer.compareTo(currentVer)).isGreaterThan(0)) {
+              appUpdateDialog(
+                title: about.name,
+                newRelease:
+                    "${newVer.canonicalizedVersion}"
+                    " (${newUpdate.channel})",
+                context: context,
+                toast: toast,
+                url: newUpdate.url,
+              );
+            } else {
+              toast?.show(context.l10n.noUpdatesAvailable);
+            }
+          },
+          error: (error, stackTrace) {
+            if (toast != null) {
+              value.showToastOnError(toast);
+            }
+          },
+        );
+      } catch (e) {
+        if (context.mounted) {
+          toast?.showError(
+            kDebugMode ? e.toString() : context.l10n.errorSomethingWentWrong,
+          );
         }
-      },
-    );
+      }
+    });
   }
 
   Future<void> checkForUpdate({
@@ -121,6 +121,7 @@ class AboutScreen extends HookConsumerWidget {
     // patch number, so appending it printed the build number twice.
     final serverVer = about?.version;
     final packageInfo = ref.watch(packageInfoProvider);
+    final serverHosted = ref.watch(serverHostedWebProvider);
 
     useEffect(() {
       if (toast != null) {
@@ -152,24 +153,32 @@ class AboutScreen extends HookConsumerWidget {
               title: Text(context.l10n.whatsNew),
               onTap: () async {
                 await launchUrlInWeb(
-                    context, AppUrls.sorayomiWhatsNew.url, toast);
+                  context,
+                  AppUrls.sorayomiWhatsNew.url,
+                  toast,
+                );
               },
             ),
             ListTile(
-              title: Text(context.l10n.checkForUpdates),
-              onTap: () => checkForUpdate(
-                title: packageInfo.appName,
-                context: context,
-                updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
-                toast: toast,
+              title: Text(
+                serverHosted
+                    ? context.l10n.updatedByYourServer
+                    : context.l10n.checkForUpdates,
               ),
+              onTap: serverHosted
+                  ? () => const ServerSettingsRoute().push(context)
+                  : () => checkForUpdate(
+                      title: packageInfo.appName,
+                      context: context,
+                      updateCallback: ref
+                          .read(aboutRepositoryProvider)
+                          .checkUpdate,
+                      toast: toast,
+                    ),
             ),
             if (about != null) ...[
               const Divider(),
-              ClipboardListTile(
-                title: context.l10n.server,
-                value: about.name,
-              ),
+              ClipboardListTile(title: context.l10n.server, value: about.name),
               ClipboardListTile(
                 title: context.l10n.channel,
                 value: about.buildType,
@@ -190,8 +199,9 @@ class AboutScreen extends HookConsumerWidget {
                     context: context,
                     serverVer: serverVer ?? "",
                     about: about,
-                    updateCallback:
-                        ref.read(aboutRepositoryProvider).checkServerUpdate,
+                    updateCallback: ref
+                        .read(aboutRepositoryProvider)
+                        .checkServerUpdate,
                     toast: toast,
                   ),
                 ),

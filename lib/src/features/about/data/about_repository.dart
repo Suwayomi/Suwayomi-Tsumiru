@@ -6,30 +6,38 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../constants/db_keys.dart';
+import '../../../constants/endpoints.dart';
 import '../../../constants/urls.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
+import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../domain/about/about_dto.dart';
 import '../domain/server_update/server_update.dart';
 import '../presentation/about/controllers/about_controller.dart';
 import 'graphql/__generated__/query.graphql.dart';
+import 'hosted_web_update.dart';
 
 part 'about_repository.g.dart';
 
 class AboutRepository {
   final GraphQLClient client;
   final PackageInfo packageInfo;
+  final bool serverHosted;
   AboutRepository({
     required this.client,
     required this.packageInfo,
+    this.serverHosted = false,
   });
 
   Future<AboutDto?> getAbout() =>
@@ -40,36 +48,38 @@ class AboutRepository {
       .getData((a) => a.checkForServerUpdates.map((e) => e.toDto).toList());
 
   Future<AsyncValue<Version?>> checkUpdate() async {
+    if (serverHosted) return const AsyncData(null);
     final gitResponse = await AsyncValue.guard<Map<String, dynamic>?>(
-        () async => json.decode((await http.get(
-              Uri.parse(AppUrls.sorayomiLatestReleaseApiUrl.url),
-            ))
-                .body));
-    return gitResponse.copyWithData<Version?>(
-      (data) {
-        String? tag = data?["tag_name"];
-        // Release tags are "v0.4.0"; pub_semver can't parse the leading "v".
-        Version? latestReleaseBuildNumber = tag != null
-            ? Version.parse(tag.startsWith('v') ? tag.substring(1) : tag)
-            : null;
-        Version? packageBuildNumber = Version.parse(packageInfo.version);
-        if (latestReleaseBuildNumber != null &&
-            latestReleaseBuildNumber
-                .compareTo(packageBuildNumber)
-                .isGreaterThan(0)) {
-          return latestReleaseBuildNumber;
-        }
-        return null;
-      },
+      () async => json.decode(
+        (await http.get(
+          Uri.parse(AppUrls.sorayomiLatestReleaseApiUrl.url),
+        )).body,
+      ),
     );
+    return gitResponse.copyWithData<Version?>((data) {
+      String? tag = data?["tag_name"];
+      // Release tags are "v0.4.0"; pub_semver can't parse the leading "v".
+      Version? latestReleaseBuildNumber = tag != null
+          ? Version.parse(tag.startsWith('v') ? tag.substring(1) : tag)
+          : null;
+      Version? packageBuildNumber = Version.parse(packageInfo.version);
+      if (latestReleaseBuildNumber != null &&
+          latestReleaseBuildNumber
+              .compareTo(packageBuildNumber)
+              .isGreaterThan(0)) {
+        return latestReleaseBuildNumber;
+      }
+      return null;
+    });
   }
 }
 
 @riverpod
 AboutRepository aboutRepository(Ref ref) => AboutRepository(
-      client: ref.watch(graphQlClientProvider),
-      packageInfo: ref.watch(packageInfoProvider),
-    );
+  client: ref.watch(graphQlClientProvider),
+  packageInfo: ref.watch(packageInfoProvider),
+  serverHosted: ref.watch(serverHostedWebProvider),
+);
 
 /// The release version the user opted to skip in the update prompt. Empty
 /// until they tick "Don't remind me about this version".
@@ -79,3 +89,25 @@ class DismissedUpdateVersion extends _$DismissedUpdateVersion
   @override
   String? build() => initialize(DBKeys.dismissedUpdateVersion);
 }
+
+final serverHostedWebProvider = Provider<bool>(
+  (ref) => isServerHostedWeb(
+    isWeb: kIsWeb,
+    pageBase: kIsWeb ? webInitialServerUrl() : '',
+    serverUrl: Endpoints.baseApi(
+      baseUrl: ref.watch(serverUrlProvider),
+      port: ref.watch(serverPortProvider),
+      addPort: ref.watch(serverPortToggleProvider).ifNull(),
+      appendApiToUrl: false,
+    ),
+  ),
+);
+
+class WebBuildReloadRequired extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void requireReload() => state = true;
+}
+
+final webBuildReloadRequiredProvider =
+    NotifierProvider<WebBuildReloadRequired, bool>(WebBuildReloadRequired.new);

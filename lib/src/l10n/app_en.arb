@@ -4015,5 +4015,8 @@
     }
   },
   "webInterfaceCustomUpdates": "Custom interfaces are installed manually in the server's \"webUI\" directory.",
-  "webInterfaceCheckAfterChange": "Check for an update and install it to apply this change."
+  "webInterfaceCheckAfterChange": "Check for an update and install it to apply this change.",
+  "updatedByYourServer": "Updated by your server",
+  "serverInstalledNewTsumiru": "A new version of Tsumiru is installed on your server",
+  "reloadWebBuild": "Reload"
 }
