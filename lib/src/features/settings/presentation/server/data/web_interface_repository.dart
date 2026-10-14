@@ -11,19 +11,16 @@ import '../../../../account/domain/account_access.dart';
 import 'graphql/__generated__/web_interface.graphql.dart';
 
 List<Enum$WebUIFlavor> supportedWebInterfaceFlavors(Iterable<String> names) =>
-    Enum$WebUIFlavor.values
+    {
+          Enum$WebUIFlavor.WEBUI,
+          Enum$WebUIFlavor.VUI,
+          Enum$WebUIFlavor.TSUMIRU,
+          Enum$WebUIFlavor.CUSTOM,
+          ...Enum$WebUIFlavor.values,
+        }
         .where((flavor) => flavor != Enum$WebUIFlavor.$unknown)
         .where((flavor) => names.contains(flavor.name))
         .toList();
-
-bool isServerWebInterface(String? serverUrl, Uri pageBase) {
-  final server = Uri.tryParse(serverUrl ?? '');
-  if (server == null || !server.hasAuthority || !pageBase.hasAuthority) {
-    return false;
-  }
-  String path(Uri uri) => uri.path.replaceFirst(RegExp(r'/+$'), '');
-  return server.origin == pageBase.origin && path(server) == path(pageBase);
-}
 
 class WebInterfaceRepository {
   const WebInterfaceRepository(this.client, {required this.permissions});

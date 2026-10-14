@@ -9,8 +9,6 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../about/data/about_repository.dart';
-import '../../../../../about/data/hosted_web_update.dart';
-import '../../../../../about/presentation/about/controllers/about_controller.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
 import '../../data/graphql/__generated__/web_interface.graphql.dart';
@@ -54,13 +52,7 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
     });
     if (finished) {
       ref.invalidate(installedWebInterfaceProvider);
-      if (ref.read(serverHostedWebProvider) &&
-          installedTsumiruDiffers(
-            status!.info.tag,
-            ref.read(packageInfoProvider).version,
-          )) {
-        ref.read(webBuildReloadRequiredProvider.notifier).requireReload();
-      }
+      ref.read(webBuildReloadRequiredProvider.notifier).check();
     }
   }
 

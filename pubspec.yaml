@@ -85,8 +85,6 @@ dependencies:
   battery_plus: ^7.1.1
   uuid: ^4.6.0
   pointycastle: ^4.0.0
-  # document.baseURI for the hosted web build's default server URL (web-only
-  # reader; harmless on native). Already transitively present via Flutter.
   web: ^1.1.0
 
 dev_dependencies:

@@ -18,3 +18,18 @@ void Function() listenForWebUpdate(void Function() check) {
 }
 
 void reloadWebBuild() => web.window.location.reload();
+
+Future<String?> readServedRevision() async {
+  try {
+    final response = await web.window
+        .fetch(
+          web.URL('revision', web.document.baseURI).href.toJS,
+          web.RequestInit(cache: 'no-store'),
+        )
+        .toDart;
+    if (response.status != 200) return null;
+    return (await response.text().toDart).toDart.trim();
+  } catch (_) {
+    return null;
+  }
+}

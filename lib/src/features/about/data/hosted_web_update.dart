@@ -4,8 +4,9 @@ bool isServerHostedWeb({
   required bool isWeb,
   required String pageBase,
   required String? serverUrl,
+  required String? revision,
 }) {
-  if (!isWeb || serverUrl == null) return false;
+  if (!isWeb || serverUrl == null || !isTsumiruTag(revision)) return false;
   final page = Uri.tryParse(pageBase.trim());
   final server = Uri.tryParse(serverUrl.trim());
   if (page == null ||
@@ -22,12 +23,10 @@ bool isServerHostedWeb({
       webDefaultServerUrl(server.toString()).replaceFirst(RegExp(r'/+$'), '');
 }
 
-bool installedTsumiruDiffers(String? tag, String version) {
-  if (tag == null ||
-      !RegExp(
-        r'^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$',
-      ).hasMatch(tag)) {
-    return false;
-  }
-  return tag != 'v$version';
+bool isTsumiruTag(String? tag) =>
+    tag != null && RegExp(r'^v\d+\.\d+\.\d+').hasMatch(tag);
+
+bool installedTsumiruDiffers(String? tag, String version, {String? flavor}) {
+  if (flavor != null && flavor != 'TSUMIRU') return false;
+  return isTsumiruTag(tag) && tag != 'v$version';
 }

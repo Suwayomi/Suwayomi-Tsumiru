@@ -4,19 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// Default server URL for the hosted web build: the page origin plus the
-/// app's base path.
-///
-/// [baseUri] is the document's effective base URI (`document.baseURI`),
-/// which honours the first `<base href>` — the server injects
-/// `<base href="/tsumiru/">` ahead of Flutter's own when it serves the app
-/// under a sub-path. Because this is the *base* URI and not the page URL, a
-/// deep link can never leak its route into the result: on page
-/// `http://h:4600/tsumiru/library` the base URI is still
-/// `http://h:4600/tsumiru/`.
-///
-/// Pure over a string so it stays unit-testable without a browser; the
-/// web-only reader (see `hosted_base_uri.dart`) supplies the input.
+/// The page origin and app base path.
 String webDefaultServerUrl(String baseUri) {
   final uri = Uri.tryParse(baseUri.trim());
   if (uri == null || !uri.hasScheme || uri.host.isEmpty) return baseUri;

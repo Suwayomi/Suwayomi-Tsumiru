@@ -2,6 +2,17 @@
 {{flutter_build_config}}
 
 (async () => {
+  let hosted = false;
+  try {
+    const response = await fetch(new URL('revision', document.baseURI), {cache: 'no-store'});
+    hosted = response.status === 200 && /^v\d+\.\d+\.\d+/.test((await response.text()).trim());
+  } catch (_) {}
+  if (!hosted) {
+    _flutter.loader.load({
+      serviceWorkerSettings: {serviceWorkerVersion: {{flutter_service_worker_version}}}
+    });
+    return;
+  }
   try {
     if ('serviceWorker' in navigator) {
       const scope = new URL('.', document.baseURI).href;

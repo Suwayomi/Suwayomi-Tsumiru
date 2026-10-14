@@ -3954,7 +3954,7 @@
   "webInterfaceVUI": "VUI",
   "webInterfaceVUIDescription": "A preview focused web frontend built with Svelte",
   "webInterfaceTsumiru": "Tsumiru",
-  "webInterfaceTsumiruDescription": "This app, in your browser",
+  "webInterfaceTsumiruDescription": "A manga and webtoon reader built with Flutter, also available as Android, iOS and desktop apps",
   "webInterfaceCustom": "Custom",
   "webInterfaceCustomDescription": "Use a custom WebUI. Replace the content of the \"webUI\" directory in the server's root directory with the custom WebUI files.",
   "webInterfaceUnknown": "Unknown interface",
@@ -4015,7 +4015,6 @@
     }
   },
   "webInterfaceCustomUpdates": "Custom interfaces are installed manually in the server's \"webUI\" directory.",
-  "webInterfaceCheckAfterChange": "Check for an update and install it to apply this change.",
   "updatedByYourServer": "Updated by your server",
   "serverInstalledNewTsumiru": "A new version of Tsumiru is installed on your server",
   "reloadWebBuild": "Reload"

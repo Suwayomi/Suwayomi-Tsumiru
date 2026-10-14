@@ -4,9 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Reads the document's effective base URI on web. The conditional import
-// follows the codebase's web-only pattern (default stub, real
-// implementation where `dart:js_interop` exists): `!kIsWeb` must be checked
-// first at call sites, mirroring `platform_runtime.dart`.
+// Read the document base URI on web.
 export 'hosted_base_uri_stub.dart'
     if (dart.library.js_interop) 'hosted_base_uri_web.dart';

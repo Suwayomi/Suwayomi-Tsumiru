@@ -126,9 +126,7 @@ class ServerLanUrl extends _$ServerLanUrl
   }
 }
 
-/// Web default for a fresh profile: the page origin plus the app's base path,
-/// so a server-hosted build under a sub-path pre-fills its own address.
-/// Falls back to the page origin when the base URI cannot be read.
+/// Default to the page origin and app base path.
 String webInitialServerUrl() {
   final candidate = webDefaultServerUrl(readHostedBaseUri());
   final parsed = Uri.tryParse(candidate);

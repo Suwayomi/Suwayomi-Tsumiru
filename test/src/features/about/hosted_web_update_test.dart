@@ -3,8 +3,17 @@ import 'package:tsumiru/src/features/about/data/hosted_web_update.dart';
 
 void main() {
   test('hosting requires web and matching normalised origin and base path', () {
-    bool hosted(String base, String? server, {bool web = true}) =>
-        isServerHostedWeb(isWeb: web, pageBase: base, serverUrl: server);
+    bool hosted(
+      String base,
+      String? server, {
+      bool web = true,
+      String? revision = 'v1.5.0',
+    }) => isServerHostedWeb(
+      isWeb: web,
+      pageBase: base,
+      serverUrl: server,
+      revision: revision,
+    );
     expect(hosted('https://example.com/', 'https://example.com'), isTrue);
     expect(
       hosted(
@@ -30,6 +39,14 @@ void main() {
       hosted('https://example.com/', 'https://example.com', web: false),
       isFalse,
     );
+    expect(
+      hosted('https://example.com/', 'https://example.com', revision: null),
+      isFalse,
+    );
+    expect(
+      hosted('https://example.com/', 'https://example.com', revision: 'r3518'),
+      isFalse,
+    );
     expect(hosted('invalid', 'invalid'), isFalse);
     expect(hosted('https://example.com/', null), isFalse);
   });
@@ -37,6 +54,18 @@ void main() {
   test('only a different Tsumiru release tag requires reloading', () {
     expect(installedTsumiruDiffers('v1.5.0', '1.5.0'), isFalse);
     expect(installedTsumiruDiffers('v1.5.1', '1.5.0'), isTrue);
+    expect(
+      installedTsumiruDiffers('v1.5.1', '1.5.0', flavor: 'TSUMIRU'),
+      isTrue,
+    );
+    expect(
+      installedTsumiruDiffers('v1.5.1', '1.5.0', flavor: 'WEBUI'),
+      isFalse,
+    );
+    expect(
+      installedTsumiruDiffers('v1.5.1', '1.5.0', flavor: 'CUSTOM'),
+      isFalse,
+    );
     expect(installedTsumiruDiffers('v1.4.0', '1.5.0'), isTrue);
     expect(installedTsumiruDiffers('r3518', '1.5.0'), isFalse);
     expect(installedTsumiruDiffers('1.5.1', '1.5.0'), isFalse);

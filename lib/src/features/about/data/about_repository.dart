@@ -20,6 +20,7 @@ import '../../../constants/urls.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../settings/presentation/server/data/web_interface_repository.dart';
 import '../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../domain/about/about_dto.dart';
@@ -27,17 +28,18 @@ import '../domain/server_update/server_update.dart';
 import '../presentation/about/controllers/about_controller.dart';
 import 'graphql/__generated__/query.graphql.dart';
 import 'hosted_web_update.dart';
+import 'web_update_browser.dart';
 
 part 'about_repository.g.dart';
 
 class AboutRepository {
   final GraphQLClient client;
   final PackageInfo packageInfo;
-  final bool serverHosted;
+  final Future<bool> Function()? isServerHosted;
   AboutRepository({
     required this.client,
     required this.packageInfo,
-    this.serverHosted = false,
+    this.isServerHosted,
   });
 
   Future<AboutDto?> getAbout() =>
@@ -48,7 +50,7 @@ class AboutRepository {
       .getData((a) => a.checkForServerUpdates.map((e) => e.toDto).toList());
 
   Future<AsyncValue<Version?>> checkUpdate() async {
-    if (serverHosted) return const AsyncData(null);
+    if (await isServerHosted?.call() ?? false) return const AsyncData(null);
     final gitResponse = await AsyncValue.guard<Map<String, dynamic>?>(
       () async => json.decode(
         (await http.get(
@@ -78,7 +80,10 @@ class AboutRepository {
 AboutRepository aboutRepository(Ref ref) => AboutRepository(
   client: ref.watch(graphQlClientProvider),
   packageInfo: ref.watch(packageInfoProvider),
-  serverHosted: ref.watch(serverHostedWebProvider),
+  isServerHosted: () async {
+    await ref.read(startupWebRevisionProvider.future);
+    return ref.read(serverHostedWebProvider);
+  },
 );
 
 /// The release version the user opted to skip in the update prompt. Empty
@@ -90,9 +95,14 @@ class DismissedUpdateVersion extends _$DismissedUpdateVersion
   String? build() => initialize(DBKeys.dismissedUpdateVersion);
 }
 
+final startupWebRevisionProvider = FutureProvider<String?>(
+  (ref) => kIsWeb ? readServedRevision() : null,
+);
+
 final serverHostedWebProvider = Provider<bool>(
   (ref) => isServerHostedWeb(
     isWeb: kIsWeb,
+    revision: ref.watch(startupWebRevisionProvider).value,
     pageBase: kIsWeb ? webInitialServerUrl() : '',
     serverUrl: Endpoints.baseApi(
       baseUrl: ref.watch(serverUrlProvider),
@@ -106,7 +116,23 @@ final serverHostedWebProvider = Provider<bool>(
 class WebBuildReloadRequired extends Notifier<bool> {
   @override
   bool build() => false;
-  void requireReload() => state = true;
+  Future<void> check() async {
+    if (!ref.read(serverHostedWebProvider)) return;
+    final revision = await readServedRevision();
+    String? flavor;
+    try {
+      flavor = (await ref.read(webInterfaceRepositoryProvider).settings())
+          ?.webUIFlavor
+          .name;
+    } catch (_) {}
+    if (installedTsumiruDiffers(
+      revision,
+      ref.read(packageInfoProvider).version,
+      flavor: flavor,
+    )) {
+      state = true;
+    }
+  }
 }
 
 final webBuildReloadRequiredProvider =

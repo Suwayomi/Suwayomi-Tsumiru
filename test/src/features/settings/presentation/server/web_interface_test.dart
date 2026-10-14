@@ -183,9 +183,18 @@ void main() {
       Enum$WebUIFlavor.CUSTOM,
     ]);
     expect(supportedWebInterfaceFlavors(['TSUMIRU', 'WEBUI', 'TSUMIRU']), [
-      Enum$WebUIFlavor.TSUMIRU,
       Enum$WebUIFlavor.WEBUI,
+      Enum$WebUIFlavor.TSUMIRU,
     ]);
+    expect(
+      supportedWebInterfaceFlavors(['CUSTOM', 'TSUMIRU', 'VUI', 'WEBUI']),
+      [
+        Enum$WebUIFlavor.WEBUI,
+        Enum$WebUIFlavor.VUI,
+        Enum$WebUIFlavor.TSUMIRU,
+        Enum$WebUIFlavor.CUSTOM,
+      ],
+    );
     expect(supportedWebInterfaceFlavors(['FUTURE']), isEmpty);
   });
 
