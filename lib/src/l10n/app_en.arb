@@ -3943,5 +3943,79 @@
   "koreaderSyncPercentageToleranceInvalid": "Enter a number between 0 and 1.",
   "koreaderSyncShowPassword": "Show password",
   "koreaderSyncHidePassword": "Hide password",
-  "koreaderSyncUnsupported": "This server does not support KOReader Sync. Update Suwayomi to use it."
+  "koreaderSyncUnsupported": "This server does not support KOReader Sync. Update Suwayomi to use it.",
+  "webInterface": "Web interface",
+  "webInterfaceExplanation": "What your server shows when someone opens its address in a browser. This doesn't change this app.",
+  "webInterfaceExplanationCurrent": "What your server shows when someone opens its address in a browser. This is the interface you're using now.",
+  "webInterfaceUnsupported": "This server does not support web interface settings.",
+  "webInterfaceFlavor": "Interface",
+  "webInterfaceWebUI": "WebUI",
+  "webInterfaceWebUIDescription": "Use the default WebUI",
+  "webInterfaceVUI": "VUI",
+  "webInterfaceVUIDescription": "A preview focused web frontend built with Svelte",
+  "webInterfaceTsumiru": "Tsumiru",
+  "webInterfaceTsumiruDescription": "A modern web frontend built with Flutter, with 13 themes, incognito mode and apps for every platform",
+  "webInterfaceCustom": "Custom",
+  "webInterfaceCustomDescription": "Use a custom WebUI. Replace the content of the \"webUI\" directory in the server's root directory with the custom WebUI files.",
+  "webInterfaceUnknown": "Unknown interface",
+  "webInterfaceChannel": "Update channel",
+  "webInterfaceBundled": "Bundled",
+  "webInterfaceBundledDescription": "Use the version that was delivered with the server release",
+  "webInterfaceStable": "Stable",
+  "webInterfaceStableDescription": "Use the latest released version.",
+  "webInterfacePreview": "Preview",
+  "webInterfacePreviewDescription": "Use the latest features and help us get them ready for a stable release.",
+  "webInterfaceBundledOnly": "Bundled only works with the default WebUI. Choose Stable or Preview for other interfaces.",
+  "webInterfaceAutomaticUpdates": "Automatic updates",
+  "webInterfaceOff": "Off",
+  "webInterfaceHours": "{hours, plural, =1{Every hour} other{Every {hours} hours}}",
+  "@webInterfaceHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "webInterfaceInstalledVersion": "Installed version",
+  "webInterfaceCheckUpdate": "Check for update",
+  "webInterfaceInstallUpdate": "Install",
+  "webInterfaceUpdateAvailable": "Update available: {tag}",
+  "@webInterfaceUpdateAvailable": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "webInterfaceInstallSwitch": "Install to switch the server to {name}",
+  "@webInterfaceInstallSwitch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "webInterfaceUpToDate": "Up to date",
+  "webInterfaceInstalling": "Installing update: {progress}%",
+  "@webInterfaceInstalling": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "webInterfaceInstalled": "Web interface update installed.",
+  "webInterfaceUpdateFailed": "The server could not install the web interface update. Check the server logs and try again.",
+  "webInterfaceError": "Web interface: {error}",
+  "@webInterfaceError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "webInterfaceCustomUpdates": "Custom interfaces are installed manually in the server's \"webUI\" directory.",
+  "updatedByYourServer": "Updated by your server",
+  "serverInstalledNewTsumiru": "A new version of Tsumiru is installed on your server",
+  "reloadWebBuild": "Reload"
 }

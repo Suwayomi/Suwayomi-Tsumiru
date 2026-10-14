@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import '../../features/about/data/about_repository.dart';
+import '../../features/about/data/web_update_browser.dart';
 import '../../features/about/presentation/about/controllers/about_controller.dart';
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
@@ -67,19 +68,57 @@ class NavigationShellScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final serverHosted = ref.watch(serverHostedWebProvider);
     useEffect(() {
-      Future.microtask(() async {
-        if (!context.mounted) return;
-        await checkForUpdate(
-          title: ref.read(packageInfoProvider).appName,
-          context: context,
-          ref: ref,
-          updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
-          toast: ref.read(toastProvider),
-        );
-      });
-      return;
-    }, []);
+      if (!serverHosted) {
+        Future.microtask(() async {
+          await ref.read(startupWebRevisionProvider.future);
+          if (!context.mounted || ref.read(serverHostedWebProvider)) return;
+          await checkForUpdate(
+            title: ref.read(packageInfoProvider).appName,
+            context: context,
+            ref: ref,
+            updateCallback: ref.read(aboutRepositoryProvider).checkUpdate,
+            toast: ref.read(toastProvider),
+          );
+        });
+        return null;
+      }
+
+      // Widget subscriptions pause when About or Settings covers this shell.
+      final container = ProviderScope.containerOf(context, listen: false);
+      final messenger = ScaffoldMessenger.of(context);
+      ScaffoldFeatureController<MaterialBanner, MaterialBannerClosedReason>?
+      banner;
+      bool active = true;
+      final reloadSubscription = container.listen(
+        webBuildReloadRequiredProvider,
+        (previous, required) {
+          if (!required || banner != null) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (active && context.mounted && banner == null) {
+              banner = messenger.showMaterialBanner(
+                webBuildReloadBanner(context),
+              );
+            }
+          });
+          WidgetsBinding.instance.ensureVisualUpdate();
+        },
+        fireImmediately: true,
+      );
+      void checkInstalledBuild() {
+        container.read(webBuildReloadRequiredProvider.notifier).check();
+      }
+
+      checkInstalledBuild();
+      final removeListeners = listenForWebUpdate(checkInstalledBuild);
+      return () {
+        active = false;
+        removeListeners();
+        reloadSubscription.close();
+        if (messenger.mounted) banner?.close();
+      };
+    }, [serverHosted]);
 
     // Handle different navigation indices for tablet vs phone
     int getAdjustedIndex(int index) {

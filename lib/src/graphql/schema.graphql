@@ -3370,6 +3370,7 @@ enum WebUIChannel {
 }
 
 enum WebUIFlavor {
+  TSUMIRU
   WEBUI
   VUI
   CUSTOM

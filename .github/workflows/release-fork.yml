@@ -209,6 +209,9 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/dist"
           zip -r "$GITHUB_WORKSPACE/dist/${pkg_name}-${{ github.ref_name }}-web.zip" *
+          printf '%s' '${{ github.ref_name }}' > revision
+          python3 "$GITHUB_WORKSPACE/.github/scripts/web_tree_md5.py" . > "$GITHUB_WORKSPACE/dist/md5sum"
+          zip -r "$GITHUB_WORKSPACE/dist/${pkg_name}-web-${{ github.ref_name }}.zip" .
 
       - name: Package macOS
         if: matrix.target == 'macos'
