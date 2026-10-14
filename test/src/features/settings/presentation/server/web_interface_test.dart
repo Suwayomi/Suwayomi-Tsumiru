@@ -72,7 +72,11 @@ class _Server extends Link {
   }
 }
 
-Future<_Server> _pump(WidgetTester tester, AccountAccess access) async {
+Future<_Server> _pump(
+  WidgetTester tester,
+  AccountAccess access, {
+  Fragment$WebInterfaceSettingsDto? settings,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   final server = _Server();
@@ -81,6 +85,12 @@ Future<_Server> _pump(WidgetTester tester, AccountAccess access) async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         settledAccountAccessProvider.overrideWithValue(access),
+        if (settings != null) ...[
+          webInterfaceSettingsProvider.overrideWith((ref) async => settings),
+          webInterfaceFlavorsProvider.overrideWith(
+            (ref) async => [Enum$WebUIFlavor.WEBUI, Enum$WebUIFlavor.TSUMIRU],
+          ),
+        ],
         graphQlClientProvider.overrideWithValue(
           GraphQLClient(link: server, cache: GraphQLCache()),
         ),
@@ -99,6 +109,73 @@ Future<_Server> _pump(WidgetTester tester, AccountAccess access) async {
 }
 
 void main() {
+  for (final scenario in [
+    (
+      flavor: Enum$WebUIFlavor.TSUMIRU,
+      channel: Enum$WebUIChannel.STABLE,
+      label: 'Stable',
+      showsNote: false,
+    ),
+    (
+      flavor: Enum$WebUIFlavor.TSUMIRU,
+      channel: Enum$WebUIChannel.BUNDLED,
+      label: 'Bundled',
+      showsNote: true,
+    ),
+    (
+      flavor: Enum$WebUIFlavor.WEBUI,
+      channel: Enum$WebUIChannel.BUNDLED,
+      label: 'Bundled',
+      showsNote: false,
+    ),
+  ]) {
+    testWidgets(
+      '${scenario.flavor.name} ${scenario.channel.name} shows bundled guidance only when applicable in the channel subtitle',
+      (tester) async {
+        await _pump(
+          tester,
+          legacyAccountAccess,
+          settings: Fragment$WebInterfaceSettingsDto(
+            webUIFlavor: scenario.flavor,
+            webUIChannel: scenario.channel,
+            webUIUpdateCheckInterval: 0,
+          ),
+        );
+        const note =
+            'Bundled only works with the default WebUI. Choose Stable or Preview for other interfaces.';
+        final channelRow = tester.widget<ListTile>(
+          find.ancestor(
+            of: find.text('Update channel'),
+            matching: find.byType(ListTile),
+          ),
+        );
+        expect(
+          find.textContaining(note),
+          scenario.showsNote ? findsOneWidget : findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byWidget(channelRow.subtitle!),
+            matching: find.textContaining(scenario.label),
+            matchRoot: true,
+          ),
+          findsOneWidget,
+        );
+        if (scenario.showsNote) {
+          expect(
+            find.descendant(
+              of: find.byWidget(channelRow.subtitle!),
+              matching: find.textContaining(note),
+              matchRoot: true,
+            ),
+            findsOneWidget,
+          );
+        }
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   test('offers only recognised flavors advertised by the server', () {
     expect(supportedWebInterfaceFlavors(['WEBUI', 'VUI', 'CUSTOM', 'FUTURE']), [
       Enum$WebUIFlavor.WEBUI,

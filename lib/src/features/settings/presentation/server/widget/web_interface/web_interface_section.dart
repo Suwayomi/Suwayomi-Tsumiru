@@ -267,7 +267,11 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
           ),
           ListTile(
             title: Text(context.l10n.webInterfaceChannel),
-            subtitle: Text(_channelName(data.webUIChannel)),
+            subtitle: Text(
+              data.webUIChannel == Enum$WebUIChannel.BUNDLED && !bundledAllowed
+                  ? '${_channelName(data.webUIChannel)}\n${context.l10n.webInterfaceBundledOnly}'
+                  : _channelName(data.webUIChannel),
+            ),
             onTap: enabled && !custom
                 ? () => _pick(
                     title: context.l10n.webInterfaceChannel,
@@ -285,8 +289,6 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
                   )
                 : null,
           ),
-          if (!bundledAllowed && !custom)
-            ListTile(subtitle: Text(context.l10n.webInterfaceBundledOnly)),
           ListTile(
             title: Text(context.l10n.webInterfaceAutomaticUpdates),
             subtitle: Text(
