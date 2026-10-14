@@ -176,6 +176,27 @@ void main() {
     );
   }
 
+  testWidgets('Tsumiru picker shows its description', (tester) async {
+    await _pump(
+      tester,
+      legacyAccountAccess,
+      settings: Fragment$WebInterfaceSettingsDto(
+        webUIFlavor: Enum$WebUIFlavor.TSUMIRU,
+        webUIChannel: Enum$WebUIChannel.STABLE,
+        webUIUpdateCheckInterval: 0,
+      ),
+    );
+    await tester.tap(find.text('Interface'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'A modern web frontend built with Flutter, with 13 themes, incognito mode and apps for every platform',
+      ),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test('offers only recognised flavors advertised by the server', () {
     expect(supportedWebInterfaceFlavors(['WEBUI', 'VUI', 'CUSTOM', 'FUTURE']), [
       Enum$WebUIFlavor.WEBUI,
