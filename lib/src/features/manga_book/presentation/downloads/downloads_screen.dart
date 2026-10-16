@@ -204,16 +204,6 @@ class _ServerDownloads extends ConsumerWidget {
                     title: Text(context.l10n.downloadsQueue),
                     trailing: Text("$downloadsCount"),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text(
-                      context.l10n.downloadsServerHint,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
                   const Divider(height: 1),
                 ],
               ),

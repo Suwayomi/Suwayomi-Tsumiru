@@ -104,16 +104,6 @@ class OfflineFilesView extends HookConsumerWidget {
                     title: Text(context.l10n.offlineStorageUsage),
                     trailing: Text(formatBytes(totalBytes)),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Text(
-                      context.l10n.offlineManageHint,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
                   const Divider(height: 1),
                 ],
               );

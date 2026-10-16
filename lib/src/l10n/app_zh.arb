@@ -3117,7 +3117,6 @@
   "manageDownloadsEmpty": "暂无下载订阅",
   "manageDownloadsNothingYet": "尚无下载内容",
   "offlineManualOnly": "仅手动",
-  "offlineManageHint": "已保存在此设备的作品。点按作品上的滑块图标可自动保留新章节，或移除作品以释放空间。长按可选择多个。",
   "manageDownloadsChangeRule": "更改规则",
   "manageDownloadsStopKeep": "停止保留（保留文件）",
   "manageDownloadsStopDelete": "停止保留并删除文件",
@@ -3165,10 +3164,6 @@
   "downloadsQueue": "队列",
   "@downloadsQueue": {
     "description": "Header title above the server download queue"
-  },
-  "downloadsServerHint": "服务器正在获取的章节。长按行可重新排序。",
-  "@downloadsServerHint": {
-    "description": "Hint shown above the server download queue"
   },
   "downloadPagesProgress": "{done}/{total} 页",
   "@downloadPagesProgress": {
