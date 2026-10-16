@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>app.tsumiru.Tsumiru</id>
+  <name>Tsumiru</name>
+  <summary>Manga and webtoon reader for your Suwayomi server</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MPL-2.0</project_license>
+  <developer id="app.tsumiru">
+    <name>Aaron Bamblett</name>
+  </developer>
+  <description>
+    <p>
+      Tsumiru is a client for a Suwayomi (Tachidesk) server. Your sources,
+      extensions, downloads, and library all live on your own server. Tsumiru
+      is the reader you point at it, so the same library is available on every
+      device.
+    </p>
+    <p>Highlights:</p>
+    <ul>
+      <li>A rebuilt continuous reader tuned for long webtoon and manhwa strips, with pinch-to-zoom.</li>
+      <li>A flexible library with custom sorts, filters, and bulk-download presets.</li>
+      <li>Server authentication via simple_login and ui_login.</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">app.tsumiru.Tsumiru.desktop</launchable>
+  <url type="homepage">https://tsumiru.app/</url>
+  <url type="bugtracker">https://github.com/Suwayomi/Suwayomi-Tsumiru/issues</url>
+  <url type="help">https://tsumiru.app/docs/guides/getting-started</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.4.1" date="2026-06-19">
+      <description>
+        <p>Linux Flatpak + AppImage, full Tsumiru branding in-app, and a fixed update check.</p>
+      </description>
+    </release>
+    <release version="0.4.0" date="2026-06-19">
+      <description>
+        <p>First Tsumiru release: rebuilt webtoon reader, multiplatform builds, server authentication, and a flexible library.</p>
+      </description>
+    </release>
+  </releases>
+</component>

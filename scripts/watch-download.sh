@@ -14,12 +14,13 @@ DURATION="${1:-90}"
 # Point at whichever install is actually running. A profile/native build uses
 # XDG_DATA_HOME; the flatpak keeps its own tree. Watching the wrong one reports
 # a perfectly steady zero for an app that is working hard.
-APP_DATA="${TSUMIRU_DATA:-$HOME/.var/app/io.github.aaronbamblett.tsumiru/data/tsumiru/offline}"
+APP_DATA="${TSUMIRU_DATA:-$HOME/.var/app/app.tsumiru.Tsumiru/data/app.tsumiru.Tsumiru/offline}"
 DB="$APP_DATA/catalog.sqlite"
 
 pid="$(pgrep -x tsumiru | head -1 || true)"
 if [[ -z "$pid" ]]; then
   echo "Tsumiru isn't running." >&2
+  echo "For existing Flatpak installs, set TSUMIRU_DATA=$HOME/.var/app/io.github.aaronbamblett.tsumiru/data/tsumiru/offline" >&2
   exit 1
 fi
 

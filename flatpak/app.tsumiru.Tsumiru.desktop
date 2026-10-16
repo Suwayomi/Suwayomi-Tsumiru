@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Tsumiru
+Comment=A manga and webtoon reader for your Suwayomi server
+Exec=tsumiru
+Icon=app.tsumiru.Tsumiru
+Terminal=false
+Type=Application
+Categories=Graphics;Viewer;
+Keywords=manga;manhwa;webtoon;comic;reader;suwayomi;tachidesk;
+StartupWMClass=tsumiru

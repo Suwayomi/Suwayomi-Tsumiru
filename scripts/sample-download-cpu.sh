@@ -14,7 +14,8 @@ DURATION="${1:-120}"
 pid="$(pgrep -x tsumiru | head -1 || true)"
 if [[ -z "$pid" ]]; then
   echo "Tsumiru isn't running. Launch it first:" >&2
-  echo "  flatpak run io.github.aaronbamblett.tsumiru" >&2
+  echo "  flatpak run app.tsumiru.Tsumiru" >&2
+  echo "  Existing installs: flatpak run io.github.aaronbamblett.tsumiru" >&2
   exit 1
 fi
 

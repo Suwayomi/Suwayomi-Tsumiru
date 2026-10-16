@@ -74,3 +74,13 @@ flatpak/bundle/
 .superpowers/
 
 /.local-translation-import/
+
+# Flathub regeneration tools and output
+/flatpak/flathub/.flatpak-flutter/
+/flatpak/flathub/.venv/
+/flatpak/flathub/work/
+/flatpak/flathub/generated/
+/flatpak/flathub/app.tsumiru.Tsumiru.yml
+/flatpak/flathub/build/
+/flatpak/flathub/repo/
+/flatpak/flathub/.flatpak-builder/

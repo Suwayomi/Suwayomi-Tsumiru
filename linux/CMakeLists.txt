@@ -7,7 +7,10 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "tsumiru")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "io.github.aaronbamblett.tsumiru")
+set(APPLICATION_ID "io.github.aaronbamblett.tsumiru" CACHE STRING "GTK application identifier")
+if(DEFINED ENV{TSUMIRU_APPLICATION_ID} AND NOT "$ENV{TSUMIRU_APPLICATION_ID}" STREQUAL "")
+  set(APPLICATION_ID "$ENV{TSUMIRU_APPLICATION_ID}")
+endif()
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
