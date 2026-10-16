@@ -42,9 +42,11 @@ With SideStore or AltStore the app is re-signed periodically, which those tools 
 **Linux:** the Flatpak is recommended and auto-updates.
 
 ```sh
-flatpak remote-add --if-not-exists tsumiru https://suwayomi.github.io/Suwayomi-Tsumiru/index.flatpakrepo
-flatpak install tsumiru io.github.aaronbamblett.tsumiru
+flatpak remote-add --if-not-exists tsumiru https://flatpak.tsumiru.app/index.flatpakrepo
+flatpak install tsumiru app.tsumiru.Tsumiru
 ```
+
+Existing Flatpak installs keep receiving updates under `io.github.aaronbamblett.tsumiru`; no data, settings or logins move. AppImage/deb also keep that ID.
 
 For a portable option, download `…-linux-x86_64.AppImage`, mark it executable with `chmod +x`, and run it.
 
