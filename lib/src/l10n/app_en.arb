@@ -3105,7 +3105,6 @@
   "manageDownloadsEmpty": "No download subscriptions yet",
   "manageDownloadsNothingYet": "Nothing downloaded yet",
   "offlineManualOnly": "Manual only",
-  "offlineManageHint": "Series saved on this device. Tap the sliders icon on a series to auto-keep new chapters, or remove a series to free space. Long-press to select several.",
   "manageDownloadsChangeRule": "Change rule",
   "manageDownloadsStopKeep": "Stop keeping (keep files)",
   "manageDownloadsStopDelete": "Stop keeping & delete files",
@@ -3153,10 +3152,6 @@
   "downloadsQueue": "Queue",
   "@downloadsQueue": {
     "description": "Header title above the server download queue"
-  },
-  "downloadsServerHint": "Chapters the server is fetching. Long-press a row to reorder.",
-  "@downloadsServerHint": {
-    "description": "Hint shown above the server download queue"
   },
   "downloadPagesProgress": "{done}/{total} pages",
   "@downloadPagesProgress": {
