@@ -612,6 +612,86 @@ void main() {
     expect(find.text('Gamma', skipOffstage: false), findsOneWidget);
   });
 
+  for (final (name, size) in [
+    ('desktop', const Size(1400, 980)),
+    ('phone', const Size(412, 900)),
+  ]) {
+    testWidgets('the search field is focused on arrival on $name', (
+      tester,
+    ) async {
+      await _pumpSearch(
+        tester,
+        fromSuggestion: false,
+        sources: [
+          (
+            source: _source(id: '1', name: 'Alpha'),
+            search: () async => <MangaDto>[],
+          ),
+        ],
+        size: size,
+      );
+
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.focusNode?.hasFocus, isTrue);
+    });
+  }
+
+  testWidgets('crossing the desktop breakpoint keeps search focus', (
+    tester,
+  ) async {
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
+      ],
+      size: const Size(1199, 900),
+    );
+
+    final focusNode = tester
+        .widget<TextField>(find.byType(TextField))
+        .focusNode!;
+    expect(focusNode.hasFocus, isTrue);
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBar), findsNothing);
+    expect(focusNode.hasFocus, isTrue);
+  });
+
+  testWidgets('crossing the desktop breakpoint does not take focus back', (
+    tester,
+  ) async {
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
+      ],
+      size: const Size(1199, 900),
+    );
+
+    final focusNode = tester
+        .widget<TextField>(find.byType(TextField))
+        .focusNode!;
+    focusNode.unfocus();
+    await tester.pumpAndSettle();
+    expect(focusNode.hasFocus, isFalse);
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.focusNode?.hasFocus, isFalse);
+  });
+
   testWidgets('crossing the desktop breakpoint keeps the typed draft', (
     tester,
   ) async {

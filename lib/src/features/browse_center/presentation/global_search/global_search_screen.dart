@@ -57,10 +57,12 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final query = useState(initialQuery);
     final queryController = useTextEditingController(text: initialQuery);
     final searchFocusNode = useFocusNode();
-    // First arrival only: a breakpoint resize rebuilds the field.
-    final autofocus = useRef(true);
     useEffect(() {
-      autofocus.value = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted && ModalRoute.of(context)?.isCurrent == true) {
+          searchFocusNode.requestFocus();
+        }
+      });
       return null;
     }, const []);
     final quickSearchResult = ref.watch(
@@ -174,7 +176,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                               child: SearchField(
                                 controller: queryController,
                                 focusNode: searchFocusNode,
-                                autofocus: autofocus.value,
+                                autofocus: false,
                                 onChanged: (_) => cancelAutoOpen(),
                                 onSubmitted: (value) {
                                   cancelAutoOpen();
@@ -201,7 +203,6 @@ class GlobalSearchScreen extends HookConsumerWidget {
                           chips: chips,
                           controller: queryController,
                           focusNode: searchFocusNode,
-                          autofocus: autofocus.value,
                           onChanged: (_) => cancelAutoOpen(),
                           onSubmitted: (value) {
                             cancelAutoOpen();
@@ -238,7 +239,6 @@ class _DesktopHeader extends StatelessWidget {
     required this.chips,
     required this.controller,
     required this.focusNode,
-    required this.autofocus,
     required this.onChanged,
     required this.onSubmitted,
   });
@@ -246,7 +246,6 @@ class _DesktopHeader extends StatelessWidget {
   final Widget chips;
   final TextEditingController controller;
   final FocusNode focusNode;
-  final bool autofocus;
   final ValueChanged<String?> onChanged;
   final ValueChanged<String?> onSubmitted;
 
@@ -266,7 +265,7 @@ class _DesktopHeader extends StatelessWidget {
                 child: SearchField(
                   controller: controller,
                   focusNode: focusNode,
-                  autofocus: autofocus,
+                  autofocus: false,
                   onChanged: onChanged,
                   onSubmitted: onSubmitted,
                 ),
