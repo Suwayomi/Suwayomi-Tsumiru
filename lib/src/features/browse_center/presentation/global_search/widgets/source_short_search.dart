@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/cover_row_section.dart';
 import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
@@ -29,83 +30,86 @@ class SourceShortSearch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          title: Text(source.displayName),
-          trailing: const Icon(Icons.arrow_forward_rounded),
-          onTap: () => SourceTypeRoute(
-            sourceId: source.id,
-            sourceType: SourceType.SEARCH,
-            query: query,
-          ).push(context),
-        ),
-        mangaList.when(
-          data: (data) => data.isEmpty
-              ? Padding(
-                  padding: KEdgeInsets.h16v4.size,
-                  child: Text(context.l10n.noResultFound),
-                )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      for (final i in data)
-                        SizedBox(
-                          width: kShortSearchCoverWidth,
-                          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
-                          child: MangaCoverGridTile(
-                            manga: i,
-                            showDarkOverlay: i.inLibrary.ifNull(),
-                            onPressed: () =>
-                                MangaRoute(mangaId: i.id).push(context),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-          error: (_, _) => Padding(
-            padding: KEdgeInsets.h16v4.size,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 20,
-                  color: context.colorScheme.error,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    context.l10n.couldntReachSource(source.displayName),
-                    style: TextStyle(
-                      color: context.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () => ref.invalidate(
-                    sourceQuickSearchMangaListProvider(source.id, query: query),
-                  ),
-                  child: Text(context.l10n.retry),
-                ),
-              ],
-            ),
-          ),
-          loading: () => SizedBox(
-            height: mangaCoverBoxHeight(kShortSearchCoverWidth),
-            child: const Center(
-              child: SizedBox.square(
-                dimension: 48,
-                child: SorayomiShimmerIndicator(),
+    Widget section({
+      int? itemCount,
+      IndexedWidgetBuilder? itemBuilder,
+      Widget? child,
+    }) => CoverRowSection(
+      title: source.displayName,
+      onSeeAll: () => SourceTypeRoute(
+        sourceId: source.id,
+        sourceType: SourceType.SEARCH,
+        query: query,
+      ).push(context),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
+      child: child,
+    );
+    return mangaList.when(
+      data: (data) => data.isEmpty
+          ? section(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(context.l10n.noResultFound),
               ),
+            )
+          : section(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final manga = data[index];
+                return SizedBox(
+                  width: kShortSearchCoverWidth,
+                  height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+                  child: MangaCoverGridTile(
+                    manga: manga,
+                    showDarkOverlay: manga.inLibrary.ifNull(),
+                    onPressed: () =>
+                        MangaRoute(mangaId: manga.id).push(context),
+                  ),
+                );
+              },
+            ),
+      error: (_, _) => section(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 20,
+                color: context.colorScheme.error,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  context.l10n.couldntReachSource(source.displayName),
+                  style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => ref.invalidate(
+                  sourceQuickSearchMangaListProvider(source.id, query: query),
+                ),
+                child: Text(context.l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      ),
+      loading: () => section(
+        child: SizedBox(
+          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+          child: const Center(
+            child: SizedBox.square(
+              dimension: 48,
+              child: SorayomiShimmerIndicator(),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

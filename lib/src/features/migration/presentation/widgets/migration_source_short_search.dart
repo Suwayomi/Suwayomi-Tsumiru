@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/cover_row_section.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
@@ -28,44 +29,42 @@ class MigrationSourceShortSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          title: Text(source.displayName),
-          trailing: const Icon(Icons.arrow_forward_rounded),
-          onTap: () {
-            // Navigate to source for detailed search
-            // For now, we'll keep it simple and not navigate
-          },
-        ),
-        mangaList.showUiWhenData(
-          context,
-          (data) => data.isEmpty
-              ? Padding(
-                  padding: KEdgeInsets.h16v4.size,
-                  child: Text(context.l10n.noResultFound),
-                )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final manga in data)
-                        SizedBox(
-                          width: kShortSearchCoverWidth,
-                          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
-                          child: MangaCoverGridTile(
-                            manga: manga,
-                            showDarkOverlay: manga.inLibrary.ifNull(),
-                            onPressed: () => _onMangaSelected(context, manga),
-                          ),
-                        ),
-                    ],
+    Widget section({
+      int? itemCount,
+      IndexedWidgetBuilder? itemBuilder,
+      Widget? child,
+    }) => CoverRowSection(
+      title: source.displayName,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
+      child: child,
+    );
+    return mangaList.showUiWhenData(
+      context,
+      (data) => data.isEmpty
+          ? section(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(context.l10n.noResultFound),
+              ),
+            )
+          : section(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final manga = data[index];
+                return SizedBox(
+                  width: kShortSearchCoverWidth,
+                  height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+                  child: MangaCoverGridTile(
+                    manga: manga,
+                    showDarkOverlay: manga.inLibrary.ifNull(),
+                    onPressed: () => _onMangaSelected(context, manga),
                   ),
-                ),
-        ),
-      ],
+                );
+              },
+            ),
     );
   }
 

@@ -51,7 +51,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(preferences),
           mangaRecommendationsProvider(1).overrideWith(
             (ref) async => [
-              for (var i = 0; i < 4; i++)
+              for (var i = 0; i < 24; i++)
                 Recommendation(title: 'Series $i', category: 'Test'),
             ],
           ),
