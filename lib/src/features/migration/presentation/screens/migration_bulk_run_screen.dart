@@ -452,6 +452,27 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     required bool deleteSource,
   }) async {
     final l10n = context.l10n;
+    if (deleteSource) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.migrateSeriesCount(1)),
+          content: Text(l10n.migrationActionMigrateDescription),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.migrate),
+            ),
+          ],
+        ),
+        animationStyle: context.motionStyle,
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final snackBarMotionStyle = context.snackBarMotionStyle;
     await r.commitOne(fromMangaId, deleteSource: deleteSource);

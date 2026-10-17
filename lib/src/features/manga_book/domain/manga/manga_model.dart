@@ -91,7 +91,6 @@ abstract class MangaMeta with _$MangaMeta {
     ReaderOrientation? readerOrientation,
     @JsonKey(name: "flutter_readerTapInvert") TapInvert? readerTapInvert,
     @JsonKey(name: "flutter_scanlator") String? scanlator,
-    @JsonKey(name: "flutter_chapterListMode") ChapterListMode? chapterListMode,
     @JsonKey(name: "flutter_rating", fromJson: MangaMeta.fromJsonToInt)
     int? rating,
     @JsonKey(name: "flutter_tags", fromJson: MangaMeta.fromJsonToStringList)
@@ -159,7 +158,6 @@ enum MangaMetaKeys {
   readerOrientation("flutter_readerOrientation"),
   readerTapInvert("flutter_readerTapInvert"),
   scanlator("flutter_scanlator"),
-  chapterListMode("flutter_chapterListMode"),
   rating("flutter_rating"),
   tags("flutter_tags"),
   preferredScanlators("flutter_preferredScanlators"),
