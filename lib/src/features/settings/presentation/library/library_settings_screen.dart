@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/db_keys.dart';
+import '../../../../constants/enum.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -24,6 +25,7 @@ import '../../../library/data/default_category.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
+import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../domain/settings/settings.dart';
@@ -241,6 +243,64 @@ class LibrarySettingsScreen extends ConsumerWidget {
                   title: Text(context.l10n.duplicatedEntries),
                   subtitle: Text(context.l10n.duplicatedEntriesSubtitle),
                   onTap: () => const LibraryDuplicatesRoute().push(context),
+                ),
+                Builder(
+                  builder: (context) {
+                    final swipeLeft =
+                        ref.watch(chapterSwipeToLeftProvider) ??
+                        DBKeys.chapterSwipeToLeft.initial as ChapterSwipeAction;
+                    final swipeRight =
+                        ref.watch(chapterSwipeToRightProvider) ??
+                        DBKeys.chapterSwipeToRight.initial
+                            as ChapterSwipeAction;
+                    void pickSwipe({
+                      required String title,
+                      required ChapterSwipeAction value,
+                      required ValueChanged<ChapterSwipeAction> onChange,
+                    }) => showDialog<void>(
+                      context: context,
+                      builder: (context) => RadioListPopup<ChapterSwipeAction>(
+                        title: title,
+                        optionList: ChapterSwipeAction.values,
+                        value: value,
+                        getOptionTitle: (v) => v.toLocale(context),
+                        onChange: (v) {
+                          onChange(v);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      animationStyle: context.motionStyle,
+                    );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: Text(context.l10n.chapterSwipeToLeft),
+                          subtitle: Text(swipeLeft.toLocale(context)),
+                          leading: const Icon(Icons.swipe_left_rounded),
+                          onTap: () => pickSwipe(
+                            title: context.l10n.chapterSwipeToLeft,
+                            value: swipeLeft,
+                            onChange: (v) => ref
+                                .read(chapterSwipeToLeftProvider.notifier)
+                                .update(v),
+                          ),
+                        ),
+                        ListTile(
+                          title: Text(context.l10n.chapterSwipeToRight),
+                          subtitle: Text(swipeRight.toLocale(context)),
+                          leading: const Icon(Icons.swipe_right_rounded),
+                          onTap: () => pickSwipe(
+                            title: context.l10n.chapterSwipeToRight,
+                            value: swipeRight,
+                            onChange: (v) => ref
+                                .read(chapterSwipeToRightProvider.notifier)
+                                .update(v),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 // SectionTitle(title: context.l10n.advanced),
               ],

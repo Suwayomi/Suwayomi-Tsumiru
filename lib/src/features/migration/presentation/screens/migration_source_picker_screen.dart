@@ -13,6 +13,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../browse_center/presentation/source/controller/source_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../controller/bulk_migration_providers.dart';
@@ -32,7 +33,10 @@ class MigrationSourcePickerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(context.l10n.migrationPickSourceTitle)),
+        appBar: AppBar(
+          leading: detailNavigationBackButton(context),
+          title: Text(context.l10n.migrationPickSourceTitle),
+        ),
         body: const MigrationSourcePickerBody(),
       );
 }
@@ -206,7 +210,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                 icon: const Icon(Icons.close),
                 onPressed: () => selection.value = const {},
               )
-            : null,
+            : detailNavigationBackButton(context),
         title: Text(selecting ? '${selection.value.length}' : data.sourceName),
         actions: [
           IconButton(

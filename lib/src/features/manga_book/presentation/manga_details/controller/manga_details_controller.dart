@@ -329,32 +329,6 @@ class MangaShowAllScanlatorVersions extends _$MangaShowAllScanlatorVersions {
   void update(bool value) => state = value;
 }
 
-/// List vs grid presentation for the chapter list, per-series in the manga
-/// meta store so the choice follows the series across devices.
-@riverpod
-class MangaChapterListMode extends _$MangaChapterListMode {
-  @override
-  ChapterListMode build({required int mangaId}) {
-    final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId));
-    return manga.value?.metaData.chapterListMode ?? ChapterListMode.list;
-  }
-
-  Future<void> update(ChapterListMode mode) async {
-    await AsyncValue.guard(
-      () => ref
-          .read(mangaBookRepositoryProvider)
-          .patchMangaMeta(
-            mangaId: mangaId,
-            key: MangaMetaKeys.chapterListMode.key,
-            value: mode.name,
-          ),
-    );
-    if (!ref.mounted) return;
-    ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-    state = mode;
-  }
-}
-
 /// Per-series chapter sort, synced with WebUI's own per-manga `webUI_sortBy`
 /// meta (see webui_chapter_sort_meta.dart) — a real cross-client setting, not
 /// a Tsumiru-only convention. Falls back to the app-wide [MangaChapterSort]
@@ -768,6 +742,26 @@ class MangaChapterDisplayMode extends _$MangaChapterDisplayMode
   @override
   ChapterDisplay? build() =>
       initialize(DBKeys.chapterDisplay, enumList: ChapterDisplay.values);
+}
+
+@riverpod
+class ChapterSwipeToLeft extends _$ChapterSwipeToLeft
+    with SharedPreferenceEnumClientMixin<ChapterSwipeAction> {
+  @override
+  ChapterSwipeAction? build() => initialize(
+    DBKeys.chapterSwipeToLeft,
+    enumList: ChapterSwipeAction.values,
+  );
+}
+
+@riverpod
+class ChapterSwipeToRight extends _$ChapterSwipeToRight
+    with SharedPreferenceEnumClientMixin<ChapterSwipeAction> {
+  @override
+  ChapterSwipeAction? build() => initialize(
+    DBKeys.chapterSwipeToRight,
+    enumList: ChapterSwipeAction.values,
+  );
 }
 
 @riverpod

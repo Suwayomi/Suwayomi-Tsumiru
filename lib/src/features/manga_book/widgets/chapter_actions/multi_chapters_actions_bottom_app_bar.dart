@@ -8,20 +8,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../features/offline/data/offline_download_providers.dart';
-import '../../../../features/offline/data/offline_repository.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/misc/toast/toast.dart';
-import '../../../../utils/motion/reduce_motion.dart';
-import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../account/data/account_providers.dart';
-import '../../data/downloads/downloads_repository.dart';
-import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
-import '../../presentation/manga_details/controller/scanlator_propagation.dart';
+import 'chapter_bulk_actions.dart';
 import 'multi_chapters_action_icon.dart';
 
 class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
@@ -50,9 +43,10 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
       if (triggerAfterOption) await afterOptionSelected();
     }
 
-    // Same floating action bar as the library multi-select, with parity actions:
-    // a leading clear + count, then mark read / unread, download to device,
-    // download to server, and delete.
+    final selected = selectedChapterDtos;
+    final allBookmarked =
+        selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
+
     return SelectionActionBar(
       clearsSystemNav: true,
       leading: [
@@ -78,16 +72,41 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
         ),
         MultiChaptersActionIcon(
           iconData: Icons.done_all_rounded,
-          chapters: selectedChapterDtos,
+          chapters: selected,
           change: ChapterChange(isRead: true, lastPageRead: 0),
           refresh: refresh,
         ),
         MultiChaptersActionIcon(
           iconData: Icons.remove_done_rounded,
-          chapters: selectedChapterDtos,
+          chapters: selected,
           // Stale progress on "unread" would still count as in-progress.
           change: ChapterChange(isRead: false, lastPageRead: 0),
           refresh: refresh,
+        ),
+        IconButton(
+          tooltip: allBookmarked
+              ? context.l10n.removeBookmark
+              : context.l10n.bookmark,
+          icon: const Icon(Icons.bookmark_rounded),
+          onPressed: () => setChaptersBookmark(
+            ref: ref,
+            chapters: selected,
+            isBookmarked: !allBookmarked,
+            refresh: refresh,
+          ),
+        ),
+        IconButton(
+          tooltip: context.l10n.markPreviousAsRead,
+          icon: const Icon(Icons.history_rounded),
+          onPressed: chapterList == null || selected.isEmpty
+              ? null
+              : () => markPreviousAsRead(
+                  context: context,
+                  ref: ref,
+                  bulkList: chapterList!,
+                  anchor: selected.last,
+                  refresh: refresh,
+                ),
         ),
         IconButton(
           tooltip: canDownload
@@ -95,37 +114,14 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
               : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.save_alt_rounded),
           onPressed: !canDownload
+              // Download first: clearing selection disposes this bar mid-loop.
               ? null
-              : () async {
-                  // Download FIRST, clear selection AFTER: clearing selection disposes
-                  // this bar, which would invalidate `ref` mid-loop and silently drop
-                  // the remaining downloads.
-                  final ids = selectedChapterList;
-                  if (ids.length > kBulkDownloadConfirmThreshold &&
-                      !await confirmBulkDownload(
-                        context,
-                        summary: '${ids.length} chapters',
-                        toDevice: true,
-                      )) {
-                    return;
-                  }
-                  // Per-chapter guard: one failure (offline, a chapter the server
-                  // hasn't downloaded) must not silently abandon the rest.
-                  var failures = 0;
-                  for (final id in ids) {
-                    try {
-                      await saveChapterToDevice(ref, id);
-                    } catch (_) {
-                      failures++;
-                    }
-                  }
-                  if (failures > 0 && context.mounted) {
-                    ref
-                        .read(toastProvider)
-                        ?.showError(context.l10n.errorSomethingWentWrong);
-                  }
-                  await refresh(true);
-                },
+              : () => keepChaptersOffline(
+                  context: context,
+                  ref: ref,
+                  chapters: selected,
+                  refresh: refresh,
+                ),
         ),
         IconButton(
           tooltip: canDownload
@@ -134,107 +130,23 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
           icon: const Icon(Icons.cloud_download_outlined),
           onPressed: !canDownload
               ? null
-              : () async {
-                  final ids = selectedChapterList;
-                  if (ids.length > kBulkDownloadConfirmThreshold &&
-                      !await confirmBulkDownload(
-                        context,
-                        summary: '${ids.length} chapters',
-                        toDevice: false,
-                      )) {
-                    return;
-                  }
-                  final result = await AsyncValue.guard(
-                    () => ref
-                        .read(downloadsRepositoryProvider)
-                        .addChaptersBatchToDownloadQueue(ids),
-                  );
-                  if (context.mounted) {
-                    result.showToastOnError(ref.read(toastProvider));
-                  }
-                  // Downloading doesn't change the source chapter list — refresh from
-                  // the server's stored chapters, no source re-scrape.
-                  await refresh(false);
-                },
+              : () => queueServerDownload(
+                  context: context,
+                  ref: ref,
+                  chapterIds: selectedChapterList,
+                  refresh: refresh,
+                ),
         ),
         IconButton(
           tooltip: context.l10n.delete,
           icon: const Icon(Icons.delete_rounded),
           onPressed: () async {
-            // Captured up front: this handler awaits a confirmation dialog and
-            // a network mutation, either of which can outlive this bar (the
-            // selection clears — and this widget unmounts — once the delete
-            // resolves). `ref.read` throws once that happens; a container
-            // obtained now stays valid regardless.
-            final containerRead = ProviderScope.containerOf(
-              context,
-              listen: false,
-            ).read;
-            // Web has no device database, so reading it would throw.
-            final repo = ref.read(offlineActiveProvider)
-                ? ref.read(offlineRepositoryProvider)
-                : null;
-            // Computed up front, before the confirmation dialog's own await:
-            // it only depends on the already-selected chapters, nothing the
-            // dialog reveals, so there is no reason for this `ref` use to
-            // wait behind an await that could outlive the widget.
-            // Delete includes confidently matched releases, grouped per manga.
-            final deleteIds = <int>[
-              for (final entry in {
-                for (final c in selectedChapterDtos) c.mangaId: true,
-              }.keys)
-                ...expandIdsAcrossScanlators(
-                  ref,
-                  mangaId: entry,
-                  chapterIds: [
-                    for (final c in selectedChapterDtos)
-                      if (c.mangaId == entry) c.id,
-                  ],
-                ),
-            ];
-            final onDevice =
-                await repo?.deviceDownloadedCount(selectedChapterList) ?? 0;
-            if (!context.mounted) return;
-            final ok =
-                await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text(ctx.l10n.delete),
-                    content: Text(
-                      [
-                        ctx.l10n.deleteChaptersConfirm,
-                        if (onDevice > 0)
-                          ctx.l10n.offlineBulkDeleteWarning(onDevice),
-                      ].join('\n\n'),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: Text(ctx.l10n.cancel),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: Text(ctx.l10n.delete),
-                      ),
-                    ],
-                  ),
-                  animationStyle: context.motionStyle,
-                ) ??
-                false;
-            if (!ok) return;
-            final result = await AsyncValue.guard(
-              () => ref
-                  .read(mangaBookRepositoryProvider)
-                  .deleteChapters(deleteIds),
+            final deleted = await deleteChaptersFromServerWithConfirm(
+              context: context,
+              ref: ref,
+              chapters: selected,
             );
-            if (context.mounted) {
-              result.showToastOnError(ref.read(toastProvider));
-            }
-            if (!result.hasError) {
-              // Same expanded set (device ⊆ server).
-              await cascadeServerDeleteToDevice(containerRead, deleteIds);
-            }
-            await refresh(true);
+            if (deleted) await refresh(true);
           },
         ),
       ],

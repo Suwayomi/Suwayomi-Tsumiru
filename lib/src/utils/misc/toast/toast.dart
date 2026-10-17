@@ -52,6 +52,31 @@ class Toast {
     }
   }
 
+  void showWithAction(
+    String msg, {
+    required String actionLabel,
+    required VoidCallback onAction,
+    Duration duration = const Duration(seconds: 5),
+  }) {
+    _fToast.showToast(
+      child: ToastWidget(
+        text: msg,
+        backgroundColor: _context.colorScheme.inverseSurface,
+        textColor: _context.colorScheme.onInverseSurface,
+        action: TextButton(
+          onPressed: () {
+            close();
+            onAction();
+          },
+          child: Text(actionLabel),
+        ),
+      ),
+      gravity: ToastGravity.BOTTOM,
+      toastDuration: duration,
+      fadeDuration: _fadeDuration,
+    );
+  }
+
   void showError(
     String error, {
     bool withMicrotask = false,
@@ -90,11 +115,13 @@ class ToastWidget extends StatelessWidget {
     super.key,
     required this.text,
     this.icon,
+    this.action,
     this.backgroundColor,
     this.textColor,
   });
   final String text;
   final Widget? icon;
+  final Widget? action;
   final Color? backgroundColor;
   final Color? textColor;
   @override
@@ -114,6 +141,13 @@ class ToastWidget extends StatelessWidget {
       ),
       child: icon != null
           ? Row(children: [icon!, const Gap(16), textWidget])
+          : action != null
+          ? Row(
+              children: [
+                Flexible(child: textWidget),
+                action!,
+              ],
+            )
           : textWidget,
     );
   }

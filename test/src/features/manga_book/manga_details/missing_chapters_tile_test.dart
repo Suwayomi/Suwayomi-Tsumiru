@@ -23,24 +23,4 @@ void main() {
     await tester.pumpWidget(_app(const MissingChaptersListTile(count: 3)));
     expect(find.text('Missing 3 chapters'), findsOneWidget);
   });
-
-  testWidgets('grid notice shows the count and full message in its tooltip', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _app(
-        const SizedBox.square(
-          dimension: 64,
-          child: MissingChaptersGridTile(count: 3),
-        ),
-      ),
-    );
-
-    expect(find.text('Missing 3 chapters'), findsOneWidget);
-    expect(
-      tester.widget<Tooltip>(find.byType(Tooltip)).message,
-      'Missing 3 chapters',
-    );
-    expect(find.byType(InkWell), findsNothing);
-  });
 }

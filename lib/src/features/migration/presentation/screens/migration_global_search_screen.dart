@@ -12,6 +12,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../browse_center/presentation/source/controller/source_controller.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../controller/migration_controller.dart';
@@ -42,6 +43,7 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(context.l10n.searchAllSources),
         bottom: PreferredSize(
           preferredSize: kCalculateAppBarBottomSize([true]),

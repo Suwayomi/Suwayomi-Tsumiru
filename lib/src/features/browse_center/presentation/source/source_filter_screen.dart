@@ -13,6 +13,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/content_rating.dart';
 import '../../domain/language/flag_emoji.dart';
@@ -59,7 +60,10 @@ class SourceFilterScreen extends HookConsumerWidget {
     refresh() => ref.refresh(sourceListProvider.future);
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.sources)),
+      appBar: AppBar(
+        leading: detailNavigationBackButton(context),
+        title: Text(context.l10n.sources),
+      ),
       body: sourceMapData.showUiWhenData(
         context,
         (data) {

@@ -8,17 +8,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../controller/chapter_list_entry.dart';
-import '../controller/manga_details_controller.dart';
 import 'add_to_library_category.dart';
-import 'chapter_grid_tile.dart';
-import 'chapter_list_mode_toggle.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 import 'missing_chapters_tile.dart';
@@ -47,7 +43,6 @@ class SmallScreenMangaDetails extends ConsumerWidget {
     final chapterEntries = chapterList.value;
     final chapterCount =
         chapterEntries?.whereType<MangaChapterEntry>().length ?? 0;
-    final listMode = ref.watch(mangaChapterListModeProvider(mangaId: mangaId));
     return RefreshIndicator(
       onRefresh: () => onRefresh(true),
       child: CustomScrollView(
@@ -74,7 +69,6 @@ class SmallScreenMangaDetails extends ConsumerWidget {
           SliverToBoxAdapter(
             child: ListTile(
               title: Text(context.l10n.noOfChapters(chapterCount)),
-              trailing: ChapterListModeToggle(mangaId: mangaId),
             ),
           ),
           chapterList.showUiWhenData(
@@ -89,42 +83,6 @@ class SmallScreenMangaDetails extends ConsumerWidget {
                   );
                 }
 
-                if (listMode == ChapterListMode.grid) {
-                  return SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    sliver: SliverGrid.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 64,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                          ),
-                      itemCount: chapterEntries!.length,
-                      itemBuilder: (context, index) {
-                        final entry = chapterEntries[index];
-                        return switch (entry) {
-                          MangaChapterEntry() => ChapterGridTile(
-                            key: ValueKey('${entry.chapter.id}'),
-                            manga: manga,
-                            chapter: entry.chapter,
-                            isSelected: selectedChapters.value.containsKey(
-                              entry.chapter.id,
-                            ),
-                            canTapSelect: selectedChapters.value.isNotEmpty,
-                            toggleSelect: toggleSelect,
-                          ),
-                          MissingChaptersEntry() => MissingChaptersGridTile(
-                            key: ValueKey('missing-${entry.id}'),
-                            count: entry.count,
-                          ),
-                        };
-                      },
-                    ),
-                  );
-                }
                 return SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final entry = chapterEntries[index];
@@ -138,6 +96,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
                           entry.chapter.id,
                         ),
                         canTapSelect: selectedChapters.value.isNotEmpty,
+                        selectionMode: selectedChapters.value.isNotEmpty,
                         toggleSelect: toggleSelect,
                       ),
                       MissingChaptersEntry() => MissingChaptersListTile(

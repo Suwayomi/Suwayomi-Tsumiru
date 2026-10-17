@@ -14,16 +14,15 @@ class BrowseShellRoute extends StatefulShellRouteData {
     BuildContext context,
     StatefulNavigationShell navigationShell,
     List<Widget> children,
-  ) =>
-      BrowseScreen(
-        key: const ValueKey('browse'),
-        currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
-        children: children,
-      );
+  ) => BrowseScreen(
+    key: const ValueKey('browse'),
+    currentIndex: navigationShell.currentIndex,
+    onDestinationSelected: (index) => navigationShell.goBranch(
+      index,
+      initialLocation: index == navigationShell.currentIndex,
+    ),
+    children: children,
+  );
 
   @override
   Widget builder(context, state, navigationShell) => navigationShell;
@@ -79,17 +78,15 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
 
   @override
   Widget build(context, state) => SourceMangaListScreen(
-        key: ValueKey('$sourceId-$sourceType'),
-        sourceId: sourceId,
-        sourceType: sourceType,
-        initialQuery: query,
-      );
+    key: ValueKey('$sourceId-$sourceType'),
+    sourceId: sourceId,
+    sourceType: sourceType,
+    initialQuery: query,
+  );
 }
 
 class SourceFilterRoute extends GoRouteData with $SourceFilterRoute {
   const SourceFilterRoute();
-
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
   Widget build(context, state) => const SourceFilterScreen();

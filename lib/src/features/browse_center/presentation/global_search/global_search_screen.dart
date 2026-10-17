@@ -13,6 +13,7 @@ import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../source/controller/source_controller.dart';
 import 'controller/source_quick_search_controller.dart';
 import 'widgets/source_short_search.dart';
@@ -30,6 +31,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final hasPinned = ref.watch(pinnedSourcesProvider).isNotEmpty;
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(context.l10n.globalSearch),
         bottom: PreferredSize(
           preferredSize: kCalculateAppBarBottomSize([true]),

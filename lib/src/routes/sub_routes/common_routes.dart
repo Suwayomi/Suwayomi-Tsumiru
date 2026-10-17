@@ -130,8 +130,6 @@ class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
   const GlobalSearchRoute({this.query});
   final String? query;
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       GlobalSearchScreen(key: ValueKey(query), initialQuery: query);

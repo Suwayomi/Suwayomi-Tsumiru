@@ -14,6 +14,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../browse_center/domain/language/flag_emoji.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../browse_center/presentation/source/controller/source_controller.dart';
@@ -67,6 +68,7 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(l10n.migrationSelectSourcesTitle),
         actions: [
           IconButton(

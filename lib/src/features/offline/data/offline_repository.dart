@@ -147,6 +147,11 @@ class OfflineRepository {
 
   /// Total bytes used by all downloaded chapters — for the storage settings UI.
   Future<int> totalDownloadedBytes() => db.totalDownloadedBytes();
+
+  /// Bytes used by one manga's downloaded chapters — for the series page
+  /// chapter header subline.
+  Future<int> downloadedBytesForManga(int mangaId) =>
+      db.downloadedBytesForManga(mangaId);
 }
 
 @riverpod

@@ -109,25 +109,32 @@ class Sorayomi extends HookConsumerWidget {
     return MaterialApp.router(
       builder: (context, child) {
         final toastWrapped = FToastBuilder()(context, child);
-        return ReduceMotionScope(
-          child: DesktopWindowScaffold(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Offstage(
-                  offstage: sessionChanging,
-                  child: TickerMode(
-                    enabled: !sessionChanging,
-                    child: ReauthBannerHost(
-                      child: _IncognitoNotificationBridge(child: toastWrapped),
+        return ScrollbarTheme(
+          data: context.isTablet
+              ? wideScreenScrollbarTheme(Theme.of(context).colorScheme)
+              : const ScrollbarThemeData(),
+          child: ReduceMotionScope(
+            child: DesktopWindowScaffold(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Offstage(
+                    offstage: sessionChanging,
+                    child: TickerMode(
+                      enabled: !sessionChanging,
+                      child: ReauthBannerHost(
+                        child: _IncognitoNotificationBridge(
+                          child: toastWrapped,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                if (sessionChanging)
-                  const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  ),
-              ],
+                  if (sessionChanging)
+                    const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -212,6 +219,28 @@ class _IncognitoNotificationBridge extends ConsumerWidget {
 /// to wheel/touch.
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    if (axisDirectionToAxis(details.direction) == Axis.horizontal) return child;
+    final scrollable = context.widget;
+    // Flutter omits physics from ScrollableDetails in the scrollbar builder.
+    for (
+      var physics =
+          details.physics ??
+          (scrollable is Scrollable ? scrollable.physics : null);
+      physics != null;
+      physics = physics.parent
+    ) {
+      if (!physics.allowUserScrolling) return child;
+    }
+    if (!context.isTablet) return super.buildScrollbar(context, child, details);
+    return Scrollbar(controller: details.controller, child: child);
+  }
 
   @override
   Set<PointerDeviceKind> get dragDevices => const {

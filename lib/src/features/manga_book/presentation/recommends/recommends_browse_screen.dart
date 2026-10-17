@@ -11,6 +11,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/navigation.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
 
@@ -45,7 +46,10 @@ class RecommendsBrowseScreen extends ConsumerWidget {
       }
     }
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        leading: detailNavigationBackButton(context),
+        title: Text(title),
+      ),
       body: recs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Emoticons(

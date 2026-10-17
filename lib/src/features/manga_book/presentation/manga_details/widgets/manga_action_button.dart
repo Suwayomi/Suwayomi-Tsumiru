@@ -35,21 +35,40 @@ class MangaActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.theme.colorScheme;
     final color = active ? cs.primary : cs.onSurfaceVariant;
+    final desktop = context.isDesktop;
     return TextButton(
       onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
+      style:
+          TextButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            overlayColor: cs.onSurface,
+            backgroundColor: Colors.transparent,
+            padding: EdgeInsets.symmetric(
+              vertical: desktop ? 7 : 8,
+              horizontal: 4,
+            ),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith(
+              (states) => cs.onSurface.withValues(
+                alpha: states.contains(WidgetState.pressed) ? .10 : .06,
+              ),
+            ),
+          ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconTheme.merge(
-            data: IconThemeData(size: 20, color: color),
+            data: IconThemeData(
+              size: 20,
+              color: desktop && !active ? cs.onSurface : color,
+            ),
             child: icon,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: desktop ? 3 : 4),
           Text(
             label,
             textAlign: TextAlign.center,
