@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/misc.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
@@ -108,8 +109,10 @@ class _Manga extends MangaWithId {
 }
 
 class _Chapters extends MangaChapterList {
+  _Chapters(this.chapters);
+  final List<ChapterDto> chapters;
   @override
-  Future<List<ChapterDto>?> build({required int mangaId}) async => _chapters;
+  Future<List<ChapterDto>?> build({required int mangaId}) async => chapters;
   @override
   Future<void> refresh([bool onlineFetch = false]) async {}
 }
@@ -179,30 +182,34 @@ class _FakeToast implements Toast {
 Widget _app(
   SharedPreferences preferences, {
   List<Override> overrides = const [],
-}) => ProviderScope(
-  overrides: [
-    ...overrides,
-    sharedPreferencesProvider.overrideWithValue(preferences),
-    offlineEnabledProvider.overrideWithValue(false),
-    mangaWithIdProvider(mangaId: 1).overrideWith(_Manga.new),
-    mangaChapterListProvider(mangaId: 1).overrideWith(_Chapters.new),
-    mangaChapterListWithFilterProvider(
-      mangaId: 1,
-    ).overrideWith((ref) => AsyncData(_chapters)),
-    mangaChapterListEntriesProvider(mangaId: 1).overrideWith(
-      (ref) => AsyncData([for (final c in _chapters) MangaChapterEntry(c)]),
+  List<ChapterDto>? chapters,
+}) {
+  final list = chapters ?? _chapters;
+  return ProviderScope(
+    overrides: [
+      ...overrides,
+      sharedPreferencesProvider.overrideWithValue(preferences),
+      offlineEnabledProvider.overrideWithValue(false),
+      mangaWithIdProvider(mangaId: 1).overrideWith(_Manga.new),
+      mangaChapterListProvider(mangaId: 1).overrideWith(() => _Chapters(list)),
+      mangaChapterListWithFilterProvider(
+        mangaId: 1,
+      ).overrideWith((ref) => AsyncData(list)),
+      mangaChapterListEntriesProvider(mangaId: 1).overrideWith(
+        (ref) => AsyncData([for (final c in list) MangaChapterEntry(c)]),
+      ),
+      firstUnreadInFilteredChapterListProvider(
+        mangaId: 1,
+      ).overrideWith((ref) => list[list.length > 1 ? 1 : 0]),
+      mangaNextUpdateProvider(mangaId: 1).overrideWith((ref) => null),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const Scaffold(body: MangaDetailsScreen(mangaId: 1)),
     ),
-    firstUnreadInFilteredChapterListProvider(
-      mangaId: 1,
-    ).overrideWith((ref) => _chapters[1]),
-    mangaNextUpdateProvider(mangaId: 1).overrideWith((ref) => null),
-  ],
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: const Scaffold(body: MangaDetailsScreen(mangaId: 1)),
-  ),
-);
+  );
+}
 
 Future<void> _pumpTile(
   WidgetTester tester, {
@@ -245,6 +252,7 @@ Future<void> _pumpDesktop(
   WidgetTester tester, {
   Size size = const Size(1400, 980),
   List<Override> overrides = const [],
+  List<ChapterDto>? chapters,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -252,8 +260,54 @@ Future<void> _pumpDesktop(
   addTearDown(tester.view.resetDevicePixelRatio);
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
-  await tester.pumpWidget(_app(preferences, overrides: overrides));
+  await tester.pumpWidget(
+    _app(preferences, overrides: overrides, chapters: chapters),
+  );
   await tester.pumpAndSettle();
+}
+
+Future<void> _resizeWindow(WidgetTester tester, double width) async {
+  tester.view.physicalSize = Size(width, 900);
+  await tester.pumpAndSettle();
+}
+
+bool _wideRows(WidgetTester tester) => _topChapter(tester)!.desktop;
+
+/// The topmost chapter row that is at least partly inside the list viewport.
+ChapterListTile? _topChapter(WidgetTester tester) {
+  final list = find.byType(ScrollablePositionedList);
+  final top = tester.getTopLeft(list).dy;
+  final bottom = tester.getBottomLeft(list).dy;
+  ChapterListTile? first;
+  var firstTop = double.infinity;
+  for (final element in find.byType(ChapterListTile).evaluate()) {
+    final box = element.renderObject! as RenderBox;
+    final rowTop = box.localToGlobal(Offset.zero).dy;
+    if (rowTop + box.size.height <= top + 0.5 || rowTop >= bottom) continue;
+    if (rowTop < firstTop) {
+      first = element.widget as ChapterListTile;
+      firstTop = rowTop;
+    }
+  }
+  return first;
+}
+
+/// Drags the one-line list until [id] is the first visible chapter.
+Future<void> _scrollToChapter(WidgetTester tester, int id) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    final first = _topChapter(tester);
+    if (first == null) break;
+    final delta = first.chapter.id - id;
+    if (delta == 0) return;
+    // Dragging down reveals earlier chapters; 46 is the one-line row height.
+    final rows = delta.clamp(-4, 4);
+    await tester.drag(
+      find.byType(ScrollablePositionedList),
+      Offset(0, rows * 46.0),
+    );
+    await tester.pumpAndSettle();
+  }
+  fail('Chapter $id never reached the top of the list');
 }
 
 Future<void> _selectRange(WidgetTester tester, String from, String to) async {
@@ -910,6 +964,49 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(BrandFab), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('row style stays put while resizing inside the band', (
+    tester,
+  ) async {
+    // Below 1200 the chapter column takes half the window: 495, 475, 480.
+    // The band is 472..487, so none of these flips the rows.
+    await _pumpDesktop(tester, size: const Size(990, 900));
+    expect(_wideRows(tester), isTrue);
+
+    await _resizeWindow(tester, 950);
+    expect(_wideRows(tester), isTrue, reason: '475 stays one-line');
+
+    await _resizeWindow(tester, 990);
+    expect(_wideRows(tester), isTrue);
+
+    await _resizeWindow(tester, 960);
+    expect(_wideRows(tester), isTrue, reason: '480 stays one-line');
+
+    await _resizeWindow(tester, 940);
+    expect(_wideRows(tester), isFalse, reason: '470 leaves the band');
+
+    await _resizeWindow(tester, 990);
+    expect(_wideRows(tester), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('row style switch keeps the chapter at the top', (tester) async {
+    final chapters = [
+      for (var id = 1; id <= 120; id++) _chapter(id: id, read: true),
+    ];
+    await _pumpDesktop(tester, size: const Size(990, 900), chapters: chapters);
+    await _scrollToChapter(tester, 60);
+    expect(_topChapter(tester)?.chapter.id, 60);
+
+    await _resizeWindow(tester, 940);
+    expect(_wideRows(tester), isFalse);
+    expect(_topChapter(tester)?.chapter.id, inInclusiveRange(59, 61));
+
+    await _resizeWindow(tester, 990);
+    expect(_wideRows(tester), isTrue);
+    expect(_topChapter(tester)?.chapter.id, inInclusiveRange(59, 61));
     expect(tester.takeException(), isNull);
   });
 }

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
@@ -29,7 +30,31 @@ import 'recommends_row.dart';
 import 'series_info_column.dart';
 
 /// Width at which the chapter column switches to one-line desktop rows.
-const _wideChapterColumn = 480.0;
+const _wideChapterColumn = 488.0;
+
+/// Width below which the column returns to two-line rows. The gap between the
+/// two thresholds keeps a column sitting on the breakpoint from flapping.
+const _narrowChapterColumn = 472.0;
+
+/// Row style for a column [width], keeping [wide] while inside the band.
+bool _wideRowsForWidth(bool? wide, double width) {
+  if (width >= _wideChapterColumn) return true;
+  if (width < _narrowChapterColumn) return false;
+  return wide ?? false;
+}
+
+/// Re-anchors the list on the chapter that was at the top when the row style
+/// changes. The two rows have different heights, so the pixel offset no longer
+/// points at the same chapter.
+int? _topChapterIndex(ItemPositionsListener positions) {
+  final visible = positions.itemPositions.value.where(
+    (position) => position.itemTrailingEdge > 0,
+  );
+  if (visible.isEmpty) return null;
+  return visible
+      .map((position) => position.index)
+      .reduce((a, b) => a < b ? a : b);
+}
 
 class BigScreenMangaDetails extends HookConsumerWidget {
   const BigScreenMangaDetails({
@@ -57,6 +82,11 @@ class BigScreenMangaDetails extends HookConsumerWidget {
     final selection = useValueListenable(selectedChapters);
     final selecting = selection.isNotEmpty;
     final anchor = useState<int?>(null);
+    // Survives column rebuilds; the first width seen picks the initial style.
+    final wideColumn = useRef<bool?>(null);
+    // Row index to land on when the list remounts for a row-style switch.
+    final restoreIndex = useRef<int?>(null);
+    final itemPositionsListener = useMemoized(ItemPositionsListener.create);
     final filterButtonKey = useMemoized(GlobalKey.new);
     final moreButtonKey = useMemoized(GlobalKey.new);
     final filterFocus = useMemoized(FocusNode.new);
@@ -186,7 +216,20 @@ class BigScreenMangaDetails extends HookConsumerWidget {
               builder: (context, constraints) {
                 // One-line rows follow the chapter column's own width, so a
                 // tablet split still gets them when the column has room.
-                final wide = constraints.maxWidth >= _wideChapterColumn;
+                final previousWide = wideColumn.value;
+                final wide = _wideRowsForWidth(
+                  previousWide,
+                  constraints.maxWidth,
+                );
+                if (previousWide != null && previousWide != wide) {
+                  // The list remounts below at the new row height, so hand it
+                  // the chapter that was at the top instead of a pixel offset.
+                  restoreIndex.value = _topChapterIndex(itemPositionsListener);
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => restoreIndex.value = null,
+                  );
+                }
+                wideColumn.value = wide;
                 return chapterList.showUiWhenData(context, (data) {
                   if (data.isNotBlank) {
                     final ordered = [
@@ -272,7 +315,10 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                                 onFilter: openFilterPanel,
                               ),
                         Expanded(
-                          child: ListView.builder(
+                          child: ScrollablePositionedList.builder(
+                            key: ValueKey(wide),
+                            initialScrollIndex: restoreIndex.value ?? 0,
+                            itemPositionsListener: itemPositionsListener,
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemBuilder: (context, index) {
                               if (chapterEntries.length == index) {
