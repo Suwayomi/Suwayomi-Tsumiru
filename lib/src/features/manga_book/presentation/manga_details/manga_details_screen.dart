@@ -35,6 +35,7 @@ import 'widgets/edit_manga_category_dialog.dart';
 import 'widgets/manga_chapter_organizer.dart';
 import 'widgets/manga_description.dart';
 import 'widgets/series_header.dart';
+import 'widgets/series_info_column.dart';
 import 'widgets/small_screen_manga_details.dart';
 
 class MangaDetailsScreen extends HookConsumerWidget {
@@ -58,6 +59,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
     final firstUnreadChapter = ref.watch(
       firstUnreadInFilteredChapterListProvider(mangaId: mangaId),
     );
+
+    final infoExpansion = useMemoized(SeriesInfoExpansion.new, [mangaId]);
+    useEffect(() => infoExpansion.dispose, [infoExpansion]);
 
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final offline = ref.watch(serverUnreachableProvider);
@@ -413,6 +417,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       child: data != null
                           ? context.isTablet
                                 ? BigScreenMangaDetails(
+                                    expansion: infoExpansion,
                                     chapterList: chapterListEntries,
                                     manga: data,
                                     mangaId: mangaId,

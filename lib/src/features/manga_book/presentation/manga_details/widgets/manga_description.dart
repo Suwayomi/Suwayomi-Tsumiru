@@ -37,6 +37,7 @@ import 'manga_action_button.dart';
 import 'manga_rating_bar.dart';
 import 'manga_user_tags_row.dart';
 import 'series_header.dart';
+import 'series_info_column.dart';
 import 'tag_actions_menu.dart';
 
 class MangaDescription extends HookConsumerWidget {
@@ -46,7 +47,9 @@ class MangaDescription extends HookConsumerWidget {
     required this.removeMangaFromLibrary,
     required this.addMangaToLibrary,
     required this.refresh,
+    this.expansion,
   });
+  final SeriesInfoExpansion? expansion;
   final MangaDto manga;
   final AsyncCallback refresh;
   final AsyncCallback removeMangaFromLibrary;
@@ -99,6 +102,16 @@ class MangaDescription extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isExpanded = useState(false);
+    useListenable(expansion);
+    final expanded = expansion?.isExpanded ?? isExpanded.value;
+    void toggleExpanded() {
+      if (expansion != null) {
+        expansion!.toggle();
+      } else {
+        isExpanded.value = !isExpanded.value;
+      }
+    }
+
     final cs = context.theme.colorScheme;
     final surface = context.theme.scaffoldBackgroundColor;
     final inLibrary = manga.inLibrary.ifNull();
@@ -171,6 +184,58 @@ class MangaDescription extends HookConsumerWidget {
               ],
             ),
           );
+
+    Widget descriptionSection(bool expanded, bool showToggle) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (manga.description.isNotBlank)
+          Padding(
+            padding: KEdgeInsets.a16.size,
+            child: MangaDescriptionBody(
+              description: manga.description!,
+              isExpanded: expanded,
+              showToggle: showToggle,
+              onToggleExpanded: toggleExpanded,
+              onOpenLink: (url) =>
+                  launchUrlInWeb(context, url, ref.read(toastProvider)),
+            ),
+          ),
+        if (expanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                AddUserTagChip(mangaId: manga.id),
+                ...manga.genre
+                    .where((e) => e.isNotBlank)
+                    .map<Widget>(
+                      (e) => Builder(
+                        builder: (chipContext) => _SeriesGenreChip(
+                          label: e,
+                          onTap: () =>
+                              showTagActionsMenu(chipContext, ref, tag: e),
+                        ),
+                      ),
+                    ),
+              ],
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: CollapsedSeriesTags(
+              tags: manga.genre.where((e) => e.isNotBlank).toList(),
+              leading: AddUserTagChip(mangaId: manga.id),
+              onExpand: toggleExpanded,
+              onTagTap: (chipContext, tag) =>
+                  showTagActionsMenu(chipContext, ref, tag: tag),
+            ),
+          ),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,50 +450,24 @@ class MangaDescription extends HookConsumerWidget {
           },
         ),
         if (!context.isDesktop) MangaRatingBar(mangaId: manga.id),
-        if (manga.description.isNotBlank)
-          Padding(
-            padding: KEdgeInsets.a16.size,
-            child: MangaDescriptionBody(
-              description: manga.description!,
-              isExpanded: isExpanded.value,
-              onToggleExpanded: () => isExpanded.value = !isExpanded.value,
-              onOpenLink: (url) =>
-                  launchUrlInWeb(context, url, ref.read(toastProvider)),
-            ),
-          ),
-        if (isExpanded.value)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                AddUserTagChip(mangaId: manga.id),
-                ...manga.genre
-                    .where((e) => e.isNotBlank)
-                    .map<Widget>(
-                      (e) => Builder(
-                        builder: (chipContext) => _SeriesGenreChip(
-                          label: e,
-                          onTap: () =>
-                              showTagActionsMenu(chipContext, ref, tag: e),
-                        ),
-                      ),
-                    ),
-              ],
-            ),
-          )
+        if (expansion == null)
+          descriptionSection(expanded, true)
         else
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: CollapsedSeriesTags(
-              tags: manga.genre.where((e) => e.isNotBlank).toList(),
-              leading: AddUserTagChip(mangaId: manga.id),
-              onExpand: () => isExpanded.value = true,
-              onTagTap: (chipContext, tag) =>
-                  showTagActionsMenu(chipContext, ref, tag: tag),
-            ),
+          Stack(
+            children: [
+              Offstage(
+                child: SizedBox(
+                  key: expansion!.fullContentKey,
+                  width: double.infinity,
+                  child: descriptionSection(true, false),
+                ),
+              ),
+              SizedBox(
+                key: expansion!.visibleContentKey,
+                width: double.infinity,
+                child: descriptionSection(expanded, !expansion!.isAutomatic),
+              ),
+            ],
           ),
         MangaUserTagsRow(mangaId: manga.id),
       ],
@@ -443,10 +482,12 @@ class MangaDescriptionBody extends StatelessWidget {
     required this.isExpanded,
     required this.onToggleExpanded,
     this.onOpenLink,
+    this.showToggle = true,
   });
 
   final String description;
   final bool isExpanded;
+  final bool showToggle;
   final VoidCallback onToggleExpanded;
   final ValueChanged<String>? onOpenLink;
 
@@ -510,17 +551,18 @@ class MangaDescriptionBody extends StatelessWidget {
               ),
             ],
           ),
-        InkWell(
-          onTap: onToggleExpanded,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 2, bottom: 6),
-            child: Icon(
-              isExpanded
-                  ? Icons.keyboard_arrow_up_rounded
-                  : Icons.keyboard_arrow_down_rounded,
+        if (showToggle)
+          InkWell(
+            onTap: onToggleExpanded,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 6),
+              child: Icon(
+                isExpanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+              ),
             ),
           ),
-        ),
       ],
     );
   }

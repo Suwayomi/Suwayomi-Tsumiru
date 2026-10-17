@@ -23,11 +23,13 @@ import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 import 'missing_chapters_tile.dart';
 import 'recommends_row.dart';
+import 'series_info_column.dart';
 
 class BigScreenMangaDetails extends ConsumerWidget {
   const BigScreenMangaDetails({
     super.key,
     required this.chapterList,
+    required this.expansion,
     required this.manga,
     required this.mangaId,
     required this.selectedChapters,
@@ -35,6 +37,7 @@ class BigScreenMangaDetails extends ConsumerWidget {
     required this.onRefresh,
     required this.onDescriptionRefresh,
   });
+  final SeriesInfoExpansion expansion;
   final MangaDto manga;
   final int mangaId;
   final AsyncValueSetter<bool> onListRefresh;
@@ -54,11 +57,14 @@ class BigScreenMangaDetails extends ConsumerWidget {
         children: [
           Expanded(
             flex: context.isDesktop ? 55 : 1,
-            child: SingleChildScrollView(
-              child: Column(
+            child: SeriesInfoColumn(
+              key: ValueKey(mangaId),
+              expansion: expansion,
+              builder: (expansion) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   MangaDescription(
+                    expansion: expansion,
                     manga: manga,
                     removeMangaFromLibrary: (() =>
                         removeMangaFromLibraryAndPurge(

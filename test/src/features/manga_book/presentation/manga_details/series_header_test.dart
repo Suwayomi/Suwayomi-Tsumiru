@@ -65,8 +65,11 @@ final _chapter = ChapterDto(
 );
 
 class _Manga extends MangaWithId {
+  _Manga([this.value]);
+
+  final MangaDto? value;
   @override
-  Future<MangaDto?> build({required int mangaId}) async => _manga;
+  Future<MangaDto?> build({required int mangaId}) async => value ?? _manga;
   @override
   Future<void> refresh([bool onlineFetch = false]) async {}
 }
@@ -251,6 +254,85 @@ void main() {
     });
   }
 
+  for (final width in [1400.0, 900.0]) {
+    for (final height in [1100.0, 480.0]) {
+      testWidgets('description fits the info column at $width x $height', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, height);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(_descriptionApp(preferences));
+        await tester.pumpAndSettle();
+
+        final body = tester.widget<MangaDescriptionBody>(
+          find.byType(MangaDescriptionBody),
+        );
+        expect(body.isExpanded, height == 1100);
+        expect(body.showToggle, height != 1100);
+        expect(
+          find.byIcon(Icons.keyboard_arrow_down_rounded),
+          height == 1100 ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.textContaining(RegExp(r'^\d+ more$')),
+          height == 1100 ? findsNothing : findsOneWidget,
+        );
+        if (height == 1100) {
+          final infoScroll = find.ancestor(
+            of: find.byType(MangaDescription),
+            matching: find.byType(SingleChildScrollView),
+          );
+          final scrollable = tester.state<ScrollableState>(
+            find
+                .descendant(of: infoScroll, matching: find.byType(Scrollable))
+                .first,
+          );
+          expect(scrollable.position.maxScrollExtent, 0);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('manual collapse sticks after resizing to a tall window', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_descriptionApp(preferences));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byIcon(Icons.keyboard_arrow_up_rounded));
+    await tester.tap(find.byIcon(Icons.keyboard_arrow_up_rounded));
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(412, 1100);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<MangaDescriptionBody>(find.byType(MangaDescriptionBody))
+          .isExpanded,
+      isFalse,
+    );
+    tester.view.physicalSize = const Size(1400, 1100);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<MangaDescriptionBody>(find.byType(MangaDescriptionBody))
+          .isExpanded,
+      isFalse,
+    );
+    expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^\d+ more$')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('N more counts only whole tags hidden from the collapsed row', (
     tester,
   ) async {
@@ -275,4 +357,33 @@ void main() {
     expect(expanded, isTrue);
     expect(tester.takeException(), isNull);
   });
+}
+
+Widget _descriptionApp(SharedPreferences preferences) {
+  final manga = MangaDto.fromJson({
+    ..._manga.toJson(),
+    'title': 'A short title',
+    'author': 'An author',
+    'description': 'A short description with a [link](https://example.com).',
+    'genre': [for (var i = 0; i < 12; i++) 'Genre number $i'],
+  });
+  return ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(preferences),
+      offlineEnabledProvider.overrideWithValue(false),
+      mangaWithIdProvider(mangaId: 1).overrideWith(() => _Manga(manga)),
+      mangaChapterListProvider(mangaId: 1).overrideWith(_Chapters.new),
+      mangaChapterListWithFilterProvider(
+        mangaId: 1,
+      ).overrideWith((ref) => const AsyncData([])),
+      mangaChapterListEntriesProvider(
+        mangaId: 1,
+      ).overrideWith((ref) => const AsyncData([])),
+      firstUnreadInFilteredChapterListProvider(
+        mangaId: 1,
+      ).overrideWith((ref) => _chapter),
+      mangaNextUpdateProvider(mangaId: 1).overrideWith((ref) => null),
+    ],
+    child: _app(const MangaDetailsScreen(mangaId: 1)),
+  );
 }
