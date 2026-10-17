@@ -54,16 +54,18 @@ Future<bool> migrateDuplicateIntoCandidate(
   );
   runner.overrideTarget(from.id, to.id, to.title);
 
-  unawaited(showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => _SingleMigrationProgressDialog(
-      runner: runner,
-      fromMangaId: from.id,
-      onCancel: runner.cancel,
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SingleMigrationProgressDialog(
+        runner: runner,
+        fromMangaId: from.id,
+        onCancel: runner.cancel,
+      ),
+      animationStyle: context.motionStyle,
     ),
-    animationStyle: context.motionStyle,
-  ));
+  );
 
   // commitOne can throw CancelledException where the batch commit() swallows
   // it; the finally keeps the non-dismissible progress dialog from stranding.

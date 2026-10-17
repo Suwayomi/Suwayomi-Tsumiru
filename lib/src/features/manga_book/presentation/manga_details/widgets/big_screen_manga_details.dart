@@ -8,17 +8,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../controller/chapter_list_entry.dart';
-import '../controller/manga_details_controller.dart';
 import 'add_to_library_category.dart';
-import 'chapter_grid_tile.dart';
-import 'chapter_list_mode_toggle.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 import 'missing_chapters_tile.dart';
@@ -86,9 +82,6 @@ class BigScreenMangaDetails extends ConsumerWidget {
             flex: context.isDesktop ? 45 : 1,
             child: chapterList.showUiWhenData(context, (data) {
               if (data.isNotBlank) {
-                final listMode = ref.watch(
-                  mangaChapterListModeProvider(mangaId: mangaId),
-                );
                 void toggleSelect(ChapterDto val) {
                   if ((val.id).isNull) return;
                   selectedChapters.value = selectedChapters.value.toggleKey(
@@ -101,81 +94,43 @@ class BigScreenMangaDetails extends ConsumerWidget {
                   children: [
                     ListTile(
                       title: Text(context.l10n.noOfChapters(chapterCount)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ChapterListModeToggle(mangaId: mangaId),
-                          if (context.isDesktop)
-                            IconButton(
+                      trailing: context.isDesktop
+                          ? IconButton(
                               tooltip: context.l10n.filter,
                               onPressed: () =>
                                   Scaffold.of(context).openEndDrawer(),
                               icon: const Icon(Icons.filter_list_rounded),
-                            ),
-                        ],
-                      ),
+                            )
+                          : null,
                     ),
                     Expanded(
-                      child: listMode == ChapterListMode.grid
-                          ? GridView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                              gridDelegate:
-                                  const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 64,
-                                    mainAxisSpacing: 8,
-                                    crossAxisSpacing: 8,
-                                  ),
-                              itemCount: chapterEntries!.length,
-                              itemBuilder: (context, index) {
-                                final entry = chapterEntries[index];
-                                return switch (entry) {
-                                  MangaChapterEntry() => ChapterGridTile(
-                                    key: ValueKey('${entry.chapter.id}'),
-                                    manga: manga,
-                                    chapter: entry.chapter,
-                                    isSelected: selectedChapters.value
-                                        .containsKey(entry.chapter.id),
-                                    canTapSelect:
-                                        selectedChapters.value.isNotEmpty,
-                                    toggleSelect: toggleSelect,
-                                  ),
-                                  MissingChaptersEntry() =>
-                                    MissingChaptersGridTile(
-                                      key: ValueKey('missing-${entry.id}'),
-                                      count: entry.count,
-                                    ),
-                                };
-                              },
-                            )
-                          : ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemBuilder: (context, index) {
-                                if (chapterEntries.length == index) {
-                                  return const ListTile();
-                                }
-                                final entry = chapterEntries[index];
-                                return switch (entry) {
-                                  MangaChapterEntry() => ChapterListTile(
-                                    key: ValueKey('${entry.chapter.id}'),
-                                    manga: manga,
-                                    chapter: entry.chapter,
-                                    updateData: () => onListRefresh(false),
-                                    isSelected: selectedChapters.value
-                                        .containsKey(entry.chapter.id),
-                                    canTapSelect:
-                                        selectedChapters.value.isNotEmpty,
-                                    toggleSelect: toggleSelect,
-                                  ),
-                                  MissingChaptersEntry() =>
-                                    MissingChaptersListTile(
-                                      key: ValueKey('missing-${entry.id}'),
-                                      count: entry.count,
-                                    ),
-                                };
-                              },
-                              itemCount: chapterEntries!.length + 1,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          if (chapterEntries.length == index) {
+                            return const ListTile();
+                          }
+                          final entry = chapterEntries[index];
+                          return switch (entry) {
+                            MangaChapterEntry() => ChapterListTile(
+                              key: ValueKey('${entry.chapter.id}'),
+                              manga: manga,
+                              chapter: entry.chapter,
+                              updateData: () => onListRefresh(false),
+                              isSelected: selectedChapters.value.containsKey(
+                                entry.chapter.id,
+                              ),
+                              canTapSelect: selectedChapters.value.isNotEmpty,
+                              toggleSelect: toggleSelect,
                             ),
+                            MissingChaptersEntry() => MissingChaptersListTile(
+                              key: ValueKey('missing-${entry.id}'),
+                              count: entry.count,
+                            ),
+                          };
+                        },
+                        itemCount: chapterEntries!.length + 1,
+                      ),
                     ),
                   ],
                 );

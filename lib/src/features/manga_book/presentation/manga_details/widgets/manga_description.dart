@@ -119,6 +119,27 @@ class MangaDescription extends HookConsumerWidget {
       () => GlobalKey<PopupMenuButtonState<String>>(),
     );
     Future<void> toggleLibrary() async {
+      if (inLibrary) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(context.l10n.removeFromLibrary),
+            content: Text(context.l10n.duplicatesRemoveConfirm(1)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(context.l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(context.l10n.remove),
+              ),
+            ],
+          ),
+          animationStyle: context.motionStyle,
+        );
+        if (confirmed != true || !context.mounted) return;
+      }
       final val = await AsyncValue.guard(() async {
         if (inLibrary) {
           await removeMangaFromLibrary();
