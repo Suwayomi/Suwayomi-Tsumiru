@@ -12,6 +12,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/presentation/offline_settings_format.dart';
@@ -171,6 +172,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
             child: MangaChapterOrganizer(mangaId: mangaId),
           ),
         ],
+        popUpAnimationStyle: context.motionStyle,
       );
       if (context.mounted) filterFocus.requestFocus();
     }
@@ -701,6 +703,7 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               ),
             ),
         ],
+        popUpAnimationStyle: context.motionStyle,
       );
     }
 

@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../offline/data/offline_download_providers.dart';
 import '../../../../offline/data/offline_repository.dart';
 import '../../../../offline/data/offline_types.dart';
@@ -333,6 +334,7 @@ Future<void> showChapterContextMenu({
     position: position,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     items: selecting ? buildSelectionItems() : buildSingleItems(),
+    popUpAnimationStyle: context.motionStyle,
   );
   refocus?.call();
 }

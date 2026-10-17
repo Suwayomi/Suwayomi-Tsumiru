@@ -160,9 +160,9 @@ class RecommendsRow extends HookConsumerWidget {
                         child: ShaderMask(
                           blendMode: BlendMode.dstIn,
                           shaderCallback: (bounds) => LinearGradient(
-                            colors: const [
-                              Colors.white,
-                              Colors.white,
+                            colors: [
+                              context.colorScheme.onSurface,
+                              context.colorScheme.onSurface,
                               Colors.transparent,
                             ],
                             stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
