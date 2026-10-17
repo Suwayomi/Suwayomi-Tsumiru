@@ -28,6 +28,9 @@ import 'missing_chapters_tile.dart';
 import 'recommends_row.dart';
 import 'series_info_column.dart';
 
+/// Width at which the chapter column switches to one-line desktop rows.
+const _wideChapterColumn = 480.0;
+
 class BigScreenMangaDetails extends HookConsumerWidget {
   const BigScreenMangaDetails({
     super.key,
@@ -179,153 +182,160 @@ class BigScreenMangaDetails extends HookConsumerWidget {
           const VerticalDivider(width: 0),
           Expanded(
             flex: desktop ? 45 : 1,
-            child: chapterList.showUiWhenData(context, (data) {
-              if (data.isNotBlank) {
-                final ordered = [
-                  for (final e in chapterEntries!)
-                    if (e is MangaChapterEntry) e.chapter,
-                ];
-                final orderedIds = [for (final c in ordered) c.id];
-                final bulk =
-                    ref
-                        .watch(
-                          mangaChapterListForBulkActionsProvider(
-                            mangaId: mangaId,
-                          ),
-                        )
-                        .value ??
-                    ordered;
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // One-line rows follow the chapter column's own width, so a
+                // tablet split still gets them when the column has room.
+                final wide = constraints.maxWidth >= _wideChapterColumn;
+                return chapterList.showUiWhenData(context, (data) {
+                  if (data.isNotBlank) {
+                    final ordered = [
+                      for (final e in chapterEntries!)
+                        if (e is MangaChapterEntry) e.chapter,
+                    ];
+                    final orderedIds = [for (final c in ordered) c.id];
+                    final bulk =
+                        ref
+                            .watch(
+                              mangaChapterListForBulkActionsProvider(
+                                mangaId: mangaId,
+                              ),
+                            )
+                            .value ??
+                        ordered;
 
-                void selectRange(int fromId, int toId) {
-                  final from = orderedIds.indexOf(fromId);
-                  final to = orderedIds.indexOf(toId);
-                  if (from < 0 || to < 0) return;
-                  final lo = from < to ? from : to;
-                  final hi = from < to ? to : from;
-                  selectedChapters.value = {
-                    for (var i = lo; i <= hi; i++) ordered[i].id: ordered[i],
-                  };
-                }
+                    void selectRange(int fromId, int toId) {
+                      final from = orderedIds.indexOf(fromId);
+                      final to = orderedIds.indexOf(toId);
+                      if (from < 0 || to < 0) return;
+                      final lo = from < to ? from : to;
+                      final hi = from < to ? to : from;
+                      selectedChapters.value = {
+                        for (var i = lo; i <= hi; i++)
+                          ordered[i].id: ordered[i],
+                      };
+                    }
 
-                void onRowTap(ChapterDto chapter, bool shift) {
-                  if (!selecting && !shift) {
-                    ReaderRoute(
-                      mangaId: manga.id,
-                      chapterId: chapter.id,
-                      showReaderLayoutAnimation: true,
-                    ).push(context);
-                    return;
-                  }
-                  final anchorId = anchor.value;
-                  if (shift && anchorId != null && anchorId != chapter.id) {
-                    selectRange(anchorId, chapter.id);
-                    return;
-                  }
-                  toggleSelect(chapter);
-                  anchor.value = chapter.id;
-                }
+                    void onRowTap(ChapterDto chapter, bool shift) {
+                      if (!selecting && !shift) {
+                        ReaderRoute(
+                          mangaId: manga.id,
+                          chapterId: chapter.id,
+                          showReaderLayoutAnimation: true,
+                        ).push(context);
+                        return;
+                      }
+                      final anchorId = anchor.value;
+                      if (shift && anchorId != null && anchorId != chapter.id) {
+                        selectRange(anchorId, chapter.id);
+                        return;
+                      }
+                      toggleSelect(chapter);
+                      anchor.value = chapter.id;
+                    }
 
-                return Column(
-                  children: [
-                    selecting
-                        ? _ChapterSelectionHeader(
-                            selected: selection.values.toList(),
-                            ordered: ordered,
-                            bulk: bulk,
-                            anchorId: anchor.value,
-                            desktop: desktop,
-                            seriesUrl: manga.realUrl,
-                            moreButtonKey: moreButtonKey,
-                            onClear: () {
-                              selectedChapters.value = {};
-                              anchor.value = null;
-                            },
-                            onSelectAll: () =>
-                                selectedChapters.value = {
+                    return Column(
+                      children: [
+                        selecting
+                            ? _ChapterSelectionHeader(
+                                selected: selection.values.toList(),
+                                ordered: ordered,
+                                bulk: bulk,
+                                anchorId: anchor.value,
+                                desktop: wide,
+                                seriesUrl: manga.realUrl,
+                                moreButtonKey: moreButtonKey,
+                                onClear: () {
+                                  selectedChapters.value = {};
+                                  anchor.value = null;
+                                },
+                                onSelectAll: () => selectedChapters.value = {
                                   for (final c in ordered) c.id: c,
                                 },
-                            refresh: barRefresh,
-                            onSelect: (next, anchorId) {
-                              selectedChapters.value = next;
-                              anchor.value = anchorId;
+                                refresh: barRefresh,
+                                onSelect: (next, anchorId) {
+                                  selectedChapters.value = next;
+                                  anchor.value = anchorId;
+                                },
+                              )
+                            : _ChapterHeader(
+                                totalCount: totalCount == 0
+                                    ? chapterCount
+                                    : totalCount,
+                                unreadCount: unreadCount,
+                                onDeviceBytes: onDeviceBytes,
+                                filterCount: filterCount,
+                                desktop: wide,
+                                filterButtonKey: filterButtonKey,
+                                filterFocus: filterFocus,
+                                onRefresh: () => onRefresh(true),
+                                onFilter: openFilterPanel,
+                              ),
+                        Expanded(
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              if (chapterEntries.length == index) {
+                                return wide
+                                    ? const SizedBox(height: 16)
+                                    : const ListTile();
+                              }
+                              final entry = chapterEntries[index];
+                              return switch (entry) {
+                                MangaChapterEntry() => ChapterListTile(
+                                  key: ValueKey('${entry.chapter.id}'),
+                                  manga: manga,
+                                  chapter: entry.chapter,
+                                  updateData: () => onListRefresh(false),
+                                  isSelected: selection.containsKey(
+                                    entry.chapter.id,
+                                  ),
+                                  canTapSelect: selecting,
+                                  toggleSelect: toggleSelect,
+                                  desktop: wide,
+                                  selectionMode: selecting,
+                                  isCurrent: entry.chapter.id == currentId,
+                                  onRowTap: (shift) =>
+                                      onRowTap(entry.chapter, shift),
+                                  onSecondaryTapAt: (pos) => openMenu(
+                                    menuAnchorForPoint(context, pos),
+                                    entry.chapter,
+                                    ordered,
+                                    bulk,
+                                    () {},
+                                  ),
+                                  onOpenMenu: (rect, refocus) => openMenu(
+                                    rect,
+                                    entry.chapter,
+                                    ordered,
+                                    bulk,
+                                    refocus,
+                                  ),
+                                ),
+                                MissingChaptersEntry() =>
+                                  MissingChaptersListTile(
+                                    key: ValueKey('missing-${entry.id}'),
+                                    count: entry.count,
+                                  ),
+                              };
                             },
-                          )
-                        : _ChapterHeader(
-                            totalCount: totalCount == 0
-                                ? chapterCount
-                                : totalCount,
-                            unreadCount: unreadCount,
-                            onDeviceBytes: onDeviceBytes,
-                            filterCount: filterCount,
-                            desktop: desktop,
-                            filterButtonKey: filterButtonKey,
-                            filterFocus: filterFocus,
-                            onRefresh: () => onRefresh(true),
-                            onFilter: openFilterPanel,
+                            itemCount: chapterEntries.length + 1,
                           ),
-                    Expanded(
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemBuilder: (context, index) {
-                          if (chapterEntries.length == index) {
-                            return desktop
-                                ? const SizedBox(height: 16)
-                                : const ListTile();
-                          }
-                          final entry = chapterEntries[index];
-                          return switch (entry) {
-                            MangaChapterEntry() => ChapterListTile(
-                              key: ValueKey('${entry.chapter.id}'),
-                              manga: manga,
-                              chapter: entry.chapter,
-                              updateData: () => onListRefresh(false),
-                              isSelected: selection.containsKey(
-                                entry.chapter.id,
-                              ),
-                              canTapSelect: selecting,
-                              toggleSelect: toggleSelect,
-                              desktop: desktop,
-                              selectionMode: selecting,
-                              isCurrent: entry.chapter.id == currentId,
-                              onRowTap: (shift) =>
-                                  onRowTap(entry.chapter, shift),
-                              onSecondaryTapAt: (pos) => openMenu(
-                                menuAnchorForPoint(context, pos),
-                                entry.chapter,
-                                ordered,
-                                bulk,
-                                () {},
-                              ),
-                              onOpenMenu: (rect, refocus) => openMenu(
-                                rect,
-                                entry.chapter,
-                                ordered,
-                                bulk,
-                                refocus,
-                              ),
-                            ),
-                            MissingChaptersEntry() =>
-                              MissingChaptersListTile(
-                                key: ValueKey('missing-${entry.id}'),
-                                count: entry.count,
-                              ),
-                          };
-                        },
-                        itemCount: chapterEntries.length + 1,
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Emoticons(
+                      title: context.l10n.noChaptersFound,
+                      button: TextButton(
+                        onPressed: () => onListRefresh(true),
+                        child: Text(context.l10n.refresh),
                       ),
-                    ),
-                  ],
-                );
-              } else {
-                return Emoticons(
-                  title: context.l10n.noChaptersFound,
-                  button: TextButton(
-                    onPressed: () => onListRefresh(true),
-                    child: Text(context.l10n.refresh),
-                  ),
-                );
-              }
-            }, refresh: () => onRefresh(false)),
+                    );
+                  }
+                }, refresh: () => onRefresh(false));
+              },
+            ),
           ),
         ],
       ),

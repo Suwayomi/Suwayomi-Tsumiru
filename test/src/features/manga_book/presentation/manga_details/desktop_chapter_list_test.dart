@@ -22,11 +22,13 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/chapter_list_tile.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/series_header.dart';
 import 'package:tsumiru/src/features/manga_book/widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/misc/toast/toast.dart';
+import 'package:tsumiru/src/utils/theme/brand.dart';
 
 ChapterDto _chapter({
   required int id,
@@ -789,6 +791,125 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1'), findsOneWidget);
     expect(find.textContaining('filtered'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet 1190 gives the chapter column one-line rows', (
+    tester,
+  ) async {
+    await _pumpDesktop(tester, size: const Size(1190, 900));
+    final tile = tester.widget<ChapterListTile>(
+      find.byKey(const ValueKey('2')),
+    );
+    expect(tile.desktop, isTrue);
+    // One-line rows draw the scanlator as its own column, not the phone
+    // subtitle's bulleted run.
+    expect(find.text('Group A'), findsWidgets);
+    expect(find.text(' • Group A'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('2')),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+    // Title once, beside the cover; no app bar title on tablets.
+    expect(find.byType(SeriesAppBarTitle), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(SeriesHeader),
+        matching: find.text('Test series'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Test series'), findsOneWidget);
+    // The selection header uses the same rule: labelled actions at this width.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 2'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('chapterSelectionHeader')),
+        matching: find.widgetWithText(TextButton, 'More'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet 800 keeps the narrow two-line rows', (tester) async {
+    await _pumpDesktop(tester, size: const Size(800, 900));
+    final tile = tester.widget<ChapterListTile>(
+      find.byKey(const ValueKey('2')),
+    );
+    expect(tile.desktop, isFalse);
+    expect(find.text(' • Group A'), findsWidgets);
+    expect(find.text('Group A'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('2')),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsNothing,
+    );
+    expect(find.byType(SeriesAppBarTitle), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(SeriesHeader),
+        matching: find.text('Test series'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Test series'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop 1400 keeps one-line rows and the bar title', (
+    tester,
+  ) async {
+    await _pumpDesktop(tester, size: const Size(1400, 900));
+    final tile = tester.widget<ChapterListTile>(
+      find.byKey(const ValueKey('2')),
+    );
+    expect(tile.desktop, isTrue);
+    expect(find.text('Group A'), findsWidgets);
+    expect(find.text(' • Group A'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(SeriesAppBarTitle),
+        matching: find.text('Test series'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SeriesHeader),
+        matching: find.text('Test series'),
+      ),
+      findsNothing,
+    );
+    expect(find.text('Test series'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone 412 keeps the phone rows and bar title', (tester) async {
+    await _pumpDesktop(tester, size: const Size(412, 915));
+    final tile = tester.widget<ChapterListTile>(
+      find.byKey(const ValueKey('2')),
+    );
+    expect(tile.desktop, isFalse);
+    expect(find.text(' • Group A'), findsWidgets);
+    expect(find.text('Group A'), findsNothing);
+    // Phone app bar still carries the faded title and the Resume button.
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Test series'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(BrandFab), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

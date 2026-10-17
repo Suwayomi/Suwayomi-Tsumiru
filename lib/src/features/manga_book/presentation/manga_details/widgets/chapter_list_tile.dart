@@ -54,7 +54,8 @@ class ChapterListTile extends HookConsumerWidget {
   final bool canTapSelect;
   final bool isSelected;
 
-  /// Desktop (>= 1200) one-line column layout with hover actions.
+  /// One-line desktop row with hover actions; used when the chapter column is
+  /// wide enough, not at a fixed window width.
   final bool desktop;
 
   /// Whether any selection is active (shows checkboxes on desktop).

@@ -296,13 +296,19 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                     ),
                                   ),
                                 ),
+                          // Tablets show the title beside the cover, so a
+                          // second one in the bar would duplicate it.
                           title: context.isDesktop
                               ? SeriesAppBarTitle(
                                   title: data?.title ?? context.l10n.manga,
                                 )
+                              : context.isTablet
+                              ? null
                               : Opacity(
                                   opacity: t,
-                                  child: Text(data?.title ?? context.l10n.manga),
+                                  child: Text(
+                                    data?.title ?? context.l10n.manga,
+                                  ),
                                 ),
                           actions: [
                             if (!context.isTablet && data != null)
