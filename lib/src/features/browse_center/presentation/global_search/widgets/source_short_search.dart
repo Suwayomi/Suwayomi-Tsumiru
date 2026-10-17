@@ -10,11 +10,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
 import '../../../domain/source/source_model.dart';
+import '../controller/source_quick_search_controller.dart';
 
-class SourceShortSearch extends StatelessWidget {
+class SourceShortSearch extends ConsumerWidget {
   const SourceShortSearch({
     super.key,
     required this.source,
@@ -26,7 +28,7 @@ class SourceShortSearch extends StatelessWidget {
   final String? query;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,9 +42,8 @@ class SourceShortSearch extends StatelessWidget {
             query: query,
           ).push(context),
         ),
-        mangaList.showUiWhenData(
-          context,
-          (data) => data.isEmpty
+        mangaList.when(
+          data: (data) => data.isEmpty
               ? Padding(
                   padding: KEdgeInsets.h16v4.size,
                   child: Text(context.l10n.noResultFound),
@@ -65,6 +66,26 @@ class SourceShortSearch extends StatelessWidget {
                     ],
                   ),
                 ),
+          error: (_, _) => Padding(
+            padding: KEdgeInsets.h16v4.size,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.couldntReachSource(source.displayName),
+                    style: TextStyle(color: context.colorScheme.error),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => ref.invalidate(
+                    sourceQuickSearchMangaListProvider(source.id, query: query),
+                  ),
+                  child: Text(context.l10n.retry),
+                ),
+              ],
+            ),
+          ),
+          loading: () => const CenterSorayomiShimmerIndicator(),
         ),
       ],
     );

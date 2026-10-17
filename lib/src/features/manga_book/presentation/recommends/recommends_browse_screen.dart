@@ -75,7 +75,11 @@ class RecommendsBrowseScreen extends ConsumerWidget {
                   final r = list[i];
                   return InkWell(
                     borderRadius: KBorderRadius.r8.radius,
-                    onTap: () => openGlobalSearch(context, query: r.title),
+                    onTap: () => openGlobalSearch(
+                      context,
+                      query: r.title,
+                      fromSuggestion: true,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
