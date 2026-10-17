@@ -163,8 +163,11 @@ Future<void> _pumpTile(
   await tester.pumpAndSettle();
 }
 
-Future<void> _pumpDesktop(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1400, 980);
+Future<void> _pumpDesktop(
+  WidgetTester tester, {
+  Size size = const Size(1400, 980),
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -377,6 +380,32 @@ void main() {
     tester,
   ) async {
     await _pumpDesktop(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 2'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('1 Selected'), findsOneWidget);
+    expect(find.text('6 Chapters'), findsNothing);
+    expect(
+      find.widgetWithIcon(IconButton, Icons.close_rounded),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(TextButton, 'Mark as read'), findsOneWidget);
+    final header = find.byKey(const ValueKey('chapterSelectionHeader'));
+    expect(
+      find.descendant(
+        of: header,
+        matching: find.widgetWithText(TextButton, 'More'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop selection header fits at 1200 wide', (tester) async {
+    await _pumpDesktop(tester, size: const Size(1200, 900));
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.tap(find.text('Chapter 2'));
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
