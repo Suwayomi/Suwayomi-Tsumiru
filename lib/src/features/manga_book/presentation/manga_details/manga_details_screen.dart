@@ -18,6 +18,7 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
@@ -163,25 +164,39 @@ class MangaDetailsScreen extends HookConsumerWidget {
       if (url != null) openInBrowser(url);
     }
 
+    // Leaving this route at the root of the detail shell pops the shell page,
+    // which disposes this screen without popping its own route, so PopScope
+    // alone would miss it. Mirror the latest data and run the same library
+    // bookkeeping on dispose; the flag keeps it to one run per exit.
+    final latestManga = useRef(manga);
+    latestManga.value = manga;
+    final libraryChecked = useRef(false);
+    void refreshLibraryAfterExit() {
+      if (libraryChecked.value || categoryId == null) return;
+      libraryChecked.value = true;
+      final id = categoryId!;
+      final current = latestManga.value;
+      // Every action re-fetches the series; mid-refetch, assume it changed.
+      final fresh = current.isLoading ? null : current.value;
+      // Defer off the pop's build phase (Riverpod-3 modify-during-build).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!providerContainer.exists(libraryMangaListProvider)) return;
+        final listed = providerContainer
+            .read(libraryMangaListProvider)
+            .value
+            ?.where((m) => m.id == mangaId)
+            .firstOrNull;
+        if (!libraryEntryOutdated(listed, fresh)) return;
+        providerContainer.invalidate(libraryMangaListProvider);
+        providerContainer.invalidate(categoryMangaListProvider(id));
+      });
+    }
+
+    useEffect(() => refreshLibraryAfterExit, const []);
+
     return PopScope(
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop && categoryId != null) {
-          final id = categoryId!;
-          // Every action re-fetches the series; mid-refetch, assume it changed.
-          final fresh = manga.isLoading ? null : manga.value;
-          // Defer off the pop's build phase (Riverpod-3 modify-during-build).
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!providerContainer.exists(libraryMangaListProvider)) return;
-            final listed = providerContainer
-                .read(libraryMangaListProvider)
-                .value
-                ?.where((m) => m.id == mangaId)
-                .firstOrNull;
-            if (!libraryEntryOutdated(listed, fresh)) return;
-            providerContainer.invalidate(libraryMangaListProvider);
-            providerContainer.invalidate(categoryMangaListProvider(id));
-          });
-        }
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) refreshLibraryAfterExit();
       },
       child: manga.showUiWhenData(
         context,
@@ -233,11 +248,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     builder: (context, px, _) {
                       final t = (px / 160).clamp(0.0, 1.0);
                       return AppBar(
-                        // Explicit back button: wrapping the AppBar in a
-                        // builder defeats automaticallyImplyLeading.
-                        leading: Navigator.of(context).canPop()
-                            ? const BackButton()
-                            : null,
+                        leading: detailNavigationBackButton(context),
                         backgroundColor: context.isTablet
                             ? surface
                             : Color.lerp(Colors.transparent, surface, t),

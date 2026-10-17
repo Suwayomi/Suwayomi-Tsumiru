@@ -15,6 +15,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../widgets/selection_action_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../domain/duplicate_matcher.dart';
@@ -150,6 +151,7 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(context.l10n.duplicatedEntries),
         actions: [
           IconButton(

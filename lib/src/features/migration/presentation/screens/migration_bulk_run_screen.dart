@@ -20,6 +20,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../auth/data/auth_credentials_store.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/data/manga_book/manga_book_repository.dart';
@@ -180,6 +181,7 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
         : null;
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(
           r == null || r.entries.isEmpty
               ? l10n.migrationListTitle

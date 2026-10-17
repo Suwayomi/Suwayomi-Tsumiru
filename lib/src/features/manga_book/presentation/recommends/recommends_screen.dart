@@ -11,6 +11,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/recommendations/recommendation_provider.dart';
 import '../../data/recommendations/recommendation_repository.dart';
 import 'recommendation_card.dart';
@@ -28,6 +29,7 @@ class RecommendsScreen extends ConsumerWidget {
     final setup = ref.watch(recommendationSetupProvider(mangaId));
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(
           mangaTitle != null
               ? context.l10n.similarTo(mangaTitle!)

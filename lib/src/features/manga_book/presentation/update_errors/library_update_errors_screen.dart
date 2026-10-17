@@ -13,6 +13,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/theme/brand.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../migration/domain/migration_models.dart';
 import '../../data/updates/updates_repository.dart';
 
@@ -25,6 +26,7 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
     final count = failed.value?.length;
     return Scaffold(
       appBar: AppBar(
+        leading: detailNavigationBackButton(context),
         title: Text(
           count == null
               ? context.l10n.libraryUpdateErrors
