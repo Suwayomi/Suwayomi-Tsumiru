@@ -4,21 +4,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../../offline/data/offline_download_providers.dart';
-import '../../../offline/data/offline_repository.dart';
-import '../../../tracking/domain/track_progress_gate.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
-import '../../presentation/manga_details/controller/scanlator_propagation.dart';
+import 'chapter_bulk_actions.dart';
 
 class MultiChaptersActionIcon extends ConsumerWidget {
   const MultiChaptersActionIcon({
@@ -45,102 +40,29 @@ class MultiChaptersActionIcon extends ConsumerWidget {
     return IconButton(
       icon: icon ?? Icon(iconData),
       onPressed: () async {
-        // Captured up front, before any await: the mutations below can outlive
-        // this icon (the selection action bar this lives in closes on a
-        // successful mark-read, unmounting the widget while these fire-and-forget
-        // follow-ups are still pending). `ref.read` throws once that happens;
-        // a container obtained now stays valid regardless.
-        final containerRead = ProviderScope.containerOf(
-          context,
-          listen: false,
-        ).read;
-        final ids = [for (final c in chapters) c.id];
-        // Read/unread expands across confidently matched releases; unrelated
-        // patches stay scoped to the selected rows.
-        final expandedByManga = <int, List<int>>{
-          if (change.isRead != null)
-            for (final mangaId in {for (final c in chapters) c.mangaId})
-              mangaId: expandIdsAcrossScanlators(
-                ref,
-                mangaId: mangaId,
-                chapterIds: [
-                  for (final c in chapters)
-                    if (c.mangaId == mangaId) c.id,
-                ],
-              ),
-        };
-        final idsForWrite = change.isRead == null
-            ? ids
-            : [for (final l in expandedByManga.values) ...l];
-        final bool ok;
         if (change.isRead != null) {
-          // Read/unread goes through the offline-aware write-through path: the
-          // local row is updated first (so it survives offline + restart and
-          // keeps Resume truthful), then the server. A failure with offline
-          // active is queued, not lost, so only surface an error when there's
-          // no local fallback.
-          ok = await recordReadState(
-            ref,
-            chapterIds: idsForWrite,
+          await markChaptersRead(
+            context: context,
+            ref: ref,
+            chapters: chapters,
             isRead: change.isRead!,
-            // Also true on mark-unread — stale progress there still reads
-            // as in-progress.
+            refresh: refresh,
             resetPosition: change.lastPageRead == 0,
           );
-          if (!ok && context.mounted && !ref.read(offlineActiveProvider)) {
-            ref
-                .read(toastProvider)
-                ?.showError(context.l10n.errorSomethingWentWrong);
-          }
-        } else {
-          final result = await AsyncValue.guard(
-            () => ref
-                .read(mangaBookRepositoryProvider)
-                .modifyBulkChapters(
-                  ChapterBatch(ids: idsForWrite, patch: change),
+          return;
+        }
+        final result = await AsyncValue.guard(
+          () => ref
+              .read(mangaBookRepositoryProvider)
+              .modifyBulkChapters(
+                ChapterBatch(
+                  ids: [for (final c in chapters) c.id],
+                  patch: change,
                 ),
-          );
-          if (context.mounted) {
-            result.showToastOnError(ref.read(toastProvider));
-          }
-          ok = !result.hasError;
-        }
-        // On a successful mark-read, sync each affected manga to its tracker and
-        // honour the delete-on-manual-read setting — keyed off each chapter's
-        // own mangaId, so a multi-manga selection (updates screen) syncs them
-        // all instead of being silently skipped.
-        if (change.isRead == true) {
-          // Local delete is purely local: run it even if the server push is
-          // still pending, or offline reads leave the copy stranded.
-          for (final entry in expandedByManga.entries) {
-            for (final id in entry.value) {
-              unawaited(maybeDeleteOnManualLocal(containerRead, chapterId: id));
-            }
-          }
-        }
-        if (ok && change.isRead == true) {
-          for (final mangaId in {for (final c in chapters) c.mangaId}) {
-            unawaited(
-              maybeTrackProgressOnReadFetch(
-                containerRead,
-                mangaId: mangaId,
-                isRead: true,
-                manual: true,
               ),
-            );
-          }
-          // Expanded set: hidden duplicates get delete-on-manual-read too.
-          for (final entry in expandedByManga.entries) {
-            for (final id in entry.value) {
-              unawaited(
-                maybeDeleteOnManualServer(
-                  containerRead,
-                  mangaId: entry.key,
-                  chapterId: id,
-                ),
-              );
-            }
-          }
+        );
+        if (context.mounted) {
+          result.showToastOnError(ref.read(toastProvider));
         }
         await refresh(true);
       },

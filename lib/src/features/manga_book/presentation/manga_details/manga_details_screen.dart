@@ -188,7 +188,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
         (data) => Scaffold(
           extendBodyBehindAppBar:
               !context.isTablet && selectedChapters.value.isEmpty && !offline,
-          appBar: selectedChapters.value.isNotEmpty
+          // Desktop selection lives in the floating chapter-column bar
+          // (close + count + labelled actions), so the app bar stays put.
+          appBar: selectedChapters.value.isNotEmpty && !context.isDesktop
               ? AppBar(
                   leading: IconButton(
                     onPressed: () => selectedChapters.value = ({}),
@@ -268,12 +270,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 child: Text(data?.title ?? context.l10n.manga),
                               ),
                         actions: [
-                          if (context.isTablet)
-                            IconButton(
-                              tooltip: context.l10n.refresh,
-                              onPressed: () => refresh(true),
-                              icon: const Icon(Icons.refresh_rounded),
-                            ),
                           if (!context.isTablet && data != null)
                             IconButton(
                               tooltip: context.l10n.webView,
@@ -284,28 +280,23 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 data,
                               ),
                             ),
-                          if (!context.isDesktop)
-                            Builder(
-                              builder: (context) => IconButton(
-                                onPressed: () {
-                                  if (context.isTablet) {
-                                    Scaffold.of(context).openEndDrawer();
-                                  } else {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: KBorderRadius.rT16.radius,
-                                      ),
-                                      clipBehavior: Clip.hardEdge,
-                                      builder: (_) => MangaChapterOrganizer(
-                                        mangaId: mangaId,
-                                      ),
-                                      sheetAnimationStyle: context.motionStyle,
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.filter_list_rounded),
-                              ),
+                          // Tablet and desktop filter from the chapter header
+                          // dropdown instead; phones keep the bottom sheet.
+                          if (!context.isTablet)
+                            IconButton(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: KBorderRadius.rT16.radius,
+                                  ),
+                                  clipBehavior: Clip.hardEdge,
+                                  builder: (_) =>
+                                      MangaChapterOrganizer(mangaId: mangaId),
+                                  sheetAnimationStyle: context.motionStyle,
+                                );
+                              },
+                              icon: const Icon(Icons.filter_list_rounded),
                             ),
                           if (!context.isTablet)
                             PopupMenuButton(
@@ -371,14 +362,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                     },
                   ),
                 ),
-          // Edge-drag would open this on phones, where the organizer is a
-          // bottom sheet instead — and it eats the system back gesture.
           endDrawerEnableOpenDragGesture: false,
-          endDrawer: Drawer(
-            shape: const RoundedRectangleBorder(),
-            width: kDrawerWidth,
-            child: MangaChapterOrganizer(mangaId: mangaId),
-          ),
           floatingActionButton:
               !context.isDesktop &&
                   firstUnreadChapter != null &&

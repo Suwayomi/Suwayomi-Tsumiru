@@ -41,8 +41,9 @@ class SelectionActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final view = View.of(context);
-    final bottomInset =
-        clearsSystemNav ? view.viewPadding.bottom / view.devicePixelRatio : 0.0;
+    final bottomInset = clearsSystemNav
+        ? view.viewPadding.bottom / view.devicePixelRatio
+        : 0.0;
     return Padding(
       padding: KEdgeInsets.a8.size.add(EdgeInsets.only(bottom: bottomInset)),
       child: Card(
@@ -59,8 +60,18 @@ class SelectionActionBar extends StatelessWidget {
               : Row(
                   children: [
                     ...leading,
-                    const Spacer(),
-                    ...actions,
+                    // Scrolls instead of overflowing once the action count
+                    // outgrows narrow phones; right-aligned like before when
+                    // everything fits.
+                    Flexible(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(children: actions),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
         ),

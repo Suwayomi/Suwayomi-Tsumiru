@@ -6,22 +6,30 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/emoticons.dart';
 import '../../../../offline/data/offline_download_providers.dart';
+import '../../../../offline/presentation/offline_settings_format.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../../widgets/chapter_actions/chapter_bulk_actions.dart';
 import '../controller/chapter_list_entry.dart';
+import '../controller/manga_details_controller.dart';
 import 'add_to_library_category.dart';
+import 'chapter_context_menu.dart';
 import 'chapter_list_tile.dart';
+import 'manga_chapter_organizer.dart';
 import 'manga_description.dart';
 import 'missing_chapters_tile.dart';
 import 'recommends_row.dart';
 import 'series_info_column.dart';
 
-class BigScreenMangaDetails extends ConsumerWidget {
+class BigScreenMangaDetails extends HookConsumerWidget {
   const BigScreenMangaDetails({
     super.key,
     required this.chapterList,
@@ -43,6 +51,101 @@ class BigScreenMangaDetails extends ConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final desktop = context.isDesktop;
+    final selection = useValueListenable(selectedChapters);
+    final selecting = selection.isNotEmpty;
+    final anchor = useState<int?>(null);
+    final filterButtonKey = useMemoized(GlobalKey.new);
+    final moreButtonKey = useMemoized(GlobalKey.new);
+    final filterFocus = useMemoized(FocusNode.new);
+    useEffect(() => filterFocus.dispose, [filterFocus]);
+    final escScope = useMemoized(FocusScopeNode.new);
+    useEffect(() => escScope.dispose, [escScope]);
+
+    final rawChapters = ref.watch(mangaChapterListProvider(mangaId: mangaId));
+    final totalCount = rawChapters.value?.length ?? 0;
+    final unreadCount =
+        rawChapters.value?.where((c) => !c.isRead.ifNull()).length ?? 0;
+    final onDeviceBytes =
+        ref.watch(offlineMangaBytesProvider(mangaId: mangaId)).value ?? 0;
+    final filterCount =
+        (ref.watch(mangaChapterFilterUnreadProvider) != null ? 1 : 0) +
+        (ref.watch(mangaChapterFilterDownloadedProvider) != null ? 1 : 0) +
+        (ref.watch(mangaChapterFilterBookmarkedProvider) != null ? 1 : 0) +
+        ((ref
+                    .watch(mangaPreferredScanlatorsProvider(mangaId: mangaId))
+                    .isNotEmpty &&
+                !ref.watch(
+                  mangaShowAllScanlatorVersionsProvider(mangaId: mangaId),
+                ))
+            ? 1
+            : 0);
+    final currentId = ref
+        .watch(firstUnreadInFilteredChapterListProvider(mangaId: mangaId))
+        ?.id;
+
+    // Keyboard focus follows the selection so Esc always lands here while
+    // selecting — menus and panels consume Esc themselves, so this only ever
+    // clears the selection and never also triggers the global Back.
+    final wasSelecting = usePrevious(selecting);
+    useEffect(() {
+      if (selecting && wasSelecting == false) escScope.requestFocus();
+      return null;
+    }, [selecting]);
+
+    void toggleSelect(ChapterDto val) {
+      if ((val.id).isNull) return;
+      selectedChapters.value = selectedChapters.value.toggleKey(val.id, val);
+    }
+
+    Future<void> barRefresh(bool online) async {
+      selectedChapters.value = {};
+      await onListRefresh(online);
+    }
+
+    Future<void> openMenu(
+      RelativeRect position,
+      ChapterDto chapter,
+      List<ChapterDto> ordered,
+      List<ChapterDto> bulk,
+      void Function() refocus,
+    ) => showChapterContextMenu(
+      context: context,
+      ref: ref,
+      position: position,
+      manga: manga,
+      chapter: chapter,
+      selectedChapters: selectedChapters,
+      selectionAnchor: anchor,
+      orderedChapters: ordered,
+      bulkChapters: bulk,
+      refresh: () => onListRefresh(false),
+      refocus: refocus,
+    );
+
+    Future<void> openFilterPanel() async {
+      final box =
+          filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      await showMenu<void>(
+        context: context,
+        position: menuAnchorForRect(
+          context,
+          Rect.fromLTWH(rect.right - 300, rect.bottom + 6, 0, 0),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        items: [
+          _FilterPanelEntry(
+            panelWidth: 300,
+            panelHeight: 420,
+            child: MangaChapterOrganizer(mangaId: mangaId),
+          ),
+        ],
+      );
+      if (context.mounted) filterFocus.requestFocus();
+    }
+
     final chapterEntries = chapterList.value;
     final chapterCount =
         chapterEntries?.whereType<MangaChapterEntry>().length ?? 0;
@@ -52,7 +155,7 @@ class BigScreenMangaDetails extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: context.isDesktop ? 55 : 1,
+            flex: desktop ? 55 : 1,
             child: SeriesInfoColumn(
               key: ValueKey(mangaId),
               expansion: expansion,
@@ -79,57 +182,148 @@ class BigScreenMangaDetails extends ConsumerWidget {
           ),
           const VerticalDivider(width: 0),
           Expanded(
-            flex: context.isDesktop ? 45 : 1,
+            flex: desktop ? 45 : 1,
             child: chapterList.showUiWhenData(context, (data) {
               if (data.isNotBlank) {
-                void toggleSelect(ChapterDto val) {
-                  if ((val.id).isNull) return;
-                  selectedChapters.value = selectedChapters.value.toggleKey(
-                    val.id,
-                    val,
-                  );
+                final ordered = [
+                  for (final e in chapterEntries!)
+                    if (e is MangaChapterEntry) e.chapter,
+                ];
+                final orderedIds = [for (final c in ordered) c.id];
+                final bulk =
+                    ref
+                        .watch(
+                          mangaChapterListForBulkActionsProvider(
+                            mangaId: mangaId,
+                          ),
+                        )
+                        .value ??
+                    ordered;
+
+                void selectRange(int fromId, int toId) {
+                  final from = orderedIds.indexOf(fromId);
+                  final to = orderedIds.indexOf(toId);
+                  if (from < 0 || to < 0) return;
+                  final lo = from < to ? from : to;
+                  final hi = from < to ? to : from;
+                  selectedChapters.value = {
+                    for (var i = lo; i <= hi; i++) ordered[i].id: ordered[i],
+                  };
+                }
+
+                void onRowTap(ChapterDto chapter, bool shift) {
+                  if (!selecting && !shift) {
+                    ReaderRoute(
+                      mangaId: manga.id,
+                      chapterId: chapter.id,
+                      showReaderLayoutAnimation: true,
+                    ).push(context);
+                    return;
+                  }
+                  final anchorId = anchor.value;
+                  if (shift && anchorId != null && anchorId != chapter.id) {
+                    selectRange(anchorId, chapter.id);
+                    return;
+                  }
+                  toggleSelect(chapter);
+                  anchor.value = chapter.id;
                 }
 
                 return Column(
                   children: [
-                    ListTile(
-                      title: Text(context.l10n.noOfChapters(chapterCount)),
-                      trailing: context.isDesktop
-                          ? IconButton(
-                              tooltip: context.l10n.filter,
-                              onPressed: () =>
-                                  Scaffold.of(context).openEndDrawer(),
-                              icon: const Icon(Icons.filter_list_rounded),
-                            )
-                          : null,
+                    _ChapterHeader(
+                      totalCount: totalCount == 0 ? chapterCount : totalCount,
+                      unreadCount: unreadCount,
+                      onDeviceBytes: onDeviceBytes,
+                      filterCount: filterCount,
+                      desktop: desktop,
+                      filterButtonKey: filterButtonKey,
+                      filterFocus: filterFocus,
+                      onRefresh: () => onRefresh(true),
+                      onFilter: openFilterPanel,
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemBuilder: (context, index) {
-                          if (chapterEntries.length == index) {
-                            return const ListTile();
+                      child: FocusScope(
+                        node: escScope,
+                        onKeyEvent: (node, event) {
+                          if (event is KeyDownEvent &&
+                              event.logicalKey == LogicalKeyboardKey.escape &&
+                              selectedChapters.value.isNotEmpty) {
+                            selectedChapters.value = {};
+                            anchor.value = null;
+                            return KeyEventResult.handled;
                           }
-                          final entry = chapterEntries[index];
-                          return switch (entry) {
-                            MangaChapterEntry() => ChapterListTile(
-                              key: ValueKey('${entry.chapter.id}'),
-                              manga: manga,
-                              chapter: entry.chapter,
-                              updateData: () => onListRefresh(false),
-                              isSelected: selectedChapters.value.containsKey(
-                                entry.chapter.id,
-                              ),
-                              canTapSelect: selectedChapters.value.isNotEmpty,
-                              toggleSelect: toggleSelect,
-                            ),
-                            MissingChaptersEntry() => MissingChaptersListTile(
-                              key: ValueKey('missing-${entry.id}'),
-                              count: entry.count,
-                            ),
-                          };
+                          return KeyEventResult.ignored;
                         },
-                        itemCount: chapterEntries!.length + 1,
+                        child: Stack(
+                          children: [
+                            ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                if (chapterEntries.length == index) {
+                                  return desktop
+                                      ? const SizedBox(height: 16)
+                                      : const ListTile();
+                                }
+                                final entry = chapterEntries[index];
+                                return switch (entry) {
+                                  MangaChapterEntry() => ChapterListTile(
+                                    key: ValueKey('${entry.chapter.id}'),
+                                    manga: manga,
+                                    chapter: entry.chapter,
+                                    updateData: () => onListRefresh(false),
+                                    isSelected: selection.containsKey(
+                                      entry.chapter.id,
+                                    ),
+                                    canTapSelect: selecting,
+                                    toggleSelect: toggleSelect,
+                                    desktop: desktop,
+                                    selectionMode: selecting,
+                                    isCurrent: entry.chapter.id == currentId,
+                                    onRowTap: (shift) =>
+                                        onRowTap(entry.chapter, shift),
+                                    onSecondaryTapAt: (pos) => openMenu(
+                                      menuAnchorForPoint(context, pos),
+                                      entry.chapter,
+                                      ordered,
+                                      bulk,
+                                      () {},
+                                    ),
+                                    onOpenMenu: (rect, refocus) => openMenu(
+                                      rect,
+                                      entry.chapter,
+                                      ordered,
+                                      bulk,
+                                      refocus,
+                                    ),
+                                  ),
+                                  MissingChaptersEntry() =>
+                                    MissingChaptersListTile(
+                                      key: ValueKey('missing-${entry.id}'),
+                                      count: entry.count,
+                                    ),
+                                };
+                              },
+                              itemCount: chapterEntries.length + 1,
+                            ),
+                            if (desktop && selecting)
+                              _DesktopSelectionBar(
+                                selected: selection.values.toList(),
+                                ordered: ordered,
+                                bulk: bulk,
+                                moreButtonKey: moreButtonKey,
+                                onClear: () {
+                                  selectedChapters.value = {};
+                                  anchor.value = null;
+                                },
+                                refresh: barRefresh,
+                                onSelect: (next, anchorId) {
+                                  selectedChapters.value = next;
+                                  anchor.value = anchorId;
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -147,6 +341,379 @@ class BigScreenMangaDetails extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ChapterHeader extends StatelessWidget {
+  const _ChapterHeader({
+    required this.totalCount,
+    required this.unreadCount,
+    required this.onDeviceBytes,
+    required this.filterCount,
+    required this.desktop,
+    required this.filterButtonKey,
+    required this.filterFocus,
+    required this.onRefresh,
+    required this.onFilter,
+  });
+  final int totalCount;
+  final int unreadCount;
+  final int onDeviceBytes;
+  final int filterCount;
+  final bool desktop;
+  final GlobalKey filterButtonKey;
+  final FocusNode filterFocus;
+  final VoidCallback onRefresh;
+  final VoidCallback onFilter;
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final subline = StringBuffer(context.l10n.unreadCount(unreadCount));
+    if (onDeviceBytes > 0) {
+      subline.write(
+        ' · ${context.l10n.onDeviceSize(formatBytes(onDeviceBytes))}',
+      );
+    }
+    if (filterCount > 0) {
+      subline.write(' · ${context.l10n.filtered}');
+    }
+    Widget filterIcon = const Icon(Icons.filter_list_rounded);
+    if (filterCount > 0) {
+      filterIcon = Badge.count(
+        count: filterCount,
+        backgroundColor: cs.primary,
+        textColor: cs.onPrimary,
+        child: filterIcon,
+      );
+    }
+    final Widget filterButton = desktop
+        ? OutlinedButton.icon(
+            key: filterButtonKey,
+            focusNode: filterFocus,
+            onPressed: onFilter,
+            icon: filterIcon,
+            label: Text(context.l10n.filter),
+            style: filterCount > 0
+                ? OutlinedButton.styleFrom(side: BorderSide(color: cs.primary))
+                : null,
+          )
+        : Container(
+            decoration: filterCount > 0
+                ? BoxDecoration(
+                    border: Border.all(color: cs.primary),
+                    borderRadius: BorderRadius.circular(10),
+                  )
+                : null,
+            child: IconButton(
+              key: filterButtonKey,
+              focusNode: filterFocus,
+              tooltip: context.l10n.filter,
+              onPressed: onFilter,
+              icon: filterIcon,
+            ),
+          );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.noOfChapters(totalCount),
+                  style: context.textTheme.titleMedium,
+                ),
+                Text(
+                  subline.toString(),
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (desktop)
+            TextButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: Text(context.l10n.refresh),
+            )
+          else
+            IconButton(
+              tooltip: context.l10n.refresh,
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          const SizedBox(width: 4),
+          filterButton,
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopSelectionBar extends ConsumerWidget {
+  const _DesktopSelectionBar({
+    required this.selected,
+    required this.ordered,
+    required this.bulk,
+    required this.moreButtonKey,
+    required this.onClear,
+    required this.refresh,
+    required this.onSelect,
+  });
+  final List<ChapterDto> selected;
+  final List<ChapterDto> ordered;
+  final List<ChapterDto> bulk;
+  final GlobalKey moreButtonKey;
+  final VoidCallback onClear;
+  final AsyncValueSetter<bool> refresh;
+  final void Function(Map<int, ChapterDto> next, int anchorId) onSelect;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = context.theme.colorScheme;
+    final allBookmarked =
+        selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
+    final anchor = selected.last;
+
+    Future<void> openMore() async {
+      final box =
+          moreButtonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final anchorIndex = ordered.indexWhere((c) => c.id == anchor.id);
+      await showMenu<void>(
+        context: context,
+        position: menuAnchorForRect(
+          context,
+          Rect.fromLTWH(rect.left, rect.top, 0, 0),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        items: [
+          PopupMenuItem(
+            onTap: () => markChaptersRead(
+              context: context,
+              ref: ref,
+              chapters: selected,
+              isRead: false,
+              refresh: refresh,
+            ),
+            child: ChapterMenuRow(
+              icon: Icons.remove_done_rounded,
+              label: context.l10n.markAsUnread,
+            ),
+          ),
+          PopupMenuItem(
+            enabled: previousChapters(bulk, anchor).isNotEmpty,
+            onTap: () => markPreviousAsRead(
+              context: context,
+              ref: ref,
+              bulkList: bulk,
+              anchor: anchor,
+              refresh: refresh,
+            ),
+            child: ChapterMenuRow(
+              icon: Icons.history_rounded,
+              label: context.l10n.markPreviousAsRead,
+            ),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            enabled: anchorIndex >= 0,
+            onTap: () {
+              if (anchorIndex < 0) return;
+              onSelect({
+                ...{for (final c in selected) c.id: c},
+                for (final c in ordered.skip(anchorIndex + 1).take(10)) c.id: c,
+              }, anchor.id);
+            },
+            child: ChapterMenuRow(
+              icon: Icons.playlist_add_check_rounded,
+              label: context.l10n.selectNext10,
+            ),
+          ),
+          PopupMenuItem(
+            onTap: () => onSelect({
+              for (final c in ordered)
+                if (!c.isRead.ifNull()) c.id: c,
+            }, anchor.id),
+            child: ChapterMenuRow(
+              icon: Icons.filter_list_rounded,
+              label: context.l10n.selectUnread,
+            ),
+          ),
+          PopupMenuItem(
+            enabled: anchorIndex >= 0,
+            onTap: () {
+              if (anchorIndex < 0) return;
+              onSelect({
+                ...{for (final c in selected) c.id: c},
+                for (final c in ordered.skip(anchorIndex)) c.id: c,
+              }, anchor.id);
+            },
+            child: ChapterMenuRow(
+              icon: Icons.vertical_align_bottom_rounded,
+              label: context.l10n.selectBelow,
+            ),
+          ),
+          PopupMenuItem(
+            onTap: () =>
+                onSelect({for (final c in ordered) c.id: c}, anchor.id),
+            child: ChapterMenuRow(
+              icon: Icons.select_all_rounded,
+              label: context.l10n.selectAll,
+            ),
+          ),
+          PopupMenuItem(
+            onTap: () {
+              final ids = {for (final c in selected) c.id};
+              final first = ordered.indexWhere((c) => ids.contains(c.id));
+              final last = ordered.lastIndexWhere((c) => ids.contains(c.id));
+              if (first < 0 || last < 0) return;
+              onSelect({
+                for (var i = first; i <= last; i++) ordered[i].id: ordered[i],
+              }, anchor.id);
+            },
+            child: ChapterMenuRow(
+              icon: Icons.swap_vert_rounded,
+              label: context.l10n.selectInBetween,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Positioned(
+      left: 12,
+      right: 12,
+      bottom: 12,
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: context.theme.cardColor.withValues(alpha: 0.97),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: context.l10n.cancel,
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: onClear,
+                ),
+                Text(
+                  context.l10n.numSelected(selected.length),
+                  style: context.textTheme.titleMedium,
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: () => markChaptersRead(
+                    context: context,
+                    ref: ref,
+                    chapters: selected,
+                    isRead: true,
+                    refresh: refresh,
+                  ),
+                  icon: const Icon(Icons.done_all_rounded, size: 20),
+                  label: Text(context.l10n.markAsRead),
+                ),
+                TextButton.icon(
+                  onPressed: () => setChaptersBookmark(
+                    ref: ref,
+                    chapters: selected,
+                    isBookmarked: !allBookmarked,
+                    refresh: refresh,
+                  ),
+                  icon: const Icon(Icons.bookmark_rounded, size: 20),
+                  label: Text(
+                    allBookmarked
+                        ? context.l10n.removeBookmark
+                        : context.l10n.bookmark,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => keepChaptersOffline(
+                    context: context,
+                    ref: ref,
+                    chapters: selected,
+                    refresh: refresh,
+                  ),
+                  icon: const Icon(Icons.save_alt_rounded, size: 20),
+                  label: Text(context.l10n.keepOffline),
+                ),
+                TextButton.icon(
+                  onPressed: () => queueServerDownload(
+                    context: context,
+                    ref: ref,
+                    chapterIds: [for (final c in selected) c.id],
+                    refresh: refresh,
+                  ),
+                  icon: const Icon(Icons.cloud_download_outlined, size: 20),
+                  label: Text(context.l10n.download),
+                ),
+                TextButton.icon(
+                  key: moreButtonKey,
+                  onPressed: openMore,
+                  icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                  label: Text(context.l10n.more),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final deleted = await deleteChaptersFromServerWithConfirm(
+                      context: context,
+                      ref: ref,
+                      chapters: selected,
+                    );
+                    if (deleted) await refresh(true);
+                  },
+                  icon: Icon(Icons.delete_rounded, size: 20, color: cs.error),
+                  label: Text('${context.l10n.delete}…'),
+                  style: ButtonStyle(
+                    overlayColor: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.pressed)
+                          ? cs.onSurface.withValues(alpha: 0.12)
+                          : states.contains(WidgetState.hovered)
+                          ? cs.error.withValues(alpha: 0.12)
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterPanelEntry extends PopupMenuEntry<void> {
+  const _FilterPanelEntry({
+    required this.panelWidth,
+    required this.panelHeight,
+    required this.child,
+  });
+  final double panelWidth;
+  final double panelHeight;
+  final Widget child;
+  @override
+  double get height => panelHeight;
+  @override
+  bool represents(void value) => false;
+  @override
+  State<StatefulWidget> createState() => _FilterPanelEntryState();
+}
+
+class _FilterPanelEntryState extends State<_FilterPanelEntry> {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.panelWidth,
+      height: widget.panelHeight,
+      child: widget.child,
     );
   }
 }

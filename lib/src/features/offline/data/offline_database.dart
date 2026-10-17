@@ -1859,4 +1859,21 @@ class OfflineDatabase extends _$OfflineDatabase {
             .getSingle();
     return row.read(sum) ?? 0;
   }
+
+  /// Bytes used by one manga's downloaded chapters — for the series page
+  /// chapter header subline.
+  Future<int> downloadedBytesForManga(int mangaId) async {
+    final sum = offlineChapters.bytes.sum();
+    final row =
+        await (selectOnly(offlineChapters)
+              ..addColumns([sum])
+              ..where(
+                offlineChapters.mangaId.equals(mangaId) &
+                    offlineChapters.deviceState.equalsValue(
+                      OfflineDeviceState.downloaded,
+                    ),
+              ))
+            .getSingle();
+    return row.read(sum) ?? 0;
+  }
 }

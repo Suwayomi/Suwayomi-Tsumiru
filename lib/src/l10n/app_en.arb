@@ -1467,6 +1467,8 @@
   "backupTime": "Backup Time",
   "badges": "Badges",
   "bookmarked": "Bookmarked",
+  "bookmark": "Bookmark",
+  "removeBookmark": "Remove bookmark",
   "categoryNumberOfItems": "Show number of items",
   "@categoryNumberOfItems": {
     "description": "Library Display > Tabs: checkbox to show a manga count next to each category tab label"
@@ -1686,6 +1688,7 @@
   "deleteCategoryDescription": "This will merge all Mangas in this Category to Default!",
   "deleteCategoryTitle": "Are you sure?",
   "deleteChapters": "Delete chapters",
+  "deleteFromServer": "Delete from server…",
   "deleteOnDeviceDownloads": "Delete on-device downloads",
   "deleteOnDeviceDownloadsDescription": "Removes a chapter's copy from this device as you read it. Your server keeps its copy — this only frees space on your phone.",
   "deleteServerDownloads": "Delete server downloads",
@@ -2316,6 +2319,30 @@
   "nsfw18": "18+",
   "nsfwInfo": "This does not prevent unofficial or potentially incorrectly flagged extensions from surfacing NSFW(18+) content within app",
   "numSelected": "{num} Selected",
+  "removeFromDevice": "Remove from device",
+  "download": "Download",
+  "undo": "Undo",
+  "filtered": "filtered",
+  "unreadCount": "{count, plural, =1{1 unread} other{{count} unread}}",
+  "@unreadCount": {
+    "description": "Chapter header subline unread segment",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "6"
+      }
+    }
+  },
+  "onDeviceSize": "{size} on device",
+  "@onDeviceSize": {
+    "description": "Chapter header subline on-device segment",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "2.1 GB"
+      }
+    }
+  },
   "obsolete": "Obsolete",
   "onDevice": "On device",
   "offlineBulkDeleteWarning": "{count} of these are saved on this device and will be removed here too.",
@@ -2330,9 +2357,24 @@
   "openFlareSolverr": "Checkout FlareSolverr for information on how to set it up",
   "openInWeb": "Open In Web",
   "openSourceInBrowser": "Open source page",
+  "openInBrowser": "Open in browser",
   "openOnServer": "Open on server",
   "or": "or",
   "page": "Page: {number}",
+  "pageOfTotal": "Page {current} of {total}",
+  "@pageOfTotal": {
+    "description": "Tooltip on the current chapter's progress line",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "12"
+      },
+      "total": {
+        "type": "int",
+        "example": "45"
+      }
+    }
+  },
   "parallelSourceRequest": "Parallel source requests",
   "password": "Password",
   "pause": "Pause",
@@ -2786,6 +2828,8 @@
   "search": "Search",
   "searchLibraryHint": "Search title, author, source...",
   "searchingForUpdates": "Searching for updates",
+  "select": "Select",
+  "selectAll": "Select all",
   "selectBelow": "Select below",
   "selectInBetween": "Select in between",
   "selectNext10": "Select next 10",
@@ -3102,6 +3146,29 @@
   "offlineDownloadingToast": "Downloading to this device…",
   "@offlineDownloadingToast": {
     "description": "Snackbar shown after starting a series download"
+  },
+  "markAsRead": "Mark as read",
+  "markAsUnread": "Mark as unread",
+  "markPreviousAsRead": "Mark previous as read",
+  "markedAsRead": "{count, plural, =1{Marked 1 chapter as read} other{Marked {count} chapters as read}}",
+  "@markedAsRead": {
+    "description": "Toast after bulk mark-read, with an Undo action",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "markedAsUnread": "{count, plural, =1{Marked 1 chapter as unread} other{Marked {count} chapters as unread}}",
+  "@markedAsUnread": {
+    "description": "Toast after bulk mark-unread, with an Undo action",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   },
   "manageDownloads": "Manage downloads",
   "@manageDownloads": {
