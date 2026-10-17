@@ -49,11 +49,16 @@ GoRouter _router(String location) {
   );
 }
 
-Future<GoRouter> _pump(WidgetTester tester, Size size, String location) async {
+Future<GoRouter> _pump(
+  WidgetTester tester,
+  Size size,
+  String location, [
+  Map<String, Object> initialPrefs = const {},
+]) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues(initialPrefs);
   final prefs = await SharedPreferences.getInstance();
   final router = _router(location);
   addTearDown(router.dispose);
@@ -96,6 +101,49 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('detail shell follows the sidebar preference at desktop width',
+      (tester) async {
+    await _pump(
+      tester,
+      const Size(1400, 900),
+      const LibraryUpdateErrorsRoute().location,
+    );
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('detail shell collapses when the sidebar preference is off',
+      (tester) async {
+    await _pump(
+      tester,
+      const Size(1400, 900),
+      const LibraryUpdateErrorsRoute().location,
+      const {'sidebarExpanded': false},
+    );
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('detail shell shows the icon rail at tablet width',
+      (tester) async {
+    await _pump(
+      tester,
+      const Size(800, 900),
+      const LibraryUpdateErrorsRoute().location,
+    );
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('reader covers the rail and back returns to series', (
     tester,
