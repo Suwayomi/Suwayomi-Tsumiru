@@ -13,11 +13,12 @@ import '../utils/motion/reduce_motion.dart';
 ///
 /// Pass [itemCount] and [itemBuilder] for a list, or [child] for a caller-owned
 /// loading, error or empty body. Arrows and the edge fade only appear while the
-/// list overflows.
+/// list overflows. With no [title] the arrows sit above the list instead.
 class CoverRowSection extends StatefulWidget {
   const CoverRowSection({
     super.key,
-    required this.title,
+    this.title,
+    this.subtitle,
     this.onSeeAll,
     this.padding = EdgeInsets.zero,
     this.height,
@@ -27,7 +28,8 @@ class CoverRowSection extends StatefulWidget {
     this.child,
   });
 
-  final String title;
+  final String? title;
+  final String? subtitle;
   final VoidCallback? onSeeAll;
   final EdgeInsetsGeometry padding;
   final double? height;
@@ -123,6 +125,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
         style: IconButton.styleFrom(
           minimumSize: const Size.square(34),
           maximumSize: const Size.square(34),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           padding: EdgeInsets.zero,
           foregroundColor: context.colorScheme.onSurface,
           backgroundColor: context.colorScheme.surfaceContainer,
@@ -133,26 +136,53 @@ class _CoverRowSectionState extends State<CoverRowSection> {
     );
   }
 
+  Widget _heading(BuildContext context) {
+    final title = Text(widget.title!, style: context.textTheme.titleMedium);
+    final subtitle = widget.subtitle;
+    if (subtitle == null) return title;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        title,
+        Text(
+          subtitle,
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.theme.hintColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _header(BuildContext context) {
-    final title = Text(widget.title, style: context.textTheme.titleMedium);
+    final heading = _heading(context);
     final showArrows = _canBack || _canForward;
     if (context.isTablet) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
         child: Row(
           children: [
-            Expanded(child: title),
+            Expanded(child: heading),
             if (widget.onSeeAll != null)
               TextButton(
                 onPressed: widget.onSeeAll,
                 child: Text(context.l10n.seriesSeeAll),
               ),
-            if (showArrows) ...[
-              const SizedBox(width: 10),
-              _arrow(context, left: true),
-              const SizedBox(width: 8),
-              _arrow(context, left: false),
-            ],
+            // Reserved at all times so See all lines up across sections.
+            SizedBox(
+              width: _arrowAreaWidth,
+              child: showArrows
+                  ? Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        _arrow(context, left: true),
+                        const SizedBox(width: 8),
+                        _arrow(context, left: false),
+                      ],
+                    )
+                  : null,
+            ),
           ],
         ),
       );
@@ -160,14 +190,14 @@ class _CoverRowSectionState extends State<CoverRowSection> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: widget.onSeeAll == null
-          ? title
+          ? heading
           : Tooltip(
               message: context.l10n.seriesSeeAll,
               child: InkWell(
                 onTap: widget.onSeeAll,
                 child: Row(
                   children: [
-                    Expanded(child: title),
+                    Expanded(child: heading),
                     const Icon(Icons.arrow_forward),
                   ],
                 ),
@@ -175,6 +205,21 @@ class _CoverRowSectionState extends State<CoverRowSection> {
             ),
     );
   }
+
+  Widget _headerlessArrows(BuildContext context) => Padding(
+    padding: widget.padding,
+    child: Align(
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _arrow(context, left: true),
+          const SizedBox(width: 8),
+          _arrow(context, left: false),
+        ],
+      ),
+    ),
+  );
 
   Widget _body(BuildContext context) {
     if (widget.itemCount == null) {
@@ -232,9 +277,15 @@ class _CoverRowSectionState extends State<CoverRowSection> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header(context),
+        if (widget.title != null)
+          _header(context)
+        else if (context.isTablet && (_canBack || _canForward))
+          _headerlessArrows(context),
         Padding(padding: widget.padding, child: body),
       ],
     );
   }
 }
+
+// 10 gap + 34 + 8 + 34: the arrows and their spacing.
+const double _arrowAreaWidth = 86;

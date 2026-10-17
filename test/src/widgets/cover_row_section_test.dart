@@ -93,6 +93,114 @@ void main() {
     expect(seeAllCalls, 1);
   });
 
+  testWidgets('See all lines up whether or not the row overflows', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Widget row({required Key key, required int itemCount}) => CoverRowSection(
+      key: key,
+      title: 'Row',
+      onSeeAll: () {},
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 120,
+      itemCount: itemCount,
+      itemBuilder: (context, index) =>
+          SizedBox(width: 100, height: 120, child: Text('Item $index')),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Column(
+            children: [
+              row(key: const Key('overflow'), itemCount: 20),
+              row(key: const Key('short'), itemCount: 3),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final overflowSeeAll = tester.getTopRight(
+      find.descendant(
+        of: find.byKey(const Key('overflow')),
+        matching: find.text('See all'),
+      ),
+    );
+    final shortSeeAll = tester.getTopRight(
+      find.descendant(
+        of: find.byKey(const Key('short')),
+        matching: find.text('See all'),
+      ),
+    );
+    expect(shortSeeAll.dx, overflowSeeAll.dx);
+
+    final short = find.byKey(const Key('short'));
+    expect(
+      find.descendant(of: short, matching: find.byTooltip('Back')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: short, matching: find.byTooltip('Next')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('overflow')),
+        matching: find.byTooltip('Next'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a header-less row shows arrows only while it overflows', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Future<void> pump(int itemCount) => tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: CoverRowSection(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 120,
+            itemCount: itemCount,
+            itemBuilder: (context, index) =>
+                SizedBox(width: 100, height: 120, child: Text('Item $index')),
+          ),
+        ),
+      ),
+    );
+
+    await pump(3);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Back'), findsNothing);
+    expect(find.byTooltip('Next'), findsNothing);
+
+    await pump(20);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Back'), findsOneWidget);
+    expect(find.byTooltip('Next'), findsOneWidget);
+
+    final sectionTop = tester.getTopLeft(find.byType(CoverRowSection)).dy;
+    final arrowsTop = tester.getTopLeft(find.byTooltip('Next')).dy;
+    final listTop = tester.getTopLeft(find.byType(ListView).first).dy;
+    expect(arrowsTop, greaterThanOrEqualTo(sectionTop));
+    expect(arrowsTop, lessThan(listTop));
+  });
+
   testWidgets('See all calls onSeeAll on a wide layout', (tester) async {
     var seeAllCalls = 0;
     await _pump(

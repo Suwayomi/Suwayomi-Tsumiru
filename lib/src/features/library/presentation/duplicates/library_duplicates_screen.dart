@@ -13,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/cover_row_section.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -336,22 +337,19 @@ class _GroupTile extends StatelessWidget {
           ),
         ),
         const Gap(8),
-        SizedBox(
-          // Derived, not a literal: the cover grew when it was corrected to
-          // 2:3, and a fixed strip height clipped the title under it.
+        // Derived, not a literal: the cover grew when it was corrected to
+        // 2:3, and a fixed strip height clipped the title under it.
+        CoverRowSection(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           height: mangaCoverBoxHeight(_kCardWidth) + _kMemberCardTextExtent,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: members.length,
-            separatorBuilder: (_, _) => const Gap(8),
-            itemBuilder: (context, index) => _MemberCard(
-              manga: members[index],
-              selected: selectedIds.contains(members[index].id),
-              selecting: selecting,
-              onToggleSelection: onToggleSelection,
-            ),
+          itemCount: members.length,
+          itemBuilder: (context, index) => _MemberCard(
+            manga: members[index],
+            selected: selectedIds.contains(members[index].id),
+            selecting: selecting,
+            onToggleSelection: onToggleSelection,
           ),
+          separatorBuilder: (_, _) => const Gap(8),
         ),
       ],
     );

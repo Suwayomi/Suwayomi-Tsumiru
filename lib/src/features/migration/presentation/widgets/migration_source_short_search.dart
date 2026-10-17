@@ -11,11 +11,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/cover_row_section.dart';
+import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../controller/migration_controller.dart';
 
-class MigrationSourceShortSearch extends StatelessWidget {
+class MigrationSourceShortSearch extends ConsumerWidget {
   const MigrationSourceShortSearch({
     super.key,
     required this.source,
@@ -28,7 +30,7 @@ class MigrationSourceShortSearch extends StatelessWidget {
   final String? query;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Widget section({
       int? itemCount,
       IndexedWidgetBuilder? itemBuilder,
@@ -41,9 +43,8 @@ class MigrationSourceShortSearch extends StatelessWidget {
       itemBuilder: itemBuilder,
       child: child,
     );
-    return mangaList.showUiWhenData(
-      context,
-      (data) => data.isEmpty
+    return mangaList.when(
+      data: (data) => data.isEmpty
           ? section(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -65,6 +66,48 @@ class MigrationSourceShortSearch extends StatelessWidget {
                 );
               },
             ),
+      error: (_, _) => section(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 20,
+                color: context.colorScheme.error,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  context.l10n.couldntReachSource(source.displayName),
+                  style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => ref.invalidate(
+                  migrationSourceQuickSearchMangaListProvider(
+                    source.id,
+                    query: query,
+                  ),
+                ),
+                child: Text(context.l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      ),
+      loading: () => section(
+        child: SizedBox(
+          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+          child: const Center(
+            child: SizedBox.square(
+              dimension: 48,
+              child: SorayomiShimmerIndicator(),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
