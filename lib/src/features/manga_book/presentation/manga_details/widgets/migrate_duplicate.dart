@@ -9,7 +9,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../../migration/controller/bulk_migration_providers.dart';
@@ -35,25 +34,6 @@ Future<bool> migrateDuplicateIntoCandidate(
   required MangaDto from,
   required MangaDto to,
 }) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(context.l10n.migrateSeriesCount(1)),
-      content: Text(context.l10n.migrationActionMigrateDescription),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(context.l10n.cancel),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(context.l10n.migrate),
-        ),
-      ],
-    ),
-    animationStyle: context.motionStyle,
-  );
-  if (confirmed != true || !context.mounted) return false;
   final container = ProviderScope.containerOf(context, listen: false);
   final runner = buildBulkMigrationRunner(
     container: container,
@@ -74,16 +54,18 @@ Future<bool> migrateDuplicateIntoCandidate(
   );
   runner.overrideTarget(from.id, to.id, to.title);
 
-  unawaited(showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => _SingleMigrationProgressDialog(
-      runner: runner,
-      fromMangaId: from.id,
-      onCancel: runner.cancel,
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SingleMigrationProgressDialog(
+        runner: runner,
+        fromMangaId: from.id,
+        onCancel: runner.cancel,
+      ),
+      animationStyle: context.motionStyle,
     ),
-    animationStyle: context.motionStyle,
-  ));
+  );
 
   // commitOne can throw CancelledException where the batch commit() swallows
   // it; the finally keeps the non-dismissible progress dialog from stranding.
