@@ -705,8 +705,9 @@ class _ChapterSelectionHeader extends ConsumerWidget {
         builder: (context, constraints) {
           final all = actions();
           final moreWidth = desktop ? 120.0 : 48.0;
+          final deleteWidth = desktop ? 160.0 : 48.0;
           final perAction = desktop ? 152.0 : 48.0;
-          final fixed = 48.0 + 100.0 + 48.0 + moreWidth + 48.0;
+          final fixed = 48.0 + 100.0 + 48.0 + moreWidth + deleteWidth;
           final visible = ((constraints.maxWidth - fixed) / perAction)
               .floor()
               .clamp(0, all.length);
@@ -734,11 +735,18 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               ),
               for (final action in shown) actionButton(action),
               moreButton(overflowed),
-              IconButton(
-                tooltip: context.l10n.delete,
-                onPressed: deleteSelected,
-                icon: Icon(Icons.delete_rounded, color: cs.error),
-              ),
+              if (desktop)
+                TextButton.icon(
+                  onPressed: deleteSelected,
+                  icon: Icon(Icons.delete_rounded, color: cs.error, size: 20),
+                  label: Text('${context.l10n.delete}…'),
+                )
+              else
+                IconButton(
+                  tooltip: context.l10n.delete,
+                  onPressed: deleteSelected,
+                  icon: Icon(Icons.delete_rounded, color: cs.error),
+                ),
             ],
           );
         },

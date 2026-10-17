@@ -390,7 +390,6 @@ void main() {
       find.widgetWithIcon(IconButton, Icons.close_rounded),
       findsOneWidget,
     );
-    expect(find.widgetWithText(TextButton, 'Mark as read'), findsOneWidget);
     final header = find.byKey(const ValueKey('chapterSelectionHeader'));
     expect(
       find.descendant(
@@ -399,8 +398,23 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: header,
+        matching: find.widgetWithText(TextButton, 'Delete…'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Delete'), findsNothing);
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
+    await tester.tap(find.widgetWithText(TextButton, 'Delete…'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Are you sure you want to delete the selected chapters?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -416,7 +430,6 @@ void main() {
       find.widgetWithIcon(IconButton, Icons.close_rounded),
       findsOneWidget,
     );
-    expect(find.widgetWithText(TextButton, 'Mark as read'), findsOneWidget);
     final header = find.byKey(const ValueKey('chapterSelectionHeader'));
     expect(
       find.descendant(
@@ -425,7 +438,14 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: header,
+        matching: find.widgetWithText(TextButton, 'Delete…'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Delete'), findsNothing);
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -494,6 +514,8 @@ void main() {
     expect(find.text('1 Selected'), findsOneWidget);
     expect(find.byTooltip('Mark as read'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Mark as read'), findsNothing);
+    expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Delete…'), findsNothing);
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
     expect(tester.takeException(), isNull);
   });
