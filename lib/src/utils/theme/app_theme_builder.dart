@@ -195,3 +195,24 @@ ThemeData buildAppTheme({
     ),
   );
 }
+
+ScrollbarThemeData wideScreenScrollbarTheme(ColorScheme scheme) =>
+    ScrollbarThemeData(
+      thumbVisibility: const WidgetStatePropertyAll(true),
+      trackVisibility: const WidgetStatePropertyAll(false),
+      thickness: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.dragged)
+            ? 10
+            : 8,
+      ),
+      radius: const Radius.circular(4),
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.dragged)
+            ? scheme.primary
+            : scheme.onSurface.withValues(alpha: 0.22),
+      ),
+    );

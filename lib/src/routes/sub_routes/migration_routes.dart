@@ -1,9 +1,9 @@
 part of '../router_config.dart';
 
-class MigrationGlobalSearchRoute extends GoRouteData with $MigrationGlobalSearchRoute {
+class MigrationGlobalSearchRoute extends GoRouteData
+    with $MigrationGlobalSearchRoute {
   const MigrationGlobalSearchRoute({this.$extra});
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
   final MigrationRouteData? $extra;
 
   @override
@@ -13,9 +13,7 @@ class MigrationGlobalSearchRoute extends GoRouteData with $MigrationGlobalSearch
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.pop();
       });
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return MigrationGlobalSearchScreen(sourceManga: $extra!.sourceManga);
@@ -26,8 +24,6 @@ class MigrationSourcePickerRoute extends GoRouteData
     with $MigrationSourcePickerRoute {
   const MigrationSourcePickerRoute();
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
-
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const MigrationSourcePickerScreen();
@@ -37,7 +33,6 @@ class MigrationSourceMangaRoute extends GoRouteData
     with $MigrationSourceMangaRoute {
   const MigrationSourceMangaRoute({this.$extra});
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
   final MigrationSourceMangaData? $extra;
 
   @override
@@ -51,10 +46,10 @@ class MigrationSourceMangaRoute extends GoRouteData
   }
 }
 
-class MigrationBulkConfigRoute extends GoRouteData with $MigrationBulkConfigRoute {
+class MigrationBulkConfigRoute extends GoRouteData
+    with $MigrationBulkConfigRoute {
   const MigrationBulkConfigRoute({this.$extra});
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
   final MigrationBulkConfigData? $extra;
 
   @override
@@ -71,7 +66,6 @@ class MigrationBulkConfigRoute extends GoRouteData with $MigrationBulkConfigRout
 class MigrationBulkRunRoute extends GoRouteData with $MigrationBulkRunRoute {
   const MigrationBulkRunRoute({this.$extra});
 
-  static final $parentNavigatorKey = _quickOpenNavigatorKey;
   final MigrationBulkRunData? $extra;
 
   @override
@@ -84,4 +78,3 @@ class MigrationBulkRunRoute extends GoRouteData with $MigrationBulkRunRoute {
     return MigrationBulkRunScreen(data: extra);
   }
 }
-

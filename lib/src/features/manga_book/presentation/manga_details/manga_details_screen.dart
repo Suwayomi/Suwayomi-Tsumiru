@@ -184,10 +184,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
       child: manga.showUiWhenData(
         context,
         (data) => Scaffold(
-          // Immersive hero: the blurred cover backdrop (top of the body) shows
-          // through behind a transparent app bar. Given up while the banner is
-          // in the way, so the cover starts below it rather than behind it.
-          extendBodyBehindAppBar: selectedChapters.value.isEmpty && !offline,
+          extendBodyBehindAppBar:
+              !context.isTablet && selectedChapters.value.isEmpty && !offline,
           appBar: selectedChapters.value.isNotEmpty
               ? AppBar(
                   leading: IconButton(

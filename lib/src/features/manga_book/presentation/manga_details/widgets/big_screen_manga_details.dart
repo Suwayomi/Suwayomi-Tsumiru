@@ -91,13 +91,6 @@ class BigScreenMangaDetails extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    // The body extends behind the transparent app bar (hero
-                    // blur); without this the chapter header sits under it.
-                    if (selectedChapters.value.isEmpty)
-                      SizedBox(
-                        height:
-                            MediaQuery.paddingOf(context).top + kToolbarHeight,
-                      ),
                     ListTile(
                       title: Text(context.l10n.noOfChapters(chapterCount)),
                       trailing: ChapterListModeToggle(mangaId: mangaId),

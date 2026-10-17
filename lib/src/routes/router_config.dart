@@ -59,6 +59,7 @@ import '../features/settings/presentation/syncyomi/syncyomi_settings_screen.dart
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
+import '../widgets/shell/detail_navigation_shell_screen.dart';
 import '../widgets/shell/navigation_shell_screen.dart';
 
 part 'router_config.g.dart';
@@ -154,6 +155,8 @@ void routeAfterIdentityChange(String location) {
 
 @riverpod
 GoRouter routerConfig(Ref ref) {
+  final shellState = ref.read(navigationShellStateProvider);
+  ref.onDispose(() => shellState.shell = null);
   final router = GoRouter(
     routes: $appRoutes,
     debugLogDiagnostics: true,
@@ -307,25 +310,35 @@ GoRouter routerConfig(Ref ref) {
         ),
       ],
     ),
-    TypedGoRoute<MangaRoute>(
-      path: Routes.mangaRoute,
-      routes: [TypedGoRoute<ReaderRoute>(path: Routes.reader)],
+    TypedShellRoute<DetailNavigationShellRoute>(
+      routes: [
+        TypedGoRoute<MangaRoute>(
+          path: Routes.mangaRoute,
+          routes: [TypedGoRoute<ReaderRoute>(path: Routes.reader)],
+        ),
+        TypedGoRoute<LibraryUpdateErrorsRoute>(
+          path: Routes.libraryUpdateErrors,
+        ),
+        TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
+        TypedGoRoute<LibraryDuplicatesRoute>(path: Routes.libraryDuplicates),
+        TypedGoRoute<RecommendsRoute>(path: Routes.recommends),
+        TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),
+        TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
+        TypedGoRoute<MigrationGlobalSearchRoute>(
+          path: Routes.migrationGlobalSearch,
+        ),
+        TypedGoRoute<MigrationBulkConfigRoute>(
+          path: Routes.migrationBulkConfig,
+        ),
+        TypedGoRoute<MigrationBulkRunRoute>(path: Routes.migrationBulkRun),
+        TypedGoRoute<MigrationSourcePickerRoute>(
+          path: Routes.migrationSourcePicker,
+        ),
+        TypedGoRoute<MigrationSourceMangaRoute>(
+          path: Routes.migrationSourceManga,
+        ),
+      ],
     ),
-    TypedGoRoute<LibraryUpdateErrorsRoute>(path: Routes.libraryUpdateErrors),
-    TypedGoRoute<GlobalSearchRoute>(path: Routes.globalSearch),
-    TypedGoRoute<LibraryDuplicatesRoute>(path: Routes.libraryDuplicates),
-    TypedGoRoute<RecommendsRoute>(path: Routes.recommends),
-    TypedGoRoute<RecommendsBrowseRoute>(path: Routes.recommendsBrowse),
-    TypedGoRoute<SourceFilterRoute>(path: Routes.sourceFilter),
-    TypedGoRoute<MigrationGlobalSearchRoute>(
-      path: Routes.migrationGlobalSearch,
-    ),
-    TypedGoRoute<MigrationBulkConfigRoute>(path: Routes.migrationBulkConfig),
-    TypedGoRoute<MigrationBulkRunRoute>(path: Routes.migrationBulkRun),
-    TypedGoRoute<MigrationSourcePickerRoute>(
-      path: Routes.migrationSourcePicker,
-    ),
-    TypedGoRoute<MigrationSourceMangaRoute>(path: Routes.migrationSourceManga),
   ],
 )
 @immutable
@@ -358,6 +371,24 @@ class NavigationShellRoute extends StatefulShellRouteData {
   static final $navigatorKey = _shellNavigatorKey;
 
   @override
-  Widget builder(context, state, navigationShell) =>
-      NavigationShellScreen(child: navigationShell);
+  Widget builder(context, state, navigationShell) => Consumer(
+    builder: (context, ref, _) {
+      ref.read(navigationShellStateProvider).shell = navigationShell;
+      return NavigationShellScreen(child: navigationShell);
+    },
+  );
+}
+
+final navigationShellStateProvider = Provider((ref) => NavigationShellState());
+
+class NavigationShellState {
+  StatefulNavigationShell? shell;
+}
+
+class DetailNavigationShellRoute extends ShellRouteData {
+  const DetailNavigationShellRoute();
+
+  @override
+  Widget builder(context, state, navigator) =>
+      DetailNavigationShellScreen(child: navigator);
 }
