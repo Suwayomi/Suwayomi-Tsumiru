@@ -159,11 +159,7 @@ class MangaDescription extends HookConsumerWidget {
                 Flexible(
                   child: Text(
                     context.isTablet
-                        ? context.l10n.seriesNextChapterExpected(
-                            soonDays == 0
-                                ? context.l10n.soon
-                                : context.l10n.inNDays(soonDays),
-                          )
+                        ? context.l10n.seriesNextChapterExpected(soonDays)
                         : soonDays == 0
                         ? context.l10n.soon
                         : context.l10n.inNDays(soonDays),
@@ -459,68 +455,69 @@ class MangaDescriptionBody extends StatelessWidget {
     final textStyle = DefaultTextStyle.of(context).style;
     final fontSize = textStyle.fontSize ?? 14;
     final lineHeight = fontSize * (textStyle.height ?? 1.4);
-    final overlayHeight = lineHeight * 2;
-    final markdownBody = Padding(
-      padding: EdgeInsets.only(bottom: overlayHeight),
-      child: MarkdownBody(
-        data: description,
-        onTapLink: (_, href, _) {
-          if (href.isNotBlank) onOpenLink?.call(href!);
-        },
-        styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
-          p: textStyle,
-          a: textStyle.copyWith(color: context.theme.colorScheme.primary),
-        ),
+    final markdownBody = MarkdownBody(
+      data: description,
+      onTapLink: (_, href, _) {
+        if (href.isNotBlank) onOpenLink?.call(href!);
+      },
+      styleSheet: MarkdownStyleSheet.fromTheme(context.theme).copyWith(
+        p: textStyle,
+        a: textStyle.copyWith(color: context.theme.colorScheme.primary),
       ),
     );
 
-    return Stack(
-      alignment: AlignmentDirectional.bottomStart,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ClipRect(
-          child: SizedBox(
-            height: isExpanded ? null : lineHeight * 5,
-            child: isExpanded
-                ? markdownBody
-                : SingleChildScrollView(
+        if (isExpanded)
+          markdownBody
+        else
+          Stack(
+            children: [
+              ClipRect(
+                child: SizedBox(
+                  height: lineHeight * 5,
+                  child: SingleChildScrollView(
                     physics: const NeverScrollableScrollPhysics(),
                     child: markdownBody,
                   ),
-          ),
-        ),
-        PositionedDirectional(
-          start: 0,
-          end: 0,
-          bottom: 0,
-          height: overlayHeight,
-          child: InkWell(
-            onTap: onToggleExpanded,
-            child: Container(
-              margin: EdgeInsets.zero,
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: context.theme.canvasColor.withValues(alpha: .7),
+                ),
+              ),
+              PositionedDirectional(
+                start: 0,
+                end: 0,
+                bottom: 0,
+                height: lineHeight,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          context.theme.scaffoldBackgroundColor.withValues(
+                            alpha: 0,
+                          ),
+                          context.theme.scaffoldBackgroundColor.withValues(
+                            alpha: .9,
+                          ),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
                   ),
-                ],
-                gradient: LinearGradient(
-                  colors: [
-                    context.theme.canvasColor.withValues(alpha: 0),
-                    context.theme.canvasColor.withValues(alpha: .3),
-                    context.theme.canvasColor.withValues(alpha: .5),
-                    context.theme.canvasColor.withValues(alpha: .6),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
                 ),
               ),
-              child: Center(
-                child: Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                ),
-              ),
+            ],
+          ),
+        InkWell(
+          onTap: onToggleExpanded,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 6),
+            child: Icon(
+              isExpanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
             ),
           ),
         ),

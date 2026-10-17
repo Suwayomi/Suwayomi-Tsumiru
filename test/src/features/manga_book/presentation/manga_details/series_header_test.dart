@@ -192,6 +192,16 @@ void main() {
           );
           expect(cover.width, 180);
           expect(controls.bottom, closeTo(cover.bottom, .01));
+          final coverCard = tester.getRect(
+            find
+                .descendant(
+                  of: find.byKey(const ValueKey('series-header-cover')),
+                  matching: find.byType(Material),
+                )
+                .first,
+          );
+          final resume = tester.getRect(headerPills.first);
+          expect(resume.bottom, closeTo(coverCard.bottom, .01));
         }
         expect(tester.takeException(), isNull);
       },

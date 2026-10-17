@@ -88,11 +88,14 @@ class SeriesHeader extends ConsumerWidget {
                 key: const ValueKey('series-header-cover'),
                 width: coverWidth,
                 height: coverWidth * 1.5,
-                child: MangaCoverGridTile(
-                  manga: manga,
-                  showBadges: false,
-                  showTitle: false,
-                  showDarkOverlay: false,
+                child: CardTheme(
+                  data: CardTheme.of(context).copyWith(margin: EdgeInsets.zero),
+                  child: MangaCoverGridTile(
+                    manga: manga,
+                    showBadges: false,
+                    showTitle: false,
+                    showDarkOverlay: false,
+                  ),
                 ),
               ),
             ),

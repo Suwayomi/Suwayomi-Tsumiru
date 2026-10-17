@@ -226,6 +226,18 @@ class AppScrollBehavior extends MaterialScrollBehavior {
     Widget child,
     ScrollableDetails details,
   ) {
+    if (axisDirectionToAxis(details.direction) == Axis.horizontal) return child;
+    final scrollable = context.widget;
+    // Flutter omits physics from ScrollableDetails in the scrollbar builder.
+    for (
+      var physics =
+          details.physics ??
+          (scrollable is Scrollable ? scrollable.physics : null);
+      physics != null;
+      physics = physics.parent
+    ) {
+      if (!physics.allowUserScrolling) return child;
+    }
     if (!context.isTablet) return super.buildScrollbar(context, child, details);
     return Scrollbar(controller: details.controller, child: child);
   }
