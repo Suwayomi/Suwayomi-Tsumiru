@@ -391,6 +391,17 @@ void main() {
       findsOneWidget,
     );
     final header = find.byKey(const ValueKey('chapterSelectionHeader'));
+    for (final tooltip in [
+      'Mark as read',
+      'Bookmark',
+      'Keep offline',
+      'Download',
+    ]) {
+      expect(
+        find.descendant(of: header, matching: find.byTooltip(tooltip)),
+        findsOneWidget,
+      );
+    }
     expect(
       find.descendant(
         of: header,
@@ -431,6 +442,17 @@ void main() {
       findsOneWidget,
     );
     final header = find.byKey(const ValueKey('chapterSelectionHeader'));
+    for (final tooltip in [
+      'Mark as read',
+      'Bookmark',
+      'Keep offline',
+      'Download',
+    ]) {
+      expect(
+        find.descendant(of: header, matching: find.byTooltip(tooltip)),
+        findsOneWidget,
+      );
+    }
     expect(
       find.descendant(
         of: header,
@@ -483,9 +505,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final label in [
+      'Mark as read',
       'Bookmark',
       'Keep offline',
       'Download',
+    ]) {
+      expect(find.text(label), findsNothing);
+    }
+    for (final label in [
       'Mark previous as read',
       'Select next 10',
       'Select below',
@@ -512,10 +539,32 @@ void main() {
     await tester.longPress(find.text('Chapter 2'));
     await tester.pumpAndSettle();
     expect(find.text('1 Selected'), findsOneWidget);
-    expect(find.byTooltip('Mark as read'), findsOneWidget);
+    final header = find.byKey(const ValueKey('chapterSelectionHeader'));
+    for (final tooltip in [
+      'Mark as read',
+      'Bookmark',
+      'Keep offline',
+      'Download',
+    ]) {
+      expect(
+        find.descendant(of: header, matching: find.byTooltip(tooltip)),
+        findsOneWidget,
+      );
+    }
     expect(find.widgetWithText(TextButton, 'Mark as read'), findsNothing);
     expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(
+      find.descendant(of: header, matching: find.byTooltip('More')),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(TextButton, 'Delete…'), findsNothing);
+    expect(
+      find.descendant(
+        of: header,
+        matching: find.widgetWithText(TextButton, 'More'),
+      ),
+      findsNothing,
+    );
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
     expect(tester.takeException(), isNull);
   });

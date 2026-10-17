@@ -676,6 +676,9 @@ class _ChapterSelectionHeader extends ConsumerWidget {
         ? TextButton.icon(
             key: moreButtonKey,
             onPressed: () => openMore(overflowed),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
             icon: const Icon(Icons.more_horiz_rounded, size: 20),
             label: Text(context.l10n.more),
           )
@@ -686,17 +689,15 @@ class _ChapterSelectionHeader extends ConsumerWidget {
             icon: const Icon(Icons.more_horiz_rounded),
           );
 
-    Widget actionButton(_HeaderAction action) => desktop
-        ? TextButton.icon(
-            onPressed: action.onTap,
-            icon: Icon(action.icon, size: 20),
-            label: Text(action.label),
-          )
-        : IconButton(
-            tooltip: action.label,
-            onPressed: action.onTap,
-            icon: Icon(action.icon),
-          );
+    Widget actionButton(_HeaderAction action) => IconButton(
+      tooltip: action.label,
+      onPressed: action.onTap,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(40, 40),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: Icon(action.icon),
+    );
 
     return Padding(
       key: const ValueKey('chapterSelectionHeader'),
@@ -704,13 +705,34 @@ class _ChapterSelectionHeader extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final all = actions();
-          final moreWidth = desktop ? 120.0 : 48.0;
-          final deleteWidth = desktop ? 160.0 : 48.0;
-          final perAction = desktop ? 152.0 : 48.0;
-          final fixed = 48.0 + 100.0 + 48.0 + moreWidth + deleteWidth;
-          final visible = ((constraints.maxWidth - fixed) / perAction)
-              .floor()
-              .clamp(0, all.length);
+          const closeWidth = 48.0;
+          const selectAllWidth = 48.0;
+          const actionWidth = 40.0;
+          const moreWidth = 104.0;
+          const moreIconWidth = 48.0;
+          const deleteFullWidth = 156.0;
+          const deleteIconWidth = 40.0;
+          final deleteLabelled =
+              desktop &&
+              constraints.maxWidth >=
+                  closeWidth +
+                      selectAllWidth +
+                      all.length * actionWidth +
+                      moreWidth +
+                      deleteFullWidth;
+          final deleteWidth = desktop
+              ? (deleteLabelled ? deleteFullWidth : deleteIconWidth)
+              : 48.0;
+          final barWidth = desktop ? moreWidth : moreIconWidth;
+          final visible =
+              ((constraints.maxWidth -
+                          (closeWidth +
+                              selectAllWidth +
+                              barWidth +
+                              deleteWidth)) /
+                      actionWidth)
+                  .floor()
+                  .clamp(0, all.length);
           final shown = all.take(visible).toList();
           final overflowed = all.skip(visible).toList();
           return Row(
@@ -735,11 +757,21 @@ class _ChapterSelectionHeader extends ConsumerWidget {
               ),
               for (final action in shown) actionButton(action),
               moreButton(overflowed),
-              if (desktop)
+              if (deleteLabelled)
                 TextButton.icon(
                   onPressed: deleteSelected,
                   icon: Icon(Icons.delete_rounded, color: cs.error, size: 20),
                   label: Text('${context.l10n.delete}…'),
+                )
+              else if (desktop)
+                IconButton(
+                  tooltip: context.l10n.delete,
+                  onPressed: deleteSelected,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(40, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: Icon(Icons.delete_rounded, color: cs.error),
                 )
               else
                 IconButton(
