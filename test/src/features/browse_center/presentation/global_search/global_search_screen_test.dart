@@ -6,10 +6,13 @@
 
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/legacy.dart';
 import 'package:queue/queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
@@ -25,6 +28,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
+import 'package:tsumiru/src/widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../../../helpers/fake_extension_repository.dart';
@@ -147,6 +151,9 @@ Future<void> _pumpSearch(
   Queue? queue,
   bool overrideSourceSearches = true,
   Size? size,
+  bool settle = true,
+  Future<List<SourceDto>?> Function(Ref ref)? sourceList,
+  AsyncValue<List<SourceDto>> Function(Ref ref)? searchableSources,
 }) async {
   if (size != null) {
     tester.view.physicalSize = size;
@@ -162,8 +169,12 @@ Future<void> _pumpSearch(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         globalSearchScopeProvider.overrideWith(_AllScope.new),
+        sourceListProvider.overrideWith(
+          sourceList ?? (ref) async => [for (final s in sources) s.source],
+        ),
         searchableSourcesProvider.overrideWith(
-          (ref) => AsyncData([for (final s in sources) s.source]),
+          searchableSources ??
+              (ref) => AsyncData([for (final s in sources) s.source]),
         ),
         pinnedSourcesProvider.overrideWithValue(const []),
         if (repository != null)
@@ -186,7 +197,12 @@ Future<void> _pumpSearch(
   );
   await tester.pumpAndSettle();
   await tester.tap(find.text('open search'));
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
 }
 
 void main() {
@@ -348,8 +364,10 @@ void main() {
     expect(find.text('Alpha'), findsOneWidget);
   });
 
-  testWidgets('desktop puts the field and chips on one row without an AppBar '
-      'title', (tester) async {
+  testWidgets('desktop puts the field and chips on one row and names the '
+      'route for assistive tech', (tester) async {
+    final semantics = tester.ensureSemantics();
+
     await _pumpSearch(
       tester,
       fromSuggestion: false,
@@ -362,7 +380,6 @@ void main() {
       size: const Size(1400, 980),
     );
 
-    expect(find.byType(AppBar), findsNothing);
     expect(find.text('Global Search'), findsNothing);
 
     final field = find.byType(SearchField);
@@ -373,6 +390,18 @@ void main() {
       (tester.getCenter(field).dy - tester.getCenter(allChip).dy).abs(),
       lessThanOrEqualTo(2),
     );
+
+    final header = tester.getSemantics(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == 'Global Search' &&
+            widget.properties.namesRoute == true,
+      ),
+    );
+    expect(header.flagsCollection.isHeader, isTrue);
+
+    semantics.dispose();
   });
 
   testWidgets('phone keeps the title and puts the chips below the field', (
@@ -421,5 +450,191 @@ void main() {
     );
 
     expect(find.text('MANGA 9'), findsOneWidget);
+  });
+
+  testWidgets('typing a different query without submitting cancels the '
+      'auto-open', (tester) async {
+    final exact = Completer<List<MangaDto>>();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: true,
+      settle: false,
+      sources: [
+        (source: _source(id: '1', name: 'Alpha'), search: () => exact.future),
+      ],
+    );
+
+    await tester.enterText(find.byType(TextField), 'Something else');
+    await tester.pump();
+
+    exact.complete([_manga(7, _query)]);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('MANGA 7'), findsNothing);
+    expect(find.text('Alpha'), findsOneWidget);
+  });
+
+  testWidgets('scrolling cancels the auto-open', (tester) async {
+    final exact = Completer<List<MangaDto>>();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: true,
+      settle: false,
+      sources: [
+        (source: _source(id: '1', name: 'Alpha'), search: () => exact.future),
+      ],
+    );
+
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(pointer.hover(const Offset(300, 400)));
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 120)));
+    await tester.pump();
+
+    exact.complete([_manga(7, _query)]);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('MANGA 7'), findsNothing);
+    expect(find.text('Alpha'), findsOneWidget);
+  });
+
+  testWidgets('pressing a key cancels the auto-open', (tester) async {
+    final exact = Completer<List<MangaDto>>();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: true,
+      settle: false,
+      sources: [
+        (source: _source(id: '1', name: 'Alpha'), search: () => exact.future),
+      ],
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.pump();
+
+    exact.complete([_manga(7, _query)]);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('MANGA 7'), findsNothing);
+    expect(find.text('Alpha'), findsOneWidget);
+  });
+
+  testWidgets('a result opened before the sources settle is not replaced', (
+    tester,
+  ) async {
+    final exact = Completer<List<MangaDto>>();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: true,
+      settle: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => [_manga(8, 'Not it')],
+        ),
+        (source: _source(id: '2', name: 'Beta'), search: () => exact.future),
+      ],
+    );
+
+    await tester.tap(find.byType(MangaCoverGridTile));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('MANGA 8'), findsOneWidget);
+
+    exact.complete([_manga(9, _query)]);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('MANGA 8'), findsOneWidget);
+    expect(find.text('MANGA 9'), findsNothing);
+  });
+
+  testWidgets('a refreshing source list is not treated as settled', (
+    tester,
+  ) async {
+    final alpha = _source(id: '1', name: 'Alpha');
+    final beta = _source(id: '2', name: 'Beta');
+    final gamma = _source(id: '3', name: 'Gamma');
+    final alphaSearch = Completer<List<MangaDto>>();
+    final secondLoad = Completer<List<SourceDto>?>();
+    final sourcesState = StateProvider<AsyncValue<List<SourceDto>>>(
+      (ref) => AsyncData([alpha, beta]),
+    );
+    var sourceListCalls = 0;
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: true,
+      settle: false,
+      sources: [
+        (source: alpha, search: () => alphaSearch.future),
+        (source: beta, search: () async => [_manga(8, 'Something else')]),
+        (source: gamma, search: () async => [_manga(9, _query)]),
+      ],
+      sourceList: (ref) {
+        sourceListCalls++;
+        return sourceListCalls == 1
+            ? Future.value([alpha, beta])
+            : secondLoad.future;
+      },
+      searchableSources: (ref) => ref.watch(sourcesState),
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(GlobalSearchScreen)),
+      listen: false,
+    );
+    container.invalidate(sourceListProvider);
+    await tester.pump();
+
+    alphaSearch.complete([_manga(7, _query)]);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('MANGA 7'), findsNothing);
+
+    container.read(sourcesState.notifier).state = AsyncData([
+      alpha,
+      beta,
+      gamma,
+    ]);
+    await tester.pump();
+    secondLoad.complete([alpha, beta, gamma]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('MANGA 7'), findsNothing);
+    expect(find.text('MANGA 9'), findsNothing);
+    expect(find.text('Gamma', skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('crossing the desktop breakpoint keeps the typed draft', (
+    tester,
+  ) async {
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
+      ],
+      size: const Size(1199, 900),
+    );
+
+    await tester.enterText(find.byType(TextField), 'draft query');
+    await tester.pump();
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBar), findsNothing);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, 'draft query');
   });
 }
