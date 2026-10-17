@@ -229,17 +229,42 @@ class BigScreenMangaDetails extends HookConsumerWidget {
 
                 return Column(
                   children: [
-                    _ChapterHeader(
-                      totalCount: totalCount == 0 ? chapterCount : totalCount,
-                      unreadCount: unreadCount,
-                      onDeviceBytes: onDeviceBytes,
-                      filterCount: filterCount,
-                      desktop: desktop,
-                      filterButtonKey: filterButtonKey,
-                      filterFocus: filterFocus,
-                      onRefresh: () => onRefresh(true),
-                      onFilter: openFilterPanel,
-                    ),
+                    selecting
+                        ? _ChapterSelectionHeader(
+                            selected: selection.values.toList(),
+                            ordered: ordered,
+                            bulk: bulk,
+                            anchorId: anchor.value,
+                            desktop: desktop,
+                            seriesUrl: manga.realUrl,
+                            moreButtonKey: moreButtonKey,
+                            onClear: () {
+                              selectedChapters.value = {};
+                              anchor.value = null;
+                            },
+                            onSelectAll: () =>
+                                selectedChapters.value = {
+                                  for (final c in ordered) c.id: c,
+                                },
+                            refresh: barRefresh,
+                            onSelect: (next, anchorId) {
+                              selectedChapters.value = next;
+                              anchor.value = anchorId;
+                            },
+                          )
+                        : _ChapterHeader(
+                            totalCount: totalCount == 0
+                                ? chapterCount
+                                : totalCount,
+                            unreadCount: unreadCount,
+                            onDeviceBytes: onDeviceBytes,
+                            filterCount: filterCount,
+                            desktop: desktop,
+                            filterButtonKey: filterButtonKey,
+                            filterFocus: filterFocus,
+                            onRefresh: () => onRefresh(true),
+                            onFilter: openFilterPanel,
+                          ),
                     Expanded(
                       child: FocusScope(
                         node: escScope,
@@ -253,74 +278,54 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                           }
                           return KeyEventResult.ignored;
                         },
-                        child: Stack(
-                          children: [
-                            ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemBuilder: (context, index) {
-                                if (chapterEntries.length == index) {
-                                  return desktop
-                                      ? const SizedBox(height: 16)
-                                      : const ListTile();
-                                }
-                                final entry = chapterEntries[index];
-                                return switch (entry) {
-                                  MangaChapterEntry() => ChapterListTile(
-                                    key: ValueKey('${entry.chapter.id}'),
-                                    manga: manga,
-                                    chapter: entry.chapter,
-                                    updateData: () => onListRefresh(false),
-                                    isSelected: selection.containsKey(
-                                      entry.chapter.id,
-                                    ),
-                                    canTapSelect: selecting,
-                                    toggleSelect: toggleSelect,
-                                    desktop: desktop,
-                                    selectionMode: selecting,
-                                    isCurrent: entry.chapter.id == currentId,
-                                    onRowTap: (shift) =>
-                                        onRowTap(entry.chapter, shift),
-                                    onSecondaryTapAt: (pos) => openMenu(
-                                      menuAnchorForPoint(context, pos),
-                                      entry.chapter,
-                                      ordered,
-                                      bulk,
-                                      () {},
-                                    ),
-                                    onOpenMenu: (rect, refocus) => openMenu(
-                                      rect,
-                                      entry.chapter,
-                                      ordered,
-                                      bulk,
-                                      refocus,
-                                    ),
-                                  ),
-                                  MissingChaptersEntry() =>
-                                    MissingChaptersListTile(
-                                      key: ValueKey('missing-${entry.id}'),
-                                      count: entry.count,
-                                    ),
-                                };
-                              },
-                              itemCount: chapterEntries.length + 1,
-                            ),
-                            if (desktop && selecting)
-                              _DesktopSelectionBar(
-                                selected: selection.values.toList(),
-                                ordered: ordered,
-                                bulk: bulk,
-                                moreButtonKey: moreButtonKey,
-                                onClear: () {
-                                  selectedChapters.value = {};
-                                  anchor.value = null;
-                                },
-                                refresh: barRefresh,
-                                onSelect: (next, anchorId) {
-                                  selectedChapters.value = next;
-                                  anchor.value = anchorId;
-                                },
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            if (chapterEntries.length == index) {
+                              return desktop
+                                  ? const SizedBox(height: 16)
+                                  : const ListTile();
+                            }
+                            final entry = chapterEntries[index];
+                            return switch (entry) {
+                              MangaChapterEntry() => ChapterListTile(
+                                key: ValueKey('${entry.chapter.id}'),
+                                manga: manga,
+                                chapter: entry.chapter,
+                                updateData: () => onListRefresh(false),
+                                isSelected: selection.containsKey(
+                                  entry.chapter.id,
+                                ),
+                                canTapSelect: selecting,
+                                toggleSelect: toggleSelect,
+                                desktop: desktop,
+                                selectionMode: selecting,
+                                isCurrent: entry.chapter.id == currentId,
+                                onRowTap: (shift) =>
+                                    onRowTap(entry.chapter, shift),
+                                onSecondaryTapAt: (pos) => openMenu(
+                                  menuAnchorForPoint(context, pos),
+                                  entry.chapter,
+                                  ordered,
+                                  bulk,
+                                  () {},
+                                ),
+                                onOpenMenu: (rect, refocus) => openMenu(
+                                  rect,
+                                  entry.chapter,
+                                  ordered,
+                                  bulk,
+                                  refocus,
+                                ),
                               ),
-                          ],
+                              MissingChaptersEntry() =>
+                                MissingChaptersListTile(
+                                  key: ValueKey('missing-${entry.id}'),
+                                  count: entry.count,
+                                ),
+                            };
+                          },
+                          itemCount: chapterEntries.length + 1,
                         ),
                       ),
                     ),
@@ -452,36 +457,109 @@ class _ChapterHeader extends StatelessWidget {
   }
 }
 
-class _DesktopSelectionBar extends ConsumerWidget {
-  const _DesktopSelectionBar({
+class _HeaderAction {
+  const _HeaderAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _ChapterSelectionHeader extends ConsumerWidget {
+  const _ChapterSelectionHeader({
     required this.selected,
     required this.ordered,
     required this.bulk,
+    required this.anchorId,
+    required this.desktop,
+    required this.seriesUrl,
     required this.moreButtonKey,
     required this.onClear,
+    required this.onSelectAll,
     required this.refresh,
     required this.onSelect,
   });
   final List<ChapterDto> selected;
   final List<ChapterDto> ordered;
   final List<ChapterDto> bulk;
+  final int? anchorId;
+  final bool desktop;
+  final String? seriesUrl;
   final GlobalKey moreButtonKey;
   final VoidCallback onClear;
+  final VoidCallback onSelectAll;
   final AsyncValueSetter<bool> refresh;
   final void Function(Map<int, ChapterDto> next, int anchorId) onSelect;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = context.theme.colorScheme;
+    final allRead =
+        selected.isNotEmpty && selected.every((c) => c.isRead.ifNull());
     final allBookmarked =
         selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
-    final anchor = selected.last;
+    final anchor =
+        selected.where((c) => c.id == anchorId).firstOrNull ?? selected.last;
 
-    Future<void> openMore() async {
+    List<_HeaderAction> actions() => [
+      _HeaderAction(
+        icon: allRead ? Icons.remove_done_rounded : Icons.done_all_rounded,
+        label: allRead ? context.l10n.markAsUnread : context.l10n.markAsRead,
+        onTap: () => markChaptersRead(
+          context: context,
+          ref: ref,
+          chapters: selected,
+          isRead: !allRead,
+          refresh: refresh,
+        ),
+      ),
+      _HeaderAction(
+        icon: Icons.bookmark_rounded,
+        label: allBookmarked
+            ? context.l10n.removeBookmark
+            : context.l10n.bookmark,
+        onTap: () => setChaptersBookmark(
+          ref: ref,
+          chapters: selected,
+          isBookmarked: !allBookmarked,
+          refresh: refresh,
+        ),
+      ),
+      _HeaderAction(
+        icon: Icons.save_alt_rounded,
+        label: context.l10n.keepOffline,
+        onTap: () => keepChaptersOffline(
+          context: context,
+          ref: ref,
+          chapters: selected,
+          refresh: refresh,
+        ),
+      ),
+      _HeaderAction(
+        icon: Icons.cloud_download_outlined,
+        label: context.l10n.download,
+        onTap: () => queueServerDownload(
+          context: context,
+          ref: ref,
+          chapterIds: [for (final c in selected) c.id],
+          refresh: refresh,
+        ),
+      ),
+    ];
+
+    Future<void> openMore(List<_HeaderAction> overflowed) async {
       final box =
           moreButtonKey.currentContext?.findRenderObject() as RenderBox?;
       if (box == null) return;
       final rect = box.localToGlobal(Offset.zero) & box.size;
       final anchorIndex = ordered.indexWhere((c) => c.id == anchor.id);
+      final browserChapter = chapterHasBrowserTarget(anchor, seriesUrl)
+          ? anchor
+          : selected
+                .where((c) => chapterHasBrowserTarget(c, seriesUrl))
+                .firstOrNull;
       await showMenu<void>(
         context: context,
         position: menuAnchorForRect(
@@ -490,19 +568,15 @@ class _DesktopSelectionBar extends ConsumerWidget {
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         items: [
-          PopupMenuItem(
-            onTap: () => markChaptersRead(
-              context: context,
-              ref: ref,
-              chapters: selected,
-              isRead: false,
-              refresh: refresh,
+          for (final action in overflowed)
+            PopupMenuItem(
+              onTap: action.onTap,
+              child: ChapterMenuRow(
+                icon: action.icon,
+                label: action.label,
+              ),
             ),
-            child: ChapterMenuRow(
-              icon: Icons.remove_done_rounded,
-              label: context.l10n.markAsUnread,
-            ),
-          ),
+          if (overflowed.isNotEmpty) const PopupMenuDivider(),
           PopupMenuItem(
             enabled: previousChapters(bulk, anchor).isNotEmpty,
             onTap: () => markPreviousAsRead(
@@ -533,16 +607,6 @@ class _DesktopSelectionBar extends ConsumerWidget {
             ),
           ),
           PopupMenuItem(
-            onTap: () => onSelect({
-              for (final c in ordered)
-                if (!c.isRead.ifNull()) c.id: c,
-            }, anchor.id),
-            child: ChapterMenuRow(
-              icon: Icons.filter_list_rounded,
-              label: context.l10n.selectUnread,
-            ),
-          ),
-          PopupMenuItem(
             enabled: anchorIndex >= 0,
             onTap: () {
               if (anchorIndex < 0) return;
@@ -557,11 +621,13 @@ class _DesktopSelectionBar extends ConsumerWidget {
             ),
           ),
           PopupMenuItem(
-            onTap: () =>
-                onSelect({for (final c in ordered) c.id: c}, anchor.id),
+            onTap: () => onSelect({
+              for (final c in ordered)
+                if (!c.isRead.ifNull()) c.id: c,
+            }, anchor.id),
             child: ChapterMenuRow(
-              icon: Icons.select_all_rounded,
-              label: context.l10n.selectAll,
+              icon: Icons.filter_list_rounded,
+              label: context.l10n.selectUnread,
             ),
           ),
           PopupMenuItem(
@@ -579,110 +645,103 @@ class _DesktopSelectionBar extends ConsumerWidget {
               label: context.l10n.selectInBetween,
             ),
           ),
+          if (browserChapter != null) const PopupMenuDivider(),
+          if (browserChapter != null)
+            PopupMenuItem(
+              onTap: () => openChapterInBrowser(
+                context,
+                ref,
+                browserChapter,
+                seriesUrl,
+              ),
+              child: ChapterMenuRow(
+                icon: Icons.public_rounded,
+                label: context.l10n.openInBrowser,
+              ),
+            ),
         ],
       );
     }
 
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: 12,
-      child: Card(
-        margin: EdgeInsets.zero,
-        color: context.theme.cardColor.withValues(alpha: 0.97),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: context.l10n.cancel,
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: onClear,
-                ),
-                Text(
+    Future<void> deleteSelected() async {
+      final deleted = await deleteChaptersFromServerWithConfirm(
+        context: context,
+        ref: ref,
+        chapters: selected,
+      );
+      if (deleted) await refresh(true);
+    }
+
+    Widget moreButton(List<_HeaderAction> overflowed) => desktop
+        ? TextButton.icon(
+            key: moreButtonKey,
+            onPressed: () => openMore(overflowed),
+            icon: const Icon(Icons.more_horiz_rounded, size: 20),
+            label: Text(context.l10n.more),
+          )
+        : IconButton(
+            key: moreButtonKey,
+            tooltip: context.l10n.more,
+            onPressed: () => openMore(overflowed),
+            icon: const Icon(Icons.more_horiz_rounded),
+          );
+
+    Widget actionButton(_HeaderAction action) => desktop
+        ? TextButton.icon(
+            onPressed: action.onTap,
+            icon: Icon(action.icon, size: 20),
+            label: Text(action.label),
+          )
+        : IconButton(
+            tooltip: action.label,
+            onPressed: action.onTap,
+            icon: Icon(action.icon),
+          );
+
+    return Padding(
+      key: const ValueKey('chapterSelectionHeader'),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final all = actions();
+          final moreWidth = desktop ? 120.0 : 48.0;
+          final perAction = desktop ? 152.0 : 48.0;
+          final fixed = 48.0 + 100.0 + 48.0 + moreWidth + 48.0;
+          final visible = ((constraints.maxWidth - fixed) / perAction)
+              .floor()
+              .clamp(0, all.length);
+          final shown = all.take(visible).toList();
+          final overflowed = all.skip(visible).toList();
+          return Row(
+            children: [
+              IconButton(
+                tooltip: context.l10n.cancel,
+                icon: const Icon(Icons.close_rounded),
+                onPressed: onClear,
+              ),
+              Flexible(
+                child: Text(
                   context.l10n.numSelected(selected.length),
                   style: context.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 4),
-                TextButton.icon(
-                  onPressed: () => markChaptersRead(
-                    context: context,
-                    ref: ref,
-                    chapters: selected,
-                    isRead: true,
-                    refresh: refresh,
-                  ),
-                  icon: const Icon(Icons.done_all_rounded, size: 20),
-                  label: Text(context.l10n.markAsRead),
-                ),
-                TextButton.icon(
-                  onPressed: () => setChaptersBookmark(
-                    ref: ref,
-                    chapters: selected,
-                    isBookmarked: !allBookmarked,
-                    refresh: refresh,
-                  ),
-                  icon: const Icon(Icons.bookmark_rounded, size: 20),
-                  label: Text(
-                    allBookmarked
-                        ? context.l10n.removeBookmark
-                        : context.l10n.bookmark,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () => keepChaptersOffline(
-                    context: context,
-                    ref: ref,
-                    chapters: selected,
-                    refresh: refresh,
-                  ),
-                  icon: const Icon(Icons.save_alt_rounded, size: 20),
-                  label: Text(context.l10n.keepOffline),
-                ),
-                TextButton.icon(
-                  onPressed: () => queueServerDownload(
-                    context: context,
-                    ref: ref,
-                    chapterIds: [for (final c in selected) c.id],
-                    refresh: refresh,
-                  ),
-                  icon: const Icon(Icons.cloud_download_outlined, size: 20),
-                  label: Text(context.l10n.download),
-                ),
-                TextButton.icon(
-                  key: moreButtonKey,
-                  onPressed: openMore,
-                  icon: const Icon(Icons.more_horiz_rounded, size: 20),
-                  label: Text(context.l10n.more),
-                ),
-                TextButton.icon(
-                  onPressed: () async {
-                    final deleted = await deleteChaptersFromServerWithConfirm(
-                      context: context,
-                      ref: ref,
-                      chapters: selected,
-                    );
-                    if (deleted) await refresh(true);
-                  },
-                  icon: Icon(Icons.delete_rounded, size: 20, color: cs.error),
-                  label: Text('${context.l10n.delete}…'),
-                  style: ButtonStyle(
-                    overlayColor: WidgetStateProperty.resolveWith(
-                      (states) => states.contains(WidgetState.pressed)
-                          ? cs.onSurface.withValues(alpha: 0.12)
-                          : states.contains(WidgetState.hovered)
-                          ? cs.error.withValues(alpha: 0.12)
-                          : null,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+              ),
+              IconButton(
+                tooltip: context.l10n.selectAll,
+                icon: const Icon(Icons.select_all_rounded),
+                onPressed: onSelectAll,
+              ),
+              for (final action in shown) actionButton(action),
+              moreButton(overflowed),
+              IconButton(
+                tooltip: context.l10n.delete,
+                onPressed: deleteSelected,
+                icon: Icon(Icons.delete_rounded, color: cs.error),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

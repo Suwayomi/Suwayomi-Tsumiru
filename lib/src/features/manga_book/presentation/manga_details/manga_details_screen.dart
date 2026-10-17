@@ -188,8 +188,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
         (data) => Scaffold(
           extendBodyBehindAppBar:
               !context.isTablet && selectedChapters.value.isEmpty && !offline,
-          // Desktop selection lives in the floating chapter-column bar.
-          appBar: selectedChapters.value.isNotEmpty && !context.isDesktop
+          // Tablet/desktop selection lives in the chapter-column header;
+          // only phones get the selection app bar.
+          appBar: selectedChapters.value.isNotEmpty && !context.isTablet
               ? AppBar(
                   leading: IconButton(
                     onPressed: () => selectedChapters.value = ({}),
@@ -424,7 +425,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
                               ),
                             ),
                     ),
-                    if (selectedChapters.value.isNotEmpty)
+                    if (selectedChapters.value.isNotEmpty &&
+                        !context.isTablet)
                       Positioned(
                         left: 0,
                         right: 0,

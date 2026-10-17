@@ -17,6 +17,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/chapter_list_tile.dart';
+import 'package:tsumiru/src/features/manga_book/widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -365,41 +366,106 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Chapter 2'), buttons: kSecondaryMouseButton);
     await tester.pumpAndSettle();
-    // Once in the floating bar, once as the menu header.
+    // Once in the chapter-column header, once as the menu header.
     expect(find.text('2 Selected'), findsNWidgets(2));
     expect(find.text('Select'), findsNothing);
     expect(find.text('Delete from server…'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop selection bar shows labelled actions', (tester) async {
+  testWidgets('desktop selection swaps the chapter header in place', (
+    tester,
+  ) async {
     await _pumpDesktop(tester);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.tap(find.text('Chapter 2'));
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pumpAndSettle();
     expect(find.text('1 Selected'), findsOneWidget);
-    for (final label in [
-      'Mark as read',
-      'Bookmark',
-      'Keep offline',
-      'Download',
-    ]) {
-      expect(find.widgetWithText(TextButton, label), findsOneWidget);
-    }
-    // 'More' also names the series action-row button; scope to the bar.
-    final bar = find.ancestor(
-      of: find.text('1 Selected'),
-      matching: find.byType(Card),
+    expect(find.text('6 Chapters'), findsNothing);
+    expect(
+      find.widgetWithIcon(IconButton, Icons.close_rounded),
+      findsOneWidget,
     );
+    expect(find.widgetWithText(TextButton, 'Mark as read'), findsOneWidget);
+    final header = find.byKey(const ValueKey('chapterSelectionHeader'));
     expect(
       find.descendant(
-        of: bar,
-        matching: find.widgetWithIcon(TextButton, Icons.more_horiz_rounded),
+        of: header,
+        matching: find.widgetWithText(TextButton, 'More'),
       ),
       findsOneWidget,
     );
-    expect(find.text('Delete…'), findsOneWidget);
+    expect(find.byTooltip('Delete'), findsOneWidget);
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('closing the selection header restores the chapter header', (
+    tester,
+  ) async {
+    await _pumpDesktop(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 2'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('1 Selected'), findsOneWidget);
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.close_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('1 Selected'), findsNothing);
+    expect(find.text('6 Chapters'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('header More menu holds overflow and select actions', (
+    tester,
+  ) async {
+    await _pumpDesktop(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 2'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('chapterSelectionHeader')),
+        matching: find.widgetWithText(TextButton, 'More'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final label in [
+      'Bookmark',
+      'Keep offline',
+      'Download',
+      'Mark previous as read',
+      'Select next 10',
+      'Select below',
+      'Select Unread',
+      'Select in between',
+      'Open in browser',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tablet selection header is icon-only with no bottom bar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    await tester.pumpWidget(_app(preferences));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('Chapter 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 Selected'), findsOneWidget);
+    expect(find.byTooltip('Mark as read'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Mark as read'), findsNothing);
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -416,6 +482,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.longPress(find.text('Chapter 2'));
     await tester.pumpAndSettle();
+    expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
     expect(find.byIcon(Icons.bookmark_rounded), findsWidgets);
     expect(find.byIcon(Icons.history_rounded), findsOneWidget);
     expect(tester.takeException(), isNull);

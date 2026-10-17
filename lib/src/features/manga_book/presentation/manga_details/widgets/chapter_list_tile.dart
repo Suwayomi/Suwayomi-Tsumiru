@@ -328,7 +328,7 @@ class ChapterListTile extends HookConsumerWidget {
         onExit: (_) => hovered.value = false,
         child: Material(
           color: isSelected
-              ? cs.secondaryContainer
+              ? cs.primary.withValues(alpha: 0.16)
               : isCurrent
               ? cs.primary.withValues(alpha: 0.10)
               : Colors.transparent,
