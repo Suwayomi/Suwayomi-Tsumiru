@@ -25,6 +25,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
+import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../../../helpers/fake_extension_repository.dart';
 import '../../../../../helpers/legacy_account_access.dart';
@@ -145,7 +146,14 @@ Future<void> _pumpSearch(
   SourceRepository? repository,
   Queue? queue,
   bool overrideSourceSearches = true,
+  Size? size,
 }) async {
+  if (size != null) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -338,6 +346,60 @@ void main() {
 
     expect(find.text('MANGA 7'), findsNothing);
     expect(find.text('Alpha'), findsOneWidget);
+  });
+
+  testWidgets('desktop puts the field and chips on one row without an AppBar '
+      'title', (tester) async {
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
+      ],
+      size: const Size(1400, 980),
+    );
+
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.text('Global Search'), findsNothing);
+
+    final field = find.byType(SearchField);
+    final allChip = find.widgetWithText(FilterChip, 'All');
+    expect(field, findsOneWidget);
+    expect(allChip, findsOneWidget);
+    expect(
+      (tester.getCenter(field).dy - tester.getCenter(allChip).dy).abs(),
+      lessThanOrEqualTo(2),
+    );
+  });
+
+  testWidgets('phone keeps the title and puts the chips below the field', (
+    tester,
+  ) async {
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [
+        (
+          source: _source(id: '1', name: 'Alpha'),
+          search: () async => <MangaDto>[],
+        ),
+      ],
+      size: const Size(412, 900),
+    );
+
+    expect(find.widgetWithText(AppBar, 'Global Search'), findsOneWidget);
+
+    final field = find.byType(SearchField);
+    final allChip = find.widgetWithText(FilterChip, 'All');
+    expect(field, findsOneWidget);
+    expect(allChip, findsOneWidget);
+    expect(
+      tester.getTopLeft(allChip).dy,
+      greaterThan(tester.getBottomLeft(field).dy),
+    );
   });
 
   testWidgets('one source erroring does not block an exact match elsewhere', (

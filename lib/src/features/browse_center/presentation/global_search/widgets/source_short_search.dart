@@ -50,6 +50,7 @@ class SourceShortSearch extends ConsumerWidget {
                 )
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       for (final i in data)
@@ -76,7 +77,7 @@ class SourceShortSearch extends ConsumerWidget {
                   color: context.colorScheme.error,
                 ),
                 const SizedBox(width: 8),
-                Expanded(
+                Flexible(
                   child: Text(
                     context.l10n.couldntReachSource(source.displayName),
                     style: TextStyle(
@@ -84,6 +85,7 @@ class SourceShortSearch extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => ref.invalidate(
                     sourceQuickSearchMangaListProvider(source.id, query: query),
