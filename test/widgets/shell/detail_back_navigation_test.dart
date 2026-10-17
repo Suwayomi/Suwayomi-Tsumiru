@@ -27,6 +27,7 @@ import 'package:tsumiru/src/features/manga_book/presentation/manga_details/contr
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/recommends/recommends_screen.dart';
+import 'package:tsumiru/src/features/manga_book/widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -279,6 +280,62 @@ void main() {
 
       expect(find.text('LIBRARY'), findsOneWidget);
       expect(find.byType(MangaDetailsScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Esc clears a desktop selection even while a header button has focus',
+    (tester) async {
+      await _pump(tester, const Size(1400, 900));
+      await _openSeriesFromLibrary(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tap(find.text('Chapter 2'));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pumpAndSettle();
+      expect(find.byType(Checkbox), findsWidgets);
+
+      final selectAll = find.descendant(
+        of: find.byKey(const ValueKey('chapterSelectionHeader')),
+        matching: find.byIcon(Icons.select_all_rounded),
+      );
+      final node = Focus.of(tester.element(selectAll));
+      node.requestFocus();
+      await tester.pump();
+      expect(node.hasPrimaryFocus, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(Checkbox), findsNothing);
+      expect(find.byType(MangaDetailsScreen), findsOneWidget);
+      expect(find.text('LIBRARY'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Esc clears a phone selection even while an app bar action has focus',
+    (tester) async {
+      await _pump(tester, const Size(412, 915));
+      await _openSeriesFromLibrary(tester);
+      await tester.longPress(find.text('Chapter 2'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
+
+      final selectAll = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byIcon(Icons.select_all_rounded),
+      );
+      final node = Focus.of(tester.element(selectAll));
+      node.requestFocus();
+      await tester.pump();
+      expect(node.hasPrimaryFocus, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(MultiChaptersActionsBottomAppBar), findsNothing);
+      expect(find.byType(MangaDetailsScreen), findsOneWidget);
+      expect(find.text('LIBRARY'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

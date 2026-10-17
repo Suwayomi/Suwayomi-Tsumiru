@@ -11,8 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../features/account/data/account_providers.dart';
+import '../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../features/offline/data/offline_download_providers.dart';
 import '../../../../features/offline/data/offline_repository.dart';
+import '../../../../features/offline/data/offline_runtime_storage.dart';
 import '../../../../features/tracking/domain/track_progress_gate.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -25,7 +27,10 @@ import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../domain/downloads/downloads_model.dart';
+import '../../presentation/manga_details/controller/manga_details_controller.dart';
 import '../../presentation/manga_details/controller/scanlator_propagation.dart';
+
+typedef _ReadSnapshot = ({int id, bool isRead, int lastPageRead});
 
 Future<void> markChaptersRead({
   required BuildContext context,
@@ -37,7 +42,10 @@ Future<void> markChaptersRead({
   bool showUndoToast = true,
 }) async {
   if (chapters.isEmpty) return;
-  final containerRead = ProviderScope.containerOf(context, listen: false).read;
+  // Undo must survive the selection UI (and its ref) clearing, so it runs off
+  // the container rather than this ref.
+  final container = ProviderScope.containerOf(context, listen: false);
+  final containerRead = container.read;
   final expandedByManga = <int, List<int>>{
     for (final mangaId in {for (final c in chapters) c.mangaId})
       mangaId: expandIdsAcrossScanlators(
@@ -50,6 +58,13 @@ Future<void> markChaptersRead({
       ),
   };
   final idsForWrite = [for (final l in expandedByManga.values) ...l];
+  final snapshots = _captureReadSnapshots(
+    container,
+    expandedByManga: expandedByManga,
+    chapters: chapters,
+    isRead: isRead,
+    resetPosition: resetPosition,
+  );
   final toast = ref.read(toastProvider);
   final markedMessage = isRead
       ? context.l10n.markedAsRead(chapters.length)
@@ -99,22 +114,95 @@ Future<void> markChaptersRead({
       markedMessage,
       actionLabel: undoLabel,
       onAction: () {
-        if (!ref.context.mounted) return;
-        unawaited(
-          markChaptersRead(
-            context: context,
-            ref: ref,
-            chapters: chapters,
-            isRead: !isRead,
-            refresh: refresh,
-            resetPosition: resetPosition,
-            showUndoToast: false,
-          ),
-        );
+        unawaited(_restoreChapterReadStates(container, snapshots));
+        for (final mangaId in expandedByManga.keys) {
+          container.invalidate(mangaChapterListProvider(mangaId: mangaId));
+        }
       },
     );
   }
   await refresh(true);
+}
+
+/// The exact read state of every chapter this action would change, taken
+/// before the write so Undo can put it back instead of inverting the request.
+List<_ReadSnapshot> _captureReadSnapshots(
+  ProviderContainer container, {
+  required Map<int, List<int>> expandedByManga,
+  required List<ChapterDto> chapters,
+  required bool isRead,
+  required bool resetPosition,
+}) {
+  final byId = <int, ChapterDto>{for (final c in chapters) c.id: c};
+  for (final mangaId in expandedByManga.keys) {
+    final all = container
+        .read(mangaChapterListProvider(mangaId: mangaId))
+        .value;
+    for (final c in all ?? const <ChapterDto>[]) {
+      byId.putIfAbsent(c.id, () => c);
+    }
+  }
+  return [
+    for (final id in [for (final l in expandedByManga.values) ...l])
+      if (byId[id] case final original?)
+        if (original.isRead.ifNull() != isRead ||
+            (resetPosition && original.lastPageRead != 0))
+          (
+            id: id,
+            isRead: original.isRead.ifNull(),
+            lastPageRead: original.lastPageRead,
+          ),
+  ];
+}
+
+/// Undo for [markChaptersRead]: writes each captured chapter state back,
+/// locally first (marked dirty for the next sync) then to the server.
+Future<void> _restoreChapterReadStates(
+  ProviderContainer container,
+  List<_ReadSnapshot> snapshots,
+) async {
+  if (snapshots.isEmpty) return;
+  final current = container
+      .read(authCredentialsStoreProvider.notifier)
+      .captureSession();
+  if (!current()) return;
+  final offline = container.read(offlineActiveProvider);
+  final db = offline ? container.read(offlineDatabaseProvider) : null;
+  final repository = container.read(mangaBookRepositoryProvider);
+  await container.read(offlineRuntimeStorageProvider.notifier).track(() async {
+    for (final snapshot in snapshots) {
+      if (!current()) return;
+      if (db != null) {
+        await db.setChapterProgress(
+          snapshot.id,
+          lastPageRead: snapshot.lastPageRead,
+          isRead: snapshot.isRead,
+          manual: true,
+        );
+      }
+      if (!current()) return;
+      final result = await AsyncValue.guard(
+        () => repository.putChapter(
+          chapterId: snapshot.id,
+          patch: ChapterChange(
+            isRead: snapshot.isRead,
+            lastPageRead: snapshot.lastPageRead,
+          ),
+        ),
+      );
+      if (!current()) return;
+      if (db != null && !result.hasError) {
+        await db.clearReadStateDirtyIfUnchanged(
+          snapshot.id,
+          isRead: snapshot.isRead,
+        );
+        await db.clearProgressDirtyIfUnchanged(
+          snapshot.id,
+          lastPageRead: snapshot.lastPageRead,
+        );
+      }
+    }
+  });
 }
 
 List<ChapterDto> previousChapters(
@@ -146,17 +234,15 @@ Future<void> setChaptersBookmark({
   required AsyncValueSetter<bool> refresh,
 }) async {
   if (chapters.isEmpty) return;
-  final result = await AsyncValue.guard(
-    () => ref
-        .read(mangaBookRepositoryProvider)
-        .modifyBulkChapters(
-          ChapterBatch(
-            ids: [for (final c in chapters) c.id],
-            patch: ChapterChange(isBookmarked: isBookmarked),
-          ),
-        ),
-  );
-  result.showToastOnError(ref.read(toastProvider));
+  // Same offline-aware path as a single tile's bookmark: write the local
+  // catalogue first, then push; an unreachable server leaves it queued.
+  for (final chapter in chapters) {
+    await recordBookmark(
+      ref,
+      chapterId: chapter.id,
+      isBookmarked: isBookmarked,
+    );
+  }
   await refresh(true);
 }
 
@@ -234,7 +320,8 @@ Future<void> queueServerDownload({
 
 /// Phone swipe's Download action, per live server state (Komikku parity):
 /// queue when missing, cancel while queued/downloading, delete once the
-/// server holds it. The delete follows the row icon: direct, no confirmation.
+/// server holds it. Queue and cancel are one-step; the delete asks first, the
+/// same confirmation as the selection bar and the chapter menu.
 Future<void> runChapterSwipeDownload({
   required BuildContext context,
   required WidgetRef ref,
@@ -267,22 +354,12 @@ Future<void> runChapterSwipeDownload({
       }
     }
   } else if (chapter.isDownloaded.ifNull()) {
-    final containerRead = ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read;
-    final deleteIds = expandIdsAcrossScanlators(
-      ref,
-      mangaId: chapter.mangaId,
-      chapterIds: [chapter.id],
+    final deleted = await deleteChaptersFromServerWithConfirm(
+      context: context,
+      ref: ref,
+      chapters: [chapter],
     );
-    final result = await AsyncValue.guard(
-      () => ref.read(mangaBookRepositoryProvider).deleteChapters(deleteIds),
-    );
-    if (context.mounted) result.showToastOnError(toast);
-    if (!result.hasError) {
-      await cascadeServerDeleteToDevice(containerRead, deleteIds);
-    }
+    if (!deleted) return;
   } else {
     await queueServerDownload(
       context: context,

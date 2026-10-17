@@ -6,7 +6,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -59,8 +58,6 @@ class BigScreenMangaDetails extends HookConsumerWidget {
     final moreButtonKey = useMemoized(GlobalKey.new);
     final filterFocus = useMemoized(FocusNode.new);
     useEffect(() => filterFocus.dispose, [filterFocus]);
-    final escScope = useMemoized(FocusScopeNode.new);
-    useEffect(() => escScope.dispose, [escScope]);
 
     final rawChapters = ref.watch(mangaChapterListProvider(mangaId: mangaId));
     final totalCount = rawChapters.value?.length ?? 0;
@@ -84,10 +81,11 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         .watch(firstUnreadInFilteredChapterListProvider(mangaId: mangaId))
         ?.id;
 
-    // Focus follows the selection so Esc clears it, never the global Back.
+    // A cleared selection drops its range anchor too, so a later shift-click
+    // never extends from a stale row (Esc is handled by the series page).
     final wasSelecting = usePrevious(selecting);
     useEffect(() {
-      if (selecting && wasSelecting == false) escScope.requestFocus();
+      if (!selecting && wasSelecting == true) anchor.value = null;
       return null;
     }, [selecting]);
 
@@ -266,67 +264,54 @@ class BigScreenMangaDetails extends HookConsumerWidget {
                             onFilter: openFilterPanel,
                           ),
                     Expanded(
-                      child: FocusScope(
-                        node: escScope,
-                        onKeyEvent: (node, event) {
-                          if (event is KeyDownEvent &&
-                              event.logicalKey == LogicalKeyboardKey.escape &&
-                              selectedChapters.value.isNotEmpty) {
-                            selectedChapters.value = {};
-                            anchor.value = null;
-                            return KeyEventResult.handled;
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          if (chapterEntries.length == index) {
+                            return desktop
+                                ? const SizedBox(height: 16)
+                                : const ListTile();
                           }
-                          return KeyEventResult.ignored;
-                        },
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemBuilder: (context, index) {
-                            if (chapterEntries.length == index) {
-                              return desktop
-                                  ? const SizedBox(height: 16)
-                                  : const ListTile();
-                            }
-                            final entry = chapterEntries[index];
-                            return switch (entry) {
-                              MangaChapterEntry() => ChapterListTile(
-                                key: ValueKey('${entry.chapter.id}'),
-                                manga: manga,
-                                chapter: entry.chapter,
-                                updateData: () => onListRefresh(false),
-                                isSelected: selection.containsKey(
-                                  entry.chapter.id,
-                                ),
-                                canTapSelect: selecting,
-                                toggleSelect: toggleSelect,
-                                desktop: desktop,
-                                selectionMode: selecting,
-                                isCurrent: entry.chapter.id == currentId,
-                                onRowTap: (shift) =>
-                                    onRowTap(entry.chapter, shift),
-                                onSecondaryTapAt: (pos) => openMenu(
-                                  menuAnchorForPoint(context, pos),
-                                  entry.chapter,
-                                  ordered,
-                                  bulk,
-                                  () {},
-                                ),
-                                onOpenMenu: (rect, refocus) => openMenu(
-                                  rect,
-                                  entry.chapter,
-                                  ordered,
-                                  bulk,
-                                  refocus,
-                                ),
+                          final entry = chapterEntries[index];
+                          return switch (entry) {
+                            MangaChapterEntry() => ChapterListTile(
+                              key: ValueKey('${entry.chapter.id}'),
+                              manga: manga,
+                              chapter: entry.chapter,
+                              updateData: () => onListRefresh(false),
+                              isSelected: selection.containsKey(
+                                entry.chapter.id,
                               ),
-                              MissingChaptersEntry() =>
-                                MissingChaptersListTile(
-                                  key: ValueKey('missing-${entry.id}'),
-                                  count: entry.count,
-                                ),
-                            };
-                          },
-                          itemCount: chapterEntries.length + 1,
-                        ),
+                              canTapSelect: selecting,
+                              toggleSelect: toggleSelect,
+                              desktop: desktop,
+                              selectionMode: selecting,
+                              isCurrent: entry.chapter.id == currentId,
+                              onRowTap: (shift) =>
+                                  onRowTap(entry.chapter, shift),
+                              onSecondaryTapAt: (pos) => openMenu(
+                                menuAnchorForPoint(context, pos),
+                                entry.chapter,
+                                ordered,
+                                bulk,
+                                () {},
+                              ),
+                              onOpenMenu: (rect, refocus) => openMenu(
+                                rect,
+                                entry.chapter,
+                                ordered,
+                                bulk,
+                                refocus,
+                              ),
+                            ),
+                            MissingChaptersEntry() =>
+                              MissingChaptersListTile(
+                                key: ValueKey('missing-${entry.id}'),
+                                count: entry.count,
+                              ),
+                          };
+                        },
+                        itemCount: chapterEntries.length + 1,
                       ),
                     ),
                   ],

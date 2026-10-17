@@ -8,9 +8,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/manga_book/data/manga_book/manga_book_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/chapter/chapter_model.dart';
+import 'package:tsumiru/src/features/manga_book/domain/chapter_batch/chapter_batch_model.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/chapter_list_entry.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
@@ -21,6 +26,7 @@ import 'package:tsumiru/src/features/manga_book/widgets/chapter_actions/multi_ch
 import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/utils/misc/toast/toast.dart';
 
 ChapterDto _chapter({
   required int id,
@@ -106,8 +112,74 @@ class _Chapters extends MangaChapterList {
   Future<void> refresh([bool onlineFetch = false]) async {}
 }
 
-Widget _app(SharedPreferences preferences) => ProviderScope(
+class _RecordingBook extends MangaBookRepository {
+  _RecordingBook()
+    : super(
+        GraphQLClient(
+          link: HttpLink('http://localhost:0'),
+          cache: GraphQLCache(),
+        ),
+      );
+
+  final batches = <ChapterBatch>[];
+  final putCalls = <({int id, ChapterChange patch})>[];
+
+  @override
+  Future<void> modifyBulkChapters(ChapterBatch batch) async =>
+      batches.add(batch);
+
+  @override
+  Future<void> putChapter({
+    required int chapterId,
+    required ChapterChange patch,
+  }) async => putCalls.add((id: chapterId, patch: patch));
+}
+
+class _Session extends AuthCredentialsStore {
+  @override
+  Future<AuthCredentialsState> build() async =>
+      const AuthCredentialsState.empty();
+}
+
+class _FakeToast implements Toast {
+  String? undoLabel;
+  VoidCallback? undo;
+
+  @override
+  void showWithAction(
+    String msg, {
+    required String actionLabel,
+    required VoidCallback onAction,
+    Duration duration = const Duration(seconds: 5),
+  }) {
+    undoLabel = actionLabel;
+    undo = onAction;
+  }
+
+  @override
+  void show(
+    String msg, {
+    bool withMicrotask = false,
+    bool instantShow = false,
+  }) {}
+
+  @override
+  void showError(
+    String error, {
+    bool withMicrotask = false,
+    bool instantShow = false,
+  }) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Widget _app(
+  SharedPreferences preferences, {
+  List<Override> overrides = const [],
+}) => ProviderScope(
   overrides: [
+    ...overrides,
     sharedPreferencesProvider.overrideWithValue(preferences),
     offlineEnabledProvider.overrideWithValue(false),
     mangaWithIdProvider(mangaId: 1).overrideWith(_Manga.new),
@@ -150,7 +222,11 @@ Future<void> _pumpTile(
         home: Scaffold(
           body: ChapterListTile(
             manga: _manga,
-            chapter: _chapter(id: 99, scanlator: scanlator, lastPageRead: lastPageRead),
+            chapter: _chapter(
+              id: 99,
+              scanlator: scanlator,
+              lastPageRead: lastPageRead,
+            ),
             updateData: () async {},
             toggleSelect: (_) {},
             desktop: true,
@@ -166,6 +242,7 @@ Future<void> _pumpTile(
 Future<void> _pumpDesktop(
   WidgetTester tester, {
   Size size = const Size(1400, 980),
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -173,7 +250,15 @@ Future<void> _pumpDesktop(
   addTearDown(tester.view.resetDevicePixelRatio);
   SharedPreferences.setMockInitialValues({});
   final preferences = await SharedPreferences.getInstance();
-  await tester.pumpWidget(_app(preferences));
+  await tester.pumpWidget(_app(preferences, overrides: overrides));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _selectRange(WidgetTester tester, String from, String to) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.tap(find.text(from));
+  await tester.tap(find.text(to));
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
   await tester.pumpAndSettle();
 }
 
@@ -595,6 +680,100 @@ void main() {
     expect(find.byType(MultiChaptersActionsBottomAppBar), findsOneWidget);
     expect(find.byIcon(Icons.bookmark_rounded), findsWidgets);
     expect(find.byIcon(Icons.history_rounded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Undo after bulk mark read restores once the bar is gone', (
+    tester,
+  ) async {
+    final book = _RecordingBook();
+    final toast = _FakeToast();
+    await _pumpDesktop(
+      tester,
+      overrides: [
+        mangaBookRepositoryProvider.overrideWith((ref) => book),
+        toastProvider.overrideWith((ref) => toast),
+        authCredentialsStoreProvider.overrideWith(_Session.new),
+      ],
+    );
+    await _selectRange(tester, 'Chapter 2', 'Chapter 4');
+    expect(find.byType(Checkbox), findsWidgets);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('chapterSelectionHeader')),
+        matching: find.byTooltip('Mark as read'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // The action cleared the selection, disposing the header whose ref the
+    // Undo callback used to capture.
+    expect(find.byType(Checkbox), findsNothing);
+    expect(book.batches, hasLength(1));
+    expect(toast.undo, isNotNull);
+
+    toast.undo!();
+    await tester.pumpAndSettle();
+
+    final restored = {for (final c in book.putCalls) c.id: c.patch};
+    expect(restored.keys, containsAll([2, 3, 4]));
+    expect(restored[2]!.isRead, isFalse);
+    expect(restored[2]!.lastPageRead, 4);
+    expect(restored[3]!.isRead, isFalse);
+    expect(restored[3]!.lastPageRead, 5);
+    expect(restored[4]!.isRead, isFalse);
+    expect(restored[4]!.lastPageRead, 0);
+    // A restore, not another inverted bulk write.
+    expect(book.batches, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Undo of Mark previous as read keeps already-read progress', (
+    tester,
+  ) async {
+    final book = _RecordingBook();
+    final toast = _FakeToast();
+    await _pumpDesktop(
+      tester,
+      overrides: [
+        mangaBookRepositoryProvider.overrideWith((ref) => book),
+        toastProvider.overrideWith((ref) => toast),
+        authCredentialsStoreProvider.overrideWith(_Session.new),
+      ],
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Chapter 4'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('1 Selected'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('chapterSelectionHeader')),
+        matching: find.widgetWithText(TextButton, 'More'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark previous as read'));
+    await tester.pumpAndSettle();
+    expect(book.batches, hasLength(1));
+    expect(book.batches.single.ids, containsAll([1, 2, 3]));
+
+    toast.undo!();
+    await tester.pumpAndSettle();
+
+    final restored = {for (final c in book.putCalls) c.id: c.patch};
+    // Chapter 1 was already read with no progress, so nothing to restore.
+    expect(restored.containsKey(1), isFalse);
+    expect(restored[2]!.isRead, isFalse);
+    expect(restored[2]!.lastPageRead, 4);
+    expect(restored[3]!.isRead, isFalse);
+    expect(restored[3]!.lastPageRead, 5);
+    expect(
+      book.putCalls.where((c) => c.patch.isRead == true),
+      isEmpty,
+      reason: 'no previously-read chapter is left read by undo',
+    );
     expect(tester.takeException(), isNull);
   });
 

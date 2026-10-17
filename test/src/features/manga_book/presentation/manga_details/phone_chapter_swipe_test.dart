@@ -346,7 +346,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('download action deletes a server chapter without asking', (
+  testWidgets('download swipe asks before deleting a downloaded chapter', (
     tester,
   ) async {
     final book = _RecordingBook();
@@ -356,9 +356,34 @@ void main() {
       prefs: const {'chapterSwipeToLeft': 2},
     );
     await _swipe(tester, 'Chapter 3', const Offset(-200, 0));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.text('Are you sure you want to delete the selected chapters?'),
+      findsOneWidget,
+    );
+    expect(book.deleted, isEmpty);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(book.deleted, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('download swipe deletes once the confirmation is accepted', (
+    tester,
+  ) async {
+    final book = _RecordingBook();
+    await _pumpPhone(
+      tester,
+      book: book,
+      prefs: const {'chapterSwipeToLeft': 2},
+    );
+    await _swipe(tester, 'Chapter 3', const Offset(-200, 0));
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
     expect(book.deleted, hasLength(1));
     expect(book.deleted.single, contains(3));
-    expect(find.byType(AlertDialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
