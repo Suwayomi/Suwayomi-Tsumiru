@@ -70,10 +70,18 @@ class SourceShortSearch extends ConsumerWidget {
             padding: KEdgeInsets.h16v4.size,
             child: Row(
               children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 20,
+                  color: context.colorScheme.error,
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     context.l10n.couldntReachSource(source.displayName),
-                    style: TextStyle(color: context.colorScheme.error),
+                    style: TextStyle(
+                      color: context.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
                 TextButton(

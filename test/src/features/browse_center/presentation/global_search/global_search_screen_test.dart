@@ -10,8 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:queue/queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/browse_center/data/source_repository/source_repository.dart';
+import 'package:tsumiru/src/features/browse_center/domain/filter/filter_model.dart';
+import 'package:tsumiru/src/features/browse_center/domain/manga_page/manga_page.dart';
 import 'package:tsumiru/src/features/browse_center/domain/source/source_model.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/global_search/controller/source_quick_search_controller.dart';
 import 'package:tsumiru/src/features/browse_center/presentation/global_search/global_search_screen.dart';
@@ -20,6 +24,10 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
+import 'package:tsumiru/src/utils/network/graphql_errors.dart';
+
+import '../../../../../helpers/fake_extension_repository.dart';
+import '../../../../../helpers/legacy_account_access.dart';
 
 SourceDto _source({required String id, required String name}) =>
     SourceDto.fromJson({
@@ -68,6 +76,25 @@ class _AllScope extends GlobalSearchScope {
   GlobalSearchSourceFilter? build() => GlobalSearchSourceFilter.all;
 }
 
+class _FailingSourceRepository extends SourceRepository {
+  _FailingSourceRepository()
+    : super(dummyGraphQLClient(), permissions: legacyAccountPermissions);
+
+  int searchCalls = 0;
+
+  @override
+  Future<MangaPage?> fetchSourceManga({
+    required String sourceId,
+    required SourceType sourceType,
+    required int page,
+    String? query,
+    List<FilterChange>? filters,
+  }) async {
+    searchCalls++;
+    throw Exception('HTTP 522');
+  }
+}
+
 typedef _SourceResult = ({
   SourceDto source,
   Future<List<MangaDto>> Function() search,
@@ -114,12 +141,16 @@ Future<void> _pumpSearch(
   WidgetTester tester, {
   required bool fromSuggestion,
   required List<_SourceResult> sources,
+  Duration? Function(int, Object)? retry,
+  SourceRepository? repository,
+  Queue? queue,
+  bool overrideSourceSearches = true,
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
-      retry: (_, _) => null,
+      retry: retry,
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         globalSearchScopeProvider.overrideWith(_AllScope.new),
@@ -127,11 +158,16 @@ Future<void> _pumpSearch(
           (ref) => AsyncData([for (final s in sources) s.source]),
         ),
         pinnedSourcesProvider.overrideWithValue(const []),
-        for (final s in sources)
-          sourceQuickSearchMangaListProvider(
-            s.source.id,
-            query: _query,
-          ).overrideWith((ref) => s.search()),
+        if (repository != null)
+          sourceRepositoryProvider.overrideWithValue(repository),
+        if (queue != null)
+          rateLimitQueueProvider(_query).overrideWithValue(queue),
+        if (overrideSourceSearches)
+          for (final s in sources)
+            sourceQuickSearchMangaListProvider(
+              s.source.id,
+              query: _query,
+            ).overrideWith((ref) => s.search()),
       ],
       child: MaterialApp.router(
         routerConfig: _router(fromSuggestion: fromSuggestion),
@@ -205,6 +241,37 @@ void main() {
     expect(betaCalls, 1);
     expect(find.text("Couldn't reach Comix (EN)"), findsNothing);
     expect(find.text("Couldn't reach Beta"), findsOneWidget);
+  });
+
+  testWidgets('a failed source is not retried automatically under the app '
+      'retry policy', (tester) async {
+    final comix = _source(id: '2', name: 'Comix (EN)');
+    final repository = _FailingSourceRepository();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      sources: [(source: comix, search: () async => <MangaDto>[])],
+      overrideSourceSearches: false,
+      retry: (retryCount, error) => isConnectionError(error)
+          ? null
+          : ProviderContainer.defaultRetry(retryCount, error),
+      repository: repository,
+      queue: Queue(),
+    );
+
+    expect(find.text("Couldn't reach Comix (EN)"), findsOneWidget);
+    expect(repository.searchCalls, 1);
+
+    await tester.pump(const Duration(seconds: 45));
+
+    expect(repository.searchCalls, 1);
+    expect(find.text("Couldn't reach Comix (EN)"), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(repository.searchCalls, 2);
   });
 
   testWidgets('a lone exact match from a suggestion opens the series and '
