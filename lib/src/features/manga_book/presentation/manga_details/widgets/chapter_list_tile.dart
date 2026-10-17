@@ -346,13 +346,6 @@ class ChapterListTile extends HookConsumerWidget {
             child: Container(
               height: 46,
               padding: const EdgeInsets.only(right: 4),
-              decoration: isCurrent
-                  ? BoxDecoration(
-                      border: Border(
-                        left: BorderSide(color: cs.primary, width: 3),
-                      ),
-                    )
-                  : null,
               child: Stack(
                 children: [
                   Row(
@@ -486,6 +479,14 @@ class ChapterListTile extends HookConsumerWidget {
                           ),
                         ),
                       ),
+                    ),
+                  if (isCurrent)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 3,
+                      child: ColoredBox(color: cs.primary),
                     ),
                 ],
               ),

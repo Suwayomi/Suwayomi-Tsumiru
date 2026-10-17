@@ -233,6 +233,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('current chapter accent bar does not shift its title', (
+    tester,
+  ) async {
+    await _pumpDesktop(tester, size: const Size(1400, 900));
+    final current = tester.getTopLeft(find.text('Chapter 2')).dx;
+    final normal = tester.getTopLeft(find.text('Chapter 4')).dx;
+    expect(current, normal);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('right-click opens the menu without selecting', (tester) async {
     await _pumpDesktop(tester);
     await tester.tap(find.text('Chapter 1'), buttons: kSecondaryMouseButton);
