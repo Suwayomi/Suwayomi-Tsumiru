@@ -95,7 +95,15 @@ class SourceShortSearch extends ConsumerWidget {
               ],
             ),
           ),
-          loading: () => const CenterSorayomiShimmerIndicator(),
+          loading: () => SizedBox(
+            height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+            child: const Center(
+              child: SizedBox.square(
+                dimension: 48,
+                child: SorayomiShimmerIndicator(),
+              ),
+            ),
+          ),
         ),
       ],
     );

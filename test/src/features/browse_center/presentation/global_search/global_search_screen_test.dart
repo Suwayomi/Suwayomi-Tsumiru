@@ -15,6 +15,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hooks_riverpod/legacy.dart';
 import 'package:queue/queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/app_sizes.dart';
 import 'package:tsumiru/src/constants/enum.dart';
 import 'package:tsumiru/src/features/browse_center/data/source_repository/source_repository.dart';
 import 'package:tsumiru/src/features/browse_center/domain/filter/filter_model.dart';
@@ -28,6 +29,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
+import 'package:tsumiru/src/widgets/custom_circular_progress_indicator.dart';
 import 'package:tsumiru/src/widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
@@ -265,6 +267,38 @@ void main() {
     expect(betaCalls, 1);
     expect(find.text("Couldn't reach Comix (EN)"), findsNothing);
     expect(find.text("Couldn't reach Beta"), findsOneWidget);
+  });
+
+  testWidgets('a loading source reserves the cover row height with a small '
+      'indicator', (tester) async {
+    final pending = Completer<List<MangaDto>>();
+
+    await _pumpSearch(
+      tester,
+      fromSuggestion: false,
+      settle: false,
+      sources: [
+        (source: _source(id: '1', name: 'Alpha'), search: () => pending.future),
+      ],
+    );
+
+    expect(find.byType(CenterSorayomiShimmerIndicator), findsNothing);
+
+    final indicator = find.byType(SorayomiShimmerIndicator);
+    expect(indicator, findsOneWidget);
+
+    final boxes = find.ancestor(
+      of: indicator,
+      matching: find.byType(SizedBox),
+    );
+    expect(tester.getSize(boxes.first), const Size.square(48));
+    expect(
+      tester.getSize(boxes.at(1)).height,
+      mangaCoverBoxHeight(kShortSearchCoverWidth),
+    );
+
+    pending.complete(<MangaDto>[]);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('a failed source is not retried automatically under the app '
