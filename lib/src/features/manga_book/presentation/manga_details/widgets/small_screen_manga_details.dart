@@ -96,6 +96,7 @@ class SmallScreenMangaDetails extends ConsumerWidget {
                           entry.chapter.id,
                         ),
                         canTapSelect: selectedChapters.value.isNotEmpty,
+                        selectionMode: selectedChapters.value.isNotEmpty,
                         toggleSelect: toggleSelect,
                       ),
                       MissingChaptersEntry() => MissingChaptersListTile(

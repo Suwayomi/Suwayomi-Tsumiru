@@ -3148,6 +3148,10 @@
     "description": "Snackbar shown after starting a series download"
   },
   "markAsRead": "Mark as read",
+  "chapterSwipeToLeft": "Chapter on swipe to left",
+  "chapterSwipeToRight": "Chapter on swipe to right",
+  "chapterSwipeDisabled": "Disabled",
+  "chapterSwipeBookmarkChapter": "Bookmark chapter",
   "markAsUnread": "Mark as unread",
   "markPreviousAsRead": "Mark previous as read",
   "markedAsRead": "{count, plural, =1{Marked 1 chapter as read} other{Marked {count} chapters as read}}",

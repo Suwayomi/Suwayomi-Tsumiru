@@ -24,6 +24,7 @@ import '../../data/downloads/downloads_repository.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
+import '../../domain/downloads/downloads_model.dart';
 import '../../presentation/manga_details/controller/scanlator_propagation.dart';
 
 Future<void> markChaptersRead({
@@ -227,6 +228,69 @@ Future<void> queueServerDownload({
     } else {
       ref.read(toastProvider)?.show(context.l10n.queued);
     }
+  }
+  await refresh(false);
+}
+
+/// Phone swipe's Download action, per live server state (Komikku parity):
+/// queue when missing, cancel while queued/downloading, delete once the
+/// server holds it. The delete follows the row icon: direct, no confirmation.
+Future<void> runChapterSwipeDownload({
+  required BuildContext context,
+  required WidgetRef ref,
+  required ChapterDto chapter,
+  required DownloadDto? queueEntry,
+  required AsyncValueSetter<bool> refresh,
+}) async {
+  if (!canDownloadChapters(ref)) return;
+  final toast = ref.read(toastProvider);
+  if (queueEntry != null &&
+      (queueEntry.state == DownloadState.QUEUED ||
+          queueEntry.state == DownloadState.DOWNLOADING)) {
+    final result = await AsyncValue.guard(
+      () => ref
+          .read(downloadsRepositoryProvider)
+          .removeChapterFromDownloadQueue(chapter.id),
+    );
+    if (context.mounted) result.showToastOnError(toast);
+  } else if (queueEntry != null) {
+    final repo = ref.read(downloadsRepositoryProvider);
+    final result = await AsyncValue.guard(() async {
+      await repo.removeChapterFromDownloadQueue(chapter.id);
+      await repo.addChaptersBatchToDownloadQueue([chapter.id]);
+    });
+    if (context.mounted) {
+      if (result.hasError) {
+        result.showToastOnError(toast);
+      } else {
+        toast?.show(context.l10n.queued);
+      }
+    }
+  } else if (chapter.isDownloaded.ifNull()) {
+    final containerRead = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read;
+    final deleteIds = expandIdsAcrossScanlators(
+      ref,
+      mangaId: chapter.mangaId,
+      chapterIds: [chapter.id],
+    );
+    final result = await AsyncValue.guard(
+      () => ref.read(mangaBookRepositoryProvider).deleteChapters(deleteIds),
+    );
+    if (context.mounted) result.showToastOnError(toast);
+    if (!result.hasError) {
+      await cascadeServerDeleteToDevice(containerRead, deleteIds);
+    }
+  } else {
+    await queueServerDownload(
+      context: context,
+      ref: ref,
+      chapterIds: [chapter.id],
+      refresh: refresh,
+    );
+    return;
   }
   await refresh(false);
 }

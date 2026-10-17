@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,15 +13,18 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../offline/presentation/offline_save_button.dart';
 import '../../../domain/chapter/chapter_model.dart';
+import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/chapter_actions/chapter_bulk_actions.dart';
 import '../../../widgets/download_status_icon.dart';
+import '../../downloads/controller/downloads_controller.dart';
 import '../controller/manga_details_controller.dart';
 import 'chapter_context_menu.dart';
 
@@ -74,6 +79,66 @@ class ChapterListTile extends HookConsumerWidget {
     return _desktopRow(context, ref);
   }
 
+  Future<void> _runSwipeAction(
+    BuildContext context,
+    WidgetRef ref,
+    ChapterSwipeAction action,
+  ) async {
+    switch (action) {
+      case ChapterSwipeAction.toggleRead:
+        await markChaptersRead(
+          context: context,
+          ref: ref,
+          chapters: [chapter],
+          isRead: !chapter.isRead.ifNull(),
+          refresh: (_) => updateData(),
+        );
+      case ChapterSwipeAction.toggleBookmark:
+        await toggleChapterBookmark(ref, chapter);
+        await updateData();
+      case ChapterSwipeAction.download:
+        await runChapterSwipeDownload(
+          context: context,
+          ref: ref,
+          chapter: chapter,
+          queueEntry: ref.read(downloadsFromIdProvider(chapter.id)),
+          refresh: (_) => updateData(),
+        );
+      case ChapterSwipeAction.disabled:
+        break;
+    }
+  }
+
+  IconData? _swipeIcon(
+    ChapterSwipeAction action, {
+    required bool read,
+    required bool bookmarked,
+    required DownloadDto? queueEntry,
+    required bool downloaded,
+    required bool canDownload,
+  }) {
+    switch (action) {
+      case ChapterSwipeAction.toggleRead:
+        return read ? Icons.remove_done_rounded : Icons.done_rounded;
+      case ChapterSwipeAction.toggleBookmark:
+        return bookmarked
+            ? Icons.bookmark_remove_outlined
+            : Icons.bookmark_add_outlined;
+      case ChapterSwipeAction.download:
+        if (!canDownload) return null;
+        if (queueEntry != null) {
+          return queueEntry.state == DownloadState.ERROR
+              ? Icons.cloud_download_outlined
+              : Icons.file_download_off_outlined;
+        }
+        return downloaded
+            ? Icons.delete_outline_rounded
+            : Icons.cloud_download_outlined;
+      case ChapterSwipeAction.disabled:
+        return null;
+    }
+  }
+
   Widget _phoneTile(BuildContext context, WidgetRef ref) {
     final showChapterNumber =
         ref.watch(mangaChapterDisplayModeProvider) ==
@@ -85,7 +150,18 @@ class ChapterListTile extends HookConsumerWidget {
     final readColor = context.theme.colorScheme.onSurface.withValues(
       alpha: 0.38,
     );
-    return GestureDetector(
+    final read = chapter.isRead.ifNull();
+    final bookmarked = chapter.isBookmarked.ifNull();
+    final downloaded = chapter.isDownloaded.ifNull();
+    final swipeLeft =
+        ref.watch(chapterSwipeToLeftProvider) ??
+        DBKeys.chapterSwipeToLeft.initial as ChapterSwipeAction;
+    final swipeRight =
+        ref.watch(chapterSwipeToRightProvider) ??
+        DBKeys.chapterSwipeToRight.initial as ChapterSwipeAction;
+    final queueEntry = ref.watch(downloadsFromIdProvider(chapter.id));
+    final canDownload = canDownloadChapters(ref);
+    final row = GestureDetector(
       key: Key("manga-${manga.id}-chapter-${chapter.id}"),
       onSecondaryTap: () => toggleSelect(chapter),
       child: ListTile(
@@ -168,6 +244,29 @@ class ChapterListTile extends HookConsumerWidget {
               ).push(context),
         onLongPress: () => toggleSelect(chapter),
       ),
+    );
+    return _ChapterSwipeRow(
+      enabled: !selectionMode && !canTapSelect,
+      leftIcon: _swipeIcon(
+        swipeLeft,
+        read: read,
+        bookmarked: bookmarked,
+        queueEntry: queueEntry,
+        downloaded: downloaded,
+        canDownload: canDownload,
+      ),
+      rightIcon: _swipeIcon(
+        swipeRight,
+        read: read,
+        bookmarked: bookmarked,
+        queueEntry: queueEntry,
+        downloaded: downloaded,
+        canDownload: canDownload,
+      ),
+      onSwipeLeft: () => _runSwipeAction(context, ref, swipeLeft),
+      onSwipeRight: () => _runSwipeAction(context, ref, swipeRight),
+      isSelected: isSelected,
+      child: row,
     );
   }
 
@@ -394,6 +493,124 @@ class ChapterListTile extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ChapterSwipeRow extends StatefulWidget {
+  const _ChapterSwipeRow({
+    required this.enabled,
+    required this.leftIcon,
+    required this.rightIcon,
+    required this.onSwipeLeft,
+    required this.onSwipeRight,
+    required this.isSelected,
+    required this.child,
+  });
+
+  final bool enabled;
+  final IconData? leftIcon;
+  final IconData? rightIcon;
+  final AsyncCallback onSwipeLeft;
+  final AsyncCallback onSwipeRight;
+  final bool isSelected;
+  final Widget child;
+
+  @override
+  State<_ChapterSwipeRow> createState() => _ChapterSwipeRowState();
+}
+
+class _ChapterSwipeRowState extends State<_ChapterSwipeRow>
+    with SingleTickerProviderStateMixin {
+  // Komikku parity: the action background flips at a 56px drag.
+  static const double _threshold = 56;
+  double _offset = 0;
+  Tween<double> _tween = Tween(begin: 0, end: 0);
+  late final AnimationController _snap = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _snap.addListener(() => setState(() => _offset = _tween.evaluate(_snap)));
+  }
+
+  @override
+  void dispose() {
+    _snap.dispose();
+    super.dispose();
+  }
+
+  bool get _canLeft => widget.enabled && widget.leftIcon != null;
+  bool get _canRight => widget.enabled && widget.rightIcon != null;
+
+  void _settle() {
+    if (_offset == 0) return;
+    final fired = _offset.abs() >= _threshold;
+    final toLeft = _offset < 0;
+    _tween = Tween(begin: _offset, end: 0);
+    _snap.forward(from: 0);
+    if (fired) {
+      if (toLeft && _canLeft) {
+        unawaited(widget.onSwipeLeft());
+      } else if (!toLeft && _canRight) {
+        unawaited(widget.onSwipeRight());
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxDrag = constraints.maxWidth * 0.45;
+        return GestureDetector(
+          onHorizontalDragStart: (_) => _snap.stop(),
+          onHorizontalDragUpdate: (details) {
+            if (!widget.enabled) return;
+            var next = _offset + (details.primaryDelta ?? 0);
+            if (next < 0 && !_canLeft) next = 0;
+            if (next > 0 && !_canRight) next = 0;
+            next = next.clamp(-maxDrag, maxDrag);
+            if (next != _offset) setState(() => _offset = next);
+          },
+          onHorizontalDragEnd: (_) => _settle(),
+          onHorizontalDragCancel: _settle,
+          child: Stack(
+            children: [
+              Positioned.fill(child: _swipeBackground(cs)),
+              Transform.translate(
+                offset: Offset(_offset, 0),
+                child: Material(
+                  color: widget.isSelected ? cs.secondaryContainer : cs.surface,
+                  child: widget.child,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _swipeBackground(ColorScheme cs) {
+    final toLeft = _offset < 0;
+    final icon = toLeft ? widget.leftIcon : widget.rightIcon;
+    final past = _offset.abs() >= _threshold && icon != null;
+    return Container(
+      color: past ? cs.primaryContainer : cs.surfaceContainerLowest,
+      child: _offset == 0 || !past
+          ? null
+          : Align(
+              alignment: toLeft ? Alignment.centerRight : Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(icon, color: cs.onPrimaryContainer, size: 24),
+              ),
+            ),
     );
   }
 }

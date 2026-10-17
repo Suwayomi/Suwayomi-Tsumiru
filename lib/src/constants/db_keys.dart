@@ -260,6 +260,10 @@ enum DBKeys {
   longStripDoubleTapToZoom(true),
   longStripPinchToZoom(true),
   longStripDisableZoomOut(false),
+  // Phone chapter-row swipe actions (Komikku parity: left bookmarks, right
+  // marks read). Fresh keys, so the defaults below apply to every install.
+  chapterSwipeToLeft(ChapterSwipeAction.toggleBookmark),
+  chapterSwipeToRight(ChapterSwipeAction.toggleRead),
   // Auto Webtoon Mode: series whose tags/source say
   // long-strip read in webtoon mode when their per-series mode is Default.
   autoWebtoonMode(true),

@@ -745,6 +745,26 @@ class MangaChapterDisplayMode extends _$MangaChapterDisplayMode
 }
 
 @riverpod
+class ChapterSwipeToLeft extends _$ChapterSwipeToLeft
+    with SharedPreferenceEnumClientMixin<ChapterSwipeAction> {
+  @override
+  ChapterSwipeAction? build() => initialize(
+    DBKeys.chapterSwipeToLeft,
+    enumList: ChapterSwipeAction.values,
+  );
+}
+
+@riverpod
+class ChapterSwipeToRight extends _$ChapterSwipeToRight
+    with SharedPreferenceEnumClientMixin<ChapterSwipeAction> {
+  @override
+  ChapterSwipeAction? build() => initialize(
+    DBKeys.chapterSwipeToRight,
+    enumList: ChapterSwipeAction.values,
+  );
+}
+
+@riverpod
 class MangaChapterFilterDownloaded extends _$MangaChapterFilterDownloaded
     with SharedPreferenceClientMixin<bool> {
   @override
