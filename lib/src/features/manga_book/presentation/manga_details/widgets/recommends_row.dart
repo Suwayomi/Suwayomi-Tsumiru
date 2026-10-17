@@ -86,34 +86,56 @@ class RecommendsRow extends HookConsumerWidget {
       );
     }
 
+    void openSeeAll() =>
+        RecommendsRoute(mangaId: mangaId, mangaTitle: mangaTitle).push(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 0),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.l10n.suggestions,
-                  style: context.textTheme.titleMedium,
+        if (context.isTablet)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    context.l10n.suggestions,
+                    style: context.textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: openSeeAll,
+                  child: Text(context.l10n.seriesSeeAll),
+                ),
+                const SizedBox(width: 10),
+                arrow(true),
+                const SizedBox(width: 8),
+                arrow(false),
+              ],
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Tooltip(
+              message: context.l10n.seriesSeeAll,
+              child: InkWell(
+                onTap: openSeeAll,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        context.l10n.suggestions,
+                        style: context.textTheme.titleMedium,
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward),
+                  ],
                 ),
               ),
-              TextButton(
-                onPressed: () => RecommendsRoute(
-                  mangaId: mangaId,
-                  mangaTitle: mangaTitle,
-                ).push(context),
-                child: Text(context.l10n.seriesSeeAll),
-              ),
-              const SizedBox(width: 10),
-              arrow(true),
-              const SizedBox(width: 8),
-              arrow(false),
-            ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(19, 4, 19, 16),
           child: LayoutBuilder(
