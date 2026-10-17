@@ -2288,6 +2288,11 @@
       }
     }
   },
+  "seriesSeeAll": "See all",
+  "seriesTagsMore": "{count} more",
+  "@seriesTagsMore": {"placeholders": {"count": {"type": "int"}}},
+  "seriesNextChapterExpected": "Next chapter expected: {when}",
+  "@seriesNextChapterExpected": {"placeholders": {"when": {"type": "String"}}},
   "suggestions": "Suggestions",
   "@suggestions": {
     "description": "Header for the inline suggestions row on the manga details page"

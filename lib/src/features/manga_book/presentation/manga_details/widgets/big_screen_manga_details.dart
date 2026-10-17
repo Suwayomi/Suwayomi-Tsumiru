@@ -53,6 +53,7 @@ class BigScreenMangaDetails extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
+            flex: context.isDesktop ? 55 : 1,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,6 +77,7 @@ class BigScreenMangaDetails extends ConsumerWidget {
           ),
           const VerticalDivider(width: 0),
           Expanded(
+            flex: context.isDesktop ? 45 : 1,
             child: chapterList.showUiWhenData(context, (data) {
               if (data.isNotBlank) {
                 final listMode = ref.watch(
@@ -93,7 +95,19 @@ class BigScreenMangaDetails extends ConsumerWidget {
                   children: [
                     ListTile(
                       title: Text(context.l10n.noOfChapters(chapterCount)),
-                      trailing: ChapterListModeToggle(mangaId: mangaId),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ChapterListModeToggle(mangaId: mangaId),
+                          if (context.isDesktop)
+                            IconButton(
+                              tooltip: context.l10n.filter,
+                              onPressed: () =>
+                                  Scaffold.of(context).openEndDrawer(),
+                              icon: const Icon(Icons.filter_list_rounded),
+                            ),
+                        ],
+                      ),
                     ),
                     Expanded(
                       child: listMode == ChapterListMode.grid
