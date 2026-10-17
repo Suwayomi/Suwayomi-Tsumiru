@@ -26,9 +26,6 @@ import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../presentation/manga_details/controller/scanlator_propagation.dart';
 
-/// Shared implementations behind the chapter ⋮ menu, the desktop selection
-/// bar and the phone selection bar — the same calls the existing selection
-/// bar and offline button use, so every surface behaves identically.
 Future<void> markChaptersRead({
   required BuildContext context,
   required WidgetRef ref,
@@ -119,8 +116,6 @@ Future<void> markChaptersRead({
   await refresh(true);
 }
 
-/// Chapters strictly before [anchor] in source order, from the same
-/// scanlator-filtered bulk list the bulk actions use.
 List<ChapterDto> previousChapters(
   List<ChapterDto> bulkList,
   ChapterDto anchor,
@@ -236,9 +231,6 @@ Future<void> queueServerDownload({
   await refresh(false);
 }
 
-/// Server delete with the bulk-delete confirmation (plus the on-device
-/// warning when some of the chapters are also on this device). Returns
-/// whether anything was deleted.
 Future<bool> deleteChaptersFromServerWithConfirm({
   required BuildContext context,
   required WidgetRef ref,
@@ -315,7 +307,6 @@ void openChapterInBrowser(
 bool chapterHasBrowserTarget(ChapterDto chapter, String? seriesUrl) =>
     chapter.realUrl != null || seriesUrl != null;
 
-/// Download permission gate shared with the selection bar icons.
 bool canDownloadChapters(WidgetRef ref) => ref
     .read(settledAccountAccessProvider)
     .allows(Enum$UserPermission.DOWNLOAD_CHAPTERS);

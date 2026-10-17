@@ -17,21 +17,15 @@ import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 import '../../../widgets/chapter_actions/chapter_bulk_actions.dart';
 
-/// Menu anchor for a widget rect, in overlay coordinates for [showMenu].
 RelativeRect menuAnchorForRect(BuildContext context, Rect rect) {
   final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
   return RelativeRect.fromRect(rect, Offset.zero & overlay.size);
 }
 
-/// Menu anchor for a right-click point.
 RelativeRect menuAnchorForPoint(BuildContext context, Offset point) =>
     menuAnchorForRect(context, point & const Size(1, 1));
 
-/// Chapter ⋮ / right-click menu, shared by both gestures. Right-click no
-/// longer toggles selection; while selecting, the menu acts on the whole
-/// selection under an "N selected" header. Dismissal comes from the framework
-/// menu route (Esc closes it, outside taps close without activating); the
-/// caller passes [refocus] to hand focus back to the opening control.
+/// Shared ⋮/right-click menu; right-click never toggles selection.
 Future<void> showChapterContextMenu({
   required BuildContext context,
   required WidgetRef ref,
@@ -360,9 +354,7 @@ class ChapterMenuRow extends StatelessWidget {
   }
 }
 
-/// Server-delete row: danger-colored icon, normal-ink label, error-tinted
-/// hover. The label stays normal ink because error text misses contrast on
-/// several dark themes.
+/// Danger icon, normal-ink label: error text misses contrast on dark themes.
 class _DangerMenuItem extends PopupMenuEntry<void> {
   const _DangerMenuItem({
     required this.icon,

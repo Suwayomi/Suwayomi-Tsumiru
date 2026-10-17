@@ -47,9 +47,6 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
     final allBookmarked =
         selected.isNotEmpty && selected.every((c) => c.isBookmarked.ifNull());
 
-    // Same floating action bar as the library multi-select, with parity actions:
-    // a leading clear + count, then mark read / unread, bookmark, mark
-    // previous as read, download to device, download to server, and delete.
     return SelectionActionBar(
       clearsSystemNav: true,
       leading: [
@@ -117,9 +114,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
               : context.l10n.accountPermissionDenied,
           icon: const Icon(Icons.save_alt_rounded),
           onPressed: !canDownload
-              // Download FIRST, clear selection AFTER: clearing selection
-              // disposes this bar, which would invalidate `ref` mid-loop and
-              // silently drop the remaining downloads.
+              // Download first: clearing selection disposes this bar mid-loop.
               ? null
               : () => keepChaptersOffline(
                   context: context,

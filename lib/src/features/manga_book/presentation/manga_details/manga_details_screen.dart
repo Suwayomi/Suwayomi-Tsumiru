@@ -188,8 +188,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
         (data) => Scaffold(
           extendBodyBehindAppBar:
               !context.isTablet && selectedChapters.value.isEmpty && !offline,
-          // Desktop selection lives in the floating chapter-column bar
-          // (close + count + labelled actions), so the app bar stays put.
+          // Desktop selection lives in the floating chapter-column bar.
           appBar: selectedChapters.value.isNotEmpty && !context.isDesktop
               ? AppBar(
                   leading: IconButton(
@@ -280,8 +279,6 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 data,
                               ),
                             ),
-                          // Tablet and desktop filter from the chapter header
-                          // dropdown instead; phones keep the bottom sheet.
                           if (!context.isTablet)
                             IconButton(
                               onPressed: () {

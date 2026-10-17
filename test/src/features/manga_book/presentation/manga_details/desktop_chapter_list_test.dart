@@ -129,6 +129,39 @@ Widget _app(SharedPreferences preferences) => ProviderScope(
   ),
 );
 
+Future<void> _pumpTile(
+  WidgetTester tester, {
+  String? scanlator = 'Group A',
+  int lastPageRead = 0,
+  bool isCurrent = false,
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final preferences = await SharedPreferences.getInstance();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        offlineEnabledProvider.overrideWithValue(false),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: ChapterListTile(
+            manga: _manga,
+            chapter: _chapter(id: 99, scanlator: scanlator, lastPageRead: lastPageRead),
+            updateData: () async {},
+            toggleSelect: (_) {},
+            desktop: true,
+            isCurrent: isCurrent,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _pumpDesktop(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1400, 980);
   tester.view.devicePixelRatio = 1;
@@ -160,6 +193,25 @@ void main() {
     expect(tile.chapter.scanlator, isNull);
     // No "Unknown" text anywhere in the chapter column rows.
     expect(find.textContaining('nknown'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('whitespace-only scanlator shows nothing', (tester) async {
+    await _pumpTile(tester, scanlator: '   ');
+    expect(find.text('   '), findsNothing);
+    expect(find.textContaining('nknown'), findsNothing);
+    expect(
+      find.byWidgetPredicate((w) => w is SizedBox && w.width == 96),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('current chapter without progress shows no progress line', (
+    tester,
+  ) async {
+    await _pumpTile(tester, isCurrent: true);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -1763,8 +1763,6 @@ Future<int> offlineUsageBytes(Ref ref) async {
   return ref.read(offlineRepositoryProvider).totalDownloadedBytes();
 }
 
-/// Bytes used by one manga's downloaded chapters — for the series page
-/// chapter header subline.
 @riverpod
 Future<int> offlineMangaBytes(Ref ref, {required int mangaId}) async {
   if (!ref.watch(offlineActiveProvider)) return 0;

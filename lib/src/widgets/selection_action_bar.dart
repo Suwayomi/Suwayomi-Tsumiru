@@ -60,9 +60,6 @@ class SelectionActionBar extends StatelessWidget {
               : Row(
                   children: [
                     ...leading,
-                    // Scrolls instead of overflowing once the action count
-                    // outgrows narrow phones; right-aligned like before when
-                    // everything fits.
                     Flexible(
                       child: Align(
                         alignment: Alignment.centerRight,

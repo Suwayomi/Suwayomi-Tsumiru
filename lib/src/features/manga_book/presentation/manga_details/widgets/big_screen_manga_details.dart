@@ -84,9 +84,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
         .watch(firstUnreadInFilteredChapterListProvider(mangaId: mangaId))
         ?.id;
 
-    // Keyboard focus follows the selection so Esc always lands here while
-    // selecting — menus and panels consume Esc themselves, so this only ever
-    // clears the selection and never also triggers the global Back.
+    // Focus follows the selection so Esc clears it, never the global Back.
     final wasSelecting = usePrevious(selecting);
     useEffect(() {
       if (selecting && wasSelecting == false) escScope.requestFocus();

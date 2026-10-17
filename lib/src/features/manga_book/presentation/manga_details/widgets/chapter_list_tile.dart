@@ -23,8 +23,6 @@ import '../../../widgets/download_status_icon.dart';
 import '../controller/manga_details_controller.dart';
 import 'chapter_context_menu.dart';
 
-/// Opens the chapter menu anchored at [position], then runs [refocus] (the
-/// row guards it with its own mounted state).
 typedef ChapterMenuOpener =
     void Function(RelativeRect position, void Function() refocus);
 
@@ -216,7 +214,9 @@ class ChapterListTile extends HookConsumerWidget {
     final title = showChapterNumber
         ? context.l10n.chapterNumber(chapter.formattedChapterNumber)
         : chapter.name;
-    final scanlator = chapter.scanlator.isNotBlank ? chapter.scanlator! : '';
+    final scanlator = (chapter.scanlator ?? '').trim().isEmpty
+        ? ''
+        : chapter.scanlator!;
     final progress = chapter.pageCount > 0
         ? (chapter.lastPageRead / chapter.pageCount).clamp(0.0, 1.0)
         : 0.0;
@@ -366,7 +366,9 @@ class ChapterListTile extends HookConsumerWidget {
                       ),
                     ],
                   ),
-                  if (isCurrent && chapter.pageCount > 0)
+                  if (isCurrent &&
+                      chapter.pageCount > 0 &&
+                      chapter.lastPageRead.getValueOnNullOrNegative() != 0)
                     Positioned(
                       left: 0,
                       right: 0,
