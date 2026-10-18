@@ -107,7 +107,15 @@ Widget _groupedBody({
       ? Builder(
           builder: (context) {
             final tabs = tabViews();
-            if (!context.isDesktop) return TabBarView(children: tabs);
+            if (!context.isDesktop) {
+              // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
+              return ScrollConfiguration(
+                behavior: ScrollConfiguration.of(
+                  context,
+                ).copyWith(scrollbars: false),
+                child: TabBarView(children: tabs),
+              );
+            }
             return TabBarView(
               children: [for (final tab in tabs) _TabScrollHost(child: tab)],
             );
