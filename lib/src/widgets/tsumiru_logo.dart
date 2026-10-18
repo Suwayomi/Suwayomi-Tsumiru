@@ -40,6 +40,7 @@ class TsumiruLogo extends ConsumerWidget {
         ? (scheme.primary, scheme.secondary)
         : (scheme.secondary, scheme.primary);
     return Stack(
+      alignment: Alignment.center,
       children: [
         ShaderMask(
           blendMode: BlendMode.modulate,

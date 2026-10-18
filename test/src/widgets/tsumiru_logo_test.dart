@@ -68,7 +68,74 @@ Future<void> _pump(
   await tester.pump();
 }
 
+Future<void> _pumpInFullWidthBox(
+  WidgetTester tester,
+  Widget child, {
+  required AppTheme theme,
+  required Brightness brightness,
+}) async {
+  final prefs = await _prefs(theme: theme);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: _theme(theme, brightness),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 600,
+              height: 600,
+              child: ListView(children: [child]),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
 void main() {
+  for (final (name, theme, brightness) in const [
+    ('Indigo Night', AppTheme.indigoNight, Brightness.dark),
+    ('Royal', AppTheme.royal, Brightness.dark),
+    ('light theme', AppTheme.royal, Brightness.light),
+  ]) {
+    testWidgets('$name logo is centred in a full-width box', (tester) async {
+      await _pumpInFullWidthBox(
+        tester,
+        const TsumiruLogo(size: 48),
+        theme: theme,
+        brightness: brightness,
+      );
+
+      final box = tester.getRect(find.byType(ListView));
+      final images = find.byType(Image);
+      expect(images, findsWidgets);
+      for (var i = 0; i < images.evaluate().length; i++) {
+        expect(
+          tester.getCenter(images.at(i)).dx,
+          moreOrLessEquals(box.center.dx),
+        );
+      }
+    });
+
+    testWidgets('$name logo is size x size under loose constraints', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const TsumiruLogo(size: 48),
+        theme: theme,
+        brightness: brightness,
+      );
+
+      expect(tester.getSize(find.byType(TsumiruLogo)), const Size(48, 48));
+    });
+  }
+
   testWidgets('Indigo Night dark draws the original artwork', (tester) async {
     await _pump(
       tester,
