@@ -67,7 +67,14 @@ class AdaptiveSegments<T> extends StatelessWidget {
           return RadioGroup<T>(
             groupValue: value,
             onChanged: (next) {
-              if (next != null) onChanged(next);
+              // RadioGroup reports the tapped radio's value, so picking the
+              // Any row legitimately yields null. Only drop null when no
+              // option carries it (keyboard tristate toggle on non-null
+              // options), never when Any is on the list.
+              if (next != null ||
+                  options.any((option) => option.value == null)) {
+                onChanged(next as T);
+              }
             },
             child: Column(
               mainAxisSize: MainAxisSize.min,

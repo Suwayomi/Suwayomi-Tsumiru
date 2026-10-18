@@ -19,6 +19,7 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_panels.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/library_filter_segments.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/library_manga_organizer.dart';
@@ -147,6 +148,28 @@ Future<void> _openFilterPanel(WidgetTester tester) async {
 Future<void> _openDisplayPanel(WidgetTester tester) async {
   await tester.tap(find.byTooltip('Display'));
   await tester.pumpAndSettle();
+}
+
+/// Opens the Filter panel and returns the toolbar button rect plus the open
+/// panel rect, both in screen coordinates.
+Future<(Rect, Rect)> _openFilterAndMeasure(
+  WidgetTester tester,
+  Size surface,
+) async {
+  await _pumpLibrary(tester, surface: surface);
+  await _openFilterPanel(tester);
+  final buttonBox = find.ancestor(
+    of: find.descendant(
+      of: find.byType(DesktopLibraryToolbar),
+      matching: find.text('Filter'),
+    ),
+    matching: find.byType(DesktopToolbarBox),
+  );
+  expect(buttonBox, findsOneWidget);
+  return (
+    tester.getRect(buttonBox),
+    tester.getRect(find.byType(DesktopLibraryFilterPanel)),
+  );
 }
 
 void main() {
@@ -281,6 +304,97 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('panel right edge sits under the Filter button (1400)', (
+      tester,
+    ) async {
+      final (buttonRect, panelRect) = await _openFilterAndMeasure(
+        tester,
+        const Size(1400, 980),
+      );
+      expect(panelRect.width, 720);
+      expect(panelRect.right - buttonRect.right, lessThanOrEqualTo(1.0));
+      expect(panelRect.right - buttonRect.right, greaterThanOrEqualTo(-1.0));
+      expect(
+        panelRect.top,
+        moreOrLessEquals(buttonRect.bottom + 6, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('panel right edge sits under the Filter button (1920)', (
+      tester,
+    ) async {
+      final (buttonRect, panelRect) = await _openFilterAndMeasure(
+        tester,
+        const Size(1920, 1080),
+      );
+      expect(panelRect.width, 720);
+      expect(panelRect.right - buttonRect.right, lessThanOrEqualTo(1.0));
+      expect(panelRect.right - buttonRect.right, greaterThanOrEqualTo(-1.0));
+      expect(
+        panelRect.top,
+        moreOrLessEquals(buttonRect.bottom + 6, epsilon: 1),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('panel stays inside the window (1200)', (tester) async {
+      const surface = Size(1200, 800);
+      final (_, panelRect) = await _openFilterAndMeasure(tester, surface);
+      expect(panelRect.left, greaterThanOrEqualTo(7.0));
+      expect(panelRect.right, lessThanOrEqualTo(surface.width - 7.0));
+      expect(panelRect.top, greaterThanOrEqualTo(7.0));
+      expect(panelRect.bottom, lessThanOrEqualTo(surface.height - 7.0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('panel uses the series-page menu surface', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openFilterPanel(tester);
+
+      final panelBox = find.byWidgetPredicate(
+        (w) => w is SizedBox && w.width == 720 && w.height == 600,
+      );
+      expect(panelBox, findsOneWidget);
+      final material = tester.widget<Material>(
+        find.descendant(of: panelBox, matching: find.byType(Material)).first,
+      );
+      final scheme = Theme.of(
+        tester.element(find.byType(DesktopLibraryFilterPanel)),
+      ).colorScheme;
+      expect(material.color, scheme.surfaceContainer);
+      expect(material.elevation, 3);
+      final shape = material.shape! as RoundedRectangleBorder;
+      expect(shape.borderRadius, BorderRadius.circular(14));
+      expect(shape.side.color, scheme.outlineVariant);
+      expect(shape.side.width, 1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tag list fills the right column height', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openFilterPanel(tester);
+
+      final leftColumn = find.ancestor(
+        of: find.text('Downloaded'),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(leftColumn, findsOneWidget);
+      final tagList = find.ancestor(
+        of: find.text('All tags'),
+        matching: find.byType(ListView),
+      );
+      expect(tagList, findsOneWidget);
+      final tagRect = tester.getRect(tagList);
+      // Grown past the old ~3-row (150 px) cap ...
+      expect(tagRect.height, greaterThan(150));
+      // ... so its bottom aligns with the left column bottom.
+      final leftRect = tester.getRect(leftColumn);
+      expect(tagRect.bottom - leftRect.bottom, lessThanOrEqualTo(1.0));
+      expect(tagRect.bottom - leftRect.bottom, greaterThanOrEqualTo(-1.0));
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('Library display panel (desktop 1400x980)', () {
@@ -379,6 +493,49 @@ void main() {
         find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
         findsWidgets,
       );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('radio fallback can select Any after Yes', (tester) async {
+      bool? tapped;
+      var calls = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              child: AdaptiveSegments<bool?>(
+                value: true,
+                onChanged: (next) {
+                  tapped = next;
+                  calls++;
+                },
+                options: const [
+                  SegmentOption(value: null, label: 'Any'),
+                  SegmentOption(
+                    value: true,
+                    label: 'A very long included label that cannot fit',
+                  ),
+                  SegmentOption(
+                    value: false,
+                    label: 'Another very long excluded label that cannot fit',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
+        findsWidgets,
+      );
+      await tester.tap(find.text('Any'));
+      await tester.pump();
+      expect(calls, 1);
+      expect(tapped, isNull);
       expect(tester.takeException(), isNull);
     });
 

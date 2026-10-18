@@ -136,15 +136,29 @@ class _LibraryPanelRoute extends PopupRoute<void> {
                 },
                 child: SizedBox.fromSize(
                   size: panelSize,
-                  child: Material(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: MediaQuery(
-                      data: mediaQuery.copyWith(padding: EdgeInsets.zero),
-                      child: panel,
-                    ),
+                  child: Builder(
+                    builder: (context) {
+                      // Series-page menu look (big_screen_manga_details.dart
+                      // openFilterPanel via showMenu with a radius-14 shape):
+                      // surfaceContainer fill, 1 px outlineVariant border,
+                      // radius 14, and the M3 menu elevation-3 shadow.
+                      final scheme = context.theme.colorScheme;
+                      return Material(
+                        color: scheme.surfaceContainer,
+                        elevation: 3,
+                        shadowColor: scheme.shadow,
+                        surfaceTintColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: scheme.outlineVariant),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: MediaQuery(
+                          data: mediaQuery.copyWith(padding: EdgeInsets.zero),
+                          child: panel,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -192,9 +206,15 @@ Future<void> _openPanel({
   final navigator = Navigator.of(context);
   await navigator.push(
     _LibraryPanelRoute(
+      // Zero-size anchor on the button's bottom-right corner: the layout
+      // delegate right-aligns the panel to anchor.left, so the panel's
+      // right edge lands under the button's right edge. (Subtracting the
+      // panel width here would apply the offset twice — once here and once
+      // in _LibraryPanelLayout — and push the panel a full width too far
+      // left.)
       position: menuAnchorForRect(
         context,
-        Rect.fromLTWH(rect.right - panelWidth, rect.bottom + 6, 0, 0),
+        Rect.fromLTWH(rect.right, rect.bottom + 6, 0, 0),
       ),
       panelSize: Size(panelWidth, panelHeight),
       panel: child,

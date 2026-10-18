@@ -26,10 +26,10 @@ class LibraryFilterContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final right = Column(
+    const right = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
-      children: const [
+      children: [
         LibraryRatingFilter(),
         LibraryTrackerSegments(),
         LibraryCategoryFilter(),
@@ -41,20 +41,35 @@ class LibraryFilterContent extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const LibraryFilterHeader(),
-        // Two columns need a bounded height (the desktop panel): each
+        // Two columns need a bounded height (the desktop panel): the left
         // column scrolls internally, so a radio fallback for long labels
         // never overflows the panel. With short labels everything fits and
-        // nothing scrolls.
+        // nothing scrolls. The right column never scrolls as a whole;
+        // instead its tag list grows to fill the remaining height and
+        // scrolls inside itself, so both column bottoms align.
         if (twoColumns)
-          Expanded(
+          const Expanded(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              // Stretch both columns to the full row height: the left
+              // column scrolls inside that height and the right column's
+              // tag list expands into it, aligning both bottoms.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Expanded(
+                Expanded(
                   child: SingleChildScrollView(child: LibraryFilterSegments()),
                 ),
-                const SizedBox(width: 24),
-                Expanded(child: SingleChildScrollView(child: right)),
+                SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LibraryRatingFilter(),
+                      LibraryTrackerSegments(),
+                      LibraryCategoryFilter(),
+                      Expanded(child: LibraryTagFilter(expandList: true)),
+                    ],
+                  ),
+                ),
               ],
             ),
           )
@@ -400,7 +415,12 @@ class LibraryCategoryFilter extends ConsumerWidget {
 /// "All tags" first clears the selection; tapping a tag cycles it through
 /// include → exclude → ignored, reusing the tag filter providers.
 class LibraryTagFilter extends HookConsumerWidget {
-  const LibraryTagFilter({super.key});
+  const LibraryTagFilter({super.key, this.expandList = false});
+
+  /// When true, the tag list expands to fill the remaining column height
+  /// and scrolls inside itself (desktop two-column panel). When false, it
+  /// takes its intrinsic height up to 150 px (single-column organizer).
+  final bool expandList;
 
   static bool? _nextValue(bool? current) {
     if (current == null) return true;
@@ -516,6 +536,56 @@ class LibraryTagFilter extends HookConsumerWidget {
       );
     }
 
+    final list = tagsAsync.isLoading
+        ? const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        : ListView(
+            shrinkWrap: !expandList,
+            children: [
+              tagRow(
+                label: context.l10n.allTags,
+                state: hasSelection ? null : true,
+                onTap: clear,
+              ),
+              for (final tag in tags)
+                tagRow(
+                  label: tag,
+                  state: stateFor(tag),
+                  onTap: () => toggle(tag),
+                  count: mangaList == null
+                      ? null
+                      : counts[tag.toLowerCase()] ?? 0,
+                ),
+            ],
+          );
+    // The expanded variant fills the column, so this Column must be laid
+    // out with a bounded height (it is: the desktop panel stretches it).
+    if (expandList) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FilterSectionHeading(context.l10n.tags),
+          TextField(
+            onChanged: (value) => query.value = value,
+            style: context.theme.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              hintText: context.l10n.searchTags,
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+          Expanded(child: list),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -534,32 +604,7 @@ class LibraryTagFilter extends HookConsumerWidget {
         ),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 150),
-          child: tagsAsync.isLoading
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              : ListView(
-                  shrinkWrap: true,
-                  children: [
-                    tagRow(
-                      label: context.l10n.allTags,
-                      state: hasSelection ? null : true,
-                      onTap: clear,
-                    ),
-                    for (final tag in tags)
-                      tagRow(
-                        label: tag,
-                        state: stateFor(tag),
-                        onTap: () => toggle(tag),
-                        count: mangaList == null
-                            ? null
-                            : counts[tag.toLowerCase()] ?? 0,
-                      ),
-                  ],
-                ),
+          child: list,
         ),
       ],
     );
