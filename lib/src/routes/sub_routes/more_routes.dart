@@ -19,6 +19,9 @@ class MoreRoute extends GoRouteData with $MoreRoute {
 // The key is the quick-open shell's, not rootNavigatorKey: GlobalShortcutHost
 // lives inside that shell, so a root-navigator page would be its sibling and
 // lose every global shortcut. ReaderRoute and GlobalSearchRoute do the same.
+//
+// Each screen is wrapped in DetailNavigationShellScreen so the sidebar stays
+// visible on tablet/desktop. It returns the child unchanged on phone.
 
 class AboutRoute extends GoRouteData with $AboutRoute {
   const AboutRoute();
@@ -26,7 +29,8 @@ class AboutRoute extends GoRouteData with $AboutRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const AboutScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: AboutScreen());
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {
@@ -35,7 +39,8 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const SettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: SettingsScreen());
 }
 
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
@@ -44,7 +49,8 @@ class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const LibrarySettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: LibrarySettingsScreen());
 }
 
 class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
@@ -53,7 +59,8 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const EditCategoryScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: EditCategoryScreen());
 }
 
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
@@ -62,7 +69,8 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const ReaderSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: ReaderSettingsScreen());
 }
 
 class AppearanceSettingsRoute extends GoRouteData
@@ -72,7 +80,8 @@ class AppearanceSettingsRoute extends GoRouteData
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const AppearanceScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: AppearanceScreen());
 }
 
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
@@ -81,7 +90,8 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const GeneralScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: GeneralScreen());
 }
 
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
@@ -90,7 +100,8 @@ class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const BrowseSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: BrowseSettingsScreen());
 }
 
 class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
@@ -99,7 +110,8 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const ExtensionStoreScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: ExtensionStoreScreen());
 }
 
 class BackupRoute extends GoRouteData with $BackupRoute {
@@ -108,7 +120,8 @@ class BackupRoute extends GoRouteData with $BackupRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const BackupScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: BackupScreen());
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
@@ -117,7 +130,8 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const ServerScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: ServerScreen());
 }
 
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
@@ -126,7 +140,8 @@ class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const DownloadsSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: DownloadsSettingsScreen());
 }
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
@@ -135,7 +150,8 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const OfflineSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: OfflineSettingsScreen());
 }
 
 class NotificationsSettingsRoute extends GoRouteData
@@ -145,7 +161,8 @@ class NotificationsSettingsRoute extends GoRouteData
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const NotificationsSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: NotificationsSettingsScreen());
 }
 
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
@@ -154,7 +171,8 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const ConnectionScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: ConnectionScreen());
 }
 
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
@@ -163,7 +181,8 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const TrackingSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: TrackingSettingsScreen());
 }
 
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
@@ -172,7 +191,8 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const SyncYomiSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: SyncYomiSettingsScreen());
 }
 
 class KoreaderSyncSettingsRoute extends GoRouteData
@@ -182,7 +202,8 @@ class KoreaderSyncSettingsRoute extends GoRouteData
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const KoreaderSyncSettingsScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: KoreaderSyncSettingsScreen());
 }
 
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
@@ -192,7 +213,7 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const HotkeysSettingsScreen();
+      const DetailNavigationShellScreen(child: HotkeysSettingsScreen());
 }
 
 class AccountRoute extends GoRouteData with $AccountRoute {
@@ -201,7 +222,8 @@ class AccountRoute extends GoRouteData with $AccountRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const AccountScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: AccountScreen());
 }
 
 class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
@@ -210,5 +232,6 @@ class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => const ManageUsersScreen();
+  Widget build(context, state) =>
+      const DetailNavigationShellScreen(child: ManageUsersScreen());
 }
