@@ -360,8 +360,14 @@ void main() {
         field.decoration?.hintText,
         'Search your library, app, and sources',
       );
-      // Empty query teaches the operators, like the unified search.
-      expect(find.text('unread:true'), findsOneWidget);
+      // Empty query draws no results body: no examples, no Go to rows, and
+      // the page underneath stays visible and hit-testable.
+      expect(find.text('unread:true'), findsNothing);
+      expect(find.text('Go to'), findsNothing);
+      expect(
+        find.byIcon(Icons.search_rounded).hitTestable(),
+        findsOneWidget,
+      );
     });
 
     testWidgets('typing does not change the page filter', (tester) async {
@@ -510,6 +516,76 @@ void main() {
 
       expect(container.read(libraryQueryProvider), 'unread:true');
       expect(find.byType(PhoneSearchOverlay), findsNothing);
+    });
+  });
+
+  group('empty query shows the page', () {
+    testWidgets('typing shows the results body with the page row', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      expect(find.text('unread:true'), findsNothing);
+      expect(find.text('Go to'), findsNothing);
+
+      await tester.enterText(_overlayField(), 'a');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Search library for "a"'), findsOneWidget);
+    });
+
+    testWidgets('last row scrolls above the keyboard', (tester) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.history,
+        library: [
+          for (var i = 0; i < 8; i++) _manga(100 + i, 'Alpha Saga $i'),
+        ],
+        history: [
+          for (var i = 0; i < 4; i++)
+            _historyItem(
+              id: 200 + i,
+              series: 'Alpha Tale $i',
+              chapter: 'Chapter $i',
+            ),
+        ],
+      );
+      await _openOverlay(tester);
+
+      // Keyboard opens first (autofocus on open); results build after, while
+      // it is open — the padding is read then.
+      tester.view.viewInsets = FakeViewPadding(bottom: 300);
+      await tester.pump();
+      await tester.enterText(_overlayField(), 'a');
+      await tester.pump();
+      await tester.pump();
+
+      final list = find.descendant(
+        of: find.byType(PhoneSearchOverlay),
+        matching: find.byType(ListView),
+      );
+      // The ListView's own Scrollable stays mounted while rows scroll in and
+      // out; anchoring on a row's text would break once it scrolls away.
+      final scroller = find.descendant(
+        of: list,
+        matching: find.byType(Scrollable),
+      );
+      final last = find.text('Search all sources for "a"');
+      await tester.scrollUntilVisible(last, 500, scrollable: scroller);
+      await tester.drag(list, const Offset(0, -5000));
+      await tester.pumpAndSettle();
+
+      expect(last, findsOneWidget);
+      expect(
+        tester.getBottomRight(last).dy,
+        lessThanOrEqualTo(_phone.height - 300),
+      );
     });
   });
 

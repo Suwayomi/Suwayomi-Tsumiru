@@ -30,14 +30,6 @@ import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
 
-// Operator examples worth teaching while the field is empty. Same set as the
-// unified results so both hosts teach the same filters.
-const List<String> _phoneSearchExamples = [
-  'unread:true',
-  'downloaded:true',
-  'status:ongoing',
-];
-
 /// Which page opened the phone search. Library, History and the Sources tab
 /// have their own filter, so they get the page row first; every other page
 /// searches the app without one.
@@ -234,7 +226,9 @@ class PhoneSearchClearFilter extends ConsumerWidget {
 }
 
 /// The full-screen phone search: back arrow, autofocus field, clear button on
-/// top; results below on a solid surface background. The query lives in this
+/// top; results below on a solid surface background once text is typed. While
+/// the query is empty only the bar is drawn, so the page underneath stays
+/// visible. The query lives in this
 /// widget's own controller, so typing never changes the page underneath —
 /// only the page row writes the page's filter provider.
 class PhoneSearchOverlay extends HookConsumerWidget {
@@ -294,14 +288,6 @@ class PhoneSearchOverlay extends HookConsumerWidget {
       );
     }
 
-    void setQuery(String text) {
-      controller.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
-      focusNode.requestFocus();
-    }
-
     void applySuggestionAndStay(SearchSuggestion s) {
       final caretRaw = controller.selection.baseOffset;
       final caret = caretRaw < 0 ? controller.text.length : caretRaw;
@@ -320,67 +306,89 @@ class PhoneSearchOverlay extends HookConsumerWidget {
     final caretRaw = controller.selection.baseOffset;
     final caret = caretRaw < 0 ? query.length : caretRaw;
 
+    final searchBar = Row(
+      children: [
+        IconButton(
+          tooltip: l.back,
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: onClose,
+        ),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            style: context.textTheme.bodyLarge,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              hintText: l.unifiedSearchHint,
+            ),
+            onSubmitted: (_) => submit(),
+          ),
+        ),
+        if (query.isNotEmpty)
+          IconButton(
+            tooltip: l.close,
+            icon: const Icon(Icons.close_rounded),
+            onPressed: controller.clear,
+          ),
+      ],
+    );
+
     // System back closes the overlay first, like a dialog.
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) onClose();
       },
+      // While the query is empty only the search bar is drawn, so the page
+      // underneath stays visible. The full-screen results body appears once
+      // text is typed; only the top bar hit-tests while empty, so taps
+      // elsewhere still reach the page.
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Material(
-              color: cs.surface,
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          tooltip: l.back,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          onPressed: onClose,
+          if (query.trim().isEmpty)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Material(
+                color: cs.surface,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [searchBar, const Divider(height: 1)],
+                  ),
+                ),
+              ),
+            )
+          else
+            Positioned.fill(
+              child: Material(
+                color: cs.surface,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      searchBar,
+                      const Divider(height: 1),
+                      Expanded(
+                        child: _PhoneSearchResults(
+                          query: query,
+                          caret: caret,
+                          origin: origin,
+                          onApplyPage: applyPage,
+                          onLeave: leave,
+                          onApplySuggestion: applySuggestionAndStay,
                         ),
-                        Expanded(
-                          child: TextField(
-                            controller: controller,
-                            focusNode: focusNode,
-                            autofocus: true,
-                            textInputAction: TextInputAction.search,
-                            style: context.textTheme.bodyLarge,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              isDense: true,
-                              hintText: l.unifiedSearchHint,
-                            ),
-                            onSubmitted: (_) => submit(),
-                          ),
-                        ),
-                        if (query.isNotEmpty)
-                          IconButton(
-                            tooltip: l.close,
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: controller.clear,
-                          ),
-                      ],
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: _PhoneSearchResults(
-                        query: query,
-                        caret: caret,
-                        origin: origin,
-                        onApplyPage: applyPage,
-                        onLeave: leave,
-                        onSetQuery: setQuery,
-                        onApplySuggestion: applySuggestionAndStay,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -457,7 +465,8 @@ String _historySubtitle(HistoryItemDto item) {
 /// Results for the phone overlay, top to bottom: the page row (always first
 /// while text is non-empty on pages with their own filter), up to 3 matches
 /// from the current page, Library (a swipeable cover row on the Library page,
-/// list rows everywhere else), Go to, Search all sources.
+/// list rows everywhere else), Go to, Search all sources. Renders nothing
+/// while the query is empty — the overlay shows the page underneath instead.
 class _PhoneSearchResults extends ConsumerWidget {
   const _PhoneSearchResults({
     required this.query,
@@ -465,7 +474,6 @@ class _PhoneSearchResults extends ConsumerWidget {
     required this.origin,
     required this.onApplyPage,
     required this.onLeave,
-    required this.onSetQuery,
     required this.onApplySuggestion,
   });
 
@@ -474,7 +482,6 @@ class _PhoneSearchResults extends ConsumerWidget {
   final PhoneSearchOrigin origin;
   final VoidCallback onApplyPage;
   final void Function(VoidCallback navigate) onLeave;
-  final ValueChanged<String> onSetQuery;
   final ValueChanged<SearchSuggestion> onApplySuggestion;
 
   @override
@@ -482,6 +489,7 @@ class _PhoneSearchResults extends ConsumerWidget {
     final l = context.l10n;
     final cs = context.colorScheme;
     final hasQuery = query.trim().isNotEmpty;
+    if (!hasQuery) return const SizedBox.shrink();
     final libraryHits = ref.watch(unifiedLibraryResultsForProvider(query));
     final historyMatches = origin == PhoneSearchOrigin.history
         ? _historyMatches(ref.watch(historyGroupedByDateProvider), query)
@@ -531,18 +539,20 @@ class _PhoneSearchResults extends ConsumerWidget {
     };
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+      // Bottom padding clears the soft keyboard, so the last row scrolls
+      // fully above it. The overlay is a Material, not a Scaffold, so nothing
+      // resizes for the inset automatically. Read the inset from the view
+      // itself: the overlay inherits its entry's MediaQuery, whose bottom
+      // inset the page Scaffold strips for body-placed entries (it resizes
+      // its body instead, which the full-screen overlay does not follow) —
+      // MediaQuery.viewInsetsOf here reads 0 exactly where the padding is
+      // needed.
+      padding: EdgeInsets.only(
+        bottom:
+            16 +
+            MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
+      ),
       children: [
-        if (!hasQuery) ...[
-          SearchSectionHeader(l.unifiedSearchExamplesSection),
-          for (final ex in _phoneSearchExamples)
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.bolt_rounded),
-              title: Text(ex),
-              onTap: () => onSetQuery(ex),
-            ),
-        ],
         if (hasQuery && origin != PhoneSearchOrigin.plain)
           ListTile(
             selected: pageHasMatches,
@@ -684,7 +694,7 @@ class _PhoneSearchResults extends ConsumerWidget {
               ),
           ],
         ],
-        if (goToHits.isNotEmpty) ...[
+        if (hasQuery && goToHits.isNotEmpty) ...[
           SearchSectionHeader(l.unifiedSearchGoToSection),
           for (final t in goToHits)
             ListTile(
