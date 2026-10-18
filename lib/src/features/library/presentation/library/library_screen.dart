@@ -28,6 +28,7 @@ import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/offline_server_mismatch_banner.dart';
 import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../domain/category/category_model.dart';
@@ -285,6 +286,9 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
     // Show the search bar when the user opens it OR when a query was set
     // programmatically (tapping a tag → Search opens the library on that tag).
+    // Phone searches from the app-bar entry instead, which applies to the
+    // filter on submit.
+    final phone = !context.isTablet;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
@@ -331,7 +335,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
               appBar: desktop
                   ? null
                   : AppBar(
-                      title: !showSearch
+                      title: phone || !showSearch
                           ? _LibraryTitle(sections: _categorySections(data))
                           // SearchField no longer pads itself; keep the pre-refactor
                           // inset and large-tablet width cap here.
@@ -393,13 +397,21 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               dividerColor: Colors.transparent,
                             )
                           : null,
-                      actions: showSearch
+                      actions: showSearch && !phone
                           ? const [SizedBox.shrink()]
                           : [
-                              IconButton(
-                                onPressed: () => searchToggled.value = true,
-                                icon: const Icon(Icons.search_rounded),
-                              ),
+                              if (phone) ...[
+                                const PhoneSearchClearFilter(
+                                  origin: PhoneSearchOrigin.library,
+                                ),
+                                const PhoneSearchEntry(
+                                  origin: PhoneSearchOrigin.library,
+                                ),
+                              ] else
+                                IconButton(
+                                  onPressed: () => searchToggled.value = true,
+                                  icon: const Icon(Icons.search_rounded),
+                                ),
                               _organizerButton(),
                               SyncYomiSyncButton(
                                 onSynced: () => _refreshLibraryAfterSync(ref),
@@ -555,6 +567,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         // Desktop replaces the sliver app bar + TabBar with the toolbar row
         // and the tab strip, both pinned.
         final desktop = context.isDesktop;
+        // Phone searches from the box under the title, applied to the filter
+        // on submit; tablet keeps the live sticky bar.
+        final phone = !context.isTablet;
 
         return DefaultTabController(
           // See the matching comment on the toggled-search variant above: keys
@@ -623,9 +638,14 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                   SliverAppBar(
                     pinned: true,
                     floating: false,
-                    title: isSearchBarHidden
-                        ? const _LibrarySearchBar(inAppBar: true)
-                        : _LibraryTitle(sections: _categorySections(data)),
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _categorySections(data))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
                     actions: [
                       _organizerButton(),
                       SyncYomiSyncButton(
@@ -645,12 +665,13 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                       ),
                     ],
                   ),
-                  SliverToBoxAdapter(
-                    child: KeyedSubtree(
-                      key: searchBarKey,
-                      child: const _LibrarySearchBar(inAppBar: false),
+                  if (!phone)
+                    SliverToBoxAdapter(
+                      child: KeyedSubtree(
+                        key: searchBarKey,
+                        child: const _LibrarySearchBar(inAppBar: false),
+                      ),
                     ),
-                  ),
                   if (showTabs)
                     SliverPersistentHeader(
                       pinned: true,
@@ -756,6 +777,9 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
     // Show the search bar when the user opens it OR when a query was set
     // programmatically (tapping a tag → Search opens the library on that tag).
+    // Phone searches from the app-bar entry instead, which applies to the
+    // filter on submit.
+    final phone = !context.isTablet;
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
@@ -797,7 +821,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
             appBar: desktop
                 ? null
                 : AppBar(
-                    title: !showSearch
+                    title: phone || !showSearch
                         ? _LibraryTitle(sections: _groupSections(tabs))
                         // SearchField no longer pads itself; keep the pre-refactor
                         // inset and large-tablet width cap here.
@@ -839,13 +863,21 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                             dividerColor: Colors.transparent,
                           )
                         : null,
-                    actions: showSearch
+                    actions: showSearch && !phone
                         ? const [SizedBox.shrink()]
                         : [
-                            IconButton(
-                              onPressed: () => searchToggled.value = true,
-                              icon: const Icon(Icons.search_rounded),
-                            ),
+                            if (phone) ...[
+                              const PhoneSearchClearFilter(
+                                origin: PhoneSearchOrigin.library,
+                              ),
+                              const PhoneSearchEntry(
+                                origin: PhoneSearchOrigin.library,
+                              ),
+                            ] else
+                              IconButton(
+                                onPressed: () => searchToggled.value = true,
+                                icon: const Icon(Icons.search_rounded),
+                              ),
                             IconButton(
                               tooltip: context.l10n.migrationPickSourceTitle,
                               onPressed: () =>
@@ -961,6 +993,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     // Desktop replaces the sliver app bar + TabBar with the toolbar row
     // and the tab strip, both pinned.
     final desktop = context.isDesktop;
+    // Phone searches from the box under the title, applied to the filter
+    // on submit; tablet keeps the live sticky bar.
+    final phone = !context.isTablet;
 
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
@@ -1033,9 +1068,14 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                   SliverAppBar(
                     pinned: true,
                     floating: false,
-                    title: isSearchBarHidden
-                        ? const _LibrarySearchBar(inAppBar: true)
-                        : _LibraryTitle(sections: _groupSections(tabs)),
+                    title: phone || !isSearchBarHidden
+                        ? _LibraryTitle(sections: _groupSections(tabs))
+                        : const _LibrarySearchBar(inAppBar: true),
+                    bottom: phone
+                        ? const PhoneSearchBoxBottom(
+                            origin: PhoneSearchOrigin.library,
+                          )
+                        : null,
                     actions: [
                       _organizerButton(),
                       SyncYomiSyncButton(
@@ -1043,12 +1083,13 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                       ),
                     ],
                   ),
-                  SliverToBoxAdapter(
-                    child: KeyedSubtree(
-                      key: searchBarKey,
-                      child: const _LibrarySearchBar(inAppBar: false),
+                  if (!phone)
+                    SliverToBoxAdapter(
+                      child: KeyedSubtree(
+                        key: searchBarKey,
+                        child: const _LibrarySearchBar(inAppBar: false),
+                      ),
                     ),
-                  ),
                   if (showTabBar && tabs.length > 1)
                     SliverPersistentHeader(
                       pinned: true,

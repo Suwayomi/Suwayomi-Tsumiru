@@ -13,7 +13,9 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
+import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/widgets/source_language_filter.dart';
@@ -54,6 +56,11 @@ class BrowseScreen extends HookConsumerWidget {
       return null;
     }, [tabController.index]);
     useListenable(tabController);
+    final phone = !context.isTablet;
+    // Phone searches the Sources tab from the app-bar entry (or the box in
+    // the tab when the persistent setting is on); other tabs are unchanged.
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
 
     return Scaffold(
       appBar: AppBar(
@@ -79,6 +86,10 @@ class BrowseScreen extends HookConsumerWidget {
             : Text(context.l10n.browse),
         actions: [
           if (tabController.index == 0) ...[
+            if (phone && !persistentBox) ...[
+              const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
+              const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
+            ],
             IconButton(
               tooltip: context.l10n.globalSearch,
               onPressed: () => openGlobalSearch(context),
