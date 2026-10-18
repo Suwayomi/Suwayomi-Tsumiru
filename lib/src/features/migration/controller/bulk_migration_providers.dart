@@ -12,6 +12,7 @@ import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../utils/mixin/state_provider_mixin.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/auth_state.dart';
 import '../../browse_center/presentation/source/controller/source_controller.dart';
@@ -90,6 +91,16 @@ Future<List<LibrarySourceGroup>> librarySourceGroups(Ref ref) async {
         isObsolete: m.source == null || m.source!.$extension.isObsolete,
       ),
   ]);
+}
+
+/// The Migrate tab's source-name filter. Backed by a provider (not local
+/// widget state) so the desktop Browse search box drives the same filter the
+/// tab's inner box writes to.
+@riverpod
+class MigrationSourcePickerQuery extends _$MigrationSourcePickerQuery
+    with StateProviderMixin<String> {
+  @override
+  String build() => '';
 }
 
 /// Ordered target-source priority (ids, most preferred first); persisted so it

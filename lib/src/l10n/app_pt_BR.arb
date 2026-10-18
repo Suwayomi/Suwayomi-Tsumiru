@@ -673,7 +673,6 @@
   "searchForExtensions": "Pesquisar extensões",
   "noTagsYet": "Ainda não há tags na biblioteca",
   "searchTips": "Dicas de pesquisa",
-  "searchTipsBody": "Filtre por campo com key:value.\n\ntag:seinen (tags da fonte ou suas)\ngenre:action (gêneros da fonte)\nauthor:oda\nstatus:ongoing (também completed, hiatus, cancelled)\nsource:mangadex\ntracked:true, tracked:anilist\nrating:>=4 (sua avaliação)\nunread:true, downloaded:true\n\nUse aspas para valores com várias palavras: tag:\"slice of life\"\nExclua com um sinal de menos: -tag:dropped",
   "updateProgressManualMarkReadDesc": "Não se aplica ao marcar vários capítulos como lidos de uma vez",
   "reLogin": "O token expirou. Entre novamente.",
   "trackerLoginSuccess": "Conectado a {trackerName}",

@@ -356,12 +356,26 @@ void main() {
       expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
       final field = tester.widget<TextField>(_overlayField());
       expect(field.autofocus, isTrue);
+      expect(field.decoration?.hintText, 'Search title or author...');
+      // Empty query draws no results body: no examples, no Go to rows, and
+      // the page underneath stays visible and hit-testable.
+      expect(find.text('unread:true'), findsNothing);
+      expect(find.text('Go to'), findsNothing);
+      expect(
+        find.byIcon(Icons.search_rounded).hitTestable(),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('other origins keep the unified hint', (tester) async {
+      await _pumpEntry(tester, origin: PhoneSearchOrigin.plain);
+      await _openOverlay(tester);
+
+      final field = tester.widget<TextField>(_overlayField());
       expect(
         field.decoration?.hintText,
         'Search your library, app, and sources',
       );
-      // Empty query teaches the operators, like the unified search.
-      expect(find.text('unread:true'), findsOneWidget);
     });
 
     testWidgets('typing does not change the page filter', (tester) async {
@@ -513,6 +527,76 @@ void main() {
     });
   });
 
+  group('empty query shows the page', () {
+    testWidgets('typing shows the results body with the page row', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      expect(find.text('unread:true'), findsNothing);
+      expect(find.text('Go to'), findsNothing);
+
+      await tester.enterText(_overlayField(), 'a');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Search library for "a"'), findsOneWidget);
+    });
+
+    testWidgets('last row scrolls above the keyboard', (tester) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.history,
+        library: [
+          for (var i = 0; i < 8; i++) _manga(100 + i, 'Alpha Saga $i'),
+        ],
+        history: [
+          for (var i = 0; i < 4; i++)
+            _historyItem(
+              id: 200 + i,
+              series: 'Alpha Tale $i',
+              chapter: 'Chapter $i',
+            ),
+        ],
+      );
+      await _openOverlay(tester);
+
+      // Keyboard opens first (autofocus on open); results build after, while
+      // it is open — the padding is read then.
+      tester.view.viewInsets = FakeViewPadding(bottom: 300);
+      await tester.pump();
+      await tester.enterText(_overlayField(), 'a');
+      await tester.pump();
+      await tester.pump();
+
+      final list = find.descendant(
+        of: find.byType(PhoneSearchOverlay),
+        matching: find.byType(ListView),
+      );
+      // The ListView's own Scrollable stays mounted while rows scroll in and
+      // out; anchoring on a row's text would break once it scrolls away.
+      final scroller = find.descendant(
+        of: list,
+        matching: find.byType(Scrollable),
+      );
+      final last = find.text('Search all sources for "a"');
+      await tester.scrollUntilVisible(last, 500, scrollable: scroller);
+      await tester.drag(list, const Offset(0, -5000));
+      await tester.pumpAndSettle();
+
+      expect(last, findsOneWidget);
+      expect(
+        tester.getBottomRight(last).dy,
+        lessThanOrEqualTo(_phone.height - 300),
+      );
+    });
+  });
+
   group('history origin', () {
     final items = [
       _historyItem(id: 1, series: 'Sword One', chapter: 'Chapter 12'),
@@ -580,6 +664,27 @@ void main() {
       expect(find.text('2 unread'), findsNothing);
     });
 
+    testWidgets('header shows the full match count, row stays capped at 6', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [for (var i = 0; i < 10; i++) _manga(100 + i, 'Sword Saga $i')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'sword');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Library (10)'), findsOneWidget);
+      expect(
+        tester.widget<CoverRowSection>(find.byType(CoverRowSection)).itemCount,
+        6,
+      );
+    });
+
     testWidgets('leaving through a cover clears the search text', (
       tester,
     ) async {
@@ -602,6 +707,90 @@ void main() {
         isNull,
         reason: 'leaving through a result clears the search text',
       );
+    });
+  });
+
+  group('search tips button', () {
+    final helpButton = find.widgetWithIcon(
+      IconButton,
+      Icons.help_outline_rounded,
+    );
+
+    testWidgets('Library origin shows it empty and with text', (tester) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      expect(helpButton, findsOneWidget);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      expect(helpButton, findsOneWidget);
+      // The tips button sits at the right end of the bar, immediately
+      // before the clear button.
+      final clearButton = find.widgetWithIcon(
+        IconButton,
+        Icons.close_rounded,
+      );
+      expect(clearButton, findsOneWidget);
+      expect(
+        tester.getCenter(helpButton).dx,
+        lessThan(tester.getCenter(clearButton).dx),
+      );
+    });
+
+    testWidgets('tips dialog keeps the query, overlay and focus', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(helpButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(AlertDialog, 'Search tips'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
+      expect(
+        tester.widget<TextField>(_overlayField()).controller?.text,
+        'sw',
+      );
+      expect(
+        tester.widget<TextField>(_overlayField()).focusNode?.hasFocus,
+        isTrue,
+      );
+    });
+
+    testWidgets('History origin has no tips button', (tester) async {
+      await _pumpEntry(tester, origin: PhoneSearchOrigin.history);
+      await _openOverlay(tester);
+
+      expect(helpButton, findsNothing);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      expect(helpButton, findsNothing);
     });
   });
 

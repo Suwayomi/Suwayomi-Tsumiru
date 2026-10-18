@@ -18,6 +18,21 @@ void main() {
     expect(hits, ['Naruto']);
   });
 
+  group('countLibraryTitles', () {
+    test('blank query counts nothing', () {
+      expect(countLibraryTitles(const ['A', 'B'], '', (s, q) => true), 0);
+    });
+
+    test('counts every match without the cap', () {
+      final many = List.generate(20, (i) => 'Manga $i');
+      expect(countLibraryTitles(many, 'manga', (s, q) => true), 20);
+      expect(
+        matchLibraryTitles(many, 'manga', (s, q) => true).length,
+        kUnifiedSectionLimit,
+      );
+    });
+  });
+
   group('titleMatchesQuery', () {
     test('matches only the title, not other metadata', () {
       // The reported bug: "bad" surfaced titles that only mention it in their

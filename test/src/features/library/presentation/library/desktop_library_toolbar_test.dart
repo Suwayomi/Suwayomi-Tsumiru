@@ -77,6 +77,16 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.decoration?.hintText, 'Search title or author...');
       expect(find.text('Last Read'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is DesktopToolbarBox && w.width == 230),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is DesktopToolbarBox && (w.width == 180 || w.width == 40),
+        ),
+        findsNothing,
+      );
       expect(find.text('Filter'), findsOneWidget);
       expect(find.byTooltip('Display'), findsOneWidget);
       expect(find.text('Library'), findsNothing);
@@ -89,23 +99,17 @@ void main() {
       await tester.pump();
 
       expect(container.read(libraryQueryProvider), 'sword');
-      // Search-all-sources is only enabled with a query.
-      final global = tester.widget<IconButton>(
+      // The dropdown offers Search all sources; no separate button remains.
+      expect(
         find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsNothing,
       );
-      expect(global.onPressed, isNotNull);
     });
 
     testWidgets('sort menu lists sorts; picking updates the provider', (
       tester,
     ) async {
       final container = await _pumpToolbar(tester);
-
-      // No query: search-all-sources stays disabled.
-      final global = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-      );
-      expect(global.onPressed, isNull);
 
       await _tapSortBox(tester);
 
@@ -171,9 +175,12 @@ void main() {
       final direction = tester.widget<IconButton>(
         find.descendant(
           of: find.byWidgetPredicate(
-            (w) => w is DesktopToolbarBox && w.width == 40,
+            (w) => w is DesktopToolbarBox && w.width == 230,
           ),
-          matching: find.byType(IconButton),
+          matching: find.widgetWithIcon(
+            IconButton,
+            Icons.arrow_downward_rounded,
+          ),
         ),
       );
       expect(direction.onPressed, isNull);
@@ -183,6 +190,73 @@ void main() {
       await tester.tap(find.widgetWithText(MenuItemButton, 'Random'));
       await tester.pumpAndSettle();
       expect(container.read(librarySortRandomSeedProvider), seed + 1);
+    });
+
+    testWidgets('search tips show three paragraphs and two code chips', (
+      tester,
+    ) async {
+      await _pumpToolbar(tester);
+
+      await tester.tap(find.byTooltip('Search tips'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Search tips'), findsOneWidget);
+      expect(
+        find.text('Plain words match the title, author, genres and tags.'),
+        findsOneWidget,
+      );
+      expect(find.text('author:oda'), findsOneWidget);
+      expect(find.text('-tag:dropped'), findsOneWidget);
+      expect(find.textContaining('Match any of these'), findsNothing);
+      // Each example appears only inside its chip: the plain text spans
+      // around the chips must not repeat them.
+      String plainOf(InlineSpan span) {
+        if (span is! TextSpan) return '';
+        final buffer = StringBuffer(span.text ?? '');
+        for (final child in span.children ?? const <InlineSpan>[]) {
+          buffer.write(plainOf(child));
+        }
+        return buffer.toString();
+      }
+      // Only the tip paragraphs use Text.rich (plain + chip + plain
+      // spans); the chips themselves are plain Text widgets and are
+      // covered by the findsOneWidget checks above.
+      final plains = tester
+          .widgetList<RichText>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(RichText),
+            ),
+          )
+          .where(
+            (rich) =>
+                rich.text is TextSpan &&
+                (rich.text as TextSpan).children?.isNotEmpty == true,
+          )
+          .map((rich) => plainOf(rich.text))
+          .toList();
+      expect(plains, isNotEmpty);
+      for (final plain in plains) {
+        expect(plain, isNot(contains('author:oda')));
+        expect(plain, isNot(contains('-tag:dropped')));
+      }
+      expect(
+        plains.any((plain) => plain.contains('Type a field and a colon, like ')),
+        isTrue,
+      );
+      expect(
+        plains.any(
+          (plain) => plain.contains(
+            ', to search one field. Suggestions show as you type.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        plains.any((plain) => plain.contains('Exclude with a minus: ')),
+        isTrue,
+      );
     });
 
     testWidgets('filter opens an anchored panel, not a drawer', (tester) async {

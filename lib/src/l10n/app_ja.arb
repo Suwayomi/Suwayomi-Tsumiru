@@ -2057,7 +2057,6 @@
   "searchForExtensions": "拡張機能を検索",
   "noTagsYet": "ライブラリにタグはまだありません",
   "searchTips": "検索のヒント",
-  "searchTipsBody": "key:value で項目を指定して絞り込めます。\n\ntag:seinen（ソースのタグ、または自分のタグ）\ngenre:action（ソースのジャンル）\nauthor:oda\nstatus:ongoing（completed、hiatus、cancelled も使用可能）\nsource:mangadex\ntracked:true, tracked:anilist\nrating:>=4（自分の評価）\nunread:true, downloaded:true\n\n複数の単語は引用符で囲みます：tag:\"slice of life\"\nマイナス記号で除外します：-tag:dropped",
   "updateProgressManualMarkReadDesc": "複数の章をまとめて既読にする場合には適用しません",
   "reLogin": "トークンの有効期限が切れました。再度ログインしてください",
   "trackerLoginSuccess": "{trackerName} にログインしました",

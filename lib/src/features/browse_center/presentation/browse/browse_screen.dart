@@ -12,12 +12,14 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../migration/controller/bulk_migration_providers.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
-import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../extension/controller/extension_controller.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
+import '../source/controller/source_controller.dart' hide SourceLanguageFilter;
 import '../source/widgets/source_language_filter.dart';
 
 class BrowseScreen extends HookConsumerWidget {
@@ -64,23 +66,15 @@ class BrowseScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        // Desktop replaces the title with the unified search box (the sidebar
-        // already names the page); Sources/Extensions keep their own bars
-        // inside their tabs. Phone and tablet keep the title.
+        // Desktop replaces the title with a search box driving the current
+        // tab's own filter (the sidebar already names the page). Phone and
+        // tablet keep the title.
         title: context.isDesktop
             ? Align(
                 alignment: Alignment.centerLeft,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: DesktopSearchField(
-                    query: ref.watch(unifiedSearchQueryProvider),
-                    onChanged: (value) =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            value,
-                    onNavigate: () =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            '',
-                  ),
+                  child: _BrowseDesktopSearch(tabIndex: tabController.index),
                 ),
               )
             : Text(context.l10n.browse),
@@ -90,11 +84,13 @@ class BrowseScreen extends HookConsumerWidget {
               const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
               const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
             ],
-            IconButton(
-              tooltip: context.l10n.globalSearch,
-              onPressed: () => openGlobalSearch(context),
-              icon: const Icon(Icons.travel_explore_rounded),
-            ),
+            if (context.isTablet && !context.isDesktop)
+              IconButton(
+                tooltip: context.l10n.globalSearch,
+                onPressed: () => openGlobalSearch(context),
+                icon: const Icon(Icons.travel_explore_rounded),
+              ),
+            // The search overlay/dropdown already offers "Search all sources".
             IconButton(
               tooltip: context.l10n.filterSources,
               onPressed: () => const SourceFilterRoute().push(context),
@@ -134,6 +130,46 @@ class BrowseScreen extends HookConsumerWidget {
         ),
       ),
       body: TabBarView(controller: tabController, children: children),
+    );
+  }
+}
+
+/// Desktop Browse search box: drives the current tab's existing filter, live
+/// as you type, like the desktop Library toolbar drives its query provider.
+/// Switching tabs shows that tab's filter text.
+class _BrowseDesktopSearch extends ConsumerWidget {
+  const _BrowseDesktopSearch({required this.tabIndex});
+
+  final int tabIndex;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final String query;
+    final ValueChanged<String> onChanged;
+    final String hint;
+    switch (tabIndex) {
+      case 1:
+        query = ref.watch(extensionQueryProvider) ?? '';
+        onChanged = (value) =>
+            ref.read(extensionQueryProvider.notifier).update(value);
+        hint = l10n.searchExtensionsHint;
+      case 2:
+        query = ref.watch(migrationSourcePickerQueryProvider);
+        onChanged = (value) =>
+            ref.read(migrationSourcePickerQueryProvider.notifier).update(value);
+        hint = l10n.searchSourcesHint;
+      default:
+        query = ref.watch(sourceSearchQueryProvider) ?? '';
+        onChanged = (value) =>
+            ref.read(sourceSearchQueryProvider.notifier).update(value);
+        hint = l10n.searchSourcesHint;
+    }
+    return DesktopSearchField(
+      query: query,
+      onChanged: onChanged,
+      onNavigate: () => onChanged(''),
+      hintText: hint,
     );
   }
 }

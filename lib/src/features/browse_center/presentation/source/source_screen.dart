@@ -142,13 +142,14 @@ class SourceScreen extends HookConsumerWidget {
     }, refresh: refresh);
 
     // Phone searches from the Browse app-bar entry (or the box below when
-    // the persistent setting is on); tablet and desktop keep the live field.
+    // the persistent setting is on) and desktop from the Browse app-bar box;
+    // only tablet keeps the live field.
     final phone = !context.isTablet;
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     return Column(
       children: [
-        if (!phone)
+        if (!phone && !context.isDesktop)
           SizedBox(
             width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
             child: Padding(

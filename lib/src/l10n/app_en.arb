@@ -3318,11 +3318,30 @@
   "tags": "Tags",
   "searchForSources": "Search for sources",
   "searchForExtensions": "Search for extensions",
+  "searchSourcesHint": "Search sources...",
+  "@searchSourcesHint": {
+    "description": "Placeholder in the desktop Browse search box on the Sources and Migrate tabs"
+  },
+  "searchExtensionsHint": "Search extensions...",
+  "@searchExtensionsHint": {
+    "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+  },
   "noTagsYet": "No tags in your library yet",
   "copyToClipboard": "Copy to clipboard",
   "copiedToClipboard": "Copied to clipboard",
   "searchTips": "Search tips",
-  "searchTipsBody": "Filter by field with key:value.\n\ntag:seinen (source tags or your own)\ngenre:action (source genres)\nauthor:oda\nstatus:ongoing (also completed, hiatus, cancelled)\nsource:mangadex\ntracked:true, tracked:anilist\nrating:>=4 (your rating)\nunread:true, downloaded:true\n\nQuote multi-word values: tag:\"slice of life\"\nExclude with a minus sign: -tag:dropped",
+  "searchTipsPlainWords": "Plain words match the title, author, genres and tags.",
+  "@searchTipsPlainWords": {
+    "description": "First paragraph of the search tips dialog"
+  },
+  "searchTipsField": "Type a field and a colon, like {example}, to search one field. Suggestions show as you type.",
+  "@searchTipsField": {
+    "description": "Second paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+  },
+  "searchTipsExclude": "Exclude with a minus: {example}",
+  "@searchTipsExclude": {
+    "description": "Third paragraph of the search tips dialog; {example} renders as an inline code chip and is never translated"
+  },
   "@tracking": {
     "description": "Settings entry and screen title for the Tracking screen"
   },

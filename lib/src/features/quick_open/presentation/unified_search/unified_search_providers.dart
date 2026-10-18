@@ -45,6 +45,22 @@ List<T> matchLibraryTitles<T>(
   return out;
 }
 
+/// Generic, testable full count over a list, using an injected predicate.
+/// Same matching as [matchLibraryTitles] but without the cap, so a section
+/// header can show the real total while the row stays capped.
+int countLibraryTitles<T>(
+  List<T> items,
+  String query,
+  bool Function(T item, String query) matches,
+) {
+  if (query.trim().isEmpty) return 0;
+  var count = 0;
+  for (final item in items) {
+    if (matches(item, query)) count++;
+  }
+  return count;
+}
+
 /// Quick search matches the TITLE only. The library DSL (`MangaDto.query`)
 /// also matches author/genre/description/tags, which surfaces confusing hits
 /// like "bad" → a manga whose description mentions "bad".
@@ -62,6 +78,20 @@ final unifiedLibraryResultsForProvider = Provider.autoDispose
       final library = ref.watch(libraryMangaListProvider).value ?? const [];
       final useDsl = queryUsesOperator(query);
       return matchLibraryTitles<MangaDto>(
+        library,
+        query,
+        (m, q) => useDsl ? m.query(q) : titleMatchesQuery(m.title, q),
+      );
+    });
+
+/// Total number of in-library matches for [query], without the section cap.
+/// Same matcher as [unifiedLibraryResultsForProvider], so the header count and
+/// the capped row can never disagree on what counts as a match.
+final unifiedLibraryResultCountForProvider = Provider.autoDispose
+    .family<int, String>((Ref ref, String query) {
+      final library = ref.watch(libraryMangaListProvider).value ?? const [];
+      final useDsl = queryUsesOperator(query);
+      return countLibraryTitles<MangaDto>(
         library,
         query,
         (m, q) => useDsl ? m.query(q) : titleMatchesQuery(m.title, q),
