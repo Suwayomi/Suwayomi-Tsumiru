@@ -15,6 +15,7 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/library_manga_organizer.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
 import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
@@ -24,6 +25,7 @@ Future<ProviderContainer> _pumpToolbar(
   WidgetTester tester, {
   double width = 1400,
   double textScale = 1.0,
+  List<Widget> trailing = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
@@ -58,7 +60,7 @@ Future<ProviderContainer> _pumpToolbar(
             data: MediaQuery.of(
               context,
             ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: const Scaffold(body: DesktopLibraryToolbar()),
+            child: Scaffold(body: DesktopLibraryToolbar(trailing: trailing)),
           ),
         ),
       ),
@@ -367,6 +369,148 @@ void main() {
       expect(find.text('Filter'), findsNothing);
       expect(find.byTooltip('Last Read'), findsOneWidget);
       expect(find.byTooltip('Filter'), findsOneWidget);
+    });
+
+    testWidgets('compact trailing actions stay visible and tappable', (
+      tester,
+    ) async {
+      var syncTaps = 0;
+      var menuTaps = 0;
+      await _pumpToolbar(
+        tester,
+        width: 520,
+        // SizedBox pins the production 48 px IconButton/PopupMenuButton
+        // widths deterministically (a bare M3 IconButton sizes itself 40).
+        trailing: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: IconButton(
+              icon: const Icon(Icons.cloud_sync_rounded),
+              tooltip: 'Sync now',
+              onPressed: () => syncTaps++,
+            ),
+          ),
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: PopupMenuButton<int>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Updates',
+              itemBuilder: (context) => [
+                PopupMenuItem<int>(
+                  value: 1,
+                  onTap: () => menuTaps++,
+                  child: const Text('Global update'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      expect(tester.takeException(), isNull);
+
+      // Both trailing buttons are 48 px wide and fully inside the toolbar.
+      final toolbarRect = tester.getRect(find.byType(DesktopLibraryToolbar));
+      final syncRect = tester.getRect(find.byTooltip('Sync now'));
+      final menuRect = tester.getRect(find.byTooltip('Updates'));
+      expect(syncRect.width, 48.0);
+      expect(menuRect.width, 48.0);
+      for (final rect in [syncRect, menuRect]) {
+        expect(rect.left, greaterThanOrEqualTo(toolbarRect.left));
+        expect(rect.right, lessThanOrEqualTo(toolbarRect.right));
+      }
+
+      await tester.tap(find.byTooltip('Sync now'));
+      await tester.pump();
+      expect(syncTaps, 1);
+
+      await tester.tap(find.byTooltip('Updates'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Global update'));
+      await tester.pump();
+      expect(menuTaps, 1);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('search field keeps element, text and focus across resize', (
+      tester,
+    ) async {
+      final container = await _pumpToolbar(tester, width: 1100);
+      expect(find.text('Last Read'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'sword');
+      await tester.pump();
+      expect(container.read(libraryQueryProvider), 'sword');
+
+      final before = tester.element(find.byType(DesktopSearchField));
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+        isTrue,
+      );
+
+      tester.view.physicalSize = const Size(520, 980);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Last Read'), findsNothing);
+      final after = tester.element(find.byType(DesktopSearchField));
+      expect(identical(after, before), isTrue);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'sword',
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('narrow toolbar with three trailing buttons has no overflow', (
+      tester,
+    ) async {
+      await _pumpToolbar(
+        tester,
+        width: 360,
+        // 48 px trailing, the worst case from the clipped-actions report.
+        trailing: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              tooltip: 'Migrate',
+              onPressed: () {},
+            ),
+          ),
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: IconButton(
+              icon: const Icon(Icons.cloud_sync_rounded),
+              tooltip: 'Sync now',
+              onPressed: () {},
+            ),
+          ),
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: PopupMenuButton<int>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Updates',
+              itemBuilder: (context) => [
+                const PopupMenuItem<int>(
+                  value: 1,
+                  child: Text('Global update'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

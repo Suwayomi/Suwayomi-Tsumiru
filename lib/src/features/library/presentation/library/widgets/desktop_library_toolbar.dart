@@ -4,8 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -270,59 +268,49 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
           );
           // Compact Filter drops the text but keeps its tooltip, so the
           // button stays discoverable.
-          final controls = [
-            _DesktopSortControl(compact: compact),
-            if (compact)
-              Tooltip(message: context.l10n.filter, child: filterBox)
-            else
-              filterBox,
-            displayBox,
-            ...trailing,
-          ];
-          if (compact) {
-            // Everything besides the search field has a fixed width, so the
-            // field takes the rest, floored at 160 px. When that does not
-            // fit, the row lays out past the viewport inside an OverflowBox
-            // (which never reports a flex overflow) and the excess clips.
-            final gaps = (3 + trailing.length) * 10.0;
-            final fixedBesidesSearch =
-                _sortCompactWidth +
-                _filterCompactWidth +
-                _displayBoxWidth +
-                gaps +
-                trailing.length * 40.0;
-            final contentWidth = constraints.maxWidth - 24.0;
-            final searchWidth = math.max(
-              160.0,
-              contentWidth - fixedBesidesSearch,
-            );
+          //
+          // Both modes share one Row with the search field always in the
+          // same Expanded slot, so crossing the compact threshold only
+          // rebuilds the Sort/Filter children and never remounts the field
+          // (which would drop its focus, selection and results dropdown).
+          // The search field absorbs every shortage: it shrinks below any
+          // floor rather than letting a control clip or overflow.
+          final row = Row(
+            spacing: 10,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: searchField),
+              _DesktopSortControl(compact: compact),
+              if (compact)
+                Tooltip(message: context.l10n.filter, child: filterBox)
+              else
+                filterBox,
+              displayBox,
+              ...trailing,
+            ],
+          );
+          if (!compact || !constraints.hasBoundedWidth) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ClipRect(
-                child: OverflowBox(
-                  maxWidth: double.infinity,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Row(
-                    spacing: 10,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(width: searchWidth, child: searchField),
-                      ...controls,
-                    ],
-                  ),
-                ),
-              ),
+              child: row,
+            );
+          }
+          // Degenerate widths (fixed controls alone exceed the content):
+          // keep the identical row — the search field keeps its slot and
+          // state, sized to 0 — inside a horizontal scroller sized to the
+          // controls, so no RenderFlex overflow is ever reported.
+          final minWidth = _compactFixedWidth(trailing.length);
+          if (constraints.maxWidth >= minWidth) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: row,
             );
           }
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              spacing: 10,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(child: searchField),
-                ...controls,
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(width: minWidth - 24.0, child: row),
             ),
           );
         },
@@ -349,6 +337,27 @@ const _filterCompactWidth = 12.0 + 6.0 + 18.0 + 8.0 + 22.0;
 const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 22.0;
 // Compact Sort: 48 px trigger, 1 px divider, 40 px direction button.
 const _sortCompactWidth = 48.0 + 1.0 + 40.0;
+// Every DesktopToolbarBox paints a 1 px border on each side. The full Sort
+// width (230) is the Container's outer width so it already includes its
+// border; the chrome sums are content widths, so Filter and Display each
+// reserve 2 px more, as does the compact Sort below.
+const _boxBorderWidth = 2.0;
+// Trailing callers pass IconButton/PopupMenuButton-sized controls, 48 px by
+// default and never narrower in practice; assuming the wider size flips to
+// compact before a real button clips instead of after.
+const _trailingButtonWidth = 48.0;
+
+/// Minimum outer width of the compact row: 12 px padding on each side, a
+/// 10 px gap between every child, the three boxes with their borders, and
+/// one [_trailingButtonWidth] slot per trailing action. Below this the
+/// search field is already at 0, so the row scrolls instead of overflowing.
+double _compactFixedWidth(int trailingCount) =>
+    24.0 +
+    (3 + trailingCount) * 10.0 +
+    (_sortCompactWidth + _boxBorderWidth) +
+    (_filterCompactWidth + _boxBorderWidth) +
+    (_displayBoxWidth + _boxBorderWidth) +
+    trailingCount * _trailingButtonWidth;
 
 bool _toolbarIsCompact(
   BuildContext context,
@@ -374,8 +383,10 @@ bool _toolbarIsCompact(
       _sortFullWidth +
       _filterFullChrome +
       labelWidth +
+      _boxBorderWidth +
       _displayBoxWidth +
-      trailingCount * 40.0;
+      _boxBorderWidth +
+      trailingCount * _trailingButtonWidth;
   return constraints.maxWidth - neededBesidesSearch < scaler.scale(280.0);
 }
 
