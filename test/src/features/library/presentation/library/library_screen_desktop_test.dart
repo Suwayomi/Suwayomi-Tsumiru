@@ -60,7 +60,7 @@ Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
 
 /// Pumps the real [LibraryScreen] with two empty categories. Phone widths
 /// take the legacy app bar; desktop widths take the toolbar + tab strip.
-Future<void> _pumpLibrary(
+Future<ProviderContainer> _pumpLibrary(
   WidgetTester tester, {
   required Size surface,
   bool withManga = false,
@@ -134,6 +134,7 @@ Future<void> _pumpLibrary(
     ),
   );
   await tester.pumpAndSettle();
+  return container;
 }
 
 void main() {
@@ -223,6 +224,78 @@ void main() {
         const Offset(0, -500),
       );
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tablet toggled search enables global search with a query', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(900, 980),
+      );
+
+      // Open the toggled search field: no query yet, so the button is
+      // present but disabled — the tablet-only way into Global Search.
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.search_rounded));
+      await tester.pumpAndSettle();
+      var global = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+      );
+      expect(global.onPressed, isNull);
+
+      container.read(libraryQueryProvider.notifier).update('sword');
+      await tester.pumpAndSettle();
+      global = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+      );
+      expect(global.onPressed, isNotNull);
+    });
+
+    testWidgets('tablet sticky search shows global search with a query', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(900, 980),
+        persistentSearchBar: true,
+      );
+
+      container.read(libraryQueryProvider.notifier).update('sword');
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('phone shows no global search button', (tester) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(412, 800),
+      );
+      container.read(libraryQueryProvider.notifier).update('sword');
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('desktop shows no global search button', (tester) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      container.read(libraryQueryProvider.notifier).update('sword');
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     });
   });

@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/enum.dart';
+import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -384,6 +385,30 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                                       tooltip: context.l10n.searchTips,
                                       onPressed: () => showSearchTips(context),
                                     ),
+                                    if (context.isTablet && !context.isDesktop)
+                                      Consumer(
+                                        builder: (context, ref, child) =>
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.travel_explore_rounded,
+                                              ),
+                                              tooltip:
+                                                  context.l10n.globalSearch,
+                                              onPressed:
+                                                  ref
+                                                      .watch(
+                                                        libraryQueryProvider,
+                                                      )
+                                                      .isNotBlank
+                                                  ? () => openGlobalSearch(
+                                                      context,
+                                                      query: ref.read(
+                                                        libraryQueryProvider,
+                                                      ),
+                                                    )
+                                                  : null,
+                                            ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -1383,6 +1408,12 @@ class _LibrarySearchBar extends ConsumerWidget {
           tooltip: context.l10n.searchTips,
           onPressed: () => showSearchTips(context),
         ),
+        if (context.isTablet && !context.isDesktop && query.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.travel_explore_rounded),
+            tooltip: context.l10n.globalSearch,
+            onPressed: () => openGlobalSearch(context, query: query),
+          ),
       ],
       highlightDsl: true,
       hintBehavior: SearchFieldHintBehavior.forceHint,

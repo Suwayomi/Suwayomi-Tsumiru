@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/data/account_providers.dart';
@@ -250,5 +251,98 @@ void main() {
 
       await _unmount(tester);
     });
+
+    testWidgets(
+      'tablet keeps the global search button; phone/desktop hide it',
+      (tester) async {
+        await _pumpBrowse(tester, size: const Size(900, 980));
+        expect(tester.takeException(), isNull);
+        expect(
+          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+          findsOneWidget,
+        );
+        await _unmount(tester);
+
+        await _pumpBrowse(tester, size: _phone);
+        expect(tester.takeException(), isNull);
+        expect(
+          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+          findsNothing,
+        );
+        await _unmount(tester);
+
+        await _pumpBrowse(tester, size: _desktop);
+        expect(tester.takeException(), isNull);
+        expect(
+          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+          findsNothing,
+        );
+        await _unmount(tester);
+      },
+    );
+
+    testWidgets('tapping the tablet button opens Global Search', (
+      tester,
+    ) async {
+      await _pumpBrowseInRouter(tester, size: const Size(900, 980));
+      expect(tester.takeException(), isNull);
+      expect(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('GLOBAL SEARCH'), findsOneWidget);
+
+      await _unmount(tester);
+    });
   });
+}
+
+/// Same providers as [_pumpBrowse], but inside a router so the tablet
+/// Global Search button's [openGlobalSearch] push lands on a real route.
+Future<void> _pumpBrowseInRouter(
+  WidgetTester tester, {
+  required Size size,
+}) async {
+  final container = await _pumpBrowse(tester, size: size);
+  final router = GoRouter(
+    initialLocation: '/browse',
+    routes: [
+      GoRoute(
+        path: '/browse',
+        builder: (context, state) => BrowseScreen(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          children: const [
+            SourceScreen(),
+            ExtensionScreen(),
+            MigrationSourcePickerBody(hideInnerSearchOnDesktop: true),
+          ],
+        ),
+      ),
+      GoRoute(
+        path: '/global-search',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('GLOBAL SEARCH'))),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
