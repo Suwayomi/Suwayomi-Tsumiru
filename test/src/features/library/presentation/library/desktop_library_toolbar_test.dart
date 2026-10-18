@@ -75,7 +75,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.decoration?.hintText, 'Search title, author, source...');
+      expect(field.decoration?.hintText, 'Search title or author...');
       expect(find.text('Last Read'), findsOneWidget);
       expect(find.text('Filter'), findsOneWidget);
       expect(find.byTooltip('Display'), findsOneWidget);

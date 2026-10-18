@@ -13,7 +13,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../routes/navigation.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
-import '../../../../../widgets/search_field.dart';
+import '../../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../controller/library_controller.dart';
 import 'desktop_library_panels.dart';
@@ -139,8 +139,52 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
           spacing: 10,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Expanded(
-              child: DesktopToolbarBox(child: _DesktopSearchField()),
+            Expanded(
+              child: DesktopSearchField(
+                query: ref.watch(libraryQueryProvider) ?? '',
+                onChanged: (val) =>
+                    ref.read(libraryQueryProvider.notifier).update(val),
+                // Leaving through a dropdown result (Go to, Search all
+                // sources) clears the query; opening a series from the
+                // filtered grid keeps it — that path never touches this.
+                onNavigate: () =>
+                    ref.read(libraryQueryProvider.notifier).update(''),
+                // The grid below is already the filtered library: only Go to
+                // matches and Search all sources belong in the dropdown.
+                showLibrarySection: false,
+                hintText: context.l10n.searchLibraryHint,
+                suffixActions: [
+                  IconButton(
+                    iconSize: 20,
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    icon: const Icon(Icons.help_outline_rounded),
+                    tooltip: context.l10n.searchTips,
+                    onPressed: () => showSearchTips(context),
+                  ),
+                  Consumer(
+                    builder: (context, ref, child) => IconButton(
+                      iconSize: 20,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      icon: const Icon(Icons.travel_explore_rounded),
+                      tooltip: context.l10n.globalSearch,
+                      onPressed: ref.watch(libraryQueryProvider).isNotBlank
+                          ? () => openGlobalSearch(
+                              context,
+                              query: ref.read(libraryQueryProvider),
+                            )
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const _DesktopSortControl(),
             const _DesktopSortDirectionButton(),
@@ -194,81 +238,6 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
             ...trailing,
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// The toolbar search field. Same behaviour as today's library search: writes
-/// [libraryQueryProvider] on change, initial text from it, a clear button,
-/// and the Search tips + search-all-sources actions. Always visible and never
-/// autofocused on desktop.
-class _DesktopSearchField extends HookConsumerWidget {
-  const _DesktopSearchField();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final query = ref.watch(libraryQueryProvider) ?? '';
-    final controller = useMemoized(() => DslSearchController(text: query));
-    useEffect(() => controller.dispose, [controller]);
-    // A query set programmatically (tapping a tag opens the library on that
-    // tag) refreshes the field; while typing both sides already agree.
-    ref.listen<String?>(libraryQueryProvider, (_, next) {
-      final value = next ?? '';
-      if (controller.text != value) controller.text = value;
-    });
-
-    const iconConstraints = BoxConstraints(minWidth: 36, minHeight: 36);
-    return TextField(
-      controller: controller,
-      autofocus: false,
-      onChanged: (val) => ref.read(libraryQueryProvider.notifier).update(val),
-      style: Theme.of(context).textTheme.bodyMedium,
-      decoration: InputDecoration(
-        border: InputBorder.none,
-        isDense: true,
-        hintText: context.l10n.searchLibraryHint,
-        prefixIcon: const Icon(Icons.search_rounded, size: 20),
-        prefixIconConstraints: iconConstraints,
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              iconSize: 20,
-              padding: const EdgeInsets.all(8),
-              constraints: iconConstraints,
-              icon: const Icon(Icons.help_outline_rounded),
-              tooltip: context.l10n.searchTips,
-              onPressed: () => showSearchTips(context),
-            ),
-            IconButton(
-              iconSize: 20,
-              padding: const EdgeInsets.all(8),
-              constraints: iconConstraints,
-              icon: const Icon(Icons.travel_explore_rounded),
-              tooltip: context.l10n.globalSearch,
-              onPressed: query.isNotBlank
-                  ? () => openGlobalSearch(
-                      context,
-                      query: ref.read(libraryQueryProvider),
-                    )
-                  : null,
-            ),
-            if (controller.text.isNotEmpty)
-              IconButton(
-                iconSize: 20,
-                padding: const EdgeInsets.all(8),
-                constraints: iconConstraints,
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () {
-                  controller.clear();
-                  ref.read(libraryQueryProvider.notifier).update('');
-                },
-              ),
-          ],
-        ),
-        suffixIconConstraints: const BoxConstraints(minHeight: 40),
-        contentPadding: const EdgeInsets.symmetric(vertical: 10),
       ),
     );
   }

@@ -16,6 +16,8 @@ import '../../../../utils/hooks/paging_controller_hook.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/emoticons.dart';
+import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -83,9 +85,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     List<UpdatesGroupedEntry> groups,
     Map<int, int> headIndex,
     Set<int> headerIndices,
-  }) _groupingFor(
-    List<List<ChapterWithMangaDto>>? pages,
-  ) {
+  })
+  _groupingFor(List<List<ChapterWithMangaDto>>? pages) {
     if (_memoPages != null && identical(_memoPages, pages)) {
       return (
         items: _memoItems!,
@@ -152,8 +153,10 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
 
   void _toggleSelect(ChapterDto val) {
     if ((val.id).isNull) return;
-    widget.selectedChapters.value =
-        widget.selectedChapters.value.toggleKey(val.id, val);
+    widget.selectedChapters.value = widget.selectedChapters.value.toggleKey(
+      val.id,
+      val,
+    );
   }
 
   Widget _buildItem(
@@ -207,7 +210,8 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     return ChapterMangaGroupedTile(
       head: group.head,
       tail: group.tail,
-      updatePairFor: (chapter) => () => _updatePair(chapter),
+      updatePairFor: (chapter) =>
+          () => _updatePair(chapter),
       refreshManga: () => _refreshManga(group.head.mangaId),
       isSelectedFor: (chapter) =>
           widget.selectedChapters.value.containsKey(chapter.id),
@@ -228,9 +232,7 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ListTile(
-          title: Text(currentDate.toDaysAgoFromSeconds(context)),
-        ),
+        ListTile(title: Text(currentDate.toDaysAgoFromSeconds(context))),
         tile,
       ],
     );
@@ -289,7 +291,7 @@ Future<ChapterDto?> refetchChapter(WidgetRef ref, int chapterId) async {
 /// encountered, meaning the caller has collected all new items up to the
 /// existing list and can stop fetching further pages.
 ({List<ChapterWithMangaDto> items, bool boundaryFound})
-    extractNewUpdatesFromPage(
+extractNewUpdatesFromPage(
   List<ChapterWithMangaDto> nodes,
   Set<int> existingIds,
 ) {
@@ -311,9 +313,13 @@ class UpdatesScreen extends HookConsumerWidget {
     int pageKey,
     UpdatesFilter filter,
   ) async {
-    final page =
-        await repository.getRecentChaptersPage(pageNo: pageKey, filter: filter);
-    if (page == null) return (items: <ChapterWithMangaDto>[], hasNextPage: false);
+    final page = await repository.getRecentChaptersPage(
+      pageNo: pageKey,
+      filter: filter,
+    );
+    if (page == null) {
+      return (items: <ChapterWithMangaDto>[], hasNextPage: false);
+    }
     return (items: page.nodes, hasNextPage: page.hasNextPage);
   }
 
@@ -327,8 +333,8 @@ class UpdatesScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final filter = ref.watch(updatesFilterProvider);
     final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
-    final groupingMode = ref.watch(updatesGroupingModeProvider) ??
-        UpdatesGroupingMode.disabled;
+    final groupingMode =
+        ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
     // The page fetcher is captured once, so it can't close over `filter` — it
     // reads the latest value through this holder instead.
     final latestFilter = useRef(filter);
@@ -362,8 +368,7 @@ class UpdatesScreen extends HookConsumerWidget {
     Future<void> liveUpdate() async {
       final gen = generation.value;
       final existingIds = {
-        for (final item in controller.items ?? <ChapterWithMangaDto>[])
-          item.id,
+        for (final item in controller.items ?? <ChapterWithMangaDto>[]) item.id,
       };
       final newItems = <ChapterWithMangaDto>[];
       // Walk pages until we hit a known ID (the boundary) or run out of pages.
@@ -440,7 +445,30 @@ class UpdatesScreen extends HookConsumerWidget {
               // line in here made this the only header whose title sat at a
               // different height; it lives at the top of the list instead,
               // which is where Mihon keeps it.
-              title: Text(context.l10n.updates),
+              //
+              // Desktop replaces the title with the unified search box (the
+              // sidebar already names the page); phone and tablet keep it.
+              title: context.isDesktop
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: DesktopSearchField(
+                          query: ref.watch(unifiedSearchQueryProvider),
+                          onChanged: (value) =>
+                              ref
+                                      .read(unifiedSearchQueryProvider.notifier)
+                                      .state =
+                                  value,
+                          onNavigate: () =>
+                              ref
+                                      .read(unifiedSearchQueryProvider.notifier)
+                                      .state =
+                                  '',
+                        ),
+                      ),
+                    )
+                  : Text(context.l10n.updates),
               actions: [
                 SyncYomiSyncButton(onSynced: resetList),
                 IconButton(

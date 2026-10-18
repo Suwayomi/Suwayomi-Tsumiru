@@ -2862,7 +2862,7 @@
   "saveAsCBZArchive": "Save as CBZ archive",
   "scanlators": "Scanlators",
   "search": "Search",
-  "searchLibraryHint": "Search title, author, source...",
+  "searchLibraryHint": "Search title or author...",
   "searchingForUpdates": "Searching for updates",
   "select": "Select",
   "selectAll": "Select all",

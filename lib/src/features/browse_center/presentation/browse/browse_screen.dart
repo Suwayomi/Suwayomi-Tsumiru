@@ -12,6 +12,8 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
 import '../source/widgets/source_language_filter.dart';
@@ -55,7 +57,26 @@ class BrowseScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.browse),
+        // Desktop replaces the title with the unified search box (the sidebar
+        // already names the page); Sources/Extensions keep their own bars
+        // inside their tabs. Phone and tablet keep the title.
+        title: context.isDesktop
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: DesktopSearchField(
+                    query: ref.watch(unifiedSearchQueryProvider),
+                    onChanged: (value) =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            value,
+                    onNavigate: () =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            '',
+                  ),
+                ),
+              )
+            : Text(context.l10n.browse),
         actions: [
           if (tabController.index == 0) ...[
             IconButton(

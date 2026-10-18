@@ -19,6 +19,8 @@ import '../../../account/data/account_providers.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
+import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
@@ -33,7 +35,27 @@ class MoreScreen extends ConsumerWidget {
     final account = ref.watch(currentAccountProvider);
     final showAccount = authType == AuthType.uiLogin;
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.more)),
+      // Desktop replaces the title with the unified search box (the sidebar
+      // already names the page); phone and tablet keep it.
+      appBar: AppBar(
+        title: context.isDesktop
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: DesktopSearchField(
+                    query: ref.watch(unifiedSearchQueryProvider),
+                    onChanged: (value) =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            value,
+                    onNavigate: () =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            '',
+                  ),
+                ),
+              )
+            : Text(context.l10n.more),
+      ),
       body: ListView(
         children: [
           TsumiruLogo(size: context.height * .2),

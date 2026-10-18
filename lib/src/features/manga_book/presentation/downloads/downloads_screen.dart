@@ -18,6 +18,8 @@ import '../../../account/data/account_providers.dart';
 import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
 import '../../../offline/presentation/offline_files_view.dart';
+import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
 import '../../domain/downloads_queue/downloads_queue_model.dart';
@@ -58,7 +60,25 @@ class DownloadsScreen extends HookConsumerWidget {
     final onDeviceTab = tabController.index == 1;
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.downloads),
+        // Desktop replaces the title with the unified search box (the sidebar
+        // already names the page); phone and tablet keep it.
+        title: context.isDesktop
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: DesktopSearchField(
+                    query: ref.watch(unifiedSearchQueryProvider),
+                    onChanged: (value) =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            value,
+                    onNavigate: () =>
+                        ref.read(unifiedSearchQueryProvider.notifier).state =
+                            '',
+                  ),
+                ),
+              )
+            : Text(context.l10n.downloads),
         bottom: TabBar(
           controller: tabController,
           // Fill alignment so the underline aligns under each tab (the global
