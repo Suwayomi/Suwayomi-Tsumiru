@@ -98,8 +98,8 @@ void showSearchTips(BuildContext context) {
 }
 
 /// The desktop Library toolbar: one 64 px row (12 px horizontal padding,
-/// 40 px controls, 10 px gaps) with an always-visible search field, a sort
-/// control with a separate direction button, Filter and Display buttons that
+/// 40 px controls, 10 px gaps) with an always-visible search field, a
+/// combined sort + direction control, Filter and Display buttons that
 /// open anchored dropdown panels, and whatever [trailing] controls the
 /// variant keeps reachable (sync, update menu, migration picker). No title.
 /// Phone and tablet never see this.
@@ -187,7 +187,6 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
               ),
             ),
             const _DesktopSortControl(),
-            const _DesktopSortDirectionButton(),
             DesktopToolbarBox(
               key: filterButtonKey,
               borderColor: activeFilters > 0 ? scheme.primary : null,
@@ -243,15 +242,20 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
   }
 }
 
-/// Sort field menu, 180 px wide. Lists the same sorts in the same order as
-/// the organizer ([librarySortDisplayOrder]), hiding Tracker score unless a
-/// tracker is logged in. Picking the already-active Random re-rolls the order
-/// via [librarySortRandomSeedProvider], mirroring [LibraryMangaSortTile].
+/// Sort field menu + direction toggle in one 230 px box: the menu trigger
+/// fills the remaining width and a 40 px direction button sits past a 1 px
+/// divider. Lists the same sorts in the same order as the organizer
+/// ([librarySortDisplayOrder]), hiding Tracker score unless a tracker is
+/// logged in. Picking the already-active Random re-rolls the order via
+/// [librarySortRandomSeedProvider], mirroring [LibraryMangaSortTile]. The
+/// direction button is disabled for Random, whose comparator ignores
+/// direction by design.
 class _DesktopSortControl extends ConsumerWidget {
   const _DesktopSortControl();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
     final current =
         ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial;
     final hasTrackers =
@@ -260,79 +264,86 @@ class _DesktopSortControl extends ConsumerWidget {
       for (final sort in librarySortDisplayOrder)
         if (sort != MangaSort.trackerScore || hasTrackers) sort,
     ];
+    final ascending = ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
+    final isRandom = current == MangaSort.random;
     return DesktopToolbarBox(
-      width: 180,
-      child: MenuAnchor(
-        style: const MenuStyle(
-          minimumSize: WidgetStatePropertyAll(Size(180, 0)),
-        ),
-        menuChildren: [
-          for (final sort in sorts)
-            MenuItemButton(
-              leadingIcon: sort == current
-                  ? const Icon(Icons.check_rounded, size: 18)
-                  : null,
-              onPressed: () {
-                if (sort == MangaSort.random && sort == current) {
-                  final seed = ref.read(librarySortRandomSeedProvider) ?? 0;
-                  ref
-                      .read(librarySortRandomSeedProvider.notifier)
-                      .update(seed + 1);
-                } else {
-                  ref.read(libraryMangaSortProvider.notifier).update(sort);
-                }
-              },
-              child: Text(sort.toLocale(context)),
-            ),
-        ],
-        builder: (context, menu, _) => InkWell(
-          onTap: () => menu.isOpen ? menu.close() : menu.open(),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 12, right: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    current.toLocale(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+      width: 230,
+      child: Row(
+        children: [
+          Expanded(
+            child: MenuAnchor(
+              style: const MenuStyle(
+                minimumSize: WidgetStatePropertyAll(Size(230, 0)),
+              ),
+              menuChildren: [
+                for (final sort in sorts)
+                  MenuItemButton(
+                    leadingIcon: sort == current
+                        ? const Icon(Icons.check_rounded, size: 18)
+                        : null,
+                    onPressed: () {
+                      if (sort == MangaSort.random && sort == current) {
+                        final seed =
+                            ref.read(librarySortRandomSeedProvider) ?? 0;
+                        ref
+                            .read(librarySortRandomSeedProvider.notifier)
+                            .update(seed + 1);
+                      } else {
+                        ref
+                            .read(libraryMangaSortProvider.notifier)
+                            .update(sort);
+                      }
+                    },
+                    child: Text(sort.toLocale(context)),
+                  ),
+              ],
+              builder: (context, menu, _) => InkWell(
+                onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 6),
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 20,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      Expanded(
+                        child: Text(
+                          current.toLocale(context),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                    ],
                   ),
                 ),
-                const Icon(Icons.arrow_drop_down_rounded, size: 22),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Separate square direction button. Disabled for Random, whose comparator
-/// ignores direction by design.
-class _DesktopSortDirectionButton extends ConsumerWidget {
-  const _DesktopSortDirectionButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ascending = ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
-    final isRandom =
-        (ref.watch(libraryMangaSortProvider) ?? DBKeys.mangaSort.initial) ==
-        MangaSort.random;
-    return DesktopToolbarBox(
-      width: 40,
-      child: IconButton(
-        iconSize: 20,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: Icon(
-          ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-        ),
-        onPressed: isRandom
-            ? null
-            : () => ref
-                  .read(libraryMangaSortDirectionProvider.notifier)
-                  .update(!ascending),
+          Container(width: 1, height: 22, color: scheme.outlineVariant),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              iconSize: 20,
+              color: scheme.onSurface,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: Icon(
+                ascending
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+              ),
+              onPressed: isRandom
+                  ? null
+                  : () => ref
+                        .read(libraryMangaSortDirectionProvider.notifier)
+                        .update(!ascending),
+            ),
+          ),
+        ],
       ),
     );
   }

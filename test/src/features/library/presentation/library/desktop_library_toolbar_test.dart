@@ -77,6 +77,16 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.decoration?.hintText, 'Search title or author...');
       expect(find.text('Last Read'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is DesktopToolbarBox && w.width == 230),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is DesktopToolbarBox && (w.width == 180 || w.width == 40),
+        ),
+        findsNothing,
+      );
       expect(find.text('Filter'), findsOneWidget);
       expect(find.byTooltip('Display'), findsOneWidget);
       expect(find.text('Library'), findsNothing);
@@ -171,9 +181,12 @@ void main() {
       final direction = tester.widget<IconButton>(
         find.descendant(
           of: find.byWidgetPredicate(
-            (w) => w is DesktopToolbarBox && w.width == 40,
+            (w) => w is DesktopToolbarBox && w.width == 230,
           ),
-          matching: find.byType(IconButton),
+          matching: find.widgetWithIcon(
+            IconButton,
+            Icons.arrow_downward_rounded,
+          ),
         ),
       );
       expect(direction.onPressed, isNull);
