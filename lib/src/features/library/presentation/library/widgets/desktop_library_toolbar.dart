@@ -16,6 +16,8 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/search_field.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../controller/library_controller.dart';
+import 'desktop_library_panels.dart';
+import 'library_filter_content.dart';
 import 'library_manga_organizer.dart';
 
 /// Desktop Library toolbar chrome, copied from Tsumige's `ToolbarBox`
@@ -23,9 +25,18 @@ import 'library_manga_organizer.dart';
 /// a 40 px box, 10 px radius, `surfaceContainer` fill and an `outlineVariant`
 /// border that brightens on hover. Not imported from that repo.
 class DesktopToolbarBox extends StatefulWidget {
-  const DesktopToolbarBox({super.key, this.width, required this.child});
+  const DesktopToolbarBox({
+    super.key,
+    this.width,
+    this.borderColor,
+    required this.child,
+  });
 
   final double? width;
+
+  /// Overrides the border color (the Filter box uses `primary` while any
+  /// filter is active).
+  final Color? borderColor;
   final Widget child;
 
   @override
@@ -49,9 +60,11 @@ class _DesktopToolbarBoxState extends State<DesktopToolbarBox> {
           color: scheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: _hovered
-                ? scheme.onSurface.withValues(alpha: 0.18)
-                : scheme.outlineVariant,
+            color:
+                widget.borderColor ??
+                (_hovered
+                    ? scheme.onSurface.withValues(alpha: 0.18)
+                    : scheme.outlineVariant),
           ),
         ),
         child: widget.child,
@@ -87,21 +100,37 @@ void showSearchTips(BuildContext context) {
 /// The desktop Library toolbar: one 64 px row (12 px horizontal padding,
 /// 40 px controls, 10 px gaps) with an always-visible search field, a sort
 /// control with a separate direction button, Filter and Display buttons that
-/// open the organizer end drawer (slice 3 replaces these with dropdowns), and
-/// whatever [trailing] controls the variant keeps reachable (sync, update
-/// menu, migration picker). No title. Phone and tablet never see this.
-class DesktopLibraryToolbar extends ConsumerWidget {
-  const DesktopLibraryToolbar({
-    super.key,
-    required this.onOpenOrganizer,
-    this.trailing = const [],
-  });
+/// open anchored dropdown panels, and whatever [trailing] controls the
+/// variant keeps reachable (sync, update menu, migration picker). No title.
+/// Phone and tablet never see this.
+class DesktopLibraryToolbar extends HookConsumerWidget {
+  const DesktopLibraryToolbar({super.key, this.trailing = const []});
 
-  final VoidCallback onOpenOrganizer;
   final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final filterButtonKey = useMemoized(GlobalKey.new);
+    final displayButtonKey = useMemoized(GlobalKey.new);
+    final filterFocus = useMemoized(FocusNode.new);
+    final displayFocus = useMemoized(FocusNode.new);
+    useEffect(() {
+      return () {
+        filterFocus.dispose();
+        displayFocus.dispose();
+      };
+    }, [filterFocus, displayFocus]);
+    final activeFilters = watchLibraryFilterActiveCount(ref);
+    Widget filterIcon = const Icon(Icons.filter_list_rounded, size: 18);
+    if (activeFilters > 0) {
+      filterIcon = Badge.count(
+        count: activeFilters,
+        backgroundColor: scheme.primary,
+        textColor: scheme.onPrimary,
+        child: filterIcon,
+      );
+    }
     return SizedBox(
       height: 64,
       child: Padding(
@@ -116,14 +145,21 @@ class DesktopLibraryToolbar extends ConsumerWidget {
             const _DesktopSortControl(),
             const _DesktopSortDirectionButton(),
             DesktopToolbarBox(
+              key: filterButtonKey,
+              borderColor: activeFilters > 0 ? scheme.primary : null,
               child: InkWell(
-                onTap: onOpenOrganizer,
+                focusNode: filterFocus,
+                onTap: () => showLibraryFilterPanel(
+                  context: context,
+                  buttonKey: filterButtonKey,
+                  focusNode: filterFocus,
+                ),
                 child: Padding(
                   padding: const EdgeInsets.only(left: 12, right: 6),
                   child: Row(
                     spacing: 8,
                     children: [
-                      const Icon(Icons.filter_list_rounded, size: 18),
+                      filterIcon,
                       Text(context.l10n.filter),
                       const Icon(Icons.arrow_drop_down_rounded, size: 22),
                     ],
@@ -132,10 +168,16 @@ class DesktopLibraryToolbar extends ConsumerWidget {
               ),
             ),
             DesktopToolbarBox(
+              key: displayButtonKey,
               child: Tooltip(
                 message: context.l10n.display,
                 child: InkWell(
-                  onTap: onOpenOrganizer,
+                  focusNode: displayFocus,
+                  onTap: () => showLibraryDisplayPanel(
+                    context: context,
+                    buttonKey: displayButtonKey,
+                    focusNode: displayFocus,
+                  ),
                   child: const Padding(
                     padding: EdgeInsets.only(left: 10, right: 6),
                     child: Row(

@@ -1,0 +1,434 @@
+// Copyright (c) 2026 Contributors to the Suwayomi project
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// ignore_for_file: prefer_const_constructors
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/library/data/default_category.dart';
+import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_grouping.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
+import 'package:tsumiru/src/features/library/presentation/library/library_screen.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/library_filter_segments.dart';
+import 'package:tsumiru/src/features/library/presentation/library/widgets/library_manga_organizer.dart';
+import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
+import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
+import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
+import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/custom_checkbox_list_tile.dart';
+import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.dart';
+
+Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
+  defaultCategory: false,
+  id: id,
+  includeInDownload: Enum$IncludeOrExclude.UNSET,
+  includeInUpdate: Enum$IncludeOrExclude.UNSET,
+  name: name,
+  order: id,
+  mangas: Fragment$CategoryDto$mangas(totalCount: 0),
+  meta: const [],
+);
+
+Fragment$MangaDto$source _mangaSource() => Fragment$MangaDto$source(
+  displayName: 'Test Source',
+  iconUrl: '',
+  id: '1',
+  contentWarning: Enum$ContentWarning.SAFE,
+  lang: 'en',
+  name: 'Test Source',
+  $extension: Fragment$MangaDto$source$extension(isObsolete: false),
+);
+
+Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
+  id: id,
+  title: 'Manga $id',
+  bookmarkCount: 0,
+  chapters: Fragment$MangaDto$chapters(totalCount: 0),
+  downloadCount: 0,
+  genre: genre,
+  inLibrary: true,
+  inLibraryAt: '0',
+  initialized: true,
+  meta: const [],
+  source: _mangaSource(),
+  sourceId: '1',
+  status: Enum$MangaStatus.ONGOING,
+  categories: Fragment$MangaDto$categories(nodes: const []),
+  trackRecords: Fragment$MangaDto$trackRecords(nodes: const []),
+  unreadCount: 0,
+  updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+  url: 'https://example.com/manga/$id',
+);
+
+/// Pumps the real [LibraryScreen] with two empty categories and two tagged
+/// manga (Action x2, Fantasy x1). Never hits the network.
+Future<ProviderContainer> _pumpLibrary(
+  WidgetTester tester, {
+  required Size surface,
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final sp = await SharedPreferences.getInstance();
+  final container = ProviderContainer(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
+      loggedInTrackersProvider.overrideWithValue(
+        const AsyncData(<Fragment$TrackerDto>[]),
+      ),
+      updateRunningSocketProvider.overrideWithValue(
+        const AsyncData<bool?>(null),
+      ),
+      failedUpdateCountProvider.overrideWithValue(const AsyncData(0)),
+      syncYomiSettingsProvider.overrideWithValue(const AsyncData(null)),
+      settledDefaultCategoryIdProvider.overrideWithValue(1),
+      nonZeroCategoryListProvider.overrideWithValue(
+        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
+      ),
+      visibleCategoryListProvider.overrideWithValue(
+        AsyncData([_category(1, 'One'), _category(2, 'Two')]),
+      ),
+      categoryMangaListProvider.overrideWith(
+        (ref, categoryId) async => <Fragment$MangaDto>[],
+      ),
+      categoryMangaListWithQueryAndFilterProvider(
+        categoryId: 1,
+      ).overrideWithValue(AsyncData<List<Fragment$MangaDto>?>(null)),
+      categoryMangaListWithQueryAndFilterProvider(
+        categoryId: 2,
+      ).overrideWithValue(AsyncData<List<Fragment$MangaDto>?>(null)),
+      libraryTagListProvider.overrideWithValue(
+        const AsyncData(<String>['Action', 'Fantasy']),
+      ),
+      libraryMangaListProvider.overrideWith(
+        (ref) async => [
+          _manga(1, ['Action', 'Fantasy']),
+          _manga(2, ['Action']),
+        ],
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  tester.view.physicalSize = surface;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const LibraryScreen(categoryId: 1),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return container;
+}
+
+Future<void> _openFilterPanel(WidgetTester tester) async {
+  await tester.tap(find.text('Filter'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openDisplayPanel(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Display'));
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  group('Library filter panel (desktop 1400x980)', () {
+    testWidgets('filter opens an anchored panel; no drawer on desktop', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+
+      await _openFilterPanel(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Downloaded'), findsOneWidget);
+      expect(find.text('Minimum rating'), findsOneWidget);
+      expect(find.byType(Drawer), findsNothing);
+    });
+
+    testWidgets('Yes/No segments write true/false on two filters', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      await _openFilterPanel(tester);
+
+      // Row order: Downloaded, Storage, Read Status, Started, ...
+      await tester.tap(find.text('Yes').at(0));
+      await tester.pump();
+      expect(container.read(libraryMangaFilterDownloadedProvider), isTrue);
+
+      await tester.tap(find.text('No').at(0));
+      await tester.pump();
+      expect(container.read(libraryMangaFilterDownloadedProvider), isFalse);
+
+      await tester.tap(find.text('Yes').at(1));
+      await tester.pump();
+      expect(container.read(libraryMangaFilterStartedProvider), isTrue);
+
+      await tester.tap(find.text('No').at(1));
+      await tester.pump();
+      expect(container.read(libraryMangaFilterStartedProvider), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reset is disabled when idle and clears every filter', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      await _openFilterPanel(tester);
+
+      final reset = find.widgetWithText(TextButton, 'Reset');
+      expect(tester.widget<TextButton>(reset).onPressed, isNull);
+
+      container
+          .read(libraryMangaFilterDownloadedProvider.notifier)
+          .update(true);
+      container.read(libraryMangaFilterMinRatingProvider.notifier).update(3);
+      await tester.pump();
+
+      expect(tester.widget<TextButton>(reset).onPressed, isNotNull);
+      await tester.tap(reset);
+      await tester.pump();
+
+      expect(container.read(libraryMangaFilterDownloadedProvider), isNull);
+      expect(container.read(libraryMangaFilterMinRatingProvider), 0);
+      expect(tester.widget<TextButton>(reset).onPressed, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('filter button shows the active count badge', (tester) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+
+      container
+          .read(libraryMangaFilterDownloadedProvider.notifier)
+          .update(true);
+      container.read(libraryMangaFilterLewdProvider.notifier).update(false);
+      await tester.pump();
+
+      expect(
+        find.descendant(
+          of: find.byType(DesktopLibraryToolbar),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tags list shows counts; tapping a tag filters by it', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      await _openFilterPanel(tester);
+
+      expect(find.text('All tags'), findsOneWidget);
+      expect(find.text('Action'), findsOneWidget);
+      // Two series carry Action, one carries Fantasy.
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+
+      await tester.tap(find.text('Action'));
+      await tester.pump();
+      expect(
+        container.read(libraryFilterTagsIncludeProvider),
+        contains('Action'),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Library display panel (desktop 1400x980)', () {
+    testWidgets('radios update display mode, grid style, group style', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      await _openDisplayPanel(tester);
+
+      expect(find.text('Display Mode'), findsOneWidget);
+
+      await tester.tap(find.text('Comfortable grid'));
+      await tester.pump();
+      expect(
+        container.read(libraryDisplayModeProvider),
+        DisplayMode.comfortableGrid,
+      );
+
+      await tester.ensureVisible(find.text('Staggered'));
+      await tester.tap(find.text('Staggered'));
+      await tester.pump();
+      expect(
+        container.read(libraryGridStyleKeyProvider),
+        LibraryGridStyle.staggered,
+      );
+
+      await tester.ensureVisible(find.text('Sections'));
+      await tester.tap(find.text('Sections'));
+      await tester.pump();
+      expect(
+        container.read(libraryGroupStyleKeyProvider),
+        LibraryGroupStyle.headers,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('badge radios and toggles update their providers', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+      );
+      await _openDisplayPanel(tester);
+
+      await tester.ensureVisible(find.text('Hide'));
+      await tester.tap(find.text('Hide'));
+      await tester.pump();
+      expect(container.read(unreadBadgeStyleProvider), UnreadBadgeMode.hidden);
+
+      final languageToggle = find.ancestor(
+        of: find.text('Language'),
+        matching: find.byType(CustomCheckboxListTile),
+      );
+      expect(languageToggle, findsOneWidget);
+      await tester.ensureVisible(languageToggle);
+      await tester.tap(languageToggle);
+      await tester.pump();
+      // The badge default is off, so tapping enables it.
+      expect(container.read(languageBadgeProvider), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('AdaptiveSegments', () {
+    testWidgets('long labels fall back to radio rows without overflow', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              child: AdaptiveSegments<String>(
+                value: 'a',
+                onChanged: (_) {},
+                options: const [
+                  SegmentOption(value: 'a', label: 'Any'),
+                  SegmentOption(
+                    value: 'b',
+                    label: 'A very long option label that cannot fit',
+                  ),
+                  SegmentOption(value: 'c', label: 'No'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
+        findsWidgets,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('short labels stay segmented', (tester) async {
+      var tapped = '';
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              child: AdaptiveSegments<String>(
+                value: 'a',
+                onChanged: (next) => tapped = next,
+                options: const [
+                  SegmentOption(value: 'a', label: 'Any'),
+                  SegmentOption(value: 'b', label: 'Yes'),
+                  SegmentOption(value: 'c', label: 'No'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
+        findsNothing,
+      );
+      await tester.tap(find.text('Yes'));
+      expect(tapped, 'b');
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Library organizer (phone 412x900)', () {
+    testWidgets('organizer has 4 tabs; filter tab shows short headings', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, surface: const Size(412, 900));
+
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.filter_list_rounded),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final organizer = find.byType(LibraryMangaOrganizer);
+      expect(organizer, findsOneWidget);
+      expect(
+        find.descendant(of: organizer, matching: find.byType(Tab)),
+        findsNWidgets(4),
+      );
+      expect(find.widgetWithText(Tab, 'Filter'), findsOneWidget);
+      expect(find.widgetWithText(Tab, 'Sort'), findsOneWidget);
+      expect(find.widgetWithText(Tab, 'Display'), findsOneWidget);
+      expect(find.widgetWithText(Tab, 'Group'), findsOneWidget);
+      expect(find.text('Badges'), findsNothing);
+      expect(find.text('Downloaded'), findsOneWidget);
+      expect(find.text('Started'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(Tab, 'Display'));
+      await tester.pumpAndSettle();
+      expect(find.text('Badges'), findsOneWidget);
+    });
+  });
+}

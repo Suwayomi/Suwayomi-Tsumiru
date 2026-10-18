@@ -16,7 +16,11 @@ import '../../../../../widgets/organizer_heading.dart';
 /// The "Badges" tab inside [LibraryMangaOrganizer]: everything that feeds
 /// `MangaBadgesRow` and the cover overlays.
 class LibraryMangaBadges extends ConsumerWidget {
-  const LibraryMangaBadges({super.key});
+  const LibraryMangaBadges({super.key, this.scrollable = true});
+
+  /// False when nested inside another scrollable (the Display tab embeds the
+  /// badges below the display options).
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,6 +29,7 @@ class LibraryMangaBadges extends ConsumerWidget {
 
     return ListView(
       shrinkWrap: true,
+      physics: scrollable ? null : const NeverScrollableScrollPhysics(),
       children: [
         OrganizerHeading(context.l10n.unreadBadgeMode),
         Padding(
@@ -64,8 +69,9 @@ class LibraryMangaBadges extends ConsumerWidget {
         CustomCheckboxListTile(
           title: context.l10n.continueReadingButton,
           provider: showContinueReadingButtonProvider,
-          onChanged:
-              ref.read(showContinueReadingButtonProvider.notifier).update,
+          onChanged: ref
+              .read(showContinueReadingButtonProvider.notifier)
+              .update,
         ),
         // Covers Local Source too, as a folder glyph.
         CustomCheckboxListTile(
@@ -81,16 +87,17 @@ class LibraryMangaBadges extends ConsumerWidget {
         ),
         OrganizerHeading(context.l10n.badgeLayout),
         OrganizerHint(context.l10n.badgeLayoutHint),
-        const _BadgeLayoutList(),
+        const BadgeLayoutList(),
       ],
     );
   }
 }
 
 /// Drag-to-reorder list of every cover badge, each with an inline button that
-/// flips it between the cover's top-left and top-right clusters.
-class _BadgeLayoutList extends ConsumerWidget {
-  const _BadgeLayoutList();
+/// flips it between the cover's top-left and top-right clusters. Also used by
+/// the desktop Display panel.
+class BadgeLayoutList extends ConsumerWidget {
+  const BadgeLayoutList({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
