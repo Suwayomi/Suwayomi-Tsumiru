@@ -147,7 +147,7 @@ class UpcomingRoute extends GoRouteData with $UpcomingRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const UpcomingScreen();
+      const DetailNavigationShellScreen(child: UpcomingScreen());
 }
 
 @TypedGoRoute<OnboardingRoute>(path: Routes.onboarding)
