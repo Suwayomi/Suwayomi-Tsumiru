@@ -33,16 +33,24 @@ class MigrationSourcePickerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          leading: detailNavigationBackButton(context),
-          title: Text(context.l10n.migrationPickSourceTitle),
-        ),
-        body: const MigrationSourcePickerBody(),
-      );
+    appBar: AppBar(
+      leading: detailNavigationBackButton(context),
+      title: Text(context.l10n.migrationPickSourceTitle),
+    ),
+    body: const MigrationSourcePickerBody(),
+  );
 }
 
 class MigrationSourcePickerBody extends HookConsumerWidget {
-  const MigrationSourcePickerBody({super.key});
+  const MigrationSourcePickerBody({
+    super.key,
+    this.hideInnerSearchOnDesktop = false,
+  });
+
+  /// True when hosted in the Browse Migrate tab: the desktop Browse search box
+  /// already drives the filter there, so the inner box hides on desktop. The
+  /// standalone route keeps its own box everywhere.
+  final bool hideInnerSearchOnDesktop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,7 +59,7 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
     final sources = ref.watch(searchableSourcesProvider).value ?? const [];
     final iconById = {for (final s in sources) s.id: s.iconUrl};
 
-    final query = useState('');
+    final query = ref.watch(migrationSourcePickerQueryProvider);
     final obsoleteOnly = useState(false);
     final sortMode = useState(_SortMode.alphabetical);
     final ascending = useState(true);
@@ -60,18 +68,19 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
       data: (all) {
-        final q = query.value.trim().toLowerCase();
+        final q = query.trim().toLowerCase();
         var groups = [
           for (final g in all)
             if ((!obsoleteOnly.value || g.isObsolete) &&
                 (q.isEmpty || g.displayName.toLowerCase().contains(q)))
               g,
         ];
-        groups = [...groups]..sort((a, b) {
+        groups = [...groups]
+          ..sort((a, b) {
             final c = sortMode.value == _SortMode.alphabetical
-                ? a.displayName
-                    .toLowerCase()
-                    .compareTo(b.displayName.toLowerCase())
+                ? a.displayName.toLowerCase().compareTo(
+                    b.displayName.toLowerCase(),
+                  )
                 : a.count.compareTo(b.count);
             return ascending.value ? c : -c;
           });
@@ -95,33 +104,40 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                 ),
                 IconButton(
                   tooltip: l10n.migrationSortMode,
-                  icon: Icon(sortMode.value == _SortMode.alphabetical
-                      ? Icons.sort_by_alpha
-                      : Icons.numbers),
-                  onPressed: () => sortMode.value =
-                      sortMode.value == _SortMode.alphabetical
-                          ? _SortMode.total
-                          : _SortMode.alphabetical,
+                  icon: Icon(
+                    sortMode.value == _SortMode.alphabetical
+                        ? Icons.sort_by_alpha
+                        : Icons.numbers,
+                  ),
+                  onPressed: () =>
+                      sortMode.value = sortMode.value == _SortMode.alphabetical
+                      ? _SortMode.total
+                      : _SortMode.alphabetical,
                 ),
                 IconButton(
                   tooltip: l10n.migrationSortDirection,
-                  icon: Icon(ascending.value
-                      ? Icons.arrow_upward
-                      : Icons.arrow_downward),
+                  icon: Icon(
+                    ascending.value ? Icons.arrow_upward : Icons.arrow_downward,
+                  ),
                   onPressed: () => ascending.value = !ascending.value,
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: SearchField(
-                autofocus: false,
-                initialText: query.value,
-                hintText: l10n.migrationSearchForSource,
-                onChanged: (v) => query.value = v ?? '',
-                onClose: () => query.value = '',
+            if (!hideInnerSearchOnDesktop || !context.isDesktop)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: SearchField(
+                  autofocus: false,
+                  initialText: query,
+                  hintText: l10n.migrationSearchForSource,
+                  onChanged: (v) => ref
+                      .read(migrationSourcePickerQueryProvider.notifier)
+                      .update(v ?? ''),
+                  onClose: () => ref
+                      .read(migrationSourcePickerQueryProvider.notifier)
+                      .update(''),
+                ),
               ),
-            ),
             Expanded(
               child: ListView.builder(
                 itemCount: groups.length,
@@ -137,9 +153,12 @@ class MigrationSourcePickerBody extends HookConsumerWidget {
                     ),
                     title: Text(g.displayName),
                     subtitle: g.isObsolete
-                        ? Text(l10n.migrationObsoleteSource,
+                        ? Text(
+                            l10n.migrationObsoleteSource,
                             style: TextStyle(
-                                color: context.theme.colorScheme.error))
+                              color: context.theme.colorScheme.error,
+                            ),
+                          )
                         : null,
                     trailing: _CountBadge(g.count),
                     onTap: () => MigrationSourceMangaRoute(
@@ -172,9 +191,12 @@ class _CountBadge extends StatelessWidget {
         color: theme.colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text('$count',
-          style: theme.textTheme.labelMedium
-              ?.copyWith(color: theme.colorScheme.onSecondaryContainer)),
+      child: Text(
+        '$count',
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
+      ),
     );
   }
 }
@@ -245,8 +267,11 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
                       size: const Size.square(40),
                     ),
                   ),
-                  title: Text(m.title,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    m.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: checked ? const Icon(Icons.check_circle) : null,
                   onTap: () {
                     if (selecting) {

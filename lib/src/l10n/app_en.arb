@@ -3318,6 +3318,14 @@
   "tags": "Tags",
   "searchForSources": "Search for sources",
   "searchForExtensions": "Search for extensions",
+  "searchSourcesHint": "Search sources...",
+  "@searchSourcesHint": {
+    "description": "Placeholder in the desktop Browse search box on the Sources and Migrate tabs"
+  },
+  "searchExtensionsHint": "Search extensions...",
+  "@searchExtensionsHint": {
+    "description": "Placeholder in the desktop Browse search box on the Extensions tab"
+  },
   "noTagsYet": "No tags in your library yet",
   "copyToClipboard": "Copy to clipboard",
   "copiedToClipboard": "Copied to clipboard",

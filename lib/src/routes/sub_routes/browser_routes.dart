@@ -61,7 +61,8 @@ class BrowseMigrateRoute extends GoRouteData with $BrowseMigrateRoute {
   const BrowseMigrateRoute();
 
   @override
-  Widget build(context, state) => const MigrationSourcePickerBody();
+  Widget build(context, state) =>
+      const MigrationSourcePickerBody(hideInnerSearchOnDesktop: true);
 }
 
 class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {

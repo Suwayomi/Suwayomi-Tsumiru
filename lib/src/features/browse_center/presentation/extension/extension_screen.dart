@@ -29,11 +29,7 @@ class ExtensionScreen extends HookConsumerWidget {
   }) {
     if (extensions.isBlank) return <Widget>[];
     return [
-      SliverToBoxAdapter(
-        child: ListTile(
-          title: Text(title),
-        ),
-      ),
+      SliverToBoxAdapter(child: ListTile(title: Text(title))),
       SliverList(
         key: key,
         delegate: SliverChildBuilderDelegate(
@@ -71,17 +67,15 @@ class ExtensionScreen extends HookConsumerWidget {
     useEffect(() {
       final toast = ref.read(toastProvider);
       if (toast != null) {
-        extensionMapData.showToastOnError(
-          toast,
-          withMicrotask: true,
-        );
+        extensionMapData.showToastOnError(toast, withMicrotask: true);
       }
       return;
     }, [extensionMapData.value]);
 
     final body = extensionMapData.showUiWhenData(
       context,
-      (data) => (extensionMap.isEmpty &&
+      (data) =>
+          (extensionMap.isEmpty &&
               installed.isBlank &&
               update.isBlank &&
               all.isBlank)
@@ -128,21 +122,20 @@ class ExtensionScreen extends HookConsumerWidget {
 
     return Column(
       children: [
-        SizedBox(
-          width: context.isLargeTablet
-              ? context.widthScale(scale: .5)
-              : null,
-          child: Padding(
-            padding: KEdgeInsets.h16v4.size,
-            child: SearchField(
-              autofocus: false,
-              labelText: context.l10n.searchForExtensions,
-              initialText: ref.watch(extensionQueryProvider),
-              onChanged: (val) =>
-                  ref.read(extensionQueryProvider.notifier).update(val),
+        if (!context.isDesktop)
+          SizedBox(
+            width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
+            child: Padding(
+              padding: KEdgeInsets.h16v4.size,
+              child: SearchField(
+                autofocus: false,
+                labelText: context.l10n.searchForExtensions,
+                initialText: ref.watch(extensionQueryProvider),
+                onChanged: (val) =>
+                    ref.read(extensionQueryProvider.notifier).update(val),
+              ),
             ),
           ),
-        ),
         Expanded(child: body),
       ],
     );
