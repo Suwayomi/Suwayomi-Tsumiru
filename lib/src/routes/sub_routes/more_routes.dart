@@ -44,7 +44,11 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
 }
 
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
-  const LibrarySettingsRoute();
+  const LibrarySettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -75,7 +79,11 @@ class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
 
 class AppearanceSettingsRoute extends GoRouteData
     with $AppearanceSettingsRoute {
-  const AppearanceSettingsRoute();
+  const AppearanceSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -85,7 +93,11 @@ class AppearanceSettingsRoute extends GoRouteData
 }
 
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
-  const GeneralSettingsRoute();
+  const GeneralSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
