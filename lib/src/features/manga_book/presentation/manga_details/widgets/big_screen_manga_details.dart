@@ -79,7 +79,7 @@ class BigScreenMangaDetails extends HookConsumerWidget {
   final AsyncValue<List<MangaChapterListEntry>?> chapterList;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final desktop = context.isDesktop;
+    final desktop = context.isWideDesktop;
     final selection = useValueListenable(selectedChapters);
     final selecting = selection.isNotEmpty;
     final anchor = useState<int?>(null);

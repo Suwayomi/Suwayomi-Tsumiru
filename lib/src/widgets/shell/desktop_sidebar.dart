@@ -18,7 +18,7 @@ import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
 
-/// Desktop-only navigation sidebar (shown when [BuildContext.isDesktop]).
+/// Wide-desktop-only navigation sidebar (shown when [BuildContext.isWideDesktop]).
 ///
 /// Expanded (208 px): logo header with collapse chevron, then 40 px rows with
 /// icon + label. Collapsed (60 px): centred logo (tap to expand), icon-only

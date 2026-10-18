@@ -153,6 +153,11 @@ Future<void> showSearchTips(BuildContext context) {
 /// open anchored dropdown panels, and whatever [trailing] controls the
 /// variant keeps reachable (sync, update menu, migration picker). No title.
 /// Phone and tablet never see this.
+///
+/// When the row is too narrow to leave the search field a usable width, the
+/// toolbar switches to compact mode: Sort and Filter drop their text labels
+/// and become icon buttons (see [_toolbarIsCompact]). Full mode renders
+/// exactly the labelled layout.
 class DesktopLibraryToolbar extends HookConsumerWidget {
   const DesktopLibraryToolbar({super.key, this.trailing = const []});
 
@@ -183,95 +188,206 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
     }
     return SizedBox(
       height: 64,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          spacing: 10,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: DesktopSearchField(
-                query: ref.watch(libraryQueryProvider) ?? '',
-                onChanged: (val) =>
-                    ref.read(libraryQueryProvider.notifier).update(val),
-                // Leaving through a dropdown result (Go to, Search all
-                // sources) clears the query; opening a series from the
-                // filtered grid keeps it — that path never touches this.
-                onNavigate: () =>
-                    ref.read(libraryQueryProvider.notifier).update(''),
-                // The grid below is already the filtered library: only Go to
-                // matches and Search all sources belong in the dropdown.
-                showLibrarySection: false,
-                hintText: context.l10n.searchLibraryHint,
-                suffixActions: [
-                  IconButton(
-                    iconSize: 20,
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    icon: const Icon(Icons.help_outline_rounded),
-                    tooltip: context.l10n.searchTips,
-                    onPressed: () => showSearchTips(context),
-                  ),
-                ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = _toolbarIsCompact(
+            context,
+            constraints,
+            trailingCount: trailing.length,
+          );
+          final searchField = DesktopSearchField(
+            query: ref.watch(libraryQueryProvider) ?? '',
+            onChanged: (val) =>
+                ref.read(libraryQueryProvider.notifier).update(val),
+            // Leaving through a dropdown result (Go to, Search all
+            // sources) clears the query; opening a series from the
+            // filtered grid keeps it — that path never touches this.
+            onNavigate: () =>
+                ref.read(libraryQueryProvider.notifier).update(''),
+            // The grid below is already the filtered library: only Go to
+            // matches and Search all sources belong in the dropdown.
+            showLibrarySection: false,
+            hintText: context.l10n.searchLibraryHint,
+            suffixActions: [
+              IconButton(
+                iconSize: 20,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                icon: const Icon(Icons.help_outline_rounded),
+                tooltip: context.l10n.searchTips,
+                onPressed: () => showSearchTips(context),
+              ),
+            ],
+          );
+          final filterBox = DesktopToolbarBox(
+            key: filterButtonKey,
+            borderColor: activeFilters > 0 ? scheme.primary : null,
+            child: InkWell(
+              focusNode: filterFocus,
+              onTap: () => showLibraryFilterPanel(
+                context: context,
+                buttonKey: filterButtonKey,
+                focusNode: filterFocus,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 6),
+                child: Row(
+                  spacing: 8,
+                  children: [
+                    filterIcon,
+                    if (!compact) Text(context.l10n.filter),
+                    const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                  ],
+                ),
               ),
             ),
-            const _DesktopSortControl(),
-            DesktopToolbarBox(
-              key: filterButtonKey,
-              borderColor: activeFilters > 0 ? scheme.primary : null,
+          );
+          final displayBox = DesktopToolbarBox(
+            key: displayButtonKey,
+            child: Tooltip(
+              message: context.l10n.display,
               child: InkWell(
-                focusNode: filterFocus,
-                onTap: () => showLibraryFilterPanel(
+                focusNode: displayFocus,
+                onTap: () => showLibraryDisplayPanel(
                   context: context,
-                  buttonKey: filterButtonKey,
-                  focusNode: filterFocus,
+                  buttonKey: displayButtonKey,
+                  focusNode: displayFocus,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12, right: 6),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 10, right: 6),
                   child: Row(
-                    spacing: 8,
+                    spacing: 2,
                     children: [
-                      filterIcon,
-                      Text(context.l10n.filter),
-                      const Icon(Icons.arrow_drop_down_rounded, size: 22),
+                      Icon(Icons.grid_view_rounded, size: 20),
+                      Icon(Icons.arrow_drop_down_rounded, size: 22),
                     ],
                   ),
                 ),
               ),
             ),
-            DesktopToolbarBox(
-              key: displayButtonKey,
-              child: Tooltip(
-                message: context.l10n.display,
-                child: InkWell(
-                  focusNode: displayFocus,
-                  onTap: () => showLibraryDisplayPanel(
-                    context: context,
-                    buttonKey: displayButtonKey,
-                    focusNode: displayFocus,
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.only(left: 10, right: 6),
-                    child: Row(
-                      spacing: 2,
-                      children: [
-                        Icon(Icons.grid_view_rounded, size: 20),
-                        Icon(Icons.arrow_drop_down_rounded, size: 22),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          );
+          // Compact Filter drops the text but keeps its tooltip, so the
+          // button stays discoverable.
+          //
+          // Both modes share one Row with the search field always in the
+          // same Expanded slot, so crossing the compact threshold only
+          // rebuilds the Sort/Filter children and never remounts the field
+          // (which would drop its focus, selection and results dropdown).
+          // The search field absorbs every shortage: it shrinks below any
+          // floor rather than letting a control clip or overflow.
+          final row = Row(
+            spacing: 10,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: searchField),
+              _DesktopSortControl(compact: compact),
+              if (compact)
+                Tooltip(message: context.l10n.filter, child: filterBox)
+              else
+                filterBox,
+              displayBox,
+              ...trailing,
+            ],
+          );
+          if (!compact || !constraints.hasBoundedWidth) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: row,
+            );
+          }
+          // Degenerate widths (fixed controls alone exceed the content):
+          // keep the identical row — the search field keeps its slot and
+          // state, sized to 0 — inside a horizontal scroller sized to the
+          // controls, so no RenderFlex overflow is ever reported.
+          final minWidth = _compactFixedWidth(trailing.length);
+          if (constraints.maxWidth >= minWidth) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: row,
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(width: minWidth - 24.0, child: row),
             ),
-            ...trailing,
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+}
+
+/// True when the toolbar is too narrow to keep the labelled layout: the
+/// space the full layout leaves for the search box would drop below a usable
+/// width. The Filter box is measured with a [TextPainter] under the current
+/// text style and [MediaQuery.textScalerOf], so larger text flips the switch
+/// sooner; the usable search width itself scales the same way, since it is a
+/// text width too.
+// Fixed chrome of the toolbar boxes, shared by the compact-mode switch and
+// the compact layout so the two agree on what fits.
+const _sortFullWidth = 230.0;
+// Filter box around its label: left/right padding, the 18 px icon and 22 px
+// caret with an 8 px gap on each side of the text.
+const _filterFullChrome = 12.0 + 6.0 + 18.0 + 8.0 + 8.0 + 22.0;
+// Compact Filter: same padding, icon and caret, one gap, no label.
+const _filterCompactWidth = 12.0 + 6.0 + 18.0 + 8.0 + 22.0;
+// Display box: padding, the 20 px icon and 22 px caret, 2 px apart.
+const _displayBoxWidth = 10.0 + 6.0 + 20.0 + 2.0 + 22.0;
+// Compact Sort: 48 px trigger, 1 px divider, 40 px direction button.
+const _sortCompactWidth = 48.0 + 1.0 + 40.0;
+// Every DesktopToolbarBox paints a 1 px border on each side. The full Sort
+// width (230) is the Container's outer width so it already includes its
+// border; the chrome sums are content widths, so Filter and Display each
+// reserve 2 px more, as does the compact Sort below.
+const _boxBorderWidth = 2.0;
+// Trailing callers pass IconButton/PopupMenuButton-sized controls, 48 px by
+// default and never narrower in practice; assuming the wider size flips to
+// compact before a real button clips instead of after.
+const _trailingButtonWidth = 48.0;
+
+/// Minimum outer width of the compact row: 12 px padding on each side, a
+/// 10 px gap between every child, the three boxes with their borders, and
+/// one [_trailingButtonWidth] slot per trailing action. Below this the
+/// search field is already at 0, so the row scrolls instead of overflowing.
+double _compactFixedWidth(int trailingCount) =>
+    24.0 +
+    (3 + trailingCount) * 10.0 +
+    (_sortCompactWidth + _boxBorderWidth) +
+    (_filterCompactWidth + _boxBorderWidth) +
+    (_displayBoxWidth + _boxBorderWidth) +
+    trailingCount * _trailingButtonWidth;
+
+bool _toolbarIsCompact(
+  BuildContext context,
+  BoxConstraints constraints, {
+  required int trailingCount,
+}) {
+  if (!constraints.hasBoundedWidth) return false;
+  final scaler = MediaQuery.textScalerOf(context);
+  final label = TextPainter(
+    text: TextSpan(
+      text: context.l10n.filter,
+      style: DefaultTextStyle.of(context).style,
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: scaler,
+  )..layout();
+  final labelWidth = label.width;
+  label.dispose();
+  final gaps = (3 + trailingCount) * 10.0;
+  final neededBesidesSearch =
+      24.0 +
+      gaps +
+      _sortFullWidth +
+      _filterFullChrome +
+      labelWidth +
+      _boxBorderWidth +
+      _displayBoxWidth +
+      _boxBorderWidth +
+      trailingCount * _trailingButtonWidth;
+  return constraints.maxWidth - neededBesidesSearch < scaler.scale(280.0);
 }
 
 /// Sort field menu + direction toggle in one 230 px box: the menu trigger
@@ -282,8 +398,14 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
 /// [librarySortRandomSeedProvider], mirroring [LibraryMangaSortTile]. The
 /// direction button is disabled for Random, whose comparator ignores
 /// direction by design.
+///
+/// In compact mode the trigger shrinks to a 48 px icon button (the caret is
+/// dropped) carrying the current sort's label as its tooltip; the menu, the
+/// divider and the direction button are unchanged.
 class _DesktopSortControl extends ConsumerWidget {
-  const _DesktopSortControl();
+  const _DesktopSortControl({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -298,6 +420,72 @@ class _DesktopSortControl extends ConsumerWidget {
     ];
     final ascending = ref.watch(libraryMangaSortDirectionProvider).ifNull(true);
     final isRandom = current == MangaSort.random;
+    final menuChildren = [
+      for (final sort in sorts)
+        MenuItemButton(
+          leadingIcon: sort == current
+              ? const Icon(Icons.check_rounded, size: 18)
+              : null,
+          onPressed: () {
+            if (sort == MangaSort.random && sort == current) {
+              final seed = ref.read(librarySortRandomSeedProvider) ?? 0;
+              ref.read(librarySortRandomSeedProvider.notifier).update(seed + 1);
+            } else {
+              ref.read(libraryMangaSortProvider.notifier).update(sort);
+            }
+          },
+          child: Text(sort.toLocale(context)),
+        ),
+    ];
+    final directionButton = SizedBox(
+      width: 40,
+      child: IconButton(
+        iconSize: 20,
+        color: scheme.onSurface,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: Icon(
+          ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+        ),
+        onPressed: isRandom
+            ? null
+            : () => ref
+                  .read(libraryMangaSortDirectionProvider.notifier)
+                  .update(!ascending),
+      ),
+    );
+    if (compact) {
+      return DesktopToolbarBox(
+        child: Row(
+          children: [
+            SizedBox(
+              width: 48,
+              child: MenuAnchor(
+                style: const MenuStyle(
+                  minimumSize: WidgetStatePropertyAll(Size(230, 0)),
+                ),
+                menuChildren: menuChildren,
+                builder: (context, menu, _) => Tooltip(
+                  message: current.toLocale(context),
+                  child: InkWell(
+                    onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                    child: Center(
+                      child: Icon(
+                        Icons.sort_rounded,
+                        size: 20,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Container(width: 1, height: 22, color: scheme.outlineVariant),
+            directionButton,
+          ],
+        ),
+      );
+    }
     return DesktopToolbarBox(
       width: 230,
       child: Row(
@@ -307,28 +495,7 @@ class _DesktopSortControl extends ConsumerWidget {
               style: const MenuStyle(
                 minimumSize: WidgetStatePropertyAll(Size(230, 0)),
               ),
-              menuChildren: [
-                for (final sort in sorts)
-                  MenuItemButton(
-                    leadingIcon: sort == current
-                        ? const Icon(Icons.check_rounded, size: 18)
-                        : null,
-                    onPressed: () {
-                      if (sort == MangaSort.random && sort == current) {
-                        final seed =
-                            ref.read(librarySortRandomSeedProvider) ?? 0;
-                        ref
-                            .read(librarySortRandomSeedProvider.notifier)
-                            .update(seed + 1);
-                      } else {
-                        ref
-                            .read(libraryMangaSortProvider.notifier)
-                            .update(sort);
-                      }
-                    },
-                    child: Text(sort.toLocale(context)),
-                  ),
-              ],
+              menuChildren: menuChildren,
               builder: (context, menu, _) => InkWell(
                 onTap: () => menu.isOpen ? menu.close() : menu.open(),
                 child: Padding(
@@ -356,25 +523,7 @@ class _DesktopSortControl extends ConsumerWidget {
             ),
           ),
           Container(width: 1, height: 22, color: scheme.outlineVariant),
-          SizedBox(
-            width: 40,
-            child: IconButton(
-              iconSize: 20,
-              color: scheme.onSurface,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(
-                ascending
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-              ),
-              onPressed: isRandom
-                  ? null
-                  : () => ref
-                        .read(libraryMangaSortDirectionProvider.notifier)
-                        .update(!ascending),
-            ),
-          ),
+          directionButton,
         ],
       ),
     );

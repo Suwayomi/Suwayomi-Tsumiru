@@ -682,7 +682,7 @@ void main() {
           search: () async => <MangaDto>[],
         ),
       ],
-      size: const Size(1199, 900),
+      size: const Size(915, 412),
     );
 
     final focusNode = tester
@@ -690,7 +690,7 @@ void main() {
         .focusNode!;
     expect(focusNode.hasFocus, isTrue);
 
-    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.physicalSize = const Size(900, 900);
     await tester.pumpAndSettle();
 
     expect(find.byType(AppBar), findsNothing);
@@ -709,7 +709,7 @@ void main() {
           search: () async => <MangaDto>[],
         ),
       ],
-      size: const Size(1199, 900),
+      size: const Size(915, 412),
     );
 
     final focusNode = tester
@@ -719,7 +719,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(focusNode.hasFocus, isFalse);
 
-    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.physicalSize = const Size(900, 900);
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byType(TextField));
@@ -738,13 +738,13 @@ void main() {
           search: () async => <MangaDto>[],
         ),
       ],
-      size: const Size(1199, 900),
+      size: const Size(915, 412),
     );
 
     await tester.enterText(find.byType(TextField), 'draft query');
     await tester.pump();
 
-    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.physicalSize = const Size(900, 900);
     await tester.pumpAndSettle();
 
     expect(find.byType(AppBar), findsNothing);

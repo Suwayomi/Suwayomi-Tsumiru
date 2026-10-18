@@ -131,6 +131,31 @@ void main() {
     expect(_sidebarWidth(tester), 60);
   });
 
+  testWidgets('900x900 shows the icon rail, not the desktop sidebar', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs, size: const Size(900, 900));
+
+    expect(find.byType(DesktopSidebar), findsNothing);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('1400x900 shows the full desktop sidebar', (tester) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs, size: const Size(1400, 900));
+
+    expect(find.byType(DesktopSidebar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tablet width ignores the collapse pref (no stranded chevron)', (
     tester,
   ) async {

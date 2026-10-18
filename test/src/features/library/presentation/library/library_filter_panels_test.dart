@@ -245,8 +245,8 @@ Future<(Rect, Rect)> _openDisplayAndMeasure(
 }
 
 /// Pumps the real [DesktopLibraryFilterPanel] in its 720x600 box on the
-/// given window surface. Used below 1200 px wide, where the library shows
-/// the phone UI and the desktop panel cannot open from the toolbar.
+/// given window surface. Used on narrow windows, where the library keeps
+/// the in-between UI and the desktop panel cannot open from the toolbar.
 Future<void> _pumpFilterBox(
   WidgetTester tester, {
   required Size surface,

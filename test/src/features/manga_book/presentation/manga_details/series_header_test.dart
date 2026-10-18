@@ -9,6 +9,7 @@ import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/controller/next_update_controller.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/manga_details_screen.dart';
+import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/big_screen_manga_details.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/manga_description.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/recommends_row.dart';
 import 'package:tsumiru/src/features/manga_book/presentation/manga_details/widgets/series_header.dart';
@@ -210,6 +211,49 @@ void main() {
       },
     );
   }
+
+  testWidgets('series page keeps the big-screen layout at 900x900', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          offlineEnabledProvider.overrideWithValue(false),
+          mangaWithIdProvider(mangaId: 1).overrideWith(_Manga.new),
+          mangaChapterListProvider(mangaId: 1).overrideWith(_Chapters.new),
+          mangaChapterListWithFilterProvider(
+            mangaId: 1,
+          ).overrideWith((ref) => const AsyncData([])),
+          mangaChapterListEntriesProvider(
+            mangaId: 1,
+          ).overrideWith((ref) => const AsyncData([])),
+          firstUnreadInFilteredChapterListProvider(
+            mangaId: 1,
+          ).overrideWith((ref) => _chapter),
+          mangaNextUpdateProvider(mangaId: 1).overrideWith((ref) => null),
+        ],
+        child: _app(const MangaDetailsScreen(mangaId: 1)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Still the two-pane big-screen layout, but without the >= 1200
+    // desktop extras: no header pills, floating Resume instead.
+    expect(find.byType(BigScreenMangaDetails), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SeriesHeader),
+        matching: find.byType(SeriesHeaderPill),
+      ),
+      findsNothing,
+    );
+    expect(find.byType(BrandFab), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final width in [420.0, 610.0]) {
     testWidgets('suggestions end on exactly half a card at $width', (

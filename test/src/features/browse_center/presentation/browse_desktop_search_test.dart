@@ -253,9 +253,9 @@ void main() {
     });
 
     testWidgets(
-      'tablet keeps the global search button; phone/desktop hide it',
+      'in-between layout keeps the global search button; phone/desktop hide it',
       (tester) async {
-        await _pumpBrowse(tester, size: const Size(900, 980));
+        await _pumpBrowse(tester, size: const Size(915, 412));
         expect(tester.takeException(), isNull);
         expect(
           find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
@@ -281,10 +281,10 @@ void main() {
       },
     );
 
-    testWidgets('tapping the tablet button opens Global Search', (
+    testWidgets('tapping the in-between-layout button opens Global Search', (
       tester,
     ) async {
-      await _pumpBrowseInRouter(tester, size: const Size(900, 980));
+      await _pumpBrowseInRouter(tester, size: const Size(915, 412));
       expect(tester.takeException(), isNull);
       expect(
         find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
