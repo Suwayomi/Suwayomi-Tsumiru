@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/library/domain/category/category_model.dart';
 import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_screen.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
@@ -24,22 +26,26 @@ CategoryDto _cat(int id, String name) => Fragment$CategoryDto(
 // or SharedPreferences stack. `all` is the raw category list; `visible` is the
 // filtered set (non-empty + not-hidden) the screen MUST use — the split lets
 // us prove the screen reads visibleCategoryListProvider, not the raw list.
-Widget _host({
+Future<Widget> _host({
   List<CategoryDto> visible = const [],
   List<CategoryDto> all = const [],
-}) =>
-    ProviderScope(
-      overrides: [
-        libraryMangaListProvider.overrideWith((ref) async => const []),
-        categoryControllerProvider.overrideWith(() => _Categories(all)),
-        visibleCategoryListProvider.overrideWith((ref) => AsyncData(visible)),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: UnifiedSearchScreen(afterClick: () {})),
-      ),
-    );
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final sp = await SharedPreferences.getInstance();
+  return ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
+      libraryMangaListProvider.overrideWith((ref) async => const []),
+      categoryControllerProvider.overrideWith(() => _Categories(all)),
+      visibleCategoryListProvider.overrideWith((ref) => AsyncData(visible)),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: UnifiedSearchScreen(afterClick: () {})),
+    ),
+  );
+}
 
 class _Categories extends CategoryController {
   _Categories(this._categories);
@@ -51,7 +57,7 @@ class _Categories extends CategoryController {
 void main() {
   testWidgets('typing shows the Go to section and an all-sources row',
       (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'reader');
     await tester.pumpAndSettle();
 
@@ -61,7 +67,7 @@ void main() {
 
   testWidgets('empty query shows the go-to launcher (not a blank box)',
       (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.pumpAndSettle();
     // The empty state teaches what's searchable by listing destinations.
     expect(find.text('Go to'), findsOneWidget);
@@ -76,7 +82,7 @@ void main() {
 
   testWidgets('empty state offers example queries; tapping one fills the field',
       (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.pumpAndSettle();
 
     expect(find.text('Examples'), findsOneWidget);
@@ -91,7 +97,7 @@ void main() {
 
   testWidgets('typing an operator prefix shows a key suggestion; tapping completes it',
       (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'sou');
     await tester.pumpAndSettle();
 
@@ -108,7 +114,7 @@ void main() {
 
   testWidgets('a pure operator query hides the search-all-sources row',
       (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'unread:true');
     await tester.pumpAndSettle();
     // Nothing plain to hand off — a source can't search a local filter.
@@ -116,7 +122,7 @@ void main() {
   });
 
   testWidgets('a plain word shows no Filters section', (tester) async {
-    await tester.pumpWidget(_host());
+    await tester.pumpWidget(await _host());
     await tester.enterText(find.byType(TextField), 'solo');
     await tester.pumpAndSettle();
     expect(find.text('Filters'), findsNothing);
@@ -126,7 +132,7 @@ void main() {
       (tester) async {
     // 'Pornhwa' is in the raw list but NOT the visible set (it's hidden).
     // Mirrors the reported repro: typing the hidden category's name.
-    await tester.pumpWidget(_host(
+    await tester.pumpWidget(await _host(
       visible: [_cat(2, 'Seinen')],
       all: [_cat(2, 'Seinen'), _cat(3, 'Pornhwa')],
     ));

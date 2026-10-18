@@ -92,8 +92,11 @@ Future<ProviderContainer> _pumpField(
   List<Fragment$MangaDto> library = const [],
 }) async {
   _setSize(tester, _desktop);
+  SharedPreferences.setMockInitialValues({});
+  final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
     ],
@@ -152,8 +155,11 @@ Future<ProviderContainer> _pumpFieldWithRouter(
   List<Fragment$MangaDto> library = const [],
 }) async {
   _setSize(tester, _desktop);
+  SharedPreferences.setMockInitialValues({});
+  final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
     ],
@@ -330,8 +336,11 @@ void main() {
       tester,
     ) async {
       _setSize(tester, _desktop);
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
           quickSearchToggleProvider.overrideWith(_ToggleOn.new),
           libraryMangaListProvider.overrideWith((ref) async => null),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
@@ -664,8 +673,11 @@ void main() {
       List<Fragment$MangaDto> library = const [],
     }) async {
       _setSize(tester, _desktop);
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
           quickSearchToggleProvider.overrideWith(_ToggleOn.new),
           libraryMangaListProvider.overrideWith((ref) async => library),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
@@ -891,8 +903,11 @@ void main() {
       tester,
     ) async {
       _setSize(tester, _desktop);
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
           libraryMangaListProvider.overrideWith((ref) async => null),
           visibleCategoryListProvider.overrideWithValue(_emptyCategories),
         ],
