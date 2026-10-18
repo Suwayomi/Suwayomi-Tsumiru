@@ -314,6 +314,7 @@ void main() {
     'registered Android controller allows changing the server address',
     () async {
       controller.register();
+      await controller.startupSettled;
       await container
           .read(serverExternalUrlProvider.notifier)
           .update('http://127.0.0.1:4598');
@@ -324,6 +325,7 @@ void main() {
   test('connectivity changes wait for offline storage', () async {
     offlineEnabled = false;
     controller.register();
+    await controller.startupSettled;
     connectionChanges.add([ConnectivityResult.wifi]);
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(service.starts, 0);
@@ -510,6 +512,7 @@ void main() {
       service.running = true;
       seedAttempt();
       controller.register();
+      await controller.startupSettled;
       await controller.ensureServiceRunning();
       service.callback!({
         'catalogServerId': 'catalog-A',
@@ -780,6 +783,7 @@ void main() {
         .read(offlineDownloadsStalledProvider.notifier)
         .set('background');
     controller.register();
+    await controller.startupSettled;
     await controller.ensureServiceRunning();
 
     expect(service.starts, 0);
@@ -1157,6 +1161,7 @@ void main() {
     'deleting the last queued chapter clears stall without starting',
     () async {
       controller.register();
+      await controller.startupSettled;
       refuse();
       await controller.ensureServiceRunning();
       await db.setChapterDeviceState(5, OfflineDeviceState.none);
