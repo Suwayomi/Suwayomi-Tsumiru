@@ -26,6 +26,7 @@ import '../../../library/presentation/library/controller/library_manga_list.dart
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../../../settings/search/settings_search_registry.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
@@ -526,6 +527,12 @@ class _PhoneSearchResults extends ConsumerWidget {
           )
         : false;
     final goToHits = matchingGoToTargets(ref, query, l);
+    final settingsHits = matchSettingsEntries(
+      entries: allSettingsSearchEntries,
+      l: l,
+      query: query,
+      isVisible: (e) => e.visible(ref, context),
+    );
     final plainQuery = plainQueryText(query);
     final suggestions = hasQuery
         ? suggestFor(
@@ -568,8 +575,7 @@ class _PhoneSearchResults extends ConsumerWidget {
       // needed.
       padding: EdgeInsets.only(
         bottom:
-            16 +
-            MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
+            16 + MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
       ),
       children: [
         if (hasQuery && origin != PhoneSearchOrigin.plain)
@@ -720,6 +726,15 @@ class _PhoneSearchResults extends ConsumerWidget {
               leading: Icon(t.icon),
               title: Text(t.label(l)),
               onTap: () => onLeave(() => t.navigate(context)),
+            ),
+        ],
+        if (hasQuery && settingsHits.isNotEmpty) ...[
+          SearchSectionHeader(l.settings),
+          for (final e in settingsHits)
+            SettingsSearchResultRow(
+              entry: e,
+              query: query,
+              onTap: () => onLeave(() => e.open(context)),
             ),
         ],
         if (plainQuery.isNotEmpty) ...[

@@ -15,6 +15,7 @@ import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../settings/search/settings_search_registry.dart';
 import 'go_to_targets.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
@@ -60,10 +61,23 @@ List<GoToTarget> matchingGoToTargets(
   );
 }
 
-/// Enter opens the top result (library first, then go-to), falling back to the
-/// global handoff — not always global. Returns true when it navigated, so
-/// callers can clear their field; every entry point (overlay, desktop
-/// dropdowns) shares this so Enter behaves one way everywhere.
+/// Settings entries matching [query], visibility-filtered for this ref+context.
+List<SettingsSearchEntry> matchingSettingsEntries(
+  WidgetRef ref,
+  BuildContext context,
+  String query,
+) => matchSettingsEntries(
+  entries: allSettingsSearchEntries,
+  l: context.l10n,
+  query: query,
+  isVisible: (e) => e.visible(ref, context),
+);
+
+/// Enter opens the top result (library first, then go-to, then settings),
+/// falling back to the global handoff — not always global. Returns true when
+/// it navigated, so callers can clear their field; every entry point
+/// (overlay, desktop dropdowns) shares this so Enter behaves one way
+/// everywhere.
 bool submitUnifiedQuery(
   BuildContext context,
   WidgetRef ref,
@@ -83,6 +97,12 @@ bool submitUnifiedQuery(
   final goTo = matchingGoToTargets(ref, query, context.l10n);
   if (goTo.isNotEmpty) {
     goTo.first.navigate(context);
+    close();
+    return true;
+  }
+  final settings = matchingSettingsEntries(ref, context, query);
+  if (settings.isNotEmpty) {
+    settings.first.open(context);
     close();
     return true;
   }
@@ -146,6 +166,14 @@ class UnifiedSearchResults extends ConsumerWidget {
         ? ref.watch(unifiedLibraryResultsForProvider(query))
         : const <MangaDto>[];
     final goToHits = matchingGoToTargets(ref, query, l);
+    final settingsHits = hasQuery
+        ? matchSettingsEntries(
+            entries: allSettingsSearchEntries,
+            l: l,
+            query: query,
+            isVisible: (e) => e.visible(ref, context),
+          )
+        : const <SettingsSearchEntry>[];
     final plainQuery = plainQueryText(query);
 
     return ListView(
@@ -206,6 +234,18 @@ class UnifiedSearchResults extends ConsumerWidget {
               title: Text(t.label(l)),
               onTap: () {
                 t.navigate(context);
+                close();
+              },
+            ),
+        ],
+        if (settingsHits.isNotEmpty) ...[
+          SearchSectionHeader(l.settings),
+          for (final e in settingsHits)
+            SettingsSearchResultRow(
+              entry: e,
+              query: query,
+              onTap: () {
+                e.open(context);
                 close();
               },
             ),
