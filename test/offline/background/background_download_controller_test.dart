@@ -408,7 +408,7 @@ void main() {
     service.running = true;
     seedAttempt(attempt: 'attempt-B');
     controller.register();
-    await pumpEventQueue();
+    await controller.startupSettled;
     for (final kind in ['parked', 'chapterStart']) {
       service.callback!({
         'kind': kind,
@@ -438,7 +438,7 @@ void main() {
       service.running = true;
       seedAttempt();
       controller.register();
-      await pumpEventQueue();
+      await controller.startupSettled;
       final event = {
         'kind': 'chapterDone',
         'chapterId': 5,
@@ -463,7 +463,7 @@ void main() {
     service.running = true;
     seedAttempt();
     controller.register();
-    await pumpEventQueue();
+    await controller.startupSettled;
     for (final state in [
       OfflineDeviceState.error,
       OfflineDeviceState.downloaded,
@@ -543,7 +543,7 @@ void main() {
       service.running = true;
       seedAttempt();
       controller.register();
-      await pumpEventQueue();
+      await controller.startupSettled;
       await pumpEventQueue();
       await prefs.setString('offlineCatalogServerId', 'catalog-B');
       service.callback!({
@@ -592,7 +592,7 @@ void main() {
       service.running = true;
       seedAttempt();
       controller.register();
-      await pumpEventQueue();
+      await controller.startupSettled;
       await pumpEventQueue();
       final event = {
         'kind': 'chapterDone',
@@ -622,6 +622,7 @@ void main() {
         publications++;
       };
       controller.register();
+      await controller.startupSettled;
       await pumpEventQueue();
       publishTimer(timers);
       await pumpEventQueue();
@@ -675,6 +676,7 @@ void main() {
           }
         };
         controller.register();
+        await controller.startupSettled;
         await pumpEventQueue();
         for (var i = 0; i < 3; i++) {
           await db.bumpChapterGeneration(5);
@@ -913,7 +915,7 @@ void main() {
       network = [ConnectivityResult.mobile];
       await prefs.setBool(DBKeys.downloadOnlyOverWifi.name, true);
       controller.register();
-      await pumpEventQueue();
+      await controller.startupSettled;
       await controller.ensureServiceRunning();
       expect(service.running, isFalse);
       final startsBeforeChange = service.starts;
@@ -1081,7 +1083,7 @@ void main() {
     final timers = useManualTimers();
     seedAttempt();
     controller.register();
-    await pumpEventQueue();
+    await controller.startupSettled;
     service.callback!({
       'catalogServerId': 'catalog-A',
       'identityEpoch': 0,
@@ -1244,7 +1246,7 @@ void main() {
       service.running = true;
       seedAttempt();
       controller.register();
-      await pumpEventQueue();
+      await controller.startupSettled;
       service.callback!({
         'catalogServerId': 'catalog-A',
         'identityEpoch': 0,
