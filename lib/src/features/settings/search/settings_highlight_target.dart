@@ -10,18 +10,110 @@ import 'package:go_router/go_router.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
 
+/// Ancestor helper that lets a highlight reach tiles far down a long list.
+///
+/// A [SettingsHighlightTarget] only scrolls itself into view once it is
+/// mounted, and lazily built rows (e.g. [ListView.builder]) past the viewport
+/// plus cache extent never mount on their own. Screens wrap their scroll view
+/// in this scope; every target registers its id here, and when the page opens
+/// with a highlight id that isn't mounted yet, the first mounted non-target
+/// steps its [Scrollable] toward the end — about one viewport per frame —
+/// until the target mounts (its own highlight then takes over via
+/// [Scrollable.ensureVisible]) or the end of the scrollable is reached.
+///
+/// [highlightId] overrides the route query lookup; when null the scope reads
+/// the `highlight` query parameter like the targets do. Screens pass neither:
+/// they only wrap their scroll view. Tests pass [highlightId] to drive the
+/// highlight without a router.
+class SettingsHighlightScope extends StatefulWidget {
+  const SettingsHighlightScope({
+    super.key,
+    this.highlightId,
+    required this.child,
+  });
+
+  final String? highlightId;
+  final Widget child;
+
+  @override
+  State<SettingsHighlightScope> createState() => SettingsHighlightScopeState();
+
+  static SettingsHighlightScopeState? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_HighlightScopeBinding>()
+      ?.state;
+}
+
+class SettingsHighlightScopeState extends State<SettingsHighlightScope> {
+  final Set<String> _mountedIds = {};
+  Object? _seeker;
+  String? _queryId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _queryId = GoRouter.maybeOf(
+      context,
+    )?.state.uri.queryParameters['highlight'];
+  }
+
+  String? get highlightId => widget.highlightId ?? _queryId;
+
+  bool isMounted(String id) => _mountedIds.contains(id);
+
+  void register(String id) => _mountedIds.add(id);
+
+  void unregister(String id) => _mountedIds.remove(id);
+
+  /// First mounted non-target to call this drives the seek. The winner holds
+  /// it until the seek ends or it unmounts ([releaseSeek]), so scrolling one
+  /// claimer off the list hands the job to a newly mounted row instead of
+  /// stalling with the claim consumed.
+  bool claimSeek(Object seeker) {
+    if (_seeker != null) return false;
+    _seeker = seeker;
+    return true;
+  }
+
+  void releaseSeek(Object seeker) {
+    if (identical(_seeker, seeker)) _seeker = null;
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _HighlightScopeBinding(state: this, child: widget.child);
+}
+
+class _HighlightScopeBinding extends InheritedWidget {
+  const _HighlightScopeBinding({required this.state, required super.child});
+
+  final SettingsHighlightScopeState state;
+
+  @override
+  bool updateShouldNotify(_HighlightScopeBinding oldWidget) =>
+      state != oldWidget.state;
+}
+
 /// Wraps a settings tile so opening its page with `?highlight=<id>` scrolls
 /// the tile into view and pulses it. Pages opened normally (no id, or a
 /// different id) render the child untouched.
 ///
+/// The highlighted row gets [ColorScheme.primary] at 18% alpha plus a 3 px
+/// [ColorScheme.primary] bar on its left edge. The bar is painted inside the
+/// row's bounds (a [BoxDecoration] left border), so the content never moves.
 /// Timing follows Komikku's `BasePreferenceWidget`: after the first frame the
 /// target centres itself, waits 600 ms, then pulses 5 times at 200 ms each
-/// way before settling — about 3 s total. With reduced motion (OS flag or the
-/// app's own setting, both visible through [ReduceMotionContext.reduceMotion])
-/// there is no pulse: a steady tint shows for ~2 s instead.
+/// way. The bar stays at full opacity while the tint pulses; the final
+/// pulse-out fades both together over 200 ms — about 3 s total. With reduced
+/// motion (OS flag or the app's own setting, both visible through
+/// [ReduceMotionContext.reduceMotion]) there is no pulse: a steady tint + bar
+/// shows for ~2 s, then fades jointly.
 ///
-/// [activeId] overrides the route query lookup; screens never pass it, tests
-/// use it to drive the highlight without a router.
+/// Far-down targets in lazily built lists need a [SettingsHighlightScope]
+/// above the scroll view (see its docs); without one, only mounted targets
+/// highlight, as before.
+///
+/// [activeId] overrides the scope and route query lookups; screens never pass
+/// it, tests use it to drive the highlight without a router.
 class SettingsHighlightTarget extends StatefulWidget {
   const SettingsHighlightTarget({
     super.key,
@@ -40,37 +132,97 @@ class SettingsHighlightTarget extends StatefulWidget {
 }
 
 class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 200),
   );
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+  );
   bool _armed = false;
+  bool _seekArmed = false;
+  bool _seeking = false;
   bool _done = true;
   bool _cancelled = false;
+  SettingsHighlightScopeState? _scope;
 
   @override
   void dispose() {
     _cancelled = true;
+    if (_seeking) {
+      _seeking = false;
+      _scope?.releaseSeek(this);
+    }
+    _scope?.unregister(widget.id);
     _pulse.dispose();
+    _fade.dispose();
     super.dispose();
   }
 
   bool _isTarget(BuildContext context) {
     if (widget.activeId != null) return widget.activeId == widget.id;
-    final highlight = GoRouter.maybeOf(
-      context,
-    )?.state.uri.queryParameters['highlight'];
+    final highlight =
+        _scope?.highlightId ??
+        GoRouter.maybeOf(context)?.state.uri.queryParameters['highlight'];
     return highlight != null && highlight == widget.id;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_armed || !_isTarget(context)) return;
-    _armed = true;
-    _done = false;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+    _scope = SettingsHighlightScope.maybeOf(context);
+    _scope?.register(widget.id);
+    if (_armed) return;
+    if (_isTarget(context)) {
+      _armed = true;
+      _done = false;
+      _fade.value = 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+      return;
+    }
+    final pending = _scope?.highlightId;
+    if (!_seekArmed && pending != null && pending != widget.id) {
+      _seekArmed = true;
+      final scope = _scope!;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeSeek(scope));
+    }
+  }
+
+  /// Steps the enclosing scrollable toward the end until the pending target
+  /// mounts, so lazily built rows far down the list still get highlighted.
+  /// Only one mounted target seeks per page ([SettingsHighlightScopeState.claimSeek]);
+  /// the target's own [_run] takes over once it mounts.
+  Future<void> _maybeSeek(SettingsHighlightScopeState scope) async {
+    final pending = scope.highlightId;
+    if (pending == null || _cancelled || !mounted) return;
+    if (scope.isMounted(pending)) return;
+    if (!scope.claimSeek(this)) return;
+    _seeking = true;
+    try {
+      while (!_cancelled && mounted && !scope.isMounted(pending)) {
+        final position = Scrollable.maybeOf(context)?.position;
+        if (position == null || !position.hasPixels) return;
+        if (!position.hasContentDimensions ||
+            position.pixels >= position.maxScrollExtent) {
+          return;
+        }
+        final step = position.viewportDimension;
+        if (step <= 0) return;
+        position.jumpTo(
+          (position.pixels + step).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+      }
+    } finally {
+      _seeking = false;
+      scope.releaseSeek(this);
+    }
   }
 
   Future<void> _run() async {
@@ -88,14 +240,18 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
       _pulse.value = 1;
       await Future<void>.delayed(const Duration(seconds: 2));
       if (_cancelled || !mounted) return;
-      await _pulse.animateTo(0, duration: const Duration(milliseconds: 200));
+      await Future.wait([_pulse.animateTo(0), _fade.animateTo(0)]);
     } else {
       await Future<void>.delayed(const Duration(milliseconds: 600));
       for (var i = 0; i < 5; i++) {
         if (_cancelled || !mounted) return;
         await _pulse.forward();
         if (_cancelled || !mounted) return;
-        await _pulse.reverse();
+        if (i == 4) {
+          await Future.wait([_pulse.reverse(), _fade.animateTo(0)]);
+        } else {
+          await _pulse.reverse();
+        }
       }
     }
     if (_cancelled || !mounted) return;
@@ -106,13 +262,22 @@ class _SettingsHighlightTargetState extends State<SettingsHighlightTarget>
   Widget build(BuildContext context) {
     if (_done) return widget.child;
     return AnimatedBuilder(
-      animation: _pulse,
-      builder: (context, child) => Container(
-        color: context.colorScheme.primary.withValues(
-          alpha: 0.12 * _pulse.value,
-        ),
-        child: child,
-      ),
+      animation: Listenable.merge([_pulse, _fade]),
+      builder: (context, child) {
+        final primary = context.colorScheme.primary;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: primary.withValues(alpha: 0.18 * _pulse.value),
+            border: Border(
+              left: BorderSide(
+                color: primary.withValues(alpha: _fade.value),
+                width: 3,
+              ),
+            ),
+          ),
+          child: child,
+        );
+      },
       child: widget.child,
     );
   }
