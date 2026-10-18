@@ -23,6 +23,7 @@ import '../../../history/presentation/history_controller.dart';
 import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/controller/library_manga_list.dart';
+import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'unified_search_autocomplete.dart';
@@ -306,6 +307,10 @@ class PhoneSearchOverlay extends HookConsumerWidget {
     final caretRaw = controller.selection.baseOffset;
     final caret = caretRaw < 0 ? query.length : caretRaw;
 
+    // Read at build time: tapping the tips button moves focus to it before
+    // onPressed runs, so checking focus there would always see it as lost.
+    final fieldFocused = focusNode.hasFocus;
+
     final searchBar = Row(
       children: [
         IconButton(
@@ -330,6 +335,17 @@ class PhoneSearchOverlay extends HookConsumerWidget {
             onSubmitted: (_) => submit(),
           ),
         ),
+        if (origin == PhoneSearchOrigin.library)
+          IconButton(
+            tooltip: l.searchTips,
+            icon: const Icon(Icons.help_outline_rounded),
+            onPressed: () async {
+              await showSearchTips(context);
+              if (fieldFocused && context.mounted) {
+                focusNode.requestFocus();
+              }
+            },
+          ),
         if (query.isNotEmpty)
           IconButton(
             tooltip: l.close,

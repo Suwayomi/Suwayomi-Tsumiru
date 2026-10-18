@@ -74,8 +74,8 @@ class _DesktopToolbarBoxState extends State<DesktopToolbarBox> {
 
 /// Shows the library search cheat-sheet (opened from the search bar's help
 /// icon), so the query syntax is discoverable rather than hidden.
-void showSearchTips(BuildContext context) {
-  showDialog<void>(
+Future<void> showSearchTips(BuildContext context) {
+  return showDialog<void>(
     context: context,
     builder: (context) {
       final scheme = Theme.of(context).colorScheme;

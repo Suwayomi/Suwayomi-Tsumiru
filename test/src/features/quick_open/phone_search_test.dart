@@ -710,6 +710,90 @@ void main() {
     });
   });
 
+  group('search tips button', () {
+    final helpButton = find.widgetWithIcon(
+      IconButton,
+      Icons.help_outline_rounded,
+    );
+
+    testWidgets('Library origin shows it empty and with text', (tester) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      expect(helpButton, findsOneWidget);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      expect(helpButton, findsOneWidget);
+      // The tips button sits at the right end of the bar, immediately
+      // before the clear button.
+      final clearButton = find.widgetWithIcon(
+        IconButton,
+        Icons.close_rounded,
+      );
+      expect(clearButton, findsOneWidget);
+      expect(
+        tester.getCenter(helpButton).dx,
+        lessThan(tester.getCenter(clearButton).dx),
+      );
+    });
+
+    testWidgets('tips dialog keeps the query, overlay and focus', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(helpButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(AlertDialog, 'Search tips'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
+      expect(
+        tester.widget<TextField>(_overlayField()).controller?.text,
+        'sw',
+      );
+      expect(
+        tester.widget<TextField>(_overlayField()).focusNode?.hasFocus,
+        isTrue,
+      );
+    });
+
+    testWidgets('History origin has no tips button', (tester) async {
+      await _pumpEntry(tester, origin: PhoneSearchOrigin.history);
+      await _openOverlay(tester);
+
+      expect(helpButton, findsNothing);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+
+      expect(helpButton, findsNothing);
+    });
+  });
+
   group('leaving through results', () {
     testWidgets('Go to navigates and clears the search text', (tester) async {
       final container = await _pumpEntryWithRouter(
