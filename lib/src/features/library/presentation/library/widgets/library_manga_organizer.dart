@@ -19,7 +19,7 @@ import 'library_manga_sort_tile.dart';
 
 /// Sort-key display order. Kept separate from the
 /// `MangaSort` enum declaration because that is persisted by index.
-const List<MangaSort> _sortDisplayOrder = [
+const List<MangaSort> librarySortDisplayOrder = [
   MangaSort.alphabetical,
   MangaSort.rating,
   MangaSort.totalChapters,
@@ -70,7 +70,7 @@ class _OrganizerBody extends StatelessWidget {
       ListView(
         shrinkWrap: true,
         children: [
-          for (final sortType in _sortDisplayOrder)
+          for (final sortType in librarySortDisplayOrder)
             if (sortType != MangaSort.trackerScore || hasTrackers)
               LibraryMangaSortTile(sortType: sortType),
         ],
