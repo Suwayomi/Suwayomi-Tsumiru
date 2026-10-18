@@ -7,12 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hooks_riverpod/misc.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
-import '../../../../../widgets/custom_checkbox_list_tile.dart';
 import '../../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../../domain/library_group.dart';
@@ -245,7 +245,9 @@ Future<void> showLibraryFilterPanel({
 );
 
 /// Opens the desktop Display panel anchored under the toolbar's Display
-/// button: 760 px, three columns, changes apply live.
+/// button: 820 px so labels like "Continue reading button" fit on one line,
+/// three columns, changes apply live. The 600 px height stays under the
+/// window-height-minus-140 cap at 1400x980.
 Future<void> showLibraryDisplayPanel({
   required BuildContext context,
   required GlobalKey buttonKey,
@@ -254,7 +256,7 @@ Future<void> showLibraryDisplayPanel({
   context: context,
   buttonKey: buttonKey,
   focusNode: focusNode,
-  panelWidth: 760,
+  panelWidth: 820,
   panelHeight: 600,
   child: const DesktopLibraryDisplayPanel(),
 );
@@ -275,7 +277,8 @@ class DesktopLibraryFilterPanel extends StatelessWidget {
 }
 
 /// Desktop Display panel body: three columns of radio lists and checkboxes,
-/// no segmented switches.
+/// no segmented switches. Columns size to content with no per-column
+/// scrolling; the whole body scrolls as one when it exceeds the panel.
 class DesktopLibraryDisplayPanel extends StatelessWidget {
   const DesktopLibraryDisplayPanel({super.key});
 
@@ -292,15 +295,26 @@ class DesktopLibraryDisplayPanel extends StatelessWidget {
             style: context.theme.textTheme.titleMedium,
           ),
           const Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _DisplayColumn()),
-                SizedBox(width: 24),
-                Expanded(child: _BadgesColumn()),
-                SizedBox(width: 24),
-                Expanded(child: _GroupColumn()),
-              ],
+            child: SingleChildScrollView(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    key: ValueKey('displayColumn1'),
+                    child: _DisplayColumn(),
+                  ),
+                  SizedBox(width: 24),
+                  Expanded(
+                    key: ValueKey('displayColumn2'),
+                    child: _BadgesColumn(),
+                  ),
+                  SizedBox(width: 24),
+                  Expanded(
+                    key: ValueKey('displayColumn3'),
+                    child: _GroupColumn(),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -309,7 +323,105 @@ class DesktopLibraryDisplayPanel extends StatelessWidget {
   }
 }
 
-/// Col 1: Display Mode radios, then the cover checkboxes.
+/// Unified radio row used by every radio list in both desktop panels: 36 px
+/// tall, 14 px label, same zero left indent as the checkbox rows below.
+class _PanelRadioRow<T> extends StatelessWidget {
+  const _PanelRadioRow({
+    required this.value,
+    required this.onChanged,
+    required this.title,
+    this.leading,
+  });
+
+  final T value;
+  final ValueChanged<T?> onChanged;
+  final String title;
+  final Widget? leading;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(value),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          children: [
+            Radio<T>(
+              value: value,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            const SizedBox(width: 12),
+            if (leading != null) ...[leading!, const SizedBox(width: 8)],
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Unified checkbox row used by every checkbox list in both desktop panels:
+/// 36 px tall, 20 px icon, 14 px label, same zero left indent as the radio
+/// rows above (not the old tile paddings).
+class _PanelCheckRow extends ConsumerWidget {
+  const _PanelCheckRow({
+    required this.title,
+    required this.provider,
+    required this.onChanged,
+  });
+
+  final String title;
+  final ProviderListenable<bool?> provider;
+  final ValueChanged<bool?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final checked = ref.watch(provider) ?? true;
+    return InkWell(
+      onTap: () => onChanged(!checked),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          children: [
+            Icon(
+              checked
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              size: 20,
+              color: checked
+                  ? context.theme.colorScheme.primary
+                  : context.theme.unselectedWidgetColor,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Col 1: Display Mode radios, Grid style radios, then the cover
+/// checkboxes.
 class _DisplayColumn extends ConsumerWidget {
   const _DisplayColumn();
 
@@ -318,50 +430,70 @@ class _DisplayColumn extends ConsumerWidget {
     final displayMode = ref.watch(libraryDisplayModeProvider);
     final selectedMode =
         displayMode ?? DBKeys.libraryDisplayMode.initial as DisplayMode;
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FilterSectionHeading(context.l10n.displayMode),
-          RadioGroup<DisplayMode>(
-            groupValue: selectedMode,
-            onChanged: (mode) =>
-                ref.read(libraryDisplayModeProvider.notifier).update(mode),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final mode in DisplayMode.libraryDisplayList)
-                  RadioListTile<DisplayMode>(
-                    value: mode,
-                    title: Text(mode.toLibraryLocale(context)),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-              ],
-            ),
+    final gridStyle =
+        ref.watch(libraryGridStyleKeyProvider) ?? LibraryGridStyle.uniform;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilterSectionHeading(context.l10n.displayMode),
+        RadioGroup<DisplayMode>(
+          groupValue: selectedMode,
+          onChanged: (mode) =>
+              ref.read(libraryDisplayModeProvider.notifier).update(mode),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final mode in DisplayMode.libraryDisplayList)
+                _PanelRadioRow<DisplayMode>(
+                  value: mode,
+                  onChanged: (next) => ref
+                      .read(libraryDisplayModeProvider.notifier)
+                      .update(next),
+                  title: mode.toLibraryLocale(context),
+                ),
+            ],
           ),
-          if (selectedMode == DisplayMode.comfortableGrid ||
-              selectedMode == DisplayMode.list ||
-              selectedMode == DisplayMode.descriptiveList)
-            CustomCheckboxListTile(
-              title: context.l10n.limitTitleLines,
-              provider: limitTitleLinesProvider,
-              onChanged: ref.read(limitTitleLinesProvider.notifier).update,
-            ),
-          CustomCheckboxListTile(
-            title: context.l10n.outlineOnCovers,
-            provider: outlineOnCoversProvider,
-            onChanged: ref.read(outlineOnCoversProvider.notifier).update,
+        ),
+        FilterSectionHeading(context.l10n.gridStyle),
+        RadioGroup<LibraryGridStyle>(
+          groupValue: gridStyle,
+          onChanged: (style) =>
+              ref.read(libraryGridStyleKeyProvider.notifier).update(style),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final style in LibraryGridStyle.values)
+                _PanelRadioRow<LibraryGridStyle>(
+                  value: style,
+                  onChanged: (next) => ref
+                      .read(libraryGridStyleKeyProvider.notifier)
+                      .update(next),
+                  title: style.toLocale(context),
+                  leading: Icon(style.icon, size: 20),
+                ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (selectedMode == DisplayMode.comfortableGrid ||
+            selectedMode == DisplayMode.list ||
+            selectedMode == DisplayMode.descriptiveList)
+          _PanelCheckRow(
+            title: context.l10n.limitTitleLines,
+            provider: limitTitleLinesProvider,
+            onChanged: ref.read(limitTitleLinesProvider.notifier).update,
+          ),
+        _PanelCheckRow(
+          title: context.l10n.outlineOnCovers,
+          provider: outlineOnCoversProvider,
+          onChanged: ref.read(outlineOnCoversProvider.notifier).update,
+        ),
+      ],
     );
   }
 }
 
-/// Col 2: Badges (unread mode radios, badge checkboxes, badge layout) then
-/// Grid style radios.
+/// Col 2: Badges (unread mode radios, badge checkboxes, badge layout).
 class _BadgesColumn extends ConsumerWidget {
   const _BadgesColumn();
 
@@ -369,87 +501,64 @@ class _BadgesColumn extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unreadMode =
         ref.watch(unreadBadgeStyleProvider) ?? UnreadBadgeMode.count;
-    final gridStyle =
-        ref.watch(libraryGridStyleKeyProvider) ?? LibraryGridStyle.uniform;
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FilterSectionHeading(context.l10n.badges),
-          FilterSectionHeading(context.l10n.unreadBadgeMode),
-          RadioGroup<UnreadBadgeMode>(
-            groupValue: unreadMode,
-            onChanged: (mode) =>
-                ref.read(unreadBadgeStyleProvider.notifier).update(mode),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final mode in UnreadBadgeMode.values)
-                  RadioListTile<UnreadBadgeMode>(
-                    value: mode,
-                    title: Text(mode.toLocale(context)),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilterSectionHeading(context.l10n.badges),
+        FilterSectionHeading(context.l10n.unreadBadgeMode),
+        RadioGroup<UnreadBadgeMode>(
+          groupValue: unreadMode,
+          onChanged: (mode) =>
+              ref.read(unreadBadgeStyleProvider.notifier).update(mode),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final mode in UnreadBadgeMode.values)
+                _PanelRadioRow<UnreadBadgeMode>(
+                  value: mode,
+                  onChanged: (next) =>
+                      ref.read(unreadBadgeStyleProvider.notifier).update(next),
+                  title: mode.toLocale(context),
+                ),
+            ],
           ),
-          CustomCheckboxListTile(
-            title: context.l10n.downloaded,
-            provider: downloadedBadgeProvider,
-            onChanged: ref.read(downloadedBadgeProvider.notifier).update,
-          ),
-          CustomCheckboxListTile(
-            title: context.l10n.onDevice,
-            provider: onDeviceBadgeProvider,
-            onChanged: ref.read(onDeviceBadgeProvider.notifier).update,
-          ),
-          CustomCheckboxListTile(
-            title: context.l10n.readProgressBar,
-            provider: readProgressBarProvider,
-            onChanged: ref.read(readProgressBarProvider.notifier).update,
-          ),
-          CustomCheckboxListTile(
-            title: context.l10n.continueReadingButton,
-            provider: showContinueReadingButtonProvider,
-            onChanged: ref
-                .read(showContinueReadingButtonProvider.notifier)
-                .update,
-          ),
-          CustomCheckboxListTile(
-            title: context.l10n.sourceBadge,
-            provider: sourceBadgeProvider,
-            onChanged: ref.read(sourceBadgeProvider.notifier).update,
-          ),
-          CustomCheckboxListTile(
-            title: context.l10n.languageBadge,
-            provider: languageBadgeProvider,
-            onChanged: ref.read(languageBadgeProvider.notifier).update,
-          ),
-          FilterSectionHeading(context.l10n.badgeLayout),
-          const BadgeLayoutList(),
-          FilterSectionHeading(context.l10n.gridStyle),
-          RadioGroup<LibraryGridStyle>(
-            groupValue: gridStyle,
-            onChanged: (style) =>
-                ref.read(libraryGridStyleKeyProvider.notifier).update(style),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final style in LibraryGridStyle.values)
-                  RadioListTile<LibraryGridStyle>(
-                    value: style,
-                    secondary: Icon(style.icon, size: 18),
-                    title: Text(style.toLocale(context)),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        _PanelCheckRow(
+          title: context.l10n.downloaded,
+          provider: downloadedBadgeProvider,
+          onChanged: ref.read(downloadedBadgeProvider.notifier).update,
+        ),
+        _PanelCheckRow(
+          title: context.l10n.onDevice,
+          provider: onDeviceBadgeProvider,
+          onChanged: ref.read(onDeviceBadgeProvider.notifier).update,
+        ),
+        _PanelCheckRow(
+          title: context.l10n.readProgressBar,
+          provider: readProgressBarProvider,
+          onChanged: ref.read(readProgressBarProvider.notifier).update,
+        ),
+        _PanelCheckRow(
+          title: context.l10n.continueReadingButton,
+          provider: showContinueReadingButtonProvider,
+          onChanged: ref
+              .read(showContinueReadingButtonProvider.notifier)
+              .update,
+        ),
+        _PanelCheckRow(
+          title: context.l10n.sourceBadge,
+          provider: sourceBadgeProvider,
+          onChanged: ref.read(sourceBadgeProvider.notifier).update,
+        ),
+        _PanelCheckRow(
+          title: context.l10n.languageBadge,
+          provider: languageBadgeProvider,
+          onChanged: ref.read(languageBadgeProvider.notifier).update,
+        ),
+        FilterSectionHeading(context.l10n.badgeLayout),
+        const BadgeLayoutList(),
+      ],
     );
   }
 }
@@ -490,127 +599,123 @@ class _GroupColumn extends ConsumerWidget {
 
     final isGrouped = LibraryGroup.isGrouped(current);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FilterSectionHeading(context.l10n.group),
-          RadioGroup<int>(
-            groupValue: current,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilterSectionHeading(context.l10n.group),
+        RadioGroup<int>(
+          groupValue: current,
+          onChanged: (value) =>
+              ref.read(libraryGroupTypeProvider.notifier).update(value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final type in LibraryGroup.all)
+                if (type != LibraryGroup.byTrackStatus || hasTrackers)
+                  _PanelRadioRow<int>(
+                    value: type,
+                    onChanged: (next) => ref
+                        .read(libraryGroupTypeProvider.notifier)
+                        .update(next),
+                    title: groupLabel(type),
+                  ),
+            ],
+          ),
+        ),
+        if (isGrouped) ...[
+          FilterSectionHeading(context.l10n.groupStyle),
+          RadioGroup<LibraryGroupStyle>(
+            groupValue: style,
             onChanged: (value) =>
-                ref.read(libraryGroupTypeProvider.notifier).update(value),
+                ref.read(libraryGroupStyleKeyProvider.notifier).update(value),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final type in LibraryGroup.all)
-                  if (type != LibraryGroup.byTrackStatus || hasTrackers)
-                    RadioListTile<int>(
-                      value: type,
-                      title: Text(groupLabel(type)),
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
+                _PanelRadioRow<LibraryGroupStyle>(
+                  value: LibraryGroupStyle.tabs,
+                  onChanged: (next) => ref
+                      .read(libraryGroupStyleKeyProvider.notifier)
+                      .update(next),
+                  title: context.l10n.groupStyleTabs,
+                ),
+                _PanelRadioRow<LibraryGroupStyle>(
+                  value: LibraryGroupStyle.headers,
+                  onChanged: (next) => ref
+                      .read(libraryGroupStyleKeyProvider.notifier)
+                      .update(next),
+                  title: context.l10n.groupStyleSections,
+                ),
               ],
             ),
           ),
-          if (isGrouped) ...[
-            FilterSectionHeading(context.l10n.groupStyle),
-            RadioGroup<LibraryGroupStyle>(
-              groupValue: style,
-              onChanged: (value) =>
-                  ref.read(libraryGroupStyleKeyProvider.notifier).update(value),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  RadioListTile<LibraryGroupStyle>(
-                    value: LibraryGroupStyle.tabs,
-                    title: Text(context.l10n.groupStyleTabs),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  RadioListTile<LibraryGroupStyle>(
-                    value: LibraryGroupStyle.headers,
-                    title: Text(context.l10n.groupStyleSections),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-            ),
-            if (style == LibraryGroupStyle.tabs)
-              CustomCheckboxListTile(
-                title: context.l10n.categoryTabs,
-                provider: categoryTabsProvider,
-                onChanged: ref.read(categoryTabsProvider.notifier).update,
-              )
-            else
-              CustomCheckboxListTile(
-                title: context.l10n.sectionHeadersShowAllCategories,
-                provider: sectionHeadersShowAllCategoriesProvider,
-                onChanged: ref
-                    .read(sectionHeadersShowAllCategoriesProvider.notifier)
-                    .update,
-              ),
-            if (current == LibraryGroup.byDefault)
-              CustomCheckboxListTile(
-                title: context.l10n.showHiddenCategories,
-                provider: showHiddenCategoriesProvider,
-                onChanged: ref
-                    .read(showHiddenCategoriesProvider.notifier)
-                    .update,
-              ),
-            CustomCheckboxListTile(
-              title: context.l10n.categoryNumberOfItems,
-              provider: categoryNumberOfItemsProvider,
+          if (style == LibraryGroupStyle.tabs)
+            _PanelCheckRow(
+              title: context.l10n.categoryTabs,
+              provider: categoryTabsProvider,
+              onChanged: ref.read(categoryTabsProvider.notifier).update,
+            )
+          else
+            _PanelCheckRow(
+              title: context.l10n.sectionHeadersShowAllCategories,
+              provider: sectionHeadersShowAllCategoriesProvider,
               onChanged: ref
-                  .read(categoryNumberOfItemsProvider.notifier)
+                  .read(sectionHeadersShowAllCategoriesProvider.notifier)
                   .update,
             ),
-          ],
-          if (isGrid) ...[
-            FilterSectionHeading(context.l10n.libraryColumnsPortrait),
-            _ColumnsSlider(
-              value: portraitCols,
-              onChanged: (value) => ref
-                  .read(libraryPortraitColumnsProvider.notifier)
-                  .update(value),
+          _PanelCheckRow(
+            title: context.l10n.categoryNumberOfItems,
+            provider: categoryNumberOfItemsProvider,
+            onChanged: ref.read(categoryNumberOfItemsProvider.notifier).update,
+          ),
+          if (current == LibraryGroup.byDefault)
+            _PanelCheckRow(
+              title: context.l10n.showHiddenCategories,
+              provider: showHiddenCategoriesProvider,
+              onChanged: ref.read(showHiddenCategoriesProvider.notifier).update,
             ),
-            FilterSectionHeading(context.l10n.libraryColumnsLandscape),
-            _ColumnsSlider(
-              value: landscapeCols,
-              onChanged: (value) => ref
-                  .read(libraryLandscapeColumnsProvider.notifier)
-                  .update(value),
-            ),
-          ] else ...[
-            FilterSectionHeading(context.l10n.listSize),
-            Row(
-              children: [
-                Expanded(
-                  child: Slider(
-                    value: listScale,
-                    min: 0.7,
-                    max: 1.6,
-                    divisions: 18,
-                    label: '${(listScale * 100).round()}%',
-                    onChanged: (value) => ref
-                        .read(libraryListScaleProvider.notifier)
-                        .update(double.parse(value.toStringAsFixed(2))),
-                  ),
-                ),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    '${(listScale * 100).round()}%',
-                    textAlign: TextAlign.end,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
-      ),
+        if (isGrid) ...[
+          FilterSectionHeading(context.l10n.libraryColumnsPortrait),
+          _ColumnsSlider(
+            value: portraitCols,
+            onChanged: (value) =>
+                ref.read(libraryPortraitColumnsProvider.notifier).update(value),
+          ),
+          FilterSectionHeading(context.l10n.libraryColumnsLandscape),
+          _ColumnsSlider(
+            value: landscapeCols,
+            onChanged: (value) => ref
+                .read(libraryLandscapeColumnsProvider.notifier)
+                .update(value),
+          ),
+        ] else ...[
+          FilterSectionHeading(context.l10n.listSize),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: listScale,
+                  min: 0.7,
+                  max: 1.6,
+                  divisions: 18,
+                  label: '${(listScale * 100).round()}%',
+                  onChanged: (value) => ref
+                      .read(libraryListScaleProvider.notifier)
+                      .update(double.parse(value.toStringAsFixed(2))),
+                ),
+              ),
+              SizedBox(
+                width: 48,
+                child: Text(
+                  '${(listScale * 100).round()}%',
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

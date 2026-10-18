@@ -31,7 +31,6 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-import 'package:tsumiru/src/widgets/custom_checkbox_list_tile.dart';
 import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
@@ -450,7 +449,7 @@ void main() {
 
       final languageToggle = find.ancestor(
         of: find.text('Language'),
-        matching: find.byType(CustomCheckboxListTile),
+        matching: find.byType(InkWell),
       );
       expect(languageToggle, findsOneWidget);
       await tester.ensureVisible(languageToggle);
@@ -458,6 +457,95 @@ void main() {
       await tester.pump();
       // The badge default is off, so tapping enables it.
       expect(container.read(languageBadgeProvider), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('body scrolls as one; no column scrolls inside itself', (
+      tester,
+    ) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openDisplayPanel(tester);
+
+      final panel = find.byType(DesktopLibraryDisplayPanel);
+      expect(panel, findsOneWidget);
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsOneWidget,
+      );
+      for (final key in [
+        'displayColumn1',
+        'displayColumn2',
+        'displayColumn3',
+      ]) {
+        final column = find.byKey(ValueKey(key));
+        expect(column, findsOneWidget);
+        expect(
+          find.descendant(
+            of: column,
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsNothing,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('grid style radios live in column 1', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openDisplayPanel(tester);
+
+      final first = find.byKey(const ValueKey('displayColumn1'));
+      expect(first, findsOneWidget);
+      expect(
+        find.descendant(of: first, matching: find.text('Grid style')),
+        findsOneWidget,
+      );
+      for (final label in ['Uniform', 'Non-uniform', 'Staggered']) {
+        expect(
+          find.descendant(of: first, matching: find.text(label)),
+          findsOneWidget,
+        );
+      }
+      final second = find.byKey(const ValueKey('displayColumn2'));
+      expect(second, findsOneWidget);
+      expect(
+        find.descendant(of: second, matching: find.text('Uniform')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('display rows share the 36 px unified style', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openDisplayPanel(tester);
+
+      for (final label in [
+        'Uniform',
+        'Continue reading button',
+        'Show number of items',
+      ]) {
+        expect(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.byWidgetPredicate(
+              (w) => w is SizedBox && w.height == 36,
+            ),
+          ),
+          findsOneWidget,
+          reason: label,
+        );
+        expect(
+          tester.widget<Text>(find.text(label)).style?.fontSize,
+          14,
+          reason: label,
+        );
+      }
+      final heading = tester.widget<Text>(find.text('Grid style'));
+      expect(heading.style?.fontSize, 13);
+      expect(heading.style?.fontWeight, FontWeight.w600);
       expect(tester.takeException(), isNull);
     });
   });

@@ -207,9 +207,8 @@ class LibraryTriStateSegment extends ConsumerWidget {
   }
 }
 
-/// Plain compact heading for the segmented filter content, matching the
-/// approved mockup (body-weight label, not the primary-tinted organizer
-/// heading used by the old chip rows).
+/// Compact heading shared by the desktop Filter and Display panels: 13 px
+/// semibold with 12 px above, per the approved panel layout.
 class FilterSectionHeading extends StatelessWidget {
   const FilterSectionHeading(this.text, {super.key});
 
@@ -218,8 +217,14 @@ class FilterSectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
-      child: Text(text, style: context.theme.textTheme.titleSmall),
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Text(
+        text,
+        style: context.theme.textTheme.bodySmall?.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
