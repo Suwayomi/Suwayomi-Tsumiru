@@ -96,6 +96,28 @@ void main() {
     expect(_rail(tester).extended, isFalse);
   });
 
+  testWidgets('900x900 shows the icon rail, not the extended sidebar',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs, size: const Size(900, 900));
+
+    expect(_rail(tester).extended, isFalse);
+    expect(find.byIcon(Icons.chevron_left), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('1400x900 shows the full extended sidebar', (tester) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs, size: const Size(1400, 900));
+
+    expect(_rail(tester).extended, isTrue);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tablet width ignores the collapse pref (no stranded chevron)',
       (tester) async {
     // Persist "collapsed", then render at tablet width (600–1199).

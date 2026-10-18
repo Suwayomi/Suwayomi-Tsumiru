@@ -9,10 +9,15 @@ import 'package:tsumiru/src/features/account/data/graphql/__generated__/account.
 import 'package:tsumiru/src/features/account/domain/account_access.dart';
 import 'package:tsumiru/src/features/account/presentation/account_screen.dart';
 import 'package:tsumiru/src/features/auth/data/auth_session_status.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/manga_book/data/updates/updates_repository.dart';
 import 'package:tsumiru/src/features/manga_book/domain/manga/manga_model.dart';
 import 'package:tsumiru/src/features/settings/presentation/more/more_screen.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
+import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
+import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -79,24 +84,46 @@ void main() {
     tester.view.physicalSize = const Size(600, 1500);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    // The container is owned here, not by the widget tree: at 600x1500 More
+    // mounts the desktop search box, whose deferred focus-node unregister
+    // must flush while the container is still alive. Unmount below (before
+    // the dispose teardown) so it fires on a live container instead of the
+    // next test's pump on a dead one.
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        // At 600x1500 More mounts the desktop search box, whose results
+        // overlay reads these: never hit the network in widget tests.
+        loggedInTrackersProvider.overrideWithValue(
+          const AsyncData(<Fragment$TrackerDto>[]),
+        ),
+        libraryTagListProvider.overrideWithValue(const AsyncData(<String>[])),
+        libraryMangaListProvider.overrideWith((ref) async => []),
+        visibleCategoryListProvider.overrideWithValue(const AsyncData([])),
+        failedUpdateCountProvider.overrideWithValue(const AsyncData(0)),
+        updatesRepositoryProvider.overrideWithValue(ScreenUpdatesRepository()),
+        currentAccountProvider.overrideWithValue(account),
+        settledAccountAccessProvider.overrideWithValue(
+          AccountAccess(
+            capability: capability,
+            user: capability == AccountCapability.supported ? account : null,
+          ),
+        ),
+        authTypeKeyProvider.overrideWith(() => ScreenAuthType(mode)),
+        hasStoredCredentialsProvider.overrideWithValue(credentials),
+        accountActionsProvider.overrideWith(
+          (ref) => actions = ScreenAccountActions(ref),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          updatesRepositoryProvider.overrideWithValue(ScreenUpdatesRepository()),
-          currentAccountProvider.overrideWithValue(account),
-          settledAccountAccessProvider.overrideWithValue(
-            AccountAccess(
-              capability: capability,
-              user: capability == AccountCapability.supported ? account : null,
-            ),
-          ),
-          authTypeKeyProvider.overrideWith(() => ScreenAuthType(mode)),
-          hasStoredCredentialsProvider.overrideWithValue(credentials),
-          accountActionsProvider.overrideWith(
-            (ref) => actions = ScreenAccountActions(ref),
-          ),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

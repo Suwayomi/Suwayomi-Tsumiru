@@ -153,11 +153,40 @@ void main() {
     });
 
     testWidgets('phone keeps the old AppBar (no regression)', (tester) async {
-      await _pumpLibrary(tester, surface: const Size(800, 600));
+      await _pumpLibrary(tester, surface: const Size(412, 800));
 
       expect(tester.takeException(), isNull);
       expect(find.byType(DesktopLibraryToolbar), findsNothing);
       expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+    });
+
+    testWidgets('900x900 shows the desktop toolbar, no AppBar', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(900, 900));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+      expect(find.text('Library'), findsNothing);
+    });
+
+    testWidgets('landscape phone keeps the tablet layout', (tester) async {
+      final container = await _pumpLibrary(
+        tester,
+        surface: const Size(915, 412),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DesktopLibraryToolbar), findsNothing);
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+
+      // The in-between layout keeps the tablet-only Global Search button.
+      container.read(libraryQueryProvider.notifier).update('sword');
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('two tabs scroll with a themed scrollbar, no clash', (
@@ -193,12 +222,12 @@ void main() {
       expect(find.byType(Scrollbar), findsWidgets);
     });
 
-    testWidgets('tablet sticky search keeps scrollbars off, no clash', (
+    testWidgets('landscape-phone sticky search keeps scrollbars off, no clash', (
       tester,
     ) async {
       await _pumpLibrary(
         tester,
-        surface: const Size(900, 900),
+        surface: const Size(915, 412),
         withManga: true,
         persistentSearchBar: true,
         scrollbarTheme: wideScreenScrollbarTheme(const ColorScheme.light()),
@@ -227,37 +256,41 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('tablet toggled search enables global search with a query', (
+    testWidgets(
+      'landscape-phone toggled search enables global search with a query',
+      (tester) async {
+        final container = await _pumpLibrary(
+          tester,
+          surface: const Size(915, 412),
+        );
+
+        // Open the toggled search field: no query yet, so the button is
+        // present but disabled — the in-between layout's way into Global
+        // Search.
+        await tester.tap(
+          find.widgetWithIcon(IconButton, Icons.search_rounded),
+        );
+        await tester.pumpAndSettle();
+        var global = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        );
+        expect(global.onPressed, isNull);
+
+        container.read(libraryQueryProvider.notifier).update('sword');
+        await tester.pumpAndSettle();
+        global = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        );
+        expect(global.onPressed, isNotNull);
+      },
+    );
+
+    testWidgets('landscape-phone sticky search shows global search with a query', (
       tester,
     ) async {
       final container = await _pumpLibrary(
         tester,
-        surface: const Size(900, 980),
-      );
-
-      // Open the toggled search field: no query yet, so the button is
-      // present but disabled — the tablet-only way into Global Search.
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.search_rounded));
-      await tester.pumpAndSettle();
-      var global = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-      );
-      expect(global.onPressed, isNull);
-
-      container.read(libraryQueryProvider.notifier).update('sword');
-      await tester.pumpAndSettle();
-      global = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-      );
-      expect(global.onPressed, isNotNull);
-    });
-
-    testWidgets('tablet sticky search shows global search with a query', (
-      tester,
-    ) async {
-      final container = await _pumpLibrary(
-        tester,
-        surface: const Size(900, 980),
+        surface: const Size(915, 412),
         persistentSearchBar: true,
       );
 

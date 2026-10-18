@@ -362,19 +362,19 @@ class MangaDescription extends HookConsumerWidget {
           builder: (context) {
             final offlineEnabled = ref.watch(offlineEnabledProvider);
             return Padding(
-              padding: context.isDesktop
+              padding: context.isWideDesktop
                   ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
                   : const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (context.isDesktop) ...[
+                  if (context.isWideDesktop) ...[
                     Divider(height: 1, color: cs.outlineVariant),
                     const SizedBox(height: 6),
                   ],
                   Row(
                     children: [
-                      if (!context.isDesktop)
+                      if (!context.isWideDesktop)
                         Expanded(
                           child: MangaActionButton(
                             active: inLibrary,
@@ -470,7 +470,7 @@ class MangaDescription extends HookConsumerWidget {
             );
           },
         ),
-        if (!context.isDesktop) MangaRatingBar(mangaId: manga.id),
+        if (!context.isWideDesktop) MangaRatingBar(mangaId: manga.id),
         if (expansion == null)
           descriptionSection(expanded, true)
         else

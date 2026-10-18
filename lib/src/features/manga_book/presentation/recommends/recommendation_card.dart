@@ -83,7 +83,7 @@ class RecommendationCard extends HookConsumerWidget {
                       )
                     else
                       ColoredBox(color: cs.surfaceContainerHighest),
-                    if (context.isDesktop && hovered.value)
+                    if (context.isWideDesktop && hovered.value)
                       DecoratedBox(
                         decoration: BoxDecoration(
                           borderRadius: KBorderRadius.r8.radius,
@@ -111,7 +111,7 @@ class RecommendationCard extends HookConsumerWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: context.textTheme.bodySmall?.copyWith(
-                color: context.isDesktop && hovered.value ? cs.primary : null,
+                color: context.isWideDesktop && hovered.value ? cs.primary : null,
               ),
             ),
           ],

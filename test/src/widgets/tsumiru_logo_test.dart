@@ -272,12 +272,23 @@ void main() {
   });
 
   testWidgets('the More screen uses TsumiruLogo', (tester) async {
+    // Externally-owned container: at the default 800x600 surface More mounts
+    // the desktop search box, whose deferred focus-node unregister must flush
+    // while the container is still alive (see account_screen_test).
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(await _prefs()),
+        failedUpdateCountProvider.overrideWith((ref) async => 0),
+      ],
+    );
+    addTearDown(container.dispose);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    });
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(await _prefs()),
-          failedUpdateCountProvider.overrideWith((ref) async => 0),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

@@ -298,7 +298,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                                 ),
                           // Tablets show the title beside the cover, so a
                           // second one in the bar would duplicate it.
-                          title: context.isDesktop
+                          title: context.isWideDesktop
                               ? SeriesAppBarTitle(
                                   title: data?.title ?? context.l10n.manga,
                                 )
@@ -403,7 +403,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   ),
             endDrawerEnableOpenDragGesture: false,
             floatingActionButton:
-                !context.isDesktop &&
+                !context.isWideDesktop &&
                     firstUnreadChapter != null &&
                     selectedChapters.value.isEmpty
                 ? BrandFab(

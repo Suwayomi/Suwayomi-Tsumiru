@@ -61,7 +61,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
     final expanded = ref.watch(sidebarExpandedProvider).ifNull(true);
     // Collapse only applies to the desktop (extended) rail; the tablet rail is
     // already an icon rail.
-    final showExtended = context.isDesktop && expanded;
+    final showExtended = context.isWideDesktop && expanded;
     void toggleSidebar() =>
         ref.read(sidebarExpandedProvider.notifier).update(!expanded);
 
@@ -102,7 +102,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
           ),
         ),
       );
-    } else if (context.isDesktop) {
+    } else if (context.isWideDesktop) {
       // Collapsed: keep the logo (tap to expand) so the header never swaps
       // between logo and chevron as the rail collapses or the width changes.
       leadingIcon = IconButton(

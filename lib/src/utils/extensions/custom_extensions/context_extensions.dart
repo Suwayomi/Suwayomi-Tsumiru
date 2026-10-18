@@ -184,11 +184,18 @@ extension ContextExtensions on BuildContext {
   /// True if the width is less than 1200p
   bool get isDesktopOrLess => width <= 1200;
 
-  /// True if the width is greater than 1200p
-  bool get isDesktopOrWider => width >= 1200;
+  /// True if the window gets the desktop layout: width >= 600 with a
+  /// shortestSide >= 600, so a landscape phone keeps the in-between layout.
+  bool get isDesktopOrWider =>
+      width >= 600 && mediaQueryShortestSide >= 600;
 
-  /// True if the width is greater than 1200p
+  /// True if the window gets the desktop layout: width >= 600 with a
+  /// shortestSide >= 600, so a landscape phone keeps the in-between layout.
   bool get isDesktop => isDesktopOrWider;
+
+  /// Old 1200px rule: the full labelled sidebar and the series page's
+  /// two-column layout still only appear from this width.
+  bool get isWideDesktop => width >= 1200;
 
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 

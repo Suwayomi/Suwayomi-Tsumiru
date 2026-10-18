@@ -70,7 +70,7 @@ class SeriesHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final desktop = context.isDesktop;
+    final desktop = context.isWideDesktop;
     final coverWidth = desktop ? 180.0 : 140.0;
     final next = desktop
         ? ref.watch(firstUnreadInFilteredChapterListProvider(mangaId: manga.id))
