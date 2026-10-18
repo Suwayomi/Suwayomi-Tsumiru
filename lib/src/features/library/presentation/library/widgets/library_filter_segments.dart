@@ -41,7 +41,12 @@ class AdaptiveSegments<T> extends StatelessWidget {
   static const _gap = 2.0;
   static const _labelPadding = 20.0;
 
-  bool _fits(double maxWidth, TextStyle? style, TextDirection dir) {
+  bool _fits(
+    double maxWidth,
+    TextStyle? style,
+    TextDirection dir,
+    TextScaler scaler,
+  ) {
     if (!maxWidth.isFinite || options.isEmpty) return false;
     final gaps = _padding.horizontal + _gap * (options.length - 1);
     final segWidth = (maxWidth - gaps) / options.length;
@@ -49,6 +54,7 @@ class AdaptiveSegments<T> extends StatelessWidget {
       final painter = TextPainter(
         text: TextSpan(text: option.label, style: style),
         textDirection: dir,
+        textScaler: scaler,
         maxLines: 1,
       )..layout();
       if (painter.width > segWidth - _labelPadding) return false;
@@ -61,9 +67,10 @@ class AdaptiveSegments<T> extends StatelessWidget {
     final scheme = context.theme.colorScheme;
     final labelStyle = context.theme.textTheme.labelLarge;
     final dir = Directionality.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (!_fits(constraints.maxWidth, labelStyle, dir)) {
+        if (!_fits(constraints.maxWidth, labelStyle, dir, scaler)) {
           return RadioGroup<T>(
             groupValue: value,
             onChanged: (next) {
@@ -103,10 +110,16 @@ class AdaptiveSegments<T> extends StatelessWidget {
             children: [
               for (final option in options)
                 Expanded(
-                  child: _Segment(
-                    label: option.label,
+                  child: Semantics(
+                    button: true,
                     selected: option.value == value,
-                    onTap: () => onChanged(option.value),
+                    inMutuallyExclusiveGroup: true,
+                    label: option.label,
+                    child: _Segment(
+                      label: option.label,
+                      selected: option.value == value,
+                      onTap: () => onChanged(option.value),
+                    ),
                   ),
                 ),
             ],

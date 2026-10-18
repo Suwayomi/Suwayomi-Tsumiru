@@ -7,6 +7,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -54,6 +55,19 @@ Fragment$MangaDto$source _mangaSource() => Fragment$MangaDto$source(
   $extension: Fragment$MangaDto$source$extension(isObsolete: false),
 );
 
+Fragment$TrackerDto _tracker(int id, String name) => Fragment$TrackerDto(
+  id: id,
+  name: name,
+  icon: '',
+  isLoggedIn: true,
+  isTokenExpired: false,
+  supportsTrackDeletion: true,
+  supportsPrivateTracking: false,
+  supportsReadingDates: false,
+  scores: const [],
+  statuses: const [],
+);
+
 Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
   id: id,
   title: 'Manga $id',
@@ -85,18 +99,15 @@ Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
 /// covering only the content area, which is what caught the window-global
 /// anchor bug (panels pinned to the window's right edge instead of the
 /// button's). Narrow surfaces pump the screen directly (phone, no shell).
-Future<ProviderContainer> _pumpLibrary(
-  WidgetTester tester, {
-  required Size surface,
+Future<ProviderContainer> _createContainer({
+  List<Fragment$TrackerDto> trackers = const <Fragment$TrackerDto>[],
 }) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(sp),
-      loggedInTrackersProvider.overrideWithValue(
-        const AsyncData(<Fragment$TrackerDto>[]),
-      ),
+      loggedInTrackersProvider.overrideWithValue(AsyncData(trackers)),
       updateRunningSocketProvider.overrideWithValue(
         const AsyncData<bool?>(null),
       ),
@@ -130,6 +141,15 @@ Future<ProviderContainer> _pumpLibrary(
     ],
   );
   addTearDown(container.dispose);
+  return container;
+}
+
+Future<ProviderContainer> _pumpLibrary(
+  WidgetTester tester, {
+  required Size surface,
+  List<Fragment$TrackerDto> trackers = const <Fragment$TrackerDto>[],
+}) async {
+  final container = await _createContainer(trackers: trackers);
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -223,6 +243,47 @@ Future<(Rect, Rect)> _openDisplayAndMeasure(
     tester.getRect(find.byType(DesktopLibraryDisplayPanel)),
   );
 }
+
+/// Pumps the real [DesktopLibraryFilterPanel] in its 720x600 box on the
+/// given window surface. Used below 1200 px wide, where the library shows
+/// the phone UI and the desktop panel cannot open from the toolbar.
+Future<void> _pumpFilterBox(
+  WidgetTester tester, {
+  required Size surface,
+  List<Fragment$TrackerDto> trackers = const <Fragment$TrackerDto>[],
+}) async {
+  final container = await _createContainer(trackers: trackers);
+  tester.view.physicalSize = surface;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 720,
+              height: 600,
+              child: DesktopLibraryFilterPanel(),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+List<Fragment$TrackerDto> _fiveTrackers() => [
+  _tracker(1, 'Tracker One'),
+  _tracker(2, 'Tracker Two'),
+  _tracker(3, 'Tracker Three'),
+  _tracker(4, 'Tracker Four'),
+  _tracker(5, 'Tracker Five'),
+];
 
 void main() {
   group('Library filter panel (desktop 1400x980)', () {
@@ -465,6 +526,81 @@ void main() {
       final leftRect = tester.getRect(leftColumn);
       expect(tagRect.bottom - leftRect.bottom, lessThanOrEqualTo(1.0));
       expect(tagRect.bottom - leftRect.bottom, greaterThanOrEqualTo(-1.0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('five trackers fit without overflow (1400x980)', (
+      tester,
+    ) async {
+      await _pumpLibrary(
+        tester,
+        surface: const Size(1400, 980),
+        trackers: _fiveTrackers(),
+      );
+      await _openFilterPanel(tester);
+
+      for (final name in [
+        'Tracker One',
+        'Tracker Two',
+        'Tracker Three',
+        'Tracker Four',
+        'Tracker Five',
+      ]) {
+        expect(find.text(name), findsOneWidget);
+      }
+      final panel = find.byType(DesktopLibraryFilterPanel);
+      expect(panel, findsOneWidget);
+      // The right column scrolls as one (left keeps its own scroll view).
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        findsNWidgets(2),
+      );
+      // The tag list shrank to its ~3-row minimum instead of overflowing ...
+      final tagList = find.ancestor(
+        of: find.text('All tags'),
+        matching: find.byType(ListView),
+      );
+      expect(tagList, findsOneWidget);
+      final tagRect = tester.getRect(tagList);
+      expect(tagRect.height, lessThan(150), reason: 'tag list shrank first');
+      expect(
+        tagRect.height,
+        greaterThan(70),
+        reason: 'tag list keeps ~3 rows minimum',
+      );
+      // ... and the scrolled column extends past the panel bottom.
+      final panelRect = tester.getRect(panel);
+      expect(tagRect.bottom, greaterThan(panelRect.bottom));
+      // The fallback actually scrolls.
+      await tester.drag(find.text('Minimum rating'), const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('five trackers fit without overflow (1000x760)', (
+      tester,
+    ) async {
+      await _pumpFilterBox(
+        tester,
+        surface: const Size(1000, 760),
+        trackers: _fiveTrackers(),
+      );
+
+      expect(find.byType(DesktopLibraryFilterPanel), findsOneWidget);
+      expect(find.text('Tracker Five'), findsOneWidget);
+      final tagList = find.ancestor(
+        of: find.text('All tags'),
+        matching: find.byType(ListView),
+      );
+      expect(tagList, findsOneWidget);
+      expect(
+        tester.getRect(tagList).height,
+        lessThan(150),
+        reason: 'tag list shrank first',
+      );
       expect(tester.takeException(), isNull);
     });
   });
@@ -770,6 +906,163 @@ void main() {
       await tester.tap(find.text('Yes'));
       expect(tapped, 'b');
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('short labels stay segmented at 200 px', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              child: AdaptiveSegments<String>(
+                value: 'a',
+                onChanged: (_) {},
+                options: const [
+                  SegmentOption(value: 'a', label: 'Any'),
+                  SegmentOption(value: 'b', label: 'Yes'),
+                  SegmentOption(value: 'c', label: 'No'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Control for the next test: the same width fits at default text size.
+      expect(
+        find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('large text falls back to radio rows without overflow', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+              child: SizedBox(
+                width: 200,
+                child: AdaptiveSegments<String>(
+                  value: 'a',
+                  onChanged: (_) {},
+                  options: const [
+                    SegmentOption(value: 'a', label: 'Any'),
+                    SegmentOption(value: 'b', label: 'Yes'),
+                    SegmentOption(value: 'c', label: 'No'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate((w) => w is RadioListTile<dynamic>),
+        findsWidgets,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('segments expose selected state to semantics', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              child: AdaptiveSegments<String>(
+                value: 'b',
+                onChanged: (_) {},
+                options: const [
+                  SegmentOption(value: 'a', label: 'Any'),
+                  SegmentOption(value: 'b', label: 'Yes'),
+                  SegmentOption(value: 'c', label: 'No'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final wrappers = tester
+          .widgetList<Semantics>(
+            find.descendant(
+              of: find.byType(AdaptiveSegments<String>),
+              matching: find.byType(Semantics),
+            ),
+          )
+          .where((s) => (s.properties.label ?? '').isNotEmpty)
+          .toList();
+      expect(wrappers, hasLength(3));
+      expect(wrappers.map((s) => s.properties.label).toList(), [
+        'Any',
+        'Yes',
+        'No',
+      ]);
+      expect(wrappers.map((s) => s.properties.button).toList(), [
+        true,
+        true,
+        true,
+      ]);
+      expect(wrappers.map((s) => s.properties.selected).toList(), [
+        false,
+        true,
+        false,
+      ]);
+      expect(
+        wrappers.map((s) => s.properties.inMutuallyExclusiveGroup).toList(),
+        [true, true, true],
+      );
+
+      // And the selected flag reaches the semantics tree: walking up from
+      // the tapped label's own node finds the selected segment wrapper ...
+      SemanticsNode? selected;
+      SemanticsNode? current = tester.getSemantics(find.text('Yes'));
+      while (current != null) {
+        if (current
+                .getSemanticsData()
+                .flagsCollection
+                .isSelected
+                .toBoolOrNull() ==
+            true) {
+          selected = current;
+          break;
+        }
+        current = current.parent;
+      }
+      expect(selected, isNotNull);
+      final selectedData = selected!.getSemanticsData();
+      // The node joins the wrapper label with the segment text.
+      expect(selectedData.label, contains('Yes'));
+      expect(selectedData.flagsCollection.isButton, isTrue);
+      // ... while the unselected labels have no selected ancestor.
+      for (final label in ['Any', 'No']) {
+        SemanticsNode? ancestor = tester.getSemantics(find.text(label));
+        var found = false;
+        while (ancestor != null) {
+          if (ancestor
+                  .getSemanticsData()
+                  .flagsCollection
+                  .isSelected
+                  .toBoolOrNull() ==
+              true) {
+            found = true;
+            break;
+          }
+          ancestor = ancestor.parent;
+        }
+        expect(found, isFalse, reason: label);
+      }
+      expect(tester.takeException(), isNull);
+      handle.dispose();
     });
   });
 

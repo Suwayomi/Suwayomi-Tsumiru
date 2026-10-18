@@ -297,8 +297,9 @@ Future<void> showLibraryDisplayPanel({
 );
 
 /// Desktop Filter panel body: header row plus the shared filter content in
-/// two columns. The tag list scrolls inside a fixed max height so the panel
-/// itself never scrolls.
+/// two columns. The tag list fills the leftover right-column height and
+/// scrolls inside itself; with many trackers it shrinks to ~3 rows first,
+/// and only then does the right column scroll as one.
 class DesktopLibraryFilterPanel extends StatelessWidget {
   const DesktopLibraryFilterPanel({super.key});
 

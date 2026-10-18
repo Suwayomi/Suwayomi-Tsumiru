@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -43,10 +45,12 @@ class LibraryFilterContent extends ConsumerWidget {
         const LibraryFilterHeader(),
         // Two columns need a bounded height (the desktop panel): the left
         // column scrolls internally, so a radio fallback for long labels
-        // never overflows the panel. With short labels everything fits and
-        // nothing scrolls. The right column never scrolls as a whole;
-        // instead its tag list grows to fill the remaining height and
-        // scrolls inside itself, so both column bottoms align.
+        // never overflows the panel. The right column's tag list grows to
+        // fill the remaining height and scrolls inside itself, so both
+        // column bottoms align. With many trackers the tag list shrinks
+        // first (down to ~3 rows); only if the right column still doesn't
+        // fit does the right column scroll as one. The left column is
+        // unaffected either way.
         if (twoColumns)
           const Expanded(
             child: Row(
@@ -59,17 +63,7 @@ class LibraryFilterContent extends ConsumerWidget {
                   child: SingleChildScrollView(child: LibraryFilterSegments()),
                 ),
                 SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LibraryRatingFilter(),
-                      LibraryTrackerSegments(),
-                      LibraryCategoryFilter(),
-                      Expanded(child: LibraryTagFilter(expandList: true)),
-                    ],
-                  ),
-                ),
+                Expanded(child: _FilterRightColumn()),
               ],
             ),
           )
@@ -78,6 +72,106 @@ class LibraryFilterContent extends ConsumerWidget {
           right,
         ],
       ],
+    );
+  }
+}
+
+/// Slots of the two-column filter panel's right column.
+enum _FilterRightSlot { fixed, tags }
+
+/// Lays out the right column without intrinsic measurements (a [ListView]
+/// cannot answer those): the fixed filters get their natural height and the
+/// tag list takes the leftover viewport height, shrinking to
+/// [_minTagListHeight] first. Anything beyond the viewport paints past the
+/// layout size, where the surrounding scroll view picks it up — so the right
+/// column scrolls as one only when the fixed filters plus that minimum
+/// exceed the row height.
+class _FilterRightDelegate extends MultiChildLayoutDelegate {
+  _FilterRightDelegate({required this.viewportHeight});
+
+  final double viewportHeight;
+
+  @override
+  Size getSize(BoxConstraints constraints) =>
+      Size(constraints.maxWidth, viewportHeight);
+
+  @override
+  void performLayout(Size size) {
+    final fixed = layoutChild(
+      _FilterRightSlot.fixed,
+      BoxConstraints(maxWidth: size.width),
+    );
+    positionChild(_FilterRightSlot.fixed, Offset.zero);
+    final listHeight = math.max(_minTagListHeight, size.height - fixed.height);
+    layoutChild(
+      _FilterRightSlot.tags,
+      BoxConstraints.tightFor(width: size.width, height: listHeight),
+    );
+    positionChild(_FilterRightSlot.tags, Offset(0, fixed.height));
+  }
+
+  @override
+  bool shouldRelayout(_FilterRightDelegate oldDelegate) =>
+      oldDelegate.viewportHeight != viewportHeight;
+}
+
+/// Right column of the two-column filter panel: rating, per-tracker rows,
+/// categories, tag search, then the tag list expanding into the leftover
+/// height and scrolling inside itself. The left column is unaffected.
+class _FilterRightColumn extends HookConsumerWidget {
+  const _FilterRightColumn();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final query = useState('');
+    final data = _readTagFilterData(ref, query.value);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportHeight = constraints.maxHeight;
+        if (!viewportHeight.isFinite) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LibraryRatingFilter(),
+                const LibraryTrackerSegments(),
+                const LibraryCategoryFilter(),
+                _TagSearchHeader(
+                  onQueryChanged: (value) => query.value = value,
+                ),
+                _TagListView(data: data, shrinkWrap: true),
+              ],
+            ),
+          );
+        }
+        return SingleChildScrollView(
+          child: CustomMultiChildLayout(
+            delegate: _FilterRightDelegate(viewportHeight: viewportHeight),
+            children: [
+              LayoutId(
+                id: _FilterRightSlot.fixed,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const LibraryRatingFilter(),
+                    const LibraryTrackerSegments(),
+                    const LibraryCategoryFilter(),
+                    _TagSearchHeader(
+                      onQueryChanged: (value) => query.value = value,
+                    ),
+                  ],
+                ),
+              ),
+              LayoutId(
+                id: _FilterRightSlot.tags,
+                child: _TagListView(data: data),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -411,188 +505,176 @@ class LibraryCategoryFilter extends ConsumerWidget {
   }
 }
 
-/// Tag filter: a search field plus the library's tags with series counts.
-/// "All tags" first clears the selection; tapping a tag cycles it through
-/// include → exclude → ignored, reusing the tag filter providers.
-class LibraryTagFilter extends HookConsumerWidget {
-  const LibraryTagFilter({super.key, this.expandList = false});
+/// Minimum height of the expanded tag list: ~3 tag rows (each ~36 px: 8 px
+/// padding above and below a ~20 px line). The list shrinks to this before
+/// the right column starts scrolling as a whole.
+const _minTagListHeight = 112.0;
 
-  /// When true, the tag list expands to fill the remaining column height
-  /// and scrolls inside itself (desktop two-column panel). When false, it
-  /// takes its intrinsic height up to 150 px (single-column organizer).
-  final bool expandList;
+/// Next tag state when tapping: include → exclude → ignored.
+bool? _nextTagValue(bool? current) {
+  if (current == null) return true;
+  if (current == true) return false;
+  return null;
+}
 
-  static bool? _nextValue(bool? current) {
-    if (current == null) return true;
-    if (current == true) return false;
+/// Tag rows shared by the single-column filter and the two-column panel's
+/// right column: the filtered tags with series counts plus their
+/// include/exclude state and the callbacks that change it.
+class _TagFilterData {
+  const _TagFilterData({
+    required this.isLoading,
+    required this.tags,
+    required this.counts,
+    required this.hasCounts,
+    required this.hasSelection,
+    required this.stateFor,
+    required this.toggle,
+    required this.clear,
+  });
+
+  final bool isLoading;
+  final List<String> tags;
+  final Map<String, int> counts;
+  final bool hasCounts;
+  final bool hasSelection;
+  final bool? Function(String tag) stateFor;
+  final void Function(String tag) toggle;
+  final VoidCallback clear;
+}
+
+/// Reads the tag filter rows for [rawQuery] (untrimmed search field text).
+_TagFilterData _readTagFilterData(WidgetRef ref, String rawQuery) {
+  final tagsAsync = ref.watch(libraryTagListProvider);
+  final includeSet =
+      (ref.watch(libraryFilterTagsIncludeProvider) ?? const <String>[]).toSet();
+  final excludeSet =
+      (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[]).toSet();
+  final mangaList = ref.watch(libraryMangaListProvider).value;
+
+  bool? stateFor(String tag) {
+    if (excludeSet.contains(tag)) return false;
+    if (includeSet.contains(tag)) return true;
     return null;
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final query = useState('');
-    final tagsAsync = ref.watch(libraryTagListProvider);
-    final includeSet =
-        (ref.watch(libraryFilterTagsIncludeProvider) ?? const <String>[])
-            .toSet();
-    final excludeSet =
-        (ref.watch(libraryFilterTagsExcludeProvider) ?? const <String>[])
-            .toSet();
-    final mangaList = ref.watch(libraryMangaListProvider).value;
+  void toggle(String tag) {
+    final next = _nextTagValue(stateFor(tag));
+    final newInclude = Set<String>.from(includeSet)..remove(tag);
+    final newExclude = Set<String>.from(excludeSet)..remove(tag);
+    if (next == true) newInclude.add(tag);
+    if (next == false) newExclude.add(tag);
+    ref
+        .read(libraryFilterTagsIncludeProvider.notifier)
+        .update(newInclude.toList());
+    ref
+        .read(libraryFilterTagsExcludeProvider.notifier)
+        .update(newExclude.toList());
+    ref
+        .read(libraryFilterTagsProvider.notifier)
+        .update(newInclude.isNotEmpty || newExclude.isNotEmpty);
+  }
 
-    bool? stateFor(String tag) {
-      if (excludeSet.contains(tag)) return false;
-      if (includeSet.contains(tag)) return true;
-      return null;
-    }
+  void clear() {
+    ref.read(libraryFilterTagsIncludeProvider.notifier).update(const []);
+    ref.read(libraryFilterTagsExcludeProvider.notifier).update(const []);
+    ref.read(libraryFilterTagsProvider.notifier).update(false);
+  }
 
-    void toggle(String tag) {
-      final next = _nextValue(stateFor(tag));
-      final newInclude = Set<String>.from(includeSet)..remove(tag);
-      final newExclude = Set<String>.from(excludeSet)..remove(tag);
-      if (next == true) newInclude.add(tag);
-      if (next == false) newExclude.add(tag);
-      ref
-          .read(libraryFilterTagsIncludeProvider.notifier)
-          .update(newInclude.toList());
-      ref
-          .read(libraryFilterTagsExcludeProvider.notifier)
-          .update(newExclude.toList());
-      ref
-          .read(libraryFilterTagsProvider.notifier)
-          .update(newInclude.isNotEmpty || newExclude.isNotEmpty);
-    }
-
-    void clear() {
-      ref.read(libraryFilterTagsIncludeProvider.notifier).update(const []);
-      ref.read(libraryFilterTagsExcludeProvider.notifier).update(const []);
-      ref.read(libraryFilterTagsProvider.notifier).update(false);
-    }
-
-    final counts = <String, int>{};
-    if (mangaList != null) {
-      for (final manga in mangaList) {
-        final tags = {
-          for (final genre in manga.genre) genre.toLowerCase(),
-          for (final tag in (manga.metaData.userTags ?? const <String>[]))
-            tag.toLowerCase(),
-        };
-        for (final tag in tags) {
-          counts[tag] = (counts[tag] ?? 0) + 1;
-        }
+  final counts = <String, int>{};
+  if (mangaList != null) {
+    for (final manga in mangaList) {
+      final tags = {
+        for (final genre in manga.genre) genre.toLowerCase(),
+        for (final tag in (manga.metaData.userTags ?? const <String>[]))
+          tag.toLowerCase(),
+      };
+      for (final tag in tags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
       }
     }
+  }
 
-    final allTags = tagsAsync.value ?? const <String>[];
-    final q = query.value.trim().toLowerCase();
-    final tags = q.isEmpty
-        ? allTags
-        : allTags.where((t) => t.toLowerCase().contains(q)).toList();
-    final hasSelection = includeSet.isNotEmpty || excludeSet.isNotEmpty;
-    final scheme = context.theme.colorScheme;
+  final allTags = tagsAsync.value ?? const <String>[];
+  final q = rawQuery.trim().toLowerCase();
+  final tags = q.isEmpty
+      ? allTags
+      : allTags.where((t) => t.toLowerCase().contains(q)).toList();
+  return _TagFilterData(
+    isLoading: tagsAsync.isLoading,
+    tags: tags,
+    counts: counts,
+    hasCounts: mangaList != null,
+    hasSelection: includeSet.isNotEmpty || excludeSet.isNotEmpty,
+    stateFor: stateFor,
+    toggle: toggle,
+    clear: clear,
+  );
+}
 
-    Widget tagRow({
-      required String label,
-      required bool? state,
-      required VoidCallback onTap,
-      int? count,
-    }) {
-      final Widget? leading;
-      if (state == true) {
-        leading = Icon(Icons.check_rounded, size: 18, color: scheme.primary);
-      } else if (state == false) {
-        leading = Icon(Icons.block_rounded, size: 18, color: scheme.error);
-      } else {
-        leading = null;
-      }
-      return InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              if (leading != null) ...[leading, const SizedBox(width: 12)],
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.theme.textTheme.bodyMedium?.copyWith(
-                    color: state == null ? null : scheme.primary,
-                    fontWeight: state == null ? null : FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (count != null)
-                Text(
-                  '$count',
-                  style: context.theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final list = tagsAsync.isLoading
-        ? const Center(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        : ListView(
-            shrinkWrap: !expandList,
-            children: [
-              tagRow(
-                label: context.l10n.allTags,
-                state: hasSelection ? null : true,
-                onTap: clear,
-              ),
-              for (final tag in tags)
-                tagRow(
-                  label: tag,
-                  state: stateFor(tag),
-                  onTap: () => toggle(tag),
-                  count: mangaList == null
-                      ? null
-                      : counts[tag.toLowerCase()] ?? 0,
-                ),
-            ],
-          );
-    // The expanded variant fills the column, so this Column must be laid
-    // out with a bounded height (it is: the desktop panel stretches it).
-    if (expandList) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+/// One tag row: the label plus its series count, checkmarked or blocked when
+/// included or excluded. "All tags" clears the selection.
+Widget _tagRow(
+  BuildContext context, {
+  required String label,
+  required bool? state,
+  required VoidCallback onTap,
+  int? count,
+}) {
+  final scheme = context.theme.colorScheme;
+  final Widget? leading;
+  if (state == true) {
+    leading = Icon(Icons.check_rounded, size: 18, color: scheme.primary);
+  } else if (state == false) {
+    leading = Icon(Icons.block_rounded, size: 18, color: scheme.error);
+  } else {
+    leading = null;
+  }
+  return InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         children: [
-          FilterSectionHeading(context.l10n.tags),
-          TextField(
-            onChanged: (value) => query.value = value,
-            style: context.theme.textTheme.bodyMedium,
-            decoration: InputDecoration(
-              hintText: context.l10n.searchTags,
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+          if (leading != null) ...[leading, const SizedBox(width: 12)],
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.theme.textTheme.bodyMedium?.copyWith(
+                color: state == null ? null : scheme.primary,
+                fontWeight: state == null ? null : FontWeight.w600,
               ),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
           ),
-          Expanded(child: list),
+          if (count != null)
+            Text(
+              '$count',
+              style: context.theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
         ],
-      );
-    }
+      ),
+    ),
+  );
+}
+
+/// Tag search heading plus search field, shared by both filter layouts.
+class _TagSearchHeader extends StatelessWidget {
+  const _TagSearchHeader({required this.onQueryChanged});
+
+  final ValueChanged<String> onQueryChanged;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         FilterSectionHeading(context.l10n.tags),
         TextField(
-          onChanged: (value) => query.value = value,
+          onChanged: onQueryChanged,
           style: context.theme.textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: context.l10n.searchTags,
@@ -602,9 +684,73 @@ class LibraryTagFilter extends HookConsumerWidget {
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// The tag rows as a list, scrolling inside whatever height its parent gives
+/// it (or shrink-wrapped inside a scrollable parent).
+class _TagListView extends StatelessWidget {
+  const _TagListView({required this.data, this.shrinkWrap = false});
+
+  final _TagFilterData data;
+  final bool shrinkWrap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return ListView(
+      shrinkWrap: shrinkWrap,
+      children: [
+        _tagRow(
+          context,
+          label: context.l10n.allTags,
+          state: data.hasSelection ? null : true,
+          onTap: data.clear,
+        ),
+        for (final tag in data.tags)
+          _tagRow(
+            context,
+            label: tag,
+            state: data.stateFor(tag),
+            onTap: () => data.toggle(tag),
+            count: data.hasCounts ? data.counts[tag.toLowerCase()] ?? 0 : null,
+          ),
+      ],
+    );
+  }
+}
+
+/// Tag filter: a search field plus the library's tags with series counts.
+/// "All tags" first clears the selection; tapping a tag cycles it through
+/// include → exclude → ignored, reusing the tag filter providers.
+///
+/// Single-column layout (organizer Filter tab): the list takes its intrinsic
+/// height up to 150 px. The desktop two-column panel composes
+/// [_TagSearchHeader] and [_TagListView] itself (see [_FilterRightColumn]).
+class LibraryTagFilter extends HookConsumerWidget {
+  const LibraryTagFilter({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final query = useState('');
+    final data = _readTagFilterData(ref, query.value);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _TagSearchHeader(onQueryChanged: (value) => query.value = value),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 150),
-          child: list,
+          child: _TagListView(data: data, shrinkWrap: true),
         ),
       ],
     );
