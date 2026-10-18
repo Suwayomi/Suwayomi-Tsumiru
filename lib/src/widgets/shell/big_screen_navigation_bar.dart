@@ -7,12 +7,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../constants/gen/assets.gen.dart';
 import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import '../tsumiru_logo.dart';
 import 'animated_nav_icon.dart';
 import 'nav_badges.dart';
 import 'sidebar_expanded.dart';
@@ -65,10 +65,7 @@ class BigScreenNavigationBar extends ConsumerWidget {
     void toggleSidebar() =>
         ref.read(sidebarExpandedProvider.notifier).update(!expanded);
 
-    final logoIcon = ImageIcon(
-      AssetImage(Assets.icons.darkIcon.path),
-      size: 48,
-    );
+    final logoIcon = const TsumiruLogo(size: 48);
 
     final Widget leadingIcon;
     if (showExtended) {

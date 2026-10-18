@@ -16,12 +16,21 @@ class $AssetsIconsGen {
   AssetGenImage get darkIcon =>
       const AssetGenImage('assets/icons/dark_icon.png');
 
+  /// File path: assets/icons/logo_foreground.png
+  AssetGenImage get logoForeground =>
+      const AssetGenImage('assets/icons/logo_foreground.png');
+
   /// File path: assets/icons/logo_on_light.png
   AssetGenImage get logoOnLight =>
       const AssetGenImage('assets/icons/logo_on_light.png');
 
+  /// File path: assets/icons/logo_shadow.png
+  AssetGenImage get logoShadow =>
+      const AssetGenImage('assets/icons/logo_shadow.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [darkIcon, logoOnLight];
+  List<AssetGenImage> get values =>
+      [darkIcon, logoForeground, logoOnLight, logoShadow];
 }
 
 class Assets {

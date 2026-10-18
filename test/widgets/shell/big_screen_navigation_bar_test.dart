@@ -12,6 +12,7 @@ import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
+import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
 
 Future<void> _pump(WidgetTester tester, SharedPreferences prefs,
     {Size size = const Size(1400, 900)}) async {
@@ -70,13 +71,13 @@ void main() {
         reason: 'tapping collapse must switch to the icon-only rail');
     expect(find.byIcon(Icons.chevron_right), findsNothing,
         reason: 'the header must not swap to a chevron when collapsed');
-    expect(find.byType(ImageIcon), findsOneWidget,
+    expect(find.byType(TsumiruLogo), findsOneWidget,
         reason: 'collapsed rail keeps the logo (tap to expand)');
     expect(tester.takeException(), isNull,
         reason: 'the narrow collapsed leading must not overflow');
 
     // Expand again by tapping the logo.
-    await tester.tap(find.byType(ImageIcon));
+    await tester.tap(find.byType(TsumiruLogo));
     await tester.pumpAndSettle();
     expect(_rail(tester).extended, isTrue);
   });

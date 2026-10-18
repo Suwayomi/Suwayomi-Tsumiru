@@ -8,13 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/enum.dart';
-import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/tsumiru_logo.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
@@ -36,10 +36,7 @@ class MoreScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(context.l10n.more)),
       body: ListView(
         children: [
-          ImageIcon(
-            AssetImage(Assets.icons.darkIcon.path),
-            size: context.height * .2,
-          ),
+          TsumiruLogo(size: context.height * .2),
           const Divider(),
           Builder(
             builder: (context) {
