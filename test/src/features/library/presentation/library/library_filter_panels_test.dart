@@ -1040,8 +1040,8 @@ void main() {
       }
       expect(selected, isNotNull);
       final selectedData = selected!.getSemanticsData();
-      // The node joins the wrapper label with the segment text.
-      expect(selectedData.label, contains('Yes'));
+      // Each option reads exactly once with the option text.
+      expect(selectedData.label, 'Yes');
       expect(selectedData.flagsCollection.isButton, isTrue);
       // ... while the unselected labels have no selected ancestor.
       for (final label in ['Any', 'No']) {

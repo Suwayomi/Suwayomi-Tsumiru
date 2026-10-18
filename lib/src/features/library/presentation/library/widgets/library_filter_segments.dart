@@ -115,6 +115,7 @@ class AdaptiveSegments<T> extends StatelessWidget {
                     selected: option.value == value,
                     inMutuallyExclusiveGroup: true,
                     label: option.label,
+                    excludeSemantics: true,
                     child: _Segment(
                       label: option.label,
                       selected: option.value == value,
