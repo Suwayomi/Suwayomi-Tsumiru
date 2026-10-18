@@ -10,7 +10,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
-import '../../../../../routes/navigation.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../quick_open/presentation/unified_search/desktop_search_field.dart';
@@ -210,24 +209,6 @@ class DesktopLibraryToolbar extends HookConsumerWidget {
                     icon: const Icon(Icons.help_outline_rounded),
                     tooltip: context.l10n.searchTips,
                     onPressed: () => showSearchTips(context),
-                  ),
-                  Consumer(
-                    builder: (context, ref, child) => IconButton(
-                      iconSize: 20,
-                      padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                      icon: const Icon(Icons.travel_explore_rounded),
-                      tooltip: context.l10n.globalSearch,
-                      onPressed: ref.watch(libraryQueryProvider).isNotBlank
-                          ? () => openGlobalSearch(
-                              context,
-                              query: ref.read(libraryQueryProvider),
-                            )
-                          : null,
-                    ),
                   ),
                 ],
               ),

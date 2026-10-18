@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
@@ -84,11 +83,7 @@ class BrowseScreen extends HookConsumerWidget {
               const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
               const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
             ],
-            IconButton(
-              tooltip: context.l10n.globalSearch,
-              onPressed: () => openGlobalSearch(context),
-              icon: const Icon(Icons.travel_explore_rounded),
-            ),
+            // The search overlay/dropdown already offers "Search all sources".
             IconButton(
               tooltip: context.l10n.filterSources,
               onPressed: () => const SourceFilterRoute().push(context),

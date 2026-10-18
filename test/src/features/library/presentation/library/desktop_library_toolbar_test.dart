@@ -99,23 +99,17 @@ void main() {
       await tester.pump();
 
       expect(container.read(libraryQueryProvider), 'sword');
-      // Search-all-sources is only enabled with a query.
-      final global = tester.widget<IconButton>(
+      // The dropdown offers Search all sources; no separate button remains.
+      expect(
         find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
+        findsNothing,
       );
-      expect(global.onPressed, isNotNull);
     });
 
     testWidgets('sort menu lists sorts; picking updates the provider', (
       tester,
     ) async {
       final container = await _pumpToolbar(tester);
-
-      // No query: search-all-sources stays disabled.
-      final global = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.travel_explore_rounded),
-      );
-      expect(global.onPressed, isNull);
 
       await _tapSortBox(tester);
 
