@@ -17,6 +17,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../search/settings_search_registry.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
 import 'widgets/force_portrait_tile.dart';
@@ -30,44 +31,57 @@ class GeneralScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(context.l10n.general)),
       body: ListView(
         children: [
-          ListTile(
-            leading: const Icon(Icons.translate_rounded),
-            title: Text(context.l10n.appLanguage),
-            subtitle: Text(getLanguageNameFormLocale(context.currentLocale)),
-            onTap: () => showDialog(
-              context: context,
-              builder: (context) => RadioListPopup<Locale>(
-                title: context.l10n.appLanguage,
-                optionList: AppLocalizations.supportedLocales,
-                value: context.currentLocale,
-                onChange: (locale) {
-                  ref.read(l10nProvider.notifier).update(locale);
-                  Navigator.pop(context);
-                },
-                getOptionTitle: getLanguageNameFormLocale,
-                getOptionSubtitle: getLanguageNameInEnFormLocale,
+          SettingsHighlightTarget(
+            id: 'appLanguage',
+            child: ListTile(
+              leading: const Icon(Icons.translate_rounded),
+              title: Text(context.l10n.appLanguage),
+              subtitle: Text(getLanguageNameFormLocale(context.currentLocale)),
+              onTap: () => showDialog(
+                context: context,
+                builder: (context) => RadioListPopup<Locale>(
+                  title: context.l10n.appLanguage,
+                  optionList: AppLocalizations.supportedLocales,
+                  value: context.currentLocale,
+                  onChange: (locale) {
+                    ref.read(l10nProvider.notifier).update(locale);
+                    Navigator.pop(context);
+                  },
+                  getOptionTitle: getLanguageNameFormLocale,
+                  getOptionSubtitle: getLanguageNameInEnFormLocale,
+                ),
+                animationStyle: context.motionStyle,
               ),
-              animationStyle: context.motionStyle,
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.cleaning_services_rounded),
-            title: Text(context.l10n.clearCache),
-            onTap: () async {
-              // The GraphQL cache is in-memory (and bypassed by noCache), so
-              // "clear cache" now means the image caches: pages and covers.
-              await DefaultCacheManager().emptyCache();
-              await ref.read(coverCacheManagerProvider).emptyCache();
-              if (context.mounted) {
-                ref.read(toastProvider)?.show(context.l10n.cacheCleared);
-              }
-            },
+          SettingsHighlightTarget(
+            id: 'clearCache',
+            child: ListTile(
+              leading: const Icon(Icons.cleaning_services_rounded),
+              title: Text(context.l10n.clearCache),
+              onTap: () async {
+                // The GraphQL cache is in-memory (and bypassed by noCache), so
+                // "clear cache" now means the image caches: pages and covers.
+                await DefaultCacheManager().emptyCache();
+                await ref.read(coverCacheManagerProvider).emptyCache();
+                if (context.mounted) {
+                  ref.read(toastProvider)?.show(context.l10n.cacheCleared);
+                }
+              },
+            ),
           ),
           // A keyboard shortcut is the only way to open quick search, so on a
           // touch device this switch turned on something unreachable. Same
           // gate the Keyboard shortcuts entry already uses.
-          if (isKeyboardRuntime) const QuickSearchToggleTile(),
-          const ForcePortraitTile(),
+          if (isKeyboardRuntime)
+            const SettingsHighlightTarget(
+              id: 'quickSearch',
+              child: QuickSearchToggleTile(),
+            ),
+          const SettingsHighlightTarget(
+            id: 'lockToPortrait',
+            child: ForcePortraitTile(),
+          ),
           const TimeoutSettingsSection(),
         ],
       ),
