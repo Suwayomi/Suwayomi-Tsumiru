@@ -20,24 +20,24 @@ class WindowGeometryListener with WindowListener {
   final SharedPreferences _prefs;
   Timer? _debounce;
   bool _persisting = false;
+  Future<void>? _inFlight;
+  bool _closing = false;
 
   void _scheduleSave() {
+    if (_closing) return;
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), _persist);
   }
 
-  Future<void> _persist() async {
+  Future<void> _persist() {
     // Serialize: interleaved isMaximized/getSize reads corrupt the saved bounds.
     if (_persisting) {
       _scheduleSave();
-      return;
+      return _inFlight ?? Future.value();
     }
     _persisting = true;
-    try {
-      await _persistNow();
-    } finally {
-      _persisting = false;
-    }
+    _inFlight = _persistNow().whenComplete(() => _persisting = false);
+    return _inFlight!;
   }
 
   Future<void> _persistNow() async {
@@ -45,12 +45,16 @@ class WindowGeometryListener with WindowListener {
     if (shouldPersistSize(isMaximized: maximized)) {
       final size = await windowManager.getSize();
       await saveWindowGeometry(
-          _prefs, WindowGeometry(size: size, maximized: false));
+        _prefs,
+        WindowGeometry(size: size, maximized: false),
+      );
     } else {
       // Keep the last saved size; only flip the maximized flag.
       final existing = loadWindowGeometry(_prefs);
       await saveWindowGeometry(
-          _prefs, WindowGeometry(size: existing.size, maximized: true));
+        _prefs,
+        WindowGeometry(size: existing.size, maximized: true),
+      );
     }
   }
 
@@ -64,11 +68,29 @@ class WindowGeometryListener with WindowListener {
   void onWindowUnmaximize() => _scheduleSave();
 
   @override
-  void onWindowClose() {
-    // Best-effort flush of a pending debounced save; quitting right after a
-    // resize would otherwise restore stale geometry next launch.
+  Future<void> onWindowClose() async {
+    if (_closing) return;
+    _closing = true;
     _debounce?.cancel();
-    _persist();
+    try {
+      await _flush().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Best-effort save; shutdown proceeds regardless.
+    } finally {
+      await windowManager.destroy();
+    }
+  }
+
+  Future<void> _flush() async {
+    final running = _inFlight;
+    if (running != null) {
+      try {
+        await running;
+      } catch (_) {
+        // Fall through to the final save below.
+      }
+    }
+    await _persistNow();
   }
 }
 

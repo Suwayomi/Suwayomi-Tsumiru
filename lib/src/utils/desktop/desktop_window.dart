@@ -51,6 +51,7 @@ Future<void> initDesktopWindow(SharedPreferences prefs) async {
     } else {
       await windowManager.setSize(restoreSize);
     }
+    await windowManager.setPreventClose(true);
     attachWindowGeometryListener(prefs);
     // Show after Flutter's first frame, not here — the rest of startup (Hive,
     // migrations, auth preload) still runs before runApp, and showing early
