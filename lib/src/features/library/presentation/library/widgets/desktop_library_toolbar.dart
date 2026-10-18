@@ -83,8 +83,13 @@ Future<void> showSearchTips(BuildContext context) {
         fontSize: 14,
         color: scheme.onSurfaceVariant,
       );
-      Text tip(String template, String example) {
-        final parts = template.split('{example}');
+      Text tip(String Function(Object) format, String example) {
+        const sentinel = '\u{0}';
+        final template = format(sentinel);
+        final parts = template.split(sentinel);
+        if (parts.length < 2) {
+          return Text(template.replaceAll(sentinel, example), style: body);
+        }
         return Text.rich(
           TextSpan(
             children: [
@@ -126,8 +131,8 @@ Future<void> showSearchTips(BuildContext context) {
           spacing: 12,
           children: [
             Text(l10n.searchTipsPlainWords, style: body),
-            tip(l10n.searchTipsField('author:oda'), 'author:oda'),
-            tip(l10n.searchTipsExclude('-tag:dropped'), '-tag:dropped'),
+            tip(l10n.searchTipsField, 'author:oda'),
+            tip(l10n.searchTipsExclude, '-tag:dropped'),
           ],
         ),
         actions: [

@@ -206,17 +206,57 @@ void main() {
         find.text('Plain words match the title, author, genres and tags.'),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('Suggestions show as you type', findRichText: true),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('Exclude with a minus', findRichText: true),
-        findsOneWidget,
-      );
       expect(find.text('author:oda'), findsOneWidget);
       expect(find.text('-tag:dropped'), findsOneWidget);
       expect(find.textContaining('Match any of these'), findsNothing);
+      // Each example appears only inside its chip: the plain text spans
+      // around the chips must not repeat them.
+      String plainOf(InlineSpan span) {
+        if (span is! TextSpan) return '';
+        final buffer = StringBuffer(span.text ?? '');
+        for (final child in span.children ?? const <InlineSpan>[]) {
+          buffer.write(plainOf(child));
+        }
+        return buffer.toString();
+      }
+      // Only the tip paragraphs use Text.rich (plain + chip + plain
+      // spans); the chips themselves are plain Text widgets and are
+      // covered by the findsOneWidget checks above.
+      final plains = tester
+          .widgetList<RichText>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(RichText),
+            ),
+          )
+          .where(
+            (rich) =>
+                rich.text is TextSpan &&
+                (rich.text as TextSpan).children?.isNotEmpty == true,
+          )
+          .map((rich) => plainOf(rich.text))
+          .toList();
+      expect(plains, isNotEmpty);
+      for (final plain in plains) {
+        expect(plain, isNot(contains('author:oda')));
+        expect(plain, isNot(contains('-tag:dropped')));
+      }
+      expect(
+        plains.any((plain) => plain.contains('Type a field and a colon, like ')),
+        isTrue,
+      );
+      expect(
+        plains.any(
+          (plain) => plain.contains(
+            ', to search one field. Suggestions show as you type.',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        plains.any((plain) => plain.contains('Exclude with a minus: ')),
+        isTrue,
+      );
     });
 
     testWidgets('filter opens an anchored panel, not a drawer', (tester) async {
