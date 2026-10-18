@@ -51,18 +51,26 @@ List<T> matchLibraryTitles<T>(
 bool titleMatchesQuery(String title, String query) =>
     title.toLowerCase().contains(query.trim().toLowerCase());
 
-/// Top matching in-library manga for the current query (instant, local).
+/// Top matching in-library manga for an explicit query (instant, local).
 ///
 /// Hybrid: plain words match the TITLE only (keeps "bad" clean); the moment the
 /// query contains a metatag operator it runs the full library DSL, so quick
-/// search is never weaker than the library filter bar.
-final unifiedLibraryResultsProvider = Provider<List<MangaDto>>((Ref ref) {
-  final query = ref.watch(unifiedSearchQueryProvider);
-  final library = ref.watch(libraryMangaListProvider).value ?? const [];
-  final useDsl = queryUsesOperator(query);
-  return matchLibraryTitles<MangaDto>(
-    library,
-    query,
-    (m, q) => useDsl ? m.query(q) : titleMatchesQuery(m.title, q),
-  );
-});
+/// search is never weaker than the library filter bar. A family so desktop
+/// dropdowns can search their own field text, not the overlay's query.
+final unifiedLibraryResultsForProvider =
+    Provider.family<List<MangaDto>, String>((Ref ref, String query) {
+      final library = ref.watch(libraryMangaListProvider).value ?? const [];
+      final useDsl = queryUsesOperator(query);
+      return matchLibraryTitles<MangaDto>(
+        library,
+        query,
+        (m, q) => useDsl ? m.query(q) : titleMatchesQuery(m.title, q),
+      );
+    });
+
+/// Top matching in-library manga for the current query (instant, local).
+final unifiedLibraryResultsProvider = Provider<List<MangaDto>>(
+  (Ref ref) => ref.watch(
+    unifiedLibraryResultsForProvider(ref.watch(unifiedSearchQueryProvider)),
+  ),
+);
