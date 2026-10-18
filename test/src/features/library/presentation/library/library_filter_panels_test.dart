@@ -77,6 +77,14 @@ Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
 
 /// Pumps the real [LibraryScreen] with two empty categories and two tagged
 /// manga (Action x2, Fantasy x1). Never hits the network.
+///
+/// On desktop widths the screen goes inside a replica of the desktop shell: a
+/// 256 px sidebar (the extended rail width in `big_screen_navigation_bar.dart`)
+/// plus a 40 px title strip, with the library in a nested [Navigator] like
+/// go_router's branch Navigator. The nested Navigator owns its own Overlay
+/// covering only the content area, which is what caught the window-global
+/// anchor bug (panels pinned to the window's right edge instead of the
+/// button's). Narrow surfaces pump the screen directly (phone, no shell).
 Future<ProviderContainer> _pumpLibrary(
   WidgetTester tester, {
   required Size surface,
@@ -125,13 +133,36 @@ Future<ProviderContainer> _pumpLibrary(
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  const library = LibraryScreen(categoryId: 1);
+  final Widget home = surface.width >= 1200
+      ? Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 256),
+              Expanded(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    Expanded(
+                      child: Navigator(
+                        onGenerateRoute: (_) =>
+                            MaterialPageRoute(builder: (_) => library),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )
+      : library;
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const LibraryScreen(categoryId: 1),
+        home: home,
       ),
     ),
   );
@@ -168,6 +199,28 @@ Future<(Rect, Rect)> _openFilterAndMeasure(
   return (
     tester.getRect(buttonBox),
     tester.getRect(find.byType(DesktopLibraryFilterPanel)),
+  );
+}
+
+/// Opens the Display panel and returns the toolbar button rect plus the open
+/// panel rect, both in screen coordinates.
+Future<(Rect, Rect)> _openDisplayAndMeasure(
+  WidgetTester tester,
+  Size surface,
+) async {
+  await _pumpLibrary(tester, surface: surface);
+  await _openDisplayPanel(tester);
+  final buttonBox = find.ancestor(
+    of: find.descendant(
+      of: find.byType(DesktopLibraryToolbar),
+      matching: find.byTooltip('Display'),
+    ),
+    matching: find.byType(DesktopToolbarBox),
+  );
+  expect(buttonBox, findsOneWidget);
+  return (
+    tester.getRect(buttonBox),
+    tester.getRect(find.byType(DesktopLibraryDisplayPanel)),
   );
 }
 
@@ -345,6 +398,26 @@ void main() {
       expect(panelRect.right, lessThanOrEqualTo(surface.width - 7.0));
       expect(panelRect.top, greaterThanOrEqualTo(7.0));
       expect(panelRect.bottom, lessThanOrEqualTo(surface.height - 7.0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('display panel right edge sits under the Display button', (
+      tester,
+    ) async {
+      // The shell's nested Navigator overlay covers only the content area, so
+      // a window-global anchor would pin this 820 px panel to the window's
+      // right edge instead of the button's.
+      final (buttonRect, panelRect) = await _openDisplayAndMeasure(
+        tester,
+        const Size(1400, 980),
+      );
+      expect(panelRect.width, 820);
+      expect(panelRect.right - buttonRect.right, lessThanOrEqualTo(1.0));
+      expect(panelRect.right - buttonRect.right, greaterThanOrEqualTo(-1.0));
+      expect(
+        panelRect.top,
+        moreOrLessEquals(buttonRect.bottom + 6, epsilon: 1),
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -546,6 +619,47 @@ void main() {
       final heading = tester.widget<Text>(find.text('Grid style'));
       expect(heading.style?.fontSize, 13);
       expect(heading.style?.fontWeight, FontWeight.w600);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('display height sizes to content; column 3 needs no scroll', (
+      tester,
+    ) async {
+      const surface = Size(1400, 980);
+      final (_, panelRect) = await _openDisplayAndMeasure(tester, surface);
+      // Content height, capped at the content-area height minus 140. The shell
+      // reserves a 40 px title strip, so the cap here is 940 - 140 = 800.
+      expect(panelRect.height, lessThanOrEqualTo(801.0));
+      // Column 3's sliders are visible without scrolling ...
+      final sliders = find.text('Columns (Portrait)');
+      expect(sliders, findsOneWidget);
+      final labelRect = tester.getRect(sliders);
+      expect(labelRect.top, greaterThanOrEqualTo(panelRect.top - 1.0));
+      expect(labelRect.bottom, lessThanOrEqualTo(panelRect.bottom + 1.0));
+      // ... and the body has not scrolled.
+      final scrollable = tester.widget<Scrollable>(
+        find
+            .descendant(
+              of: find.byType(DesktopLibraryDisplayPanel),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(scrollable.controller?.offset ?? 0, 0);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('limit titles follows the display-mode rule', (tester) async {
+      // Same rule as today's Display tab (`library_manga_display.dart`): only
+      // modes that draw the title on the theme surface offer the cap. The
+      // compact grid draws it on the art, so the toggle stays hidden there.
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openDisplayPanel(tester);
+      expect(find.text('Limit titles to 2 lines'), findsNothing);
+
+      await tester.tap(find.text('Comfortable grid'));
+      await tester.pump();
+      expect(find.text('Limit titles to 2 lines'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

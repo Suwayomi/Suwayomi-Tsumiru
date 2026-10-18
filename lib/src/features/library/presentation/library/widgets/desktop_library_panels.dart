@@ -22,10 +22,13 @@ import 'library_filter_content.dart';
 import 'library_filter_segments.dart';
 import 'library_manga_badges.dart';
 
-/// Anchors a dropdown menu to [rect], in overlay coordinates. Same mechanism
-/// the series page uses for its chapter filter
-/// (`big_screen_manga_details.dart`): the menu's top edge sits 6 px below the
-/// button, no scrim, Esc closes only the panel.
+/// Anchors a dropdown menu to [rect], which must already be in the coordinates
+/// of the [Overlay] above [context] (see [_openPanel]: the desktop Library
+/// lives in a branch [Navigator] whose overlay covers only the content area,
+/// window minus the sidebar, so window-global coordinates would shift the
+/// panel right by the sidebar width). Same mechanism the series page uses for
+/// its chapter filter (`big_screen_manga_details.dart`): the menu's top edge
+/// sits 6 px below the button, no scrim, Esc closes only the panel.
 RelativeRect menuAnchorForRect(BuildContext context, Rect rect) {
   final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
   return RelativeRect.fromRect(rect, Offset.zero & overlay.size);
@@ -76,7 +79,8 @@ class _LibraryPanelLayout extends SingleChildLayoutDelegate {
 class _LibraryPanelRoute extends PopupRoute<void> {
   _LibraryPanelRoute({
     required this.position,
-    required this.panelSize,
+    required this.panelWidth,
+    this.panelHeight,
     required this.panel,
     required this.capturedThemes,
     required this.barrierLabel,
@@ -84,7 +88,11 @@ class _LibraryPanelRoute extends PopupRoute<void> {
   });
 
   final RelativeRect position;
-  final Size panelSize;
+  final double panelWidth;
+
+  /// Fixed height, or null to size to the content, capped at the overlay
+  /// height minus 140 (the body scrolls only beyond that cap).
+  final double? panelHeight;
   final Widget panel;
   final CapturedThemes capturedThemes;
   final AnimationStyle? popUpAnimationStyle;
@@ -121,6 +129,48 @@ class _LibraryPanelRoute extends PopupRoute<void> {
           // the button's right edge, 6 px below it.
           final overlay = Offset.zero & constraints.biggest;
           final anchor = position.toRect(overlay);
+          final fixedHeight = panelHeight;
+          final Widget sheet = Builder(
+            builder: (context) {
+              // Series-page menu look (big_screen_manga_details.dart
+              // openFilterPanel via showMenu with a radius-14 shape):
+              // surfaceContainer fill, 1 px outlineVariant border,
+              // radius 14, and the M3 menu elevation-3 shadow.
+              final scheme = context.theme.colorScheme;
+              return Material(
+                color: scheme.surfaceContainer,
+                elevation: 3,
+                shadowColor: scheme.shadow,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: MediaQuery(
+                  data: mediaQuery.copyWith(padding: EdgeInsets.zero),
+                  child: panel,
+                ),
+              );
+            },
+          );
+          final Widget sized = fixedHeight != null
+              ? SizedBox.fromSize(
+                  size: Size(panelWidth, fixedHeight),
+                  child: sheet,
+                )
+              : SizedBox(
+                  width: panelWidth,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: (overlay.height - 140).clamp(
+                        200.0,
+                        overlay.height,
+                      ),
+                    ),
+                    child: sheet,
+                  ),
+                );
           return CustomSingleChildLayout(
             delegate: _LibraryPanelLayout(anchor),
             child: capturedThemes.wrap(
@@ -134,33 +184,7 @@ class _LibraryPanelRoute extends PopupRoute<void> {
                   }
                   return KeyEventResult.ignored;
                 },
-                child: SizedBox.fromSize(
-                  size: panelSize,
-                  child: Builder(
-                    builder: (context) {
-                      // Series-page menu look (big_screen_manga_details.dart
-                      // openFilterPanel via showMenu with a radius-14 shape):
-                      // surfaceContainer fill, 1 px outlineVariant border,
-                      // radius 14, and the M3 menu elevation-3 shadow.
-                      final scheme = context.theme.colorScheme;
-                      return Material(
-                        color: scheme.surfaceContainer,
-                        elevation: 3,
-                        shadowColor: scheme.shadow,
-                        surfaceTintColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: MediaQuery(
-                          data: mediaQuery.copyWith(padding: EdgeInsets.zero),
-                          child: panel,
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                child: sized,
               ),
             ),
           );
@@ -197,12 +221,23 @@ Future<void> _openPanel({
   required GlobalKey buttonKey,
   required FocusNode focusNode,
   required double panelWidth,
-  required double panelHeight,
+  double? panelHeight,
   required Widget child,
 }) async {
   final box = buttonKey.currentContext?.findRenderObject() as RenderBox?;
   if (box == null) return;
-  final rect = box.localToGlobal(Offset.zero) & box.size;
+  // Overlay-relative, not window-global: the branch Navigator's overlay
+  // covers only the content area, so a global rect interpreted against the
+  // smaller overlay lands a sidebar-width too far right and the clamp then
+  // pins the panel to the window's right edge minus the margin.
+  final overlayBox =
+      Overlay.of(context).context.findRenderObject()! as RenderBox;
+  final topLeft = box.localToGlobal(Offset.zero, ancestor: overlayBox);
+  final bottomRight = box.localToGlobal(
+    box.size.bottomRight(Offset.zero),
+    ancestor: overlayBox,
+  );
+  final rect = Rect.fromPoints(topLeft, bottomRight);
   final navigator = Navigator.of(context);
   await navigator.push(
     _LibraryPanelRoute(
@@ -216,7 +251,8 @@ Future<void> _openPanel({
         context,
         Rect.fromLTWH(rect.right, rect.bottom + 6, 0, 0),
       ),
-      panelSize: Size(panelWidth, panelHeight),
+      panelWidth: panelWidth,
+      panelHeight: panelHeight,
       panel: child,
       capturedThemes: InheritedTheme.capture(
         from: context,
@@ -246,8 +282,8 @@ Future<void> showLibraryFilterPanel({
 
 /// Opens the desktop Display panel anchored under the toolbar's Display
 /// button: 820 px so labels like "Continue reading button" fit on one line,
-/// three columns, changes apply live. The 600 px height stays under the
-/// window-height-minus-140 cap at 1400x980.
+/// three columns, changes apply live. The height sizes to the content, capped
+/// at the window height minus 140; the body scrolls only beyond that cap.
 Future<void> showLibraryDisplayPanel({
   required BuildContext context,
   required GlobalKey buttonKey,
@@ -257,7 +293,6 @@ Future<void> showLibraryDisplayPanel({
   buttonKey: buttonKey,
   focusNode: focusNode,
   panelWidth: 820,
-  panelHeight: 600,
   child: const DesktopLibraryDisplayPanel(),
 );
 
@@ -278,7 +313,9 @@ class DesktopLibraryFilterPanel extends StatelessWidget {
 
 /// Desktop Display panel body: three columns of radio lists and checkboxes,
 /// no segmented switches. Columns size to content with no per-column
-/// scrolling; the whole body scrolls as one when it exceeds the panel.
+/// scrolling; the whole body scrolls as one only when the content exceeds the
+/// route's window-height-minus-140 cap. [Flexible] (loose) lets a short body
+/// size to its content while still bounding a tall one so it can scroll.
 class DesktopLibraryDisplayPanel extends StatelessWidget {
   const DesktopLibraryDisplayPanel({super.key});
 
@@ -294,7 +331,7 @@ class DesktopLibraryDisplayPanel extends StatelessWidget {
             context.l10n.display,
             style: context.theme.textTheme.titleMedium,
           ),
-          const Expanded(
+          const Flexible(
             child: SingleChildScrollView(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
