@@ -198,6 +198,33 @@ void main() {
       expect(container.read(librarySortRandomSeedProvider), seed + 1);
     });
 
+    testWidgets('search tips show three paragraphs and two code chips', (
+      tester,
+    ) async {
+      await _pumpToolbar(tester);
+
+      await tester.tap(find.byTooltip('Search tips'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Search tips'), findsOneWidget);
+      expect(
+        find.text('Plain words match the title, author, genres and tags.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Suggestions show as you type', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Exclude with a minus', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('author:oda'), findsOneWidget);
+      expect(find.text('-tag:dropped'), findsOneWidget);
+      expect(find.textContaining('Match any of these'), findsNothing);
+    });
+
     testWidgets('filter opens an anchored panel, not a drawer', (tester) async {
       await _pumpToolbar(tester);
 

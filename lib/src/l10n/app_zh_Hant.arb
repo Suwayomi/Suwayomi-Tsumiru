@@ -3118,7 +3118,6 @@
   "copyToClipboard": "複製到剪貼簿",
   "copiedToClipboard": "已複製到剪貼簿",
   "searchTips": "搜尋技巧",
-  "searchTipsBody": "使用 key:value 按欄位篩選。\n\ntag:seinen（來源標籤或自定義標籤）\ngenre:action（來源分類）\nauthor:oda\nstatus:ongoing（也支援 completed、hiatus、cancelled）\nsource:mangadex\ntracked:true、tracked:anilist\nrating:>=4（你的評分）\nunread:true、downloaded:true\n\n多詞值請加引號：tag:\"slice of life\"\n用減號排除：-tag:dropped",
   "updateProgressAfterReading": "閱讀後更新進度",
   "@updateProgressAfterReading": {
     "description": "Toggle label: automatically sync reading progress after a chapter is read"

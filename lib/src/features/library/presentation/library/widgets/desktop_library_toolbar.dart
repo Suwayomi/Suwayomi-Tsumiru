@@ -73,26 +73,72 @@ class _DesktopToolbarBoxState extends State<DesktopToolbarBox> {
   }
 }
 
-/// Shows the library search DSL cheat-sheet (opened from the search bar's help
+/// Shows the library search cheat-sheet (opened from the search bar's help
 /// icon), so the query syntax is discoverable rather than hidden.
 void showSearchTips(BuildContext context) {
   showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(context.l10n.searchTips),
-      // The `{a|b}` OR-group example lives here rather than in the l10n string
-      // because ICU message syntax reserves curly braces for placeholders.
-      content: Text(
-        '${context.l10n.searchTipsBody}'
-        '\nMatch any of these: {genre:action|genre:romance}',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.close),
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      final body = Theme.of(context).textTheme.bodyMedium?.copyWith(
+        fontSize: 14,
+        color: scheme.onSurfaceVariant,
+      );
+      Text tip(String template, String example) {
+        final parts = template.split('{example}');
+        return Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: parts.first),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    example,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12.5,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              if (parts.length > 1) TextSpan(text: parts.last),
+            ],
+          ),
+          style: body,
+        );
+      }
+
+      final l10n = context.l10n;
+      return AlertDialog(
+        title: Text(l10n.searchTips),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: [
+            Text(l10n.searchTipsPlainWords, style: body),
+            tip(l10n.searchTipsField('author:oda'), 'author:oda'),
+            tip(l10n.searchTipsExclude('-tag:dropped'), '-tag:dropped'),
+          ],
         ),
-      ],
-    ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.l10n.close),
+          ),
+        ],
+      );
+    },
     animationStyle: context.motionStyle,
   );
 }

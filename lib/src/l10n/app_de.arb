@@ -1163,7 +1163,6 @@
   "searchForExtensions": "Erweiterungen suchen",
   "noTagsYet": "Noch keine Tags in deiner Bibliothek",
   "searchTips": "Suchtipps",
-  "searchTipsBody": "Mit key:value nach Feldern filtern.\n\ntag:seinen (Tags der Quelle oder eigene)\ngenre:action (Genres der Quelle)\nauthor:oda\nstatus:ongoing (auch completed, hiatus, cancelled)\nsource:mangadex\ntracked:true, tracked:anilist\nrating:>=4 (deine Bewertung)\nunread:true, downloaded:true\n\nMehrere Wörter in Anführungszeichen setzen: tag:\"slice of life\"\nMit einem Minuszeichen ausschließen: -tag:dropped",
   "updateProgressManualMarkReadDesc": "Gilt nicht, wenn mehrere Kapitel gleichzeitig als gelesen markiert werden",
   "reLogin": "Token abgelaufen. Melde dich erneut an.",
   "trackerLoginSuccess": "Bei {trackerName} angemeldet",
