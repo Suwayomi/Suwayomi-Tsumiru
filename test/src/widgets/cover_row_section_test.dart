@@ -49,6 +49,10 @@ void main() {
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
     expect(find.byType(ShaderMask), findsOneWidget);
+    expect(
+      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
+      isTrue,
+    );
 
     final arrows = tester
         .widgetList<IconButton>(find.byType(IconButton))
@@ -69,7 +73,10 @@ void main() {
     expect(find.byType(IconButton), findsNothing);
     expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
     expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
-    expect(find.byType(ShaderMask), findsNothing);
+    expect(
+      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
+      isFalse,
+    );
   });
 
   testWidgets('phone header is a tappable title with no paging arrows', (
@@ -199,6 +206,64 @@ void main() {
     final listTop = tester.getTopLeft(find.byType(ListView).first).dy;
     expect(arrowsTop, greaterThanOrEqualTo(sectionTop));
     expect(arrowsTop, lessThan(listTop));
+  });
+
+  testWidgets('a titled row keeps its offset when it reaches the end', (
+    tester,
+  ) async {
+    await _pump(tester, size: const Size(1000, 600), itemCount: 20);
+
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
+
+    final list = tester.widget<ListView>(find.byType(ListView));
+    final position = list.controller!.position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(
+      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
+      isFalse,
+    );
+  });
+
+  testWidgets('a header-less row keeps its offset when it reaches the end', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: CoverRowSection(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 120,
+            itemCount: 20,
+            itemBuilder: (context, index) =>
+                SizedBox(width: 100, height: 120, child: Text('Item $index')),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next'));
+    await tester.pumpAndSettle();
+
+    final list = tester.widget<ListView>(find.byType(ListView));
+    final position = list.controller!.position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(
+      tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
+      isFalse,
+    );
   });
 
   testWidgets('See all calls onSeeAll on a wide layout', (tester) async {

@@ -249,20 +249,11 @@ class _CoverRowSectionState extends State<CoverRowSection> {
         _scheduleSync();
         return false;
       },
-      child: _canForward
-          ? ShaderMask(
-              blendMode: BlendMode.dstIn,
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [
-                  context.colorScheme.onSurface,
-                  context.colorScheme.onSurface,
-                  Colors.transparent,
-                ],
-                stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
-              ).createShader(bounds),
-              child: scrollable,
-            )
-          : scrollable,
+      child: CoverRowEdgeFade(
+        fade: _canForward,
+        color: context.colorScheme.onSurface,
+        child: scrollable,
+      ),
     );
   }
 
@@ -281,8 +272,40 @@ class _CoverRowSectionState extends State<CoverRowSection> {
           _header(context)
         else if (context.isTablet && (_canBack || _canForward))
           _headerlessArrows(context),
-        Padding(padding: widget.padding, child: body),
+        Padding(
+          key: const ValueKey('cover-row-body'),
+          padding: widget.padding,
+          child: body,
+        ),
       ],
+    );
+  }
+}
+
+/// Always renders a [ShaderMask], so toggling the fade never reparents the
+/// scrollable and resets its offset.
+@visibleForTesting
+class CoverRowEdgeFade extends StatelessWidget {
+  const CoverRowEdgeFade({
+    super.key,
+    required this.fade,
+    required this.color,
+    required this.child,
+  });
+
+  final bool fade;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (bounds) => LinearGradient(
+        colors: [color, color, fade ? Colors.transparent : color],
+        stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
+      ).createShader(bounds),
+      child: child,
     );
   }
 }
