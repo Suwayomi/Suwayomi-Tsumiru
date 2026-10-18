@@ -208,11 +208,13 @@ class BrandButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final brand = BrandColors.of(context);
+    final disabled = onPressed == null && !loading;
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: brand.gradient,
+        gradient: disabled ? null : brand.gradient,
+        color: disabled ? cs.onSurface.withValues(alpha: 0.12) : null,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: brandGlow(cs),
+        boxShadow: disabled ? null : brandGlow(cs),
       ),
       child: Material(
         color: Colors.transparent,
@@ -231,6 +233,9 @@ class BrandButton extends StatelessWidget {
                         label: label,
                         icon: icon,
                         expand: expand,
+                        content: disabled
+                            ? cs.onSurface.withValues(alpha: 0.38)
+                            : null,
                       ),
               ),
             ),
@@ -283,7 +288,9 @@ class BrandGlassButton extends StatelessWidget {
                   label: label,
                   icon: icon,
                   expand: expand,
-                  content: accent,
+                  content: onPressed == null
+                      ? cs.onSurface.withValues(alpha: 0.38)
+                      : accent,
                 ),
               ),
             ),
