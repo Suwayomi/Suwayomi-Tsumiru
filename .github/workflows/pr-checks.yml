@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Release is listed in the Flatpak metainfo
+        run: tool/add_metainfo_release.sh --check
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
