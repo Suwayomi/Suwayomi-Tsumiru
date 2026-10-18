@@ -199,6 +199,29 @@ void main() {
       );
     });
 
+    testWidgets('text is vertically centred in the 40 px box', (tester) async {
+      await _pumpField(tester);
+      expect(tester.takeException(), isNull);
+
+      final box = tester.getRect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.clipBehavior == Clip.antiAlias &&
+              (w.decoration as BoxDecoration?)?.borderRadius ==
+                  BorderRadius.circular(10),
+        ),
+      );
+      expect(box.height, 40);
+      final textCenter = tester.getCenter(
+        find.descendant(
+          of: find.byType(DesktopSearchField),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect((textCenter.dy - box.center.dy).abs(), lessThanOrEqualTo(1));
+    });
+
     testWidgets('typing opens Library hits and Search all sources', (
       tester,
     ) async {

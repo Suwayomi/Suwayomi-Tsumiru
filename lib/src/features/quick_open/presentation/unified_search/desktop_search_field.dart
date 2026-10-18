@@ -349,6 +349,7 @@ class DesktopSearchField extends HookConsumerWidget {
                   focusNode: focusNode,
                   autofocus: autofocus,
                   onChanged: handleChanged,
+                  textAlignVertical: TextAlignVertical.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                   decoration: InputDecoration(
                     border: InputBorder.none,
@@ -375,8 +376,8 @@ class DesktopSearchField extends HookConsumerWidget {
                           ),
                       ],
                     ),
-                    suffixIconConstraints: const BoxConstraints(minHeight: 40),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    suffixIconConstraints: const BoxConstraints(minHeight: 36),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
                   // Enter opens the top result — a leading section first
                   // (History), then the unified top result like the overlay.
