@@ -106,16 +106,13 @@ Widget _groupedBody({
   padding: KEdgeInsets.h8.size,
   child: useTabs
       ? Builder(
-          // Every tab's CustomScrollView shares the ambient
-          // PrimaryScrollController, so desktop's auto-Scrollbar throws
-          // "attached to more than one ScrollPosition" once two tabs are alive.
-          // Dropping the scrollbar removes the reader; scrolling is untouched.
-          builder: (context) => ScrollConfiguration(
-            behavior: ScrollConfiguration.of(
-              context,
-            ).copyWith(scrollbars: false),
-            child: TabBarView(children: tabViews()),
-          ),
+          builder: (context) {
+            final tabs = tabViews();
+            if (!context.isDesktop) return TabBarView(children: tabs);
+            return TabBarView(
+              children: [for (final tab in tabs) _TabScrollHost(child: tab)],
+            );
+          },
         )
       : LibrarySectionsView(
           sections: sections,
@@ -123,6 +120,22 @@ Widget _groupedBody({
           showCounts: showCounts,
         ),
 );
+
+/// Gives one library tab its own primary scroll controller on desktop, so the
+/// themed scrollbar never sees two tabs sharing the ambient controller (the
+/// "attached to more than one ScrollPosition" assertion). Phone and tablet
+/// keep the shared controller exactly as before.
+class _TabScrollHost extends HookWidget {
+  const _TabScrollHost({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = useScrollController();
+    return PrimaryScrollController(controller: controller, child: child);
+  }
+}
 
 class LibraryScreen extends HookConsumerWidget {
   const LibraryScreen({super.key, required this.categoryId});
