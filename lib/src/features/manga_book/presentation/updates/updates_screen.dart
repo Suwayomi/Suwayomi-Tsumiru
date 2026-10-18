@@ -17,7 +17,9 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
+import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -335,6 +337,11 @@ class UpdatesScreen extends HookConsumerWidget {
     final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
     final groupingMode =
         ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.disabled;
+    final phone = !context.isTablet;
+    // Phone searches from the app-bar entry (or the box under the title when
+    // the persistent setting is on); tablet and desktop are unchanged.
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     // The page fetcher is captured once, so it can't close over `filter` — it
     // reads the latest value through this holder instead.
     final latestFilter = useRef(filter);
@@ -469,7 +476,12 @@ class UpdatesScreen extends HookConsumerWidget {
                       ),
                     )
                   : Text(context.l10n.updates),
+              bottom: persistentBox
+                  ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
+                  : null,
               actions: [
+                if (phone && !persistentBox)
+                  const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
                 SyncYomiSyncButton(onSynced: resetList),
                 IconButton(
                   icon: const Icon(Icons.filter_list_rounded),

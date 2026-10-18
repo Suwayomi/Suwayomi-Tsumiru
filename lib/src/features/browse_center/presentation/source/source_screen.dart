@@ -14,6 +14,8 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
+import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'controller/source_controller.dart';
 import 'widgets/source_list_tile.dart';
 
@@ -53,113 +55,115 @@ class SourceScreen extends HookConsumerWidget {
       return;
     }, [sourceMapData.value]);
 
-    final body = sourceMapData.showUiWhenData(
-      context,
-      (data) {
-        if ((sourceMap.isEmpty &&
-            localSource.isBlank &&
-            lastUsed.isBlank &&
-            pinned.isEmpty)) {
-          return Emoticons(
-            title: context.l10n.noSourcesFound,
-            button: TextButton(
-              onPressed: refresh,
-              child: Text(context.l10n.refresh),
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: refresh,
-          child: CustomScrollView(
-            slivers: [
-              if (pinned.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: ListTile(
-                    title: Text(languageMap["pinned"]?.displayName ?? ""),
-                  ),
-                ),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => SourceListTile(source: pinned[index]),
-                    childCount: pinned.length,
-                  ),
-                ),
-              ],
-              if (lastUsed.isNotBlank) ...[
-                SliverToBoxAdapter(
-                  child: ListTile(
-                    title: Text(languageMap["lastUsed"]?.displayName ?? ""),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                    child: SourceListTile(source: lastUsed!.first))
-              ],
-              if (allSource.isNotBlank) ...[
-                SliverToBoxAdapter(
-                  child: ListTile(
-                    title: Text(languageMap["all"]?.displayName ?? ""),
-                  ),
-                ),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => SourceListTile(
-                      source: allSource![index],
-                    ),
-                    childCount: allSource?.length,
-                  ),
-                )
-              ],
-              for (final k in sourceMap.keys) ...[
-                if (sourceMap[k].isNotBlank) ...[
-                  SliverToBoxAdapter(
-                    child:
-                        ListTile(title: Text(languageMap[k]?.displayName ?? k)),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => SourceListTile(
-                        source: sourceMap[k]![index],
-                      ),
-                      childCount: sourceMap[k]?.length,
-                    ),
-                  )
-                ]
-              ],
-              if (localSource.isNotBlank) ...[
-                SliverToBoxAdapter(
-                  child: ListTile(
-                    title:
-                        Text(languageMap["localsourcelang"]?.displayName ?? ""),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: SourceListTile(source: localSource!.first),
-                )
-              ],
-            ],
+    final body = sourceMapData.showUiWhenData(context, (data) {
+      if ((sourceMap.isEmpty &&
+          localSource.isBlank &&
+          lastUsed.isBlank &&
+          pinned.isEmpty)) {
+        return Emoticons(
+          title: context.l10n.noSourcesFound,
+          button: TextButton(
+            onPressed: refresh,
+            child: Text(context.l10n.refresh),
           ),
         );
-      },
-      refresh: refresh,
-    );
+      }
+      return RefreshIndicator(
+        onRefresh: refresh,
+        child: CustomScrollView(
+          slivers: [
+            if (pinned.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: ListTile(
+                  title: Text(languageMap["pinned"]?.displayName ?? ""),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => SourceListTile(source: pinned[index]),
+                  childCount: pinned.length,
+                ),
+              ),
+            ],
+            if (lastUsed.isNotBlank) ...[
+              SliverToBoxAdapter(
+                child: ListTile(
+                  title: Text(languageMap["lastUsed"]?.displayName ?? ""),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SourceListTile(source: lastUsed!.first),
+              ),
+            ],
+            if (allSource.isNotBlank) ...[
+              SliverToBoxAdapter(
+                child: ListTile(
+                  title: Text(languageMap["all"]?.displayName ?? ""),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => SourceListTile(source: allSource![index]),
+                  childCount: allSource?.length,
+                ),
+              ),
+            ],
+            for (final k in sourceMap.keys) ...[
+              if (sourceMap[k].isNotBlank) ...[
+                SliverToBoxAdapter(
+                  child: ListTile(
+                    title: Text(languageMap[k]?.displayName ?? k),
+                  ),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        SourceListTile(source: sourceMap[k]![index]),
+                    childCount: sourceMap[k]?.length,
+                  ),
+                ),
+              ],
+            ],
+            if (localSource.isNotBlank) ...[
+              SliverToBoxAdapter(
+                child: ListTile(
+                  title: Text(
+                    languageMap["localsourcelang"]?.displayName ?? "",
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SourceListTile(source: localSource!.first),
+              ),
+            ],
+          ],
+        ),
+      );
+    }, refresh: refresh);
 
+    // Phone searches from the Browse app-bar entry (or the box below when
+    // the persistent setting is on); tablet and desktop keep the live field.
+    final phone = !context.isTablet;
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     return Column(
       children: [
-        SizedBox(
-          width: context.isLargeTablet
-              ? context.widthScale(scale: .5)
-              : null,
-          child: Padding(
-            padding: KEdgeInsets.h16v4.size,
-            child: SearchField(
-              autofocus: false,
-              labelText: context.l10n.searchForSources,
-              initialText: query,
-              onChanged: (val) =>
-                  ref.read(sourceSearchQueryProvider.notifier).update(val),
+        if (!phone)
+          SizedBox(
+            width: context.isLargeTablet ? context.widthScale(scale: .5) : null,
+            child: Padding(
+              padding: KEdgeInsets.h16v4.size,
+              child: SearchField(
+                autofocus: false,
+                labelText: context.l10n.searchForSources,
+                initialText: query,
+                onChanged: (val) =>
+                    ref.read(sourceSearchQueryProvider.notifier).update(val),
+              ),
             ),
           ),
-        ),
+        if (persistentBox)
+          const PhoneSearchEntry(origin: PhoneSearchOrigin.sources, box: true),
         Expanded(child: body),
       ],
     );

@@ -20,9 +20,11 @@ import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/data/auth_state.dart';
 import '../../../manga_book/data/updates/updates_repository.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
+import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 
@@ -34,6 +36,11 @@ class MoreScreen extends ConsumerWidget {
     final authType = ref.watch(authTypeKeyProvider);
     final account = ref.watch(currentAccountProvider);
     final showAccount = authType == AuthType.uiLogin;
+    final phone = !context.isTablet;
+    // Phone searches from the app-bar entry (or the box under the title when
+    // the persistent setting is on); tablet and desktop are unchanged.
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     return Scaffold(
       // Desktop replaces the title with the unified search box (the sidebar
       // already names the page); phone and tablet keep it.
@@ -55,6 +62,13 @@ class MoreScreen extends ConsumerWidget {
                 ),
               )
             : Text(context.l10n.more),
+        bottom: persistentBox
+            ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
+            : null,
+        actions: [
+          if (phone && !persistentBox)
+            const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
+        ],
       ),
       body: ListView(
         children: [

@@ -27,6 +27,7 @@ import 'package:tsumiru/src/features/library/presentation/library/widgets/deskto
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/search_stack/search_stack_screen.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
+import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phone_search_view.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
 import 'package:tsumiru/src/features/settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
@@ -577,7 +578,7 @@ void main() {
         expect(container.read(historySearchQueryProvider), isEmpty);
       });
 
-      testWidgets('phone keeps the title and its own search bar', (
+      testWidgets('phone keeps the title and gets the search entry', (
         tester,
       ) async {
         await pumpHistory(
@@ -595,7 +596,10 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.byType(SearchField), findsOneWidget);
+        // Slice 4b: phone searches from the app-bar entry, which applies to
+        // the filter on submit — no live inline field anymore.
+        expect(find.byType(SearchField), findsNothing);
+        expect(find.byType(PhoneSearchEntry), findsOneWidget);
       });
     });
 

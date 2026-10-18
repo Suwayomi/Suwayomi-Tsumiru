@@ -19,7 +19,9 @@ import '../../../offline/data/offline_download_providers.dart';
 import '../../../offline/data/offline_settings_providers.dart';
 import '../../../offline/presentation/offline_files_view.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
+import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
 import '../../domain/downloads_queue/downloads_queue_model.dart';
@@ -58,6 +60,21 @@ class DownloadsScreen extends HookConsumerWidget {
     );
     useListenable(tabController);
     final onDeviceTab = tabController.index == 1;
+    final phone = !context.isTablet;
+    // Phone searches from the app-bar entry (or the box under the title when
+    // the persistent setting is on); tablet and desktop are unchanged.
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
+    final tabBar = TabBar(
+      controller: tabController,
+      // Fill alignment so the underline aligns under each tab (the global
+      // theme's center alignment is for the scrollable category tabs).
+      tabAlignment: TabAlignment.fill,
+      tabs: [
+        Tab(text: context.l10n.downloadsServerTab),
+        Tab(text: context.l10n.downloadsOnDeviceTab),
+      ],
+    );
     return Scaffold(
       appBar: AppBar(
         // Desktop replaces the title with the unified search box (the sidebar
@@ -79,17 +96,15 @@ class DownloadsScreen extends HookConsumerWidget {
                 ),
               )
             : Text(context.l10n.downloads),
-        bottom: TabBar(
-          controller: tabController,
-          // Fill alignment so the underline aligns under each tab (the global
-          // theme's center alignment is for the scrollable category tabs).
-          tabAlignment: TabAlignment.fill,
-          tabs: [
-            Tab(text: context.l10n.downloadsServerTab),
-            Tab(text: context.l10n.downloadsOnDeviceTab),
-          ],
-        ),
+        bottom: persistentBox
+            ? PhoneSearchBoxBottom(
+                origin: PhoneSearchOrigin.plain,
+                below: tabBar,
+              )
+            : tabBar,
         actions: [
+          if (phone && !persistentBox)
+            const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
           if (!onDeviceTab && erroredChapterIds.isNotEmpty)
             IconButton(
               tooltip: context.l10n.retryAll,

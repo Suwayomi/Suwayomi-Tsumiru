@@ -2023,7 +2023,7 @@
   "@libraryPersistentSearchBar": {
     "description": "Library setting: always show the search bar under the app bar instead of behind the search button"
   },
-  "libraryPersistentSearchBarSubtitle": "Always show the search bar below the app bar. It sticks to the top while scrolling",
+  "libraryPersistentSearchBarSubtitle": "Show a search box under the title on every page instead of a search icon",
   "@libraryPersistentSearchBarSubtitle": {
     "description": "Subtitle for the persistent search bar library setting"
   },
@@ -2959,6 +2959,37 @@
   "unifiedSearchFiltersSection": "Filters",
   "unifiedSearchExamplesSection": "Examples",
   "unifiedSearchAllSources": "Search all sources for \"{query}\"",
+  "phoneSearchLibraryFor": "Search library for \"{query}\"",
+  "@phoneSearchLibraryFor": {
+    "description": "Phone search: highlighted first row applying the typed text to the Library filter",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "phoneSearchHistoryFor": "Search history for \"{query}\"",
+  "@phoneSearchHistoryFor": {
+    "description": "Phone search: highlighted first row applying the typed text to the History filter",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "phoneSearchSourcesFor": "Search sources for \"{query}\"",
+  "@phoneSearchSourcesFor": {
+    "description": "Phone search: highlighted first row applying the typed text to the Sources filter",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "phoneSearchNoResults": "No results",
+  "@phoneSearchNoResults": {
+    "description": "Phone search: trailing label on the dimmed page row when nothing on the page matches"
+  },
   "uninstall": "Uninstall",
   "uninstalling": "Uninstalling",
   "reinstall": "Reinstall",

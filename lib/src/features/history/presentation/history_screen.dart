@@ -15,7 +15,9 @@ import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/server_image.dart';
 import '../../quick_open/presentation/unified_search/desktop_search_field.dart';
+import '../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../quick_open/presentation/unified_search/unified_search_results.dart';
+import '../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../domain/history_item.dart';
 import 'history_controller.dart';
 import 'widgets/history_filter.dart';
@@ -32,6 +34,11 @@ class HistoryScreen extends ConsumerWidget {
     final searchQuery = ref.watch(historySearchQueryProvider);
     final hasActiveFilters = ref.watch(historyHasActiveFiltersProvider);
     final desktop = context.isDesktop;
+    final phone = !context.isTablet;
+    // The persistent-search setting puts the tappable box under the title;
+    // otherwise phone pages get a search icon in the app bar.
+    final persistentBox =
+        phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     // Dropdown-first matches, same live filter the list uses.
     final historyTop = [
       for (final group in historyGroups) ...group.items,
@@ -73,7 +80,14 @@ class HistoryScreen extends ConsumerWidget {
                 ),
               )
             : Text(l10n.history),
+        bottom: persistentBox
+            ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.history)
+            : null,
         actions: [
+          if (phone && !persistentBox) ...[
+            const PhoneSearchClearFilter(origin: PhoneSearchOrigin.history),
+            const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
+          ],
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
             tooltip: l10n.filter,
@@ -100,9 +114,10 @@ class HistoryScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Phone/tablet keep their own search bar; desktop searches from the
-          // header box above, so a second box would double-filter.
-          if (!desktop)
+          // Tablet keeps its own search bar; desktop searches from the header
+          // box above, so a second box would double-filter. Phone searches
+          // from the app-bar entry, which applies to the filter on submit.
+          if (!desktop && !phone)
             Padding(
               padding: const EdgeInsets.all(8),
               child: SizedBox(
