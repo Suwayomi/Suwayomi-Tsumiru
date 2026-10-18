@@ -7,6 +7,7 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -164,6 +165,19 @@ void main() {
       expect(find.text('Downloaded'), findsOneWidget);
       expect(find.text('Minimum rating'), findsOneWidget);
       expect(find.byType(Drawer), findsNothing);
+    });
+
+    testWidgets('esc closes only the panel', (tester) async {
+      await _pumpLibrary(tester, surface: const Size(1400, 980));
+      await _openFilterPanel(tester);
+      expect(find.text('Downloaded'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Downloaded'), findsNothing);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Yes/No segments write true/false on two filters', (
