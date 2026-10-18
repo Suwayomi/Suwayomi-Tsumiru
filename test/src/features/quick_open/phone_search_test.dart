@@ -356,10 +356,7 @@ void main() {
       expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
       final field = tester.widget<TextField>(_overlayField());
       expect(field.autofocus, isTrue);
-      expect(
-        field.decoration?.hintText,
-        'Search your library, app, and sources',
-      );
+      expect(field.decoration?.hintText, 'Search title or author...');
       // Empty query draws no results body: no examples, no Go to rows, and
       // the page underneath stays visible and hit-testable.
       expect(find.text('unread:true'), findsNothing);
@@ -367,6 +364,17 @@ void main() {
       expect(
         find.byIcon(Icons.search_rounded).hitTestable(),
         findsOneWidget,
+      );
+    });
+
+    testWidgets('other origins keep the unified hint', (tester) async {
+      await _pumpEntry(tester, origin: PhoneSearchOrigin.plain);
+      await _openOverlay(tester);
+
+      final field = tester.widget<TextField>(_overlayField());
+      expect(
+        field.decoration?.hintText,
+        'Search your library, app, and sources',
       );
     });
 
@@ -654,6 +662,27 @@ void main() {
       expect(find.text('Sword Chronicles'), findsOneWidget);
       // No list-style unread line under the cover row.
       expect(find.text('2 unread'), findsNothing);
+    });
+
+    testWidgets('header shows the full match count, row stays capped at 6', (
+      tester,
+    ) async {
+      await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [for (var i = 0; i < 10; i++) _manga(100 + i, 'Sword Saga $i')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'sword');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Library (10)'), findsOneWidget);
+      expect(
+        tester.widget<CoverRowSection>(find.byType(CoverRowSection)).itemCount,
+        6,
+      );
     });
 
     testWidgets('leaving through a cover clears the search text', (

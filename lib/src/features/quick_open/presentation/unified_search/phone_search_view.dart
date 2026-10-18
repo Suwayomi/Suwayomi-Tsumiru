@@ -323,7 +323,9 @@ class PhoneSearchOverlay extends HookConsumerWidget {
             decoration: InputDecoration(
               border: InputBorder.none,
               isDense: true,
-              hintText: l.unifiedSearchHint,
+              hintText: origin == PhoneSearchOrigin.library
+                  ? l.searchLibraryHint
+                  : l.unifiedSearchHint,
             ),
             onSubmitted: (_) => submit(),
           ),
@@ -491,6 +493,7 @@ class _PhoneSearchResults extends ConsumerWidget {
     final hasQuery = query.trim().isNotEmpty;
     if (!hasQuery) return const SizedBox.shrink();
     final libraryHits = ref.watch(unifiedLibraryResultsForProvider(query));
+    final libraryTotal = ref.watch(unifiedLibraryResultCountForProvider(query));
     final historyMatches = origin == PhoneSearchOrigin.history
         ? _historyMatches(ref.watch(historyGroupedByDateProvider), query)
         : const <HistoryItemDto>[];
@@ -652,7 +655,7 @@ class _PhoneSearchResults extends ConsumerWidget {
         if (hasQuery && libraryHits.isNotEmpty) ...[
           if (origin == PhoneSearchOrigin.library)
             CoverRowSection(
-              title: '${l.unifiedSearchLibrarySection} (${libraryHits.length})',
+              title: '${l.unifiedSearchLibrarySection} ($libraryTotal)',
               padding: const EdgeInsets.symmetric(horizontal: 16),
               height: 110 * 1.5 + 46,
               itemCount: libraryHits.length,
