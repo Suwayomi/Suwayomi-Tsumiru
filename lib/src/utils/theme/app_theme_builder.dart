@@ -7,6 +7,15 @@ import 'app_color_scheme.dart';
 import 'brand.dart';
 import 'theme_tokens.dart';
 
+/// The [ColorScheme] a theme uses at [brightness]; Custom is seed-derived.
+ColorScheme schemeFor(
+  AppTheme theme,
+  Brightness brightness,
+  Color customSeed,
+) => theme == AppTheme.custom
+    ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
+    : schemeFromTokens(tokensFor(theme, brightness), brightness);
+
 /// Single source of truth for app ThemeData. Named themes use brand tokens;
 /// custom uses ColorScheme.fromSeed. AMOLED applies only to dark.
 ThemeData buildAppTheme({
@@ -16,9 +25,7 @@ ThemeData buildAppTheme({
   required bool amoled,
 }) {
   final tokens = theme == AppTheme.custom ? null : tokensFor(theme, brightness);
-  ColorScheme scheme = theme == AppTheme.custom
-      ? ColorScheme.fromSeed(seedColor: customSeed, brightness: brightness)
-      : schemeFromTokens(tokens!, brightness);
+  ColorScheme scheme = schemeFor(theme, brightness, customSeed);
 
   if (brightness == Brightness.dark && amoled) {
     scheme = applyAmoled(scheme);

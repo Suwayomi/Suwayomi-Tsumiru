@@ -25,6 +25,8 @@ import 'package:tsumiru/src/widgets/tsumiru_logo.dart';
 const _seed = Color(0xFF7C7BFF);
 const _darkIcon = 'assets/icons/dark_icon.png';
 const _onLight = 'assets/icons/logo_on_light.png';
+const _onLightForeground = 'assets/icons/logo_on_light_foreground.png';
+const _onLightShadow = 'assets/icons/logo_on_light_shadow.png';
 const _shadow = 'assets/icons/logo_shadow.png';
 const _foreground = 'assets/icons/logo_foreground.png';
 
@@ -101,7 +103,8 @@ void main() {
   for (final (name, theme, brightness) in const [
     ('Indigo Night', AppTheme.indigoNight, Brightness.dark),
     ('Royal', AppTheme.royal, Brightness.dark),
-    ('light theme', AppTheme.royal, Brightness.light),
+    ('Royal light', AppTheme.royal, Brightness.light),
+    ('Catppuccin light', AppTheme.catppuccin, Brightness.light),
   ]) {
     testWidgets('$name logo is centred in a full-width box', (tester) async {
       await _pumpInFullWidthBox(
@@ -165,16 +168,45 @@ void main() {
     expect(_image(_darkIcon), findsNothing);
   });
 
-  testWidgets('light themes draw the light artwork', (tester) async {
+  testWidgets('Indigo Night light draws the original artwork', (tester) async {
     await _pump(
       tester,
       const TsumiruLogo(size: 48),
-      theme: AppTheme.royal,
+      theme: AppTheme.indigoNight,
       brightness: Brightness.light,
     );
 
     expect(_image(_onLight), findsOneWidget);
     expect(find.byType(ShaderMask), findsNothing);
+    expect(_image(_onLightShadow), findsNothing);
+    expect(_image(_onLightForeground), findsNothing);
+  });
+
+  testWidgets('Catppuccin light tints the shadow with its dark accent pair', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const TsumiruLogo(size: 48),
+      theme: AppTheme.catppuccin,
+      brightness: Brightness.light,
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is ShaderMask && w.blendMode == BlendMode.modulate,
+      ),
+      findsOneWidget,
+    );
+    expect(_image(_onLightShadow), findsOneWidget);
+    expect(_image(_onLightForeground), findsOneWidget);
+    expect(_image(_onLight), findsNothing);
+
+    final dark = schemeFor(AppTheme.catppuccin, Brightness.dark, _seed);
+    final expected = [dark.primary, dark.secondary]
+      ..sort((a, b) => b.computeLuminance().compareTo(a.computeLuminance()));
+    expect(logoShadowGradient(dark).colors, expected);
+    expect(expected.first, isNot(expected.last));
   });
 
   testWidgets('the sidebar header uses TsumiruLogo', (tester) async {
