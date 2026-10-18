@@ -181,7 +181,7 @@ List<HistoryGroup> filteredHistoryGroups(Ref ref) {
   return filteredGroups;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class HistorySearchQuery extends _$HistorySearchQuery {
   @override
   String build() => '';

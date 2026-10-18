@@ -216,7 +216,7 @@ AsyncValue<Map<String, List<SourceDto>>?> sourceMapFilteredAndQueried(Ref ref) {
   );
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SourceSearchQuery extends _$SourceSearchQuery
     with StateProviderMixin<String?> {
   @override

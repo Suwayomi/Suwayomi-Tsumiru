@@ -20,7 +20,10 @@ import '../../../browse_center/presentation/source/controller/source_controller.
 import '../../../history/domain/history_group.dart';
 import '../../../history/domain/history_item.dart';
 import '../../../history/presentation/history_controller.dart';
+import '../../../library/domain/library_search_query.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
+import '../../../library/presentation/library/controller/library_manga_list.dart';
+import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
@@ -387,17 +390,60 @@ class PhoneSearchOverlay extends HookConsumerWidget {
 List<HistoryItemDto> _historyMatches(List<HistoryGroup> groups, String query) =>
     [for (final g in groups) ...g.filterByQuery(query).items];
 
+/// Whether applying [q] to the Library page would show at least one series,
+/// using the same matcher the library filter uses ([MangaDto.query]) so plain
+/// words match author/genre/tags too. Pure-operator queries (e.g.
+/// `unread:true`), service-scoped `tracked:` (needs the trackers map the
+/// overlay doesn't load), and queries parsing to nothing (half-typed `tag:`)
+/// can't be judged cheaply here — applying them is always valid, so the row
+/// stays enabled.
+bool _libraryPageHasMatches(List<MangaDto> library, String q) {
+  final query = q.trim();
+  if (query.isEmpty) return false;
+  if (LibrarySearchQuery.parse(query).isEmpty) return true;
+  if (LibrarySearchQuery.plainText(query).trim().isEmpty) return true;
+  if (_namesTrackerService(query)) return true;
+  return library.any((m) => m.query(query));
+}
+
+/// Whether [q] holds a `tracked:<service>` term, which only resolves with the
+/// trackers map (a bare `tracked:true`/`false` is self-contained).
+bool _namesTrackerService(String q) {
+  for (final m in RegExp(
+    r'(?:^|[\s,{])-?tracked:([^|\s,}]+)',
+    caseSensitive: false,
+  ).allMatches(q)) {
+    switch (m.group(1)!.toLowerCase()) {
+      case 'true' || 'yes' || '1' || 'false' || 'no' || '0':
+        break;
+      default:
+        return true;
+    }
+  }
+  return false;
+}
+
+/// The Sources tab shows pinned sources (name-filtered) above the grouped
+/// rest, so the row matches that same combined list ([searchableSources] is
+/// pinned first, then the language-filtered rest).
+List<SourceDto> _sourcePageMatches(List<SourceDto> searchable, String query) =>
+    searchable.where((s) => s.name.query(query)).toList();
+
 bool _hasPageMatches(WidgetRef ref, PhoneSearchOrigin origin, String q) {
   if (q.trim().isEmpty) return false;
   return switch (origin) {
-    PhoneSearchOrigin.library =>
-      ref.read(unifiedLibraryResultsForProvider(q)).isNotEmpty,
+    PhoneSearchOrigin.library => _libraryPageHasMatches(
+      ref.read(libraryMangaListProvider).value ?? const [],
+      q,
+    ),
     PhoneSearchOrigin.history => _historyMatches(
       ref.read(historyGroupedByDateProvider),
       q,
     ).isNotEmpty,
-    PhoneSearchOrigin.sources =>
-      (ref.read(sourceQueryProvider(query: q)) ?? const []).isNotEmpty,
+    PhoneSearchOrigin.sources => _sourcePageMatches(
+      ref.read(searchableSourcesProvider).value ?? const [],
+      q,
+    ).isNotEmpty,
     PhoneSearchOrigin.plain => false,
   };
 }
@@ -441,8 +487,17 @@ class _PhoneSearchResults extends ConsumerWidget {
         ? _historyMatches(ref.watch(historyGroupedByDateProvider), query)
         : const <HistoryItemDto>[];
     final sourceMatches = origin == PhoneSearchOrigin.sources
-        ? ref.watch(sourceQueryProvider(query: query)) ?? const <SourceDto>[]
+        ? _sourcePageMatches(
+            ref.watch(searchableSourcesProvider).value ?? const [],
+            query,
+          )
         : const <SourceDto>[];
+    final libraryPageMatches = origin == PhoneSearchOrigin.library
+        ? _libraryPageHasMatches(
+            ref.watch(libraryMangaListProvider).value ?? const [],
+            query,
+          )
+        : false;
     final goToHits = matchingGoToTargets(ref, query, l);
     final plainQuery = plainQueryText(query);
     final suggestions = hasQuery
@@ -459,7 +514,7 @@ class _PhoneSearchResults extends ConsumerWidget {
     ) = switch (origin) {
       PhoneSearchOrigin.library => (
         l.phoneSearchLibraryFor(query),
-        libraryHits.isNotEmpty,
+        libraryPageMatches,
         Icons.collections_bookmark_rounded,
       ),
       PhoneSearchOrigin.history => (

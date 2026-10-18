@@ -46,14 +46,20 @@ void _setSize(WidgetTester tester, Size size) {
   addTearDown(tester.view.reset);
 }
 
-Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
+Fragment$MangaDto _manga(
+  int id,
+  String title, {
+  String? author,
+  List<String> genres = const [],
+}) => Fragment$MangaDto(
   id: id,
   title: title,
+  author: author,
   thumbnailUrl: null,
   bookmarkCount: 0,
   chapters: Fragment$MangaDto$chapters(totalCount: 4),
   downloadCount: 1,
-  genre: const [],
+  genre: genres,
   inLibrary: true,
   inLibraryAt: '0',
   initialized: true,
@@ -146,6 +152,7 @@ Future<ProviderContainer> _pumpEntry(
   List<Fragment$MangaDto> library = const [],
   List<HistoryItemDto> history = const [],
   Map<String, List<Fragment$SourceDto>>? sources,
+  List<Fragment$SourceDto> pinned = const [],
 }) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
@@ -157,6 +164,8 @@ Future<ProviderContainer> _pumpEntry(
       readingHistoryProvider.overrideWith(() => _FakeReadingHistory(history)),
       if (sources != null)
         sourceMapFilteredProvider.overrideWithValue(AsyncData(sources)),
+      if (origin == PhoneSearchOrigin.sources)
+        pinnedSourcesProvider.overrideWithValue(pinned),
     ],
   );
   addTearDown(container.dispose);
@@ -459,6 +468,49 @@ void main() {
 
       expect(container.read(libraryQueryProvider), 'unread:true');
     });
+
+    testWidgets('author name enables the page row', (tester) async {
+      final container = await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+        library: [_manga(1, 'Sword Chronicles', author: 'Oda Sketch')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'oda');
+      await tester.pump();
+      await tester.pump();
+
+      // Title-only matching finds nothing here; the library DSL matches
+      // authors, so the row must stay enabled.
+      expect(find.text('No results'), findsNothing);
+      await tester.tap(find.text('Search library for "oda"'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(libraryQueryProvider), 'oda');
+      expect(find.byType(PhoneSearchOverlay), findsNothing);
+    });
+
+    testWidgets('pure-operator query stays enabled on an empty library', (
+      tester,
+    ) async {
+      final container = await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.library,
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'unread:true');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('No results'), findsNothing);
+      await tester.tap(find.text('Search library for "unread:true"'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(libraryQueryProvider), 'unread:true');
+      expect(find.byType(PhoneSearchOverlay), findsNothing);
+    });
   });
 
   group('history origin', () {
@@ -637,6 +689,33 @@ void main() {
       expect(container.read(sourceSearchQueryProvider), 'sw');
       expect(find.byType(PhoneSearchOverlay), findsNothing);
     });
+
+    testWidgets('pinned-only match enables the row', (tester) async {
+      final container = await _pumpEntry(
+        tester,
+        origin: PhoneSearchOrigin.sources,
+        sources: {
+          'en': [_source('2', 'Unrelated Scans')],
+        },
+        pinned: [_source('1', 'Pinned Scans')],
+      );
+      await _openOverlay(tester);
+
+      await tester.enterText(_overlayField(), 'pin');
+      await tester.pump();
+      await tester.pump();
+
+      // The grouped rest matches nothing; the pinned source does, like the
+      // Sources tab which lists pinned above the rest.
+      expect(find.text('Search sources for "pin"'), findsOneWidget);
+      expect(find.text('No results'), findsNothing);
+      expect(find.text('Pinned Scans'), findsOneWidget);
+      await tester.tap(find.text('Search sources for "pin"'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sourceSearchQueryProvider), 'pin');
+      expect(find.byType(PhoneSearchOverlay), findsNothing);
+    });
   });
 
   group('library page entry', () {
@@ -693,6 +772,35 @@ void main() {
       await tester.tap(find.text('Search your library, app, and sources'));
       await tester.pumpAndSettle();
       expect(find.byType(PhoneSearchOverlay), findsOneWidget);
+    });
+
+    testWidgets('box mode keeps the applied filter after the overlay closes', (
+      tester,
+    ) async {
+      final container = await _pumpLibrary(
+        tester,
+        persistent: true,
+        library: [_manga(1, 'Sword Chronicles')],
+      );
+
+      await tester.tap(find.text('Search your library, app, and sources'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhoneSearchOverlay), findsOneWidget);
+
+      await tester.enterText(_overlayField(), 'sw');
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Search library for "sw"'));
+      await tester.pumpAndSettle();
+      await tester.pump();
+
+      expect(find.byType(PhoneSearchOverlay), findsNothing);
+      expect(container.read(libraryQueryProvider), 'sw');
+      expect(
+        find.text('sw'),
+        findsOneWidget,
+        reason: 'the box shows the applied filter — the page stayed filtered',
+      );
     });
   });
 

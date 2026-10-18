@@ -389,7 +389,7 @@ class CategoryMangaListWithQueryAndFilter
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class LibraryQuery extends _$LibraryQuery with StateProviderMixin<String?> {
   @override
   String? build() => null;
