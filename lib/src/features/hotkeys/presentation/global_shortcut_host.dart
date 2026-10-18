@@ -17,6 +17,19 @@ import '../../quick_open/presentation/unified_search/unified_search_providers.da
 import '../../settings/presentation/general/quick_search_toggle/quick_search_toggle_tile.dart';
 import '../data/hotkey_binding.dart';
 
+/// Whether [node] belongs to the currently visible page. Shell branches stay
+/// mounted while hidden (kept alive), so the registered field can sit on an
+/// inactive page — focusing it would steal Ctrl+F into a hidden box.
+bool desktopSearchNodeIsCurrent(FocusNode node) {
+  final context = node.context;
+  if (context == null) return false;
+  // Hidden keep-alive branches (IndexedStack/Offstage) disable tickers.
+  if (!TickerMode.valuesOf(context).enabled) return false;
+  final route = ModalRoute.of(context);
+  if (route != null && !route.isCurrent) return false;
+  return true;
+}
+
 /// App-wide keyboard + mouse navigation, mounted as the OUTERMOST wrapper
 /// around the shell. Owns every global shortcut (back, search, library,
 /// downloads) so there is a single `Shortcuts` layer that reliably receives
@@ -40,9 +53,10 @@ class GlobalShortcutHost extends ConsumerWidget {
         // A visible desktop page owns its search box: focus it instead of
         // opening the overlay. Routes without a field (reader, series page)
         // leave the provider null — or detached after a route change — and
-        // keep today's overlay.
+        // keep today's overlay. A node on an inactive branch/route is
+        // skipped the same way, so Ctrl+F never lands in a hidden box.
         final field = ref.read(desktopSearchFocusNodeProvider);
-        if (field != null && field.context != null) {
+        if (field != null && desktopSearchNodeIsCurrent(field)) {
           field.requestFocus();
           return;
         }

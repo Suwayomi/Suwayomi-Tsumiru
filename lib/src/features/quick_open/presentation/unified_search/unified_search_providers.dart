@@ -57,8 +57,8 @@ bool titleMatchesQuery(String title, String query) =>
 /// query contains a metatag operator it runs the full library DSL, so quick
 /// search is never weaker than the library filter bar. A family so desktop
 /// dropdowns can search their own field text, not the overlay's query.
-final unifiedLibraryResultsForProvider =
-    Provider.family<List<MangaDto>, String>((Ref ref, String query) {
+final unifiedLibraryResultsForProvider = Provider.autoDispose
+    .family<List<MangaDto>, String>((Ref ref, String query) {
       final library = ref.watch(libraryMangaListProvider).value ?? const [];
       final useDsl = queryUsesOperator(query);
       return matchLibraryTitles<MangaDto>(

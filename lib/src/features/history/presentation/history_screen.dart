@@ -59,6 +59,16 @@ class HistoryScreen extends ConsumerWidget {
                         HistoryDropdownSection(items: historyTop),
                     ],
                     hasLeadingResults: historyTop.isNotEmpty,
+                    // Enter opens the top History result first; the field
+                    // closes the dropdown and clears the query afterwards.
+                    onSubmitLeading: historyTop.isEmpty
+                        ? null
+                        : () {
+                            MangaRoute(
+                              mangaId: historyTop.first.manga.id,
+                            ).push(context);
+                            return true;
+                          },
                   ),
                 ),
               )

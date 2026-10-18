@@ -629,4 +629,320 @@ void main() {
       );
     });
   });
+
+  group('Desktop search follow-ups', () {
+    Future<ProviderContainer> pumpHost(
+      WidgetTester tester,
+      Widget child, {
+      List<Fragment$MangaDto> library = const [],
+    }) async {
+      _setSize(tester, _desktop);
+      final container = ProviderContainer(
+        overrides: [
+          quickSearchToggleProvider.overrideWith(_ToggleOn.new),
+          libraryMangaListProvider.overrideWith((ref) async => library),
+          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: GlobalShortcutHost(child: child),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    Widget hostApp(Widget child) => MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: Center(child: SizedBox(width: 500, child: child)),
+      ),
+    );
+
+    // A hidden keep-alive shell branch, like go_router renders inactive
+    // branches: offstage with tickers disabled.
+    Widget inactiveBranch(Widget child) => TickerMode(
+      enabled: false,
+      child: Offstage(offstage: true, child: child),
+    );
+
+    Future<void> sendCtrlF(WidgetTester tester) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+    }
+
+    testWidgets('blur keeps the field registered; dispose unregisters', (
+      tester,
+    ) async {
+      final container = await _pumpField(tester);
+
+      // Registered on mount.
+      await tester.pump();
+      final node = container.read(desktopSearchFocusNodeProvider);
+      expect(node, isNotNull);
+
+      // Clicking elsewhere blurs the field but must not unregister it.
+      await tester.tap(_fieldTextField());
+      await tester.pump();
+      expect(node!.hasFocus, isTrue);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+      expect(node.hasFocus, isFalse);
+      expect(
+        container.read(desktopSearchFocusNodeProvider),
+        same(node),
+        reason: 'Ctrl+F must still find the field after a blur',
+      );
+
+      // Unmounting the field releases the registration.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(container.read(desktopSearchFocusNodeProvider), isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Ctrl+F focuses the visible field with two mounted', (
+      tester,
+    ) async {
+      final container = await pumpHost(
+        tester,
+        hostApp(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Inactive branch, kept alive but hidden; registers first.
+              inactiveBranch(_boundField()),
+              _boundField(),
+            ],
+          ),
+        ),
+      );
+
+      await sendCtrlF(tester);
+
+      expect(container.read(quickOpenVisibleProvider), isFalse);
+      final node = container.read(desktopSearchFocusNodeProvider);
+      expect(node, isNotNull);
+      expect(node!.hasFocus, isTrue);
+      expect(TickerMode.valuesOf(node.context!).enabled, isTrue);
+    });
+
+    testWidgets('Ctrl+F with only a hidden field opens the overlay', (
+      tester,
+    ) async {
+      final container = await pumpHost(
+        tester,
+        hostApp(inactiveBranch(_boundField())),
+      );
+
+      // The hidden field is the only registrant; it must not take focus.
+      expect(container.read(desktopSearchFocusNodeProvider), isNotNull);
+
+      await sendCtrlF(tester);
+
+      expect(
+        container.read(quickOpenVisibleProvider),
+        isTrue,
+        reason: 'no current field, so the overlay opens',
+      );
+      expect(container.read(desktopSearchFocusNodeProvider)!.hasFocus, isFalse);
+    });
+
+    testWidgets('operator-only query still opens the Filters dropdown', (
+      tester,
+    ) async {
+      await _pumpField(tester);
+
+      await tester.enterText(_fieldTextField(), 'unread:');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Filters'), findsOneWidget);
+      expect(find.text('unread:true'), findsOneWidget);
+    });
+
+    testWidgets('History Enter opens the top History result first', (
+      tester,
+    ) async {
+      final historyItem = Fragment$HistoryChapterDto(
+        id: 1,
+        chapterNumber: 1,
+        fetchedAt: '0',
+        isBookmarked: false,
+        isDownloaded: false,
+        isRead: false,
+        lastPageRead: 4,
+        lastReadAt: '1700000000',
+        mangaId: 1,
+        name: 'Chapter 12',
+        pageCount: 10,
+        sourceOrder: 1,
+        uploadDate: '0',
+        url: '/c/1',
+        meta: const [],
+        manga: Fragment$HistoryChapterDto$manga(
+          id: 1,
+          inLibrary: true,
+          title: 'Sword Chronicles',
+          unreadCount: 3,
+        ),
+      );
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          readingHistoryProvider.overrideWith(
+            () => _FakeReadingHistory([historyItem]),
+          ),
+          historyGroupedByDateProvider.overrideWith(
+            (ref) => [
+              HistoryGroup(title: 'Today', items: [historyItem]),
+            ],
+          ),
+          libraryMangaListProvider.overrideWith((ref) async => null),
+          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+        ],
+      );
+      addTearDown(container.dispose);
+      _setSize(tester, _desktop);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              initialLocation: '/history',
+              routes: [
+                GoRoute(
+                  path: '/history',
+                  builder: (_, _) => const Scaffold(body: HistoryScreen()),
+                ),
+                GoRoute(
+                  path: '/manga/:mangaId',
+                  builder: (_, _) =>
+                      const Scaffold(body: Center(child: Text('MANGA PAGE'))),
+                ),
+                GoRoute(
+                  path: '/global-search',
+                  builder: (_, _) => const Scaffold(
+                    body: Center(child: Text('GLOBAL SEARCH PAGE')),
+                  ),
+                ),
+              ],
+            ),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final headerField = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(headerField, 'sw');
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('MANGA PAGE'),
+        findsOneWidget,
+        reason: 'Enter opens the top History result before the unified one',
+      );
+      expect(container.read(historySearchQueryProvider), isEmpty);
+    });
+
+    testWidgets('Esc on an empty closed field propagates to go back', (
+      tester,
+    ) async {
+      _setSize(tester, _desktop);
+      final container = ProviderContainer(
+        overrides: [
+          libraryMangaListProvider.overrideWith((ref) async => null),
+          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) =>
+                const Scaffold(body: Center(child: Text('HOME'))),
+          ),
+          // The host wraps the page below the router, like the app shell.
+          GoRoute(
+            path: '/two',
+            builder: (_, _) => GlobalShortcutHost(
+              child: Scaffold(
+                body: Center(child: SizedBox(width: 500, child: _boundField())),
+              ),
+            ),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      router.push('/two');
+      await tester.pumpAndSettle();
+      await tester.tap(_fieldTextField());
+      await tester.pump();
+      expect(container.read(unifiedSearchQueryProvider), isEmpty);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('HOME'),
+        findsOneWidget,
+        reason: 'empty closed field lets Esc reach the global back handler',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    test('per-query library results dispose when unlistened', () async {
+      final container = ProviderContainer(
+        overrides: [
+          libraryMangaListProvider.overrideWith(
+            (ref) async => [_manga(1, 'Sword Chronicles')],
+          ),
+          visibleCategoryListProvider.overrideWithValue(_emptyCategories),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(libraryMangaListProvider.future);
+      final target = unifiedLibraryResultsForProvider('sw');
+      final first = container.read(target);
+      expect(first.map((m) => m.title), contains('Sword Chronicles'));
+
+      await container.pump();
+      final second = container.read(target);
+
+      expect(
+        identical(first, second),
+        isFalse,
+        reason: 'stale per-query results must not stay alive',
+      );
+    });
+  });
 }

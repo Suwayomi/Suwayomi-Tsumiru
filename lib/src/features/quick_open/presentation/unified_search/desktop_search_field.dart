@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/legacy.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/search_field.dart';
 import 'unified_search_autocomplete.dart';
+import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
 
@@ -25,6 +26,25 @@ final desktopSearchFocusNodeProvider = StateProvider<FocusNode?>(
 
 class _CloseSearchDropdownIntent extends Intent {
   const _CloseSearchDropdownIntent();
+}
+
+/// Esc handler that is only enabled while there is something to do (an open
+/// dropdown or text to clear). Disabled, the key event is ignored by this
+/// layer and keeps propagating to the global Esc=Back handler.
+class _CloseSearchDropdownAction extends Action<_CloseSearchDropdownIntent> {
+  _CloseSearchDropdownAction({required this.isActive, required this.onInvoke});
+
+  final bool Function() isActive;
+  final void Function() onInvoke;
+
+  @override
+  bool get isActionEnabled => isActive();
+
+  @override
+  Object? invoke(_CloseSearchDropdownIntent intent) {
+    onInvoke();
+    return null;
+  }
 }
 
 /// Visible search box for desktop pages, in the same top-left place on every
@@ -44,6 +64,7 @@ class DesktopSearchField extends HookConsumerWidget {
     this.hintText,
     this.suffixActions = const <Widget>[],
     this.autofocus = false,
+    this.onSubmitLeading,
   });
 
   /// Current field text, owned by the host (a query provider).
@@ -73,6 +94,12 @@ class DesktopSearchField extends HookConsumerWidget {
   final List<Widget> suffixActions;
 
   final bool autofocus;
+
+  /// Enter handler for extra leading sections: navigate to the top leading
+  /// result and return true. The field then closes the dropdown and clears
+  /// the host query, like any other dropdown result. Null (or false) falls
+  /// back to the unified top result.
+  final bool Function()? onSubmitLeading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -108,9 +135,18 @@ class DesktopSearchField extends HookConsumerWidget {
       return null;
     });
 
-    bool canShow(String text) {
+    bool canShow(String text, [int? caret]) {
       if (text.trim().isEmpty || fieldWidth.value == null) return false;
       if (hasLeadingResults) return true;
+      // Operator autocomplete (the Filters section) can be the only thing a
+      // query offers, e.g. `unread:` has no plain text or matches.
+      final caretOffset = (caret ?? text.length).clamp(0, text.length);
+      if (suggestFor(
+        activeTokenAt(text, caretOffset),
+        ref.read(unifiedLibraryFacetsProvider),
+      ).isNotEmpty) {
+        return true;
+      }
       // Search all sources is always offered for plain text, so any of it
       // opens the dropdown.
       if (plainQueryText(text).isNotEmpty) return true;
@@ -133,9 +169,14 @@ class DesktopSearchField extends HookConsumerWidget {
       onNavigate?.call();
     }
 
+    int caretOf(String value) {
+      final caret = controller.selection.baseOffset;
+      return caret < 0 ? value.length : caret;
+    }
+
     void handleChanged(String value) {
       onChanged(value);
-      if (focusNode.hasFocus && canShow(value)) {
+      if (focusNode.hasFocus && canShow(value, caretOf(value))) {
         if (!portal.isShowing) portal.show();
       } else {
         closeResults();
@@ -157,36 +198,42 @@ class DesktopSearchField extends HookConsumerWidget {
 
     // Ctrl+F registration. Provider writes are banned during the build phase
     // (effect setup runs inside it), so every write goes through a post-frame
-    // callback guarded by mount state; routes without a field simply leave a
-    // null (or detached) node behind and the overlay path stays.
+    // callback guarded by mount state. The field stays registered while
+    // mounted — a blur (clicking elsewhere) must not unregister it, or Ctrl+F
+    // falls back to the overlay. Only disposal clears it; the global host
+    // ignores nodes on inactive branches/routes.
     useEffect(() {
+      // Captured, not read lazily: ref is unusable once the widget is
+      // unmounted, but the controller itself is a plain state object.
+      final registration = ref.read(desktopSearchFocusNodeProvider.notifier);
       void register() {
-        if (context.mounted) {
-          ref.read(desktopSearchFocusNodeProvider.notifier).state = focusNode;
-        }
+        if (context.mounted) registration.state = focusNode;
       }
 
       WidgetsBinding.instance.addPostFrameCallback((_) => register());
       void onFocus() {
-        if (!context.mounted) return;
-        if (!focusNode.hasFocus) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!context.mounted) return;
-            if (ref.read(desktopSearchFocusNodeProvider) == focusNode) {
-              ref.read(desktopSearchFocusNodeProvider.notifier).state = null;
-            }
-          });
-          return;
-        }
+        if (!context.mounted || !focusNode.hasFocus) return;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
           register();
-          if (canShow(controller.text) && !portal.isShowing) portal.show();
+          if (canShow(controller.text, caretOf(controller.text)) &&
+              !portal.isShowing) {
+            portal.show();
+          }
         });
       }
 
       focusNode.addListener(onFocus);
-      return () => focusNode.removeListener(onFocus);
+      return () {
+        focusNode.removeListener(onFocus);
+        // Deferred past the frame: unmount can run inside the build phase
+        // (a pop rebuilds the tree), where provider writes are banned.
+        if (registration.state == focusNode) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (registration.state == focusNode) registration.state = null;
+          });
+        }
+      };
     }, [focusNode]);
 
     void setText(String text, [int? caret]) {
@@ -279,20 +326,20 @@ class DesktopSearchField extends HookConsumerWidget {
             },
             child: Actions(
               actions: {
-                _CloseSearchDropdownIntent:
-                    CallbackAction<_CloseSearchDropdownIntent>(
-                      onInvoke: (_) {
-                        if (portal.isShowing) {
-                          closeResults();
-                        } else if (controller.text.isNotEmpty) {
-                          controller.clear();
-                          onChanged('');
-                        } else {
-                          return null; // let Esc bubble (back navigation)
-                        }
-                        return null;
-                      },
-                    ),
+                _CloseSearchDropdownIntent: _CloseSearchDropdownAction(
+                  // Closed and empty: disabled, so Esc keeps propagating to
+                  // the global Esc=Back handler instead of being swallowed.
+                  isActive: () =>
+                      portal.isShowing || controller.text.isNotEmpty,
+                  onInvoke: () {
+                    if (portal.isShowing) {
+                      closeResults();
+                    } else {
+                      controller.clear();
+                      onChanged('');
+                    }
+                  },
+                ),
               },
               child: CompositedTransformTarget(
                 link: link,
@@ -331,14 +378,21 @@ class DesktopSearchField extends HookConsumerWidget {
                     suffixIconConstraints: const BoxConstraints(minHeight: 40),
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                  // Enter opens the top result — shared with the overlay.
-                  onSubmitted: (_) => submitUnifiedQuery(
-                    context,
-                    ref,
-                    controller.text,
-                    includeLibrary: showLibrarySection,
-                    close: closeAndClearHost,
-                  ),
+                  // Enter opens the top result — a leading section first
+                  // (History), then the unified top result like the overlay.
+                  onSubmitted: (_) {
+                    if (onSubmitLeading?.call() == true) {
+                      closeAndClearHost();
+                      return;
+                    }
+                    submitUnifiedQuery(
+                      context,
+                      ref,
+                      controller.text,
+                      includeLibrary: showLibrarySection,
+                      close: closeAndClearHost,
+                    );
+                  },
                 ),
               ),
             ),
