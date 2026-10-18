@@ -101,6 +101,11 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   final Timer Function(Duration, void Function()) _timer;
   int _recoveryEpoch = 0;
   String? _activeAttemptId;
+  Future<void>? _startupFuture;
+
+  // Test-only: completes once the async work register() kicked off settles.
+  @visibleForTesting
+  Future<void> get startupSettled => _startupFuture ?? Future.value();
   Future<void> _identityTail = Future.value();
   Future<void> _mutationTail = Future.value();
   DateTime? _lastRecovery;
@@ -290,8 +295,14 @@ class BackgroundDownloadController with WidgetsBindingObserver {
   void register() {
     if (!_isAndroid()) return;
     _notifiedStall ??= _ref.read(offlineDownloadsStalledProvider);
-    unawaited(_recoverIdentityTransition());
-    unawaited(_restoreActiveAttempt());
+    final identityFuture = _recoverIdentityTransition();
+    unawaited(identityFuture);
+    final restoreFuture = _restoreActiveAttempt();
+    unawaited(restoreFuture);
+    _startupFuture = Future.wait<void>([
+      identityFuture.then<void>((_) {}, onError: (_) {}),
+      restoreFuture.then<void>((_) {}, onError: (_) {}),
+    ]);
     WidgetsBinding.instance.addObserver(this);
     _workerEventCallback ??= _onWorkerEvent;
     _gateway.addCallback(_workerEventCallback!);
