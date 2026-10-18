@@ -37,6 +37,8 @@ import 'category_manga_list.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_grouping.dart';
 import 'controller/library_manga_list.dart';
+import 'widgets/category_tab_strip.dart';
+import 'widgets/desktop_library_toolbar.dart';
 import 'widgets/library_manga_grid_view.dart';
 import 'widgets/library_manga_organizer.dart';
 import 'widgets/library_sections_view.dart';
@@ -46,18 +48,24 @@ import 'widgets/library_sections_view.dart';
 /// [grouped] picks what the banner's Retry re-asks for: the two library screens
 /// draw their tabs from different providers, and refreshing the other one left
 /// the content stale while the banner vanished.
-Widget _libraryBody(WidgetRef ref, Widget body, {bool grouped = false}) =>
-    Column(
-      children: [
-        ServerUnreachableBanner(
-          onRetry: () => ref.invalidate(
-            grouped ? libraryGroupedTabsProvider : categoryControllerProvider,
-          ),
-        ),
-        const OfflineServerMismatchBanner(),
-        Expanded(child: body),
-      ],
-    );
+/// [header] is the desktop toolbar + tab strip, fixed above the banners.
+Widget _libraryBody(
+  WidgetRef ref,
+  Widget body, {
+  bool grouped = false,
+  Widget? header,
+}) => Column(
+  children: [
+    ?header,
+    ServerUnreachableBanner(
+      onRetry: () => ref.invalidate(
+        grouped ? libraryGroupedTabsProvider : categoryControllerProvider,
+      ),
+    ),
+    const OfflineServerMismatchBanner(),
+    Expanded(child: body),
+  ],
+);
 
 /// Categories as headers-style sections. Id 0 is Default/uncategorised.
 List<LibrarySection> _categorySections(List<CategoryDto> categories) => [
@@ -161,6 +169,26 @@ void _refreshLibraryAfterSync(WidgetRef ref) {
   ref.invalidate(categoryControllerProvider);
 }
 
+/// Desktop page header: the toolbar row plus the category strip when tabs
+/// show. Built under the Scaffold (so the Filter/Display buttons can open the
+/// organizer end drawer) and under the DefaultTabController (so the overflow
+/// menu and strip share the tab index with the TabBarView).
+Widget _desktopLibraryHeader({
+  required List<Widget> trailing,
+  Widget? tabStrip,
+}) => Builder(
+  builder: (context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      DesktopLibraryToolbar(
+        onOpenOrganizer: () => Scaffold.of(context).openEndDrawer(),
+        trailing: trailing,
+      ),
+      ?tabStrip,
+    ],
+  ),
+);
+
 /// Filter/sort/display organizer button: end-drawer on tablets, bottom sheet
 /// on phones.
 Widget _organizerButton() => Builder(
@@ -262,6 +290,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     // programmatically (tapping a tag → Search opens the library on that tag).
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
+    // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
+    final desktop = context.isDesktop;
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
       return;
@@ -301,87 +331,99 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
             // the id, falling back to the first tab if it isn't visible (#284).
             initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
             child: Scaffold(
-              appBar: AppBar(
-                title: !showSearch
-                    ? _LibraryTitle(sections: _categorySections(data))
-                    // SearchField no longer pads itself; keep the pre-refactor
-                    // inset and large-tablet width cap here.
-                    : SizedBox(
-                        width: context.isLargeTablet
-                            ? context.widthScale(scale: .5)
-                            : null,
-                        child: Padding(
-                          padding: KEdgeInsets.h16v4.size,
-                          child: SearchField(
-                            initialText: ref.read(libraryQueryProvider),
-                            highlightDsl: true,
-                            // Only grab focus when the user opened search; a
-                            // tag-set query shows results without popping the
-                            // keyboard.
-                            autofocus: searchToggled.value,
-                            onChanged: (val) => ref
-                                .read(libraryQueryProvider.notifier)
-                                .update(val),
-                            onClose: () => searchToggled.value = false,
-                            actions: [
-                              IconButton(
-                                icon: const Icon(Icons.help_outline_rounded),
-                                tooltip: context.l10n.searchTips,
-                                onPressed: () => showSearchTips(context),
-                              ),
-                              Consumer(
-                                builder: (context, ref, child) => IconButton(
-                                  icon: const Icon(
-                                    Icons.travel_explore_rounded,
-                                  ),
-                                  tooltip: context.l10n.globalSearch,
-                                  onPressed:
-                                      ref.watch(libraryQueryProvider).isNotBlank
-                                      ? () => openGlobalSearch(
-                                          context,
-                                          query: ref.read(libraryQueryProvider),
-                                        )
-                                      : null,
+              appBar: desktop
+                  ? null
+                  : AppBar(
+                      title: !showSearch
+                          ? _LibraryTitle(sections: _categorySections(data))
+                          // SearchField no longer pads itself; keep the pre-refactor
+                          // inset and large-tablet width cap here.
+                          : SizedBox(
+                              width: context.isLargeTablet
+                                  ? context.widthScale(scale: .5)
+                                  : null,
+                              child: Padding(
+                                padding: KEdgeInsets.h16v4.size,
+                                child: SearchField(
+                                  initialText: ref.read(libraryQueryProvider),
+                                  highlightDsl: true,
+                                  // Only grab focus when the user opened search; a
+                                  // tag-set query shows results without popping the
+                                  // keyboard.
+                                  autofocus: searchToggled.value,
+                                  onChanged: (val) => ref
+                                      .read(libraryQueryProvider.notifier)
+                                      .update(val),
+                                  onClose: () => searchToggled.value = false,
+                                  actions: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.help_outline_rounded,
+                                      ),
+                                      tooltip: context.l10n.searchTips,
+                                      onPressed: () => showSearchTips(context),
+                                    ),
+                                    Consumer(
+                                      builder: (context, ref, child) =>
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.travel_explore_rounded,
+                                            ),
+                                            tooltip: context.l10n.globalSearch,
+                                            onPressed:
+                                                ref
+                                                    .watch(libraryQueryProvider)
+                                                    .isNotBlank
+                                                ? () => openGlobalSearch(
+                                                    context,
+                                                    query: ref.read(
+                                                      libraryQueryProvider,
+                                                    ),
+                                                  )
+                                                : null,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ),
+                      bottom: showTabBar && data.length.isGreaterThan(1)
+                          ? TabBar(
+                              isScrollable: true,
+                              tabs: data
+                                  .map((e) => _CategoryTab(category: e))
+                                  .toList(),
+                              dividerColor: Colors.transparent,
+                            )
+                          : null,
+                      actions: showSearch
+                          ? const [SizedBox.shrink()]
+                          : [
+                              IconButton(
+                                onPressed: () => searchToggled.value = true,
+                                icon: const Icon(Icons.search_rounded),
+                              ),
+                              _organizerButton(),
+                              SyncYomiSyncButton(
+                                onSynced: () => _refreshLibraryAfterSync(ref),
+                              ),
+                              Builder(
+                                builder: (context) {
+                                  return UpdateStatusPopupMenu(
+                                    // Section-headers style has no "current" tab, so
+                                    // the menu targets the whole library there.
+                                    getCategory: () =>
+                                        useTabs && data.isNotBlank
+                                        ? data[DefaultTabController.of(
+                                            context,
+                                          ).index]
+                                        : null,
+                                    showDuplicatesButton: true,
+                                  );
+                                },
+                              ),
                             ],
-                          ),
-                        ),
-                      ),
-                bottom: showTabBar && data.length.isGreaterThan(1)
-                    ? TabBar(
-                        isScrollable: true,
-                        tabs: data
-                            .map((e) => _CategoryTab(category: e))
-                            .toList(),
-                        dividerColor: Colors.transparent,
-                      )
-                    : null,
-                actions: showSearch
-                    ? const [SizedBox.shrink()]
-                    : [
-                        IconButton(
-                          onPressed: () => searchToggled.value = true,
-                          icon: const Icon(Icons.search_rounded),
-                        ),
-                        _organizerButton(),
-                        SyncYomiSyncButton(
-                          onSynced: () => _refreshLibraryAfterSync(ref),
-                        ),
-                        Builder(
-                          builder: (context) {
-                            return UpdateStatusPopupMenu(
-                              // Section-headers style has no "current" tab, so
-                              // the menu targets the whole library there.
-                              getCategory: () => useTabs && data.isNotBlank
-                                  ? data[DefaultTabController.of(context).index]
-                                  : null,
-                              showDuplicatesButton: true,
-                            );
-                          },
-                        ),
-                      ],
-              ),
+                    ),
               endDrawerEnableOpenDragGesture: false,
               endDrawer: const Drawer(
                 width: kDrawerWidth,
@@ -390,6 +432,32 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
               ),
               body: _libraryBody(
                 ref,
+                header: desktop
+                    ? _desktopLibraryHeader(
+                        trailing: [
+                          SyncYomiSyncButton(
+                            onSynced: () => _refreshLibraryAfterSync(ref),
+                          ),
+                          Builder(
+                            builder: (context) {
+                              return UpdateStatusPopupMenu(
+                                // Section-headers style has no "current" tab,
+                                // so the menu targets the whole library there.
+                                getCategory: () => useTabs && data.isNotBlank
+                                    ? data[DefaultTabController.of(
+                                        context,
+                                      ).index]
+                                    : null,
+                                showDuplicatesButton: true,
+                              );
+                            },
+                          ),
+                        ],
+                        tabStrip: showTabBar && data.length.isGreaterThan(1)
+                            ? DefaultCategoryTabStrip(categories: data)
+                            : null,
+                      )
+                    : null,
                 _groupedBody(
                   useTabs: useTabs,
                   sections: _categorySections(data),
@@ -483,6 +551,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
             .watch(categoryNumberOfItemsProvider)
             .ifNull(false);
         final showTabs = data!.length > 1 && _showTabBar(style, categoryTabsOn);
+        // Desktop replaces the sliver app bar + TabBar with the toolbar row
+        // and the tab strip, both pinned.
+        final desktop = context.isDesktop;
 
         return DefaultTabController(
           // See the matching comment on the toggled-search variant above: keys
@@ -508,6 +579,41 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
             body: NestedScrollView(
               controller: scrollController,
               headerSliverBuilder: (context, innerBoxIsScrolled) {
+                if (desktop) {
+                  return [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverFixedHeaderDelegate(
+                        height: showTabs ? 64 + 44 : 64,
+                        child: _desktopLibraryHeader(
+                          trailing: [
+                            SyncYomiSyncButton(
+                              onSynced: () => _refreshLibraryAfterSync(ref),
+                            ),
+                            Builder(
+                              builder: (context) {
+                                return UpdateStatusPopupMenu(
+                                  // Section-headers style has no "current"
+                                  // tab, so the menu targets the whole
+                                  // library there.
+                                  getCategory: () => useTabs && data.isNotBlank
+                                      ? data[DefaultTabController.of(
+                                          context,
+                                        ).index]
+                                      : null,
+                                  showDuplicatesButton: true,
+                                );
+                              },
+                            ),
+                          ],
+                          tabStrip: showTabs
+                              ? DefaultCategoryTabStrip(categories: data)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ];
+                }
                 return [
                   SliverAppBar(
                     pinned: true,
@@ -647,6 +753,8 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     // programmatically (tapping a tag → Search opens the library on that tag).
     final showSearch =
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
+    // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
+    final desktop = context.isDesktop;
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
       return;
@@ -681,63 +789,72 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
               ? Duration.zero
               : kTabScrollDuration,
           child: Scaffold(
-            appBar: AppBar(
-              title: !showSearch
-                  ? _LibraryTitle(sections: _groupSections(tabs))
-                  // SearchField no longer pads itself; keep the pre-refactor
-                  // inset and large-tablet width cap here.
-                  : SizedBox(
-                      width: context.isLargeTablet
-                          ? context.widthScale(scale: .5)
-                          : null,
-                      child: Padding(
-                        padding: KEdgeInsets.h16v4.size,
-                        child: SearchField(
-                          initialText: ref.read(libraryQueryProvider),
-                          highlightDsl: true,
-                          autofocus: searchToggled.value,
-                          onChanged: (val) => ref
-                              .read(libraryQueryProvider.notifier)
-                              .update(val),
-                          onClose: () => searchToggled.value = false,
-                          actions: [
+            appBar: desktop
+                ? null
+                : AppBar(
+                    title: !showSearch
+                        ? _LibraryTitle(sections: _groupSections(tabs))
+                        // SearchField no longer pads itself; keep the pre-refactor
+                        // inset and large-tablet width cap here.
+                        : SizedBox(
+                            width: context.isLargeTablet
+                                ? context.widthScale(scale: .5)
+                                : null,
+                            child: Padding(
+                              padding: KEdgeInsets.h16v4.size,
+                              child: SearchField(
+                                initialText: ref.read(libraryQueryProvider),
+                                highlightDsl: true,
+                                autofocus: searchToggled.value,
+                                onChanged: (val) => ref
+                                    .read(libraryQueryProvider.notifier)
+                                    .update(val),
+                                onClose: () => searchToggled.value = false,
+                                actions: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.help_outline_rounded,
+                                    ),
+                                    tooltip: context.l10n.searchTips,
+                                    onPressed: () => showSearchTips(context),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                    bottom: showTabBar && tabs.length > 1
+                        ? TabBar(
+                            isScrollable: true,
+                            tabs: tabs
+                                .map(
+                                  (t) =>
+                                      _GroupTab(tab: t, showCount: showCounts),
+                                )
+                                .toList(),
+                            dividerColor: Colors.transparent,
+                          )
+                        : null,
+                    actions: showSearch
+                        ? const [SizedBox.shrink()]
+                        : [
                             IconButton(
-                              icon: const Icon(Icons.help_outline_rounded),
-                              tooltip: context.l10n.searchTips,
-                              onPressed: () => showSearchTips(context),
+                              onPressed: () => searchToggled.value = true,
+                              icon: const Icon(Icons.search_rounded),
+                            ),
+                            IconButton(
+                              tooltip: context.l10n.migrationPickSourceTitle,
+                              onPressed: () =>
+                                  const MigrationSourcePickerRoute().push(
+                                    context,
+                                  ),
+                              icon: const Icon(Icons.swap_horiz_rounded),
+                            ),
+                            _organizerButton(),
+                            SyncYomiSyncButton(
+                              onSynced: () => _refreshLibraryAfterSync(ref),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-              bottom: showTabBar && tabs.length > 1
-                  ? TabBar(
-                      isScrollable: true,
-                      tabs: tabs
-                          .map((t) => _GroupTab(tab: t, showCount: showCounts))
-                          .toList(),
-                      dividerColor: Colors.transparent,
-                    )
-                  : null,
-              actions: showSearch
-                  ? const [SizedBox.shrink()]
-                  : [
-                      IconButton(
-                        onPressed: () => searchToggled.value = true,
-                        icon: const Icon(Icons.search_rounded),
-                      ),
-                      IconButton(
-                        tooltip: context.l10n.migrationPickSourceTitle,
-                        onPressed: () =>
-                            const MigrationSourcePickerRoute().push(context),
-                        icon: const Icon(Icons.swap_horiz_rounded),
-                      ),
-                      _organizerButton(),
-                      SyncYomiSyncButton(
-                        onSynced: () => _refreshLibraryAfterSync(ref),
-                      ),
-                    ],
-            ),
+                  ),
             endDrawerEnableOpenDragGesture: false,
             endDrawer: const Drawer(
               width: kDrawerWidth,
@@ -747,6 +864,24 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
             body: _libraryBody(
               ref,
               grouped: true,
+              header: desktop
+                  ? _desktopLibraryHeader(
+                      trailing: [
+                        IconButton(
+                          tooltip: context.l10n.migrationPickSourceTitle,
+                          onPressed: () =>
+                              const MigrationSourcePickerRoute().push(context),
+                          icon: const Icon(Icons.swap_horiz_rounded),
+                        ),
+                        SyncYomiSyncButton(
+                          onSynced: () => _refreshLibraryAfterSync(ref),
+                        ),
+                      ],
+                      tabStrip: showTabBar && tabs.length > 1
+                          ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                          : null,
+                    )
+                  : null,
               _groupedBody(
                 useTabs: useTabs,
                 sections: _groupSections(tabs),
@@ -814,6 +949,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final showTabBar = _showTabBar(style, categoryTabsOn);
     final showInlineHeaders = _showInlineHeaders(style, showAllCategories);
     final showCounts = ref.watch(categoryNumberOfItemsProvider).ifNull(false);
+    // Desktop replaces the sliver app bar + TabBar with the toolbar row
+    // and the tab strip, both pinned.
+    final desktop = context.isDesktop;
 
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
@@ -858,6 +996,26 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
             body: NestedScrollView(
               controller: scrollController,
               headerSliverBuilder: (context, innerBoxIsScrolled) {
+                if (desktop) {
+                  return [
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverFixedHeaderDelegate(
+                        height: showTabBar && tabs.length > 1 ? 64 + 44 : 64,
+                        child: _desktopLibraryHeader(
+                          trailing: [
+                            SyncYomiSyncButton(
+                              onSynced: () => _refreshLibraryAfterSync(ref),
+                            ),
+                          ],
+                          tabStrip: showTabBar && tabs.length > 1
+                              ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ];
+                }
                 return [
                   SliverAppBar(
                     pinned: true,
@@ -1103,30 +1261,6 @@ class _GroupedMangaList extends ConsumerWidget {
   }
 }
 
-/// Shows the library search DSL cheat-sheet (opened from the search bar's help
-/// icon), so the query syntax is discoverable rather than hidden.
-void showSearchTips(BuildContext context) {
-  showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(context.l10n.searchTips),
-      // The `{a|b}` OR-group example lives here rather than in the l10n string
-      // because ICU message syntax reserves curly braces for placeholders.
-      content: Text(
-        '${context.l10n.searchTipsBody}'
-        '\nMatch any of these: {genre:action|genre:romance}',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.close),
-        ),
-      ],
-    ),
-    animationStyle: context.motionStyle,
-  );
-}
-
 /// "Library", plus a subtitle naming the section on screen while scrolling a
 /// continuous Section-Headers library. Tab mode and single-section libraries
 /// have nothing to disambiguate, so they get no subtitle.
@@ -1213,6 +1347,34 @@ class _LibrarySearchBar extends ConsumerWidget {
             child: field,
           );
   }
+}
+
+/// A pinned sliver of fixed [height] hosting the desktop toolbar + tab strip.
+class _SliverFixedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _SliverFixedHeaderDelegate({required this.height, required this.child});
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverFixedHeaderDelegate oldDelegate) =>
+      height != oldDelegate.height || child != oldDelegate.child;
 }
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
