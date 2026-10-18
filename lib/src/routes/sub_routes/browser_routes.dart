@@ -77,11 +77,13 @@ class SourceTypeRoute extends GoRouteData with $SourceTypeRoute {
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) => SourceMangaListScreen(
-    key: ValueKey('$sourceId-$sourceType'),
-    sourceId: sourceId,
-    sourceType: sourceType,
-    initialQuery: query,
+  Widget build(context, state) => DetailNavigationShellScreen(
+    child: SourceMangaListScreen(
+      key: ValueKey('$sourceId-$sourceType'),
+      sourceId: sourceId,
+      sourceType: sourceType,
+      initialQuery: query,
+    ),
   );
 }
 
@@ -99,5 +101,7 @@ class SourcePreferenceRoute extends GoRouteData with $SourcePreferenceRoute {
   final String sourceId;
 
   @override
-  Widget build(context, state) => SourcePreferenceScreen(sourceId: sourceId);
+  Widget build(context, state) => DetailNavigationShellScreen(
+    child: SourcePreferenceScreen(sourceId: sourceId),
+  );
 }
