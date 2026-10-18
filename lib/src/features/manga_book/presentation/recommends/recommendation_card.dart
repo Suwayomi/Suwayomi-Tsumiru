@@ -48,7 +48,7 @@ class RecommendationCard extends HookConsumerWidget {
     if (match != null) {
       MangaRoute(mangaId: match.id).push(context);
     } else {
-      openGlobalSearch(context, query: rec.title);
+      openGlobalSearch(context, query: rec.title, fromSuggestion: true);
     }
   }
 

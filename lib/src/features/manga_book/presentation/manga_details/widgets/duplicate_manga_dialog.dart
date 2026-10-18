@@ -17,6 +17,7 @@ import 'package:gap/gap.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/cover_row_section.dart';
 import '../../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../../widgets/manga_cover/widgets/manga_badges.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -118,25 +119,21 @@ class DuplicateMangaDialog extends StatelessWidget {
                 style: context.textTheme.bodyMedium,
               ),
               const Gap(12),
-              SizedBox(
+              CoverRowSection(
                 height: 300,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: duplicates.length,
-                  separatorBuilder: (_, _) => const Gap(8),
-                  itemBuilder: (context, index) {
-                    final duplicate = duplicates[index];
-                    return _DuplicateCard(
-                      duplicate: duplicate,
-                      candidate: candidate,
-                      isCertain: certainIds.contains(duplicate.id),
-                      trackerNameOf: trackerNameOf,
-                      onTap: () => _handleCardTap(context, duplicate),
-                      onLongPress: () =>
-                          _handleCardLongPress(context, duplicate),
-                    );
-                  },
-                ),
+                itemCount: duplicates.length,
+                itemBuilder: (context, index) {
+                  final duplicate = duplicates[index];
+                  return _DuplicateCard(
+                    duplicate: duplicate,
+                    candidate: candidate,
+                    isCertain: certainIds.contains(duplicate.id),
+                    trackerNameOf: trackerNameOf,
+                    onTap: () => _handleCardTap(context, duplicate),
+                    onLongPress: () => _handleCardLongPress(context, duplicate),
+                  );
+                },
+                separatorBuilder: (_, _) => const Gap(8),
               ),
             ],
           ),

@@ -82,7 +82,10 @@ typedef QuickSearchResults = ({
   AsyncValue<List<MangaDto>> mangaList
 });
 
-@riverpod
+// The row's Retry is the only re-fetch; a failed source must settle at once.
+Duration? _noRetry(int retryCount, Object error) => null;
+
+@Riverpod(retry: _noRetry)
 Future<List<MangaDto>> sourceQuickSearchMangaList(
   Ref ref,
   String sourceId, {

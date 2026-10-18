@@ -10,11 +10,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/cover_row_section.dart';
+import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../browse_center/domain/source/source_model.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../controller/migration_controller.dart';
 
-class MigrationSourceShortSearch extends StatelessWidget {
+class MigrationSourceShortSearch extends ConsumerWidget {
   const MigrationSourceShortSearch({
     super.key,
     required this.source,
@@ -27,45 +30,84 @@ class MigrationSourceShortSearch extends StatelessWidget {
   final String? query;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          title: Text(source.displayName),
-          trailing: const Icon(Icons.arrow_forward_rounded),
-          onTap: () {
-            // Navigate to source for detailed search
-            // For now, we'll keep it simple and not navigate
-          },
-        ),
-        mangaList.showUiWhenData(
-          context,
-          (data) => data.isEmpty
-              ? Padding(
-                  padding: KEdgeInsets.h16v4.size,
-                  child: Text(context.l10n.noResultFound),
-                )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final manga in data)
-                        SizedBox(
-                          width: kShortSearchCoverWidth,
-                          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
-                          child: MangaCoverGridTile(
-                            manga: manga,
-                            showDarkOverlay: manga.inLibrary.ifNull(),
-                            onPressed: () => _onMangaSelected(context, manga),
-                          ),
-                        ),
-                    ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    Widget section({
+      int? itemCount,
+      IndexedWidgetBuilder? itemBuilder,
+      Widget? child,
+    }) => CoverRowSection(
+      title: source.displayName,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
+      child: child,
+    );
+    return mangaList.when(
+      data: (data) => data.isEmpty
+          ? section(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(context.l10n.noResultFound),
+              ),
+            )
+          : section(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final manga = data[index];
+                return SizedBox(
+                  width: kShortSearchCoverWidth,
+                  height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+                  child: MangaCoverGridTile(
+                    manga: manga,
+                    showDarkOverlay: manga.inLibrary.ifNull(),
+                    onPressed: () => _onMangaSelected(context, manga),
+                  ),
+                );
+              },
+            ),
+      error: (_, _) => section(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 20,
+                color: context.colorScheme.error,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  context.l10n.couldntReachSource(source.displayName),
+                  style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => ref.invalidate(
+                  migrationSourceQuickSearchMangaListProvider(
+                    source.id,
+                    query: query,
                   ),
                 ),
+                child: Text(context.l10n.retry),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
+      loading: () => section(
+        child: SizedBox(
+          height: mangaCoverBoxHeight(kShortSearchCoverWidth),
+          child: const Center(
+            child: SizedBox.square(
+              dimension: 48,
+              child: SorayomiShimmerIndicator(),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

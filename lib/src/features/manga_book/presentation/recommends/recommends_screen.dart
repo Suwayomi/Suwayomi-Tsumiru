@@ -7,9 +7,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/cover_row_section.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/recommendations/recommendation_provider.dart';
@@ -95,61 +95,48 @@ class _ProviderSection extends ConsumerWidget {
     final recs = ref.watch(
       providerRecommendationsProvider(mangaId, provider.key),
     );
+    Widget section({
+      int? itemCount,
+      IndexedWidgetBuilder? itemBuilder,
+      Widget? child,
+    }) => CoverRowSection(
+      title: provider.name,
+      subtitle: provider.category,
+      onSeeAll: () => RecommendsBrowseRoute(
+        mangaId: mangaId,
+        providerName: provider.key,
+      ).push(context),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 200,
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      child: child,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          onTap: () => RecommendsBrowseRoute(
-            mangaId: mangaId,
-            providerName: provider.key,
-          ).push(context),
-          child: Padding(
-            padding: KEdgeInsets.h16v8.size,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(provider.name, style: context.textTheme.titleMedium),
-                      Text(
-                        provider.category,
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.theme.hintColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_rounded),
-              ],
+        recs.when(
+          loading: () => section(
+            child: const SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
             ),
           ),
-        ),
-        recs.when(
-          loading: () => const SizedBox(
-            height: 200,
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => _SectionMessage(
-            e is RecommendationUnavailableOnWeb
-                ? context.l10n.recommendationsUnavailableWeb
-                : e is RecommendationHttpException
-                ? context.l10n.httpErrorCheckWebView(e.statusCode)
-                : context.l10n.errorSomethingWentWrong,
+          error: (e, _) => section(
+            child: _SectionMessage(
+              e is RecommendationUnavailableOnWeb
+                  ? context.l10n.recommendationsUnavailableWeb
+                  : e is RecommendationHttpException
+                  ? context.l10n.httpErrorCheckWebView(e.statusCode)
+                  : context.l10n.errorSomethingWentWrong,
+            ),
           ),
           data: (list) => list.isEmpty
-              ? _SectionMessage(context.l10n.noResultFound)
-              : SizedBox(
-                  height: 200,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: list.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) =>
-                        RecommendationCard(rec: list[i]),
-                  ),
+              ? section(child: _SectionMessage(context.l10n.noResultFound))
+              : section(
+                  itemCount: list.length,
+                  itemBuilder: (context, i) => RecommendationCard(rec: list[i]),
                 ),
         ),
         const SizedBox(height: 8),
@@ -168,7 +155,7 @@ class _SectionMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

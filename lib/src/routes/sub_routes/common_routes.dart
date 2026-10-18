@@ -127,12 +127,16 @@ class _ReaderRouteTransition extends ConsumerWidget {
 }
 
 class GlobalSearchRoute extends GoRouteData with $GlobalSearchRoute {
-  const GlobalSearchRoute({this.query});
+  const GlobalSearchRoute({this.query, this.fromSuggestion = false});
   final String? query;
+  final bool fromSuggestion;
 
   @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      GlobalSearchScreen(key: ValueKey(query), initialQuery: query);
+  Widget build(BuildContext context, GoRouterState state) => GlobalSearchScreen(
+    key: ValueKey(query),
+    initialQuery: query,
+    fromSuggestion: fromSuggestion,
+  );
 }
 
 @TypedGoRoute<UpcomingRoute>(path: Routes.upcoming)

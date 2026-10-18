@@ -25,10 +25,14 @@ class SearchField extends HookWidget {
     this.actions,
     this.highlightDsl = false,
     this.hintBehavior = SearchFieldHintBehavior.auto,
+    this.controller,
+    this.focusNode,
   });
   final String? labelText;
   final String? hintText;
   final String? initialText;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String?>? onChanged;
   final ValueChanged<String?>? onSubmitted;
   final VoidCallback? onClose;
@@ -43,30 +47,35 @@ class SearchField extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = useMemoized(
-      () => highlightDsl
-          ? DslSearchController(text: initialText)
-          : TextEditingController(text: initialText),
-      [highlightDsl],
+    final ownController = useMemoized<TextEditingController?>(
+      () {
+        if (controller != null) return null;
+        return highlightDsl
+            ? DslSearchController(text: initialText)
+            : TextEditingController(text: initialText);
+      },
+      [highlightDsl, controller],
     );
-    useEffect(() => controller.dispose, [controller]);
+    useEffect(() => ownController?.dispose, [ownController]);
+    final textController = controller ?? ownController!;
 
-    final focusNode = useFocusNode();
-    useListenable(focusNode);
+    final ownFocusNode = useFocusNode();
+    final effectiveFocusNode = focusNode ?? ownFocusNode;
+    useListenable(effectiveFocusNode);
 
     void closeAction() {
-      controller.clear();
+      textController.clear();
       onClose?.call();
       onChanged?.call(null);
       onSubmitted?.call(null);
     }
 
     void prefixAction() {
-      if (focusNode.hasFocus) {
-        focusNode.unfocus();
+      if (effectiveFocusNode.hasFocus) {
+        effectiveFocusNode.unfocus();
         closeAction();
       } else {
-        focusNode.requestFocus();
+        effectiveFocusNode.requestFocus();
       }
     }
 
@@ -76,10 +85,10 @@ class SearchField extends HookWidget {
       SearchFieldHintBehavior.auto => (unfocusedText, hintText),
       SearchFieldHintBehavior.forceHint => (
           null,
-          focusNode.hasFocus ? focusedText : unfocusedText
+          effectiveFocusNode.hasFocus ? focusedText : unfocusedText
         ),
       SearchFieldHintBehavior.forceLabel => (
-          focusNode.hasFocus ? focusedText : unfocusedText,
+          effectiveFocusNode.hasFocus ? focusedText : unfocusedText,
           null
         ),
     };
@@ -94,8 +103,8 @@ class SearchField extends HookWidget {
     return TextField(
       onChanged: onChanged,
       autofocus: autofocus,
-      controller: controller,
-      focusNode: focusNode,
+      controller: textController,
+      focusNode: effectiveFocusNode,
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
         isDense: true,
@@ -103,7 +112,7 @@ class SearchField extends HookWidget {
         labelText: decorationLabel,
         hintText: decorationHint,
         prefixIcon: IconButton(
-          icon: Icon(focusNode.hasFocus
+          icon: Icon(effectiveFocusNode.hasFocus
               ? Icons.arrow_back_rounded
               : Icons.search_rounded),
           onPressed: prefixAction,

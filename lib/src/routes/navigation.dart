@@ -12,5 +12,11 @@ import 'router_config.dart';
 /// nav. It has to be pushed: `go` replaces the stack, leaving nothing to go
 /// back to and no way off the screen but killing the app (#350). Routed
 /// through here so no caller has to know that.
-void openGlobalSearch(BuildContext context, {String? query}) =>
-    GlobalSearchRoute(query: query).push(context);
+void openGlobalSearch(
+  BuildContext context, {
+  String? query,
+  bool fromSuggestion = false,
+}) => GlobalSearchRoute(
+  query: query,
+  fromSuggestion: fromSuggestion,
+).push(context);
