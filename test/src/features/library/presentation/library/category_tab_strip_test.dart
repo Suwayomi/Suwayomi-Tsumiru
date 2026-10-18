@@ -7,12 +7,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/category_tab_strip.dart';
+import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
 Future<void> _pumpStrip(
   WidgetTester tester,
   List<StripTab> tabs, {
   double width = 1400,
   int initialIndex = 0,
+  Locale? locale,
   required void Function(TabController controller) onController,
 }) async {
   // Drive the strip width through the view: it fills the Scaffold body, so
@@ -22,6 +24,9 @@ Future<void> _pumpStrip(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: DefaultTabController(
           length: tabs.length,
@@ -38,6 +43,13 @@ Future<void> _pumpStrip(
   );
   await tester.pumpAndSettle();
 }
+
+/// Names currently rendered in the strip row (More label excluded by using
+/// exact tab-name matches while the menu is closed).
+Set<String> _visibleNames(WidgetTester tester, List<StripTab> tabs) => {
+  for (final tab in tabs)
+    if (find.text(tab.name, findRichText: true).evaluate().isNotEmpty) tab.name,
+};
 
 List<StripTab> _tabs(List<String> names) => [
   for (final name in names) (name: name, count: null),
@@ -142,6 +154,67 @@ void main() {
         find.text('Long category name 11', findRichText: true),
         findsOneWidget,
       );
+    });
+
+    testWidgets(
+      'selecting a very long hidden name leaves visible tabs identical',
+      (tester) async {
+        const longName =
+            'An Extremely Long Category Name That Goes On And On And On Forever';
+        late TabController controller;
+        final tabs = _tabs([
+          for (var i = 0; i < 11; i++) 'Category $i',
+          longName,
+        ]);
+        await _pumpStrip(
+          tester,
+          tabs,
+          width: 1000,
+          onController: (c) => controller = c,
+        );
+
+        expect(tester.takeException(), isNull);
+        // The long name starts hidden behind the count label.
+        expect(find.text(longName, findRichText: true), findsNothing);
+        expect(
+          find.textContaining('More (', findRichText: true),
+          findsOneWidget,
+        );
+        final before = _visibleNames(tester, tabs);
+        expect(before, isNotEmpty);
+        expect(before, isNot(contains(longName)));
+
+        await tester.tap(find.textContaining('More (', findRichText: true));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(longName, findRichText: true).last);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(controller.index, 11);
+        // The row never reshuffles: the same tabs stay visible, and the long
+        // name appears only in the More control, ellipsized with a tooltip.
+        final after = _visibleNames(tester, tabs)..remove(longName);
+        expect(after, before);
+        expect(find.textContaining('More (', findRichText: true), findsNothing);
+        expect(find.byTooltip(longName), findsOneWidget);
+      },
+    );
+
+    testWidgets('More label comes from l10n', (tester) async {
+      late TabController controller;
+      final tabs = _tabs([for (var i = 0; i < 12; i++) 'Kategorie $i']);
+      await _pumpStrip(
+        tester,
+        tabs,
+        width: 1000,
+        locale: const Locale('de'),
+        onController: (c) => controller = c,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Mehr (', findRichText: true), findsOneWidget);
+      expect(find.textContaining('More (', findRichText: true), findsNothing);
+      expect(controller.index, 0);
     });
 
     testWidgets('long German names do not clip', (tester) async {

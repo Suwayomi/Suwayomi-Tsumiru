@@ -51,6 +51,7 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
     final direction = Directionality.of(context);
     final scaler = MediaQuery.textScalerOf(context);
 
+    final moreLabel = context.l10n.more;
     return LayoutBuilder(
       builder: (context, constraints) {
         final layout = _computeLayout(
@@ -59,6 +60,7 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
           selected: selected,
           direction: direction,
           scaler: scaler,
+          moreLabel: moreLabel,
           nameStyle: _nameStyle(context, true),
           countStyle: _countStyle(context, true),
           moreStyle: _moreStyle(context, false),
@@ -102,6 +104,7 @@ class CategoryTabStrip extends HookWidget implements PreferredSizeWidget {
                   hidden: layout.hidden,
                   selected: selected,
                   maxWidth: layout.moreMaxWidth,
+                  moreLabel: moreLabel,
                   onPick: (i) => controller.animateTo(i),
                 ),
               ],
@@ -188,6 +191,7 @@ _computeLayout({
   required int selected,
   required TextDirection direction,
   required TextScaler scaler,
+  required String moreLabel,
   required TextStyle nameStyle,
   required TextStyle countStyle,
   required TextStyle moreStyle,
@@ -203,7 +207,7 @@ _computeLayout({
   final tabWidths = [for (final w in textWidths) w + _kTabHPadding * 2];
   const dividerWidth = 1 + 16;
   const moreChrome = 8 + 20 + _kTabHPadding * 2; // gap + ▾ + padding
-  String moreCountLabel(int n) => 'More ($n)';
+  String moreCountLabel(int n) => '$moreLabel ($n)';
   double moreCountWidth(int n) =>
       _textWidth(moreCountLabel(n), moreStyle, direction, scaler) + moreChrome;
 
@@ -222,19 +226,25 @@ _computeLayout({
   }
 
   // Reserve room for the widest More label we could end up with: either the
-  // "More (N)" count or the selected tab's name, whichever is wider. The walk
-  // below then never overflows, whatever is hidden or selected.
-  final selectedHiddenWidth =
+  // "More (N)" count or the widest category name among ALL categories (capped
+  // at 200 px; longer names ellipsize in the More control). Independent of the
+  // selection, so picking a hidden category never reshuffles the row.
+  var widestName = 0.0;
+  for (final tab in tabs) {
+    widestName = max(
+      widestName,
       _richWidth(
-        tabs[selected],
+        tab,
         moreSelectedStyle,
         moreSelectedCountStyle,
         direction,
         scaler,
-      ) +
-      moreChrome;
+      ),
+    );
+  }
+  widestName = min(widestName, 200);
   final reserve =
-      dividerWidth + max(moreCountWidth(tabs.length), selectedHiddenWidth);
+      dividerWidth + max(moreCountWidth(tabs.length), widestName + moreChrome);
 
   final visible = <int>[];
   var used = 0.0;
@@ -327,6 +337,7 @@ class _MoreControl extends StatelessWidget {
     required this.hidden,
     required this.selected,
     required this.maxWidth,
+    required this.moreLabel,
     required this.onPick,
   });
 
@@ -334,6 +345,7 @@ class _MoreControl extends StatelessWidget {
   final List<int> hidden;
   final int selected;
   final double maxWidth;
+  final String moreLabel;
   final ValueChanged<int> onPick;
 
   @override
@@ -342,8 +354,11 @@ class _MoreControl extends StatelessWidget {
     final selectedHidden = hidden.contains(selected);
     final label = selectedHidden
         ? tabs[selected].name
-        : 'More (${hidden.length})';
+        : '$moreLabel (${hidden.length})';
     final count = selectedHidden ? tabs[selected].count : null;
+    final fullName = selectedHidden
+        ? (count != null ? '${tabs[selected].name} ($count)' : label)
+        : null;
     return MenuAnchor(
       menuChildren: [
         for (final i in hidden)
@@ -379,25 +394,29 @@ class _MoreControl extends StatelessWidget {
                   children: [
                     ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: label,
-                              style: _moreStyle(context, selectedHidden),
-                            ),
-                            if (count != null)
+                      child: Tooltip(
+                        message: fullName ?? '',
+                        preferBelow: false,
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
                               TextSpan(
-                                text: ' ($count)',
-                                style: _countStyle(
-                                  context,
-                                  selectedHidden,
-                                ).copyWith(fontSize: _kMoreFontSize),
+                                text: label,
+                                style: _moreStyle(context, selectedHidden),
                               ),
-                          ],
+                              if (count != null)
+                                TextSpan(
+                                  text: ' ($count)',
+                                  style: _countStyle(
+                                    context,
+                                    selectedHidden,
+                                  ).copyWith(fontSize: _kMoreFontSize),
+                                ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
