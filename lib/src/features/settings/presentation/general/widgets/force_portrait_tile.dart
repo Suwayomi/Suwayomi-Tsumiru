@@ -49,8 +49,8 @@ class ForcePortraitTile extends ConsumerWidget {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: const Icon(Icons.screen_lock_portrait_rounded),
-      title: const Text('Lock to portrait'),
-      subtitle: const Text('Stop the app rotating to landscape on phones'),
+      title: Text(context.l10n.lockToPortrait),
+      subtitle: Text(context.l10n.lockToPortraitSubtitle),
       onChanged: (value) {
         ref.read(forcePortraitProvider.notifier).update(value);
         applyForcePortrait(value);
