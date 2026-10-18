@@ -1,5 +1,9 @@
 <p align="center">
- <img width=120px height=120px src="assets/icons/launcher/tsumiru_icon.png" alt="Tsumiru logo"/>
+ <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/icons/dark_icon.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/icons/logo_on_light.png">
+  <img width=120px height=120px src="assets/icons/dark_icon.png" alt="Tsumiru logo"/>
+ </picture>
 </p>
 
 <h1 align="center">Tsumiru</h1>

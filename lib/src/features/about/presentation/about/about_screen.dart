@@ -12,12 +12,12 @@ import 'package:pub_semver/pub_semver.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/brand_icons.dart';
-import '../../../../constants/gen/assets.gen.dart';
 import '../../../../constants/urls.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/tsumiru_logo.dart';
 import '../../data/about_repository.dart';
 import '../../domain/about/about_dto.dart';
 import '../../domain/server_update/server_update.dart';
@@ -136,10 +136,7 @@ class AboutScreen extends HookConsumerWidget {
         onRefresh: () => ref.refresh(aboutProvider.future),
         child: ListView(
           children: [
-            ImageIcon(
-              AssetImage(Assets.icons.darkIcon.path),
-              size: context.height * .2,
-            ),
+            TsumiruLogo(size: context.height * .2),
             const Divider(),
             ClipboardListTile(
               title: context.l10n.client,
