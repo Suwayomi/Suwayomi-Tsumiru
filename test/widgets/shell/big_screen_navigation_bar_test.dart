@@ -207,6 +207,56 @@ void main() {
     ], reason: 'desktop nav list is the tablet list (History sits at 2)');
   });
 
+  testWidgets('each row exposes its label exactly once to screen readers', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final handle = tester.ensureSemantics();
+    await _pump(tester, prefs);
+
+    final l10n = _l10n(tester);
+    Finder libraryRow() => find.byWidgetPredicate(
+      (w) => w is Semantics && w.properties.label == l10n.library,
+    );
+
+    // Expanded: visible text is excluded, so the explicit label is the
+    // only name (otherwise a reader announces "Library\nLibrary").
+    expect(find.text(l10n.library), findsOneWidget);
+    expect(libraryRow(), findsOneWidget);
+    expect(
+      tester.getSemantics(libraryRow()),
+      matchesSemantics(
+        label: l10n.library,
+        isButton: true,
+        isFocusable: true,
+        isSelected: true,
+        hasSelectedState: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+
+    // Collapsed: icon-only row keeps the explicit label.
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.library), findsNothing);
+    expect(libraryRow(), findsOneWidget);
+    expect(
+      tester.getSemantics(libraryRow()),
+      matchesSemantics(
+        label: l10n.library,
+        isButton: true,
+        isFocusable: true,
+        isSelected: true,
+        hasSelectedState: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+    handle.dispose();
+  });
+
   testWidgets('badges still render on the sidebar icons', (tester) async {
     SharedPreferences.setMockInitialValues(const {});
     final prefs = await SharedPreferences.getInstance();

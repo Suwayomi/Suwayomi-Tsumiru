@@ -86,13 +86,15 @@ class DesktopSidebar extends ConsumerWidget {
                   icon,
                   const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: selected ? cs.primary : cs.onSurfaceVariant,
+                    child: ExcludeSemantics(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: selected ? cs.primary : cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
