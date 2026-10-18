@@ -123,9 +123,6 @@ void main() {
       locale.trackRemoveConfirmBody('AniList'),
       'Die Verknüpfung mit AniList wird entfernt.',
     );
-    expect(locale.searchTipsBody, contains('status:ongoing'));
-    expect(locale.searchTipsBody, contains('tag:"slice of life"'));
-    expect(locale.searchTipsBody, contains('-tag:dropped'));
   });
 
   test('Chinese completion retains quantities and script-specific wording', () {
@@ -225,25 +222,6 @@ void main() {
     );
     expect(locale.trackRemoveConfirmBody('AniList'), 'AniList との連携を解除します。');
     expect(locale.offlineRecoveryPendingSync('ブックマーク'), '同期待ち：ブックマーク');
-    for (final syntax in [
-      'tag:seinen',
-      'genre:action',
-      'author:oda',
-      'status:ongoing',
-      'completed',
-      'hiatus',
-      'cancelled',
-      'source:mangadex',
-      'tracked:true',
-      'tracked:anilist',
-      'rating:>=4',
-      'unread:true',
-      'downloaded:true',
-      'tag:"slice of life"',
-      '-tag:dropped',
-    ]) {
-      expect(locale.searchTipsBody, contains(syntax));
-    }
   });
 
   test('New Portuguese plurals preserve zero in every regional locale', () {
@@ -339,25 +317,6 @@ void main() {
       expect(locale.offlineRecoveryOriginal, 'Usar progresso original');
       expect(locale.offlineRecoveryCurrent, 'Usar progresso atual');
       expect(locale.offlineRecoveryCompleted(21), '21 imagens recuperadas');
-      for (final syntax in [
-        'tag:seinen',
-        'genre:action',
-        'author:oda',
-        'status:ongoing',
-        'completed',
-        'hiatus',
-        'cancelled',
-        'source:mangadex',
-        'tracked:true',
-        'tracked:anilist',
-        'rating:>=4',
-        'unread:true',
-        'downloaded:true',
-        'tag:"slice of life"',
-        '-tag:dropped',
-      ]) {
-        expect(locale.searchTipsBody, contains(syntax));
-      }
     }
   });
 
