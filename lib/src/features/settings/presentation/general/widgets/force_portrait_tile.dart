@@ -17,7 +17,8 @@ import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 part 'force_portrait_tile.g.dart';
 
 @riverpod
-class ForcePortrait extends _$ForcePortrait with SharedPreferenceClientMixin<bool> {
+class ForcePortrait extends _$ForcePortrait
+    with SharedPreferenceClientMixin<bool> {
   @override
   bool? build() => initialize(DBKeys.forcePortrait);
 }
@@ -30,7 +31,8 @@ void applyForcePortrait(bool forcePortrait) {
   final shortestSide = views.isEmpty
       ? 0.0
       : (views.first.physicalSize / views.first.devicePixelRatio).shortestSide;
-  final isPhone = !kIsWeb &&
+  final isPhone =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS) &&
       shortestSide > 0 &&
@@ -49,8 +51,8 @@ class ForcePortraitTile extends ConsumerWidget {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: const Icon(Icons.screen_lock_portrait_rounded),
-      title: const Text('Lock to portrait'),
-      subtitle: const Text('Stop the app rotating to landscape on phones'),
+      title: Text(context.l10n.lockToPortrait),
+      subtitle: Text(context.l10n.lockToPortraitSubtitle),
       onChanged: (value) {
         ref.read(forcePortraitProvider.notifier).update(value);
         applyForcePortrait(value);

@@ -2194,6 +2194,8 @@
   },
   "localSourceLocation": "Local source location",
   "localSourceLocationDescription": "The path to the directory on the server where local source files are saved in",
+  "lockToPortrait": "Lock to portrait",
+  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
   "manga": "Manga",
   "mangaGridSize": "Manga Grid Size",
   "mangaMissingSources": "Manga Missing Sources",
