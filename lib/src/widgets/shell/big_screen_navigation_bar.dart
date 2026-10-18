@@ -14,8 +14,8 @@ import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../tsumiru_logo.dart';
 import 'animated_nav_icon.dart';
+import 'desktop_sidebar.dart';
 import 'nav_badges.dart';
-import 'sidebar_expanded.dart';
 
 class BigScreenNavigationBar extends ConsumerWidget {
   const BigScreenNavigationBar({
@@ -26,11 +26,6 @@ class BigScreenNavigationBar extends ConsumerWidget {
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
-
-  /// Width of the extended rail. Set explicitly on the [NavigationRail] below
-  /// AND used to size the [leading] so the header fills the rail and can
-  /// left-align (the rail's Column centers a narrower leading child).
-  static const double _extendedWidth = 256;
 
   NavigationRailDestination getNavigationRailDestination(
     BuildContext context,
@@ -48,6 +43,15 @@ class BigScreenNavigationBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Desktop uses the custom sidebar (icon rows, no under-icon labels);
+    // tablet and landscape phone keep the icon rail exactly as before.
+    if (context.isDesktop) {
+      return DesktopSidebar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+      );
+    }
+
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
@@ -58,65 +62,13 @@ class BigScreenNavigationBar extends ConsumerWidget {
     // the bottom). Real tablets keep the header.
     final isPhone = MediaQuery.sizeOf(context).shortestSide < 600;
 
-    final expanded = ref.watch(sidebarExpandedProvider).ifNull(true);
-    // Collapse only applies to the desktop (extended) rail; the tablet rail is
-    // already an icon rail.
-    final showExtended = context.isDesktop && expanded;
-    void toggleSidebar() =>
-        ref.read(sidebarExpandedProvider.notifier).update(!expanded);
+    const logoIcon = TsumiruLogo(size: 48);
 
-    final logoIcon = const TsumiruLogo(size: 48);
-
-    final Widget leadingIcon;
-    if (showExtended) {
-      leadingIcon = SizedBox(
-        width: _extendedWidth,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8, right: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => const AboutRoute().push(context),
-                    icon: logoIcon,
-                    label: Text(
-                      context.l10n.appTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: context.textTheme.bodyLarge?.color,
-                      alignment: Alignment.centerLeft,
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                tooltip: context.l10n.collapseSidebar,
-                onPressed: toggleSidebar,
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (context.isDesktop) {
-      // Collapsed: keep the logo (tap to expand) so the header never swaps
-      // between logo and chevron as the rail collapses or the width changes.
-      leadingIcon = IconButton(
-        icon: logoIcon,
-        tooltip: context.l10n.expandSidebar,
-        onPressed: toggleSidebar,
-      );
-    } else {
-      // Tablet / landscape phone: compact logo (no collapse — already an icon rail).
-      leadingIcon = IconButton(
-        onPressed: () => const AboutRoute().push(context),
-        icon: logoIcon,
-      );
-    }
+    // Tablet / landscape phone: compact logo (no collapse — already an icon rail).
+    final leadingIcon = IconButton(
+      onPressed: () => const AboutRoute().push(context),
+      icon: logoIcon,
+    );
 
     // The rail doesn't scroll on its own, so in landscape (short height) its
     // destinations overflow the bottom. Let it scroll when it can't fit, while
@@ -130,13 +82,8 @@ class BigScreenNavigationBar extends ConsumerWidget {
             child: NavigationRail(
               useIndicator: true,
               elevation: 5,
-              extended: showExtended,
-              minExtendedWidth: _extendedWidth,
-              // Extended shows labels beside icons; otherwise keep them UNDER the icons
-              // (collapsed desktop + tablet) rather than dropping them.
-              labelType: showExtended
-                  ? NavigationRailLabelType.none
-                  : NavigationRailLabelType.all,
+              extended: false,
+              labelType: NavigationRailLabelType.all,
               leading: isPhone ? null : leadingIcon,
               destinations: [
                 for (var i = 0; i < navList.length; i++)

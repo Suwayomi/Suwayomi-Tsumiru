@@ -10,6 +10,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
 import 'package:tsumiru/src/widgets/shell/big_screen_navigation_bar.dart';
+import 'package:tsumiru/src/widgets/shell/desktop_sidebar.dart';
 
 GoRouter _router(String location) {
   final quickSearch = $appRoutes.whereType<ShellRoute>().first;
@@ -93,31 +94,44 @@ void main() {
         find.byType(BigScreenNavigationBar),
         size.width >= 600 ? findsOneWidget : findsNothing,
       );
-      if (size.width >= 600) {
+      if (size.width >= 1200) {
+        // Desktop uses the custom sidebar, not a NavigationRail.
+        expect(find.byType(NavigationRail), findsNothing);
+        final sidebar = tester.widget<DesktopSidebar>(
+          find.byType(DesktopSidebar),
+        );
+        expect(
+          tester.getSize(find.byType(DesktopSidebar)).width,
+          DesktopSidebar.expandedWidth,
+        );
+        expect(sidebar.selectedIndex, 0);
+      } else if (size.width >= 600) {
         final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-        expect(rail.extended, size.width >= 1200);
+        expect(rail.extended, isFalse);
         expect(rail.selectedIndex, 0);
       }
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('detail shell follows the sidebar preference at desktop width',
-      (tester) async {
+  testWidgets('detail shell follows the sidebar preference at desktop width', (
+    tester,
+  ) async {
     await _pump(
       tester,
       const Size(1400, 900),
       const LibraryUpdateErrorsRoute().location,
     );
     expect(
-      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
-      isTrue,
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.expandedWidth,
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('detail shell collapses when the sidebar preference is off',
-      (tester) async {
+  testWidgets('detail shell collapses when the sidebar preference is off', (
+    tester,
+  ) async {
     await _pump(
       tester,
       const Size(1400, 900),
@@ -125,14 +139,15 @@ void main() {
       const {'sidebarExpanded': false},
     );
     expect(
-      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
-      isFalse,
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.collapsedWidth,
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('detail shell shows the icon rail at tablet width',
-      (tester) async {
+  testWidgets('detail shell shows the icon rail at tablet width', (
+    tester,
+  ) async {
     await _pump(
       tester,
       const Size(800, 900),
