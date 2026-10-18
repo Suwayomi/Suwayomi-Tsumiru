@@ -20,7 +20,11 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
-Future<ProviderContainer> _pumpToolbar(WidgetTester tester) async {
+Future<ProviderContainer> _pumpToolbar(
+  WidgetTester tester, {
+  double width = 1400,
+  double textScale = 1.0,
+}) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
@@ -40,7 +44,7 @@ Future<ProviderContainer> _pumpToolbar(WidgetTester tester) async {
     ],
   );
   addTearDown(container.dispose);
-  tester.view.physicalSize = const Size(1400, 980);
+  tester.view.physicalSize = Size(width, 980);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -49,7 +53,14 @@ Future<ProviderContainer> _pumpToolbar(WidgetTester tester) async {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: DesktopLibraryToolbar()),
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: const Scaffold(body: DesktopLibraryToolbar()),
+          ),
+        ),
       ),
     ),
   );
@@ -219,6 +230,7 @@ void main() {
         }
         return buffer.toString();
       }
+
       // Only the tip paragraphs use Text.rich (plain + chip + plain
       // spans); the chips themselves are plain Text widgets and are
       // covered by the findsOneWidget checks above.
@@ -242,7 +254,9 @@ void main() {
         expect(plain, isNot(contains('-tag:dropped')));
       }
       expect(
-        plains.any((plain) => plain.contains('Type a field and a colon, like ')),
+        plains.any(
+          (plain) => plain.contains('Type a field and a colon, like '),
+        ),
         isTrue,
       );
       expect(
@@ -279,6 +293,80 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Display Mode'), findsOneWidget);
       expect(find.byType(Drawer), findsNothing);
+    });
+
+    testWidgets('full mode at 1100 keeps the sort label and Filter text', (
+      tester,
+    ) async {
+      await _pumpToolbar(tester, width: 1100);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Last Read'), findsOneWidget);
+      expect(find.text('Filter'), findsOneWidget);
+    });
+
+    testWidgets('compact mode at 520 hides labels but keeps every action', (
+      tester,
+    ) async {
+      final container = await _pumpToolbar(tester, width: 520);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Last Read'), findsNothing);
+      expect(find.text('Filter'), findsNothing);
+      expect(find.byTooltip('Last Read'), findsOneWidget);
+      expect(find.byTooltip('Filter'), findsOneWidget);
+
+      // The direction button still toggles.
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.arrow_downward_rounded),
+      );
+      await tester.pump();
+      expect(container.read(libraryMangaSortDirectionProvider), isTrue);
+
+      // The sort trigger still opens the menu and picking still applies.
+      await tester.tap(find.byTooltip('Last Read'));
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(MenuItemButton, 'Alphabetical'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(MenuItemButton, 'Alphabetical'));
+      await tester.pumpAndSettle();
+      expect(container.read(libraryMangaSortProvider), MangaSort.alphabetical);
+
+      // The filter icon still opens the panel.
+      await tester.tap(find.byTooltip('Filter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Downloaded'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('compact mode at 360 reports no overflow', (tester) async {
+      await _pumpToolbar(tester, width: 360);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      expect(find.text('Filter'), findsNothing);
+      expect(find.byTooltip('Filter'), findsOneWidget);
+    });
+
+    testWidgets('full mode at 900 with default text scale', (tester) async {
+      await _pumpToolbar(tester, width: 900);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Last Read'), findsOneWidget);
+      expect(find.text('Filter'), findsOneWidget);
+    });
+
+    testWidgets('text scale 1.5 at 900 switches to compact', (tester) async {
+      await _pumpToolbar(tester, width: 900, textScale: 1.5);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Last Read'), findsNothing);
+      expect(find.text('Filter'), findsNothing);
+      expect(find.byTooltip('Last Read'), findsOneWidget);
+      expect(find.byTooltip('Filter'), findsOneWidget);
     });
   });
 }
