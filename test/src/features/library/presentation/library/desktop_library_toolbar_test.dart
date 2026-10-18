@@ -9,7 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/enum.dart';
+import 'package:tsumiru/src/features/library/domain/category/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/library/presentation/category/controller/edit_category_controller.dart';
 import 'package:tsumiru/src/features/library/presentation/library/controller/library_controller.dart';
+import 'package:tsumiru/src/features/library/presentation/library/controller/library_manga_list.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/desktop_library_toolbar.dart';
 import 'package:tsumiru/src/features/library/presentation/library/widgets/library_manga_organizer.dart';
 import 'package:tsumiru/src/features/tracking/data/graphql/__generated__/query.graphql.dart';
@@ -17,10 +20,7 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
-Future<ProviderContainer> _pumpToolbar(
-  WidgetTester tester, {
-  void Function()? onOpenOrganizer,
-}) async {
+Future<ProviderContainer> _pumpToolbar(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
   final sp = await SharedPreferences.getInstance();
   final container = ProviderContainer(
@@ -30,6 +30,12 @@ Future<ProviderContainer> _pumpToolbar(
       // rule; never hit the network in widget tests.
       loggedInTrackersProvider.overrideWithValue(
         const AsyncData(<Fragment$TrackerDto>[]),
+      ),
+      libraryTagListProvider.overrideWithValue(const AsyncData(<String>[])),
+      libraryMangaListProvider.overrideWith((ref) async => null),
+      // The category summary reads this; never hit the network in widget tests.
+      visibleCategoryListProvider.overrideWithValue(
+        const AsyncData(<Fragment$CategoryDto>[]),
       ),
     ],
   );
@@ -43,11 +49,7 @@ Future<ProviderContainer> _pumpToolbar(
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: DesktopLibraryToolbar(
-            onOpenOrganizer: onOpenOrganizer ?? () {},
-          ),
-        ),
+        home: const Scaffold(body: DesktopLibraryToolbar()),
       ),
     ),
   );
@@ -183,15 +185,26 @@ void main() {
       expect(container.read(librarySortRandomSeedProvider), seed + 1);
     });
 
-    testWidgets('filter and display open the organizer', (tester) async {
-      var opened = 0;
-      await _pumpToolbar(tester, onOpenOrganizer: () => opened++);
+    testWidgets('filter opens an anchored panel, not a drawer', (tester) async {
+      await _pumpToolbar(tester);
 
       await tester.tap(find.text('Filter'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Downloaded'), findsOneWidget);
+      expect(find.byType(Drawer), findsNothing);
+    });
+
+    testWidgets('display opens the display panel', (tester) async {
+      await _pumpToolbar(tester);
+
       await tester.tap(find.byTooltip('Display'));
-      await tester.pump();
-      expect(opened, 2);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Display Mode'), findsOneWidget);
+      expect(find.byType(Drawer), findsNothing);
     });
   });
 }

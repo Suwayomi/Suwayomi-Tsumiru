@@ -16,7 +16,11 @@ import '../../../../../widgets/organizer_heading.dart';
 import '../controller/library_controller.dart';
 
 class LibraryMangaDisplay extends ConsumerWidget {
-  const LibraryMangaDisplay({super.key});
+  const LibraryMangaDisplay({super.key, this.scrollable = true});
+
+  /// False when nested inside another scrollable (the organizer Display tab
+  /// embeds this above the badges section).
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,18 +32,21 @@ class LibraryMangaDisplay extends ConsumerWidget {
         displayMode ?? DBKeys.libraryDisplayMode.initial as DisplayMode;
     final isGridMode = selectedMode.isGrid;
 
-    final currentCols = (isLandscape
+    final currentCols =
+        (isLandscape
             ? ref.watch(libraryLandscapeColumnsProvider)
             : ref.watch(libraryPortraitColumnsProvider)) ??
         0;
 
     final gridStyle =
         ref.watch(libraryGridStyleKeyProvider) ?? LibraryGridStyle.uniform;
-    final listScale = ref.watch(libraryListScaleProvider) ??
+    final listScale =
+        ref.watch(libraryListScaleProvider) ??
         DBKeys.listScale.initial as double;
 
     return ListView(
       shrinkWrap: true,
+      physics: scrollable ? null : const NeverScrollableScrollPhysics(),
       children: [
         OrganizerHeading(context.l10n.displayMode),
         // A chip row for display mode, not a tall radio list — keeps
@@ -63,9 +70,11 @@ class LibraryMangaDisplay extends ConsumerWidget {
           ),
         ),
         if (isGridMode) ...[
-          OrganizerHeading(isLandscape
-              ? context.l10n.libraryColumnsLandscape
-              : context.l10n.libraryColumnsPortrait),
+          OrganizerHeading(
+            isLandscape
+                ? context.l10n.libraryColumnsLandscape
+                : context.l10n.libraryColumnsPortrait,
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Row(
@@ -81,11 +90,11 @@ class LibraryMangaDisplay extends ConsumerWidget {
                     label: currentCols == 0 ? 'Auto' : '$currentCols',
                     onChanged: (val) => isLandscape
                         ? ref
-                            .read(libraryLandscapeColumnsProvider.notifier)
-                            .update(val.round())
+                              .read(libraryLandscapeColumnsProvider.notifier)
+                              .update(val.round())
                         : ref
-                            .read(libraryPortraitColumnsProvider.notifier)
-                            .update(val.round()),
+                              .read(libraryPortraitColumnsProvider.notifier)
+                              .update(val.round()),
                   ),
                 ),
                 SizedBox(

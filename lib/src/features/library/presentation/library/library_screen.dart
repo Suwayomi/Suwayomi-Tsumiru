@@ -170,9 +170,9 @@ void _refreshLibraryAfterSync(WidgetRef ref) {
 }
 
 /// Desktop page header: the toolbar row plus the category strip when tabs
-/// show. Built under the Scaffold (so the Filter/Display buttons can open the
-/// organizer end drawer) and under the DefaultTabController (so the overflow
-/// menu and strip share the tab index with the TabBarView).
+/// show. Built under the DefaultTabController (so the overflow menu and strip
+/// share the tab index with the TabBarView). The toolbar's Filter/Display
+/// buttons open anchored panels, so desktop needs no end drawer.
 Widget _desktopLibraryHeader({
   required List<Widget> trailing,
   Widget? tabStrip,
@@ -180,10 +180,7 @@ Widget _desktopLibraryHeader({
   builder: (context) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
-      DesktopLibraryToolbar(
-        onOpenOrganizer: () => Scaffold.of(context).openEndDrawer(),
-        trailing: trailing,
-      ),
+      DesktopLibraryToolbar(trailing: trailing),
       ?tabStrip,
     ],
   ),
@@ -424,12 +421,16 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                               ),
                             ],
                     ),
+              // Desktop uses the toolbar's anchored panels instead of the
+              // drawer; tablet keeps the end drawer via _organizerButton.
               endDrawerEnableOpenDragGesture: false,
-              endDrawer: const Drawer(
-                width: kDrawerWidth,
-                shape: RoundedRectangleBorder(),
-                child: LibraryMangaOrganizer(),
-              ),
+              endDrawer: desktop
+                  ? null
+                  : const Drawer(
+                      width: kDrawerWidth,
+                      shape: RoundedRectangleBorder(),
+                      child: LibraryMangaOrganizer(),
+                    ),
               body: _libraryBody(
                 ref,
                 header: desktop
@@ -570,12 +571,16 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
           // the id, falling back to the first tab if it isn't visible (#284).
           initialIndex: max(0, data.indexWhere((c) => c.id == categoryId)),
           child: Scaffold(
+            // Desktop uses the toolbar's anchored panels instead of the
+            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: const Drawer(
-              width: kDrawerWidth,
-              shape: RoundedRectangleBorder(),
-              child: LibraryMangaOrganizer(),
-            ),
+            endDrawer: desktop
+                ? null
+                : const Drawer(
+                    width: kDrawerWidth,
+                    shape: RoundedRectangleBorder(),
+                    child: LibraryMangaOrganizer(),
+                  ),
             body: NestedScrollView(
               controller: scrollController,
               headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -855,12 +860,16 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                             ),
                           ],
                   ),
+            // Desktop uses the toolbar's anchored panels instead of the
+            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: const Drawer(
-              width: kDrawerWidth,
-              shape: RoundedRectangleBorder(),
-              child: LibraryMangaOrganizer(),
-            ),
+            endDrawer: desktop
+                ? null
+                : const Drawer(
+                    width: kDrawerWidth,
+                    shape: RoundedRectangleBorder(),
+                    child: LibraryMangaOrganizer(),
+                  ),
             body: _libraryBody(
               ref,
               grouped: true,
@@ -987,12 +996,16 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
               ? Duration.zero
               : kTabScrollDuration,
           child: Scaffold(
+            // Desktop uses the toolbar's anchored panels instead of the
+            // drawer; tablet keeps the end drawer via _organizerButton.
             endDrawerEnableOpenDragGesture: false,
-            endDrawer: const Drawer(
-              width: kDrawerWidth,
-              shape: RoundedRectangleBorder(),
-              child: LibraryMangaOrganizer(),
-            ),
+            endDrawer: desktop
+                ? null
+                : const Drawer(
+                    width: kDrawerWidth,
+                    shape: RoundedRectangleBorder(),
+                    child: LibraryMangaOrganizer(),
+                  ),
             body: NestedScrollView(
               controller: scrollController,
               headerSliverBuilder: (context, innerBoxIsScrolled) {

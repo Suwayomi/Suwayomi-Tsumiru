@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/organizer_heading.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import 'library_manga_badges.dart';
 import 'library_manga_display.dart';
@@ -41,7 +42,7 @@ class LibraryMangaOrganizer extends ConsumerWidget {
     final hasTrackers =
         ref.watch(loggedInTrackersProvider).value?.isNotEmpty ?? false;
     return DefaultTabController(
-      length: 5,
+      length: 4,
       animationDuration: context.reduceMotion
           ? Duration.zero
           : kTabScrollDuration,
@@ -75,8 +76,8 @@ class _OrganizerBody extends StatelessWidget {
               LibraryMangaSortTile(sortType: sortType),
         ],
       ),
-      const LibraryMangaDisplay(),
-      const LibraryMangaBadges(),
+      // Display absorbs the old Badges tab as a trailing section.
+      _DisplayTab(),
       const LibraryMangaGroup(),
     ];
     return SafeArea(
@@ -93,7 +94,6 @@ class _OrganizerBody extends StatelessWidget {
               Tab(text: context.l10n.filter),
               Tab(text: context.l10n.sort),
               Tab(text: context.l10n.display),
-              Tab(text: context.l10n.badges),
               Tab(text: context.l10n.group),
             ],
           ),
@@ -123,6 +123,23 @@ class _OrganizerBody extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Display tab: today's display options with the old Badges tab as a
+/// trailing "Badges" section. One outer scrollable; both inner lists are
+/// nested (never scroll on their own).
+class _DisplayTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      shrinkWrap: true,
+      children: [
+        const LibraryMangaDisplay(scrollable: false),
+        OrganizerHeading(context.l10n.badges),
+        const LibraryMangaBadges(scrollable: false),
+      ],
     );
   }
 }

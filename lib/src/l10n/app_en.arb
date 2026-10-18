@@ -1856,6 +1856,38 @@
   "@filterOptionNotLewd": {
     "description": "Content-rating filter chip: only entries not marked NSFW"
   },
+  "filterShortDownloaded": "Downloaded",
+  "@filterShortDownloaded": {
+    "description": "Short filter segment heading for the downloaded tri-state"
+  },
+  "filterShortStarted": "Started",
+  "@filterShortStarted": {
+    "description": "Short filter segment heading for the started tri-state"
+  },
+  "filterShortBookmarked": "Bookmarked",
+  "@filterShortBookmarked": {
+    "description": "Short filter segment heading for the bookmarked tri-state"
+  },
+  "filterShortCompleted": "Completed",
+  "@filterShortCompleted": {
+    "description": "Short filter segment heading for the completed tri-state"
+  },
+  "filterShortLewd": "Lewd",
+  "@filterShortLewd": {
+    "description": "Short filter segment heading for the lewd tri-state"
+  },
+  "allTags": "All tags",
+  "@allTags": {
+    "description": "Tags filter row that clears the tag selection"
+  },
+  "anyCategory": "Any category",
+  "@anyCategory": {
+    "description": "Categories filter summary when no category is included or excluded"
+  },
+  "searchTags": "Search tags…",
+  "@searchTags": {
+    "description": "Hint in the tags filter search field"
+  },
   "limitTitleLines": "Limit titles to 2 lines",
   "@limitTitleLines": {
     "description": "Library Display checkbox to cap titles at two ellipsized lines"
@@ -1941,6 +1973,10 @@
   "groupStyleHeaders": "Section headers",
   "@groupStyleHeaders": {
     "description": "Group display chip: one continuous scroll with a sticky header per group"
+  },
+  "groupStyleSections": "Sections",
+  "@groupStyleSections": {
+    "description": "Group display radio in the desktop Display panel: sections style"
   },
   "groupByTag": "By tag",
   "@groupByTag": {
