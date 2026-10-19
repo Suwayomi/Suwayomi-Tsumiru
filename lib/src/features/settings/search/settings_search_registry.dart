@@ -8,23 +8,32 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_theme.dart';
+import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../../utils/platform/platform_runtime.dart';
+import '../../account/data/account_providers.dart';
+import '../../account/domain/account_access.dart';
 import '../../notifications/controller/notification_settings_providers.dart';
 import '../../offline/data/background/catchup_settings.dart';
 import '../../offline/data/offline_repository.dart';
+import '../controller/server_controller.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
 import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
+import '../presentation/koreader_sync/data/koreader_sync_repository.dart';
 import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
 import '../presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../presentation/reader/widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
+import '../presentation/server/data/web_interface_repository.dart';
+import '../presentation/server/widget/client/server_url_tile/server_url_tile.dart';
+import '../presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import '../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'settings_search_entry.dart';
 
@@ -1150,8 +1159,385 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
   ),
 ];
 
+/// Server page (17 rows, "Server › \<Section\>" breadcrumbs with the real
+/// section header strings). The whole page is server state: every entry needs
+/// the server reachable (`settingsProvider` holding a value — loading/error
+/// shows the fallback view instead), which subsumes each section's own
+/// `serverSettings.value != null` gate. Web-interface rows additionally need
+/// the web settings loaded and MANAGE_SETTINGS (both gate the tiles'
+/// mounting, unlike the permission-gated-but-mounted rows elsewhere); the
+/// channel/automatic rows stay mounted-but-disabled under the Custom flavor,
+/// so they stay visible. Check for update needs an authenticated session
+/// and a non-Custom flavor, exactly like its tile. SOCKS rows need the
+/// proxy on, FlareSolverr rows need it on — same DTO flags as the screen.
+/// "Installed version" is read-only info with no editor, so it has no entry.
+bool _serverReachable(WidgetRef ref) =>
+    ref.watch(settingsProvider).value != null;
+
+bool _webInterfaceVisible(WidgetRef ref) =>
+    _serverReachable(ref) &&
+    ref
+        .watch(settledAccountAccessProvider)
+        .allows(Enum$UserPermission.MANAGE_SETTINGS) &&
+    ref.watch(webInterfaceSettingsProvider).value != null;
+
+List<SettingsSearchEntry> get serverSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'webInterfaceFlavor',
+    title: (l) => l.webInterfaceFlavor,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'webInterfaceFlavor').push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'webInterfaceChannel',
+    title: (l) => l.webInterfaceChannel,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'webInterfaceChannel').push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'webInterfaceAutomaticUpdates',
+    title: (l) => l.webInterfaceAutomaticUpdates,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'webInterfaceAutomaticUpdates',
+    ).push(c),
+    visible: (ref, _) => _webInterfaceVisible(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'webInterfaceCheckUpdate',
+    title: (l) => l.webInterfaceCheckUpdate,
+    breadcrumb: (l) => '${l.server} › ${l.webInterface}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'webInterfaceCheckUpdate').push(c),
+    visible: (ref, _) =>
+        _serverReachable(ref) &&
+        ref.watch(settledAccountAccessProvider).capability !=
+            AccountCapability.unknown &&
+        ref.watch(webInterfaceSettingsProvider).value?.webUIFlavor !=
+            Enum$WebUIFlavor.CUSTOM,
+  ),
+  SettingsSearchEntry(
+    id: 'serverIpAddress',
+    title: (l) => l.ip,
+    breadcrumb: (l) => '${l.server} › ${l.serverBindings}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'serverIpAddress').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'serverPort',
+    title: (l) => l.serverPort,
+    breadcrumb: (l) => '${l.server} › ${l.serverBindings}',
+    open: (c) => const ServerSettingsRoute(highlight: 'serverPort').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'enableSocksProxy',
+    title: (l) => l.enableSocksProxy,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'enableSocksProxy').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'socksVersion',
+    title: (l) => l.socksVersion,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) => const ServerSettingsRoute(highlight: 'socksVersion').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'socksHost',
+    title: (l) => l.socksHost,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) => const ServerSettingsRoute(highlight: 'socksHost').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'socksPort',
+    title: (l) => l.socksPort,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) => const ServerSettingsRoute(highlight: 'socksPort').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'socksUserName',
+    title: (l) => l.socksUserName,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) => const ServerSettingsRoute(highlight: 'socksUserName').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'socksPassword',
+    title: (l) => l.socksPassword,
+    breadcrumb: (l) => '${l.server} › ${l.socksProxy}',
+    open: (c) => const ServerSettingsRoute(highlight: 'socksPassword').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.socksProxyEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverr',
+    title: (l) => l.flareSolverr,
+    subtitle: (l) => l.openFlareSolverr,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) => const ServerSettingsRoute(highlight: 'flareSolverr').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrServerUrl',
+    title: (l) => l.flareSolverrServerUrl,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'flareSolverrServerUrl').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrRequestTimeout',
+    title: (l) => l.flareSolverrRequestTimeout,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) => const ServerSettingsRoute(
+      highlight: 'flareSolverrRequestTimeout',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrSessionName',
+    title: (l) => l.flareSolverrSessionName,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'flareSolverrSessionName').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'flareSolverrSessionTTL',
+    title: (l) => l.flareSolverrSessionTTL,
+    breadcrumb: (l) => '${l.server} › ${l.cloudflareBypass}',
+    open: (c) =>
+        const ServerSettingsRoute(highlight: 'flareSolverrSessionTTL').push(c),
+    visible: (ref, _) =>
+        ref.watch(settingsProvider).value?.flareSolverrEnabled ?? false,
+  ),
+  SettingsSearchEntry(
+    id: 'debugLogs',
+    title: (l) => l.debugLogs,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) => const ServerSettingsRoute(highlight: 'debugLogs').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'systemTrayIcon',
+    title: (l) => l.systemTrayIcon,
+    breadcrumb: (l) => '${l.server} › ${l.misc}',
+    open: (c) => const ServerSettingsRoute(highlight: 'systemTrayIcon').push(c),
+    visible: (ref, _) => _serverReachable(ref),
+  ),
+];
+
+/// Connection page (5 rows, plain "Connection" breadcrumb). Server URL and
+/// the auth-mode dropdown always render; the LAN tile only once an address
+/// exists (the "add" row is a button, not a setting); the custom-headers
+/// entry lands on the section's Add row (per-header rows are dynamic, not
+/// settings); Open in WEB is desktop-only, like its tile. Username/password
+/// fields, sign-in/test/log-out buttons, chips, and warnings are credentials
+/// or transient state, so they have no entries.
+List<SettingsSearchEntry> get connectionSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'serverUrl',
+    title: (l) => l.serverUrl,
+    breadcrumb: (l) => l.connection,
+    open: (c) => const ConnectionRoute(highlight: 'serverUrl').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'serverLanUrl',
+    title: (l) => l.serverLanUrl,
+    breadcrumb: (l) => l.connection,
+    open: (c) => const ConnectionRoute(highlight: 'serverLanUrl').push(c),
+    visible: (ref, _) => ref.watch(serverLanUrlProvider) != null,
+  ),
+  SettingsSearchEntry(
+    id: 'authentication',
+    title: (l) => l.authType,
+    breadcrumb: (l) => l.connection,
+    open: (c) => const ConnectionRoute(highlight: 'authentication').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'customHeaders',
+    title: (l) => l.customHeaders,
+    breadcrumb: (l) => l.connection,
+    open: (c) => const ConnectionRoute(highlight: 'customHeaders').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'openInWeb',
+    title: (l) => l.webUI,
+    breadcrumb: (l) => l.connection,
+    open: (c) => const ConnectionRoute(highlight: 'openInWeb').push(c),
+    visible: (_, _) => !kIsWeb,
+  ),
+];
+
+/// SyncYomi page (6 rows, plain "SyncYomi" breadcrumb). Null settings mean
+/// the server doesn't support it (the unsupported note shows instead), so
+/// nothing is visible then; loading/error likewise hides everything. Sync
+/// now additionally needs the triple the screen's section gates on: the
+/// switch on plus a non-blank host and API key.
+bool _syncYomiSupported(WidgetRef ref) =>
+    ref.watch(syncYomiSettingsProvider).value != null;
+
+List<SettingsSearchEntry> get syncYomiSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'syncYomiEnabled',
+    title: (l) => l.syncYomiEnabled,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) =>
+        const SyncYomiSettingsRoute(highlight: 'syncYomiEnabled').push(c),
+    visible: (ref, _) => _syncYomiSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'syncYomiHost',
+    title: (l) => l.syncYomiHost,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) => const SyncYomiSettingsRoute(highlight: 'syncYomiHost').push(c),
+    visible: (ref, _) => _syncYomiSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'syncYomiApiKey',
+    title: (l) => l.syncYomiApiKey,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) =>
+        const SyncYomiSettingsRoute(highlight: 'syncYomiApiKey').push(c),
+    visible: (ref, _) => _syncYomiSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'syncYomiSyncInterval',
+    title: (l) => l.syncYomiSyncInterval,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) =>
+        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncInterval').push(c),
+    visible: (ref, _) => _syncYomiSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'syncYomiSyncData',
+    title: (l) => l.syncYomiSyncData,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) =>
+        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncData').push(c),
+    visible: (ref, _) => _syncYomiSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'syncYomiSyncNow',
+    title: (l) => l.syncYomiSyncNow,
+    breadcrumb: (l) => l.syncyomi,
+    open: (c) =>
+        const SyncYomiSettingsRoute(highlight: 'syncYomiSyncNow').push(c),
+    visible: (ref, _) {
+      final settings = ref.watch(syncYomiSettingsProvider).value;
+      return settings != null &&
+          settings.enabled &&
+          settings.host.isNotBlank &&
+          settings.apiKey.isNotBlank;
+    },
+  ),
+];
+
+/// KOReader page (5 rows, plain "KOReader Sync" breadcrumb). Same
+/// unsupported rule as the screen: the list only renders when both the
+/// server settings and the KOReader status hold values (a null server, a
+/// still-loading/error status, or the undefined-field status error all show
+/// the unsupported note instead), so every entry needs both.
+bool _koreaderSyncSupported(WidgetRef ref) =>
+    ref.watch(koreaderSyncSettingsProvider).value != null &&
+    ref.watch(koSyncStatusProvider).value != null;
+
+List<SettingsSearchEntry> get koreaderSyncSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'koreaderSyncStatus',
+    title: (l) => l.koreaderSyncStatus,
+    breadcrumb: (l) => l.koreaderSync,
+    open: (c) => const KoreaderSyncSettingsRoute(
+      highlight: 'koreaderSyncStatus',
+    ).push(c),
+    visible: (ref, _) => _koreaderSyncSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'koreaderSyncStrategyForward',
+    title: (l) => l.koreaderSyncStrategyForward,
+    breadcrumb: (l) => l.koreaderSync,
+    open: (c) => const KoreaderSyncSettingsRoute(
+      highlight: 'koreaderSyncStrategyForward',
+    ).push(c),
+    visible: (ref, _) => _koreaderSyncSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'koreaderSyncStrategyBackward',
+    title: (l) => l.koreaderSyncStrategyBackward,
+    breadcrumb: (l) => l.koreaderSync,
+    open: (c) => const KoreaderSyncSettingsRoute(
+      highlight: 'koreaderSyncStrategyBackward',
+    ).push(c),
+    visible: (ref, _) => _koreaderSyncSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'koreaderSyncChecksumMethod',
+    title: (l) => l.koreaderSyncChecksumMethod,
+    breadcrumb: (l) => l.koreaderSync,
+    open: (c) => const KoreaderSyncSettingsRoute(
+      highlight: 'koreaderSyncChecksumMethod',
+    ).push(c),
+    visible: (ref, _) => _koreaderSyncSupported(ref),
+  ),
+  SettingsSearchEntry(
+    id: 'koreaderSyncPercentageTolerance',
+    title: (l) => l.koreaderSyncPercentageTolerance,
+    breadcrumb: (l) => l.koreaderSync,
+    open: (c) => const KoreaderSyncSettingsRoute(
+      highlight: 'koreaderSyncPercentageTolerance',
+    ).push(c),
+    visible: (ref, _) => _koreaderSyncSupported(ref),
+  ),
+];
+
+/// Tracking page (2 rows, plain "Tracking" breadcrumb). Both switches render
+/// unconditionally; the per-tracker login rows are dynamic server data, not
+/// settings, so they have no entries.
+List<SettingsSearchEntry> get trackingSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'updateProgressAfterReading',
+    title: (l) => l.updateProgressAfterReading,
+    breadcrumb: (l) => l.tracking,
+    open: (c) => const TrackingSettingsRoute(
+      highlight: 'updateProgressAfterReading',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'updateProgressManualMarkRead',
+    title: (l) => l.updateProgressManualMarkRead,
+    subtitle: (l) => l.updateProgressManualMarkReadDesc,
+    breadcrumb: (l) => l.tracking,
+    open: (c) => const TrackingSettingsRoute(
+      highlight: 'updateProgressManualMarkRead',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+];
+
 /// Every registered entry in result order: General, Appearance, Library,
-/// Reader, Browse, Notifications, Backup, Downloads.
+/// Reader, Browse, Notifications, Backup, Downloads, Server, Connection,
+/// SyncYomi, KOReader, Tracking.
 List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...generalSettingsSearchEntries,
   ...appearanceSettingsSearchEntries,
@@ -1161,4 +1547,9 @@ List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...notificationsSettingsSearchEntries,
   ...backupSettingsSearchEntries,
   ...downloadsSettingsSearchEntries,
+  ...serverSettingsSearchEntries,
+  ...connectionSettingsSearchEntries,
+  ...syncYomiSettingsSearchEntries,
+  ...koreaderSyncSettingsSearchEntries,
+  ...trackingSettingsSearchEntries,
 ];

@@ -11,6 +11,7 @@ import '../../../../../../widgets/section_title.dart';
 import '../../../../../about/data/about_repository.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../../account/domain/account_access.dart';
+import '../../../../search/settings_search_registry.dart';
 import '../../data/graphql/__generated__/web_interface.graphql.dart';
 import '../../data/web_interface_repository.dart';
 
@@ -238,73 +239,83 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
             subtitle: Text(context.l10n.manageSettingsPermissionRequired),
           ),
         if (canManage && data != null) ...[
-          ListTile(
-            title: Text(context.l10n.webInterfaceFlavor),
-            subtitle: Text(_flavorName(data.webUIFlavor)),
-            onTap: enabled && flavors.hasValue && flavors.value!.isNotEmpty
-                ? () => _pick(
-                    title: context.l10n.webInterfaceFlavor,
-                    value: data.webUIFlavor,
-                    options: flavors.value!,
-                    name: _flavorName,
-                    description: _flavorDescription,
-                    write: (value) async {
-                      _originalFlavor ??= data.webUIFlavor;
-                      await _write(
-                        Input$PartialSettingsTypeInput(webUIFlavor: value),
-                      );
-                    },
-                  )
-                : null,
-          ),
-          ListTile(
-            title: Text(context.l10n.webInterfaceChannel),
-            subtitle: Text(
-              data.webUIChannel == Enum$WebUIChannel.BUNDLED && !bundledAllowed
-                  ? '${_channelName(data.webUIChannel)}\n${context.l10n.webInterfaceBundledOnly}'
-                  : _channelName(data.webUIChannel),
+          SettingsHighlightTarget(
+            id: 'webInterfaceFlavor',
+            child: ListTile(
+              title: Text(context.l10n.webInterfaceFlavor),
+              subtitle: Text(_flavorName(data.webUIFlavor)),
+              onTap: enabled && flavors.hasValue && flavors.value!.isNotEmpty
+                  ? () => _pick(
+                      title: context.l10n.webInterfaceFlavor,
+                      value: data.webUIFlavor,
+                      options: flavors.value!,
+                      name: _flavorName,
+                      description: _flavorDescription,
+                      write: (value) async {
+                        _originalFlavor ??= data.webUIFlavor;
+                        await _write(
+                          Input$PartialSettingsTypeInput(webUIFlavor: value),
+                        );
+                      },
+                    )
+                  : null,
             ),
-            onTap: enabled && !custom
-                ? () => _pick(
-                    title: context.l10n.webInterfaceChannel,
-                    value: data.webUIChannel,
-                    options: [
-                      if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
-                      Enum$WebUIChannel.STABLE,
-                      Enum$WebUIChannel.PREVIEW,
-                    ],
-                    name: _channelName,
-                    description: _channelDescription,
-                    write: (value) => _write(
-                      Input$PartialSettingsTypeInput(webUIChannel: value),
-                    ),
-                  )
-                : null,
           ),
-          ListTile(
-            title: Text(context.l10n.webInterfaceAutomaticUpdates),
-            subtitle: Text(
-              data.webUIUpdateCheckInterval == 0
-                  ? context.l10n.webInterfaceOff
-                  : context.l10n.webInterfaceHours(
-                      data.webUIUpdateCheckInterval.toInt(),
-                    ),
-            ),
-            onTap: enabled && !custom
-                ? () => _pick(
-                    title: context.l10n.webInterfaceAutomaticUpdates,
-                    value: data.webUIUpdateCheckInterval.toInt(),
-                    options: List.generate(24, (index) => index),
-                    name: (value) => value == 0
-                        ? context.l10n.webInterfaceOff
-                        : context.l10n.webInterfaceHours(value),
-                    write: (value) => _write(
-                      Input$PartialSettingsTypeInput(
-                        webUIUpdateCheckInterval: value.toDouble(),
+          SettingsHighlightTarget(
+            id: 'webInterfaceChannel',
+            child: ListTile(
+              title: Text(context.l10n.webInterfaceChannel),
+              subtitle: Text(
+                data.webUIChannel == Enum$WebUIChannel.BUNDLED &&
+                        !bundledAllowed
+                    ? '${_channelName(data.webUIChannel)}\n${context.l10n.webInterfaceBundledOnly}'
+                    : _channelName(data.webUIChannel),
+              ),
+              onTap: enabled && !custom
+                  ? () => _pick(
+                      title: context.l10n.webInterfaceChannel,
+                      value: data.webUIChannel,
+                      options: [
+                        if (bundledAllowed) Enum$WebUIChannel.BUNDLED,
+                        Enum$WebUIChannel.STABLE,
+                        Enum$WebUIChannel.PREVIEW,
+                      ],
+                      name: _channelName,
+                      description: _channelDescription,
+                      write: (value) => _write(
+                        Input$PartialSettingsTypeInput(webUIChannel: value),
                       ),
-                    ),
-                  )
-                : null,
+                    )
+                  : null,
+            ),
+          ),
+          SettingsHighlightTarget(
+            id: 'webInterfaceAutomaticUpdates',
+            child: ListTile(
+              title: Text(context.l10n.webInterfaceAutomaticUpdates),
+              subtitle: Text(
+                data.webUIUpdateCheckInterval == 0
+                    ? context.l10n.webInterfaceOff
+                    : context.l10n.webInterfaceHours(
+                        data.webUIUpdateCheckInterval.toInt(),
+                      ),
+              ),
+              onTap: enabled && !custom
+                  ? () => _pick(
+                      title: context.l10n.webInterfaceAutomaticUpdates,
+                      value: data.webUIUpdateCheckInterval.toInt(),
+                      options: List.generate(24, (index) => index),
+                      name: (value) => value == 0
+                          ? context.l10n.webInterfaceOff
+                          : context.l10n.webInterfaceHours(value),
+                      write: (value) => _write(
+                        Input$PartialSettingsTypeInput(
+                          webUIUpdateCheckInterval: value.toDouble(),
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
           ),
         ],
         if (authenticated)
@@ -317,56 +328,61 @@ class _WebInterfaceSectionState extends ConsumerState<WebInterfaceSection> {
         if (custom)
           ListTile(subtitle: Text(context.l10n.webInterfaceCustomUpdates)),
         if (authenticated && !custom) ...[
-          ListTile(
-            title: Text(context.l10n.webInterfaceCheckUpdate),
-            subtitle: updateText == null && !_busy
-                ? null
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (updateText != null)
-                        Text(
-                          updateText,
-                          style:
-                              error != null ||
-                                  _status?.state == Enum$UpdateState.ERROR
-                              ? TextStyle(
-                                  color: context.theme.colorScheme.error,
-                                )
-                              : null,
-                        ),
-                      if (downloading || _busy)
-                        LinearProgressIndicator(
-                          value: downloading
-                              ? (_status?.progress ?? 0).clamp(0, 100) / 100
-                              : null,
-                        ),
-                    ],
-                  ),
-            trailing: check?.updateAvailable == true && !downloading
-                ? TextButton(
-                    onPressed: enabled ? _install : null,
-                    child: Text(context.l10n.webInterfaceInstallUpdate),
-                  )
-                : null,
-            onTap: enabled
-                ? () => _run(() async {
-                    final result = await ref
-                        .read(webInterfaceRepositoryProvider)
-                        .check();
-                    if (result == null) {
-                      throw StateError('Missing web interface update response');
-                    }
-                    if (mounted) {
-                      setState(() {
-                        _check = result;
-                        _installStarted = false;
-                        _status = null;
-                        _checkedFlavor = data?.webUIFlavor;
-                      });
-                    }
-                  })
-                : null,
+          SettingsHighlightTarget(
+            id: 'webInterfaceCheckUpdate',
+            child: ListTile(
+              title: Text(context.l10n.webInterfaceCheckUpdate),
+              subtitle: updateText == null && !_busy
+                  ? null
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (updateText != null)
+                          Text(
+                            updateText,
+                            style:
+                                error != null ||
+                                    _status?.state == Enum$UpdateState.ERROR
+                                ? TextStyle(
+                                    color: context.theme.colorScheme.error,
+                                  )
+                                : null,
+                          ),
+                        if (downloading || _busy)
+                          LinearProgressIndicator(
+                            value: downloading
+                                ? (_status?.progress ?? 0).clamp(0, 100) / 100
+                                : null,
+                          ),
+                      ],
+                    ),
+              trailing: check?.updateAvailable == true && !downloading
+                  ? TextButton(
+                      onPressed: enabled ? _install : null,
+                      child: Text(context.l10n.webInterfaceInstallUpdate),
+                    )
+                  : null,
+              onTap: enabled
+                  ? () => _run(() async {
+                      final result = await ref
+                          .read(webInterfaceRepositoryProvider)
+                          .check();
+                      if (result == null) {
+                        throw StateError(
+                          'Missing web interface update response',
+                        );
+                      }
+                      if (mounted) {
+                        setState(() {
+                          _check = result;
+                          _installStarted = false;
+                          _status = null;
+                          _checkedFlavor = data?.webUIFlavor;
+                        });
+                      }
+                    })
+                  : null,
+            ),
           ),
         ],
       ],

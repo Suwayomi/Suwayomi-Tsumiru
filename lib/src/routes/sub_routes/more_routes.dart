@@ -149,7 +149,11 @@ class BackupRoute extends GoRouteData with $BackupRoute {
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
-  const ServerSettingsRoute();
+  const ServerSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -204,7 +208,11 @@ class NotificationsSettingsRoute extends GoRouteData
 }
 
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
-  const ConnectionRoute();
+  const ConnectionRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -214,7 +222,11 @@ class ConnectionRoute extends GoRouteData with $ConnectionRoute {
 }
 
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
-  const TrackingSettingsRoute();
+  const TrackingSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -224,7 +236,11 @@ class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
 }
 
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
-  const SyncYomiSettingsRoute();
+  const SyncYomiSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -235,7 +251,11 @@ class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
 
 class KoreaderSyncSettingsRoute extends GoRouteData
     with $KoreaderSyncSettingsRoute {
-  const KoreaderSyncSettingsRoute();
+  const KoreaderSyncSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 

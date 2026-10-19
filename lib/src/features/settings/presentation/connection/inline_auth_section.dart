@@ -28,6 +28,7 @@ import '../../../account/presentation/account_code_dialog.dart';
 import '../../../auth/data/auth_session_status.dart';
 import '../../../auth/presentation/auth_failure_text.dart';
 import '../../../offline/data/background/background_download_controller_shim.dart';
+import '../../search/settings_search_registry.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 import '../server/widget/credential_popup/login_credentials_popup.dart';
@@ -224,23 +225,26 @@ class InlineAuthSection extends HookConsumerWidget {
           // anchors the selected item over the field and can open upward, wider
           // than the field). Opens below, sized to the field. Keyed by authType
           // so it re-seeds when the auth mode is changed elsewhere (e.g. logout).
-          DropdownMenu<AuthType>(
-            key: ValueKey(authType),
-            initialSelection: authType,
-            expandedInsets: EdgeInsets.zero,
-            requestFocusOnTap: false,
-            label: Text(context.l10n.authType),
-            leadingIcon: const Icon(Icons.security_rounded),
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
+          SettingsHighlightTarget(
+            id: 'authentication',
+            child: DropdownMenu<AuthType>(
+              key: ValueKey(authType),
+              initialSelection: authType,
+              expandedInsets: EdgeInsets.zero,
+              requestFocusOnTap: false,
+              label: Text(context.l10n.authType),
+              leadingIcon: const Icon(Icons.security_rounded),
+              inputDecorationTheme: const InputDecorationTheme(
+                border: OutlineInputBorder(),
+              ),
+              dropdownMenuEntries: authChoices
+                  .map(
+                    (t) =>
+                        DropdownMenuEntry(value: t, label: t.toLocale(context)),
+                  )
+                  .toList(),
+              onSelected: onAuthModeChanged,
             ),
-            dropdownMenuEntries: authChoices
-                .map(
-                  (t) =>
-                      DropdownMenuEntry(value: t, label: t.toLocale(context)),
-                )
-                .toList(),
-            onSelected: onAuthModeChanged,
           ),
         ),
         if (isWeb)
