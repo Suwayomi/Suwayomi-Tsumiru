@@ -102,31 +102,39 @@ Widget _groupedBody({
   required bool byCategory,
   required bool showCounts,
   required List<Widget> Function() tabViews,
-}) => Padding(
-  padding: KEdgeInsets.h8.size,
-  child: useTabs
-      ? Builder(
-          builder: (context) {
-            final tabs = tabViews();
-            if (!context.isDesktop) {
-              // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
-              return ScrollConfiguration(
-                behavior: ScrollConfiguration.of(
-                  context,
-                ).copyWith(scrollbars: false),
-                child: TabBarView(children: tabs),
+}) => Builder(
+  builder: (context) => Padding(
+    // Desktop runs the scroll view to the content area's right edge so the
+    // always-visible themed scrollbar travels in the gutter the slivers keep
+    // (see LibraryMangaSliver); the left inset stays as before. Phone/tablet
+    // keep the symmetric inset.
+    padding: context.isDesktop
+        ? const EdgeInsets.only(left: 8)
+        : KEdgeInsets.h8.size,
+    child: useTabs
+        ? Builder(
+            builder: (context) {
+              final tabs = tabViews();
+              if (!context.isDesktop) {
+                // Tabs share the ambient controller here, so no scrollbars (else "attached to more than one ScrollPosition").
+                return ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(
+                    context,
+                  ).copyWith(scrollbars: false),
+                  child: TabBarView(children: tabs),
+                );
+              }
+              return TabBarView(
+                children: [for (final tab in tabs) _TabScrollHost(child: tab)],
               );
-            }
-            return TabBarView(
-              children: [for (final tab in tabs) _TabScrollHost(child: tab)],
-            );
-          },
-        )
-      : LibrarySectionsView(
-          sections: sections,
-          byCategory: byCategory,
-          showCounts: showCounts,
-        ),
+            },
+          )
+        : LibrarySectionsView(
+            sections: sections,
+            byCategory: byCategory,
+            showCounts: showCounts,
+          ),
+  ),
 );
 
 /// Gives one library tab its own primary scroll controller on desktop, so the

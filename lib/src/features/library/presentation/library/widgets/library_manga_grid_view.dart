@@ -24,6 +24,12 @@ import '../../../../manga_book/presentation/manga_details/controller/manga_detai
 import '../../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import '../controller/library_controller.dart';
 
+/// Gutter between library content and the scroll view's right edge on desktop:
+/// the themed scrollbar thumb at its widest (10px) plus 4px clearance, so the
+/// thumb never paints over covers or list rows. The scroll view itself runs to
+/// the content area's right edge; the gutter lives inside the slivers.
+const double _libraryScrollbarGutter = 14.0;
+
 /// The scrollable that renders one library tab's manga, shared by the
 /// per-category list and the grouped tabs.
 class LibraryMangaGridView extends StatelessWidget {
@@ -232,7 +238,7 @@ class LibraryMangaSliver extends ConsumerWidget {
           : SliverList(delegate: delegate);
     }
 
-    return switch (displayMode) {
+    final sliver = switch (displayMode) {
       DisplayMode.list || null => listSliver(
           extent: 96 * rowScale,
           builder: (context, index) => scaled(MangaCoverListTile(
@@ -269,6 +275,15 @@ class LibraryMangaSliver extends ConsumerWidget {
       DisplayMode.comfortableGrid => grid(titleBelow: true),
       DisplayMode.coverOnly => grid(showTitle: false),
     };
+    // Desktop paints the always-visible themed scrollbar over the scroll
+    // view's right edge; keep the gutter inside the sliver so covers and rows
+    // end left of the thumb. Covers keep their size and spacing — only the
+    // trailing inset changes. Phone/tablet lay out edge-to-edge as before.
+    if (!context.isDesktop) return sliver;
+    return SliverPadding(
+      padding: const EdgeInsets.only(right: _libraryScrollbarGutter),
+      sliver: sliver,
+    );
   }
 }
 
