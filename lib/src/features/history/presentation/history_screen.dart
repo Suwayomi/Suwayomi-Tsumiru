@@ -11,6 +11,7 @@ import '../../../constants/app_sizes.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../widgets/emoticons.dart';
 import '../../../widgets/search_field.dart';
 import '../../../widgets/server_image.dart';
@@ -43,91 +44,89 @@ class HistoryScreen extends ConsumerWidget {
     final historyTop = [
       for (final group in historyGroups) ...group.items,
     ].take(3).toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        // Desktop uses the one search box: it filters the list live AND opens
-        // the unified dropdown with History first. The sidebar names the page.
-        title: desktop
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: DesktopSearchField(
-                    query: searchQuery,
-                    onChanged: (value) => ref
-                        .read(historySearchQueryProvider.notifier)
-                        .updateQuery(value),
-                    onNavigate: () => ref
-                        .read(historySearchQueryProvider.notifier)
-                        .clearQuery(),
-                    // Built synchronously (not in a child widget): the list
-                    // hands out row indices as [selectable] runs, so rows
-                    // built here take the first indices in visual order.
-                    leadingBuilder: (selectable) => [
-                      if (historyTop.isNotEmpty)
-                        SearchSectionHeader(l10n.history),
-                      for (final item in historyTop)
-                        selectable(
-                          action: () {
-                            MangaRoute(mangaId: item.manga.id).push(context);
-                            ref
-                                .read(historySearchQueryProvider.notifier)
-                                .clearQuery();
-                          },
-                          tile: (onTap) => HistoryDropdownRow(
-                            item: item,
-                            onTap: onTap,
-                          ),
-                        ),
-                    ],
-                    hasLeadingResults: historyTop.isNotEmpty,
-                    // Enter opens the top History result first; the field
-                    // closes the dropdown and clears the query afterwards.
-                    onSubmitLeading: historyTop.isEmpty
-                        ? null
-                        : () {
-                            MangaRoute(
-                              mangaId: historyTop.first.manga.id,
-                            ).push(context);
-                            return true;
-                          },
-                  ),
-                ),
-              )
-            : Text(l10n.history),
-        bottom: persistentBox
-            ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.history)
-            : null,
-        actions: [
-          if (phone && !persistentBox) ...[
-            const PhoneSearchClearFilter(origin: PhoneSearchOrigin.history),
-            const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
-          ],
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            tooltip: l10n.filter,
-            // Tinted while filtered, so a short list reads as "filtered" rather
-            // than "nothing read". Komikku uses amber; ours comes from the theme.
-            color: hasActiveFilters ? context.theme.colorScheme.primary : null,
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: KBorderRadius.rT16.radius,
-              ),
-              clipBehavior: Clip.hardEdge,
-              builder: (_) => const HistoryFilterSheet(),
-              sheetAnimationStyle: context.motionStyle,
-            ),
+    // Native desktop draws the search box and actions in the shell bar
+    // instead of an app bar.
+    final topBar = useDesktopTopBar(context);
+    final search = DesktopSearchField(
+      query: searchQuery,
+      onChanged: (value) =>
+          ref.read(historySearchQueryProvider.notifier).updateQuery(value),
+      onNavigate: () =>
+          ref.read(historySearchQueryProvider.notifier).clearQuery(),
+      // Built synchronously (not in a child widget): the list
+      // hands out row indices as [selectable] runs, so rows
+      // built here take the first indices in visual order.
+      leadingBuilder: (selectable) => [
+        if (historyTop.isNotEmpty) SearchSectionHeader(l10n.history),
+        for (final item in historyTop)
+          selectable(
+            action: () {
+              MangaRoute(mangaId: item.manga.id).push(context);
+              ref.read(historySearchQueryProvider.notifier).clearQuery();
+            },
+            tile: (onTap) => HistoryDropdownRow(item: item, onTap: onTap),
           ),
-          IconButton(
-            onPressed: () =>
-                ref.read(readingHistoryProvider.notifier).refresh(),
-            icon: const Icon(Icons.refresh),
+      ],
+      hasLeadingResults: historyTop.isNotEmpty,
+      // Enter opens the top History result first; the field
+      // closes the dropdown and clears the query afterwards.
+      onSubmitLeading: historyTop.isEmpty
+          ? null
+          : () {
+              MangaRoute(mangaId: historyTop.first.manga.id).push(context);
+              return true;
+            },
+    );
+    final actions = <Widget>[
+      if (phone && !persistentBox) ...[
+        const PhoneSearchClearFilter(origin: PhoneSearchOrigin.history),
+        const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
+      ],
+      IconButton(
+        icon: const Icon(Icons.filter_list_rounded),
+        tooltip: l10n.filter,
+        // Tinted while filtered, so a short list reads as "filtered" rather
+        // than "nothing read". Komikku uses amber; ours comes from the theme.
+        color: hasActiveFilters ? context.theme.colorScheme.primary : null,
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: KBorderRadius.rT16.radius,
           ),
-        ],
+          clipBehavior: Clip.hardEdge,
+          builder: (_) => const HistoryFilterSheet(),
+          sheetAnimationStyle: context.motionStyle,
+        ),
       ),
+      IconButton(
+        onPressed: () => ref.read(readingHistoryProvider.notifier).refresh(),
+        icon: const Icon(Icons.refresh),
+      ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              // Desktop uses the one search box: it filters the list live
+              // AND opens the unified dropdown with History first. The
+              // sidebar names the page.
+              title: desktop
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: search,
+                      ),
+                    )
+                  : Text(l10n.history),
+              bottom: persistentBox
+                  ? const PhoneSearchBoxBottom(
+                      origin: PhoneSearchOrigin.history,
+                    )
+                  : null,
+              actions: actions,
+            ),
       body: Column(
         children: [
           // Tablet keeps its own search bar; desktop searches from the header
@@ -195,6 +194,13 @@ class HistoryScreen extends ConsumerWidget {
         ],
       ),
     );
+    return topBar
+        ? TopBarSlot(
+            content: desktopSearchSlotContent(search: search, actions: actions),
+            minWidth: searchTopBarSlotMinWidth(actions.length),
+            child: scaffold,
+          )
+        : scaffold;
   }
 }
 
@@ -204,7 +210,11 @@ class HistoryScreen extends ConsumerWidget {
 /// join the keyboard order first with the same highlight, hover, Semantics,
 /// and scroll behaviour; Enter runs the same action as a tap.
 class HistoryDropdownRow extends StatelessWidget {
-  const HistoryDropdownRow({super.key, required this.item, required this.onTap});
+  const HistoryDropdownRow({
+    super.key,
+    required this.item,
+    required this.onTap,
+  });
 
   final HistoryItemDto item;
   final VoidCallback onTap;

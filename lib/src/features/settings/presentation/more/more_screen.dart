@@ -14,6 +14,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../auth/data/auth_session_status.dart';
@@ -41,35 +42,39 @@ class MoreScreen extends ConsumerWidget {
     // the persistent setting is on); tablet and desktop are unchanged.
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
-    return Scaffold(
+    // Native desktop draws the search box in the shell bar instead of an
+    // app bar.
+    final topBar = useDesktopTopBar(context);
+    final search = DesktopSearchField(
+      query: ref.watch(unifiedSearchQueryProvider),
+      onChanged: (value) =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = value,
+      onNavigate: () =>
+          ref.read(unifiedSearchQueryProvider.notifier).state = '',
+    );
+    final scaffold = Scaffold(
       // Desktop replaces the title with the unified search box (the sidebar
       // already names the page); phone and tablet keep it.
-      appBar: AppBar(
-        title: context.isDesktop
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: DesktopSearchField(
-                    query: ref.watch(unifiedSearchQueryProvider),
-                    onChanged: (value) =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            value,
-                    onNavigate: () =>
-                        ref.read(unifiedSearchQueryProvider.notifier).state =
-                            '',
-                  ),
-                ),
-              )
-            : Text(context.l10n.more),
-        bottom: persistentBox
-            ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
-            : null,
-        actions: [
-          if (phone && !persistentBox)
-            const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
-        ],
-      ),
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: context.isDesktop
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: search,
+                      ),
+                    )
+                  : Text(context.l10n.more),
+              bottom: persistentBox
+                  ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
+                  : null,
+              actions: [
+                if (phone && !persistentBox)
+                  const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
+              ],
+            ),
       body: ListView(
         children: [
           TsumiruLogo(size: context.height * .2),
@@ -172,5 +177,12 @@ class MoreScreen extends ConsumerWidget {
         ],
       ),
     );
+    return topBar
+        ? TopBarSlot(
+            content: desktopSearchSlotContent(search: search, actions: const []),
+            minWidth: searchTopBarSlotMinWidth(0),
+            child: scaffold,
+          )
+        : scaffold;
   }
 }

@@ -30,6 +30,7 @@ import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/navigation.dart';
 import 'package:tsumiru/src/utils/network/graphql_errors.dart';
 import 'package:tsumiru/src/widgets/custom_circular_progress_indicator.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
@@ -129,9 +130,25 @@ GoRouter _router({required bool fromSuggestion}) => GoRouter(
     ),
     GoRoute(
       path: '/global-search',
-      builder: (context, state) => GlobalSearchScreen(
-        initialQuery: state.uri.queryParameters['query'],
-        fromSuggestion: state.uri.queryParameters['from-suggestion'] == 'true',
+      // Native desktop draws the search box in the shell bar above the
+      // page. The body is keyed like the shells' so a breakpoint toggle
+      // moves the page instead of remounting it.
+      builder: (context, state) => Scaffold(
+        body: Builder(
+          builder: (context) => Column(
+            children: [
+              if (useDesktopTopBar(context)) const DesktopTopBar(),
+              Expanded(
+                key: const ValueKey('searchPage'),
+                child: GlobalSearchScreen(
+                  initialQuery: state.uri.queryParameters['query'],
+                  fromSuggestion:
+                      state.uri.queryParameters['from-suggestion'] == 'true',
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     ),
     GoRoute(
@@ -165,6 +182,17 @@ Future<void> _pumpSearch(
   }
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   await tester.pumpWidget(
     ProviderScope(
       retry: retry,
@@ -398,8 +426,8 @@ void main() {
     expect(find.text('Alpha'), findsOneWidget);
   });
 
-  testWidgets('desktop puts the field and chips on one row and names the '
-      'route for assistive tech', (tester) async {
+  testWidgets('desktop draws the field in the shell bar, the chips below '
+      'it, and names the route for assistive tech', (tester) async {
     final semantics = tester.ensureSemantics();
 
     await _pumpSearch(
@@ -415,14 +443,21 @@ void main() {
     );
 
     expect(find.text('Global Search'), findsNothing);
+    expect(find.byType(AppBar), findsNothing);
 
-    final field = find.byType(SearchField);
-    final allChip = find.widgetWithText(FilterChip, 'All');
+    // The search box moved to the shell bar; the chips stay in the body.
+    final barRect = tester.getRect(find.byType(DesktopTopBar));
+    final field = find.descendant(
+      of: find.byType(DesktopTopBar),
+      matching: find.byType(SearchField),
+    );
     expect(field, findsOneWidget);
+    expect(barRect.contains(tester.getCenter(field)), isTrue);
+    final allChip = find.widgetWithText(FilterChip, 'All');
     expect(allChip, findsOneWidget);
     expect(
-      (tester.getCenter(field).dy - tester.getCenter(allChip).dy).abs(),
-      lessThanOrEqualTo(2),
+      tester.getTopLeft(allChip).dy,
+      greaterThanOrEqualTo(barRect.bottom - 1),
     );
 
     final header = tester.getSemantics(

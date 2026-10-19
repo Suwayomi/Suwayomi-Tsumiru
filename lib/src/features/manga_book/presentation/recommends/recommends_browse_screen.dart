@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/navigation.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../data/recommendations/recommendation_provider.dart';
@@ -45,11 +46,17 @@ class RecommendsBrowseScreen extends ConsumerWidget {
         break;
       }
     }
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(title),
-      ),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final barTitle = Text(title);
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: barTitle,
+            ),
       body: recs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Emoticons(
@@ -117,6 +124,12 @@ class RecommendsBrowseScreen extends ConsumerWidget {
                 },
               ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: barTitle,
+      child: scaffold,
     );
   }
 }

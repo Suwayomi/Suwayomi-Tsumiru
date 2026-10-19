@@ -15,11 +15,13 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../library/data/default_category.dart';
 import '../../../library/domain/category/category_model.dart';
@@ -52,14 +54,18 @@ class LibrarySettingsScreen extends ConsumerWidget {
     final categories =
         ref.watch(categoryControllerProvider).value ?? const <CategoryDto>[];
 
-    return ListTileTheme(
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.library);
+    final content = ListTileTheme(
       data: ListTileThemeData(
         subtitleTextStyle: TextStyle(
           color: context.theme.colorScheme.onSurfaceVariant,
         ),
       ),
       child: Scaffold(
-        appBar: AppBar(title: Text(context.l10n.library)),
+        appBar: topBar ? null : AppBar(title: title),
         body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(userSettingsProvider);
@@ -348,6 +354,12 @@ class LibrarySettingsScreen extends ConsumerWidget {
           }),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: content,
     );
   }
 }

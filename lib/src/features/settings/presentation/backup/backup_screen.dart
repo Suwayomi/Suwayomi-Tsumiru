@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../controller/server_controller.dart';
 import '../../search/settings_search_registry.dart';
 import 'widgets/automatic_backup/automatic_backup_section.dart';
@@ -18,8 +20,12 @@ class BackupScreen extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.backup)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.backup);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(settingsProvider.future),
         child: ListTileTheme(
@@ -38,6 +44,12 @@ class BackupScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

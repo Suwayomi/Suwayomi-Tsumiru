@@ -18,6 +18,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -179,63 +180,70 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
     final r = sameSession && !unavailable.value && startupError.value == null
         ? runner.value
         : null;
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(
-          r == null || r.entries.isEmpty
-              ? l10n.migrationListTitle
-              : l10n.migrationListTitleProgress(_finished(r), r.entries.length),
-        ),
-        actions: r == null
-            ? null
-            : [
-                AnimatedBuilder(
-                  animation: r,
-                  builder: (context, _) {
-                    final complete = _complete(r);
-                    final single = r.entries.length == 1;
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: l10n.migrationSettings,
-                          icon: const Icon(Icons.settings_outlined),
-                          onPressed: () => _openSettings(
-                            context,
-                            r,
-                            hideUnmatched,
-                            hideWithoutUpdates,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: l10n.migrationActionCopy,
-                          icon: Icon(
-                            single
-                                ? Icons.content_copy_outlined
-                                : Icons.copy_all_outlined,
-                          ),
-                          onPressed: complete
-                              ? () => _confirm(context, r, deleteSource: false)
-                              : null,
-                        ),
-                        IconButton(
-                          tooltip: l10n.migrationActionMigrate,
-                          icon: Icon(
-                            single
-                                ? Icons.done_outlined
-                                : Icons.done_all_outlined,
-                          ),
-                          onPressed: complete
-                              ? () => _confirm(context, r, deleteSource: true)
-                              : null,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-      ),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(
+      r == null || r.entries.isEmpty
+          ? l10n.migrationListTitle
+          : l10n.migrationListTitleProgress(_finished(r), r.entries.length),
+    );
+    final List<Widget>? actions = r == null
+        ? null
+        : [
+            AnimatedBuilder(
+              animation: r,
+              builder: (context, _) {
+                final complete = _complete(r);
+                final single = r.entries.length == 1;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: l10n.migrationSettings,
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: () => _openSettings(
+                        context,
+                        r,
+                        hideUnmatched,
+                        hideWithoutUpdates,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.migrationActionCopy,
+                      icon: Icon(
+                        single
+                            ? Icons.content_copy_outlined
+                            : Icons.copy_all_outlined,
+                      ),
+                      onPressed: complete
+                          ? () => _confirm(context, r, deleteSource: false)
+                          : null,
+                    ),
+                    IconButton(
+                      tooltip: l10n.migrationActionMigrate,
+                      icon: Icon(
+                        single
+                            ? Icons.done_outlined
+                            : Icons.done_all_outlined,
+                      ),
+                      onPressed: complete
+                          ? () => _confirm(context, r, deleteSource: true)
+                          : null,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+              actions: actions,
+            ),
       body: unavailable.value || !sameSession
           ? Emoticons(
               title: l10n.migrationIdentityUnavailable,
@@ -299,6 +307,13 @@ class MigrationBulkRunScreen extends HookConsumerWidget {
                 );
               },
             ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions ?? const [],
+      child: scaffold,
     );
   }
 

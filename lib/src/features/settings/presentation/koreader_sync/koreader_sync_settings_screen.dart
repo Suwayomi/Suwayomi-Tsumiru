@@ -13,8 +13,10 @@ import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/graphql_undefined_field.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../search/settings_search_registry.dart';
@@ -65,8 +67,12 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
       await AppUtils.guard(action, ref.read(toastProvider));
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.koreaderSync)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(l10n.koreaderSync);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: settings.showUiWhenData(
         context,
         refresh: refresh,
@@ -174,6 +180,12 @@ class KoreaderSyncSettingsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

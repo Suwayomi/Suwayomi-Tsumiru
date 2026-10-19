@@ -6,6 +6,8 @@ import '../../../constants/app_sizes.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/motion/reduce_motion.dart';
+import '../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../data/account_administration.dart';
 import '../data/account_providers.dart';
 import '../domain/account_access.dart';
@@ -33,8 +35,12 @@ class ManageUsersScreen extends HookConsumerWidget {
       }
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.accountPermissionManageUsers)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.accountPermissionManageUsers);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: !access.canManageUsers
           ? Center(child: Text(context.l10n.accountSettingsUnavailable))
           : Column(
@@ -177,6 +183,12 @@ class ManageUsersScreen extends HookConsumerWidget {
                 ),
               ],
             ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

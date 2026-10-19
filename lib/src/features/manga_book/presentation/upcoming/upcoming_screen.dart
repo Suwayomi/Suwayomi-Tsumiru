@@ -15,8 +15,10 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/custom_circular_progress_indicator.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../domain/manga/manga_model.dart';
 import 'controller/upcoming_controller.dart';
 import 'widgets/upcoming_calendar.dart';
@@ -33,30 +35,37 @@ class UpcomingScreen extends HookConsumerWidget {
     final itemScrollController = useMemoized(ItemScrollController.new);
     final upcoming = ref.watch(upcomingProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.upcoming),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline_rounded),
-            tooltip: context.l10n.upcomingGuide,
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(ctx.l10n.upcoming),
-                content: Text(ctx.l10n.upcomingGuideBody),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text(ctx.l10n.close),
-                  ),
-                ],
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.upcoming);
+    final actions = <Widget>[
+      IconButton(
+        icon: const Icon(Icons.help_outline_rounded),
+        tooltip: context.l10n.upcomingGuide,
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(ctx.l10n.upcoming),
+            content: Text(ctx.l10n.upcomingGuideBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(ctx.l10n.close),
               ),
-              animationStyle: context.motionStyle,
-            ),
+            ],
           ),
-        ],
+          animationStyle: context.motionStyle,
+        ),
       ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+              actions: actions,
+            ),
       body: upcoming.when(
         loading: () => const CenterSorayomiShimmerIndicator(),
         error: (e, _) => Emoticons(
@@ -132,6 +141,13 @@ class UpcomingScreen extends HookConsumerWidget {
           );
         },
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions,
+      child: scaffold,
     );
   }
 }

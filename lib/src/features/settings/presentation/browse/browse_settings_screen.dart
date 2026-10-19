@@ -11,8 +11,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../browse_center/data/extension_store_repository/extension_store_repository.dart';
 import '../../controller/server_controller.dart';
@@ -34,8 +36,12 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final BrowserSettingsDto? browseSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
     final storeCount = ref.watch(extensionStoreListProvider).value?.totalCount;
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.browse)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.browse);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: RefreshIndicator(
         onRefresh: onRefresh,
         child: ListTileTheme(
@@ -137,6 +143,12 @@ class BrowseSettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

@@ -84,6 +84,31 @@ double searchTopBarSlotMinWidth(int actionCount) =>
     actionCount * (48.0 + kDesktopTopBarGap) +
     kDesktopTopBarGap;
 
+/// Wraps a standard back-arrow title page for the desktop top bar: without
+/// the merged bar [child] is returned unchanged; with it the page's AppBar
+/// must be null and its toolbar shows in the shell bar instead. The page
+/// passes the same leading, title and actions its AppBar uses (usually
+/// [detailNavigationBackButton] for the leading). Pages whose title slot is
+/// wider than back-plus-title (a search box) pass their own [minWidth].
+Widget titleTopBarSlot({
+  required bool topBar,
+  Widget? leading,
+  required Widget title,
+  List<Widget> actions = const [],
+  double? minWidth,
+  required Widget child,
+}) => topBar
+    ? TopBarSlot(
+        content: DesktopTitleSlot(
+          leading: leading,
+          title: title,
+          actions: actions,
+        ),
+        minWidth: minWidth ?? titleTopBarSlotMinWidth(actions.length),
+        child: child,
+      )
+    : child;
+
 /// The toolbar row for a search page: the search box left-aligned at up to
 /// 720 px with the page's actions after it, matching the AppBar layout.
 Widget desktopSearchSlotContent({
@@ -152,15 +177,27 @@ class TopBarSlotEntry {
 }
 
 class TopBarSlotRegistry extends Notifier<Map<String, TopBarSlotEntry>> {
+  /// False once this container (and the registry with it) is disposed, so
+  /// deferred slot removals can skip the dead notifier. A plain field: safe
+  /// to read after disposal, unlike any notifier access.
+  bool alive = true;
+
   @override
-  Map<String, TopBarSlotEntry> build() => const {};
+  Map<String, TopBarSlotEntry> build() {
+    alive = true;
+    ref.onDispose(() => alive = false);
+    return const {};
+  }
 
   void setEntry(String routeKey, TopBarSlotEntry entry) {
     state = {...state, routeKey: entry};
   }
 
-  void removeEntry(String routeKey) {
-    if (!state.containsKey(routeKey)) return;
+  /// Removes [routeKey] only while it still holds [entry]: a route that
+  /// re-registers after this slot unmounted (same location pushed again)
+  /// publishes a new instance, which a stale removal must not clear.
+  void removeEntry(String routeKey, TopBarSlotEntry entry) {
+    if (!identical(state[routeKey], entry)) return;
     state = {...state}..remove(routeKey);
   }
 }
@@ -195,29 +232,31 @@ class TopBarSlot extends ConsumerStatefulWidget {
 class _TopBarSlotState extends ConsumerState<TopBarSlot> {
   late String _routeKey;
   late TopBarSlotRegistry _registry;
+  TopBarSlotEntry? _entry;
   bool _scheduled = false;
 
   String _currentRouteKey() => _matchedLocationOrNull(context) ?? '';
 
   void _schedulePublish() {
     _routeKey = _currentRouteKey();
+    _entry = TopBarSlotEntry(
+      content: widget.content,
+      minWidth: widget.minWidth,
+      slotKey: widget.slotKey,
+    );
     if (_scheduled) return;
     _scheduled = true;
     // Post-frame: the host bar is an ancestor that may still be building, and
-    // publishing synchronously would setState it mid-build.
+    // publishing synchronously would setState it mid-build. The latest entry
+    // wins: a second schedule before the frame only moves [_entry] forward.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
       if (!mounted) return;
+      final latest = _entry;
+      if (latest == null) return;
       ref
           .read(topBarSlotRegistryProvider.notifier)
-          .setEntry(
-            _routeKey,
-            TopBarSlotEntry(
-              content: widget.content,
-              minWidth: widget.minWidth,
-              slotKey: widget.slotKey,
-            ),
-          );
+          .setEntry(_routeKey, latest);
     });
   }
 
@@ -238,7 +277,19 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
 
   @override
   void dispose() {
-    _registry.removeEntry(_routeKey);
+    // Deferred like publishing: unmounting runs inside the frame that
+    // navigates away, where touching the provider throws, and a route that
+    // re-registers meanwhile owns a newer entry the guard keeps.
+    final registry = _registry;
+    final routeKey = _routeKey;
+    final entry = _entry;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (entry == null) return;
+      // Whole-tree teardown disposes the container with the tree; the
+      // registry is gone, so there is nothing to clean.
+      if (!registry.alive) return;
+      registry.removeEntry(routeKey, entry);
+    });
     super.dispose();
   }
 

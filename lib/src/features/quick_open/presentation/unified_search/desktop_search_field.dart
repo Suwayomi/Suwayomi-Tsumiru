@@ -243,8 +243,14 @@ class DesktopSearchField extends HookConsumerWidget {
       // Captured, not read lazily: ref is unusable once the widget is
       // unmounted, but the controller itself is a plain state object.
       final registration = ref.read(desktopSearchFocusNodeProvider.notifier);
+      // Local mirror of the registration: reading the provider in cleanup
+      // throws when whole-tree teardown already disposed the container.
+      var registered = false;
       void register() {
-        if (context.mounted) registration.state = focusNode;
+        if (context.mounted) {
+          registration.state = focusNode;
+          registered = true;
+        }
       }
 
       WidgetsBinding.instance.addPostFrameCallback((_) => register());
@@ -266,12 +272,19 @@ class DesktopSearchField extends HookConsumerWidget {
       return () {
         focusNode.removeListener(onFocus);
         // Deferred past the frame: unmount can run inside the build phase
-        // (a pop rebuilds the tree), where provider writes are banned.
-        if (registration.state == focusNode) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+        // (a pop rebuilds the tree), where provider writes are banned. The
+        // deferred write tolerates a dead container: whole-tree teardown
+        // disposes it with the tree, and then nobody is left to read the
+        // registration.
+        if (!registered) return;
+        registered = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
             if (registration.state == focusNode) registration.state = null;
-          });
-        }
+          } on StateError catch (e) {
+            if (!e.toString().contains('after `dispose` was called')) rethrow;
+          }
+        });
       };
     }, [focusNode]);
 

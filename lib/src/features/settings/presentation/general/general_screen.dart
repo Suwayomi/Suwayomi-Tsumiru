@@ -16,7 +16,9 @@ import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/cover_cache/cover_cache.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
@@ -27,8 +29,12 @@ class GeneralScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.general)),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.general);
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: SettingsHighlightScope(
         child: ListView(
           children: [
@@ -87,6 +93,12 @@ class GeneralScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

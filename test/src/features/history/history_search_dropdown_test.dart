@@ -27,6 +27,7 @@ import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desk
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_results.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 import '../../../helpers/unreachable_server_stubs.dart';
 
@@ -98,8 +99,18 @@ GoRouter _router() => GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
+      // Native desktop draws the toolbar in the shell bar above the page.
       path: '/',
-      builder: (_, _) => const HistoryScreen(),
+      builder: (_, _) => Scaffold(
+        body: Builder(
+          builder: (context) => Column(
+            children: [
+              if (useDesktopTopBar(context)) const DesktopTopBar(),
+              const Expanded(child: HistoryScreen()),
+            ],
+          ),
+        ),
+      ),
     ),
     GoRoute(
       path: '/updates',
@@ -122,6 +133,17 @@ Future<void> _pumpHistory(
   ProviderContainer container,
 ) async {
   _setSize(tester, _desktop);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,

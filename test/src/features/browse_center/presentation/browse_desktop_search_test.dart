@@ -29,6 +29,7 @@ import 'package:tsumiru/src/features/quick_open/presentation/unified_search/phon
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/search_field.dart';
 
 import '../../../../helpers/fake_extension_repository.dart';
@@ -113,20 +114,45 @@ Future<ProviderContainer> _pumpBrowse(
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
+  Widget browse() => BrowseScreen(
+    currentIndex: 0,
+    onDestinationSelected: (_) {},
+    children: const [
+      SourceScreen(),
+      ExtensionScreen(),
+      MigrationSourcePickerBody(hideInnerSearchOnDesktop: true),
+    ],
+  );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: BrowseScreen(
-          currentIndex: 0,
-          onDestinationSelected: (_) {},
-          children: const [
-            SourceScreen(),
-            ExtensionScreen(),
-            MigrationSourcePickerBody(hideInnerSearchOnDesktop: true),
-          ],
+        // Native desktop draws the toolbar in the shell bar above the
+        // page; narrower surfaces keep the page on its own.
+        home: Builder(
+          builder: (context) => useDesktopTopBar(context)
+              ? Scaffold(
+                  body: Column(
+                    children: [
+                      const DesktopTopBar(),
+                      Expanded(child: browse()),
+                    ],
+                  ),
+                )
+              : browse(),
         ),
       ),
     ),
@@ -234,6 +260,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byType(SearchField), findsNothing);
+
+      await _unmount(tester);
+    });
+
+    testWidgets('toolbar lives in the shell bar, tabs below it', (
+      tester,
+    ) async {
+      await _pumpBrowse(tester, size: _desktop);
+      expect(tester.takeException(), isNull);
+
+      expect(find.byType(DesktopTopBar), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      final fieldRect = tester.getRect(_topField());
+      expect(barRect.contains(fieldRect.topCenter), isTrue);
+      expect(barRect.contains(fieldRect.bottomCenter), isTrue);
+
+      // The Sources/Extensions/Migrate tabs stay in the page body.
+      for (final tab in ['Sources', 'Extensions', 'Migrate']) {
+        expect(
+          tester.getTopLeft(find.text(tab)).dy,
+          greaterThanOrEqualTo(barRect.bottom - 1),
+        );
+      }
 
       await _unmount(tester);
     });

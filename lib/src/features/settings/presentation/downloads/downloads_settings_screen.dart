@@ -3,12 +3,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../library/domain/category/category_model.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
@@ -156,7 +158,17 @@ class DownloadsSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar; the tabs stay in the page body.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.downloads);
+    final tabBar = TabBar(
+      tabs: [
+        Tab(text: context.l10n.downloadsServerTab),
+        Tab(text: context.l10n.downloadsOnDeviceTab),
+      ],
+    );
+    final content = DefaultTabController(
       length: 2,
       initialIndex: initialTab.clamp(0, 1),
       animationDuration: context.reduceMotion
@@ -169,20 +181,37 @@ class DownloadsSettingsScreen extends StatelessWidget {
           ),
         ),
         child: Scaffold(
-          appBar: AppBar(
-            title: Text(context.l10n.downloads),
-            bottom: TabBar(
-              tabs: [
-                Tab(text: context.l10n.downloadsServerTab),
-                Tab(text: context.l10n.downloadsOnDeviceTab),
-              ],
-            ),
-          ),
-          body: const TabBarView(
-            children: [_ServerDownloadsTab(), _OnDeviceDownloadsTab()],
-          ),
+          appBar: topBar
+              ? null
+              : AppBar(
+                  title: title,
+                  bottom: tabBar,
+                ),
+          body: topBar
+              ? Column(
+                  children: [
+                    tabBar,
+                    const Expanded(
+                      child: TabBarView(
+                        children: [
+                          _ServerDownloadsTab(),
+                          _OnDeviceDownloadsTab(),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : const TabBarView(
+                  children: [_ServerDownloadsTab(), _OnDeviceDownloadsTab()],
+                ),
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: content,
     );
   }
 }

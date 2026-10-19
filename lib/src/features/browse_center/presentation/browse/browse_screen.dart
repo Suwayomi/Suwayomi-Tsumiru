@@ -12,6 +12,7 @@ import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../migration/controller/bulk_migration_providers.dart';
 import '../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
@@ -64,8 +65,64 @@ class BrowseScreen extends HookConsumerWidget {
     final persistentBox =
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
 
-    return Scaffold(
-      appBar: AppBar(
+    // Native desktop draws the search box and actions in the shell bar
+    // instead of an app bar; the tabs stay in the page body.
+    final topBar = useDesktopTopBar(context);
+    final search = _BrowseDesktopSearch(tabIndex: tabController.index);
+    final actions = <Widget>[
+      if (tabController.index == 0) ...[
+        if (phone && !persistentBox) ...[
+          const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
+          const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
+        ],
+        if (context.isTablet && !context.isDesktop)
+          IconButton(
+            tooltip: context.l10n.globalSearch,
+            onPressed: () => openGlobalSearch(context),
+            icon: const Icon(Icons.travel_explore_rounded),
+          ),
+        // The search overlay/dropdown already offers "Search all sources".
+        IconButton(
+          tooltip: context.l10n.filterSources,
+          onPressed: () => const SourceFilterRoute().push(context),
+          icon: const Icon(Icons.filter_list_rounded),
+        ),
+      ],
+      if (tabController.index == 1) ...[
+        IconButton(
+          tooltip: context.l10n.extensionStores,
+          onPressed: () => const ExtensionStoreRoute().push(context),
+          icon: const Icon(Icons.dns_rounded),
+        ),
+        const InstallExtensionFile(),
+      ],
+      // Language filter applies to Sources/Extensions only, not Migrate.
+      if (tabController.index != 2)
+        IconButton(
+          onPressed: () => showDialog(
+            context: context,
+            builder: (context) => tabController.index == 0
+                ? const SourceLanguageFilter()
+                : const ExtensionLanguageFilterDialog(),
+            animationStyle: context.motionStyle,
+          ),
+          icon: const Icon(Icons.translate_rounded),
+        ),
+    ];
+    final tabBar = TabBar(
+      dividerColor: Colors.transparent,
+      isScrollable: context.isTablet,
+      controller: tabController,
+      tabs: [
+        Tab(text: context.l10n.sources),
+        Tab(text: context.l10n.extensions),
+        Tab(text: context.l10n.migrate),
+      ],
+    );
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
         // Desktop replaces the title with a search box driving the current
         // tab's own filter (the sidebar already names the page). Phone and
         // tablet keep the title.
@@ -74,63 +131,34 @@ class BrowseScreen extends HookConsumerWidget {
                 alignment: Alignment.centerLeft,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
-                  child: _BrowseDesktopSearch(tabIndex: tabController.index),
+                  child: search,
                 ),
               )
             : Text(context.l10n.browse),
-        actions: [
-          if (tabController.index == 0) ...[
-            if (phone && !persistentBox) ...[
-              const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
-              const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),
-            ],
-            if (context.isTablet && !context.isDesktop)
-              IconButton(
-                tooltip: context.l10n.globalSearch,
-                onPressed: () => openGlobalSearch(context),
-                icon: const Icon(Icons.travel_explore_rounded),
-              ),
-            // The search overlay/dropdown already offers "Search all sources".
-            IconButton(
-              tooltip: context.l10n.filterSources,
-              onPressed: () => const SourceFilterRoute().push(context),
-              icon: const Icon(Icons.filter_list_rounded),
-            ),
-          ],
-          if (tabController.index == 1) ...[
-            IconButton(
-              tooltip: context.l10n.extensionStores,
-              onPressed: () => const ExtensionStoreRoute().push(context),
-              icon: const Icon(Icons.dns_rounded),
-            ),
-            const InstallExtensionFile(),
-          ],
-          // Language filter applies to Sources/Extensions only, not Migrate.
-          if (tabController.index != 2)
-            IconButton(
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => tabController.index == 0
-                    ? const SourceLanguageFilter()
-                    : const ExtensionLanguageFilterDialog(),
-                animationStyle: context.motionStyle,
-              ),
-              icon: const Icon(Icons.translate_rounded),
-            ),
-        ],
-        bottom: TabBar(
-          dividerColor: Colors.transparent,
-          isScrollable: context.isTablet,
-          controller: tabController,
-          tabs: [
-            Tab(text: context.l10n.sources),
-            Tab(text: context.l10n.extensions),
-            Tab(text: context.l10n.migrate),
-          ],
-        ),
+        actions: actions,
+        bottom: tabBar,
       ),
-      body: TabBarView(controller: tabController, children: children),
+      body: topBar
+          ? Column(
+              children: [
+                tabBar,
+                Expanded(
+                  child: TabBarView(
+                    controller: tabController,
+                    children: children,
+                  ),
+                ),
+              ],
+            )
+          : TabBarView(controller: tabController, children: children),
     );
+    return topBar
+        ? TopBarSlot(
+            content: desktopSearchSlotContent(search: search, actions: actions),
+            minWidth: searchTopBarSlotMinWidth(actions.length),
+            child: scaffold,
+          )
+        : scaffold;
   }
 }
 

@@ -14,6 +14,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/cover_row_section.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/manga_cover/grid/manga_cover_grid_tile.dart';
 import '../../../../widgets/selection_action_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -150,18 +151,25 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
       ],
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: detailNavigationBackButton(context),
-        title: Text(context.l10n.duplicatedEntries),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: context.l10n.scanForDuplicates,
-            onPressed: () => ref.read(scanProvider.notifier).rescan(),
-          ),
-        ],
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.duplicatedEntries);
+    final actions = <Widget>[
+      IconButton(
+        icon: const Icon(Icons.refresh_rounded),
+        tooltip: context.l10n.scanForDuplicates,
+        onPressed: () => ref.read(scanProvider.notifier).rescan(),
       ),
+    ];
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              leading: detailNavigationBackButton(context),
+              title: title,
+              actions: actions,
+            ),
       body: PopScope(
         canPop: !selecting,
         onPopInvokedWithResult: (didPop, _) {
@@ -202,6 +210,13 @@ class LibraryDuplicatesScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      actions: actions,
+      child: scaffold,
     );
   }
 }

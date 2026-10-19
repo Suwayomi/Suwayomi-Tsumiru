@@ -15,6 +15,8 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/platform/current_platform_description.dart';
 import '../../../../utils/platform/platform_runtime.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../about/presentation/about/controllers/about_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -22,10 +24,16 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.settings),
-      ),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(context.l10n.settings);
+    final scaffold = Scaffold(
+      appBar: topBar
+          ? null
+          : AppBar(
+              title: title,
+            ),
       body: ListView(
         children: [
           ListTile(
@@ -102,6 +110,12 @@ class SettingsScreen extends StatelessWidget {
           const _CopyCrashLogTile(),
         ],
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

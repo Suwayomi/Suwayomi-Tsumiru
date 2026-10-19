@@ -11,6 +11,8 @@ import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
+import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../source_manga_list/controller/source_manga_controller.dart';
@@ -31,13 +33,15 @@ class SourcePreferenceScreen extends HookConsumerWidget {
     final preferenceProvider = baseSourcePreferenceListProvider(sourceId);
     final networkPreferences = ref.watch(preferenceProvider);
     final preferences = networkPreferences.value;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          source.value?.displayName ?? "",
-          style: context.textTheme.titleLarge,
-        ),
-      ),
+    // Native desktop draws the toolbar in the shell bar instead of an app
+    // bar.
+    final topBar = useDesktopTopBar(context);
+    final title = Text(
+      source.value?.displayName ?? "",
+      style: context.textTheme.titleLarge,
+    );
+    final scaffold = Scaffold(
+      appBar: topBar ? null : AppBar(title: title),
       body: networkPreferences.showUiWhenData(
         context,
         (data) => Column(
@@ -73,6 +77,12 @@ class SourcePreferenceScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: title,
+      child: scaffold,
     );
   }
 }

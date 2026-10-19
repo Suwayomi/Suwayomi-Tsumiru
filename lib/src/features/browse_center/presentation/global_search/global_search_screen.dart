@@ -13,6 +13,7 @@ import '../../../../constants/app_sizes.dart';
 import '../../../../constants/enum.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -73,6 +74,16 @@ class GlobalSearchScreen extends HookConsumerWidget {
     final hasPinned = ref.watch(pinnedSourcesProvider).isNotEmpty;
     final decided = useRef(false);
     final cancelled = useRef(false);
+    // Latest focus state, tracked from the node itself: a build-time read
+    // races an unfocus that lands without rebuilding the page.
+    final hadFocus = useRef(false);
+    useEffect(() {
+      void update() => hadFocus.value = searchFocusNode.hasFocus;
+      update();
+      searchFocusNode.addListener(update);
+      return () => searchFocusNode.removeListener(update);
+    }, [searchFocusNode]);
+    final wasTopBar = useRef(false);
 
     void cancelAutoOpen() => cancelled.value = true;
 
@@ -147,7 +158,34 @@ class GlobalSearchScreen extends HookConsumerWidget {
       hasPinned: hasPinned,
       onInteract: cancelAutoOpen,
     );
-    return Listener(
+    // Native desktop draws the search box in the shell bar instead of an
+    // app bar; the filter chips stay in the page body. The focus node and
+    // controller are shared so the draft survives the move, and the slot
+    // mount autofocuses only when focus was held across the toggle: the
+    // slot mounts a frame after the old field detaches, so bare refocusing
+    // would be lost — and unconditional autofocus would steal focus back
+    // after an explicit unfocus.
+    final topBar = useDesktopTopBar(context);
+    final restoreFocus = topBar && !wasTopBar.value && hadFocus.value;
+    wasTopBar.value = topBar;
+    final searchField = SearchField(
+      controller: queryController,
+      focusNode: searchFocusNode,
+      autofocus: restoreFocus,
+      onChanged: (_) => cancelAutoOpen(),
+      onSubmitted: (value) {
+        cancelAutoOpen();
+        query.value = value;
+      },
+    );
+    final searchTitleBox = Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: searchField,
+      ),
+    );
+    final content = Listener(
       onPointerDown: (_) => cancelAutoOpen(),
       onPointerSignal: (_) => cancelAutoOpen(),
       child: NotificationListener<UserScrollNotification>(
@@ -173,16 +211,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                                 : null,
                             child: Padding(
                               padding: KEdgeInsets.h16v4.size,
-                              child: SearchField(
-                                controller: queryController,
-                                focusNode: searchFocusNode,
-                                autofocus: false,
-                                onChanged: (_) => cancelAutoOpen(),
-                                onSubmitted: (value) {
-                                  cancelAutoOpen();
-                                  query.value = value;
-                                },
-                              ),
+                              child: searchField,
                             ),
                           ),
                         ),
@@ -194,22 +223,30 @@ class GlobalSearchScreen extends HookConsumerWidget {
               ? SafeArea(
                   child: Column(
                     children: [
-                      Semantics(
-                        header: true,
-                        namesRoute: true,
-                        label: context.l10n.globalSearch,
-                        child: _DesktopHeader(
-                          hasPinned: hasPinned,
-                          chips: chips,
-                          controller: queryController,
-                          focusNode: searchFocusNode,
-                          onChanged: (_) => cancelAutoOpen(),
-                          onSubmitted: (value) {
-                            cancelAutoOpen();
-                            query.value = value;
-                          },
-                        ),
-                      ),
+                      topBar
+                          ? Semantics(
+                              header: true,
+                              namesRoute: true,
+                              label: context.l10n.globalSearch,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: chips,
+                              ),
+                            )
+                          : Semantics(
+                              header: true,
+                              namesRoute: true,
+                              label: context.l10n.globalSearch,
+                              child: _DesktopHeader(
+                                hasPinned: hasPinned,
+                                chips: chips,
+                                searchField: searchField,
+                              ),
+                            ),
                       results,
                     ],
                   ),
@@ -230,6 +267,13 @@ class GlobalSearchScreen extends HookConsumerWidget {
         ),
       ),
     );
+    return titleTopBarSlot(
+      topBar: topBar,
+      leading: detailNavigationBackButton(context),
+      title: searchTitleBox,
+      minWidth: searchTopBarSlotMinWidth(0),
+      child: content,
+    );
   }
 }
 
@@ -237,17 +281,11 @@ class _DesktopHeader extends StatelessWidget {
   const _DesktopHeader({
     required this.hasPinned,
     required this.chips,
-    required this.controller,
-    required this.focusNode,
-    required this.onChanged,
-    required this.onSubmitted,
+    required this.searchField,
   });
   final bool hasPinned;
   final Widget chips;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final ValueChanged<String?> onChanged;
-  final ValueChanged<String?> onSubmitted;
+  final Widget searchField;
 
   @override
   Widget build(BuildContext context) {
@@ -262,13 +300,7 @@ class _DesktopHeader extends StatelessWidget {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
-                child: SearchField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  autofocus: false,
-                  onChanged: onChanged,
-                  onSubmitted: onSubmitted,
-                ),
+                child: searchField,
               ),
             ),
             const SizedBox(width: 28),

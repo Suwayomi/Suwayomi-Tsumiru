@@ -71,7 +71,10 @@ class DetailNavigationShellScreen extends ConsumerWidget {
         child: Column(
           children: [
             if (useDesktopTopBar(context)) const DesktopTopBar(),
+            // Keyed so a breakpoint toggle moves the body instead of
+            // remounting it: the page keeps its scroll, focus and drafts.
             Expanded(
+              key: const ValueKey('shellBody'),
               child: Row(
                 children: [
                   BigScreenNavigationBar(

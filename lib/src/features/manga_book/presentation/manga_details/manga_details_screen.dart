@@ -18,6 +18,7 @@ import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../utils/theme/brand.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
@@ -207,13 +208,18 @@ class MangaDetailsScreen extends HookConsumerWidget {
 
     useEffect(() => refreshLibraryAfterExit, const []);
 
+    // Native desktop draws the back button and title in the shell bar
+    // instead of an app bar. Phone selection swaps the app bar; desktop
+    // selection lives in the chapter-column header, so the slot never swaps.
+    final topBar = useDesktopTopBar(context);
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) refreshLibraryAfterExit();
       },
       child: manga.showUiWhenData(
         context,
-        (data) => FocusScope(
+        (data) {
+          final scaffold = FocusScope(
           node: pageScope,
           onKeyEvent: (node, event) {
             if (event is KeyDownEvent &&
@@ -229,7 +235,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                 !context.isTablet && selectedChapters.value.isEmpty && !offline,
             // Tablet/desktop selection lives in the chapter-column header;
             // only phones get the selection app bar.
-            appBar: selectedChapters.value.isNotEmpty && !context.isTablet
+            appBar: topBar
+                ? null
+                : selectedChapters.value.isNotEmpty && !context.isTablet
                 ? AppBar(
                     leading: IconButton(
                       onPressed: () => selectedChapters.value = ({}),
@@ -484,12 +492,33 @@ class MangaDetailsScreen extends HookConsumerWidget {
               ],
             ),
           ),
-        ),
+        );
+        return titleTopBarSlot(
+          topBar: topBar,
+          leading: detailNavigationBackButton(context),
+          title: context.isWideDesktop
+              ? SeriesAppBarTitle(
+                  title: data?.title ?? context.l10n.manga,
+                )
+              : Text(data?.title ?? context.l10n.manga),
+          child: scaffold,
+        );
+      },
         refresh: refresh,
-        wrapper: (body) => Scaffold(
-          appBar: AppBar(title: Text(context.l10n.manga)),
-          body: body,
-        ),
+        wrapper: (body) {
+          final topBar = useDesktopTopBar(context);
+          final title = Text(context.l10n.manga);
+          final scaffold = Scaffold(
+            appBar: topBar ? null : AppBar(title: title),
+            body: body,
+          );
+          return titleTopBarSlot(
+            topBar: topBar,
+            leading: detailNavigationBackButton(context),
+            title: title,
+            child: scaffold,
+          );
+        },
       ),
     );
   }
