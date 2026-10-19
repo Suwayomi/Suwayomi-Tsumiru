@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/widgets/cover_row_section.dart';
@@ -277,5 +280,56 @@ void main() {
 
     await tester.tap(find.text('See all'));
     expect(seeAllCalls, 1);
+  });
+
+  testWidgets('the edge fade leaves no bright column at a fractional width', (
+    tester,
+  ) async {
+    for (final dpr in [1.25, 1.5]) {
+      tester.view.physicalSize = const Size(600, 200);
+      tester.view.devicePixelRatio = dpr;
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 333.5,
+                height: 100,
+                child: CoverRowEdgeFade(
+                  fade: true,
+                  color: Colors.white,
+                  child: const ColoredBox(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(boundaryKey),
+      );
+      final image = (await tester.runAsync(
+        () => boundary.toImage(pixelRatio: dpr),
+      ))!;
+      final bytes = (await tester.runAsync(
+        () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+      ))!;
+      int alphaAt(int x, int y) =>
+          bytes.getUint8((y * image.width + x) * 4 + 3);
+      final y = image.height ~/ 2;
+      final last = image.width - 1;
+      expect(alphaAt(last, y), lessThan(8), reason: 'dpr $dpr');
+      expect(
+        alphaAt(last, y),
+        lessThanOrEqualTo(alphaAt(last - 3, y)),
+        reason: 'dpr $dpr',
+      );
+    }
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
   });
 }

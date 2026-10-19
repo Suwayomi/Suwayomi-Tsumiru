@@ -305,7 +305,8 @@ class CoverRowEdgeFade extends StatelessWidget {
         colors: [color, color, fade ? Colors.transparent : color],
         stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
       ).createShader(bounds),
-      child: child,
+      // Stops a partly covered edge pixel of the child escaping the mask.
+      child: ClipRect(child: child),
     );
   }
 }
