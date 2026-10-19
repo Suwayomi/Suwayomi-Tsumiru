@@ -19,6 +19,7 @@ import '../../../../../../features/auth/data/basic_auth_migration.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../features/auth/presentation/sign_in_action.dart';
+import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../client/server_port_tile/server_port_tile.dart';
@@ -33,10 +34,16 @@ part 'credentials_popup.g.dart';
 @Riverpod(keepAlive: true)
 class Credentials extends _$Credentials {
   @override
-  Future<String?> build() async => readSecureOrAbsent(
-    ref.read(secureStorageProvider),
-    kBasicCredentialsSecureKey,
-  );
+  Future<String?> build() async {
+    final storage = ref.read(secureStorageProvider);
+    if (credentialsInvalidated(ref.read(sharedPreferencesProvider))) {
+      // The store retries the full cleanup and owns clearing the marker; this
+      // credential must simply not be read while it may be stale.
+      await deleteSecure(storage, kBasicCredentialsSecureKey);
+      return null;
+    }
+    return readSecureOrAbsent(storage, kBasicCredentialsSecureKey);
+  }
 
   /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
   /// meanwhile. Omit for a clear (set null).
@@ -50,12 +57,12 @@ class Credentials extends _$Credentials {
       if (epoch != credentials.serverEpoch) return;
       if (value == null) {
         state = const AsyncData(null);
-        await deleteSecure(storage, kBasicCredentialsSecureKey);
+        await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
         return;
       }
       await writeSecure(storage, kBasicCredentialsSecureKey, value);
       if (epoch != credentials.serverEpoch) {
-        await deleteSecure(storage, kBasicCredentialsSecureKey);
+        await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
         return;
       }
       state = AsyncData(value);

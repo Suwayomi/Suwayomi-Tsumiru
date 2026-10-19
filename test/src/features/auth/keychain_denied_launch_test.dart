@@ -120,9 +120,75 @@ class _InMemoryStorage implements FlutterSecureStorage {
       throw UnimplementedError('${invocation.memberName} not stubbed');
 }
 
+/// A readable, writable store whose writes or deletes can start failing, to
+/// model the keychain refusing partway through a run.
+class _FlakyStorage implements FlutterSecureStorage {
+  _FlakyStorage(this.store, {this.failDeletes = false});
+  final Map<String, String> store;
+  bool failWrites = false;
+  bool failDeletes;
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => store[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (failWrites) {
+      throw PlatformException(code: '-25293', message: 'User denied');
+    }
+    if (value == null) {
+      store.remove(key);
+    } else {
+      store[key] = value;
+    }
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (failDeletes) {
+      throw PlatformException(code: '-25293', message: 'User denied');
+    }
+    store.remove(key);
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName} not stubbed');
+}
+
+late SharedPreferences _prefs;
+
 ProviderContainer _container(FlutterSecureStorage storage) {
   final container = ProviderContainer(
-    overrides: [secureStorageProvider.overrideWithValue(storage)],
+    overrides: [
+      secureStorageProvider.overrideWithValue(storage),
+      sharedPreferencesProvider.overrideWithValue(_prefs),
+    ],
   );
   addTearDown(container.dispose);
   return container;
@@ -229,7 +295,11 @@ class _RecordingToast extends Toast {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(debugResetKeychainRefusal);
+  setUp(() async {
+    debugResetKeychainRefusal();
+    SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
+  });
 
   test(
     'a refused keychain read leaves the credentials absent instead of stalling startup',
@@ -434,5 +504,88 @@ void main() {
 
     // Tear the scope down so the proactive-refresh timer is cancelled.
     await tester.pumpWidget(const SizedBox());
+  });
+
+  test(
+    'a switch whose credential delete is refused cannot reuse the old sign-in after restart',
+    () async {
+      final backing = <String, String>{
+        'auth.ui.accessToken': _testToken(),
+        'auth.ui.refreshToken': 'old-refresh',
+        kBasicCredentialsSecureKey: 'Basic old',
+      };
+      final first = _container(_FlakyStorage(backing, failDeletes: true));
+      final beforeSwitch = await first.read(authCredentialsStoreProvider.future);
+      expect(beforeSwitch.uiAccessToken, isNotNull);
+      expect(backing, isNotEmpty);
+
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .clearAllForServerSwitch();
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
+      expect(backing, isNotEmpty);
+
+      // Next launch: the keychain works again, but the old sign-in survived
+      // the switch and belongs to the previous server.
+      debugResetKeychainRefusal();
+      final restarted = _container(_FlakyStorage(backing));
+      final afterRestart = await restarted.read(
+        authCredentialsStoreProvider.future,
+      );
+      final basic = await restarted.read(credentialsProvider.future);
+
+      expect(afterRestart.uiAccessToken, isNull);
+      expect(afterRestart.uiRefreshToken, isNull);
+      expect(afterRestart.simpleLoginCookie, isNull);
+      expect(basic, isNull);
+      expect(backing, isEmpty);
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
+    },
+  );
+
+  test('a header read before a refused write still loads afterwards', () async {
+    final storage = _FlakyStorage({
+      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
+    });
+    final container = _container(storage);
+    expect(
+      await container.read(customHttpHeadersProvider.future),
+      {'CF-Access-Client-Id': 'abc'},
+    );
+
+    storage.failWrites = true;
+    expect(await writeSecure(storage, 'auth.simple.cookie', 'x'), isFalse);
+
+    // The refused write flips the process-wide refusal; a provider rebuilt
+    // after it must still see what was already read this run.
+    container.invalidate(customHttpHeadersProvider);
+    expect(await container.read(customHttpHeadersProvider.future), {
+      'CF-Access-Client-Id': 'abc',
+    });
+  });
+
+  test('a refused legacy password cleanup does not stop credential reads', () async {
+    final token = _testToken();
+    final storage = _FlakyStorage(
+      {
+        'auth.password': 'old-password',
+        'auth.ui.accessToken': token,
+        'auth.ui.refreshToken': 'refresh',
+        'custom.headers': '{"X-Proxy":"secret"}',
+      },
+      failDeletes: true,
+    );
+    final container = _container(storage);
+
+    final auth = await container
+        .read(authCredentialsStoreProvider.future)
+        .timeout(const Duration(seconds: 5));
+    final headers = await container
+        .read(customHttpHeadersProvider.future)
+        .timeout(const Duration(seconds: 5));
+
+    expect(auth.uiAccessToken, token);
+    expect(headers, {'X-Proxy': 'secret'});
+    expect(keychainRefusedThisRun, isFalse);
   });
 }

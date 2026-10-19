@@ -6,10 +6,12 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/account/domain/account_binding.dart';
 import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 /// Builds a minimal JWT with the given payload. Signature is a fixed
 /// placeholder; the decoder doesn't verify.
@@ -75,12 +77,22 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
       throw UnimplementedError('${invocation.memberName} not stubbed');
 }
 
+late SharedPreferences _prefs;
+
 ProviderContainer _container(_InMemorySecureStorage storage) =>
     ProviderContainer(
-      overrides: [secureStorageProvider.overrideWithValue(storage)],
+      overrides: [
+        secureStorageProvider.overrideWithValue(storage),
+        sharedPreferencesProvider.overrideWithValue(_prefs),
+      ],
     );
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
+  });
+
   const binding = AccountBinding(
     address: 'https://server:443',
     userId: 2,

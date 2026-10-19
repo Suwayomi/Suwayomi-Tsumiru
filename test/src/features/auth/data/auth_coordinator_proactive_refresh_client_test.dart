@@ -109,9 +109,13 @@ void main() {
       });
 
       final source = _FakeClientSource();
+      SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer(
         overrides: [
           secureStorageProvider.overrideWithValue(storage),
+          sharedPreferencesProvider.overrideWithValue(
+            await SharedPreferences.getInstance(),
+          ),
           unauthenticatedGraphQlClientProvider.overrideWith((ref) {
             source.built.add(source.port);
             return GraphQLClient(
