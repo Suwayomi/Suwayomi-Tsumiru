@@ -543,6 +543,76 @@ void main() {
     },
   );
 
+  test(
+    'a fully saved sign-in clears the marker instead of being discarded next launch',
+    () async {
+      // Phase 1: the marker is set by a switch whose deletes the keychain
+      // refuses, leaving the old server's credentials in storage.
+      final backing = <String, String>{
+        'auth.ui.accessToken': 'old-token',
+        'auth.ui.refreshToken': 'old-refresh',
+        kBasicCredentialsSecureKey: 'Basic old',
+      };
+      final storage = _FlakyStorage(backing, failDeletes: true);
+      final first = _container(storage);
+      await first.read(authCredentialsStoreProvider.future);
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .clearAllForServerSwitch();
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
+      expect(backing, isNotEmpty);
+
+      // The user grants access: the sign-in saves, and the credentials it did
+      // not write are deleted, so the marker has nothing left to protect.
+      storage.failDeletes = false;
+      final token = _testToken();
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .saveUiLoginTokens(accessToken: token, refreshToken: 'new-refresh');
+
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
+      expect(backing['auth.ui.accessToken'], token);
+      expect(backing['auth.ui.refreshToken'], 'new-refresh');
+      expect(backing[kBasicCredentialsSecureKey], isNull);
+
+      // Next launch reads the fresh sign-in rather than deleting it as stale.
+      debugResetKeychainRefusal();
+      final restarted = _container(_FlakyStorage(backing));
+      final afterRestart = await restarted.read(
+        authCredentialsStoreProvider.future,
+      );
+      expect(afterRestart.uiAccessToken, token);
+      expect(afterRestart.uiRefreshToken, 'new-refresh');
+      expect(afterRestart.uiAuthorizationHeader, {
+        'Authorization': 'Bearer $token',
+      });
+      expect(await restarted.read(credentialsProvider.future), isNull);
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isFalse);
+
+      // Phase 2: the sign-in saves, but the stale-key deletes still fail, so
+      // the marker stays and the next launch keeps treating storage as stale.
+      debugResetKeychainRefusal();
+      final stale = <String, String>{
+        'auth.simple.cookie': 'JSESSIONID=old',
+        kBasicCredentialsSecureKey: 'Basic old',
+      };
+      final refused = _FlakyStorage(stale, failDeletes: true);
+      final second = _container(refused);
+      await second.read(authCredentialsStoreProvider.future);
+      await second
+          .read(authCredentialsStoreProvider.notifier)
+          .clearAllForServerSwitch();
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
+
+      await second
+          .read(authCredentialsStoreProvider.notifier)
+          .saveSimpleLoginCookie('JSESSIONID=new');
+
+      expect(stale['auth.simple.cookie'], 'JSESSIONID=new');
+      expect(_prefs.getBool(DBKeys.authCredentialsInvalidated.name), isTrue);
+    },
+  );
+
   test('a header read before a refused write still loads afterwards', () async {
     final storage = _FlakyStorage({
       'custom.headers': '{"CF-Access-Client-Id":"abc"}',

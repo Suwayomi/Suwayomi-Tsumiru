@@ -50,6 +50,37 @@ Future<bool> deleteCredential(
   return deleted;
 }
 
+/// Clears the invalidation marker once a sign-in has provably replaced every
+/// credential it should.
+///
+/// A refused sign-out or switch delete leaves the old credentials behind and
+/// sets the marker. Without this, the next launch would treat the fresh
+/// sign-in as stale too and delete it, signing the user out for no reason.
+///
+/// [overwrittenKeys] are the keys the sign-in wrote itself. Every other
+/// credential key is stale from the previous server or session, so it is
+/// deleted before the marker clears. If any write or delete is refused, the
+/// marker stays: storage may still hold something the next launch must not
+/// read.
+Future<void> clearInvalidationAfterSignIn(
+  Ref ref,
+  FlutterSecureStorage storage, {
+  required Iterable<String> overwrittenKeys,
+  required Iterable<bool> writes,
+}) async {
+  final prefs = ref.read(sharedPreferencesProvider);
+  if (!credentialsInvalidated(prefs)) return;
+  if (writes.any((saved) => !saved)) return;
+  final deleted = await Future.wait(
+    AuthCredentialsStore._kAllKeys
+        .where((key) => !overwrittenKeys.contains(key))
+        .map((key) => deleteSecure(storage, key)),
+  );
+  if (deleted.every((success) => success)) {
+    await clearCredentialInvalidation(prefs);
+  }
+}
+
 /// Holds an access + refresh token pair for UI Login mode.
 class UiLoginTokens {
   const UiLoginTokens({required this.accessToken, required this.refreshToken});
@@ -439,11 +470,21 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
       _mutate(() async {
         if (forEpoch != _serverEpoch) return;
         final storage = ref.read(secureStorageProvider);
-        await writeSecure(storage, _kSimpleCookieKey, cookieValue);
+        final written = await writeSecure(
+          storage,
+          _kSimpleCookieKey,
+          cookieValue,
+        );
         if (forEpoch != _serverEpoch) {
           await deleteCredential(ref, storage, _kSimpleCookieKey);
           return;
         }
+        await clearInvalidationAfterSignIn(
+          ref,
+          storage,
+          overwrittenKeys: [_kSimpleCookieKey],
+          writes: [written],
+        );
         state = AsyncData(_current.copyWith(simpleLoginCookie: cookieValue));
       });
 
@@ -509,19 +550,29 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   ) async {
     if (forEpoch != _serverEpoch) return;
     final storage = ref.read(secureStorageProvider);
-    await writeSecure(storage, _kUiAccessKey, accessToken);
-    await writeSecure(storage, _kUiRefreshKey, refreshToken);
+    final writes = [
+      await writeSecure(storage, _kUiAccessKey, accessToken),
+      await writeSecure(storage, _kUiRefreshKey, refreshToken),
+    ];
     if (forEpoch != _serverEpoch) {
       await deleteCredential(ref, storage, _kUiAccessKey);
       await deleteCredential(ref, storage, _kUiRefreshKey);
       return;
     }
-    await writeSecure(
-      storage,
-      _kAccountBindingKey,
-      binding?.encode(accessToken: accessToken, refreshToken: refreshToken),
+    writes.add(
+      await writeSecure(
+        storage,
+        _kAccountBindingKey,
+        binding?.encode(accessToken: accessToken, refreshToken: refreshToken),
+      ),
     );
     if (forEpoch != _serverEpoch) return;
+    await clearInvalidationAfterSignIn(
+      ref,
+      storage,
+      overwrittenKeys: [_kUiAccessKey, _kUiRefreshKey, _kAccountBindingKey],
+      writes: writes,
+    );
     final expiresAt = decodeJwtExp(accessToken);
     state = AsyncData(
       _current.copyWith(

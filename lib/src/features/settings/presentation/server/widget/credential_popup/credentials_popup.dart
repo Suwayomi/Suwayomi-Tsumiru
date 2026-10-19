@@ -60,11 +60,21 @@ class Credentials extends _$Credentials {
         await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
         return;
       }
-      await writeSecure(storage, kBasicCredentialsSecureKey, value);
+      final written = await writeSecure(
+        storage,
+        kBasicCredentialsSecureKey,
+        value,
+      );
       if (epoch != credentials.serverEpoch) {
         await deleteCredential(ref, storage, kBasicCredentialsSecureKey);
         return;
       }
+      await clearInvalidationAfterSignIn(
+        ref,
+        storage,
+        overwrittenKeys: [kBasicCredentialsSecureKey],
+        writes: [written],
+      );
       state = AsyncData(value);
     }, forEpoch: forEpoch);
   }
