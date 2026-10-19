@@ -43,10 +43,10 @@ class BigScreenNavigationBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Wide desktop (width >= 1200) uses the custom sidebar (icon rows, no
-    // under-icon labels); narrower tablets keep the icon rail exactly as
-    // before.
-    if (context.isWideDesktop) {
+    // Any desktop layout (width >= 600 with a shortestSide >= 600) uses the
+    // custom sidebar; below 1200 px it shows collapsed whatever the user
+    // chose. Narrower screens keep the icon rail exactly as before.
+    if (context.isDesktop) {
       return DesktopSidebar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onDestinationSelected,

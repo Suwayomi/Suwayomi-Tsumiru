@@ -106,9 +106,13 @@ void main() {
         );
         expect(sidebar.selectedIndex, 0);
       } else if (size.width >= 600) {
-        final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-        expect(rail.extended, isFalse);
-        expect(rail.selectedIndex, 0);
+        // Below 1200 px the desktop layout shows the collapsed sidebar,
+        // not the old icon rail.
+        expect(find.byType(NavigationRail), findsNothing);
+        expect(
+          tester.getSize(find.byType(DesktopSidebar)).width,
+          DesktopSidebar.collapsedWidth,
+        );
       }
       expect(tester.takeException(), isNull);
     });
@@ -145,7 +149,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('detail shell shows the icon rail at tablet width', (
+  testWidgets('detail shell shows the collapsed sidebar at tablet width', (
     tester,
   ) async {
     await _pump(
@@ -153,9 +157,10 @@ void main() {
       const Size(800, 900),
       const LibraryUpdateErrorsRoute().location,
     );
+    expect(find.byType(NavigationRail), findsNothing);
     expect(
-      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
-      isFalse,
+      tester.getSize(find.byType(DesktopSidebar)).width,
+      DesktopSidebar.collapsedWidth,
     );
     expect(tester.takeException(), isNull);
   });

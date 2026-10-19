@@ -18,6 +18,7 @@ import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
+import '../desktop/desktop_top_bar.dart';
 import 'big_screen_navigation_bar.dart';
 import 'incognito_banner.dart';
 import 'small_screen_navigation_bar.dart';
@@ -185,21 +186,28 @@ class NavigationShellScreen extends HookConsumerWidget {
         // navigation controls (and any landscape cutout). SafeArea keeps both
         // out of that unusable strip so the controls never overlap a cover.
         body: SafeArea(
-          child: Row(
+          child: Column(
             children: [
-              BigScreenNavigationBar(
-                selectedIndex: child.currentIndex,
-                onDestinationSelected: switchTo,
-              ),
+              if (useDesktopTopBar(context)) const DesktopTopBar(),
               Expanded(
-                child: Column(
+                child: Row(
                   children: [
-                    const UpdateProgressBanner(),
-                    AccountStorageRecoveryBanner(
-                      insetTop: !updateBannerVisible,
+                    BigScreenNavigationBar(
+                      selectedIndex: child.currentIndex,
+                      onDestinationSelected: switchTo,
                     ),
-                    Expanded(child: content),
-                    const IncognitoBanner(),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          const UpdateProgressBanner(),
+                          AccountStorageRecoveryBanner(
+                            insetTop: !updateBannerVisible,
+                          ),
+                          Expanded(child: content),
+                          const IncognitoBanner(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

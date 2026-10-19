@@ -4,12 +4,48 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../utils/platform/platform_runtime.dart';
+import '../tsumiru_logo.dart';
+
 const double kDesktopTitleBarHeight = 40;
+
+/// Logo size and logo-to-name gap shared by the title bar and the merged top
+/// bar, so the brand measures the same in both.
+const double kBrandLogoSize = 28;
+const double kBrandGap = 8;
+
+/// The brand name style, shared by [DesktopBrandTitle] and the top-bar
+/// breakpoint math so both measure the same text.
+TextStyle? brandNameStyle(BuildContext context) {
+  final theme = Theme.of(context);
+  return theme.textTheme.labelMedium?.copyWith(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: theme.colorScheme.onSurface,
+  );
+}
+
+/// The brand mark: logo plus the app name. The name is a literal, not
+/// localized, so the bar never depends on Localizations being in scope at the
+/// app-builder level, where AppLocalizations.of() isn't reliably available.
+class DesktopBrandTitle extends StatelessWidget {
+  const DesktopBrandTitle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const TsumiruLogo(size: kBrandLogoSize),
+        const SizedBox(width: kBrandGap),
+        Text('Tsumiru', style: brandNameStyle(context)),
+      ],
+    );
+  }
+}
 
 /// Slim, seamless, theme-reactive window title bar. Windows/Linux draw our own
 /// min/max/close on the right; macOS keeps the native traffic lights (left) and
@@ -30,29 +66,19 @@ class DesktopTitleBar extends StatelessWidget {
           const Positioned.fill(
             child: DragToMoveArea(child: SizedBox.expand()),
           ),
-          // App name — centred and muted: present, not a banner. IgnorePointer
-          // so it doesn't block the drag region beneath it.
-          Positioned.fill(
+          // Brand, centred: present, not a banner. IgnorePointer so it
+          // doesn't block the drag region beneath it.
+          const Positioned.fill(
             child: IgnorePointer(
-              child: Center(
-                // Brand name (not localized). Kept as a literal so the bar never
-                // depends on Localizations being in scope at the app-builder
-                // level, where AppLocalizations.of() isn't reliably available.
-                child: Text(
-                  'Tsumiru',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ),
+              child: Center(child: DesktopBrandTitle()),
             ),
           ),
           // Window controls, pinned right (Windows/Linux); macOS keeps its
           // native traffic lights on the left, so nothing is drawn there.
-          if (!Platform.isMacOS)
+          if (!isMacOSRuntime)
             Align(
               alignment: Alignment.centerRight,
-              child: _WindowButtons(brightness: theme.brightness),
+              child: DesktopWindowButtons(brightness: theme.brightness),
             ),
         ],
       ),
@@ -60,14 +86,18 @@ class DesktopTitleBar extends StatelessWidget {
   }
 }
 
-class _WindowButtons extends StatefulWidget {
-  const _WindowButtons({required this.brightness});
+/// The minimise / maximise-restore / close cluster, shrink-wrapped so the
+/// caller can pin it right. Public so the merged top bar reuses the exact
+/// same buttons.
+class DesktopWindowButtons extends StatefulWidget {
+  const DesktopWindowButtons({super.key, required this.brightness});
   final Brightness brightness;
   @override
-  State<_WindowButtons> createState() => _WindowButtonsState();
+  State<DesktopWindowButtons> createState() => _DesktopWindowButtonsState();
 }
 
-class _WindowButtonsState extends State<_WindowButtons> with WindowListener {
+class _DesktopWindowButtonsState extends State<DesktopWindowButtons>
+    with WindowListener {
   bool _maximized = false;
 
   @override

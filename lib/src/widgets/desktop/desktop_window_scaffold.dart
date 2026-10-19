@@ -6,12 +6,17 @@
 
 import 'package:flutter/material.dart';
 
+import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/platform/platform_runtime.dart';
 import 'desktop_title_bar.dart';
 
 /// Wraps the app with the custom title bar on desktop. A Column, not an
 /// overlay Stack — the opaque bar must push content down, never occlude it
 /// (macOS traffic lights float over the bar's left edge).
+///
+/// Once the desktop layout applies, the shell draws the merged top bar (or
+/// the two-row fallback) itself, so no strip is drawn here; narrower windows
+/// keep the standalone strip above the page's own bars.
 class DesktopWindowScaffold extends StatelessWidget {
   const DesktopWindowScaffold({super.key, required this.child});
   final Widget child;
@@ -19,6 +24,7 @@ class DesktopWindowScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isDesktopPlatform) return child;
+    if (context.isDesktop) return child;
 
     return Column(
       children: [

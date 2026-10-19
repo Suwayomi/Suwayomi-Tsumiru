@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
+import '../desktop/desktop_top_bar.dart';
 import 'big_screen_navigation_bar.dart';
 
 /// Back button for the AppBars of routes inside [DetailNavigationShellRoute].
@@ -44,37 +45,43 @@ class DetailNavigationShellScreen extends ConsumerWidget {
 
     final shell = ref.read(navigationShellStateProvider).shell;
     final selectedIndex = shell?.currentIndex ?? 0;
+    void goToBranch(int index) {
+      if (shell != null) {
+        shell.goBranch(index, initialLocation: index == selectedIndex);
+        return;
+      }
+      switch (index) {
+        case 0:
+          const LibraryRoute(categoryId: 0).go(context);
+        case 1:
+          const UpdatesRoute().go(context);
+        case 2:
+          const HistoryTabRoute().go(context);
+        case 3:
+          const BrowseSourceRoute().go(context);
+        case 4:
+          const DownloadsRoute().go(context);
+        case 5:
+          const MoreRoute().go(context);
+      }
+    }
+
     return Scaffold(
       body: SafeArea(
-        child: Row(
+        child: Column(
           children: [
-            BigScreenNavigationBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (index) {
-                if (shell != null) {
-                  shell.goBranch(
-                    index,
-                    initialLocation: index == selectedIndex,
-                  );
-                  return;
-                }
-                switch (index) {
-                  case 0:
-                    const LibraryRoute(categoryId: 0).go(context);
-                  case 1:
-                    const UpdatesRoute().go(context);
-                  case 2:
-                    const HistoryTabRoute().go(context);
-                  case 3:
-                    const BrowseSourceRoute().go(context);
-                  case 4:
-                    const DownloadsRoute().go(context);
-                  case 5:
-                    const MoreRoute().go(context);
-                }
-              },
+            if (useDesktopTopBar(context)) const DesktopTopBar(),
+            Expanded(
+              child: Row(
+                children: [
+                  BigScreenNavigationBar(
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: goToBranch,
+                  ),
+                  Expanded(child: child),
+                ],
+              ),
             ),
-            Expanded(child: child),
           ],
         ),
       ),

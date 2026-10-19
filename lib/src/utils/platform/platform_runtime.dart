@@ -22,6 +22,18 @@ bool get isKeyboardRuntime => kIsWeb || isDesktopPlatform;
 @visibleForTesting
 bool? debugAndroidOverride;
 
+/// Test-only override for the macOS top-bar/sidebar branch (traffic-lights
+/// inset instead of the logo block, 80 px collapsed sidebar). Null (the
+/// default) uses the real platform; widget tests set it to exercise the macOS
+/// layout on a Linux VM.
+@visibleForTesting
+bool? debugMacOSOverride;
+
+/// True on macOS. Tests opt into the macOS layout via [debugMacOSOverride];
+/// production reads the real platform.
+bool get isMacOSRuntime =>
+    debugMacOSOverride ?? (!kIsWeb && Platform.isMacOS);
+
 /// True on Android. Tests opt into the Android-only rows via
 /// [debugAndroidOverride]; production reads the real platform.
 bool get isAndroidRuntime =>
