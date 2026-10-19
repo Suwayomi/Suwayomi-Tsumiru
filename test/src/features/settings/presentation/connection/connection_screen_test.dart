@@ -12,6 +12,12 @@ void main() {
   testWidgets('ConnectionScreen shows the Server address section', (
     tester,
   ) async {
+    // Phone surface: the page keeps its own AppBar here (desktop draws
+    // the toolbar in the shell bar instead); the sections below are
+    // layout-independent.
+    tester.view.physicalSize = const Size(412, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({});
     final sp = await SharedPreferences.getInstance();
 
@@ -36,6 +42,12 @@ void main() {
   testWidgets('ConnectionScreen shows LAN status after a LAN address is set', (
     tester,
   ) async {
+    // Phone surface: the page keeps its own AppBar here (desktop draws
+    // the toolbar in the shell bar instead); the sections below are
+    // layout-independent.
+    tester.view.physicalSize = const Size(412, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({
       DBKeys.serverExternalUrl.name: 'https://example.com',
       DBKeys.serverLanUrl.name: 'http://192.168.1.100:4567',
@@ -60,7 +72,16 @@ void main() {
   });
 
   group('cleartext warning', () {
-    Future<void> pumpWith(WidgetTester tester, Map<String, Object> prefs) async {
+    Future<void> pumpWith(
+      WidgetTester tester,
+      Map<String, Object> prefs,
+    ) async {
+      // Phone surface: the page keeps its own AppBar here (desktop draws
+      // the toolbar in the shell bar instead); the sections below are
+      // layout-independent.
+      tester.view.physicalSize = const Size(412, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       SharedPreferences.setMockInitialValues(prefs);
       final sp = await SharedPreferences.getInstance();
       await tester.pumpWidget(

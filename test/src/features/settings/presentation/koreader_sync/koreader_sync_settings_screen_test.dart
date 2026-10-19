@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/ast.dart';
 import 'package:graphql/client.dart';
@@ -13,6 +14,7 @@ import 'package:tsumiru/src/features/settings/presentation/koreader_sync/koreade
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 class KoSyncLink extends Link {
   KoSyncLink({this.connectSucceeds = true});
@@ -91,6 +93,17 @@ Future<void> pumpScreen(
 }) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   final client = GraphQLClient(
     link: link,
     cache: GraphQLCache(store: InMemoryStore()),
@@ -109,10 +122,20 @@ Future<void> pumpScreen(
           ),
         ...overrides,
       ],
-      child: const MaterialApp(
+      // Native desktop draws the toolbar in the shell bar above the page.
+      child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: KoreaderSyncSettingsScreen(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                if (useDesktopTopBar(context)) const DesktopTopBar(),
+                const Expanded(child: KoreaderSyncSettingsScreen()),
+              ],
+            ),
+          ),
+        ),
       ),
     ),
   );

@@ -254,9 +254,7 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
       if (!mounted) return;
       final latest = _entry;
       if (latest == null) return;
-      ref
-          .read(topBarSlotRegistryProvider.notifier)
-          .setEntry(_routeKey, latest);
+      ref.read(topBarSlotRegistryProvider.notifier).setEntry(_routeKey, latest);
     });
   }
 
@@ -325,19 +323,22 @@ class DesktopTopBar extends ConsumerWidget {
               slotMinWidth: entry.minWidth,
               isMacOS: isMacOS,
             );
+    final theme = Theme.of(context);
     if (!merged) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const DesktopTitleBar(),
-          SizedBox(
+          // The page toolbars are bare rows; the merged bar's surface has to
+          // come from here so the row never goes transparent.
+          Container(
             height: kDesktopTopBarHeight,
+            color: theme.colorScheme.surface,
             child: _slotContent(context, entry, location),
           ),
         ],
       );
     }
-    final theme = Theme.of(context);
     return Container(
       height: kDesktopTopBarHeight,
       color: theme.colorScheme.surface,

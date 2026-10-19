@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,7 @@ import 'package:tsumiru/src/features/offline/data/offline_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/utils/theme/brand.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 final _manga = MangaDto.fromJson({
   '__typename': 'MangaType',
@@ -133,6 +135,22 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+              call,
+            ) async {
+              if (call.method == 'isMaximized') return false;
+              return null;
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('window_manager'),
+                null,
+              ),
+        );
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -151,7 +169,20 @@ void main() {
               ).overrideWith((ref) => _chapter),
               mangaNextUpdateProvider(mangaId: 1).overrideWith((ref) => null),
             ],
-            child: _app(const MangaDetailsScreen(mangaId: 1)),
+            // Native desktop draws the back button and title in the shell
+            // bar above the page.
+            child: _app(
+              Scaffold(
+                body: Builder(
+                  builder: (context) => Column(
+                    children: [
+                      if (useDesktopTopBar(context)) const DesktopTopBar(),
+                      const Expanded(child: MangaDetailsScreen(mangaId: 1)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -167,7 +198,7 @@ void main() {
         if (width >= 1200) {
           final title = tester.widget<Text>(
             find.descendant(
-              of: find.byType(SeriesAppBarTitle),
+              of: find.byType(DesktopTopBar),
               matching: find.text(_manga.title),
             ),
           );

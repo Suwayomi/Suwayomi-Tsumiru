@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,7 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 import 'package:tsumiru/src/routes/router_config.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 
 import '../../../helpers/fake_extension_repository.dart';
 
@@ -70,6 +72,10 @@ Fragment$AccountDto user({int id = 2, bool admin = false}) =>
 
 void main() {
   late ScreenAccountActions actions;
+  // The previous pump's container/tree, retired at the next pump while still
+  // in the test zone: unmounting schedules Riverpod auto-dispose tasks that
+  // only drain while the fake clock can elapse, which teardown cannot do.
+  ProviderContainer? liveContainer;
   Future<void> pump(
     WidgetTester tester, {
     AccountCapability capability = AccountCapability.supported,
@@ -78,17 +84,25 @@ void main() {
     AuthType mode = AuthType.uiLogin,
     bool credentials = true,
   }) async {
+    final retired = liveContainer;
+    liveContainer = null;
+    if (retired != null) {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
+      retired.dispose();
+    }
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     tester.view.reset();
     tester.view.physicalSize = const Size(600, 1500);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    // The container is owned here, not by the widget tree: at 600x1500 More
-    // mounts the desktop search box, whose deferred focus-node unregister
-    // must flush while the container is still alive. Unmount below (before
-    // the dispose teardown) so it fires on a live container instead of the
-    // next test's pump on a dead one.
+    // The container is owned here, not by the widget tree: the next pump (or
+    // the dispose teardown for the last one) retires it while still in the
+    // test zone. A cross-test unmount fires on an already-disposed
+    // container; the slot registry and search-box cleanup tolerate that via
+    // alive/identity guards instead of touching a dead container.
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
@@ -116,18 +130,47 @@ void main() {
         ),
       ],
     );
-    addTearDown(container.dispose);
-    addTearDown(() async {
-      await tester.pumpWidget(const SizedBox());
-      await tester.pumpAndSettle();
+    liveContainer = container;
+    addTearDown(() {
+      // dispose() is idempotent: a retired container is already gone.
+      container.dispose();
+      if (identical(liveContainer, container)) liveContainer = null;
     });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+          call,
+        ) async {
+          if (call.method == 'isMaximized') return false;
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('window_manager'),
+            null,
+          ),
+    );
+    Widget page() => more ? const MoreScreen() : const AccountScreen();
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: more ? const MoreScreen() : const AccountScreen(),
+          // Native desktop draws the toolbar in the shell bar above the
+          // page; narrower surfaces keep the page on its own.
+          home: Builder(
+            builder: (context) => useDesktopTopBar(context)
+                ? Scaffold(
+                    body: Column(
+                      children: [
+                        const DesktopTopBar(),
+                        Expanded(child: page()),
+                      ],
+                    ),
+                  )
+                : page(),
+          ),
         ),
       ),
     );

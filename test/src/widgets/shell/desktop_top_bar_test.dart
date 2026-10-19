@@ -88,20 +88,12 @@ void main() {
   test('breakpoint is built from the actual part widths', () {
     // Brand block + gap + slot + gap + window buttons + gap.
     expect(
-      topBarBreakpoint(
-        brandWidth: 208,
-        slotMinWidth: 500,
-        isMacOS: false,
-      ),
+      topBarBreakpoint(brandWidth: 208, slotMinWidth: 500, isMacOS: false),
       208 + 10 + 500 + 10 + 3 * 46 + 10,
     );
     // macOS draws no window buttons.
     expect(
-      topBarBreakpoint(
-        brandWidth: 208,
-        slotMinWidth: 500,
-        isMacOS: true,
-      ),
+      topBarBreakpoint(brandWidth: 208, slotMinWidth: 500, isMacOS: true),
       208 + 10 + 500 + 10,
     );
   });
@@ -172,6 +164,69 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  Future<void> pumpRoute(
+    WidgetTester tester,
+    Size size, {
+    double slotMinWidth = 500,
+  }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    _mockWindowManager();
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          // The bar lives in the shells, inside the Navigator (under its
+          // Overlay, which the tooltips need) — mirror that here.
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: Column(
+              children: [
+                const DesktopTopBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      BigScreenNavigationBar(
+                        selectedIndex: 0,
+                        onDestinationSelected: (_) {},
+                      ),
+                      Expanded(
+                        child: TopBarSlot(
+                          minWidth: slotMinWidth,
+                          content: const SizedBox(
+                            height: 40,
+                            child: Center(child: Text('Toolbar')),
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [..._overrides(prefs)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
   group('macOS', () {
     setUp(() => debugMacOSOverride = true);
     tearDown(() => debugMacOSOverride = null);
@@ -213,61 +268,29 @@ void main() {
       expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('two-row fallback keeps the inset and drops the buttons', (
+      tester,
+    ) async {
+      // 80 + 10 + 700 + 10 = 800 on macOS, so 700 px falls back.
+      await pumpRoute(tester, const Size(700, 900), slotMinWidth: 700);
+
+      final titleBar = find.byType(DesktopTitleBar);
+      expect(titleBar, findsOneWidget);
+      expect(tester.getSize(titleBar).height, 40);
+      expect(find.byType(TsumiruLogo), findsOneWidget);
+      expect(find.byType(WindowCaptionButton), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('Toolbar')).dy,
+        greaterThan(tester.getRect(titleBar).bottom - 1),
+      );
+      // Auto-collapsed below 1200 px; macOS keeps the 80 px column.
+      expect(tester.getSize(find.byType(DesktopSidebar)).width, 80);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('two-row fallback', () {
-    late SharedPreferences prefs;
-    late GoRouter router;
-
-    Future<void> pumpRoute(WidgetTester tester, Size size) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      _mockWindowManager();
-      SharedPreferences.setMockInitialValues(const {});
-      prefs = await SharedPreferences.getInstance();
-      router = GoRouter(
-        initialLocation: '/',
-        routes: [
-          GoRoute(
-            // The bar lives in the shells, inside the Navigator (under its
-            // Overlay, which the tooltips need) — mirror that here.
-            path: '/',
-            builder: (context, state) => Scaffold(
-              body: Column(
-                children: [
-                  const DesktopTopBar(),
-                  Expanded(
-                    child: TopBarSlot(
-                      minWidth: 500,
-                      content: const SizedBox(
-                        height: 40,
-                        child: Center(child: Text('Toolbar')),
-                      ),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [..._overrides(prefs)],
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-    }
-
     testWidgets('below the breakpoint the title bar and toolbar stack', (
       tester,
     ) async {
@@ -295,6 +318,43 @@ void main() {
       final toolbarRect = tester.getRect(find.text('Toolbar'));
       expect(barRect.contains(toolbarRect.topCenter), isTrue);
       expect(barRect.contains(toolbarRect.bottomCenter), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the sidebar starts under the toolbar row, collapsed', (
+      tester,
+    ) async {
+      await pumpRoute(tester, const Size(600, 900));
+
+      expect(find.byType(DesktopTitleBar), findsOneWidget);
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      // 40 px title bar plus the 64 px toolbar row.
+      expect(barRect.height, 104);
+      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
+      expect(sidebarRect.top, barRect.bottom);
+      // Below 1200 px the sidebar auto-collapses (default preference is
+      // expanded).
+      expect(sidebarRect.width, 60);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('auto-collapse below 1200 px', () {
+    testWidgets('900 px collapses without touching the saved preference', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(const {'sidebarExpanded': true});
+      final prefs = await SharedPreferences.getInstance();
+      await _pumpFrame(tester, prefs, size: const Size(900, 900));
+
+      expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
+      expect(prefs.getBool('sidebarExpanded'), isTrue);
+
+      // Back at 1400 the saved preference applies again, still unchanged.
+      tester.view.physicalSize = const Size(1400, 900);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
+      expect(prefs.getBool('sidebarExpanded'), isTrue);
       expect(tester.takeException(), isNull);
     });
   });
