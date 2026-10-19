@@ -28,13 +28,6 @@ class _ServerImageClient extends http.BaseClient {
         uri.origin == serverOrigin;
     return (isServer ? _server : _external).send(request);
   }
-
-  @override
-  void close() {
-    _server.close();
-    _external.close();
-    super.close();
-  }
 }
 
 class _BrowserImageCacheManager extends CacheManager {
@@ -48,9 +41,8 @@ class _BrowserImageCacheManager extends CacheManager {
 
   final http.Client client;
 
+  // A replaced manager can still serve loads already in progress; closing its
+  // client or cache store would fail them with "Client is already closed".
   @override
-  Future<void> dispose() async {
-    client.close();
-    await super.dispose();
-  }
+  Future<void> dispose() async {}
 }

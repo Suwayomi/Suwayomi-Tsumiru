@@ -485,25 +485,30 @@ class ServerImage extends HookConsumerWidget {
     final fadeDuration = context.reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 150);
-    return CachedNetworkImage(
-      key: key.value,
-      imageUrl: fetchUrl,
-      cacheKey: cacheKey,
-      height: size?.height,
-      cacheManager: cacheManager,
-      httpHeaders: httpHeaders,
-      width: size?.width,
-      fit: fit ?? BoxFit.cover,
-      // Package defaults linger the placeholder a full second after the image
-      // is ready. Zero shows the image at once (octo_image completes it inline).
-      fadeOutDuration: fadeDuration,
-      fadeInDuration: fadeDuration,
-      memCacheWidth: imageBuilder == null ? cacheWidth : null,
-      memCacheHeight: imageBuilder == null ? cacheHeight : null,
-      imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
-      progressIndicatorBuilder: finalProgressIndicatorBuilder,
-      imageBuilder: imageBuilderCapped,
-      errorWidget: errorWidget,
+    // Same cache key under a new manager would otherwise keep the old load,
+    // including its failure, on screen until the widget is recreated.
+    return KeyedSubtree(
+      key: ValueKey(cacheManager),
+      child: CachedNetworkImage(
+        key: key.value,
+        imageUrl: fetchUrl,
+        cacheKey: cacheKey,
+        height: size?.height,
+        cacheManager: cacheManager,
+        httpHeaders: httpHeaders,
+        width: size?.width,
+        fit: fit ?? BoxFit.cover,
+        // Package defaults linger the placeholder a full second after the image
+        // is ready. Zero shows the image at once (octo_image completes it inline).
+        fadeOutDuration: fadeDuration,
+        fadeInDuration: fadeDuration,
+        memCacheWidth: imageBuilder == null ? cacheWidth : null,
+        memCacheHeight: imageBuilder == null ? cacheHeight : null,
+        imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
+        progressIndicatorBuilder: finalProgressIndicatorBuilder,
+        imageBuilder: imageBuilderCapped,
+        errorWidget: errorWidget,
+      ),
     );
   }
 }
