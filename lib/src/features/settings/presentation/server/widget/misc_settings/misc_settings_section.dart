@@ -9,6 +9,7 @@ import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../controller/server_controller.dart';
 import '../../../../domain/settings/settings.dart';
+import '../../../../search/settings_search_registry.dart';
 import '../../data/server_settings_repository.dart';
 
 class MiscSettingsSection extends ConsumerWidget {
@@ -24,36 +25,42 @@ class MiscSettingsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(title: context.l10n.misc),
-        SwitchListTile(
-          title: Text(context.l10n.debugLogs),
-          value: miscSettingsDto.debugLogsEnabled,
-          onChanged: canManage
-              ? (isEnabled) async {
-                  final value = await AppUtils.guard(
-                    () => repository.toggleDebugLogs(isEnabled),
-                    ref.read(toastProvider),
-                  );
-                  if (value != null && context.mounted) {
-                    ref.read(settingsProvider.notifier).updateState(value);
+        SettingsHighlightTarget(
+          id: 'debugLogs',
+          child: SwitchListTile(
+            title: Text(context.l10n.debugLogs),
+            value: miscSettingsDto.debugLogsEnabled,
+            onChanged: canManage
+                ? (isEnabled) async {
+                    final value = await AppUtils.guard(
+                      () => repository.toggleDebugLogs(isEnabled),
+                      ref.read(toastProvider),
+                    );
+                    if (value != null && context.mounted) {
+                      ref.read(settingsProvider.notifier).updateState(value);
+                    }
                   }
-                }
-              : null,
+                : null,
+          ),
         ),
-        SwitchListTile(
-          title: Text(context.l10n.systemTrayIcon),
-          subtitle: Text(context.l10n.systemTrayIcon),
-          value: miscSettingsDto.systemTrayEnabled,
-          onChanged: canManage
-              ? (isEnabled) async {
-                  final value = await AppUtils.guard(
-                    () => repository.toggleSystemTrayEnabled(isEnabled),
-                    ref.read(toastProvider),
-                  );
-                  if (value != null && context.mounted) {
-                    ref.read(settingsProvider.notifier).updateState(value);
+        SettingsHighlightTarget(
+          id: 'systemTrayIcon',
+          child: SwitchListTile(
+            title: Text(context.l10n.systemTrayIcon),
+            subtitle: Text(context.l10n.systemTrayIcon),
+            value: miscSettingsDto.systemTrayEnabled,
+            onChanged: canManage
+                ? (isEnabled) async {
+                    final value = await AppUtils.guard(
+                      () => repository.toggleSystemTrayEnabled(isEnabled),
+                      ref.read(toastProvider),
+                    );
+                    if (value != null && context.mounted) {
+                      ref.read(settingsProvider.notifier).updateState(value);
+                    }
                   }
-                }
-              : null,
+                : null,
+          ),
         ),
       ],
     );

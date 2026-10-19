@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/section_title.dart';
+import '../../../settings/search/settings_search_registry.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/tracking_settings_providers.dart';
 import 'widgets/settings_tracker_tile.dart';
@@ -18,10 +19,12 @@ class TrackingSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final updateAfterReading =
-        ref.watch(updateProgressAfterReadingProvider).ifNull(true);
-    final updateManualMarkRead =
-        ref.watch(updateProgressManualMarkReadProvider).ifNull(true);
+    final updateAfterReading = ref
+        .watch(updateProgressAfterReadingProvider)
+        .ifNull(true);
+    final updateManualMarkRead = ref
+        .watch(updateProgressManualMarkReadProvider)
+        .ifNull(true);
     final trackersAsync = ref.watch(trackersProvider);
 
     return ListTileTheme(
@@ -31,36 +34,42 @@ class TrackingSettingsScreen extends ConsumerWidget {
         ),
       ),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(context.l10n.tracking),
-        ),
-        body: ListView(
-          children: [
-            SwitchListTile(
-              title: Text(context.l10n.updateProgressAfterReading),
-              value: updateAfterReading,
-              onChanged: (value) => ref
-                  .read(updateProgressAfterReadingProvider.notifier)
-                  .update(value),
-            ),
-            SwitchListTile(
-              title: Text(context.l10n.updateProgressManualMarkRead),
-              subtitle: Text(context.l10n.updateProgressManualMarkReadDesc),
-              value: updateManualMarkRead,
-              onChanged: (value) => ref
-                  .read(updateProgressManualMarkReadProvider.notifier)
-                  .update(value),
-            ),
-            SectionTitle(title: context.l10n.trackers),
-            trackersAsync.showUiWhenData(
-              context,
-              (trackers) => Column(
-                children: trackers
-                    .map((t) => SettingsTrackerTile(tracker: t))
-                    .toList(),
+        appBar: AppBar(title: Text(context.l10n.tracking)),
+        body: SettingsHighlightScope(
+          child: ListView(
+            children: [
+              SettingsHighlightTarget(
+                id: 'updateProgressAfterReading',
+                child: SwitchListTile(
+                  title: Text(context.l10n.updateProgressAfterReading),
+                  value: updateAfterReading,
+                  onChanged: (value) => ref
+                      .read(updateProgressAfterReadingProvider.notifier)
+                      .update(value),
+                ),
               ),
-            ),
-          ],
+              SettingsHighlightTarget(
+                id: 'updateProgressManualMarkRead',
+                child: SwitchListTile(
+                  title: Text(context.l10n.updateProgressManualMarkRead),
+                  subtitle: Text(context.l10n.updateProgressManualMarkReadDesc),
+                  value: updateManualMarkRead,
+                  onChanged: (value) => ref
+                      .read(updateProgressManualMarkReadProvider.notifier)
+                      .update(value),
+                ),
+              ),
+              SectionTitle(title: context.l10n.trackers),
+              trackersAsync.showUiWhenData(
+                context,
+                (trackers) => Column(
+                  children: trackers
+                      .map((t) => SettingsTrackerTile(tracker: t))
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

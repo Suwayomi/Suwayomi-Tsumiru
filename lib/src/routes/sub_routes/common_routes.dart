@@ -145,13 +145,15 @@ class UpcomingRoute extends GoRouteData with $UpcomingRoute {
 
   static final $parentNavigatorKey = rootNavigatorKey;
 
+  Widget get _screen => const UpcomingScreen();
+
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const DetailNavigationShellScreen(child: UpcomingScreen());
+      DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const UpcomingScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 @TypedGoRoute<OnboardingRoute>(path: Routes.onboarding)

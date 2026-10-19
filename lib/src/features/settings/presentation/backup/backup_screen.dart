@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../controller/server_controller.dart';
+import '../../search/settings_search_registry.dart';
 import 'widgets/automatic_backup/automatic_backup_section.dart';
 import 'widgets/backup_and_restore/backup_and_restore_section.dart';
 
@@ -27,11 +28,13 @@ class BackupScreen extends ConsumerWidget {
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          child: ListView(
-            children: const [
-              BackupAndRestoreSection(),
-              AutomaticBackupSection(),
-            ],
+          child: SettingsHighlightScope(
+            child: ListView(
+              children: const [
+                BackupAndRestoreSection(),
+                AutomaticBackupSection(),
+              ],
+            ),
           ),
         ),
       ),

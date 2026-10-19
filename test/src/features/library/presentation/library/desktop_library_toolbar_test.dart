@@ -21,6 +21,8 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
 
+import '../../../../../helpers/unreachable_server_stubs.dart';
+
 Future<ProviderContainer> _pumpToolbar(
   WidgetTester tester, {
   double width = 1400,
@@ -43,6 +45,7 @@ Future<ProviderContainer> _pumpToolbar(
       visibleCategoryListProvider.overrideWithValue(
         const AsyncData(<Fragment$CategoryDto>[]),
       ),
+      ...unreachableServerStubs,
     ],
   );
   addTearDown(container.dispose);

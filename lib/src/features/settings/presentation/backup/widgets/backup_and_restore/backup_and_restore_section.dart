@@ -10,6 +10,7 @@ import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../domain/settings/settings.dart';
+import '../../../../search/settings_search_registry.dart';
 import '../../data/backup_settings_repository.dart';
 import 'widgets/backup_missing_dialog.dart';
 import 'widgets/create_backup_dialog.dart';
@@ -113,19 +114,26 @@ class BackupAndRestoreSection extends HookConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(title: context.l10n.backupAndRestore),
-        ListTile(
-          title: Text(context.l10n.createBackupTitle),
-          subtitle: Text(context.l10n.createBackupDescription),
-          leading: const Icon(Icons.backup_rounded),
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => const CreateBackupDialog(),
-              animationStyle: context.motionStyle,
-            );
-          },
+        // The include-*. checkboxes live in the CreateBackupDialog, not on
+        // this page, so they stay out of search: only the two rows below.
+        SettingsHighlightTarget(
+          id: 'createBackup',
+          child: ListTile(
+            title: Text(context.l10n.createBackupTitle),
+            subtitle: Text(context.l10n.createBackupDescription),
+            leading: const Icon(Icons.backup_rounded),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => const CreateBackupDialog(),
+                animationStyle: context.motionStyle,
+              );
+            },
+          ),
         ),
-        ListTile(
+        SettingsHighlightTarget(
+          id: 'restoreBackup',
+          child: ListTile(
           title: Text(context.l10n.restoreBackupTitle),
           subtitle: Text(context.l10n.restoreBackupDescription),
           leading: const Icon(Icons.restore_rounded),
@@ -149,6 +157,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
               : null,
           onTap: () async =>
               restoreId.value = await backupFilePicker(ref, context),
+          ),
         ),
         const Gap(8),
       ],

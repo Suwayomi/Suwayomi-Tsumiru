@@ -28,13 +28,14 @@ class AboutRoute extends GoRouteData with $AboutRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const AboutScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: AboutScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const AboutScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class SettingsRoute extends GoRouteData with $SettingsRoute {
@@ -42,27 +43,33 @@ class SettingsRoute extends GoRouteData with $SettingsRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const SettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: SettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const SettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class LibrarySettingsRoute extends GoRouteData with $LibrarySettingsRoute {
-  const LibrarySettingsRoute();
+  const LibrarySettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const LibrarySettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: LibrarySettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const LibrarySettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
@@ -70,70 +77,91 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const EditCategoryScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: EditCategoryScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const EditCategoryScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
-  const ReaderSettingsRoute();
+  const ReaderSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const ReaderSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: ReaderSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const ReaderSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class AppearanceSettingsRoute extends GoRouteData
     with $AppearanceSettingsRoute {
-  const AppearanceSettingsRoute();
+  const AppearanceSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const AppearanceScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: AppearanceScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const AppearanceScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
-  const GeneralSettingsRoute();
+  const GeneralSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const GeneralScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: GeneralScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const GeneralScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
-  const BrowseSettingsRoute();
+  const BrowseSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const BrowseSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: BrowseSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const BrowseSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
@@ -141,55 +169,76 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const ExtensionStoreScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: ExtensionStoreScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const ExtensionStoreScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class BackupRoute extends GoRouteData with $BackupRoute {
-  const BackupRoute();
+  const BackupRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const BackupScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: BackupScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const BackupScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
-  const ServerSettingsRoute();
+  const ServerSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const ServerScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: ServerScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const ServerScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
-  const DownloadsSettingsRoute();
+  const DownloadsSettingsRoute({this.highlight, this.tab});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  /// Tab to open alongside [highlight]: 0 Server, 1 On device. Null (or an
+  /// out-of-range value) opens the Server tab. Any tabbed settings page can
+  /// reuse this `highlight` + `tab` pair; the entry's `tabIndex` carries it.
+  final int? tab;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => DownloadsSettingsScreen(initialTab: tab ?? 0);
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: DownloadsSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const DownloadsSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
@@ -197,85 +246,111 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const OfflineSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: OfflineSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const OfflineSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class NotificationsSettingsRoute extends GoRouteData
     with $NotificationsSettingsRoute {
-  const NotificationsSettingsRoute();
+  const NotificationsSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const NotificationsSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: NotificationsSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const NotificationsSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class ConnectionRoute extends GoRouteData with $ConnectionRoute {
-  const ConnectionRoute();
+  const ConnectionRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const ConnectionScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: ConnectionScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const ConnectionScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class TrackingSettingsRoute extends GoRouteData with $TrackingSettingsRoute {
-  const TrackingSettingsRoute();
+  const TrackingSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const TrackingSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: TrackingSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const TrackingSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class SyncYomiSettingsRoute extends GoRouteData with $SyncYomiSettingsRoute {
-  const SyncYomiSettingsRoute();
+  const SyncYomiSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const SyncYomiSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: SyncYomiSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const SyncYomiSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class KoreaderSyncSettingsRoute extends GoRouteData
     with $KoreaderSyncSettingsRoute {
-  const KoreaderSyncSettingsRoute();
+  const KoreaderSyncSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const KoreaderSyncSettingsScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: KoreaderSyncSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const KoreaderSyncSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
@@ -283,13 +358,15 @@ class HotkeysSettingsRoute extends GoRouteData with $HotkeysSettingsRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const HotkeysSettingsScreen();
+
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      const DetailNavigationShellScreen(child: HotkeysSettingsScreen());
+      DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const HotkeysSettingsScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class AccountRoute extends GoRouteData with $AccountRoute {
@@ -297,13 +374,14 @@ class AccountRoute extends GoRouteData with $AccountRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const AccountScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: AccountScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const AccountScreen());
+      detailNavigationPage(context, state, _screen);
 }
 
 class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
@@ -311,11 +389,12 @@ class ManageUsersRoute extends GoRouteData with $ManageUsersRoute {
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
+  Widget get _screen => const ManageUsersScreen();
+
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: ManageUsersScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(child: _screen);
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      detailNavigationPage(context, state, const ManageUsersScreen());
+      detailNavigationPage(context, state, _screen);
 }

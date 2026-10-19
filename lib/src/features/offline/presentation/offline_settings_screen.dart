@@ -16,6 +16,7 @@ import '../../../widgets/section_title.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../notifications/controller/notification_settings_providers.dart';
 import '../../notifications/controller/notifications_controller.dart';
+import '../../settings/search/settings_search_registry.dart';
 import '../data/background/catchup_settings.dart';
 import '../data/offline_download_providers.dart';
 import '../data/offline_repository.dart';
@@ -41,71 +42,81 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
     const InactiveAccountCatalogueTiles(),
     const OfflineServerMismatchBanner(showAfterDismissal: true),
     SectionTitle(title: context.l10n.offlineStorageSection),
+    // Storage used is info only (no action), so it stays out of search.
     ListTile(
       title: Text(context.l10n.offlineStorageUsage),
       subtitle: Text(
         formatBytes(ref.watch(offlineUsageBytesProvider).value ?? 0),
       ),
     ),
-    ListTile(
-      title: Text(context.l10n.offlineRemoveAllDownloads),
-      onTap: () async {
-        final current = ref
-            .read(authCredentialsStoreProvider.notifier)
-            .captureSession();
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            content: Text(context.l10n.offlineRemoveAllConfirm),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(context.l10n.cancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(context.l10n.delete),
-              ),
-            ],
-          ),
-          animationStyle: context.motionStyle,
-        );
-        if (confirmed != true || !context.mounted || !current()) return;
-        try {
-          await removeAllDownloadsFromDevice(ref);
-        } finally {
-          if (context.mounted && current()) {
-            ref.invalidate(offlineUsageBytesProvider);
+    SettingsHighlightTarget(
+      id: 'removeAllDownloads',
+      child: ListTile(
+        title: Text(context.l10n.offlineRemoveAllDownloads),
+        onTap: () async {
+          final current = ref
+              .read(authCredentialsStoreProvider.notifier)
+              .captureSession();
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              content: Text(context.l10n.offlineRemoveAllConfirm),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(context.l10n.cancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(context.l10n.delete),
+                ),
+              ],
+            ),
+            animationStyle: context.motionStyle,
+          );
+          if (confirmed != true || !context.mounted || !current()) return;
+          try {
+            await removeAllDownloadsFromDevice(ref);
+          } finally {
+            if (context.mounted && current()) {
+              ref.invalidate(offlineUsageBytesProvider);
+            }
           }
-        }
-      },
+        },
+      ),
     ),
     SectionTitle(title: context.l10n.offlineDownloadsSection),
-    SettingsPropTile(
-      title: context.l10n.downloadOverWifiOnly,
-      type: SettingsPropType.switchTile(
-        value: ref.watch(offlineWifiOnlyProvider) ?? true,
-        onChanged: (v) async {
-          ref.read(offlineWifiOnlyProvider.notifier).update(v);
-          return null;
-        },
+    SettingsHighlightTarget(
+      id: 'offlineWifiOnly',
+      child: SettingsPropTile(
+        title: context.l10n.downloadOverWifiOnly,
+        type: SettingsPropType.switchTile(
+          value: ref.watch(offlineWifiOnlyProvider) ?? true,
+          onChanged: (v) async {
+            ref.read(offlineWifiOnlyProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
     ),
     // Background wake-ups are Android's WorkManager; on other platforms the
     // in-app triggers (launch, update-finish, queue-drain) are the coverage,
     // so the switch would be a lie there.
     if (isAndroidNative) ...[
-      SettingsPropTile(
-        title: context.l10n.downloadNewChaptersInBackground,
-        subtitle: context.l10n.downloadNewChaptersInBackgroundDescription,
-        type: SettingsPropType.switchTile(
-          value: ref.watch(backgroundCatchupEnabledProvider),
-          onChanged: (v) async {
-            await ref
-                .read(backgroundCatchupEnabledProvider.notifier)
-                .setEnabled(v);
-            return null;
-          },
+      SettingsHighlightTarget(
+        id: 'backgroundCatchup',
+        child: SettingsPropTile(
+          title: context.l10n.downloadNewChaptersInBackground,
+          subtitle: context.l10n.downloadNewChaptersInBackgroundDescription,
+          type: SettingsPropType.switchTile(
+            value: ref.watch(backgroundCatchupEnabledProvider),
+            onChanged: (v) async {
+              await ref
+                  .read(backgroundCatchupEnabledProvider.notifier)
+                  .setEnabled(v);
+              return null;
+            },
+          ),
         ),
       ),
       // Both sub-options are meaningless with the run itself switched off —
@@ -115,101 +126,122 @@ List<Widget> buildOnDeviceStorageTiles(BuildContext context, WidgetRef ref) {
       // here too rather than only being reachable from a screen this toggle
       // doesn't depend on.
       if (ref.watch(backgroundCatchupEnabledProvider)) ...[
-        ListTile(
-          title: Text(context.l10n.notificationsCheckInterval),
-          trailing: DropdownButton<int>(
-            value: ref.watch(notificationsCheckIntervalHoursProvider) ?? 6,
-            onChanged: (v) async {
-              if (v == null) return;
-              ref
-                  .read(notificationsCheckIntervalHoursProvider.notifier)
-                  .update(v);
-              await ref.read(notificationsControllerProvider).sync();
-            },
-            items: const [1, 2, 3, 6, 12, 24]
-                .map((h) => DropdownMenuItem(value: h, child: Text('${h}h')))
-                .toList(),
+        SettingsHighlightTarget(
+          id: 'backgroundCheckInterval',
+          child: ListTile(
+            title: Text(context.l10n.notificationsCheckInterval),
+            trailing: DropdownButton<int>(
+              value: ref.watch(notificationsCheckIntervalHoursProvider) ?? 6,
+              onChanged: (v) async {
+                if (v == null) return;
+                ref
+                    .read(notificationsCheckIntervalHoursProvider.notifier)
+                    .update(v);
+                await ref.read(notificationsControllerProvider).sync();
+              },
+              items: const [1, 2, 3, 6, 12, 24]
+                  .map((h) => DropdownMenuItem(value: h, child: Text('${h}h')))
+                  .toList(),
+            ),
           ),
         ),
-        SettingsPropTile(
-          title: context.l10n.backgroundCatchupFetchFiles,
-          subtitle: context.l10n.backgroundCatchupFetchFilesDescription,
-          type: SettingsPropType.switchTile(
-            value: ref.watch(backgroundCatchupDownloadEnabledProvider),
-            onChanged: (v) async {
-              await ref
-                  .read(backgroundCatchupDownloadEnabledProvider.notifier)
-                  .setEnabled(v);
-              return null;
-            },
+        SettingsHighlightTarget(
+          id: 'backgroundFetchFiles',
+          child: SettingsPropTile(
+            title: context.l10n.backgroundCatchupFetchFiles,
+            subtitle: context.l10n.backgroundCatchupFetchFilesDescription,
+            type: SettingsPropType.switchTile(
+              value: ref.watch(backgroundCatchupDownloadEnabledProvider),
+              onChanged: (v) async {
+                await ref
+                    .read(backgroundCatchupDownloadEnabledProvider.notifier)
+                    .setEnabled(v);
+                return null;
+              },
+            ),
           ),
         ),
       ],
     ],
-    SettingsPropTile(
-      title: context.l10n.offlineConcurrencyLabel,
-      subtitle: context.l10n.offlineConcurrencyValue(
-        ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
-      ),
-      type: SettingsPropType.numberSlider(
-        min: 1,
-        max: 8,
-        value: ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
-        onChanged: (v) async {
-          ref.read(offlineDownloadConcurrencyProvider.notifier).update(v);
-          return null;
-        },
+    SettingsHighlightTarget(
+      id: 'offlineConcurrency',
+      child: SettingsPropTile(
+        title: context.l10n.offlineConcurrencyLabel,
+        subtitle: context.l10n.offlineConcurrencyValue(
+          ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
+        ),
+        type: SettingsPropType.numberSlider(
+          min: 1,
+          max: 8,
+          value: ref.watch(offlineDownloadConcurrencyProvider) ?? 2,
+          onChanged: (v) async {
+            ref.read(offlineDownloadConcurrencyProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
     ),
     SectionTitle(title: context.l10n.offlineSafetyNets),
-    SettingsPropTile(
-      title: context.l10n.offlineStorageCapEnable,
-      type: SettingsPropType.switchTile(
-        value: ref.watch(offlineStorageCapEnabledProvider) ?? false,
-        onChanged: (v) async {
-          ref.read(offlineStorageCapEnabledProvider.notifier).update(v);
-          return null;
-        },
+    SettingsHighlightTarget(
+      id: 'offlineStorageCapEnable',
+      child: SettingsPropTile(
+        title: context.l10n.offlineStorageCapEnable,
+        type: SettingsPropType.switchTile(
+          value: ref.watch(offlineStorageCapEnabledProvider) ?? false,
+          onChanged: (v) async {
+            ref.read(offlineStorageCapEnabledProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
     ),
-    SettingsPropTile(
-      title: context.l10n.offlineStorageCapLimit,
-      subtitle: context.l10n.offlineMegabytes(
-        ref.watch(offlineStorageCapMbProvider) ?? 2000,
-      ),
-      type: SettingsPropType.numberSlider(
-        min: 100,
-        max: 50000,
-        value: ref.watch(offlineStorageCapMbProvider) ?? 2000,
-        onChanged: (v) async {
-          ref.read(offlineStorageCapMbProvider.notifier).update(v);
-          return null;
-        },
-      ),
-    ),
-    SettingsPropTile(
-      title: context.l10n.offlineTimeEvictEnable,
-      type: SettingsPropType.switchTile(
-        value: ref.watch(offlineTimeEvictEnabledProvider) ?? false,
-        onChanged: (v) async {
-          ref.read(offlineTimeEvictEnabledProvider.notifier).update(v);
-          return null;
-        },
+    SettingsHighlightTarget(
+      id: 'offlineStorageCapLimit',
+      child: SettingsPropTile(
+        title: context.l10n.offlineStorageCapLimit,
+        subtitle: context.l10n.offlineMegabytes(
+          ref.watch(offlineStorageCapMbProvider) ?? 2000,
+        ),
+        type: SettingsPropType.numberSlider(
+          min: 100,
+          max: 50000,
+          value: ref.watch(offlineStorageCapMbProvider) ?? 2000,
+          onChanged: (v) async {
+            ref.read(offlineStorageCapMbProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
     ),
-    SettingsPropTile(
-      title: context.l10n.offlineKeepDaysLabel,
-      subtitle: context.l10n.offlineDays(
-        ref.watch(offlineKeepDaysProvider) ?? 30,
+    SettingsHighlightTarget(
+      id: 'offlineTimeEvictEnable',
+      child: SettingsPropTile(
+        title: context.l10n.offlineTimeEvictEnable,
+        type: SettingsPropType.switchTile(
+          value: ref.watch(offlineTimeEvictEnabledProvider) ?? false,
+          onChanged: (v) async {
+            ref.read(offlineTimeEvictEnabledProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
-      type: SettingsPropType.numberSlider(
-        min: 1,
-        max: 365,
-        value: ref.watch(offlineKeepDaysProvider) ?? 30,
-        onChanged: (v) async {
-          ref.read(offlineKeepDaysProvider.notifier).update(v);
-          return null;
-        },
+    ),
+    SettingsHighlightTarget(
+      id: 'offlineKeepDays',
+      child: SettingsPropTile(
+        title: context.l10n.offlineKeepDaysLabel,
+        subtitle: context.l10n.offlineDays(
+          ref.watch(offlineKeepDaysProvider) ?? 30,
+        ),
+        type: SettingsPropType.numberSlider(
+          min: 1,
+          max: 365,
+          value: ref.watch(offlineKeepDaysProvider) ?? 30,
+          onChanged: (v) async {
+            ref.read(offlineKeepDaysProvider.notifier).update(v);
+            return null;
+          },
+        ),
       ),
     ),
   ];

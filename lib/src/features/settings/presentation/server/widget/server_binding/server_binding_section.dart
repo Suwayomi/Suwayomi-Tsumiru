@@ -8,6 +8,7 @@ import '../../../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../../account/data/account_providers.dart';
 import '../../../../domain/settings/settings.dart';
+import '../../../../search/settings_search_registry.dart';
 import '../../data/server_settings_repository.dart';
 
 class ServerBindingSection extends ConsumerWidget {
@@ -24,25 +25,31 @@ class ServerBindingSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionTitle(title: context.l10n.serverBindings),
-        SettingsPropTile(
-          title: context.l10n.ip,
-          leading: const Icon(Icons.computer_rounded),
-          type: SettingsPropType.textField(
-            hintText: context.l10n.ipHintText,
-            value: serverBindingDto.ip,
-            onChanged: canManage ? repository.updateIpAddress : null,
+        SettingsHighlightTarget(
+          id: 'serverIpAddress',
+          child: SettingsPropTile(
+            title: context.l10n.ip,
+            leading: const Icon(Icons.computer_rounded),
+            type: SettingsPropType.textField(
+              hintText: context.l10n.ipHintText,
+              value: serverBindingDto.ip,
+              onChanged: canManage ? repository.updateIpAddress : null,
+            ),
+            subtitle: serverBindingDto.ip,
           ),
-          subtitle: serverBindingDto.ip,
         ),
-        SettingsPropTile(
-          title: context.l10n.serverPort,
-          subtitle: serverBindingDto.port.toString(),
-          leading: const Icon(Icons.dns_rounded),
-          type: SettingsPropType.numberPicker(
-            min: 0,
-            max: 65535,
-            value: serverBindingDto.port,
-            onChanged: canManage ? repository.updatePort : null,
+        SettingsHighlightTarget(
+          id: 'serverPort',
+          child: SettingsPropTile(
+            title: context.l10n.serverPort,
+            subtitle: serverBindingDto.port.toString(),
+            leading: const Icon(Icons.dns_rounded),
+            type: SettingsPropType.numberPicker(
+              min: 0,
+              max: 65535,
+              value: serverBindingDto.port,
+              onChanged: canManage ? repository.updatePort : null,
+            ),
           ),
         ),
       ],

@@ -16,6 +16,7 @@ import '../../../offline/presentation/offline_settings_screen.dart';
 import '../../controller/server_controller.dart';
 import '../../data/user_settings.dart';
 import '../../domain/settings/settings.dart';
+import '../../search/settings_search_registry.dart';
 import 'data/delete_chapters_settings_repository.dart';
 import 'data/downloads_settings_repository.dart';
 import 'widgets/auto_download_categories_dialog.dart';
@@ -39,6 +40,10 @@ String _deleteWhileReadingLabel(BuildContext context, int value) =>
 /// chapters while reading" row — the option that controls whether they're
 /// meaningful at all — rather than at the end of the section, so a
 /// dependent toggle stays visually attached to what governs it.
+///
+/// [targetIdPrefix] namespaces the three rows' highlight ids per tab
+/// ('server' / 'device'): the two tabs share titles but never target ids,
+/// so search can scroll to the right tab's row.
 List<Widget> _deleteSection(
   BuildContext context, {
   required String title,
@@ -47,6 +52,7 @@ List<Widget> _deleteSection(
   required Future<void> Function(bool) onManual,
   required void Function(int) onWhileReading,
   required Future<void> Function(bool) onBookmark,
+  required String targetIdPrefix,
   List<Widget> whileReadingSubOptions = const [],
 }) => [
   SectionTitle(title: title),
@@ -59,39 +65,48 @@ List<Widget> _deleteSection(
       ),
     ),
   ),
-  SettingsPropTile(
-    title: context.l10n.deleteChapterAfterManuallyMarkedRead,
-    type: SettingsPropType.switchTile(
-      value: settings.deleteManuallyMarkedRead,
-      onChanged: onManual,
+  SettingsHighlightTarget(
+    id: '${targetIdPrefix}DeleteManuallyMarkedRead',
+    child: SettingsPropTile(
+      title: context.l10n.deleteChapterAfterManuallyMarkedRead,
+      type: SettingsPropType.switchTile(
+        value: settings.deleteManuallyMarkedRead,
+        onChanged: onManual,
+      ),
     ),
   ),
-  ListTile(
-    title: Text(context.l10n.deleteFinishedChaptersWhileReading),
-    subtitle: Text(
-      _deleteWhileReadingLabel(context, settings.deleteWhileReading),
-    ),
-    onTap: () => showDialog(
-      context: context,
-      builder: (context) => RadioListPopup<int>(
-        title: context.l10n.deleteFinishedChaptersWhileReading,
-        optionList: const [0, 1, 2, 3, 4, 5],
-        getOptionTitle: (value) => _deleteWhileReadingLabel(context, value),
-        value: settings.deleteWhileReading,
-        onChange: (value) {
-          onWhileReading(value);
-          if (context.mounted) Navigator.pop(context);
-        },
+  SettingsHighlightTarget(
+    id: '${targetIdPrefix}DeleteWhileReading',
+    child: ListTile(
+      title: Text(context.l10n.deleteFinishedChaptersWhileReading),
+      subtitle: Text(
+        _deleteWhileReadingLabel(context, settings.deleteWhileReading),
       ),
-      animationStyle: context.motionStyle,
+      onTap: () => showDialog(
+        context: context,
+        builder: (context) => RadioListPopup<int>(
+          title: context.l10n.deleteFinishedChaptersWhileReading,
+          optionList: const [0, 1, 2, 3, 4, 5],
+          getOptionTitle: (value) => _deleteWhileReadingLabel(context, value),
+          value: settings.deleteWhileReading,
+          onChange: (value) {
+            onWhileReading(value);
+            if (context.mounted) Navigator.pop(context);
+          },
+        ),
+        animationStyle: context.motionStyle,
+      ),
     ),
   ),
   ...whileReadingSubOptions,
-  SettingsPropTile(
-    title: context.l10n.allowDeletingBookmarkedChapters,
-    type: SettingsPropType.switchTile(
-      value: settings.deleteWithBookmark,
-      onChanged: onBookmark,
+  SettingsHighlightTarget(
+    id: '${targetIdPrefix}DeleteWithBookmark',
+    child: SettingsPropTile(
+      title: context.l10n.allowDeletingBookmarkedChapters,
+      type: SettingsPropType.switchTile(
+        value: settings.deleteWithBookmark,
+        onChanged: onBookmark,
+      ),
     ),
   ),
 ];
@@ -129,13 +144,21 @@ class _SubSwitchTile extends StatelessWidget {
 /// Downloads settings, split into two tabs:
 ///   * Server — what the Suwayomi server downloads from sources.
 ///   * On-device — copies kept on this phone (Wi-Fi-only, storage, deletion).
+///
+/// [initialTab] selects the tab the page opens on (0 Server, 1 On device).
+/// Search entries carry it as `tabIndex` and the route as the `tab` query
+/// value, so opening a result lands on the tab its row lives on before the
+/// highlight seeks. Out-of-range values fall back to Server.
 class DownloadsSettingsScreen extends StatelessWidget {
-  const DownloadsSettingsScreen({super.key});
+  const DownloadsSettingsScreen({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTab.clamp(0, 1),
       animationDuration: context.reduceMotion
           ? Duration.zero
           : kTabScrollDuration,
@@ -201,94 +224,122 @@ class _ServerDownloadsTab extends ConsumerWidget {
             title: context.l10n.noPropFound(context.l10n.settings),
           );
         }
-        return ListView(
-          children: [
-            SectionTitle(title: context.l10n.general),
-            SettingsPropTile(
-              title: context.l10n.downloadLocation,
-              description: canManage
-                  ? context.l10n.downloadLocationHint
-                  : context.l10n.manageSettingsPermissionRequired,
-              type: SettingsPropType.textField(
-                hintText: context.l10n.enterProp(context.l10n.downloadLocation),
-                value: downloadsSettingsDto.downloadsPath,
-                onChanged: canManage
-                    ? repository.updateDownloadsLocation
-                    : null,
+        // Permission/personal gates only disable these rows (onChanged null);
+        // they stay mounted, so every Server entry is always visible.
+        return SettingsHighlightScope(
+          child: ListView(
+            children: [
+              SectionTitle(title: context.l10n.general),
+              SettingsHighlightTarget(
+                id: 'downloadLocation',
+                child: SettingsPropTile(
+                  title: context.l10n.downloadLocation,
+                  description: canManage
+                      ? context.l10n.downloadLocationHint
+                      : context.l10n.manageSettingsPermissionRequired,
+                  type: SettingsPropType.textField(
+                    hintText: context.l10n.enterProp(
+                      context.l10n.downloadLocation,
+                    ),
+                    value: downloadsSettingsDto.downloadsPath,
+                    onChanged: canManage
+                        ? repository.updateDownloadsLocation
+                        : null,
+                  ),
+                  subtitle: canManage
+                      ? downloadsSettingsDto.downloadsPath
+                      : context.l10n.manageSettingsPermissionRequired,
+                ),
               ),
-              subtitle: canManage
-                  ? downloadsSettingsDto.downloadsPath
-                  : context.l10n.manageSettingsPermissionRequired,
-            ),
-            SettingsPropTile(
-              title: context.l10n.saveAsCBZArchive,
-              subtitle: canManage
-                  ? null
-                  : context.l10n.manageSettingsPermissionRequired,
-              type: SettingsPropType.switchTile(
-                value: downloadsSettingsDto.downloadAsCbz,
-                onChanged: canManage ? repository.updateDownloadAsCbz : null,
+              SettingsHighlightTarget(
+                id: 'saveAsCbz',
+                child: SettingsPropTile(
+                  title: context.l10n.saveAsCBZArchive,
+                  subtitle: canManage
+                      ? null
+                      : context.l10n.manageSettingsPermissionRequired,
+                  type: SettingsPropType.switchTile(
+                    value: downloadsSettingsDto.downloadAsCbz,
+                    onChanged: canManage
+                        ? repository.updateDownloadAsCbz
+                        : null,
+                  ),
+                ),
               ),
-            ),
-            // Server downloads (shared with the web interface). Default off.
-            ..._deleteSection(
-              context,
-              title: context.l10n.deleteServerDownloads,
-              description: context.l10n.deleteServerDownloadsDescription,
-              settings: serverDelete,
-              onManual: serverDeleteController.setDeleteManuallyMarkedRead,
-              onWhileReading: serverDeleteController.setDeleteWhileReading,
-              onBookmark: serverDeleteController.setDeleteWithBookmark,
-            ),
-            SectionTitle(title: context.l10n.autoDownload),
-            if (personalState == PersonalSettingsState.unavailable)
-              ListTile(title: Text(context.l10n.accountSettingsUnavailable)),
-            SettingsPropTile(
-              title: context.l10n.autoDownloadNewChapters,
-              type: SettingsPropType.switchTile(
-                value: downloadsSettingsDto.autoDownloadNewChapters,
-                onChanged: canEditPersonal
-                    ? repository.toggleAutoDownloadNewChapters
-                    : null,
+              // Server downloads (shared with the web interface). Default off.
+              ..._deleteSection(
+                context,
+                title: context.l10n.deleteServerDownloads,
+                description: context.l10n.deleteServerDownloadsDescription,
+                settings: serverDelete,
+                onManual: serverDeleteController.setDeleteManuallyMarkedRead,
+                onWhileReading: serverDeleteController.setDeleteWhileReading,
+                onBookmark: serverDeleteController.setDeleteWithBookmark,
+                targetIdPrefix: 'server',
               ),
-            ),
-            SettingsPropTile(
-              title: context.l10n.chapterDownloadLimit,
-              description: context.l10n.chapterDownloadLimitDesc,
-              type: SettingsPropType.numberSlider(
-                value: downloadsSettingsDto.autoDownloadNewChaptersLimit,
-                min: 0,
-                max: 20,
-                onChanged: canEditPersonal
-                    ? repository.updateAutoDownloadNewChaptersLimit
-                    : null,
+              SectionTitle(title: context.l10n.autoDownload),
+              if (personalState == PersonalSettingsState.unavailable)
+                ListTile(title: Text(context.l10n.accountSettingsUnavailable)),
+              SettingsHighlightTarget(
+                id: 'autoDownloadNewChapters',
+                child: SettingsPropTile(
+                  title: context.l10n.autoDownloadNewChapters,
+                  type: SettingsPropType.switchTile(
+                    value: downloadsSettingsDto.autoDownloadNewChapters,
+                    onChanged: canEditPersonal
+                        ? repository.toggleAutoDownloadNewChapters
+                        : null,
+                  ),
+                ),
               ),
-              subtitle: context.l10n.nChapters(
-                downloadsSettingsDto.autoDownloadNewChaptersLimit,
+              SettingsHighlightTarget(
+                id: 'chapterDownloadLimit',
+                child: SettingsPropTile(
+                  title: context.l10n.chapterDownloadLimit,
+                  description: context.l10n.chapterDownloadLimitDesc,
+                  type: SettingsPropType.numberSlider(
+                    value: downloadsSettingsDto.autoDownloadNewChaptersLimit,
+                    min: 0,
+                    max: 20,
+                    onChanged: canEditPersonal
+                        ? repository.updateAutoDownloadNewChaptersLimit
+                        : null,
+                  ),
+                  subtitle: context.l10n.nChapters(
+                    downloadsSettingsDto.autoDownloadNewChaptersLimit,
+                  ),
+                ),
               ),
-            ),
-            SettingsPropTile(
-              title: context.l10n.excludeEntryWithUnreadChapters,
-              type: SettingsPropType.switchTile(
-                value: downloadsSettingsDto.excludeEntryWithUnreadChapters,
-                onChanged: canEditPersonal
-                    ? repository.toggleExcludeEntryWithUnreadChapters
-                    : null,
+              SettingsHighlightTarget(
+                id: 'excludeEntryWithUnreadChapters',
+                child: SettingsPropTile(
+                  title: context.l10n.excludeEntryWithUnreadChapters,
+                  type: SettingsPropType.switchTile(
+                    value: downloadsSettingsDto.excludeEntryWithUnreadChapters,
+                    onChanged: canEditPersonal
+                        ? repository.toggleExcludeEntryWithUnreadChapters
+                        : null,
+                  ),
+                ),
               ),
-            ),
-            ListTile(
-              enabled: downloadsSettingsDto.autoDownloadNewChapters,
-              title: Text(context.l10n.autoDownloadCategories),
-              subtitle: Text(
-                autoDownloadCategoriesSummary(context, categories),
+              // Greyed while auto-download is off, never unmounted.
+              SettingsHighlightTarget(
+                id: 'autoDownloadCategories',
+                child: ListTile(
+                  enabled: downloadsSettingsDto.autoDownloadNewChapters,
+                  title: Text(context.l10n.autoDownloadCategories),
+                  subtitle: Text(
+                    autoDownloadCategoriesSummary(context, categories),
+                  ),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => const AutoDownloadCategoriesDialog(),
+                    animationStyle: context.motionStyle,
+                  ),
+                ),
               ),
-              onTap: () => showDialog<void>(
-                context: context,
-                builder: (_) => const AutoDownloadCategoriesDialog(),
-                animationStyle: context.motionStyle,
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       }),
     );
@@ -303,40 +354,49 @@ class _OnDeviceDownloadsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final localDelete = ref.watch(localDeleteSettingsProvider);
-    return ListView(
-      children: [
-        // On-device downloads (this phone). Independent, default off.
-        ..._deleteSection(
-          context,
-          title: context.l10n.deleteOnDeviceDownloads,
-          description: context.l10n.deleteOnDeviceDownloadsDescription,
-          settings: localDelete,
-          onManual: (v) async => ref
-              .read(localDeleteManuallyMarkedReadProvider.notifier)
-              .update(v),
-          onWhileReading: (v) =>
-              ref.read(localDeleteWhileReadingProvider.notifier).update(v),
-          onBookmark: (v) async =>
-              ref.read(localDeleteWithBookmarkProvider.notifier).update(v),
-          // Only meaningful when the keep window has at least 1 protected
-          // slot — rendered right under the option that controls it.
-          whileReadingSubOptions: localDelete.deleteWhileReading >= 2
-              ? [
-                  _SubSwitchTile(
-                    title: context.l10n.downloadProtectionWindowTitle,
-                    subtitle: context.l10n.downloadProtectionWindowDescription,
-                    value:
-                        ref.watch(localDownloadProtectionWindowProvider) ??
-                        false,
-                    onChanged: (v) async => ref
-                        .read(localDownloadProtectionWindowProvider.notifier)
-                        .update(v),
-                  ),
-                ]
-              : const [],
-        ),
-        ...buildOnDeviceStorageTiles(context, ref),
-      ],
+    return SettingsHighlightScope(
+      child: ListView(
+        children: [
+          // On-device downloads (this phone). Independent, default off.
+          ..._deleteSection(
+            context,
+            title: context.l10n.deleteOnDeviceDownloads,
+            description: context.l10n.deleteOnDeviceDownloadsDescription,
+            settings: localDelete,
+            onManual: (v) async => ref
+                .read(localDeleteManuallyMarkedReadProvider.notifier)
+                .update(v),
+            onWhileReading: (v) =>
+                ref.read(localDeleteWhileReadingProvider.notifier).update(v),
+            onBookmark: (v) async =>
+                ref.read(localDeleteWithBookmarkProvider.notifier).update(v),
+            targetIdPrefix: 'device',
+            // Only meaningful when the keep window has at least 1 protected
+            // slot — rendered right under the option that controls it.
+            whileReadingSubOptions: localDelete.deleteWhileReading >= 2
+                ? [
+                    SettingsHighlightTarget(
+                      id: 'downloadProtectionWindow',
+                      child: _SubSwitchTile(
+                        title: context.l10n.downloadProtectionWindowTitle,
+                        subtitle:
+                            context.l10n.downloadProtectionWindowDescription,
+                        value:
+                            ref.watch(localDownloadProtectionWindowProvider) ??
+                            false,
+                        onChanged: (v) async => ref
+                            .read(
+                              localDownloadProtectionWindowProvider.notifier,
+                            )
+                            .update(v),
+                      ),
+                    ),
+                  ]
+                : const [],
+          ),
+          ...buildOnDeviceStorageTiles(context, ref),
+        ],
+      ),
     );
   }
 }

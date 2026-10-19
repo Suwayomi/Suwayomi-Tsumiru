@@ -26,6 +26,7 @@ import '../../../library/presentation/library/controller/library_manga_list.dart
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../../../settings/search/settings_search_registry.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_facets.dart';
 import 'unified_search_providers.dart';
@@ -505,6 +506,9 @@ class _PhoneSearchResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
+    // Keep the server-backed search dependencies alive for the whole open
+    // search, so typing never refetches them (see pinSettingsSearchProviders).
+    pinSettingsSearchProviders(ref);
     final cs = context.colorScheme;
     final hasQuery = query.trim().isNotEmpty;
     if (!hasQuery) return const SizedBox.shrink();
@@ -526,6 +530,12 @@ class _PhoneSearchResults extends ConsumerWidget {
           )
         : false;
     final goToHits = matchingGoToTargets(ref, query, l);
+    final settingsHits = matchSettingsEntries(
+      entries: allSettingsSearchEntries,
+      l: l,
+      query: query,
+      isVisible: (e) => e.visible(ref, context),
+    );
     final plainQuery = plainQueryText(query);
     final suggestions = hasQuery
         ? suggestFor(
@@ -568,8 +578,7 @@ class _PhoneSearchResults extends ConsumerWidget {
       // needed.
       padding: EdgeInsets.only(
         bottom:
-            16 +
-            MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
+            16 + MediaQueryData.fromView(View.of(context)).viewInsets.bottom,
       ),
       children: [
         if (hasQuery && origin != PhoneSearchOrigin.plain)
@@ -719,7 +728,24 @@ class _PhoneSearchResults extends ConsumerWidget {
             ListTile(
               leading: Icon(t.icon),
               title: Text(t.label(l)),
+              subtitle: t.subtitle == null
+                  ? null
+                  : Text(
+                      t.subtitle!(l),
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
               onTap: () => onLeave(() => t.navigate(context)),
+            ),
+        ],
+        if (hasQuery && settingsHits.isNotEmpty) ...[
+          SearchSectionHeader(l.settings),
+          for (final e in settingsHits)
+            SettingsSearchResultRow(
+              entry: e,
+              query: query,
+              onTap: () => onLeave(() => e.open(context)),
             ),
         ],
         if (plainQuery.isNotEmpty) ...[
