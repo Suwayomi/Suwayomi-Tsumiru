@@ -8,10 +8,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+/// Test-only override for [isDesktopPlatform]. Null (the default) uses the
+/// real platform; widget tests set it to exercise the desktop strips and
+/// bars on a non-desktop VM (or to force them off on desktop).
+@visibleForTesting
+bool? debugDesktopPlatformOverride;
+
 /// Native desktop OS (not web, not mobile). `!kIsWeb` must be first — dart:io
 /// `Platform` throws on web.
 bool get isDesktopPlatform =>
-    !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    debugDesktopPlatformOverride ??
+    (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS));
 
 /// Runtimes where a physical keyboard is expected: native desktop or web.
 bool get isKeyboardRuntime => kIsWeb || isDesktopPlatform;

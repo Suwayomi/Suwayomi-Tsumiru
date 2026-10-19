@@ -230,6 +230,40 @@ final topBarSlotRegistryProvider =
       TopBarSlotRegistry.new,
     );
 
+/// Counts the mounted merged desktop top bars, so [DesktopWindowScaffold]
+/// knows when its standalone title strip is redundant. The bar draws itself
+/// only inside the navigation shells, so a non-zero count means a shell is
+/// showing the bar; routes outside the shells (reader, onboarding) mount no
+/// bar and keep the strip with its window controls and drag area. A count,
+/// not a flag: shell transitions can mount the incoming bar before the
+/// outgoing one unmounts.
+class MergedTopBarRegistry extends Notifier<int> {
+  /// False once this container (and the registry with it) is disposed, so
+  /// deferred removals can skip the dead notifier. A plain field: safe to
+  /// read after disposal, unlike any notifier access.
+  bool alive = true;
+
+  @override
+  int build() {
+    alive = true;
+    ref.onDispose(() => alive = false);
+    return 0;
+  }
+
+  void show() {
+    if (!alive) return;
+    state = state + 1;
+  }
+
+  void hide() {
+    if (!alive || state == 0) return;
+    state = state - 1;
+  }
+}
+
+final mergedTopBarRegistryProvider =
+    NotifierProvider<MergedTopBarRegistry, int>(MergedTopBarRegistry.new);
+
 /// Registers [content] as the current route's toolbar for the desktop top
 /// bar. Renders [child] unchanged; the content itself is shown by
 /// [DesktopTopBar], keyed by route so the outgoing page's toolbar fades out
@@ -323,11 +357,51 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
 /// the toolbar row) when the window is too narrow. A [DragToMoveArea] sits
 /// behind the controls across the whole bar, so every empty part drags the
 /// window and double-clicking maximises/restores, as the title bar does.
-class DesktopTopBar extends ConsumerWidget {
+class DesktopTopBar extends ConsumerStatefulWidget {
   const DesktopTopBar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DesktopTopBar> createState() => _DesktopTopBarState();
+}
+
+class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
+  late MergedTopBarRegistry _registry;
+  bool _scheduled = false;
+  bool _shown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The registry is captured here: `ref` is unusable in dispose. Published
+    // post-frame: the window scaffold watches this registry, and publishing
+    // synchronously would setState it mid-build.
+    _registry = ref.read(mergedTopBarRegistryProvider.notifier);
+    if (_scheduled) return;
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduled = false;
+      if (!mounted) return;
+      _shown = true;
+      _registry.show();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Deferred like publishing: unmounting runs inside the frame that
+    // navigates away, where touching the provider throws. Balanced with the
+    // scheduled show above: a show skipped for a dead mount schedules no
+    // hide, and the registry itself clamps at zero.
+    final registry = _registry;
+    final wasShown = _shown;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (wasShown) registry.hide();
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // `GoRouter.of` does not subscribe, and the shell's own match never
     // changes on push/pop inside it, so rebuild off the router delegate and
     // read the leaf from the current configuration each time. Outside a
