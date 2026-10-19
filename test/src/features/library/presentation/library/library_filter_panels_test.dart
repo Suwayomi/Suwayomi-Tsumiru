@@ -202,8 +202,17 @@ Future<ProviderContainer> _pumpLibrary(
   return container;
 }
 
+/// Taps the toolbar's Filter button. The shell bar slot is narrower than the
+/// old body header, so at 1400 the toolbar is in compact mode (icon buttons,
+/// no text labels): tap the Filter icon, which both modes render, instead of
+/// the label text that only full mode shows.
+Finder _filterButton() => find.descendant(
+  of: find.byType(DesktopLibraryToolbar),
+  matching: find.byIcon(Icons.filter_list_rounded),
+);
+
 Future<void> _openFilterPanel(WidgetTester tester) async {
-  await tester.tap(find.text('Filter'));
+  await tester.tap(_filterButton());
   await tester.pumpAndSettle();
 }
 
@@ -221,10 +230,7 @@ Future<(Rect, Rect)> _openFilterAndMeasure(
   await _pumpLibrary(tester, surface: surface);
   await _openFilterPanel(tester);
   final buttonBox = find.ancestor(
-    of: find.descendant(
-      of: find.byType(DesktopLibraryToolbar),
-      matching: find.text('Filter'),
-    ),
+    of: _filterButton(),
     matching: find.byType(DesktopToolbarBox),
   );
   expect(buttonBox, findsOneWidget);
@@ -321,6 +327,22 @@ void main() {
       expect(find.text('Downloaded'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Downloaded'), findsNothing);
+      expect(find.byType(DesktopLibraryToolbar), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('click outside closes the panel', (tester) async {
+      const surface = Size(1400, 980);
+      await _pumpLibrary(tester, surface: surface);
+      await _openFilterPanel(tester);
+      expect(find.text('Downloaded'), findsOneWidget);
+
+      // Left of the right-aligned 720 px panel: hits the route's
+      // barrier, which dismisses without touching the page behind it.
+      await tester.tapAt(const Offset(20, 500));
       await tester.pumpAndSettle();
 
       expect(find.text('Downloaded'), findsNothing);
@@ -437,6 +459,11 @@ void main() {
         tester,
         const Size(1400, 980),
       );
+      // The button driving the panel lives inside the shell bar, not the
+      // page body: the panel opens from the top bar.
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      expect(barRect.contains(buttonRect.topCenter), isTrue);
+      expect(barRect.contains(buttonRect.bottomCenter), isTrue);
       expect(panelRect.width, 720);
       expect(panelRect.right - buttonRect.right, lessThanOrEqualTo(1.0));
       expect(panelRect.right - buttonRect.right, greaterThanOrEqualTo(-1.0));

@@ -46,10 +46,14 @@ bool useDesktopTopBar(BuildContext context) =>
 /// The current route's matched location, or null outside a router (plain
 /// widget tests that pump the bar on its own).
 String? _matchedLocationOrNull(BuildContext context) {
+  // Checked before GoRouterState.of: without a router above, `of` does not
+  // throw — its route-walk keeps finding the plain MaterialPageRoute above a
+  // nested Navigator and spins forever, hanging the frame. With a router
+  // present the walk ends at the first go_router page as before.
+  if (GoRouter.maybeOf(context) == null) return null;
   try {
     return GoRouterState.of(context).matchedLocation;
   } catch (_) {
-    // No router above (plain widget tests pumping the bar on its own).
     return null;
   }
 }
