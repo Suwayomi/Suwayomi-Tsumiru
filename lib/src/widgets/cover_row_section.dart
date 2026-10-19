@@ -297,13 +297,20 @@ class CoverRowEdgeFade extends StatelessWidget {
   final Color color;
   final Widget child;
 
+  @visibleForTesting
+  static List<double> stopsFor(double width) => [
+    0,
+    (1 - 40 / width).clamp(0, 1).toDouble(),
+    (1 - 2 / width).clamp(0, 1).toDouble(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
       blendMode: BlendMode.dstIn,
       shaderCallback: (bounds) => LinearGradient(
         colors: [color, color, fade ? Colors.transparent : color],
-        stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
+        stops: stopsFor(bounds.width),
       ).createShader(bounds),
       // Stops a partly covered edge pixel of the child escaping the mask.
       child: ClipRect(child: child),

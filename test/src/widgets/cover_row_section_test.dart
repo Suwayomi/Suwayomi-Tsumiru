@@ -332,4 +332,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
   });
+
+  test('the fade reaches transparent before the right edge', () {
+    final stops = CoverRowEdgeFade.stopsFor(333.5);
+    expect(stops.last, lessThan(1));
+    expect(stops.last, closeTo(1 - 2 / 333.5, 1e-9));
+  });
 }
