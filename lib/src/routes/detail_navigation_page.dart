@@ -2,7 +2,8 @@ part of 'router_config.dart';
 
 /// Page for routes that draw their own copy of the sidebar inside
 /// [DetailNavigationShellScreen] (settings/account pages, source pages,
-/// Upcoming).
+/// Upcoming), and for [DetailNavigationShellRoute] itself, which hosts the
+/// series page and the other detail routes in its own Navigator.
 ///
 /// On tablet and wider the sidebar is identical on both sides of the push, so
 /// the default zoom would animate the sidebar along with the page and the app
@@ -16,7 +17,34 @@ Page<void> detailNavigationPage(
   GoRouterState state,
   Widget child,
 ) {
-  final pageChild = DetailNavigationShellScreen(child: child);
+  return _detailNavigationPage(
+    context,
+    state,
+    DetailNavigationShellScreen(child: child),
+  );
+}
+
+/// The shell's own page: entering or leaving the detail shell from the main
+/// navigation transitions this page (sidebar included), so it needs the same
+/// fade as the routes above. Pushes inside the shell animate only the inner
+/// Navigator's pages, where the sidebar sits outside and stays still.
+Page<void> detailNavigationShellPage(
+  BuildContext context,
+  GoRouterState state,
+  Widget navigator,
+) {
+  return _detailNavigationPage(
+    context,
+    state,
+    DetailNavigationShellScreen(child: navigator),
+  );
+}
+
+Page<void> _detailNavigationPage(
+  BuildContext context,
+  GoRouterState state,
+  Widget pageChild,
+) {
   if (!context.isTablet) {
     return MaterialPage(key: state.pageKey, child: pageChild);
   }
