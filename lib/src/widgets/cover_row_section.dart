@@ -26,6 +26,7 @@ class CoverRowSection extends StatefulWidget {
     this.itemBuilder,
     this.separatorBuilder,
     this.child,
+    this.background,
   });
 
   final String? title;
@@ -37,6 +38,7 @@ class CoverRowSection extends StatefulWidget {
   final IndexedWidgetBuilder? itemBuilder;
   final IndexedWidgetBuilder? separatorBuilder;
   final Widget? child;
+  final Color? background;
 
   @override
   State<CoverRowSection> createState() => _CoverRowSectionState();
@@ -251,7 +253,7 @@ class _CoverRowSectionState extends State<CoverRowSection> {
       },
       child: CoverRowEdgeFade(
         fade: _canForward,
-        color: context.colorScheme.onSurface,
+        background: widget.background ?? context.colorScheme.surface,
         child: scrollable,
       ),
     );
@@ -282,30 +284,54 @@ class _CoverRowSectionState extends State<CoverRowSection> {
   }
 }
 
-/// Always renders a [ShaderMask], so toggling the fade never reparents the
+/// Always renders the same tree, so toggling the fade never reparents the
 /// scrollable and resets its offset.
 @visibleForTesting
 class CoverRowEdgeFade extends StatelessWidget {
   const CoverRowEdgeFade({
     super.key,
     required this.fade,
-    required this.color,
+    required this.background,
     required this.child,
   });
 
   final bool fade;
-  final Color color;
+  final Color background;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (bounds) => LinearGradient(
-        colors: [color, color, fade ? Colors.transparent : color],
-        stops: [0, (1 - 40 / bounds.width).clamp(0, 1), 1],
-      ).createShader(bounds),
-      child: child,
+    return Stack(
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: [
+        // Drops the child's partly covered edge pixel at fractional widths.
+        ClipRect(child: child),
+        // Overhangs by 1 px so the fractional edge pixel is fully covered.
+        Positioned(
+          top: 0,
+          bottom: 0,
+          right: -1,
+          width: 40,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: fade ? 1 : 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      background.withValues(alpha: 0),
+                      background,
+                      background,
+                    ],
+                    stops: const [0, 0.95, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

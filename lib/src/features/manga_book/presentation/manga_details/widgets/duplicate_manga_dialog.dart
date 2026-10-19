@@ -120,6 +120,7 @@ class DuplicateMangaDialog extends StatelessWidget {
               ),
               const Gap(12),
               CoverRowSection(
+                background: context.colorScheme.surfaceContainerHigh,
                 height: 300,
                 itemCount: duplicates.length,
                 itemBuilder: (context, index) {
