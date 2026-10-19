@@ -454,6 +454,34 @@ void main() {
   );
 
   test(
+    'a deferred Basic migration cannot restore a credential the user cleared',
+    () async {
+      // The migration was deferred because the keychain refused, so the legacy
+      // copy is still there when the user switches server.
+      SharedPreferences.setMockInitialValues({'basicCredentials': 'Basic old'});
+      _prefs = await SharedPreferences.getInstance();
+      final backing = <String, String>{kBasicCredentialsSecureKey: 'Basic old'};
+      final first = _container(_FlakyStorage(backing, failDeletes: true));
+      await first.read(credentialsProvider.future);
+
+      await first
+          .read(authCredentialsStoreProvider.notifier)
+          .clearAllForServerSwitch();
+      expect(_invalidated(), isTrue);
+      expect(_prefs.getString('basicCredentials'), isNull);
+
+      // Next launch, keychain working again: the invalidation cleanup runs,
+      // and the migration must not re-import the cleared sign-in behind it.
+      debugResetKeychainRefusal();
+      final nextStorage = _FlakyStorage(backing);
+      await migrateBasicAuthCredentials(prefs: _prefs, secure: nextStorage);
+      final restarted = _container(nextStorage);
+      expect(await restarted.read(credentialsProvider.future), isNull);
+      expect(backing[kBasicCredentialsSecureKey], isNull);
+    },
+  );
+
+  test(
     'a sign-in that saves after a refused one is read next launch',
     () async {
       final backing = <String, String>{
@@ -504,6 +532,34 @@ void main() {
     expect(await c.read(customHttpHeadersProvider.future), {
       'CF-Access-Client-Id': 'abc',
     });
+  });
+
+  test('account invalidation keeps proxy headers', () async {
+    final backing = <String, String>{
+      'auth.ui.accessToken': 'old-access',
+      'auth.ui.refreshToken': 'old-refresh',
+      'custom.headers': '{"CF-Access-Client-Id":"abc"}',
+    };
+    final first = _container(_FlakyStorage(backing, failDeletes: true));
+    await first.read(authCredentialsStoreProvider.future);
+
+    // The sign-out cannot delete the stored tokens, so the marker says the
+    // account state is unknown.
+    await first
+        .read(authCredentialsStoreProvider.notifier)
+        .clearUiLoginTokens();
+    expect(_invalidated(), isTrue);
+
+    // Next launch, keychain working again: the account cleanup must not take
+    // the endpoint's proxy headers with it.
+    debugResetKeychainRefusal();
+    final restarted = _container(_FlakyStorage(backing));
+    final auth = await restarted.read(authCredentialsStoreProvider.future);
+    expect(auth.uiAccessToken, isNull);
+    expect(await restarted.read(customHttpHeadersProvider.future), {
+      'CF-Access-Client-Id': 'abc',
+    });
+    expect(backing['custom.headers'], isNotNull);
   });
 
   test('a working keychain loads every stored credential', () async {

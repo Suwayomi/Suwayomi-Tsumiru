@@ -22,9 +22,9 @@ const kUiAccountBindingSecureKey = 'auth.ui.accountBinding';
 const kBasicCredentialsKey = 'auth.basic.credentials';
 const kCustomHeadersKey = 'custom.headers';
 
-/// Every credential the app keeps in secure storage. A persist writes the ones
-/// with a value and deletes the rest, so storage either matches the snapshot
-/// exactly or the marker says it cannot be trusted.
+/// Every account credential the app keeps in secure storage. A persist writes
+/// the ones with a value and deletes the rest, so storage either matches the
+/// snapshot exactly or the marker says it cannot be trusted.
 const kCredentialKeys = <String>[
   kLegacyPasswordSecureKey,
   kSimpleLoginCookieSecureKey,
@@ -32,12 +32,17 @@ const kCredentialKeys = <String>[
   kUiRefreshTokenSecureKey,
   kUiAccountBindingSecureKey,
   kBasicCredentialsKey,
-  kCustomHeadersKey,
 ];
+
+/// Endpoint configuration stored beside the credentials but not part of the
+/// account: an account invalidation must not delete these. Each is written
+/// only when its own update changes it; a refused write or delete leaves the
+/// in-memory value for this run and the stored value for the next launch.
+const kEndpointKeys = <String>[kCustomHeadersKey];
 
 /// Whether a credential write or delete was refused, so what is on disk may
 /// not match what the app was last signed in with.
-bool _credentialsInvalidated(SharedPreferences prefs) =>
+bool credentialsInvalidated(SharedPreferences prefs) =>
     prefs.getBool(DBKeys.authCredentialsInvalidated.name) ?? false;
 
 Future<void> _markCredentialsInvalidated(SharedPreferences prefs) =>
@@ -104,40 +109,46 @@ class CredentialSnapshot {
       _loading ??= _load(prefs);
 
   Future<void> _load(SharedPreferences prefs) async {
-    if (_credentialsInvalidated(prefs)) {
+    final invalidated = credentialsInvalidated(prefs);
+    if (invalidated) {
       final deleted = await Future.wait(
         kCredentialKeys.map((key) => deleteSecure(_storage, key)),
       );
       if (deleted.every((ok) => ok)) {
         await _clearCredentialInvalidation(prefs);
       }
-      return;
+    } else {
+      // Older versions stored the sign-in password here although nothing ever
+      // read it back. Best effort: it never affects the marker or a read.
+      unawaited(deleteSecure(_storage, kLegacyPasswordSecureKey));
     }
-    // Older versions stored the sign-in password here although nothing ever
-    // read it back. Best effort: it never affects the marker or a read.
-    unawaited(deleteSecure(_storage, kLegacyPasswordSecureKey));
-    for (final key in kCredentialKeys) {
+    // Endpoint configuration was never invalidated, so it loads either way.
+    for (final key in [...kCredentialKeys, ...kEndpointKeys]) {
       if (key == kLegacyPasswordSecureKey) continue;
+      if (invalidated && kCredentialKeys.contains(key)) continue;
       _values[key] = await readSecureOrAbsent(_storage, key);
     }
   }
 
-  /// Applies [changes] to the snapshot, then writes the whole set to secure
-  /// storage: the keys with a value are written, every other credential key is
-  /// deleted. A failure in any operation sets the invalidation marker, so the
-  /// next launch starts signed out rather than trusting a partial write.
+  /// Applies [changes] to the snapshot, then writes the whole account set to
+  /// secure storage: the keys with a value are written, every other credential
+  /// key is deleted. A failure in any operation sets the invalidation marker,
+  /// so the next launch starts signed out rather than trusting a partial write.
+  /// Endpoint keys in [changes] are written or deleted on their own and never
+  /// affect the marker.
   ///
-  /// Returns whether the complete state reached the platform store.
+  /// Returns whether the complete account state reached the platform store.
   Future<bool> update(Map<String, String?> changes, SharedPreferences prefs) {
     _values.addAll(changes);
     final target = Map<String, String?>.from(_values);
-    final result = _persistTail.then((_) => _persist(target, prefs));
+    final result = _persistTail.then((_) => _persist(target, changes, prefs));
     _persistTail = result.then((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
 
   Future<bool> _persist(
     Map<String, String?> target,
+    Map<String, String?> changes,
     SharedPreferences prefs,
   ) async {
     var complete = true;
@@ -149,6 +160,15 @@ class CredentialSnapshot {
     for (final key in kCredentialKeys) {
       if (target[key] != null) continue;
       if (!await deleteSecure(_storage, key)) complete = false;
+    }
+    for (final key in kEndpointKeys) {
+      if (!changes.containsKey(key)) continue;
+      final value = target[key];
+      if (value == null) {
+        await deleteSecure(_storage, key);
+      } else {
+        await writeSecure(_storage, key, value);
+      }
     }
     if (complete) {
       await _clearCredentialInvalidation(prefs);

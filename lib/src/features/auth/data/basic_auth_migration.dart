@@ -14,7 +14,14 @@ import 'secure_credentials_provider.dart';
 const kBasicCredentialsSecureKey = kBasicCredentialsKey;
 
 /// Legacy SharedPreferences key (DBKeys.basicCredentials.name).
-const _kLegacyBasicCredentialsKey = 'basicCredentials';
+const kLegacyBasicCredentialsKey = 'basicCredentials';
+
+/// Removes the legacy plaintext Basic credential, if one is left. Every
+/// explicit credential clear calls this: a migration deferred while the
+/// keychain was refused would otherwise re-import the cleared sign-in on a
+/// later launch.
+Future<void> clearLegacyBasicCredentials(SharedPreferences prefs) =>
+    prefs.remove(kLegacyBasicCredentialsKey);
 
 /// One-time, idempotent migration of basic-auth credentials from the
 /// plaintext-equivalent SharedPreferences store to platform secure storage.
@@ -31,18 +38,25 @@ Future<void> migrateBasicAuthCredentials({
   required SharedPreferences prefs,
   required FlutterSecureStorage secure,
 }) async {
-  final legacy = prefs.getString(_kLegacyBasicCredentialsKey);
+  final legacy = prefs.getString(kLegacyBasicCredentialsKey);
   if (legacy == null) return;
 
+  // Captured before the load: a successful cleanup clears the marker, but the
+  // storage it cleared held a sign-out that the legacy copy must not undo.
+  final invalidated = credentialsInvalidated(prefs);
   final vault = credentialSnapshot(secure, prefs);
   await vault.ensureLoaded(prefs);
   // A refused keychain keeps the legacy copy for the next launch.
   if (keychainRefusedThisRun) return;
+  if (invalidated) {
+    await clearLegacyBasicCredentials(prefs);
+    return;
+  }
   if (vault[kBasicCredentialsSecureKey] == null) {
     // Keep the legacy copy if the move failed, so the next launch retries.
     if (!await vault.update({kBasicCredentialsSecureKey: legacy}, prefs)) {
       return;
     }
   }
-  await prefs.remove(_kLegacyBasicCredentialsKey);
+  await clearLegacyBasicCredentials(prefs);
 }

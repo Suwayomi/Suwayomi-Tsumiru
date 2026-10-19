@@ -13,6 +13,7 @@ import '../../../global_providers/global_providers.dart';
 import '../../account/domain/account_binding.dart';
 import '../../settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import 'auth_session_transition.dart';
+import 'basic_auth_migration.dart';
 import 'credential_snapshot.dart';
 import 'jwt_utils.dart';
 import 'secure_credentials_provider.dart';
@@ -537,12 +538,15 @@ class AuthCredentialsStore extends _$AuthCredentialsStore {
   /// because basic auth has its own existing provider (`credentialsProvider`)
   /// for read access — this method exists solely to give the Logout flow
   /// a way to clear that entry post-migration.
-  Future<void> clearBasicCredentials() =>
-      ref.read(credentialsProvider.notifier).set(null);
+  Future<void> clearBasicCredentials() async {
+    await clearLegacyBasicCredentials(ref.read(sharedPreferencesProvider));
+    await ref.read(credentialsProvider.notifier).set(null);
+  }
 
   Future<void> clearAllForServerSwitch() => _mutate(() async {
     _serverEpoch++;
     _sessionEpoch++;
+    await clearLegacyBasicCredentials(ref.read(sharedPreferencesProvider));
     state = AsyncData(
       const AuthCredentialsState.empty().copyWith(
         sessionEpoch: _sessionEpoch,
