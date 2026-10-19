@@ -78,7 +78,7 @@ class DownloadsScreen extends HookConsumerWidget {
     );
     // Native desktop draws the search box and actions in the shell bar
     // instead of an app bar; the tab bar stays in the page body.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: ref.watch(unifiedSearchQueryProvider),
       onChanged: (value) =>

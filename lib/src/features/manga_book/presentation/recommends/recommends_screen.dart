@@ -30,7 +30,7 @@ class RecommendsScreen extends ConsumerWidget {
     final setup = ref.watch(recommendationSetupProvider(mangaId));
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final title = Text(
       mangaTitle != null
           ? context.l10n.similarTo(mangaTitle!)

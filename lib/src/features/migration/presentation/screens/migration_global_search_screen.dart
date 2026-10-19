@@ -44,7 +44,7 @@ class MigrationGlobalSearchScreen extends HookConsumerWidget {
 
     // Native desktop draws the title and search box in the shell bar
     // instead of an app bar; the results stay in the page body.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.searchAllSources);
     final searchBox = Align(
       alignment: Alignment.centerRight,

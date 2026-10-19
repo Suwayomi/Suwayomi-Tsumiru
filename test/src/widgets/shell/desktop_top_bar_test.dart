@@ -53,7 +53,7 @@ Widget _app(Widget body) => MaterialApp(
 Widget _frame() => Builder(
   builder: (context) => Column(
     children: [
-      if (useDesktopTopBar(context)) const DesktopTopBar(),
+      if (showsMergedTopBar(context)) const DesktopTopBar(),
       Expanded(
         child: Row(
           children: [

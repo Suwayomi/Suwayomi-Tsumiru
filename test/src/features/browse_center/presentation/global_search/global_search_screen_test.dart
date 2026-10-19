@@ -137,7 +137,7 @@ GoRouter _router({required bool fromSuggestion}) => GoRouter(
         body: Builder(
           builder: (context) => Column(
             children: [
-              if (useDesktopTopBar(context)) const DesktopTopBar(),
+              if (showsMergedTopBar(context)) const DesktopTopBar(),
               Expanded(
                 key: const ValueKey('searchPage'),
                 child: GlobalSearchScreen(

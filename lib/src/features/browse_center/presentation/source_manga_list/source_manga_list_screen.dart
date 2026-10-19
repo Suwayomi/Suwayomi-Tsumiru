@@ -84,7 +84,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
         // Native desktop draws the title and actions in the shell bar
         // instead of an app bar; the type chips and search box stay in the
         // page body.
-        final topBar = useDesktopTopBar(context);
+        final topBar = showsMergedTopBar(context);
         final title = Text(data?.displayName ?? context.l10n.source);
         final actions = <Widget>[
           IconButton(
@@ -268,7 +268,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
       },
       refresh: () => ref.refresh(sourceProvider(sourceId)),
       wrapper: (body) {
-        final topBar = useDesktopTopBar(context);
+        final topBar = showsMergedTopBar(context);
         final title = Text(context.l10n.source);
         final scaffold = Scaffold(
           appBar: topBar ? null : AppBar(title: title),

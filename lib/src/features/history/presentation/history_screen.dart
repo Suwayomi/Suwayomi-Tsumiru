@@ -46,7 +46,7 @@ class HistoryScreen extends ConsumerWidget {
     ].take(3).toList();
     // Native desktop draws the search box and actions in the shell bar
     // instead of an app bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: searchQuery,
       onChanged: (value) =>

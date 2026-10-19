@@ -191,7 +191,7 @@ Future<void> _pump(
           body: Builder(
             builder: (context) => Column(
               children: [
-                if (useDesktopTopBar(context)) const DesktopTopBar(),
+                if (showsMergedTopBar(context)) const DesktopTopBar(),
                 const Expanded(child: SyncYomiSettingsScreen()),
               ],
             ),

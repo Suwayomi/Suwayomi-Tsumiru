@@ -27,7 +27,7 @@ class LibraryUpdateErrorsScreen extends ConsumerWidget {
     final count = failed.value?.length;
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final title = Text(
       count == null
           ? context.l10n.libraryUpdateErrors

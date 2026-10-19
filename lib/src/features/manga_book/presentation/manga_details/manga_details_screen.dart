@@ -211,7 +211,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
     // Native desktop draws the back button and title in the shell bar
     // instead of an app bar. Phone selection swaps the app bar; desktop
     // selection lives in the chapter-column header, so the slot never swaps.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) refreshLibraryAfterExit();
@@ -506,7 +506,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
       },
         refresh: refresh,
         wrapper: (body) {
-          final topBar = useDesktopTopBar(context);
+          final topBar = showsMergedTopBar(context);
           final title = Text(context.l10n.manga);
           final scaffold = Scaffold(
             appBar: topBar ? null : AppBar(title: title),

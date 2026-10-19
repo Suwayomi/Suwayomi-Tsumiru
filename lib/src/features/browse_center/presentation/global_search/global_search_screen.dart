@@ -165,7 +165,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
     // slot mounts a frame after the old field detaches, so bare refocusing
     // would be lost — and unconditional autofocus would steal focus back
     // after an explicit unfocus.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final restoreFocus = topBar && !wasTopBar.value && hadFocus.value;
     wasTopBar.value = topBar;
     final searchField = SearchField(

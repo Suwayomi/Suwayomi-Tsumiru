@@ -105,7 +105,7 @@ GoRouter _router() => GoRouter(
         body: Builder(
           builder: (context) => Column(
             children: [
-              if (useDesktopTopBar(context)) const DesktopTopBar(),
+              if (showsMergedTopBar(context)) const DesktopTopBar(),
               const Expanded(child: HistoryScreen()),
             ],
           ),

@@ -502,7 +502,7 @@ void main() {
           body: Builder(
             builder: (context) => Column(
               children: [
-                if (useDesktopTopBar(context)) const DesktopTopBar(),
+                if (showsMergedTopBar(context)) const DesktopTopBar(),
                 const Expanded(child: HistoryScreen()),
               ],
             ),
@@ -903,7 +903,7 @@ void main() {
                     body: Builder(
                       builder: (context) => Column(
                         children: [
-                          if (useDesktopTopBar(context))
+                          if (showsMergedTopBar(context))
                             const DesktopTopBar(),
                           const Expanded(child: HistoryScreen()),
                         ],

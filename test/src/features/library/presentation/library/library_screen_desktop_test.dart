@@ -146,7 +146,7 @@ Future<ProviderContainer> _pumpLibrary(
           // Native desktop draws the toolbar in the shell bar above the
           // page; narrower surfaces keep the page on its own.
           child: Builder(
-            builder: (context) => useDesktopTopBar(context)
+            builder: (context) => showsMergedTopBar(context)
                 ? const Scaffold(
                     body: Column(
                       children: [

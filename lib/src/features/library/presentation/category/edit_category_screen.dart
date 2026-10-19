@@ -36,7 +36,7 @@ class EditCategoryScreen extends HookConsumerWidget {
 
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.editCategory);
     final scaffold = Scaffold(
       appBar: topBar ? null : AppBar(title: title),

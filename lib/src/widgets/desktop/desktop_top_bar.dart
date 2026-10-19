@@ -40,7 +40,7 @@ const double kTopBarSearchMinWidth = 200;
 /// The merged bar replaces the title strip only in a desktop app running the
 /// desktop layout (width >= 600 with a shortestSide >= 600). Web and phones are
 /// unchanged.
-bool useDesktopTopBar(BuildContext context) =>
+bool showsMergedTopBar(BuildContext context) =>
     isDesktopPlatform && context.isDesktop;
 
 /// The current route's matched location, or null outside a router (plain

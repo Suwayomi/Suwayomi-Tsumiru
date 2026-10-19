@@ -324,7 +324,7 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.isDesktop;
     // Native desktop draws the toolbar in the shell bar instead of the body.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
       return;
@@ -616,7 +616,7 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         final desktop = context.isDesktop;
         // Native desktop draws the toolbar in the shell bar instead of the
         // pinned header.
-        final topBar = useDesktopTopBar(context);
+        final topBar = showsMergedTopBar(context);
         // Phone searches from the box under the title, applied to the filter
         // on submit; tablet keeps the live sticky bar.
         final phone = !context.isTablet;
@@ -854,7 +854,7 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.isDesktop;
     // Native desktop draws the toolbar in the shell bar instead of the body.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
       return;
@@ -1081,7 +1081,7 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     final desktop = context.isDesktop;
     // Native desktop draws the toolbar in the shell bar instead of the
     // pinned header.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     // Phone searches from the box under the title, applied to the filter
     // on submit; tablet keeps the live sticky bar.
     final phone = !context.isTablet;

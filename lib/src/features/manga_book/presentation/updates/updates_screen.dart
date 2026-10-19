@@ -437,7 +437,7 @@ class UpdatesScreen extends HookConsumerWidget {
     final selecting = selectedChapters.value.isNotEmpty;
     // Native desktop draws the toolbars in the shell bar instead of an app
     // bar; selection mode swaps the slot content like it swaps the app bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
       onPressed: () => selectedChapters.value = ({}),
       icon: const Icon(Icons.close_rounded),

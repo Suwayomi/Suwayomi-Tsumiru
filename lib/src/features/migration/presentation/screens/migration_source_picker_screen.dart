@@ -36,7 +36,7 @@ class MigrationSourcePickerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Native desktop draws the toolbar in the shell bar instead of an app
     // bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.migrationPickSourceTitle);
     final scaffold = Scaffold(
       appBar: topBar
@@ -242,7 +242,7 @@ class MigrationSourceMangaScreen extends HookConsumerWidget {
 
     // Native desktop draws the toolbars in the shell bar instead of an app
     // bar; selection mode swaps the slot content like it swaps the app bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final closeSelection = IconButton(
       icon: const Icon(Icons.close),
       onPressed: () => selection.value = const {},

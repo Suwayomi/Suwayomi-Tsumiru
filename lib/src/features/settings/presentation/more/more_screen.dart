@@ -44,7 +44,7 @@ class MoreScreen extends ConsumerWidget {
         phone && ref.watch(libraryPersistentSearchBarProvider).ifNull();
     // Native desktop draws the search box in the shell bar instead of an
     // app bar.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final search = DesktopSearchField(
       query: ref.watch(unifiedSearchQueryProvider),
       onChanged: (value) =>

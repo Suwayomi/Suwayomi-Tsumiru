@@ -188,7 +188,7 @@ class NavigationShellScreen extends HookConsumerWidget {
         body: SafeArea(
           child: Column(
             children: [
-              if (useDesktopTopBar(context)) const DesktopTopBar(),
+              if (showsMergedTopBar(context)) const DesktopTopBar(),
               // Keyed so a breakpoint toggle moves the body instead of
               // remounting it: the page keeps its scroll, focus and drafts.
               Expanded(

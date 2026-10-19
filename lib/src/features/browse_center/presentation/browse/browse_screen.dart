@@ -67,7 +67,7 @@ class BrowseScreen extends HookConsumerWidget {
 
     // Native desktop draws the search box and actions in the shell bar
     // instead of an app bar; the tabs stay in the page body.
-    final topBar = useDesktopTopBar(context);
+    final topBar = showsMergedTopBar(context);
     final search = _BrowseDesktopSearch(tabIndex: tabController.index);
     final actions = <Widget>[
       if (tabController.index == 0) ...[

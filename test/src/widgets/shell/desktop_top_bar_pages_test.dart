@@ -109,7 +109,7 @@ Future<void> _pumpPage(WidgetTester tester, Widget page) async {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
-          builder: (context) => useDesktopTopBar(context)
+          builder: (context) => showsMergedTopBar(context)
               ? Scaffold(
                   body: Column(
                     children: [

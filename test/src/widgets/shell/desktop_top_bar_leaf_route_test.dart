@@ -105,7 +105,7 @@ void main() {
             builder: (context, state, child) => Scaffold(
               body: Column(
                 children: [
-                  if (useDesktopTopBar(context)) const DesktopTopBar(),
+                  if (showsMergedTopBar(context)) const DesktopTopBar(),
                   Expanded(child: child),
                 ],
               ),
