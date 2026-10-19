@@ -73,16 +73,22 @@ Page<void> _detailNavigationPage(
   // transitions keep the style they started with.
   final tablet = context.isTablet;
   final reduceMotion = context.reduceMotion;
-  final Duration duration = !tablet
-      ? const Duration(milliseconds: 300)
-      : reduceMotion
+  final platformBuilder = _platformTransitionBuilder(context);
+  final Duration duration = reduceMotion
       ? Duration.zero
-      : const Duration(milliseconds: 150);
+      : tablet
+      ? const Duration(milliseconds: 150)
+      : platformBuilder.transitionDuration;
+  final Duration reverseDuration = reduceMotion
+      ? Duration.zero
+      : tablet
+      ? const Duration(milliseconds: 150)
+      : platformBuilder.reverseTransitionDuration;
   return CustomTransitionPage(
     key: state.pageKey,
     child: pageChild,
     transitionDuration: duration,
-    reverseTransitionDuration: duration,
+    reverseTransitionDuration: reverseDuration,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       if (tablet) {
         if (reduceMotion) {
@@ -107,4 +113,14 @@ Page<void> _detailNavigationPage(
       return child;
     },
   );
+}
+
+PageTransitionsBuilder _platformTransitionBuilder(BuildContext context) {
+  final theme = Theme.of(context);
+  return theme.pageTransitionsTheme.builders[theme.platform] ??
+      switch (theme.platform) {
+        TargetPlatform.iOS ||
+        TargetPlatform.macOS => const CupertinoPageTransitionsBuilder(),
+        _ => const ZoomPageTransitionsBuilder(),
+      };
 }
