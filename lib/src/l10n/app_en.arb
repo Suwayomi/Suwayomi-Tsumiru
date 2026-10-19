@@ -4185,5 +4185,13 @@
         "type": "String"
       }
     }
+  },
+  "lockToPortrait": "Lock to portrait",
+  "@lockToPortrait": {
+    "description": "General setting: lock the app to portrait orientation"
+  },
+  "lockToPortraitSubtitle": "Stop the app rotating to landscape on phones",
+  "@lockToPortraitSubtitle": {
+    "description": "Subtitle for the lock-to-portrait general setting"
   }
 }
