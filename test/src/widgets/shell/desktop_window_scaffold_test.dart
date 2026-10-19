@@ -259,6 +259,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('web shell shows the merged bar and never a strip', (
+    tester,
+  ) async {
+    debugDesktopPlatformOverride = false;
+    final container = await _container();
+    addTearDown(container.dispose);
+    await _pump(
+      tester,
+      container,
+      const DetailNavigationShellScreen(child: Text('detail page')),
+    );
+
+    expect(find.byType(DesktopTopBar), findsOneWidget);
+    expect(find.byType(DesktopTitleBar), findsNothing);
+    expect(find.byType(DragToMoveArea), findsNothing);
+    expect(find.byType(WindowCaptionButton), findsNothing);
+    expect(find.text('detail page'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow window keeps the strip', (tester) async {
     final container = await _container();
     addTearDown(container.dispose);

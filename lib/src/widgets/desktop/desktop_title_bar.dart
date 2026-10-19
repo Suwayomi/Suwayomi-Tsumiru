@@ -49,7 +49,9 @@ class DesktopBrandTitle extends StatelessWidget {
 
 /// Slim, seamless, theme-reactive window title bar. Windows/Linux draw our own
 /// min/max/close on the right; macOS keeps the native traffic lights (left) and
-/// this is just a draggable strip.
+/// this is just a draggable strip. Off native desktop (the merged bar's
+/// two-row fallback on web/tablets) there is no window to drag or control,
+/// so this is just a plain surface row.
 class DesktopTitleBar extends StatelessWidget {
   const DesktopTitleBar({super.key});
 
@@ -57,15 +59,17 @@ class DesktopTitleBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final native = isDesktopPlatform;
     return Container(
       height: kDesktopTitleBarHeight,
       color: scheme.surface,
       child: Stack(
         children: [
           // The whole strip is a drag handle.
-          const Positioned.fill(
-            child: DragToMoveArea(child: SizedBox.expand()),
-          ),
+          if (native)
+            const Positioned.fill(
+              child: DragToMoveArea(child: SizedBox.expand()),
+            ),
           // Brand, centred: present, not a banner. IgnorePointer so it
           // doesn't block the drag region beneath it.
           const Positioned.fill(
@@ -75,7 +79,7 @@ class DesktopTitleBar extends StatelessWidget {
           ),
           // Window controls, pinned right (Windows/Linux); macOS keeps its
           // native traffic lights on the left, so nothing is drawn there.
-          if (!isMacOSRuntime)
+          if (native && !isMacOSRuntime)
             Align(
               alignment: Alignment.centerRight,
               child: DesktopWindowButtons(brightness: theme.brightness),

@@ -164,6 +164,87 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('web and tablets', () {
+    // kIsWeb is a compile-time constant tests cannot flip, so the suite
+    // simulates web (and Android tablets, which are equally non-native) with
+    // the desktop-platform override off at a desktop-layout size.
+    setUp(() => debugDesktopPlatformOverride = false);
+    tearDown(() {
+      debugDesktopPlatformOverride = null;
+      debugAndroidOverride = null;
+    });
+
+    testWidgets('web 1400x900 draws the bar with no window chrome', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      await _pumpFrame(tester, prefs);
+
+      expect(find.byType(DesktopTopBar), findsOneWidget);
+      expect(tester.getSize(find.byType(DesktopTopBar)).height, 64);
+      expect(find.byType(DesktopTitleBar), findsNothing);
+      expect(find.byType(DragToMoveArea), findsNothing);
+      expect(find.byType(WindowCaptionButton), findsNothing);
+
+      // Brand block: logo, name and the collapse chevron.
+      expect(find.byType(TsumiruLogo), findsOneWidget);
+      expect(find.text('Tsumiru'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+
+      // The sidebar sits under the bar, expanded at this width.
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
+      expect(sidebarRect.top, barRect.bottom);
+      expect(sidebarRect.width, 208);
+
+      // Collapse: logo-only block; expand again by tapping the logo.
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(DesktopSidebar)).width, 60);
+      expect(find.text('Tsumiru'), findsNothing);
+      expect(find.byType(DragToMoveArea), findsNothing);
+      expect(find.byType(WindowCaptionButton), findsNothing);
+
+      await tester.tap(find.byType(TsumiruLogo));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(DesktopSidebar)).width, 208);
+      expect(find.text('Tsumiru'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('android tablet 1200x900 draws the same bar', (tester) async {
+      debugAndroidOverride = true;
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      await _pumpFrame(tester, prefs, size: const Size(1200, 900));
+
+      expect(find.byType(DesktopTopBar), findsOneWidget);
+      expect(find.byType(DesktopTitleBar), findsNothing);
+      expect(find.byType(DragToMoveArea), findsNothing);
+      expect(find.byType(WindowCaptionButton), findsNothing);
+      expect(find.byType(TsumiruLogo), findsOneWidget);
+      expect(find.text('Tsumiru'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+
+      final barRect = tester.getRect(find.byType(DesktopTopBar));
+      final sidebarRect = tester.getRect(find.byType(DesktopSidebar));
+      expect(sidebarRect.top, barRect.bottom);
+      expect(sidebarRect.width, 208);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('phone 412x900 is unchanged', (tester) async {
+      SharedPreferences.setMockInitialValues(const {});
+      final prefs = await SharedPreferences.getInstance();
+      await _pumpFrame(tester, prefs, size: const Size(412, 900));
+
+      expect(find.byType(DesktopTopBar), findsNothing);
+      expect(find.byType(DesktopTitleBar), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   Future<void> pumpRoute(
     WidgetTester tester,
     Size size, {

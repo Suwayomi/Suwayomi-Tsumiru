@@ -75,7 +75,9 @@ class DesktopSidebar extends ConsumerWidget {
 
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final expanded = sidebarIsExpanded(context, preference);
-    final isMacOS = isMacOSRuntime;
+    // The traffic-lights inset exists only on native macOS; web and tablets
+    // always use the logo column.
+    final isMacOS = isDesktopPlatform && isMacOSRuntime;
     final windowWidth = MediaQuery.sizeOf(context).width;
     void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
 

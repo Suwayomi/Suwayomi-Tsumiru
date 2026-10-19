@@ -37,11 +37,13 @@ const double kMacOSTrafficLightsInset = 80;
 /// rows.
 const double kTopBarSearchMinWidth = 200;
 
-/// The merged bar replaces the title strip only in a desktop app running the
-/// desktop layout (width >= 600 with a shortestSide >= 600). Web and phones are
-/// unchanged.
-bool showsMergedTopBar(BuildContext context) =>
-    isDesktopPlatform && context.isDesktop;
+/// The merged bar shows wherever the desktop layout shows (width >= 600 with
+/// a shortestSide >= 600), on every platform: native desktop, web in a
+/// browser, and Android/iPad tablets. Phones and the in-between
+/// landscape-phone layout keep their existing bars. The single gate for the
+/// shells, [DesktopWindowScaffold], the slot wiring and the page AppBar
+/// suppression, so they cannot disagree.
+bool showsMergedTopBar(BuildContext context) => context.isDesktop;
 
 /// The current route's matched location, or null outside a router (plain
 /// widget tests that pump the bar on its own).
@@ -354,9 +356,11 @@ class _TopBarSlotState extends ConsumerState<TopBarSlot> {
 
 /// The desktop window bar: `[brand block | page toolbar slot | window
 /// buttons]` in one 64 px row, or the two-row fallback (40 px title bar plus
-/// the toolbar row) when the window is too narrow. A [DragToMoveArea] sits
-/// behind the controls across the whole bar, so every empty part drags the
-/// window and double-clicking maximises/restores, as the title bar does.
+/// the toolbar row) when the window is too narrow. On native desktop a
+/// [DragToMoveArea] sits behind the controls across the whole bar, so every
+/// empty part drags the window and double-clicking maximises/restores, as
+/// the title bar does; off native desktop there are no window buttons, no
+/// drag area and no macOS inset, and the brand block always shows the logo.
 class DesktopTopBar extends ConsumerStatefulWidget {
   const DesktopTopBar({super.key});
 
@@ -420,10 +424,15 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
 
   Widget _buildBar(BuildContext context, WidgetRef ref, String location) {
     final width = MediaQuery.sizeOf(context).width;
-    final isMacOS = isMacOSRuntime;
+    // Window chrome (drag area, caption buttons, traffic-lights inset) exists
+    // only on native desktop. Web and tablets show the same bar and sidebar
+    // without it; the breakpoint then drops the buttons' width like macOS.
+    final native = isDesktopPlatform;
+    final isMacOS = native && isMacOSRuntime;
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
     final brandWidth = DesktopSidebar.widthFor(
       expanded: sidebarIsExpanded(context, preference),
+      isMacOS: isMacOS,
       windowWidth: width,
     );
     final entry = ref.watch(topBarSlotRegistryProvider)[location];
@@ -433,7 +442,8 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
             topBarBreakpoint(
               brandWidth: brandWidth,
               slotMinWidth: entry.minWidth,
-              isMacOS: isMacOS,
+              // No caption buttons off native desktop, like macOS.
+              isMacOS: isMacOS || !native,
             );
     final theme = Theme.of(context);
     if (!merged) {
@@ -456,16 +466,19 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
       color: theme.colorScheme.surface,
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: DragToMoveArea(child: SizedBox.expand()),
-          ),
+          // Native desktop only: the empty bar drags the window (and a
+          // double-click maximises). Web and tablets have no window to drag.
+          if (native)
+            const Positioned.fill(
+              child: DragToMoveArea(child: SizedBox.expand()),
+            ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _BrandBlock(width: brandWidth, isMacOS: isMacOS),
               const SizedBox(width: kDesktopTopBarGap),
               Expanded(child: _slotContent(context, entry, location)),
-              if (!isMacOS) ...[
+              if (!isMacOS && native) ...[
                 const SizedBox(width: kDesktopTopBarGap),
                 Center(
                   child: DesktopWindowButtons(brightness: theme.brightness),
