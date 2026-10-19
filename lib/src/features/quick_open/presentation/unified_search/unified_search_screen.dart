@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -13,6 +14,26 @@ import '../../../../widgets/search_field.dart';
 import 'unified_search_autocomplete.dart';
 import 'unified_search_providers.dart';
 import 'unified_search_results.dart';
+
+/// Up/Down move the results highlight; focus stays in the field.
+class _MoveSearchHighlightIntent extends Intent {
+  const _MoveSearchHighlightIntent(this.delta);
+
+  /// +1 for Down, -1 for Up.
+  final int delta;
+}
+
+class _MoveSearchHighlightAction extends Action<_MoveSearchHighlightIntent> {
+  _MoveSearchHighlightAction({required this.onInvoke});
+
+  final void Function(int delta) onInvoke;
+
+  @override
+  Object? invoke(_MoveSearchHighlightIntent intent) {
+    onInvoke(intent.delta);
+    return null;
+  }
+}
 
 class UnifiedSearchScreen extends HookConsumerWidget {
   const UnifiedSearchScreen({super.key, required this.afterClick});
@@ -30,6 +51,8 @@ class UnifiedSearchScreen extends HookConsumerWidget {
       const [],
     );
     final focusNode = useFocusNode();
+    final selection = useMemoized(UnifiedSearchSelection.new);
+    useEffect(() => selection.dispose, [selection]);
     useEffect(() {
       var lastText = controller.text;
       void sync() {
@@ -39,6 +62,9 @@ class UnifiedSearchScreen extends HookConsumerWidget {
         // input or our own setQuery, never during build.
         if (controller.text == lastText) return;
         lastText = controller.text;
+        // Every text change clears the highlight; the user moves again from
+        // the top.
+        selection.reset();
         ref.read(unifiedSearchQueryProvider.notifier).state = controller.text;
       }
 
@@ -97,23 +123,50 @@ class UnifiedSearchScreen extends HookConsumerWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(12),
-                    child: TextField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        hintText: l.unifiedSearchHint,
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        border: InputBorder.none,
-                      ),
-                      // Enter opens the top result — shared with the desktop
-                      // dropdowns so it behaves one way everywhere.
-                      onSubmitted: (_) => submitUnifiedQuery(
-                        context,
-                        ref,
-                        query,
-                        includeLibrary: true,
-                        close: close,
+                    child: Shortcuts(
+                      shortcuts: const {
+                        SingleActivator(LogicalKeyboardKey.arrowDown):
+                            _MoveSearchHighlightIntent(1),
+                        SingleActivator(LogicalKeyboardKey.arrowUp):
+                            _MoveSearchHighlightIntent(-1),
+                      },
+                      child: Actions(
+                        actions: {
+                          _MoveSearchHighlightIntent:
+                              _MoveSearchHighlightAction(
+                                onInvoke: (delta) {
+                                  if (delta > 0) {
+                                    selection.moveDown();
+                                  } else {
+                                    selection.moveUp();
+                                  }
+                                },
+                              ),
+                        },
+                        child: TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: l.unifiedSearchHint,
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            border: InputBorder.none,
+                          ),
+                          // Enter opens the highlighted row exactly as a tap
+                          // would; with no highlight, the top result — shared
+                          // with the desktop dropdowns so it behaves one way
+                          // everywhere.
+                          onSubmitted: (_) {
+                            if (selection.activateSelected()) return;
+                            submitUnifiedQuery(
+                              context,
+                              ref,
+                              query,
+                              includeLibrary: true,
+                              close: close,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -124,6 +177,7 @@ class UnifiedSearchScreen extends HookConsumerWidget {
                       caret: caret,
                       onSetQuery: setQuery,
                       onApplySuggestion: applyAndStay,
+                      selection: selection,
                     ),
                   ),
                 ],

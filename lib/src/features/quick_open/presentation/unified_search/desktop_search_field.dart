@@ -28,6 +28,33 @@ class _CloseSearchDropdownIntent extends Intent {
   const _CloseSearchDropdownIntent();
 }
 
+/// Up/Down move the dropdown highlight; focus stays in the field.
+class _MoveSearchHighlightIntent extends Intent {
+  const _MoveSearchHighlightIntent(this.delta);
+
+  /// +1 for Down, -1 for Up.
+  final int delta;
+}
+
+class _MoveSearchHighlightAction extends Action<_MoveSearchHighlightIntent> {
+  _MoveSearchHighlightAction({
+    required this.isActive,
+    required this.onInvoke,
+  });
+
+  final bool Function() isActive;
+  final void Function(int delta) onInvoke;
+
+  @override
+  bool get isActionEnabled => isActive();
+
+  @override
+  Object? invoke(_MoveSearchHighlightIntent intent) {
+    onInvoke(intent.delta);
+    return null;
+  }
+}
+
 /// Esc handler that is only enabled while there is something to do (an open
 /// dropdown or text to clear). Disabled, the key event is ignored by this
 /// layer and keeps propagating to the global Esc=Back handler.
@@ -58,7 +85,7 @@ class DesktopSearchField extends HookConsumerWidget {
     required this.query,
     required this.onChanged,
     this.onNavigate,
-    this.leading = const <Widget>[],
+    this.leadingBuilder,
     this.hasLeadingResults = false,
     this.showLibrarySection = true,
     this.hintText,
@@ -78,8 +105,10 @@ class DesktopSearchField extends HookConsumerWidget {
   /// touches this).
   final VoidCallback? onNavigate;
 
-  /// Extra result sections before the unified ones (History on its page).
-  final List<Widget> leading;
+  /// Extra result sections before the unified ones (History on its page),
+  /// built with [SelectableRowBuilder] so their rows join the keyboard order
+  /// first with the same highlight, hover, Semantics, and scroll behaviour.
+  final List<Widget> Function(SelectableRowBuilder selectable)? leadingBuilder;
 
   /// Whether [leading] currently holds matches (drives dropdown visibility).
   final bool hasLeadingResults;
@@ -116,6 +145,8 @@ class DesktopSearchField extends HookConsumerWidget {
     useListenable(controller); // rebuild on text OR caret move
 
     final focusNode = useFocusNode();
+    final selection = useMemoized(UnifiedSearchSelection.new);
+    useEffect(() => selection.dispose, [selection]);
     final link = useMemoized(LayerLink.new);
     final portal = useMemoized(OverlayPortalController.new);
     final targetKey = useMemoized(GlobalKey.new);
@@ -179,6 +210,9 @@ class DesktopSearchField extends HookConsumerWidget {
 
     void handleChanged(String value) {
       onChanged(value);
+      // Every text change clears the highlight; the user moves again from
+      // the top.
+      selection.reset();
       if (focusNode.hasFocus && canShow(value, caretOf(value))) {
         if (!portal.isShowing) portal.show();
       } else {
@@ -221,6 +255,8 @@ class DesktopSearchField extends HookConsumerWidget {
           register();
           if (canShow(controller.text, caretOf(controller.text)) &&
               !portal.isShowing) {
+            // A fresh open never carries a highlight.
+            selection.reset();
             portal.show();
           }
         });
@@ -305,7 +341,8 @@ class DesktopSearchField extends HookConsumerWidget {
                         close: closeAndClearHost,
                         caret: caret,
                         showLibrarySection: showLibrarySection,
-                        leading: leading,
+                        selection: selection,
+                        leadingBuilder: leadingBuilder,
                         onSetQuery: setText,
                         onApplySuggestion: (s) {
                           final edit = applySuggestion(
@@ -326,6 +363,10 @@ class DesktopSearchField extends HookConsumerWidget {
             shortcuts: const {
               SingleActivator(LogicalKeyboardKey.escape):
                   _CloseSearchDropdownIntent(),
+              SingleActivator(LogicalKeyboardKey.arrowDown):
+                  _MoveSearchHighlightIntent(1),
+              SingleActivator(LogicalKeyboardKey.arrowUp):
+                  _MoveSearchHighlightIntent(-1),
             },
             child: Actions(
               actions: {
@@ -340,6 +381,18 @@ class DesktopSearchField extends HookConsumerWidget {
                     } else {
                       controller.clear();
                       onChanged('');
+                    }
+                  },
+                ),
+                _MoveSearchHighlightIntent: _MoveSearchHighlightAction(
+                  // Closed: disabled, so Up/Down keep their default field
+                  // behaviour instead of being swallowed.
+                  isActive: () => portal.isShowing,
+                  onInvoke: (delta) {
+                    if (delta > 0) {
+                      selection.moveDown();
+                    } else {
+                      selection.moveUp();
                     }
                   },
                 ),
@@ -373,6 +426,7 @@ class DesktopSearchField extends HookConsumerWidget {
                             onPressed: () {
                               controller.clear();
                               onChanged('');
+                              selection.reset();
                               closeResults();
                               focusNode.requestFocus();
                             },
@@ -382,9 +436,11 @@ class DesktopSearchField extends HookConsumerWidget {
                     suffixIconConstraints: const BoxConstraints(minHeight: 36),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
-                  // Enter opens the top result — a leading section first
-                  // (History), then the unified top result like the overlay.
+                  // Enter opens the highlighted row exactly as a tap would;
+                  // with no highlight, a leading section first (History),
+                  // then the unified top result like the overlay.
                   onSubmitted: (_) {
+                    if (selection.activateSelected()) return;
                     if (onSubmitLeading?.call() == true) {
                       closeAndClearHost();
                       return;

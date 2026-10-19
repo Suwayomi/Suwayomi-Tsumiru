@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
@@ -12,7 +13,7 @@ import '../../server_image.dart';
 import '../widgets/continue_reading_button.dart';
 import '../widgets/manga_badges.dart';
 
-class MangaCoverListTile extends StatelessWidget {
+class MangaCoverListTile extends StatefulWidget {
   const MangaCoverListTile({
     super.key,
     required this.manga,
@@ -49,32 +50,99 @@ class MangaCoverListTile extends StatelessWidget {
   final bool limitTitleLines;
 
   @override
+  State<MangaCoverListTile> createState() => _MangaCoverListTileState();
+}
+
+class _MangaCoverListTileState extends State<MangaCoverListTile> {
+  var _hovered = false;
+  var _focused = false;
+  var _pointerFocused = false;
+  late final _focusNode = FocusNode(onKeyEvent: _onKeyEvent);
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (_focused) setState(() {});
+  }
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (_pointerFocused && event is KeyDownEvent) {
+      setState(() => _pointerFocused = false);
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool get _keyboardFocused =>
+      _focused &&
+      !_pointerFocused &&
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
+  @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: selected
+      color: widget.selected
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)
           : Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
-        onLongPress: onLongPress,
+        focusNode: _focusNode,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        onTapDown: (_) => setState(() => _pointerFocused = true),
+        onHover: (hovered) => setState(() => _hovered = hovered),
+        onFocusChange: (focused) => setState(() {
+          _focused = focused;
+          if (!focused) _pointerFocused = false;
+        }),
+        onTap: widget.onPressed == null
+            ? null
+            : () {
+                _focusNode.requestFocus();
+                widget.onPressed!();
+              },
+        onLongPress: widget.onLongPress,
         child: Row(
           children: [
           Padding(
             padding: KEdgeInsets.a8.size,
-            child: ClipRRect(
-              borderRadius: KBorderRadius.r8.radius,
-              child: ServerImage(
-                imageUrl: manga.thumbnailUrl ?? "",
-                // Decode at display size — see the grid tile.
-                memCacheWidth: (kCompactCoverWidth *
-                        scale *
-                        MediaQuery.devicePixelRatioOf(context))
-                    .round()
-                    .clamp(1, 1 << 16),
-                size: Size(
-                  kCompactCoverWidth * scale,
-                  mangaCoverBoxHeight(kCompactCoverWidth * scale,
-                      coverInset: 0),
+            child: Container(
+              foregroundDecoration:
+                  widget.selected || _hovered || _keyboardFocused
+                  ? BoxDecoration(
+                      borderRadius: KBorderRadius.r8.radius,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: widget.selected ? 3 : 2,
+                      ),
+                    )
+                  : null,
+              child: ClipRRect(
+                borderRadius: KBorderRadius.r8.radius,
+                child: ServerImage(
+                  imageUrl: widget.manga.thumbnailUrl ?? "",
+                  // Decode at display size — see the grid tile.
+                  memCacheWidth: (kCompactCoverWidth *
+                          widget.scale *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round()
+                      .clamp(1, 1 << 16),
+                  size: Size(
+                    kCompactCoverWidth * widget.scale,
+                    mangaCoverBoxHeight(kCompactCoverWidth * widget.scale,
+                        coverInset: 0),
+                  ),
                 ),
               ),
             ),
@@ -85,26 +153,28 @@ class MangaCoverListTile extends StatelessWidget {
               // Skia collapses an uncapped ellipsis to one line, so uncapped
               // text has to clip instead.
               child: Text(
-                manga.title,
+                widget.manga.title,
                 softWrap: true,
-                overflow: limitTitleLines
+                overflow: widget.limitTitleLines
                     ? TextOverflow.ellipsis
                     : TextOverflow.clip,
-                maxLines: limitTitleLines ? 3 : null,
+                maxLines: widget.limitTitleLines ? 3 : null,
               ),
             ),
           ),
-            if (showBadges)
-              MangaBadgesRow(manga: manga, showCountBadges: showCountBadges),
-            if (onContinueReading != null)
+            if (widget.showBadges)
+              MangaBadgesRow(
+                  manga: widget.manga,
+                  showCountBadges: widget.showCountBadges),
+            if (widget.onContinueReading != null)
               Padding(
                 padding: KEdgeInsets.h8.size,
                 child: ContinueReadingButton(
-                  onPressed: onContinueReading!,
+                  onPressed: widget.onContinueReading!,
                   size: 28,
                 ),
               ),
-            ?trailing,
+            ?widget.trailing,
           ],
         ),
       ),

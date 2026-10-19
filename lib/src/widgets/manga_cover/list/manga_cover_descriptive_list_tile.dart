@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
 
 import '../../../constants/app_sizes.dart';
@@ -17,7 +18,7 @@ import '../grid/manga_cover_grid_tile.dart';
 import '../widgets/manga_badges.dart';
 import '../widgets/manga_chips.dart';
 
-class MangaCoverDescriptiveListTile extends StatelessWidget {
+class MangaCoverDescriptiveListTile extends StatefulWidget {
   const MangaCoverDescriptiveListTile({
     super.key,
     required this.manga,
@@ -60,29 +61,89 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
   final int? titleMaxLines;
 
   @override
+  State<MangaCoverDescriptiveListTile> createState() =>
+      _MangaCoverDescriptiveListTileState();
+}
+
+class _MangaCoverDescriptiveListTileState
+    extends State<MangaCoverDescriptiveListTile> {
+  var _hovered = false;
+  var _focused = false;
+  var _pointerFocused = false;
+  late final _focusNode = FocusNode(onKeyEvent: _onKeyEvent);
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (_focused) setState(() {});
+  }
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (_pointerFocused && event is KeyDownEvent) {
+      setState(() => _pointerFocused = false);
+    }
+    return KeyEventResult.ignored;
+  }
+
+  bool get _keyboardFocused =>
+      _focused &&
+      !_pointerFocused &&
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
+  @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: selected
+      color: widget.selected
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)
           : Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
-        onLongPress: onLongPress,
+        focusNode: _focusNode,
+        hoverColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        onTapDown: (_) => setState(() => _pointerFocused = true),
+        onHover: (hovered) => setState(() => _hovered = hovered),
+        onFocusChange: (focused) => setState(() {
+          _focused = focused;
+          if (!focused) _pointerFocused = false;
+        }),
+        onTap: widget.onPressed == null
+            ? null
+            : () {
+                _focusNode.requestFocus();
+                widget.onPressed!();
+              },
+        onLongPress: widget.onLongPress,
         child: Padding(
         padding: const EdgeInsets.all(kListTilePadding),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(
-              width: kDescriptiveCoverWidth * scale,
-              height: mangaCoverBoxHeight(kDescriptiveCoverWidth * scale),
+              width: kDescriptiveCoverWidth * widget.scale,
+              height: mangaCoverBoxHeight(
+                  kDescriptiveCoverWidth * widget.scale),
               child: MangaCoverGridTile(
-                manga: manga,
+                manga: widget.manga,
                 showBadges: false,
                 showTitle: false,
                 showDarkOverlay: false,
-                onContinueReading: onContinueReading,
-                outlineOnCovers: outlineOnCovers,
+                selected: widget.selected,
+                highlighted: _hovered || _keyboardFocused,
+                onContinueReading: widget.onContinueReading,
+                outlineOnCovers: widget.outlineOnCovers,
               ),
             ),
             Expanded(
@@ -94,29 +155,30 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     InkWell(
-                      onTap: onTitleClicked != null
-                          ? () => onTitleClicked!(manga.title)
+                      onTap: widget.onTitleClicked != null
+                          ? () => widget.onTitleClicked!(widget.manga.title)
                           : null,
                       // Skia collapses an uncapped ellipsis to one line, so
                       // uncapped text has to clip instead.
                       child: Text(
-                        manga.title,
+                        widget.manga.title,
                         style: context.textTheme.titleLarge,
                         softWrap: true,
-                        overflow: titleMaxLines == null
+                        overflow: widget.titleMaxLines == null
                             ? TextOverflow.clip
                             : TextOverflow.ellipsis,
-                        maxLines: titleMaxLines,
-                        semanticsLabel: manga.title,
+                        maxLines: widget.titleMaxLines,
+                        semanticsLabel: widget.manga.title,
                       ),
                     ),
                     Gap(8),
                     InkWell(
-                      onTap: onTitleClicked != null && manga.author.isNotBlank
-                          ? () => onTitleClicked!(manga.author)
+                      onTap: widget.onTitleClicked != null &&
+                              widget.manga.author.isNotBlank
+                          ? () => widget.onTitleClicked!(widget.manga.author)
                           : null,
                       child: Text(
-                        manga.author ?? context.l10n.unknownAuthor,
+                        widget.manga.author ?? context.l10n.unknownAuthor,
                         overflow: TextOverflow.ellipsis,
                         style: context.textTheme.bodyMedium,
                       ),
@@ -127,26 +189,26 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                       children: [
                         ...[
                           Icon(
-                            MangaStatus.fromJson(manga.status.name).icon,
+                            MangaStatus.fromJson(widget.manga.status.name).icon,
                             size: 16,
                             color: context.textTheme.bodySmall?.color,
                           ),
                           Text(
-                            " ${MangaStatus.fromJson(manga.status.name).toLocale(context)}",
+                            " ${MangaStatus.fromJson(widget.manga.status.name).toLocale(context)}",
                             style: context.textTheme.bodySmall,
                           ),
                         ],
-                        if (manga.source?.displayName != null) ...[
+                        if (widget.manga.source?.displayName != null) ...[
                           Text(" • "),
                           InkWell(
-                            onTap: (manga.source?.id).isNotBlank
+                            onTap: (widget.manga.source?.id).isNotBlank
                                 ? () => SourceTypeRoute(
-                                        sourceId: manga.source!.id,
+                                        sourceId: widget.manga.source!.id,
                                         sourceType: SourceType.POPULAR)
                                     .go(context)
                                 : null,
                             child: Text(
-                              manga.source?.displayName ??
+                              widget.manga.source?.displayName ??
                                   context.l10n.unknownSource,
                               style: context.textTheme.bodySmall,
                             ),
@@ -154,9 +216,9 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                         ]
                       ],
                     ),
-                    if (belowStatus != null) ...[
+                    if (widget.belowStatus != null) ...[
                       Gap(4),
-                      belowStatus!,
+                      widget.belowStatus!,
                     ],
                     // if (showLastReadChapter) ...[
                     //   Padding(
@@ -176,16 +238,16 @@ class MangaCoverDescriptiveListTile extends StatelessWidget {
                     //     ),
                     //   ),
                     // ],
-                    if (showBadges)
+                    if (widget.showBadges)
                       context.isTablet
                           ? MangaChipsRow(
-                              manga: manga,
-                              showCountBadges: showCountBadges,
+                              manga: widget.manga,
+                              showCountBadges: widget.showCountBadges,
                             )
                           : MangaBadgesRow(
                               padding: KEdgeInsets.v8.size,
-                              manga: manga,
-                              showCountBadges: showCountBadges,
+                              manga: widget.manga,
+                              showCountBadges: widget.showCountBadges,
                             ),
                   ],
                 ),
