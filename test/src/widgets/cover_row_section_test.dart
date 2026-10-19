@@ -51,7 +51,7 @@ void main() {
     expect(find.byType(IconButton), findsNWidgets(2));
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(find.byType(CoverRowEdgeFade), findsOneWidget);
     expect(
       tester.widget<CoverRowEdgeFade>(find.byType(CoverRowEdgeFade)).fade,
       isTrue,
@@ -282,12 +282,15 @@ void main() {
     expect(seeAllCalls, 1);
   });
 
-  testWidgets('the edge fade leaves no bright column at a fractional width', (
+  testWidgets('the edge fade ends fully in the background colour', (
     tester,
   ) async {
-    for (final dpr in [1.25, 1.5]) {
+    const background = Color(0xFF203040);
+    for (final dpr in [1.0, 1.25, 1.5]) {
       tester.view.physicalSize = const Size(600, 200);
       tester.view.devicePixelRatio = dpr;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final boundaryKey = GlobalKey();
       await tester.pumpWidget(
         Directionality(
@@ -296,13 +299,16 @@ void main() {
             alignment: Alignment.topLeft,
             child: RepaintBoundary(
               key: boundaryKey,
-              child: SizedBox(
-                width: 333.5,
-                height: 100,
-                child: CoverRowEdgeFade(
-                  fade: true,
-                  color: Colors.white,
-                  child: const ColoredBox(color: Colors.white),
+              child: ColoredBox(
+                color: background,
+                child: SizedBox(
+                  width: 333.5,
+                  height: 100,
+                  child: CoverRowEdgeFade(
+                    fade: true,
+                    background: background,
+                    child: const ColoredBox(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -318,24 +324,19 @@ void main() {
       final bytes = (await tester.runAsync(
         () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
       ))!;
-      int alphaAt(int x, int y) =>
-          bytes.getUint8((y * image.width + x) * 4 + 3);
-      final y = image.height ~/ 2;
+      int red(int x) => bytes.getUint8((50 * image.width + x) * 4);
       final last = image.width - 1;
-      expect(alphaAt(last, y), lessThan(8), reason: 'dpr $dpr');
-      expect(
-        alphaAt(last, y),
-        lessThanOrEqualTo(alphaAt(last - 3, y)),
-        reason: 'dpr $dpr',
-      );
+      for (final x in [last - 1, last]) {
+        expect(red(x), closeTo(0x20, 2), reason: 'dpr $dpr column $x');
+      }
+      final fadeColumns = (40 * dpr).round();
+      for (var x = last - fadeColumns + 1; x <= last; x++) {
+        expect(
+          red(x),
+          lessThanOrEqualTo(red(x - 1)),
+          reason: 'dpr $dpr column $x',
+        );
+      }
     }
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-  });
-
-  test('the fade reaches transparent before the right edge', () {
-    final stops = CoverRowEdgeFade.stopsFor(333.5);
-    expect(stops.last, lessThan(1));
-    expect(stops.last, closeTo(1 - 2 / 333.5, 1e-9));
   });
 }
