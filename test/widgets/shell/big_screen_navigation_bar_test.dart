@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/constants/navigation_bar_data.dart';
 import 'package:tsumiru/src/features/offline/data/offline_nav_status.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
@@ -280,6 +281,100 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('collapsed rows are 44px tall with 6px gaps', (tester) async {
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs);
+    expect(_sidebarWidth(tester), 60);
+
+    final rows = find.descendant(
+      of: find.byType(DesktopSidebar),
+      matching: find.byWidgetPredicate(
+        (w) => w is Container && w.constraints?.maxHeight == 44,
+      ),
+    );
+    expect(rows, findsNWidgets(6));
+    expect(
+      find.descendant(
+        of: find.byType(DesktopSidebar),
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.constraints?.maxHeight == 40,
+        ),
+      ),
+      findsNothing,
+    );
+
+    final tops = [
+      for (var i = 0; i < 6; i++) tester.getTopLeft(rows.at(i)).dy,
+    ];
+    for (var i = 1; i < tops.length; i++) {
+      expect(
+        tops[i] - tops[i - 1],
+        50,
+        reason: 'collapsed pitch is 44px row + 6px gap',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('expanded rows stay 40px tall with 2px gaps', (tester) async {
+    SharedPreferences.setMockInitialValues(const {});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs);
+    expect(_sidebarWidth(tester), 208);
+
+    final rows = find.descendant(
+      of: find.byType(DesktopSidebar),
+      matching: find.byWidgetPredicate(
+        (w) => w is Container && w.constraints?.maxHeight == 40,
+      ),
+    );
+    expect(rows, findsNWidgets(6));
+    expect(
+      find.descendant(
+        of: find.byType(DesktopSidebar),
+        matching: find.byWidgetPredicate(
+          (w) => w is Container && w.constraints?.maxHeight == 44,
+        ),
+      ),
+      findsNothing,
+    );
+
+    final tops = [
+      for (var i = 0; i < 6; i++) tester.getTopLeft(rows.at(i)).dy,
+    ];
+    for (var i = 1; i < tops.length; i++) {
+      expect(
+        tops[i] - tops[i - 1],
+        42,
+        reason: 'expanded pitch is 40px row + 2px gap',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('1400x600 collapsed shows all six destinations', (tester) async {
+    SharedPreferences.setMockInitialValues(const {'sidebarExpanded': false});
+    final prefs = await SharedPreferences.getInstance();
+    await _pump(tester, prefs, size: const Size(1400, 600));
+
+    final context = tester.element(find.byType(DesktopSidebar));
+    final navList = NavigationBarData.getNavList(context);
+    expect(navList, hasLength(6));
+
+    for (final data in navList) {
+      final label = data.label(context);
+      final row = find.byWidgetPredicate(
+        (w) => w is Tooltip && w.message == label,
+      );
+      expect(row, findsOneWidget, reason: 'collapsed row keeps "$label"');
+      final rect = tester.getRect(row);
+      expect(rect.top, greaterThanOrEqualTo(0));
+      expect(rect.bottom, lessThanOrEqualTo(600));
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('badges still render on the sidebar icons', (tester) async {

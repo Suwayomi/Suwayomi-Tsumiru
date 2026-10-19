@@ -21,9 +21,9 @@ import 'sidebar_expanded.dart';
 /// Wide-desktop-only navigation sidebar (shown when [BuildContext.isWideDesktop]).
 ///
 /// Expanded (208 px): logo header with collapse chevron, then 40 px rows with
-/// icon + label. Collapsed (60 px): centred logo (tap to expand), icon-only
-/// rows with the label as a hover [Tooltip]. Width animates over 200 ms unless
-/// reduced motion is requested.
+/// icon + label and 2 px gaps. Collapsed (60 px): centred logo (tap to
+/// expand), 44 px icon-only rows with 6 px gaps, the label as a hover
+/// [Tooltip]. Width animates over 200 ms unless reduced motion is requested.
 class DesktopSidebar extends ConsumerWidget {
   const DesktopSidebar({
     super.key,
@@ -38,6 +38,9 @@ class DesktopSidebar extends ConsumerWidget {
   static const double collapsedWidth = 60;
   static const double _headerHeight = 56;
   static const double _rowHeight = 40;
+  static const double _collapsedRowHeight = 44;
+  static const double _rowGap = 2;
+  static const double _collapsedRowGap = 6;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,8 +75,10 @@ class DesktopSidebar extends ConsumerWidget {
           extensionUpdates,
         ),
       );
+      final rowHeight = showExpanded ? _rowHeight : _collapsedRowHeight;
+      final rowGap = showExpanded ? _rowGap : _collapsedRowGap;
       final rowBody = Container(
-        height: _rowHeight,
+        height: rowHeight,
         decoration: BoxDecoration(
           color: selected ? selectedBg : null,
           borderRadius: BorderRadius.circular(10),
@@ -114,7 +119,9 @@ class DesktopSidebar extends ConsumerWidget {
         ),
       );
       return Padding(
-        padding: EdgeInsets.only(bottom: index == navList.length - 1 ? 0 : 2),
+        padding: EdgeInsets.only(
+          bottom: index == navList.length - 1 ? 0 : rowGap,
+        ),
         child: showExpanded
             ? tappable
             : Tooltip(message: label, child: tappable),
