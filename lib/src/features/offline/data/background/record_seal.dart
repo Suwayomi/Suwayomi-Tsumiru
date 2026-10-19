@@ -12,6 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart';
 
 import '../../../../utils/crash/diagnostics.dart';
+import '../../../auth/data/secure_credentials_provider.dart';
 
 /// Encrypts the secret fields of [BackgroundTokenRecord]s.
 ///
@@ -42,7 +43,11 @@ abstract final class RecordSeal {
     bool create = false,
   }) async {
     try {
-      final stored = await storage.read(key: storageKey);
+      final stored = await readSecureOrAbsent(storage, storageKey);
+      if (stored == null && keychainRefusedThisRun) {
+        _log('key-unreadable cause=refused');
+        return false;
+      }
       final bytes = stored == null ? null : _decodeKey(stored);
       if (bytes != null && bytes.length == 32) {
         _key = bytes;
@@ -53,7 +58,11 @@ abstract final class RecordSeal {
         return false;
       }
       final fresh = _randomBytes(32);
-      await storage.write(key: storageKey, value: base64Encode(fresh));
+      // A key that never reached storage would seal records nothing can
+      // open later, so an unsaved key is no key (as before).
+      if (!await writeSecure(storage, storageKey, base64Encode(fresh))) {
+        return false;
+      }
       _key = fresh;
       _log('key-created');
       return true;

@@ -35,6 +35,9 @@ enum DBKeys {
   authType(AuthType.none),
   basicCredentials(null),
   authUsername(null),
+  // A refused secure-storage delete may have left credentials behind after a
+  // sign-out or server switch. The next launch must not use them.
+  authCredentialsInvalidated(false),
   readerMode(ReaderMode.singleHorizontalRTL),
   readerPadding(0.0),
   // Desktop mouse wheel. Flutter's Linux embedder moves 53px per notch, which

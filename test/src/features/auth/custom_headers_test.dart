@@ -7,10 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/custom_headers_store.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/offline/data/background/background_token_record.dart';
 import 'package:tsumiru/src/features/onboarding/data/server_resolver.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 class _InMemorySecureStorage implements FlutterSecureStorage {
   _InMemorySecureStorage([Map<String, String>? seed]) : _store = {...?seed};
@@ -64,7 +66,14 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
       throw UnimplementedError('${invocation.memberName} not stubbed');
 }
 
+late SharedPreferences _prefs;
+
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
+  });
+
   group('applyCustomHeaders', () {
     test('merges custom headers into an empty base', () {
       final out = applyCustomHeaders({}, {
@@ -206,6 +215,7 @@ void main() {
     ProviderContainer containerWith(_InMemorySecureStorage storage) =>
         ProviderContainer(overrides: [
           secureStorageProvider.overrideWithValue(storage),
+          sharedPreferencesProvider.overrideWithValue(_prefs),
         ]);
 
     test('empty storage loads as empty', () async {

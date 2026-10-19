@@ -8,6 +8,8 @@ import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../global_providers/global_providers.dart';
+import 'credential_snapshot.dart';
 import 'secure_credentials_provider.dart';
 
 /// Generic custom HTTP headers sent with every request to the Suwayomi
@@ -27,26 +29,23 @@ import 'secure_credentials_provider.dart';
 /// [AsyncValue.value] (falling back to empty before the load completes).
 class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
   /// Secure-storage key holding the JSON-encoded header map.
-  static const secureKey = 'custom.headers';
+  static const secureKey = kCustomHeadersKey;
 
   @override
   Future<Map<String, String>> build() async {
-    try {
-      final raw = await ref.read(secureStorageProvider).read(key: secureKey);
-      return decode(raw);
-    } catch (_) {
-      return const {};
-    }
+    final prefs = ref.read(sharedPreferencesProvider);
+    final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+    await vault.ensureLoaded(prefs);
+    return decode(vault[secureKey]);
   }
 
   Future<void> _persist(Map<String, String> headers) async {
     state = AsyncData(Map<String, String>.from(headers));
-    final storage = ref.read(secureStorageProvider);
-    if (headers.isEmpty) {
-      await storage.delete(key: secureKey);
-    } else {
-      await storage.write(key: secureKey, value: encode(headers));
-    }
+    final prefs = ref.read(sharedPreferencesProvider);
+    await credentialSnapshot(
+      ref.read(secureStorageProvider),
+      prefs,
+    ).update({secureKey: headers.isEmpty ? null : encode(headers)}, prefs);
   }
 
   /// Replace the whole map (used by import/reset flows).
@@ -96,8 +95,8 @@ class CustomHttpHeadersStore extends AsyncNotifier<Map<String, String>> {
 
 final customHttpHeadersProvider =
     AsyncNotifierProvider<CustomHttpHeadersStore, Map<String, String>>(
-  CustomHttpHeadersStore.new,
-);
+      CustomHttpHeadersStore.new,
+    );
 
 /// Validate a header name for the editor. Returns an error string or null
 /// when valid. Header names are RFC 7230 tokens: no spaces, colons, or

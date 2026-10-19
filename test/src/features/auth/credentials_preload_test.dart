@@ -7,9 +7,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/basic_auth_migration.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
 import 'package:tsumiru/src/features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 class _InMemorySecureStorage implements FlutterSecureStorage {
   _InMemorySecureStorage([Map<String, String>? seed]) : _store = {...?seed};
@@ -68,10 +70,14 @@ void main() {
   // preload, so those reads saw null and the GraphQL client, on its first
   // watch, rebuilt under requests already on their way.
   test('the preloaded credentials are still there at the first read', () async {
+    SharedPreferences.setMockInitialValues({});
     final container = ProviderContainer(
       overrides: [
         secureStorageProvider.overrideWithValue(
           _InMemorySecureStorage({kBasicCredentialsSecureKey: 'Basic abc'}),
+        ),
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
         ),
       ],
     );

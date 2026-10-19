@@ -15,10 +15,11 @@ import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/data/auth_credentials_store.dart';
-import '../../../../../../features/auth/data/basic_auth_migration.dart';
+import '../../../../../../features/auth/data/credential_snapshot.dart';
 import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../features/auth/presentation/sign_in_action.dart';
+import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../widgets/popup_widgets/pop_button.dart';
 import '../client/server_port_tile/server_port_tile.dart';
@@ -33,8 +34,12 @@ part 'credentials_popup.g.dart';
 @Riverpod(keepAlive: true)
 class Credentials extends _$Credentials {
   @override
-  Future<String?> build() async =>
-      ref.read(secureStorageProvider).read(key: kBasicCredentialsSecureKey);
+  Future<String?> build() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+    await vault.ensureLoaded(prefs);
+    return vault[kBasicCredentialsKey];
+  }
 
   /// [forEpoch]: discards/undoes the write if a switch bumps [AuthCredentialsStore.serverEpoch]
   /// meanwhile. Omit for a clear (set null).
@@ -43,17 +48,15 @@ class Credentials extends _$Credentials {
       epoch,
     ) async {
       await future;
-      final storage = ref.read(secureStorageProvider);
       final credentials = ref.read(authCredentialsStoreProvider.notifier);
       if (epoch != credentials.serverEpoch) return;
-      if (value == null) {
-        state = const AsyncData(null);
-        await storage.delete(key: kBasicCredentialsSecureKey);
-        return;
-      }
-      await storage.write(key: kBasicCredentialsSecureKey, value: value);
+      final prefs = ref.read(sharedPreferencesProvider);
+      final vault = credentialSnapshot(ref.read(secureStorageProvider), prefs);
+      await vault.update({kBasicCredentialsKey: value}, prefs);
       if (epoch != credentials.serverEpoch) {
-        await storage.delete(key: kBasicCredentialsSecureKey);
+        // A switch started while the write was in flight: its complete state
+        // must not keep this server's Basic credential.
+        await vault.update({kBasicCredentialsKey: null}, prefs);
         return;
       }
       state = AsyncData(value);

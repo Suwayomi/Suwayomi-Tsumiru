@@ -247,12 +247,12 @@ Future<void> _startApp() async {
   //    first frame so synchronous reads (image widgets, GraphQL links) get
   //    populated state instead of AsyncLoading — which would produce tokenless
   //    requests that get cached as 401 failures by cached_network_image.
+  // Read one provider at a time: the keychain prompts once per launch, and a
+  // refused read stops the rest from prompting.
   try {
-    await Future.wait([
-      container.read(authCredentialsStoreProvider.future),
-      container.read(credentialsProvider.future),
-      container.read(customHttpHeadersProvider.future),
-    ]);
+    await container.read(authCredentialsStoreProvider.future);
+    await container.read(credentialsProvider.future);
+    await container.read(customHttpHeadersProvider.future);
   } catch (e, st) {
     debugPrint('auth preload failed, falling back to empty state: $e\n$st');
     // Both notifiers will re-attempt on first widget read. App still launches.

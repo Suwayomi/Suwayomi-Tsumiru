@@ -10,9 +10,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/features/auth/data/auth_coordinator.dart';
 import 'package:tsumiru/src/features/auth/data/auth_state.dart';
 import 'package:tsumiru/src/features/auth/data/secure_credentials_provider.dart';
+import 'package:tsumiru/src/global_providers/global_providers.dart';
 
 /// Secure storage whose reads never complete — the credentials store stays
 /// un-hydrated for the whole test, like a slow platform keystore at startup.
@@ -36,8 +38,12 @@ void main() {
   test('refresh before the credentials store hydrates is transient, '
       'not "Session expired"', () async {
     debugResetAuthCoordinatorSingleFlight();
+    SharedPreferences.setMockInitialValues({});
     final container = ProviderContainer(overrides: [
       secureStorageProvider.overrideWithValue(_HangingStorage()),
+      sharedPreferencesProvider.overrideWithValue(
+        await SharedPreferences.getInstance(),
+      ),
     ]);
     addTearDown(container.dispose);
 

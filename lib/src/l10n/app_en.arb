@@ -73,6 +73,9 @@
   "@authSessionExpired": {
     "description": "Banner text shown at top of screens when the session has expired and the user must re-authenticate"
   },
+  "@authCredentialsNotSaved": {
+    "description": "Toast shown after signing in when the device refused to save the credentials; the sign-in works for this run only"
+  },
   "@authReauthenticate": {
     "description": "Button text on the session-expired banner that opens the re-auth prompt"
   },
@@ -1321,6 +1324,7 @@
   "authTestConnectionFailedShape": "Server didn't respond as expected. Is your URL pointing at the Suwayomi API?",
   "authTestConnectionFailedTls": "TLS handshake failed. Common causes: 1) Server is plain HTTP — switch your URL to http://. 2) Public hostname behind a reverse proxy — turn OFF the 'Use Server Port' toggle on the Server screen so requests go to standard 443.",
   "authSessionExpired": "Session expired — sign in again.",
+  "authCredentialsNotSaved": "Signed in. This device couldn't save your sign-in, so you'll need to sign in again next launch.",
   "authReauthenticate": "Re-authenticate",
   "authInsecureTransportTitle": "Insecure connection",
   "authInsecureTransportWarning": "Your server URL uses http:// — your username and password will be sent in cleartext over the network. Use https:// unless you trust the network entirely.",

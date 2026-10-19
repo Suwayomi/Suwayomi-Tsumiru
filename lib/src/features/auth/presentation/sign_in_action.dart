@@ -8,11 +8,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../../routes/router_config.dart';
+import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/misc/toast/toast.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../data/auth_coordinator.dart';
 import '../data/auth_credentials_store.dart';
 import '../data/auth_state.dart';
+import '../data/secure_credentials_provider.dart';
 
 /// The single sign-in routine shared by first-run onboarding and the
 /// Connection settings screen. Neither surface reimplements login — they both
@@ -34,40 +38,52 @@ Future<void> performSignIn(
   required String serverBaseUrl,
   required String username,
   required String password,
-}) => ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
-  ref.read(authUsernameProvider.notifier).update(username);
-  final store = ref.read(authCredentialsStoreProvider.notifier);
-  if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
-  if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
-  if (authType != AuthType.basic) await store.clearBasicCredentials();
+}) {
+  // The notice below belongs to this attempt, not to an earlier one.
+  resetCredentialWriteFailure();
+  return ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
+    ref.read(authUsernameProvider.notifier).update(username);
+    final store = ref.read(authCredentialsStoreProvider.notifier);
+    if (authType != AuthType.uiLogin) await store.clearUiLoginTokens();
+    if (authType != AuthType.simpleLogin) await store.clearSimpleLoginCookie();
+    if (authType != AuthType.basic) await store.clearBasicCredentials();
 
-  final coordinator = ref.read(authCoordinatorProvider.notifier);
-  switch (authType) {
-    case AuthType.basic:
-      // Verifies before persisting, like the other two modes: basic_auth has
-      // no login round-trip, so storing blind reported a successful sign-in
-      // for credentials the server refuses.
-      await coordinator.loginBasic(
-        serverBaseUrl: serverBaseUrl,
-        username: username,
-        password: password,
-      );
-    case AuthType.simpleLogin:
-      await coordinator.loginSimple(
-        serverBaseUrl: serverBaseUrl,
-        username: username,
-        password: password,
-      );
-    case AuthType.uiLogin:
-      await coordinator.loginUi(
-        gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
-        username: username,
-        password: password,
-        serverBaseUrl: serverBaseUrl,
-      );
-    case AuthType.none:
-      return;
-  }
-  ref.read(authTypeKeyProvider.notifier).update(authType);
-  ref.read(needsReauthProvider.notifier).set(false);
-});
+    final coordinator = ref.read(authCoordinatorProvider.notifier);
+    switch (authType) {
+      case AuthType.basic:
+        // Verifies before persisting, like the other two modes: basic_auth has
+        // no login round-trip, so storing blind reported a successful sign-in
+        // for credentials the server refuses.
+        await coordinator.loginBasic(
+          serverBaseUrl: serverBaseUrl,
+          username: username,
+          password: password,
+        );
+      case AuthType.simpleLogin:
+        await coordinator.loginSimple(
+          serverBaseUrl: serverBaseUrl,
+          username: username,
+          password: password,
+        );
+      case AuthType.uiLogin:
+        await coordinator.loginUi(
+          gqlClient: ref.read(unauthenticatedGraphQlClientProvider),
+          username: username,
+          password: password,
+          serverBaseUrl: serverBaseUrl,
+        );
+      case AuthType.none:
+        return;
+    }
+    ref.read(authTypeKeyProvider.notifier).update(authType);
+    ref.read(needsReauthProvider.notifier).set(false);
+    // The sign-in works from memory for this run; say it cannot be saved
+    // rather than leave the user expecting it next launch.
+    if (credentialWriteFailedThisRun) {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ref.read(toastProvider)?.show(context.l10n.authCredentialsNotSaved);
+      }
+    }
+  });
+}
