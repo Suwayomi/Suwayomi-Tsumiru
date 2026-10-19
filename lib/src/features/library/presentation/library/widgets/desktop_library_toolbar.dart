@@ -12,6 +12,7 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../controller/library_controller.dart';
@@ -358,6 +359,12 @@ double _compactFixedWidth(int trailingCount) =>
     (_filterCompactWidth + _boxBorderWidth) +
     (_displayBoxWidth + _boxBorderWidth) +
     trailingCount * _trailingButtonWidth;
+
+/// Minimum width of the Library toolbar for the one-bar/two-row breakpoint:
+/// the compact row at its narrowest plus a usable search field. Compact-mode
+/// constants live above; the search floor matches the top bar's.
+double libraryTopBarSlotMinWidth(int trailingCount) =>
+    _compactFixedWidth(trailingCount) + kTopBarSearchMinWidth;
 
 bool _toolbarIsCompact(
   BuildContext context,

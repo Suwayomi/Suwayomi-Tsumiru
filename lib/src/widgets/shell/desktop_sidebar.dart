@@ -77,8 +77,7 @@ class DesktopSidebar extends ConsumerWidget {
     final expanded = sidebarIsExpanded(context, preference);
     final isMacOS = isMacOSRuntime;
     final windowWidth = MediaQuery.sizeOf(context).width;
-    void expand() =>
-        ref.read(sidebarExpandedProvider.notifier).update(true);
+    void expand() => ref.read(sidebarExpandedProvider.notifier).update(true);
 
     final cs = context.colorScheme;
     final selectedBg = cs.primary.withValues(alpha: 0.22);
@@ -179,8 +178,7 @@ class DesktopSidebar extends ConsumerWidget {
             ? Duration.zero
             : const Duration(milliseconds: 200),
         builder: (context, width, _) {
-          final showExpanded =
-              width > (expandedWidth + collapsedWidth) / 2;
+          final showExpanded = width > (expandedWidth + collapsedWidth) / 2;
           final showExpandButton = isMacOS && !showExpanded;
           final maxHeight = constraints.hasBoundedHeight
               ? constraints.maxHeight
@@ -190,9 +188,7 @@ class DesktopSidebar extends ConsumerWidget {
             height: maxHeight,
             child: Container(
               decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: cs.outlineVariant),
-                ),
+                border: Border(right: BorderSide(color: cs.outlineVariant)),
               ),
               padding: const EdgeInsets.all(8),
               child: Stack(
@@ -201,11 +197,10 @@ class DesktopSidebar extends ConsumerWidget {
                     child: SingleChildScrollView(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight:
-                              ((maxHeight ?? 0) - 16).clamp(
-                                0.0,
-                                double.infinity,
-                              ),
+                          minHeight: ((maxHeight ?? 0) - 16).clamp(
+                            0.0,
+                            double.infinity,
+                          ),
                         ),
                         child: IntrinsicHeight(
                           child: Column(
@@ -213,8 +208,7 @@ class DesktopSidebar extends ConsumerWidget {
                             children: [
                               for (var i = 0; i < navList.length; i++)
                                 row(i, showExpanded),
-                              if (showExpandButton)
-                                const SizedBox(height: 48),
+                              if (showExpandButton) const SizedBox(height: 48),
                             ],
                           ),
                         ),

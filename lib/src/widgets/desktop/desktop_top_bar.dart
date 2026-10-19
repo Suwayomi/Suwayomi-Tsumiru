@@ -71,27 +71,63 @@ double topBarBreakpoint({
     kDesktopTopBarGap +
     (isMacOS ? 0 : kWindowButtonsWidth + kDesktopTopBarGap);
 
-/// Whether the merged one-bar layout applies: the desktop top bar gate plus
-/// enough width for the brand block and this page's toolbar at its minimum.
-/// Pages hide their own top row and register it as a [TopBarSlot] exactly
-/// when this is true, so the host and the page always agree.
-bool useMergedTopBar(
-  BuildContext context,
-  WidgetRef ref, {
-  required double slotMinWidth,
-}) {
-  if (!useDesktopTopBar(context)) return false;
-  final width = MediaQuery.sizeOf(context).width;
-  final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
-  return width >=
-      topBarBreakpoint(
-        brandWidth: DesktopSidebar.widthFor(
-          expanded: sidebarIsExpanded(context, preference),
-          windowWidth: width,
+/// Minimum width of a back-arrow-plus-title toolbar: the back button, a gap,
+/// a short title that ellipsizes, plus one 48 px slot per action on the
+/// right. Pages with a search field or wider controls pass their own value.
+double titleTopBarSlotMinWidth(int actionCount) =>
+    48.0 + kDesktopTopBarGap + 120.0 + actionCount * 48.0;
+
+/// Minimum width of a search-field toolbar: a usable search box, one 48 px
+/// slot per action and the gaps between the controls.
+double searchTopBarSlotMinWidth(int actionCount) =>
+    kTopBarSearchMinWidth +
+    actionCount * (48.0 + kDesktopTopBarGap) +
+    kDesktopTopBarGap;
+
+/// The toolbar row for a search page: the search box left-aligned at up to
+/// 720 px with the page's actions after it, matching the AppBar layout.
+Widget desktopSearchSlotContent({
+  required Widget search,
+  required List<Widget> actions,
+}) => Row(
+  children: [
+    Expanded(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: search,
         ),
-        slotMinWidth: slotMinWidth,
-        isMacOS: isMacOSRuntime,
-      );
+      ),
+    ),
+    ...actions,
+  ],
+);
+
+/// The toolbar row for a back-arrow page: back button, title and the page's
+/// actions, matching the AppBar layout. The page passes its own leading
+/// (usually [detailNavigationBackButton]) because the bar sits outside the
+/// page's Navigator, where the AppBar's implied back button cannot reach.
+class DesktopTitleSlot extends StatelessWidget {
+  const DesktopTitleSlot({
+    super.key,
+    this.leading,
+    required this.title,
+    this.actions = const [],
+  });
+
+  final Widget? leading;
+  final Widget title;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      leading ?? const SizedBox.shrink(),
+      Expanded(child: title),
+      ...actions,
+    ],
+  );
 }
 
 /// One page's toolbar content, registered by route so the host always shows
@@ -227,10 +263,9 @@ class DesktopTopBar extends ConsumerWidget {
       expanded: sidebarIsExpanded(context, preference),
       windowWidth: width,
     );
-    final location = _matchedLocationOrNull(context);
-    final entry = location == null
-        ? null
-        : ref.watch(topBarSlotRegistryProvider)[location];
+    // Outside a router (plain widget tests) both sides use the empty key.
+    final location = _matchedLocationOrNull(context) ?? '';
+    final entry = ref.watch(topBarSlotRegistryProvider)[location];
     final merged =
         entry == null ||
         width >=
@@ -269,9 +304,7 @@ class DesktopTopBar extends ConsumerWidget {
               if (!isMacOS) ...[
                 const SizedBox(width: kDesktopTopBarGap),
                 Center(
-                  child: DesktopWindowButtons(
-                    brightness: theme.brightness,
-                  ),
+                  child: DesktopWindowButtons(brightness: theme.brightness),
                 ),
               ],
             ],
@@ -284,9 +317,9 @@ class DesktopTopBar extends ConsumerWidget {
   Widget _slotContent(
     BuildContext context,
     TopBarSlotEntry? entry,
-    String? location,
+    String location,
   ) {
-    if (entry == null || location == null) return const SizedBox.shrink();
+    if (entry == null) return const SizedBox.shrink();
     return AnimatedSwitcher(
       duration: context.reduceMotion
           ? Duration.zero

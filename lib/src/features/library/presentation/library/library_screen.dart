@@ -19,6 +19,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/update_banner_state.dart';
@@ -322,6 +323,8 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.isDesktop;
+    // Native desktop draws the toolbar in the shell bar instead of the body.
+    final topBar = useDesktopTopBar(context);
     useEffect(() {
       categoryList.showToastOnError(toast, withMicrotask: true);
       return;
@@ -476,34 +479,42 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                       shape: RoundedRectangleBorder(),
                       child: LibraryMangaOrganizer(),
                     ),
-              body: _libraryBody(
-                ref,
-                header: desktop
-                    ? _desktopLibraryHeader(
-                        trailing: [
-                          SyncYomiSyncButton(
-                            onSynced: () => _refreshLibraryAfterSync(ref),
-                          ),
-                          Builder(
-                            builder: (context) {
-                              return UpdateStatusPopupMenu(
-                                // Section-headers style has no "current" tab,
-                                // so the menu targets the whole library there.
-                                getCategory: () => useTabs && data.isNotBlank
-                                    ? data[DefaultTabController.of(
-                                        context,
-                                      ).index]
-                                    : null,
-                                showDuplicatesButton: true,
-                              );
-                            },
-                          ),
-                        ],
-                        tabStrip: showTabBar && data.length.isGreaterThan(1)
-                            ? DefaultCategoryTabStrip(categories: data)
-                            : null,
-                      )
-                    : null,
+              body: Builder(
+                builder: (bodyContext) {
+                  // The slot content shows in the shell bar outside this tab
+                  // controller: capture the controller now, so the update
+                  // menu targets the current tab even from the bar.
+                  final tabController = DefaultTabController.of(bodyContext);
+                  final trailing = <Widget>[
+                    SyncYomiSyncButton(
+                      onSynced: () => _refreshLibraryAfterSync(ref),
+                    ),
+                    UpdateStatusPopupMenu(
+                      // Section-headers style has no "current" tab, so the
+                      // menu targets the whole library there.
+                      getCategory: () => useTabs && data.isNotBlank
+                          ? data[tabController.index]
+                          : null,
+                      showDuplicatesButton: true,
+                    ),
+                  ];
+                  final tabStrip =
+                      showTabBar && data.length.isGreaterThan(1)
+                          ? DefaultCategoryTabStrip(categories: data)
+                          : null;
+                  return TopBarSlot(
+                    content: DesktopLibraryToolbar(trailing: trailing),
+                    minWidth: libraryTopBarSlotMinWidth(trailing.length),
+                    child: _libraryBody(
+                    ref,
+                    header: topBar
+                        ? tabStrip
+                        : desktop
+                        ? _desktopLibraryHeader(
+                            trailing: trailing,
+                            tabStrip: tabStrip,
+                          )
+                        : null,
                 _groupedBody(
                   useTabs: useTabs,
                   sections: _categorySections(data),
@@ -525,8 +536,11 @@ class _DefaultLibraryToggledSearch extends HookConsumerWidget {
                           )
                         : content;
                   }).toList(),
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
+            ),
             ),
           );
         }
@@ -600,6 +614,9 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
         // Desktop replaces the sliver app bar + TabBar with the toolbar row
         // and the tab strip, both pinned.
         final desktop = context.isDesktop;
+        // Native desktop draws the toolbar in the shell bar instead of the
+        // pinned header.
+        final topBar = useDesktopTopBar(context);
         // Phone searches from the box under the title, applied to the filter
         // on submit; tablet keeps the live sticky bar.
         final phone = !context.isTablet;
@@ -629,39 +646,55 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                     shape: RoundedRectangleBorder(),
                     child: LibraryMangaOrganizer(),
                   ),
-            body: NestedScrollView(
-              controller: scrollController,
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                if (desktop) {
-                  return [
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverFixedHeaderDelegate(
-                        height: showTabs ? 64 + 44 : 64,
+            body: Builder(
+              builder: (bodyContext) {
+                // The slot content shows in the shell bar outside this tab
+                // controller: capture the controller now, so the update
+                // menu targets the current tab even from the bar.
+                final tabController = DefaultTabController.of(bodyContext);
+                final trailing = <Widget>[
+                  SyncYomiSyncButton(
+                    onSynced: () => _refreshLibraryAfterSync(ref),
+                  ),
+                  UpdateStatusPopupMenu(
+                    getCategory: () => useTabs && data.isNotBlank
+                        ? data[tabController.index]
+                        : null,
+                    showDuplicatesButton: true,
+                  ),
+                ];
+                final tabStrip = showTabs
+                    ? DefaultCategoryTabStrip(categories: data)
+                    : null;
+                return TopBarSlot(
+                  content: DesktopLibraryToolbar(trailing: trailing),
+                  minWidth: libraryTopBarSlotMinWidth(trailing.length),
+                  child: NestedScrollView(
+                    controller: scrollController,
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      if (topBar) {
+                        // Tabs stay pinned in the page body under the bar;
+                        // the toolbar row itself lives in the shell bar.
+                        if (tabStrip == null) return [];
+                        return [
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _SliverFixedHeaderDelegate(
+                              height: 44,
+                              child: tabStrip,
+                            ),
+                          ),
+                        ];
+                      }
+                      if (desktop) {
+                        return [
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _SliverFixedHeaderDelegate(
+                              height: showTabs ? 64 + 44 : 64,
                         child: _desktopLibraryHeader(
-                          trailing: [
-                            SyncYomiSyncButton(
-                              onSynced: () => _refreshLibraryAfterSync(ref),
-                            ),
-                            Builder(
-                              builder: (context) {
-                                return UpdateStatusPopupMenu(
-                                  // Section-headers style has no "current"
-                                  // tab, so the menu targets the whole
-                                  // library there.
-                                  getCategory: () => useTabs && data.isNotBlank
-                                      ? data[DefaultTabController.of(
-                                          context,
-                                        ).index]
-                                      : null,
-                                  showDuplicatesButton: true,
-                                );
-                              },
-                            ),
-                          ],
-                          tabStrip: showTabs
-                              ? DefaultCategoryTabStrip(categories: data)
-                              : null,
+                          trailing: trailing,
+                          tabStrip: tabStrip,
                         ),
                       ),
                     ),
@@ -758,8 +791,11 @@ class _DefaultLibraryStickySearch extends HookConsumerWidget {
                 ),
               ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         // A manual retry means "try the server again" — drop the offline pin.
@@ -817,6 +853,8 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
         searchToggled.value || ref.watch(libraryQueryProvider).isNotBlank;
     // Desktop replaces the app bar + TabBar with the toolbar + tab strip.
     final desktop = context.isDesktop;
+    // Native desktop draws the toolbar in the shell bar instead of the body.
+    final topBar = useDesktopTopBar(context);
     useEffect(() {
       groupedTabsAsync.showToastOnError(toast, withMicrotask: true);
       return;
@@ -935,27 +973,39 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                     shape: RoundedRectangleBorder(),
                     child: LibraryMangaOrganizer(),
                   ),
-            body: _libraryBody(
-              ref,
-              grouped: true,
-              header: desktop
-                  ? _desktopLibraryHeader(
-                      trailing: [
-                        IconButton(
-                          tooltip: context.l10n.migrationPickSourceTitle,
-                          onPressed: () =>
-                              const MigrationSourcePickerRoute().push(context),
-                          icon: const Icon(Icons.swap_horiz_rounded),
-                        ),
-                        SyncYomiSyncButton(
-                          onSynced: () => _refreshLibraryAfterSync(ref),
-                        ),
-                      ],
-                      tabStrip: showTabBar && tabs.length > 1
-                          ? GroupedCategoryTabStrip(groupedTabs: tabs)
-                          : null,
-                    )
-                  : null,
+            body: Builder(
+              builder: (bodyContext) {
+                // Native desktop draws the toolbar in the shell bar: register
+                // it as this route's slot and keep only the tab strip in the
+                // body. This variant's trailing needs no tab controller.
+                final trailing = <Widget>[
+                  IconButton(
+                    tooltip: bodyContext.l10n.migrationPickSourceTitle,
+                    onPressed: () =>
+                        const MigrationSourcePickerRoute().push(context),
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                  ),
+                  SyncYomiSyncButton(
+                    onSynced: () => _refreshLibraryAfterSync(ref),
+                  ),
+                ];
+                final tabStrip = showTabBar && tabs.length > 1
+                    ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                    : null;
+                return TopBarSlot(
+                  content: DesktopLibraryToolbar(trailing: trailing),
+                  minWidth: libraryTopBarSlotMinWidth(trailing.length),
+                  child: _libraryBody(
+                    ref,
+                    grouped: true,
+                    header: topBar
+                        ? tabStrip
+                        : desktop
+                        ? _desktopLibraryHeader(
+                            trailing: trailing,
+                            tabStrip: tabStrip,
+                          )
+                        : null,
               _groupedBody(
                 useTabs: useTabs,
                 sections: _groupSections(tabs),
@@ -978,8 +1028,11 @@ class _GroupedLibraryToggledSearch extends HookConsumerWidget {
                 }).toList(),
               ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);
@@ -1026,6 +1079,9 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
     // Desktop replaces the sliver app bar + TabBar with the toolbar row
     // and the tab strip, both pinned.
     final desktop = context.isDesktop;
+    // Native desktop draws the toolbar in the shell bar instead of the
+    // pinned header.
+    final topBar = useDesktopTopBar(context);
     // Phone searches from the box under the title, applied to the filter
     // on submit; tablet keeps the live sticky bar.
     final phone = !context.isTablet;
@@ -1074,24 +1130,50 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                     shape: RoundedRectangleBorder(),
                     child: LibraryMangaOrganizer(),
                   ),
-            body: NestedScrollView(
-              controller: scrollController,
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                if (desktop) {
-                  return [
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverFixedHeaderDelegate(
-                        height: showTabBar && tabs.length > 1 ? 64 + 44 : 64,
-                        child: _desktopLibraryHeader(
-                          trailing: [
-                            SyncYomiSyncButton(
-                              onSynced: () => _refreshLibraryAfterSync(ref),
+            body: Builder(
+              builder: (bodyContext) {
+                // Native desktop draws the toolbar in the shell bar: register
+                // it as this route's slot and keep only the tab strip pinned.
+                // This variant's trailing needs no tab controller.
+                final trailing = <Widget>[
+                  SyncYomiSyncButton(
+                    onSynced: () => _refreshLibraryAfterSync(ref),
+                  ),
+                ];
+                final tabStrip = showTabBar && tabs.length > 1
+                    ? GroupedCategoryTabStrip(groupedTabs: tabs)
+                    : null;
+                return TopBarSlot(
+                  content: DesktopLibraryToolbar(trailing: trailing),
+                  minWidth: libraryTopBarSlotMinWidth(trailing.length),
+                  child: NestedScrollView(
+                    controller: scrollController,
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      if (topBar) {
+                        // Tabs stay pinned in the page body under the bar;
+                        // the toolbar row itself lives in the shell bar.
+                        if (tabStrip == null) return [];
+                        return [
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _SliverFixedHeaderDelegate(
+                              height: 44,
+                              child: tabStrip,
                             ),
-                          ],
-                          tabStrip: showTabBar && tabs.length > 1
-                              ? GroupedCategoryTabStrip(groupedTabs: tabs)
-                              : null,
+                          ),
+                        ];
+                      }
+                      if (desktop) {
+                        return [
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _SliverFixedHeaderDelegate(
+                              height: showTabBar && tabs.length > 1
+                                  ? 64 + 44
+                                  : 64,
+                        child: _desktopLibraryHeader(
+                          trailing: trailing,
+                          tabStrip: tabStrip,
                         ),
                       ),
                     ),
@@ -1174,8 +1256,11 @@ class _GroupedLibraryStickySearch extends HookConsumerWidget {
                 ),
               ),
             ),
-          ),
-        );
+          );
+        },
+      ),
+    ),
+  );
       },
       refresh: () {
         ref.read(viewOfflineNowProvider.notifier).set(false);

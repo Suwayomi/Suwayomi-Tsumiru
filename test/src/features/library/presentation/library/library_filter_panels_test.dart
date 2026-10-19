@@ -32,6 +32,7 @@ import 'package:tsumiru/src/features/tracking/data/tracker_repository.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
+import 'package:tsumiru/src/widgets/desktop/desktop_top_bar.dart';
 import 'package:tsumiru/src/widgets/manga_cover/providers/manga_cover_providers.dart';
 
 Fragment$CategoryDto _category(int id, String name) => Fragment$CategoryDto(
@@ -93,8 +94,8 @@ Fragment$MangaDto _manga(int id, List<String> genre) => Fragment$MangaDto(
 /// manga (Action x2, Fantasy x1). Never hits the network.
 ///
 /// On desktop widths the screen goes inside a replica of the desktop shell: a
-/// 256 px sidebar (the extended rail width in `big_screen_navigation_bar.dart`)
-/// plus a 40 px title strip, with the library in a nested [Navigator] like
+/// 256 px sidebar plus the real [DesktopTopBar] (which shows the library
+/// toolbar from its slot), with the library in a nested [Navigator] like
 /// go_router's branch Navigator. The nested Navigator owns its own Overlay
 /// covering only the content area, which is what caught the window-global
 /// anchor bug (panels pinned to the window's right edge instead of the
@@ -154,6 +155,17 @@ Future<ProviderContainer> _pumpLibrary(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   const library = LibraryScreen(categoryId: 1);
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('window_manager'), (
+        call,
+      ) async {
+        if (call.method == 'isMaximized') return false;
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('window_manager'), null),
+  );
   final Widget home = surface.width >= 1200
       ? Scaffold(
           body: Row(
@@ -162,7 +174,7 @@ Future<ProviderContainer> _pumpLibrary(
               Expanded(
                 child: Column(
                   children: [
-                    const SizedBox(height: 40),
+                    const DesktopTopBar(),
                     Expanded(
                       child: Navigator(
                         onGenerateRoute: (_) =>
