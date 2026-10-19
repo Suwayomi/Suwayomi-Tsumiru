@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
@@ -115,11 +116,73 @@ bool submitUnifiedQuery(
   return false; // pure operator query, nothing typed to hand off
 }
 
+/// Keyboard highlight state for one [UnifiedSearchResults] list, owned by the
+/// host (desktop dropdown, Ctrl+K overlay). Focus stays in the host's text
+/// field the whole time; Up/Down move [index], Enter activates it exactly as
+/// a tap would. A null index means nothing is highlighted, so Enter keeps the
+/// host's top-result rule. No wrap-around: Down on the last row stays put;
+/// Up from the first row clears the highlight back to none.
+class UnifiedSearchSelection extends ChangeNotifier {
+  int? _index;
+  List<VoidCallback> _rows = const [];
+
+  /// Highlighted row in visual order, or null for none.
+  int? get index => _index;
+
+  /// Number of selectable rows in the current list.
+  int get length => _rows.length;
+
+  void _setIndex(int? value) {
+    if (_index == value) return;
+    _index = value;
+    notifyListeners();
+  }
+
+  /// The results list calls this (post-frame) with one entry per selectable
+  /// row in visual order. Only notifies when a count change disturbs the
+  /// highlight, so a plain rebuild never loops back into the list.
+  void setRows(List<VoidCallback> rows) {
+    _rows = rows;
+    if (_index != null && _index! >= rows.length) {
+      _index = rows.isEmpty ? null : rows.length - 1;
+      notifyListeners();
+    }
+  }
+
+  void moveDown() {
+    if (_rows.isEmpty) return;
+    _setIndex(_index == null ? 0 : (_index! + 1).clamp(0, _rows.length - 1));
+  }
+
+  void moveUp() {
+    if (_index == null) return;
+    _setIndex(_index! == 0 ? null : _index! - 1);
+  }
+
+  void hover(int index) {
+    if (index < 0 || index >= _rows.length) return;
+    _setIndex(index);
+  }
+
+  /// The host calls this on every text change and every fresh open, so
+  /// nothing is highlighted until the user moves.
+  void reset() => _setIndex(null);
+
+  /// Runs the highlighted row's tap handler. Returns false when nothing is
+  /// highlighted, so the host can fall back to its top-result rule.
+  bool activateSelected() {
+    final i = _index;
+    if (i == null || i < 0 || i >= _rows.length) return false;
+    _rows[i]();
+    return true;
+  }
+}
+
 /// The unified results list: Examples (empty query), Filters, Library hits ≤6
 /// with source • unread subtitle, Go to, Search all sources. Query in, results
 /// out — every host (the phone/tablet overlay, the desktop dropdowns) renders
 /// this so the sections stay identical.
-class UnifiedSearchResults extends ConsumerWidget {
+class UnifiedSearchResults extends HookConsumerWidget {
   const UnifiedSearchResults({
     super.key,
     required this.query,
@@ -129,6 +192,7 @@ class UnifiedSearchResults extends ConsumerWidget {
     this.leading = const <Widget>[],
     required this.onSetQuery,
     required this.onApplySuggestion,
+    required this.selection,
   });
 
   /// The text being searched.
@@ -152,8 +216,13 @@ class UnifiedSearchResults extends ConsumerWidget {
   /// Tapping a filter suggestion splices it into the field text.
   final ValueChanged<SearchSuggestion> onApplySuggestion;
 
+  /// Host-owned keyboard highlight (Up/Down/Enter/hover); focus never leaves
+  /// the host's text field.
+  final UnifiedSearchSelection selection;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    useListenable(selection);
     final l = context.l10n;
     // Keep the server-backed search dependencies alive for the whole open
     // search, so typing never refetches them (see pinSettingsSearchProviders).
@@ -179,92 +248,177 @@ class UnifiedSearchResults extends ConsumerWidget {
         : const <SettingsSearchEntry>[];
     final plainQuery = plainQueryText(query);
 
-    return ListView(
-      shrinkWrap: true,
-      padding: EdgeInsets.zero,
-      children: [
+    // One tap handler per selectable row in visual order (headers skipped).
+    // The host's selection reads this post-frame for Up/Down/Enter.
+    final activations = <VoidCallback>[];
+    final rowContexts = <int, BuildContext>{};
+    var nextRow = 0;
+
+    // A selectable row: keyboard highlight paints the row's existing hover
+    // colour, mouse hover moves the highlight, Semantics carries the selected
+    // state for screen readers. The same [action] drives tap and Enter.
+    Widget selectable({
+      required VoidCallback action,
+      required Widget Function(VoidCallback onTap) tile,
+    }) {
+      final index = nextRow++;
+      activations.add(action);
+      final highlighted = selection.index == index;
+      return Builder(
+        builder: (context) {
+          rowContexts[index] = context;
+          return MouseRegion(
+            onEnter: (_) => selection.hover(index),
+            child: Semantics(
+              selected: highlighted,
+              child: Material(
+                color: highlighted
+                    ? Theme.of(context).hoverColor
+                    : Colors.transparent,
+                child: tile(action),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => selection.setRows(activations),
+      );
+      return null;
+    });
+
+    final highlighted = selection.index;
+    useEffect(() {
+      if (highlighted == null) return null;
+      // Post-frame: layout has run, so every row registered its context.
+      // Re-check the live index then — a text change may have reset it since.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (selection.index != highlighted) return;
+        final rowContext = rowContexts[highlighted];
+        if (rowContext == null || !rowContext.mounted) return;
+        Scrollable.ensureVisible(
+          rowContext,
+          alignment: 0.5,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+        );
+      });
+      return null;
+    }, [highlighted]);
+
+    // A scroll view over an eager Column, not a lazy ListView: every row
+    // stays built, so the keyboard highlight can scroll any index into
+    // view. The list is short (tens of plain tiles at most).
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         if (!hasQuery) ...[
           SearchSectionHeader(l.unifiedSearchExamplesSection),
           for (final ex in _searchExamples)
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.bolt_rounded),
-              title: Text(ex),
-              onTap: () => onSetQuery(ex),
+            selectable(
+              action: () => onSetQuery(ex),
+              tile: (onTap) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.bolt_rounded),
+                title: Text(ex),
+                onTap: onTap,
+              ),
             ),
         ],
         ...leading,
         if (suggestions.isNotEmpty) ...[
           SearchSectionHeader(l.unifiedSearchFiltersSection),
           for (final s in suggestions)
-            ListTile(
-              dense: true,
-              leading: Icon(
-                s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
+            selectable(
+              action: () => onApplySuggestion(s),
+              tile: (onTap) => ListTile(
+                dense: true,
+                leading: Icon(
+                  s.isKey ? Icons.data_object_rounded : Icons.tune_rounded,
+                ),
+                title: Text(s.display),
+                onTap: onTap,
               ),
-              title: Text(s.display),
-              onTap: () => onApplySuggestion(s),
             ),
         ],
         if (hasQuery && libraryHits.isNotEmpty) ...[
           SearchSectionHeader(l.unifiedSearchLibrarySection),
           for (final m in libraryHits)
-            ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: ServerImage(
-                  imageUrl: m.thumbnailUrl ?? "",
-                  size: const Size(40, 56),
-                ),
-              ),
-              title: Text(
-                m.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: _mangaSubtitle(context, m),
-              onTap: () {
+            selectable(
+              action: () {
                 MangaRoute(mangaId: m.id).push(context);
                 close();
               },
+              tile: (onTap) => ListTile(
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: ServerImage(
+                    imageUrl: m.thumbnailUrl ?? "",
+                    size: const Size(40, 56),
+                  ),
+                ),
+                title: Text(
+                  m.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: _mangaSubtitle(context, m),
+                onTap: onTap,
+              ),
             ),
         ],
         if (goToHits.isNotEmpty) ...[
           SearchSectionHeader(l.unifiedSearchGoToSection),
           for (final t in goToHits)
-            ListTile(
-              leading: Icon(t.icon),
-              title: Text(t.label(l)),
-              onTap: () {
+            selectable(
+              action: () {
                 t.navigate(context);
                 close();
               },
+              tile: (onTap) => ListTile(
+                leading: Icon(t.icon),
+                title: Text(t.label(l)),
+                onTap: onTap,
+              ),
             ),
         ],
         if (settingsHits.isNotEmpty) ...[
           SearchSectionHeader(l.settings),
           for (final e in settingsHits)
-            SettingsSearchResultRow(
-              entry: e,
-              query: query,
-              onTap: () {
+            selectable(
+              action: () {
                 e.open(context);
                 close();
               },
+              tile: (onTap) => SettingsSearchResultRow(
+                entry: e,
+                query: query,
+                onTap: onTap,
+              ),
             ),
         ],
         if (plainQuery.isNotEmpty) ...[
           const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.travel_explore_rounded),
-            title: Text(l.unifiedSearchAllSources(plainQuery)),
-            onTap: () {
+          selectable(
+            action: () {
               openGlobalSearch(context, query: plainQuery);
               close();
             },
+            tile: (onTap) => ListTile(
+              leading: const Icon(Icons.travel_explore_rounded),
+              title: Text(l.unifiedSearchAllSources(plainQuery)),
+              onTap: onTap,
+            ),
           ),
         ],
-      ],
+        ],
+      ),
     );
   }
 
