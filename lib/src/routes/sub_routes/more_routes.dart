@@ -111,7 +111,11 @@ class GeneralSettingsRoute extends GoRouteData with $GeneralSettingsRoute {
 }
 
 class BrowseSettingsRoute extends GoRouteData with $BrowseSettingsRoute {
-  const BrowseSettingsRoute();
+  const BrowseSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -131,7 +135,11 @@ class ExtensionStoreRoute extends GoRouteData with $ExtensionStoreRoute {
 }
 
 class BackupRoute extends GoRouteData with $BackupRoute {
-  const BackupRoute();
+  const BackupRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
@@ -151,13 +159,23 @@ class ServerSettingsRoute extends GoRouteData with $ServerSettingsRoute {
 }
 
 class DownloadsSettingsRoute extends GoRouteData with $DownloadsSettingsRoute {
-  const DownloadsSettingsRoute();
+  const DownloadsSettingsRoute({this.highlight, this.tab});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
+
+  /// Tab to open alongside [highlight]: 0 Server, 1 On device. Null (or an
+  /// out-of-range value) opens the Server tab. Any tabbed settings page can
+  /// reuse this `highlight` + `tab` pair; the entry's `tabIndex` carries it.
+  final int? tab;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
   @override
-  Widget build(context, state) =>
-      const DetailNavigationShellScreen(child: DownloadsSettingsScreen());
+  Widget build(context, state) => DetailNavigationShellScreen(
+    child: DownloadsSettingsScreen(initialTab: tab ?? 0),
+  );
 }
 
 class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
@@ -172,7 +190,11 @@ class OfflineSettingsRoute extends GoRouteData with $OfflineSettingsRoute {
 
 class NotificationsSettingsRoute extends GoRouteData
     with $NotificationsSettingsRoute {
-  const NotificationsSettingsRoute();
+  const NotificationsSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 

@@ -12,9 +12,14 @@ import 'package:flutter/material.dart';
 import '../../../constants/app_theme.dart';
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/platform/is_android_native.dart';
 import '../../../utils/platform/platform_runtime.dart';
+import '../../notifications/controller/notification_settings_providers.dart';
+import '../../offline/data/background/catchup_settings.dart';
+import '../../offline/data/offline_repository.dart';
 import '../presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import '../presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../presentation/downloads/data/delete_chapters_settings_repository.dart';
 import '../presentation/general/timeout_settings/timeout_settings_section.dart';
 import '../presentation/reader/widgets/reader_force_horizontal_seekbar_tile/reader_force_horizontal_seekbar_tile.dart';
 import '../presentation/reader/widgets/reader_general_prefs/reader_general_prefs.dart';
@@ -328,9 +333,8 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'readerBackgroundColor',
     title: (l) => l.readerBackgroundColor,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
-    open: (c) => const ReaderSettingsRoute(
-      highlight: 'readerBackgroundColor',
-    ).push(c),
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'readerBackgroundColor').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -345,17 +349,15 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'showContentInCutoutArea',
     title: (l) => l.showContentInCutoutArea,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
-    open: (c) => const ReaderSettingsRoute(
-      highlight: 'showContentInCutoutArea',
-    ).push(c),
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'showContentInCutoutArea').push(c),
     visible: (ref, _) => ref.watch(readerFullscreenProvider).ifNull(true),
   ),
   SettingsSearchEntry(
     id: 'showPageNumber',
     title: (l) => l.showPageNumber,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'showPageNumber').push(c),
+    open: (c) => const ReaderSettingsRoute(highlight: 'showPageNumber').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -379,18 +381,15 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     subtitle: (l) => l.readerKeepScreenOnSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
     open: (c) => const ReaderSettingsRoute(highlight: 'keepScreenOn').push(c),
-    visible: (_, _) =>
-        !kIsWeb && (isAndroidRuntime || Platform.isIOS),
+    visible: (_, _) => !kIsWeb && (isAndroidRuntime || Platform.isIOS),
   ),
   SettingsSearchEntry(
     id: 'ignoreSafeArea',
     title: (l) => l.readerIgnoreSafeAreaToggle,
     subtitle: (l) => l.readerIgnoreSafeAreaToggleDescription,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupDisplay}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'ignoreSafeArea').push(c),
-    visible: (_, _) =>
-        !kIsWeb && (isAndroidRuntime || Platform.isIOS),
+    open: (c) => const ReaderSettingsRoute(highlight: 'ignoreSafeArea').push(c),
+    visible: (_, _) => !kIsWeb && (isAndroidRuntime || Platform.isIOS),
   ),
   SettingsSearchEntry(
     id: 'flashOnPageChange',
@@ -460,8 +459,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     title: (l) => l.readerFeedbackToasts,
     subtitle: (l) => l.readerFeedbackToastsSubtitle,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupReading}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'feedbackToasts').push(c),
+    open: (c) => const ReaderSettingsRoute(highlight: 'feedbackToasts').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -490,8 +488,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'imageScaleType',
     title: (l) => l.imageScaleType,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'imageScaleType').push(c),
+    open: (c) => const ReaderSettingsRoute(highlight: 'imageScaleType').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -521,8 +518,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'splitWidePages',
     title: (l) => l.splitWidePages,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'splitWidePages').push(c),
+    open: (c) => const ReaderSettingsRoute(highlight: 'splitWidePages').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -545,18 +541,16 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'invertWidePageRotation',
     title: (l) => l.invertWidePageRotation,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
-    open: (c) => const ReaderSettingsRoute(
-      highlight: 'invertWidePageRotation',
-    ).push(c),
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'invertWidePageRotation').push(c),
     visible: (ref, _) => ref.watch(rotateWidePagesProvider).ifNull(false),
   ),
   SettingsSearchEntry(
     id: 'animatePageTransitions',
     title: (l) => l.animatePageTransitions,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
-    open: (c) => const ReaderSettingsRoute(
-      highlight: 'animatePageTransitions',
-    ).push(c),
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'animatePageTransitions').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -571,8 +565,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'dualPageSpread',
     title: (l) => l.dualPageSpreadInLandscape,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupPagerViewer}',
-    open: (c) =>
-        const ReaderSettingsRoute(highlight: 'dualPageSpread').push(c),
+    open: (c) => const ReaderSettingsRoute(highlight: 'dualPageSpread').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -667,9 +660,8 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     id: 'longStripDisableZoomOut',
     title: (l) => l.disableZoomOut,
     breadcrumb: (l) => '${l.reader} › ${l.readerGroupWebtoonViewer}',
-    open: (c) => const ReaderSettingsRoute(
-      highlight: 'longStripDisableZoomOut',
-    ).push(c),
+    open: (c) =>
+        const ReaderSettingsRoute(highlight: 'longStripDisableZoomOut').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
@@ -687,9 +679,7 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
     open: (c) =>
         const ReaderSettingsRoute(highlight: 'volumeTapInvert').push(c),
     visible: (ref, _) =>
-        !kIsWeb &&
-        isAndroidRuntime &&
-        ref.watch(volumeTapProvider).ifNull(),
+        !kIsWeb && isAndroidRuntime && ref.watch(volumeTapProvider).ifNull(),
   ),
   SettingsSearchEntry(
     id: 'showActionsOnLongTap',
@@ -701,11 +691,474 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   ),
 ];
 
+/// Browse page (4 rows, plain "Browse" breadcrumb). The permission gate
+/// only disables the server rows' editors, never unmounts them, so every
+/// entry is always visible.
+List<SettingsSearchEntry> get browseSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'showNsfw',
+    title: (l) => l.nsfw,
+    breadcrumb: (l) => l.browse,
+    open: (c) => const BrowseSettingsRoute(highlight: 'showNsfw').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'parallelSourceRequests',
+    title: (l) => l.parallelSourceRequest,
+    breadcrumb: (l) => l.browse,
+    open: (c) =>
+        const BrowseSettingsRoute(highlight: 'parallelSourceRequests').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'localSourceLocation',
+    title: (l) => l.localSourceLocation,
+    breadcrumb: (l) => l.browse,
+    open: (c) =>
+        const BrowseSettingsRoute(highlight: 'localSourceLocation').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'extensionStores',
+    title: (l) => l.extensionStores,
+    breadcrumb: (l) => l.browse,
+    open: (c) =>
+        const BrowseSettingsRoute(highlight: 'extensionStores').push(c),
+    visible: (_, _) => true,
+  ),
+];
+
+/// Notifications page (9 rows, plain "Notifications" breadcrumb). The five
+/// rows under "New chapter notifications" only render while it is on — same
+/// [notificationsNewChaptersEnabledProvider] read as the screen. The rest
+/// always render.
+List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'notificationsNewChapters',
+    title: (l) => l.notificationsNewChapters,
+    subtitle: (l) => l.notificationsNewChaptersSubtitle,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsNewChapters',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsCheckInterval',
+    title: (l) => l.notificationsCheckInterval,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsCheckInterval',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsWifiOnly',
+    title: (l) => l.notificationsWifiOnly,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsWifiOnly',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsChargingOnly',
+    title: (l) => l.notificationsChargingOnly,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsChargingOnly',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsHideContent',
+    title: (l) => l.notificationsHideContent,
+    subtitle: (l) => l.notificationsHideContentSubtitle,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsHideContent',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsCheckNow',
+    title: (l) => l.notificationsCheckNow,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsCheckNow',
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(notificationsNewChaptersEnabledProvider).ifNull(),
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsDownloadsComplete',
+    title: (l) => l.notificationsDownloadsComplete,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsDownloadsComplete',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsAppUpdates',
+    title: (l) => l.notificationsAppUpdates,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsAppUpdates',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'notificationsExtensionUpdates',
+    title: (l) => l.notificationsExtensionUpdates,
+    breadcrumb: (l) => l.notifications,
+    open: (c) => const NotificationsSettingsRoute(
+      highlight: 'notificationsExtensionUpdates',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+];
+
+/// Backup page (6 rows, plain "Backup" breadcrumb). The include-* checkboxes
+/// live in the Create Backup dialog, not on the page, so they have no
+/// entries. The permission gate only disables the automatic rows' editors,
+/// so every entry is always visible.
+List<SettingsSearchEntry> get backupSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'createBackup',
+    title: (l) => l.createBackupTitle,
+    subtitle: (l) => l.createBackupDescription,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'createBackup').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'restoreBackup',
+    title: (l) => l.restoreBackupTitle,
+    subtitle: (l) => l.restoreBackupDescription,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'restoreBackup').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'backupLocation',
+    title: (l) => l.backupLocation,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupLocation').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'backupTime',
+    title: (l) => l.backupTime,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupTime').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'backupInterval',
+    title: (l) => l.backupInterval,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupInterval').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'backupCleanup',
+    title: (l) => l.backupCleanup,
+    breadcrumb: (l) => l.backup,
+    open: (c) => const BackupRoute(highlight: 'backupCleanup').push(c),
+    visible: (_, _) => true,
+  ),
+];
+
+/// Downloads page: Server tab (9 rows, tab 0) and On device tab (13 rows,
+/// tab 1), with "Downloads › Server" / "Downloads › On device" breadcrumbs.
+/// The three delete rows share titles across tabs but carry per-tab ids, so
+/// search can land on the right tab's row.
+///
+/// Server rows only disable under the permission/personal gates, so they are
+/// always visible. Every On device row needs the offline feature enabled
+/// (otherwise the tab shows the "not available" note instead). The
+/// keep-window switch additionally needs delete-while-reading at 2+, the
+/// background switch needs Android-native, and its two sub-rows need the
+/// background run switched on — each mirroring the screen's gate exactly.
+List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
+  SettingsSearchEntry(
+    id: 'downloadLocation',
+    title: (l) => l.downloadLocation,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'downloadLocation',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'saveAsCbz',
+    title: (l) => l.saveAsCBZArchive,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) =>
+        const DownloadsSettingsRoute(highlight: 'saveAsCbz', tab: 0).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'serverDeleteManuallyMarkedRead',
+    title: (l) => l.deleteChapterAfterManuallyMarkedRead,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'serverDeleteManuallyMarkedRead',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'serverDeleteWhileReading',
+    title: (l) => l.deleteFinishedChaptersWhileReading,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'serverDeleteWhileReading',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'serverDeleteWithBookmark',
+    title: (l) => l.allowDeletingBookmarkedChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'serverDeleteWithBookmark',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'autoDownloadNewChapters',
+    title: (l) => l.autoDownloadNewChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'autoDownloadNewChapters',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'chapterDownloadLimit',
+    title: (l) => l.chapterDownloadLimit,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'chapterDownloadLimit',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'excludeEntryWithUnreadChapters',
+    title: (l) => l.excludeEntryWithUnreadChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'excludeEntryWithUnreadChapters',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'autoDownloadCategories',
+    title: (l) => l.autoDownloadCategories,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'autoDownloadCategories',
+      tab: 0,
+    ).push(c),
+    visible: (_, _) => true,
+    tabIndex: 0,
+  ),
+  SettingsSearchEntry(
+    id: 'deviceDeleteManuallyMarkedRead',
+    title: (l) => l.deleteChapterAfterManuallyMarkedRead,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'deviceDeleteManuallyMarkedRead',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'deviceDeleteWhileReading',
+    title: (l) => l.deleteFinishedChaptersWhileReading,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'deviceDeleteWhileReading',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'deviceDeleteWithBookmark',
+    title: (l) => l.allowDeletingBookmarkedChapters,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'deviceDeleteWithBookmark',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'downloadProtectionWindow',
+    title: (l) => l.downloadProtectionWindowTitle,
+    subtitle: (l) => l.downloadProtectionWindowDescription,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'downloadProtectionWindow',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(offlineEnabledProvider) &&
+        (ref.watch(localDeleteWhileReadingProvider) ?? 0) >= 2,
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'removeAllDownloads',
+    title: (l) => l.offlineRemoveAllDownloads,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'removeAllDownloads',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineWifiOnly',
+    title: (l) => l.downloadOverWifiOnly,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineWifiOnly',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'backgroundCatchup',
+    title: (l) => l.downloadNewChaptersInBackground,
+    subtitle: (l) => l.downloadNewChaptersInBackgroundDescription,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'backgroundCatchup',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider) && isAndroidNative,
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'backgroundCheckInterval',
+    title: (l) => l.notificationsCheckInterval,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'backgroundCheckInterval',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(offlineEnabledProvider) &&
+        isAndroidNative &&
+        ref.watch(backgroundCatchupEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'backgroundFetchFiles',
+    title: (l) => l.backgroundCatchupFetchFiles,
+    subtitle: (l) => l.backgroundCatchupFetchFilesDescription,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'backgroundFetchFiles',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) =>
+        ref.watch(offlineEnabledProvider) &&
+        isAndroidNative &&
+        ref.watch(backgroundCatchupEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineConcurrency',
+    title: (l) => l.offlineConcurrencyLabel,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineConcurrency',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineStorageCapEnable',
+    title: (l) => l.offlineStorageCapEnable,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineStorageCapEnable',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineStorageCapLimit',
+    title: (l) => l.offlineStorageCapLimit,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineStorageCapLimit',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineTimeEvictEnable',
+    title: (l) => l.offlineTimeEvictEnable,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineTimeEvictEnable',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+  SettingsSearchEntry(
+    id: 'offlineKeepDays',
+    title: (l) => l.offlineKeepDaysLabel,
+    breadcrumb: (l) => '${l.downloads} › ${l.downloadsOnDeviceTab}',
+    open: (c) => const DownloadsSettingsRoute(
+      highlight: 'offlineKeepDays',
+      tab: 1,
+    ).push(c),
+    visible: (ref, _) => ref.watch(offlineEnabledProvider),
+    tabIndex: 1,
+  ),
+];
+
 /// Every registered entry in result order: General, Appearance, Library,
-/// Reader.
+/// Reader, Browse, Notifications, Backup, Downloads.
 List<SettingsSearchEntry> get allSettingsSearchEntries => [
   ...generalSettingsSearchEntries,
   ...appearanceSettingsSearchEntries,
   ...librarySettingsSearchEntries,
   ...readerSettingsSearchEntries,
+  ...browseSettingsSearchEntries,
+  ...notificationsSettingsSearchEntries,
+  ...backupSettingsSearchEntries,
+  ...downloadsSettingsSearchEntries,
 ];

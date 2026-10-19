@@ -21,6 +21,11 @@ import '../../../l10n/generated/app_localizations.dart';
 /// providers the screen reads, so search never offers a tile that isn't
 /// there. Tiles that render disabled (permission gates) still count as
 /// visible: the tile is on screen, just not tappable.
+///
+/// [tabIndex] is for tabbed pages (Downloads): the tab the tile lives on.
+/// [open] passes it to the route as the `tab` query value and the page
+/// selects that tab alongside the highlight, so any tabbed settings page can
+/// reuse the same two-parameter pattern.
 class SettingsSearchEntry {
   const SettingsSearchEntry({
     required this.id,
@@ -29,6 +34,7 @@ class SettingsSearchEntry {
     required this.breadcrumb,
     required this.open,
     required this.visible,
+    this.tabIndex,
   });
 
   final String id;
@@ -37,6 +43,7 @@ class SettingsSearchEntry {
   final String Function(AppLocalizations l) breadcrumb;
   final void Function(BuildContext context) open;
   final bool Function(WidgetRef ref, BuildContext context) visible;
+  final int? tabIndex;
 }
 
 /// Maximum settings rows per query, Komikku's rule.

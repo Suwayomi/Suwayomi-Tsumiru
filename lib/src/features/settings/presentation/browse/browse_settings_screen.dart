@@ -17,6 +17,7 @@ import '../../../account/data/account_providers.dart';
 import '../../../browse_center/data/extension_store_repository/extension_store_repository.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
+import '../../search/settings_search_registry.dart';
 import 'data/browse_settings_repository.dart';
 import 'widgets/show_nsfw_switch/show_nsfw_switch.dart';
 
@@ -43,77 +44,96 @@ class BrowseSettingsScreen extends ConsumerWidget {
               color: context.theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          child: ListView(
-            children: [
-              const ShowNSFWTile(),
-              Row(
-                children: [
-                  const Gap(16),
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: context.theme.colorScheme.onSurfaceVariant,
-                    size: 18,
+          child: SettingsHighlightScope(
+            child: ListView(
+              children: [
+                const SettingsHighlightTarget(
+                  id: 'showNsfw',
+                  child: ShowNSFWTile(),
+                ),
+                Row(
+                  children: [
+                    const Gap(16),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                      size: 18,
+                    ),
+                    const Gap(10),
+                    Expanded(
+                      child: Text(
+                        context.l10n.nsfwInfo,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Gap(10),
+                  ],
+                ),
+                const Divider(),
+                if (!canManage)
+                  ListTile(
+                    subtitle: Text(
+                      context.l10n.manageSettingsPermissionRequired,
+                    ),
                   ),
-                  const Gap(10),
-                  Expanded(
-                    child: Text(
-                      context.l10n.nsfwInfo,
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.theme.colorScheme.onSurfaceVariant,
+                if (serverSettings.value != null) ...[
+                  // Permission-gated rows stay searchable while disabled: a
+                  // missing MANAGE_SETTINGS only nulls onChanged, the tile
+                  // stays on screen — so every entry below is always visible.
+                  SettingsHighlightTarget(
+                    id: 'parallelSourceRequests',
+                    child: SettingsPropTile(
+                      leading: const Icon(Icons.swap_vert_rounded),
+                      title: context.l10n.parallelSourceRequest,
+                      subtitle: context.l10n.nSources(
+                        (browseSettings?.maxSourcesInParallel).ifNull(),
+                      ),
+                      type: SettingsPropType.numberSlider(
+                        min: 1,
+                        max: 20,
+                        value: browseSettings?.maxSourcesInParallel,
+                        onChanged: canManage
+                            ? repository.updateSourceInParallel
+                            : null,
                       ),
                     ),
                   ),
-                  const Gap(10),
-                ],
-              ),
-              const Divider(),
-              if (!canManage)
-                ListTile(
-                  subtitle: Text(context.l10n.manageSettingsPermissionRequired),
-                ),
-              if (serverSettings.value != null) ...[
-                SettingsPropTile(
-                  leading: const Icon(Icons.swap_vert_rounded),
-                  title: context.l10n.parallelSourceRequest,
-                  subtitle: context.l10n.nSources(
-                    (browseSettings?.maxSourcesInParallel).ifNull(),
-                  ),
-                  type: SettingsPropType.numberSlider(
-                    min: 1,
-                    max: 20,
-                    value: browseSettings?.maxSourcesInParallel,
-                    onChanged: canManage
-                        ? repository.updateSourceInParallel
-                        : null,
-                  ),
-                ),
-                SettingsPropTile(
-                  leading: const Icon(Icons.folder_rounded),
-                  title: context.l10n.localSourceLocation,
-                  type: SettingsPropType.textField(
-                    hintText: context.l10n.enterProp(
-                      context.l10n.localSourceLocation,
+                  SettingsHighlightTarget(
+                    id: 'localSourceLocation',
+                    child: SettingsPropTile(
+                      leading: const Icon(Icons.folder_rounded),
+                      title: context.l10n.localSourceLocation,
+                      type: SettingsPropType.textField(
+                        hintText: context.l10n.enterProp(
+                          context.l10n.localSourceLocation,
+                        ),
+                        value: browseSettings?.localSourcePath,
+                        onChanged: canManage
+                            ? repository.updateLocalSourcePath
+                            : null,
+                      ),
+                      description: context.l10n.localSourceLocationDescription,
+                      subtitle: browseSettings?.localSourcePath,
                     ),
-                    value: browseSettings?.localSourcePath,
-                    onChanged: canManage
-                        ? repository.updateLocalSourcePath
-                        : null,
                   ),
-                  description: context.l10n.localSourceLocationDescription,
-                  subtitle: browseSettings?.localSourcePath,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.extension_rounded),
-                  title: Text(context.l10n.extensionStores),
-                  subtitle: Text(
-                    storeCount == null
-                        ? context.l10n.extensionStoresDescription
-                        : context.l10n.nStores(storeCount),
+                  SettingsHighlightTarget(
+                    id: 'extensionStores',
+                    child: ListTile(
+                      leading: const Icon(Icons.extension_rounded),
+                      title: Text(context.l10n.extensionStores),
+                      subtitle: Text(
+                        storeCount == null
+                            ? context.l10n.extensionStoresDescription
+                            : context.l10n.nStores(storeCount),
+                      ),
+                      onTap: () => const ExtensionStoreRoute().push(context),
+                    ),
                   ),
-                  onTap: () => const ExtensionStoreRoute().push(context),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
