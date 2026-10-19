@@ -20,11 +20,16 @@ import 'package:tsumiru/src/features/library/presentation/library/controller/lib
 import 'package:tsumiru/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/desktop_search_field.dart';
 import 'package:tsumiru/src/features/quick_open/presentation/unified_search/unified_search_providers.dart';
+import 'package:tsumiru/src/features/settings/controller/server_controller.dart';
+import 'package:tsumiru/src/features/settings/domain/settings/graphql/__generated__/fragment.graphql.dart';
+import 'package:tsumiru/src/features/settings/domain/settings/settings.dart';
+import 'package:tsumiru/src/features/settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/koreader_sync/domain/koreader_sync_domain.dart';
+import 'package:tsumiru/src/features/settings/presentation/server/data/web_interface_repository.dart';
+import 'package:tsumiru/src/features/settings/presentation/syncyomi/data/syncyomi_settings_provider.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/graphql/__generated__/schema.graphql.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations.dart';
-
-import '../../../helpers/unreachable_server_stubs.dart';
 
 const _desktop = Size(1400, 980);
 
@@ -57,6 +62,48 @@ Fragment$MangaDto _manga(int id, String title) => Fragment$MangaDto(
 
 const _emptyCategories = AsyncData(<Fragment$CategoryDto>[]);
 
+// Reachable server, so the server-gated rows (Library's Automatic Update,
+// Browse, Downloads, Backup) render in search like they do on their pages.
+SettingsDto _loadedSettings() => Fragment$SettingsDto(
+  backupInterval: 0,
+  backupPath: '',
+  backupTTL: 0,
+  backupTime: '',
+  ip: '0.0.0.0',
+  port: 4567,
+  socksProxyEnabled: false,
+  socksProxyHost: '',
+  socksProxyPassword: '',
+  socksProxyPort: '',
+  socksProxyUsername: '',
+  socksProxyVersion: 5,
+  flareSolverrEnabled: false,
+  flareSolverrSessionName: '',
+  flareSolverrSessionTtl: 0,
+  flareSolverrTimeout: 0,
+  flareSolverrUrl: '',
+  debugLogsEnabled: false,
+  systemTrayEnabled: false,
+  extensionRepos: const [],
+  maxSourcesInParallel: 0,
+  localSourcePath: '',
+  globalUpdateInterval: 12,
+  updateMangas: false,
+  excludeCompleted: false,
+  excludeNotStarted: false,
+  excludeUnreadChapters: false,
+  downloadAsCbz: false,
+  downloadsPath: '',
+  autoDownloadNewChapters: false,
+  autoDownloadNewChaptersLimit: 0,
+  excludeEntryWithUnreadChapters: false,
+);
+
+class _LoadedSettings extends Settings {
+  @override
+  Future<SettingsDto?> build() async => _loadedSettings();
+}
+
 Future<ProviderContainer> _container({
   List<Fragment$MangaDto> library = const [],
 }) async {
@@ -67,7 +114,15 @@ Future<ProviderContainer> _container({
       sharedPreferencesProvider.overrideWithValue(sp),
       libraryMangaListProvider.overrideWith((ref) async => library),
       visibleCategoryListProvider.overrideWithValue(_emptyCategories),
-      ...unreachableServerStubs,
+      // Same as unreachableServerStubs, but with a reachable server: the
+      // server-gated search rows must render in these tests.
+      settingsProvider.overrideWith(_LoadedSettings.new),
+      webInterfaceSettingsProvider.overrideWith((ref) async => null),
+      syncYomiSettingsProvider.overrideWith((ref) async => null),
+      koreaderSyncSettingsProvider.overrideWith((ref) async => null),
+      koSyncStatusProvider.overrideWith(
+        (ref) async => const KoSyncStatus(isLoggedIn: false),
+      ),
     ],
   );
   addTearDown(container.dispose);

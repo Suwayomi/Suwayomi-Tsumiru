@@ -18,6 +18,8 @@ import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/l10n/generated/app_localizations_en.dart';
 import 'package:tsumiru/src/utils/platform/platform_runtime.dart';
 
+import '../../../../helpers/unreachable_server_stubs.dart';
+
 SettingsSearchEntry _entry(String id, String title, {String? subtitle}) =>
     SettingsSearchEntry(
       id: id,
@@ -243,6 +245,108 @@ void main() {
       expect(await syncNowVisible(unconfigured), isFalse);
       expect(await syncNowVisible(configured), isTrue);
       expect(entryById('syncYomiSyncData').visible(refOf, ctxOf), isTrue);
+    });
+
+    testWidgets('browse server rows hidden while settings are not loaded', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          ...unreachableServerStubs,
+        ],
+      );
+      addTearDown(container.dispose);
+      await pumpScope(tester, container);
+      expect(entryById('showNsfw').visible(refOf, ctxOf), isTrue);
+      for (final id in [
+        'parallelSourceRequests',
+        'localSourceLocation',
+        'extensionStores',
+      ]) {
+        expect(entryById(id).visible(refOf, ctxOf), isFalse, reason: id);
+      }
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('library entries hidden while settings are not loaded', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          ...unreachableServerStubs,
+        ],
+      );
+      addTearDown(container.dispose);
+      await pumpScope(tester, container);
+      for (final entry in librarySettingsSearchEntries) {
+        expect(entry.visible(refOf, ctxOf), isFalse, reason: entry.id);
+      }
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      'server downloads and automatic backup rows hidden while settings are not loaded',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final sp = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sp),
+            ...unreachableServerStubs,
+          ],
+        );
+        addTearDown(container.dispose);
+        await pumpScope(tester, container);
+        for (final id in [
+          'downloadLocation',
+          'saveAsCbz',
+          'serverDeleteManuallyMarkedRead',
+          'serverDeleteWhileReading',
+          'serverDeleteWithBookmark',
+          'autoDownloadNewChapters',
+          'chapterDownloadLimit',
+          'excludeEntryWithUnreadChapters',
+          'autoDownloadCategories',
+          'backupLocation',
+          'backupTime',
+          'backupInterval',
+          'backupCleanup',
+        ]) {
+          expect(entryById(id).visible(refOf, ctxOf), isFalse, reason: id);
+        }
+        expect(entryById('createBackup').visible(refOf, ctxOf), isTrue);
+        expect(entryById('restoreBackup').visible(refOf, ctxOf), isTrue);
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets('server-gated rows shown once settings load', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final sp = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sp),
+          settingsProvider.overrideWith(() => _SocksSettings(true)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(settingsProvider.future);
+      await pumpScope(tester, container);
+      for (final id in [
+        'parallelSourceRequests',
+        'categories',
+        'downloadLocation',
+        'backupLocation',
+      ]) {
+        expect(entryById(id).visible(refOf, ctxOf), isTrue, reason: id);
+      }
+      await tester.pumpAndSettle();
     });
   });
 

@@ -155,6 +155,9 @@ class UnifiedSearchResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
+    // Keep the server-backed search dependencies alive for the whole open
+    // search, so typing never refetches them (see pinSettingsSearchProviders).
+    pinSettingsSearchProviders(ref);
     final caret = this.caret ?? query.length;
     final token = activeTokenAt(query, caret);
     final suggestions = suggestFor(

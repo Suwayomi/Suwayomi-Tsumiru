@@ -506,6 +506,9 @@ class _PhoneSearchResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
+    // Keep the server-backed search dependencies alive for the whole open
+    // search, so typing never refetches them (see pinSettingsSearchProviders).
+    pinSettingsSearchProviders(ref);
     final cs = context.colorScheme;
     final hasQuery = query.trim().isNotEmpty;
     if (!hasQuery) return const SizedBox.shrink();

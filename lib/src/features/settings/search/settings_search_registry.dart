@@ -53,9 +53,10 @@ export 'settings_search_row.dart';
 /// - Appearance: Pure black only renders when the theme mode isn't light;
 ///   Custom color only renders with the Custom theme; Recommendations in
 ///   overflow unmounts while recommendations are off. The rest always render.
-/// - Library: every tile renders unconditionally (permission gates only
-///   disable the tap, the tile stays on screen), so every entry is always
-///   visible.
+/// - Library: the whole list renders inside the server-data branch (same
+///   `serverSettings.value != null` gate as the screen), so every entry
+///   needs the server reachable. Permission gates only disable the tap, the
+///   tile stays on screen, so they add no further gate.
 ///
 /// The drift-guard test (`settings_registry_drift_test.dart`) pumps each page
 /// with every condition satisfied and checks both directions, so add an entry
@@ -186,7 +187,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     title: (l) => l.categories,
     breadcrumb: (l) => '${l.library} › ${l.general}',
     open: (c) => const LibrarySettingsRoute(highlight: 'categories').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'defaultCategory',
@@ -194,7 +195,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.general}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'defaultCategory').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'refreshChaptersFromSource',
@@ -204,7 +205,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     open: (c) => const LibrarySettingsRoute(
       highlight: 'refreshChaptersFromSource',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'persistentSearchBar',
@@ -213,7 +214,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.general}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'persistentSearchBar').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'automaticUpdate',
@@ -221,7 +222,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'automaticUpdate').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'automaticallyRefreshMetadata',
@@ -231,7 +232,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     open: (c) => const LibrarySettingsRoute(
       highlight: 'automaticallyRefreshMetadata',
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'skipUpdatingEntries',
@@ -239,7 +240,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'skipUpdatingEntries').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'updateCategories',
@@ -247,7 +248,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'updateCategories').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'duplicatedEntries',
@@ -256,7 +257,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'duplicatedEntries').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'chapterSwipeToLeft',
@@ -264,7 +265,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToLeft').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'chapterSwipeToRight',
@@ -272,7 +273,7 @@ List<SettingsSearchEntry> get librarySettingsSearchEntries => [
     breadcrumb: (l) => '${l.library} › ${l.globalUpdate}',
     open: (c) =>
         const LibrarySettingsRoute(highlight: 'chapterSwipeToRight').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
 ];
 
@@ -700,9 +701,11 @@ List<SettingsSearchEntry> get readerSettingsSearchEntries => [
   ),
 ];
 
-/// Browse page (4 rows, plain "Browse" breadcrumb). The permission gate
-/// only disables the server rows' editors, never unmounts them, so every
-/// entry is always visible.
+/// Browse page (4 rows, plain "Browse" breadcrumb). Show NSFW always renders;
+/// the other three only mount while the server settings hold a value (same
+/// `serverSettings.value != null` gate as the screen). The permission gate
+/// only disables those rows' editors, never unmounts them, so it adds no
+/// further gate.
 List<SettingsSearchEntry> get browseSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'showNsfw',
@@ -717,7 +720,7 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
     breadcrumb: (l) => l.browse,
     open: (c) =>
         const BrowseSettingsRoute(highlight: 'parallelSourceRequests').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'localSourceLocation',
@@ -725,7 +728,7 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
     breadcrumb: (l) => l.browse,
     open: (c) =>
         const BrowseSettingsRoute(highlight: 'localSourceLocation').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'extensionStores',
@@ -733,7 +736,7 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
     breadcrumb: (l) => l.browse,
     open: (c) =>
         const BrowseSettingsRoute(highlight: 'extensionStores').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
 ];
 
@@ -834,8 +837,10 @@ List<SettingsSearchEntry> get notificationsSettingsSearchEntries => [
 
 /// Backup page (6 rows, plain "Backup" breadcrumb). The include-* checkboxes
 /// live in the Create Backup dialog, not on the page, so they have no
-/// entries. The permission gate only disables the automatic rows' editors,
-/// so every entry is always visible.
+/// entries. Create/restore always render; the four automatic rows only mount
+/// while the server settings hold a value (same `showUiWhenData` data branch
+/// as the screen). The permission gate only disables the automatic rows'
+/// editors, so it adds no further gate.
 List<SettingsSearchEntry> get backupSettingsSearchEntries => [
   SettingsSearchEntry(
     id: 'createBackup',
@@ -858,28 +863,28 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
     title: (l) => l.backupLocation,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'backupLocation').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'backupTime',
     title: (l) => l.backupTime,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'backupTime').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'backupInterval',
     title: (l) => l.backupInterval,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'backupInterval').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
   SettingsSearchEntry(
     id: 'backupCleanup',
     title: (l) => l.backupCleanup,
     breadcrumb: (l) => l.backup,
     open: (c) => const BackupRoute(highlight: 'backupCleanup').push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
   ),
 ];
 
@@ -888,8 +893,10 @@ List<SettingsSearchEntry> get backupSettingsSearchEntries => [
 /// The three delete rows share titles across tabs but carry per-tab ids, so
 /// search can land on the right tab's row.
 ///
-/// Server rows only disable under the permission/personal gates, so they are
-/// always visible. Every On device row needs the offline feature enabled
+/// Server rows only mount while the server settings hold a value (same
+/// `showUiWhenData` data branch as the screen); permission/personal gates
+/// only disable them, so they add no further gate. Every On device row needs
+/// the offline feature enabled
 /// (otherwise the tab shows the "not available" note instead). The
 /// keep-window switch additionally needs delete-while-reading at 2+, the
 /// background switch needs Android-native, and its two sub-rows need the
@@ -903,7 +910,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'downloadLocation',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -912,7 +919,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
     breadcrumb: (l) => '${l.downloads} › ${l.downloadsServerTab}',
     open: (c) =>
         const DownloadsSettingsRoute(highlight: 'saveAsCbz', tab: 0).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -923,7 +930,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'serverDeleteManuallyMarkedRead',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -934,7 +941,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'serverDeleteWhileReading',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -945,7 +952,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'serverDeleteWithBookmark',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -956,7 +963,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'autoDownloadNewChapters',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -967,7 +974,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'chapterDownloadLimit',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -978,7 +985,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'excludeEntryWithUnreadChapters',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -989,7 +996,7 @@ List<SettingsSearchEntry> get downloadsSettingsSearchEntries => [
       highlight: 'autoDownloadCategories',
       tab: 0,
     ).push(c),
-    visible: (_, _) => true,
+    visible: (ref, _) => _serverReachable(ref),
     tabIndex: 0,
   ),
   SettingsSearchEntry(
@@ -1534,6 +1541,25 @@ List<SettingsSearchEntry> get trackingSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
 ];
+
+/// Holds every GraphQL-backed provider settings search reads for the
+/// duration of the open search. Each entry's [SettingsSearchEntry.visible]
+/// watches only the providers its own gate needs, and matching stops after
+/// [kSettingsSearchLimit] hits — so without this, a query that matches ten
+/// local rows first drops every server subscription, the autoDispose
+/// providers tear down, and the next keystroke fires a fresh network request
+/// per provider. Every search host calls this once per build (above the
+/// match call), so typing reuses the in-flight values: at most one fetch per
+/// provider while the search is open, and none when the data is already
+/// loaded. [syncYomiSettingsProvider] is keepAlive today and is listed too,
+/// so the set stays complete if its disposal ever changes.
+void pinSettingsSearchProviders(WidgetRef ref) {
+  ref.watch(settingsProvider);
+  ref.watch(webInterfaceSettingsProvider);
+  ref.watch(syncYomiSettingsProvider);
+  ref.watch(koreaderSyncSettingsProvider);
+  ref.watch(koSyncStatusProvider);
+}
 
 /// Every registered entry in result order: General, Appearance, Library,
 /// Reader, Browse, Notifications, Backup, Downloads, Server, Connection,
