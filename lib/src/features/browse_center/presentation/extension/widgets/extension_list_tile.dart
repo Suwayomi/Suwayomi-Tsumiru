@@ -44,7 +44,7 @@ class ExtensionListTile extends HookConsumerWidget {
       subtitle: Text.rich(
         TextSpan(
           text: "${extension.language?.displayName} ",
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w600),
           children: [
             if (!access.allows(
               extension.isInstalled.ifNull()
