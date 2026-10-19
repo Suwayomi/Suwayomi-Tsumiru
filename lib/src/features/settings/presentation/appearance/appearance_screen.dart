@@ -26,8 +26,9 @@ class AppearanceScreen extends ConsumerWidget {
     final themeMode = ref.watch(appThemeModeProvider);
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.appearance)),
-      body: ListView(
-        children: [
+      body: SettingsHighlightScope(
+        child: ListView(
+          children: [
           const SettingsHighlightTarget(
             id: 'appThemeMode',
             child: AppThemeModeTile(),
@@ -62,11 +63,12 @@ class AppearanceScreen extends ConsumerWidget {
             id: 'showRecommendations',
             child: ShowRecommendationsTile(),
           ),
-          const SettingsHighlightTarget(
-            id: 'recommendsInOverflow',
-            child: RecommendsInOverflowTile(),
-          ),
-        ],
+            const SettingsHighlightTarget(
+              id: 'recommendsInOverflow',
+              child: RecommendsInOverflowTile(),
+            ),
+          ],
+        ),
       ),
     );
   }

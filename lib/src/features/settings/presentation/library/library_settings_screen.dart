@@ -110,8 +110,9 @@ class LibrarySettingsScreen extends ConsumerWidget {
               }
             }
 
-            return ListView(
-              children: [
+            return SettingsHighlightScope(
+              child: ListView(
+                children: [
                 SectionTitle(title: context.l10n.general),
                 SettingsHighlightTarget(
                   id: 'categories',
@@ -340,8 +341,9 @@ class LibrarySettingsScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                // SectionTitle(title: context.l10n.advanced),
-              ],
+                  // SectionTitle(title: context.l10n.advanced),
+                ],
+              ),
             );
           }),
         ),

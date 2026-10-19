@@ -29,8 +29,9 @@ class GeneralScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.general)),
-      body: ListView(
-        children: [
+      body: SettingsHighlightScope(
+        child: ListView(
+          children: [
           SettingsHighlightTarget(
             id: 'appLanguage',
             child: ListTile(
@@ -82,8 +83,9 @@ class GeneralScreen extends ConsumerWidget {
             id: 'lockToPortrait',
             child: ForcePortraitTile(),
           ),
-          const TimeoutSettingsSection(),
-        ],
+            const TimeoutSettingsSection(),
+          ],
+        ),
       ),
     );
   }

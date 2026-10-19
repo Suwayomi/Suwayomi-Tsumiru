@@ -68,7 +68,11 @@ class EditCategoriesRoute extends GoRouteData with $EditCategoriesRoute {
 }
 
 class ReaderSettingsRoute extends GoRouteData with $ReaderSettingsRoute {
-  const ReaderSettingsRoute();
+  const ReaderSettingsRoute({this.highlight});
+
+  /// Id of the setting to scroll to and pulse after navigation, matching a
+  /// [SettingsHighlightTarget] on the page. Null opens the page plainly.
+  final String? highlight;
 
   static final $parentNavigatorKey = _quickOpenNavigatorKey;
 
