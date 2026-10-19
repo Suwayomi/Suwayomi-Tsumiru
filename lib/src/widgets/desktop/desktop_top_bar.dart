@@ -380,7 +380,8 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
   /// a bare mount count would keep hiding the standalone strip there.
   bool _isBarVisible() {
     final route = ModalRoute.of(context);
-    return (route?.isCurrent ?? true) && TickerMode.of(context);
+    return (route?.isCurrent ?? true) &&
+        TickerMode.valuesOf(context).enabled;
   }
 
   bool _wantVisible = true;
@@ -395,7 +396,11 @@ class _DesktopTopBarState extends ConsumerState<DesktopTopBar> {
     // registration follows what is displayed, not what stays mounted.
     _registry = ref.read(mergedTopBarRegistryProvider.notifier);
     _wantVisible = _isBarVisible();
-    if (_scheduled) return;
+    // Idempotent per mounted bar: a dependency change while the registered
+    // state already matches (theme, MediaQuery) schedules nothing, so the
+    // count cannot grow past one show per bar balanced by one hide on
+    // dispose. Only a flip of the desired state needs a reconcile.
+    if (_scheduled || _wantVisible == _shown) return;
     _scheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;
