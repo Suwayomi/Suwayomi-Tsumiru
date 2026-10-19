@@ -83,7 +83,9 @@ class DesktopSidebar extends ConsumerWidget {
           color: selected ? selectedBg : null,
           borderRadius: BorderRadius.circular(10),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: showExpanded
+            ? const EdgeInsets.symmetric(horizontal: 12)
+            : EdgeInsets.zero,
         alignment: Alignment.center,
         child: showExpanded
             ? Row(
@@ -174,6 +176,8 @@ class DesktopSidebar extends ConsumerWidget {
                 icon: const TsumiruLogo(size: 32),
                 tooltip: context.l10n.expandSidebar,
                 onPressed: toggleSidebar,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ),
     );
