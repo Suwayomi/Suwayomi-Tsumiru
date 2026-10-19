@@ -58,6 +58,25 @@ String? _matchedLocationOrNull(BuildContext context) {
   }
 }
 
+/// The active leaf route's matched location: the top-most page's match from
+/// the router's current configuration. The host bar sits in the shell above
+/// its Navigator, so `GoRouterState.of` there reports the shell's own match,
+/// which keeps the initial location after a push inside the shell (the shell
+/// page is unchanged while the new page registers under the leaf's
+/// location). Reading the router's current full match instead tracks pushes
+/// and pops; without a router it falls back to the shell lookup above.
+String _activeLeafLocation(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  if (router != null) {
+    try {
+      return router.state.matchedLocation;
+    } catch (_) {
+      // Fall through to the shell lookup.
+    }
+  }
+  return _matchedLocationOrNull(context) ?? '';
+}
+
 /// Window width at and above which the title bar and the page toolbar merge
 /// into one 64 px bar. Below it the two rows stack: the 40 px title bar with
 /// the toolbar below it. Built from the same widths and gaps as the bar
@@ -309,6 +328,23 @@ class DesktopTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // `GoRouter.of` does not subscribe, and the shell's own match never
+    // changes on push/pop inside it, so rebuild off the router delegate and
+    // read the leaf from the current configuration each time. Outside a
+    // router (plain widget tests) the location never changes either.
+    final delegate = GoRouter.maybeOf(context)?.routerDelegate;
+    if (delegate == null) {
+      // Outside a router (plain widget tests) both sides use the empty key.
+      return _buildBar(context, ref, _matchedLocationOrNull(context) ?? '');
+    }
+    return ListenableBuilder(
+      listenable: delegate,
+      builder: (context, _) =>
+          _buildBar(context, ref, _activeLeafLocation(context)),
+    );
+  }
+
+  Widget _buildBar(BuildContext context, WidgetRef ref, String location) {
     final width = MediaQuery.sizeOf(context).width;
     final isMacOS = isMacOSRuntime;
     final preference = ref.watch(sidebarExpandedProvider).ifNull(true);
@@ -316,8 +352,6 @@ class DesktopTopBar extends ConsumerWidget {
       expanded: sidebarIsExpanded(context, preference),
       windowWidth: width,
     );
-    // Outside a router (plain widget tests) both sides use the empty key.
-    final location = _matchedLocationOrNull(context) ?? '';
     final entry = ref.watch(topBarSlotRegistryProvider)[location];
     final merged =
         entry == null ||
